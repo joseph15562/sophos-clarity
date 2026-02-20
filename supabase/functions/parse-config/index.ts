@@ -38,44 +38,12 @@ const OUTPUT_KEYS = [
   "Wireless Access Points",
 ] as const;
 
-const SECTION_KEYWORDS: Record<string, string[]> = {
-  "Firewall Rules": ["firewall rules", "firewall rule", "rule name", "source", "destination", "services"],
-  "SSL/TLS Inspection Rules": ["ssl/tls inspection rules", "ssl tls inspection rules", "tls inspection", "ssl inspection"],
-  "NAT Rules": ["nat rules", "dnat", "snat", "masquerading", "translated destination", "translated source"],
-  "AdminSettings": ["admin settings", "administration settings", "device access"],
-  "AdministrationProfile": ["administration profile", "admin profile", "roles", "permissions"],
-  "Notification": ["notification", "alerts", "email", "smtp", "snmp"],
-  "BackupRestore": ["backup", "restore", "export", "import"],
-  "AzureADSSO": ["azure ad sso", "azuread", "sso", "entra"],
-  "RED": ["sd-red", "remote ethernet device", "red"],
-  "DNS": ["dns", "name resolution", "dns server"],
-  "SSLVPNPolicy": ["ssl vpn", "sslvpn policy", "ssl vpn settings"],
-  "TunnelPolicy": ["tunnel policy", "ipsec policy", "ike", "phase 1", "phase 2"],
-  "User": ["user", "users", "authentication", "directory service", "ldap", "active directory"],
-  "DecryptionProfile": ["decryption profile", "decryption", "tls decryption"],
-  "GatewayConfiguration": ["gateway configuration", "ipsec settings", "vpn settings"],
-  "Gateway": ["gateway", "vpn gateway", "ipsec gateway"],
-  "ATP": ["atp", "advanced threat", "threat protection"],
-  "ThirdPartyFeed": ["third party feed", "threat feed", "external feed", "feeds"],
-  "MalwareProtection": ["malware protection", "anti-malware", "av", "antivirus"],
-  "HAConfigure": ["high availability", "ha", "failover"],
-  "Time": ["time", "ntp", "timezone", "date and time"],
-  "Interfaces & Network": ["network interfaces", "interfaces", "ip address", "subnet mask", "gateway", "zone"],
-  "Web Filter Policies": ["web filter policies", "web filter", "web filtering", "category", "policy"],
-  "Schedules": ["schedule", "time schedule"],
-  "IPS Policies": ["ips policies", "intrusion prevention", "ips"],
-  "Zones": ["zones", "zone"],
-  "RED Devices": ["red devices", "sd-red devices"],
-  "Wireless Access Points": ["wireless access points", "wireless", "access point", "ssid", "wlan"],
-};
-
-function norm(s: string) {
-  return s.toLowerCase().replace(/\s+/g, " ").trim();
-}
+type OutputKey = typeof OUTPUT_KEYS[number];
 
 function tableToTsv(tableEl: any): string {
   const rows = Array.from(tableEl.querySelectorAll("tr"));
   const out: string[] = [];
+
   for (const tr of rows) {
     const cells = Array.from(tr.querySelectorAll("th,td")).map((c: any) =>
       (c.textContent ?? "").replace(/\s+/g, " ").trim()
@@ -92,119 +60,130 @@ function ensureAllKeys(sections: Record<string, string>) {
   return sections;
 }
 
-function routeByKeywords(text: string, buckets: Record<string, string[]>) {
-  const t = norm(text);
-  for (const [section, kws] of Object.entries(SECTION_KEYWORDS)) {
-    if (kws.some((kw) => t.includes(kw))) {
-      buckets[section].push(text);
-    }
-  }
+/**
+ * Sophos Config Viewer exports have stable section containers like:
+ *  - <div id="firewall-rules">
+ *  - <div id="section-content-firewall-rules"> ... <table> ... </table>
+ *
+ * We use those IDs directly to extract tables and text.
+ */
+function extractSection(doc: any, sectionIdBase: string): { tsv?: string; text?: string } {
+  const content = doc.querySelector(`#section-content-${sectionIdBase}`);
+  if (!content) return {};
+
+  const table = content.querySelector("table");
+  const tsv = table ? tableToTsv(table) : "";
+
+  // Also capture plain text inside the section (for non-table settings)
+  const text = (content.textContent ?? "").replace(/\s+/g, " ").trim();
+
+  return {
+    tsv: tsv || undefined,
+    text: text || undefined,
+  };
 }
 
 function extractRelevant(html: string) {
   const doc = new DOMParser().parseFromString(html, "text/html");
+  const sections: Record<string, string> = ensureAllKeys({});
+
   if (!doc) {
-    const blank: Record<string, string> = ensureAllKeys({});
-    return { diagnostics: { chars: html.length, tables: 0, textLen: 0 }, sections: blank };
+    return {
+      diagnostics: { chars: html.length, parsed: false },
+      sections,
+    };
   }
 
-  const buckets: Record<string, string[]> = {};
-  for (const k of OUTPUT_KEYS) buckets[k] = [];
+  // Map your required output keys to Sophos section IDs
+  // These IDs are based on what Sophos uses in exports (e.g., firewall-rules)
+  const map: Array<{ key: OutputKey; id: string }> = [
+    { key: "Firewall Rules", id: "firewall-rules" },
+    { key: "SSL/TLS Inspection Rules", id: "ssl-tls-inspection-rules" },
+    { key: "NAT Rules", id: "nat-rules" },
 
-  // 1) TABLES (if any exist)
-  const tables = Array.from(doc.querySelectorAll("table"));
-  for (const table of tables) {
-    const tsv = tableToTsv(table);
-    if (!tsv) continue;
+    { key: "DNS", id: "dns" },
+    { key: "Time", id: "time" },
 
-    const headerSample = Array.from(table.querySelectorAll("th,td"))
-      .slice(0, 30)
-      .map((x: any) => (x.textContent ?? "").toLowerCase())
-      .join(" ");
+    { key: "Interfaces & Network", id: "interfaces" },
+    { key: "Zones", id: "zones" },
+    { key: "Schedules", id: "schedules" },
 
-    // classify common ones
-    if (headerSample.includes("rule name") && headerSample.includes("source") && headerSample.includes("destination")) {
-      buckets["Firewall Rules"].push(tsv);
-      continue;
-    }
-    if (headerSample.includes("original") && headerSample.includes("translated")) {
-      buckets["NAT Rules"].push(tsv);
-      continue;
-    }
-    if (headerSample.includes("ip address") && headerSample.includes("zone")) {
-      buckets["Interfaces & Network"].push(tsv);
-      continue;
-    }
-    if (headerSample.includes("ssl") && headerSample.includes("inspection")) {
-      buckets["SSL/TLS Inspection Rules"].push(tsv);
-      continue;
-    }
+    { key: "Web Filter Policies", id: "web-filter-policies" },
+    { key: "IPS Policies", id: "ips-policies" },
 
-    // otherwise route by keyword hits
-    routeByKeywords(headerSample + "\n" + tsv, buckets);
-  }
+    { key: "RED Devices", id: "red-devices" },
+    { key: "Wireless Access Points", id: "wireless-access-points" },
 
-  // 2) “DIV GRID” RULE ROWS (captures Accept/Drop/etc including blocked)
-  // We can’t rely on HTML structure, so we scan element text for row-like patterns.
-  const allEls = Array.from(doc.querySelectorAll("div, li, tr, section, article"));
-  for (const el of allEls) {
-    const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
-    if (text.length < 25) continue;
+    // The rest may or may not exist as explicit sections in the export.
+    // We still try to extract by likely IDs; if not present they'll remain empty.
+    { key: "AdminSettings", id: "admin-settings" },
+    { key: "AdministrationProfile", id: "administration-profile" },
+    { key: "Notification", id: "notification" },
+    { key: "BackupRestore", id: "backup-restore" },
+    { key: "AzureADSSO", id: "azuread-sso" },
+    { key: "RED", id: "red" },
+    { key: "SSLVPNPolicy", id: "ssl-vpn-policy" },
+    { key: "TunnelPolicy", id: "tunnel-policy" },
+    { key: "User", id: "users" },
+    { key: "DecryptionProfile", id: "decryption-profile" },
+    { key: "GatewayConfiguration", id: "gateway-configuration" },
+    { key: "Gateway", id: "gateway" },
+    { key: "ATP", id: "atp" },
+    { key: "ThirdPartyFeed", id: "third-party-feed" },
+    { key: "MalwareProtection", id: "malware-protection" },
+    { key: "HAConfigure", id: "ha-configure" },
+  ];
 
-    // rule rows usually start with a number and contain an action
-    const hasRuleNumber = /^\d+\s+/.test(text);
-    const hasAction = /\b(Accept|Drop|Reject|Block|Deny)\b/i.test(text);
+  let foundSections = 0;
+  let foundTables = 0;
 
-    if (hasRuleNumber && hasAction) {
-      buckets["Firewall Rules"].push(text);
-      continue;
-    }
+  for (const m of map) {
+    const extracted = extractSection(doc, m.id);
 
-    // NAT detail cards often contain translated/original labels
-    if (/translated destination|translated source|original destination|original source/i.test(text)) {
-      buckets["NAT Rules"].push(text);
-      continue;
-    }
-
-    // interface cards commonly contain IP/Zone labels
-    if (/ip address/i.test(text) && /zone/i.test(text) && (text.includes("Port") || text.includes("Interface"))) {
-      buckets["Interfaces & Network"].push(text);
-      continue;
+    // Prefer TSV if table exists, else fallback to text
+    if (extracted.tsv) {
+      sections[m.key] = extracted.tsv.slice(0, 120_000);
+      foundSections++;
+      foundTables++;
+    } else if (extracted.text) {
+      sections[m.key] = extracted.text.slice(0, 120_000);
+      foundSections++;
     }
   }
 
-  // 3) Global text routing (cheap fallback)
-  const fullText = (doc.body?.textContent ?? "").replace(/\s+/g, " ").trim();
-  // split into big chunks so we don’t dump 13MB into one bucket
-  const chunkSize = 40_000;
-  for (let i = 0; i < fullText.length; i += chunkSize) {
-    const chunk = fullText.slice(i, i + chunkSize);
-    routeByKeywords(chunk, buckets);
+  // Extra hard-target for firewall rules (your screenshot proves this exists)
+  const fwTable = doc.querySelector("#section-content-firewall-rules table");
+  if (fwTable) {
+    sections["Firewall Rules"] = tableToTsv(fwTable).slice(0, 200_000);
+    foundTables++;
   }
 
-  // Cap each section so token usage is controlled
-  const sections: Record<string, string> = {};
-  for (const k of OUTPUT_KEYS) {
-    const joined = buckets[k].join("\n\n---\n\n");
-    sections[k] = joined.slice(0, 80_000);
+  const natTable = doc.querySelector("#section-content-nat-rules table");
+  if (natTable) {
+    sections["NAT Rules"] = tableToTsv(natTable).slice(0, 200_000);
+    foundTables++;
   }
 
-  ensureAllKeys(sections);
+  const sslTable = doc.querySelector("#section-content-ssl-tls-inspection-rules table");
+  if (sslTable) {
+    sections["SSL/TLS Inspection Rules"] = tableToTsv(sslTable).slice(0, 200_000);
+    foundTables++;
+  }
 
   return {
     diagnostics: {
       chars: html.length,
-      tables: tables.length,
-      textLen: fullText.length,
-      firewallRuleSnippets: buckets["Firewall Rules"].length,
-      natSnippets: buckets["NAT Rules"].length,
+      parsed: true,
+      foundSections,
+      foundTables,
+      firewallRulesChars: sections["Firewall Rules"]?.length ?? 0,
+      natRulesChars: sections["NAT Rules"]?.length ?? 0,
     },
     sections,
   };
 }
 
 const SYSTEM_PROMPT =
-  "You are a strict Sophos Config Viewer extractor.\n" +
   "Return ONLY valid JSON.\n" +
   "Top-level keys MUST be exactly:\n" +
   OUTPUT_KEYS.join(", ") +
@@ -213,9 +192,10 @@ const SYSTEM_PROMPT =
   "- Use ONLY the extracted input provided by the user.\n" +
   "- Do NOT invent values.\n" +
   '- If a key has no data, output: [{"status":"Not present in export"}].\n' +
-  '- Every object MUST include "source" (which section and a short evidence snippet).\n' +
-  "- For Firewall Rules: include BOTH allowed and blocked rules. A rule is blocked if action is Drop/Reject/Block/Deny.\n" +
-  "- Output JSON only. No Markdown. No summaries.";
+  '- For Firewall Rules include allowed AND blocked rules. Blocked means action Drop/Reject/Block/Deny.\n' +
+  '- Prefer converting TSV tables into arrays of objects with clear field names.\n' +
+  '- Every object MUST include "source" (e.g. section name and a short evidence snippet).\n' +
+  "- Output JSON only. No Markdown. No executive summary.";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -234,6 +214,15 @@ serve(async (req) => {
     }
 
     const extracted = extractRelevant(htmlContent);
+
+    // Debug mode without AI credits: add ?debug=1 to function URL
+    const url = new URL(req.url);
+    if (url.searchParams.get("debug") === "1") {
+      return new Response(JSON.stringify(extracted), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
