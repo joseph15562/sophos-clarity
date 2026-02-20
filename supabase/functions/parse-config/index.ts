@@ -108,6 +108,7 @@ function extractRelevant(html: string) {
 }
 
 serve(async (req) => {
+  return new Response("FUNCTION VERSION TEST 123");
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
