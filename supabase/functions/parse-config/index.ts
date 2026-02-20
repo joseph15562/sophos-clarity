@@ -125,6 +125,21 @@ serve(async (req) => {
 
     // Truncate if extremely large (AI context limits)
     const extracted = extractRelevant(htmlContent);
+    return new Response(
+  JSON.stringify({
+    message: "EXTRACTION CHECK",
+    diagnostics: extracted.diagnostics,
+    nonEmptySections: Object.entries(extracted.sections)
+      .filter(([_, v]) => (v ?? "").trim().length > 0)
+      .map(([k, v]) => ({
+        section: k,
+        chars: v.length,
+        preview: v.slice(0, 200),
+      }))
+      .slice(0, 10),
+  }),
+  { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+);
     const url = new URL(req.url);
 if (url.searchParams.get("debug") === "1") {
   const nonEmpty = Object.entries(extracted.sections)
