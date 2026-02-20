@@ -184,18 +184,20 @@ function extractRelevant(html: string) {
 }
 
 const SYSTEM_PROMPT =
+  "You are a strict data transformer.\n" +
   "Return ONLY valid JSON.\n" +
+  "Do NOT write summaries.\n" +
+  "Do NOT describe the firewall.\n" +
+  "Do NOT infer or guess anything.\n\n" +
   "Top-level keys MUST be exactly:\n" +
   OUTPUT_KEYS.join(", ") +
   ".\n\n" +
   "Rules:\n" +
-  "- Use ONLY the extracted input provided by the user.\n" +
-  "- Do NOT invent values.\n" +
-  '- If a key has no data, output: [{"status":"Not present in export"}].\n' +
-  '- For Firewall Rules include allowed AND blocked rules. Blocked means action Drop/Reject/Block/Deny.\n' +
-  '- Prefer converting TSV tables into arrays of objects with clear field names.\n' +
-  '- Every object MUST include "source" (e.g. section name and a short evidence snippet).\n' +
-  "- Output JSON only. No Markdown. No executive summary.";
+  "- Use ONLY the extracted input.\n" +
+  "- If a key has no data, output: [{\"status\":\"Not present in export\"}].\n" +
+  "- Convert TSV tables into structured arrays of objects.\n" +
+  "- For Firewall Rules include ALL rules including Drop/Reject.\n" +
+  "- Output JSON only. No Markdown. No explanation.";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
