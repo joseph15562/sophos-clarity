@@ -126,6 +126,26 @@ serve(async (req) => {
     // Truncate if extremely large (AI context limits)
     const extracted = extractRelevant(htmlContent);
     const url = new URL(req.url);
+if (url.searchParams.get("debug") === "1") {
+  const nonEmpty = Object.entries(extracted.sections)
+    .filter(([_, v]) => (v ?? "").trim().length > 0);
+
+  return new Response(
+    JSON.stringify({
+      message: "DEBUG OUTPUT",
+      htmlLength: htmlContent.length,
+      diagnostics: extracted.diagnostics,
+      nonEmptySectionCount: nonEmpty.length,
+      nonEmptySectionNames: nonEmpty.map(([k]) => k),
+      sample: nonEmpty.slice(0, 2).map(([k, v]) => ({
+        section: k,
+        first500: v.slice(0, 500),
+      })),
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+    const url = new URL(req.url);
 const debug = url.searchParams.get("debug") === "1";
 
 if (debug) {
