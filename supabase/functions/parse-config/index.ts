@@ -45,17 +45,22 @@ function norm(s: string) {
 function tableToTsv(tableEl: any): string {
   const rows = Array.from(tableEl.querySelectorAll("tr"));
   const out: string[] = [];
+
   for (const tr of rows) {
-    const cells = Array.from(tr.querySelectorAll("th,td"))
-      .map((c: any) => (c.textContent ?? "").replace(/\s+/g, " ").trim());
+    const cells = Array.from(tr.querySelectorAll("th,td")).map((c: any) =>
+      (c.textContent ?? "").replace(/\s+/g, " ").trim()
+    );
     if (cells.some((x) => x)) out.push(cells.join("\t"));
   }
+
   return out.join("\n");
 }
 
 function extractRelevant(html: string) {
   const doc = new DOMParser().parseFromString(html, "text/html");
-  if (!doc) return { diagnostics: { chars: html.length, headings: 0, tables: 0 }, sections: {} };
+  if (!doc) {
+    return { diagnostics: { chars: html.length, headings: 0, tables: 0 }, sections: {} as Record<string, string> };
+  }
 
   const allTables = Array.from(doc.querySelectorAll("table"));
   const allHeadings = Array.from(doc.querySelectorAll("h1,h2,h3"));
@@ -63,13 +68,10 @@ function extractRelevant(html: string) {
   const sections: Record<string, string[]> = {};
   for (const key of Object.keys(SECTION_KEYWORDS)) sections[key] = [];
 
-  // Walk headings and grab following tables until next heading
-  for (let i = 0; i < allHeadings.length; i++) {
-    const h = allHeadings[i];
+  for (const h of allHeadings) {
     const title = norm(h.textContent ?? "");
     if (!title) continue;
 
-    // Find which section this heading belongs to
     let matchedKey: string | null = null;
     for (const [key, kws] of Object.entries(SECTION_KEYWORDS)) {
       if (kws.some((k) => title.includes(k))) {
@@ -79,22 +81,20 @@ function extractRelevant(html: string) {
     }
     if (!matchedKey) continue;
 
-    // Collect tables until next heading
+    // Grab any tables until the next heading
     let el: any = h.nextElementSibling;
     while (el && !/H1|H2|H3/.test(el.tagName)) {
       if (el.tagName === "TABLE") {
         const tsv = tableToTsv(el);
-        if (tsv) sections[matchedKey].push(`Heading: ${h.textContent}\n${tsv}`);
+        if (tsv) sections[matchedKey].push("Heading: " + (h.textContent ?? "") + "\n" + tsv);
       }
       el = el.nextElementSibling;
     }
   }
 
-  // Cap per-section size to control tokens
   const capped: Record<string, string> = {};
   for (const [k, arr] of Object.entries(sections)) {
-    const joined = arr.join("\n\n---\n\n");
-    capped[k] = joined.slice(0, 80_000); // keep it big enough to include real data
+    capped[k] = arr.join("\n\n---\n\n").slice(0, 80_000);
   }
 
   return {
@@ -107,169 +107,62 @@ function extractRelevant(html: string) {
   };
 }
 
+const SYSTEM_PROMPT =
+  "Return ONLY valid JSON.\n" +
+  "Top-level keys MUST be exactly:\n" +
+  "Firewall Rules, SSL/TLS Inspection Rules, NAT Rules, AdminSettings, AdministrationProfile, Notification, BackupRestore, AzureADSSO, RED, DNS, SSLVPNPolicy, TunnelPolicy, User, DecryptionProfile, GatewayConfiguration, Gateway, ATP, ThirdPartyFeed, MalwareProtection, HAConfigure, Time, Interfaces & Network, Web Filter Policies, Schedules, IPS Policies, Zones, RED Devices, Wireless Access Points.\n\n" +
+  "Rules:\n" +
+  "- Use ONLY the extracted input provided by the user.\n" +
+  "- Do NOT invent values.\n" +
+  '- If no data exists for a key, output: [{"status":"Not present in export"}].\n' +
+  '- Every object MUST include "source".\n' +
+  "- Output JSON only. No Markdown.";
+
 serve(async (req) => {
-  return new Response("FUNCTION VERSION TEST 123");
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { htmlContent } = await req.json();
+    const body = await req.json();
+    const htmlContent = body?.htmlContent;
 
     if (!htmlContent || typeof htmlContent !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Missing htmlContent field" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing htmlContent field" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Truncate if extremely large (AI context limits)
     const extracted = extractRelevant(htmlContent);
-    return new Response(
-  JSON.stringify({
-    message: "EXTRACTION CHECK",
-    diagnostics: extracted.diagnostics,
-    nonEmptySections: Object.entries(extracted.sections)
-      .filter(([_, v]) => (v ?? "").trim().length > 0)
-      .map(([k, v]) => ({
-        section: k,
-        chars: v.length,
-        preview: v.slice(0, 200),
-      }))
-      .slice(0, 10),
-  }),
-  { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-);
-    const url = new URL(req.url);
-if (url.searchParams.get("debug") === "1") {
-  const nonEmpty = Object.entries(extracted.sections)
-    .filter(([_, v]) => (v ?? "").trim().length > 0);
-
-  return new Response(
-    JSON.stringify({
-      message: "DEBUG OUTPUT",
-      htmlLength: htmlContent.length,
-      diagnostics: extracted.diagnostics,
-      nonEmptySectionCount: nonEmpty.length,
-      nonEmptySectionNames: nonEmpty.map(([k]) => k),
-      sample: nonEmpty.slice(0, 2).map(([k, v]) => ({
-        section: k,
-        first500: v.slice(0, 500),
-      })),
-    }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
-    const url = new URL(req.url);
-const debug = url.searchParams.get("debug") === "1";
-
-if (debug) {
-  const nonEmptySections = Object.entries(extracted.sections)
-    .filter(([_, v]) => (v ?? "").trim().length > 0);
-
-  return new Response(
-    JSON.stringify({
-      diagnostics: extracted.diagnostics,
-      nonEmptySectionCount: nonEmptySections.length,
-      nonEmptySectionNames: nonEmptySections.map(([k]) => k),
-      sample: nonEmptySections.slice(0, 2).map(([k, v]) => ({
-        section: k,
-        first500Chars: v.slice(0, 500),
-      })),
-    }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
     const payload = JSON.stringify(extracted, null, 2);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `You are a senior network engineer and technical writer. You will receive the HTML content of a Sophos Firewall Config Viewer export. Your job is to transform this into a clean, professional, human-readable document in Markdown format.
-
-Structure your output with these sections (skip any section that has no relevant data in the config):
-
-## Executive Summary
-A brief overview of the firewall — model, firmware version, hostname, and overall architecture.
-
-## Network Interfaces & Zones
-Describe each interface, its IP address, subnet, zone assignment, and VLAN configuration if any.
-
-## Firewall Rules
-For each rule, explain in plain English: the name, source zone/network, destination zone/network, services allowed/blocked, the action (allow/drop/reject), and any logging or scheduling. Present as a table where possible.
-
-## NAT Rules
-Explain SNAT/DNAT/masquerade rules — what traffic is being translated, from where to where.
-
-## VPN Configuration
-Describe IPsec tunnels, SSL VPN settings, remote access VPN — including peer IPs, encryption settings, and connected networks.
-
-## DHCP & DNS Settings
-List DHCP scopes (range, gateway, DNS servers) and any DNS configuration.
-
-## Web Filtering & Application Control
-Describe any web filter policies, URL groups, application filter policies.
-
-## Routing
-Static routes, policy routes, SD-WAN configuration.
-
-## Authentication & Users
-Local users, groups, authentication servers (LDAP/RADIUS), SSO settings.
-
-## System Settings
-Admin access settings, backup configuration, logging, SNMP, NTP, alerts.
-
-## Summary & Recommendations
-A brief summary of the configuration and any notable observations or potential improvements.
-
-IMPORTANT GUIDELINES:
-- Write in clear, professional English that an IT admin can understand
-- Explain settings in a way that someone could replicate the config on a fresh Sophos firewall
-- Use tables for structured data like firewall rules
-- If a section has many items, include all of them — don't truncate
-- Use Markdown formatting with proper headings, lists, tables, and bold text`;
-
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `Here is the Sophos Config Viewer HTML export. Parse it thoroughly and generate the documentation:\n\n${truncated}`,
-            },
-          ],
-          stream: true,
-        }),
-      }
-    );
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + LOVABLE_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: "Extracted Sophos data:\n\n" + payload },
+        ],
+        stream: true,
+      }),
+    });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       const text = await response.text();
       console.error("AI gateway error:", response.status, text);
-      return new Response(
-        JSON.stringify({ error: "AI processing failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "AI processing failed" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return new Response(response.body, {
@@ -277,9 +170,9 @@ IMPORTANT GUIDELINES:
     });
   } catch (e) {
     console.error("parse-config error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
