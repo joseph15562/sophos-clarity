@@ -124,6 +124,26 @@ serve(async (req) => {
 
     // Truncate if extremely large (AI context limits)
     const extracted = extractRelevant(htmlContent);
+    const url = new URL(req.url);
+const debug = url.searchParams.get("debug") === "1";
+
+if (debug) {
+  const nonEmptySections = Object.entries(extracted.sections)
+    .filter(([_, v]) => (v ?? "").trim().length > 0);
+
+  return new Response(
+    JSON.stringify({
+      diagnostics: extracted.diagnostics,
+      nonEmptySectionCount: nonEmptySections.length,
+      nonEmptySectionNames: nonEmptySections.map(([k]) => k),
+      sample: nonEmptySections.slice(0, 2).map(([k, v]) => ({
+        section: k,
+        first500Chars: v.slice(0, 500),
+      })),
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
     const payload = JSON.stringify(extracted, null, 2);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
