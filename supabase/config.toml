@@ -1,0 +1,4 @@
+project_id = "dayrljixkklrlymshcin"
+
+[functions.parse-config]
+verify_jwt = false
