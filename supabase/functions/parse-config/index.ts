@@ -6,31 +6,31 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are a senior network engineer writing professional firewall configuration documentation.
+const SYSTEM_PROMPT = `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover.
 
 You receive structured JSON data extracted from a Sophos XGS firewall configuration export. Each key is a section name, and the value contains tables, detail blocks, and/or text.
-
-Your job is to produce a comprehensive, human-readable Markdown document that another IT admin could use to understand or replicate this firewall setup on a fresh Sophos device.
 
 ## Output Format
 
 Write well-structured Markdown with:
+- An **## Executive Summary** at the top with a brief overview of the firewall configuration (number of rules, key security posture observations, overall assessment)
 - Clear **## Section** headings for each configuration area
-- Bullet points and tables where appropriate
-- Plain English explanations of what each rule/setting does and why it matters
-- Group related items logically
+- **Markdown tables** for listing rules, hosts, networks, and settings — use tables instead of bullet lists wherever data has consistent columns
+- After each section's table(s), include a **### Summary** paragraph explaining the purpose and overall pattern of that section
+- After each section, include a **### Best Practice Recommendations** subsection with actionable advice specific to the configuration shown (e.g. unused rules, overly permissive access, missing logging, disabled security features)
 
 ## Rules
 
 - Document EVERY rule, host, network, and setting provided — do not skip or summarize
-- For firewall rules: include rule name, status (enabled/disabled), action (accept/drop/reject), source zones/networks, destination zones/networks, services, and any security features applied
-- For NAT rules: explain the translation clearly (what maps to what)
-- For hosts/networks: list all entries with their IPs/FQDNs/ranges
-- For policies: describe what each policy does
+- For firewall rules: create a table with columns: Rule Name, Status, Action, Source Zone, Source Networks, Destination Zone, Destination Networks, Services, Security Features
+- For NAT rules: create a table explaining the translation (what maps to what)
+- For hosts/networks: list all entries in a table with relevant columns
+- For policies: describe what each policy does in a table
 - Use the actual data provided — never invent or assume configuration details
 - If a section has no data, write "No configuration found in export."
-- Do NOT output raw JSON — write documentation in Markdown
-- Start directly with the first section heading (no title page or intro paragraph)`;
+- Do NOT output raw JSON — write documentation in Markdown tables and prose
+- Start with the Executive Summary, then proceed section by section
+- End with a **## Overall Security Recommendations** section covering cross-cutting best practices based on the entire configuration`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
