@@ -1,42 +1,54 @@
 
-# Sophos Config Document Generator
+# Fix: Extract Config Data from HTML Properly
 
-A simple web app where MSPs upload their Sophos Config Viewer HTML export, and AI transforms it into a clean, professional, human-readable document describing the entire firewall setup.
+## Problem
 
-## How It Works (User Flow)
+The edge function currently sends the **entire raw HTML** (94,000+ lines, including a 4MB base64 font) to a server-side DOM parser (`deno_dom`), which either fails to parse or times out. The section ID mapping is also partially wrong, so even if parsing succeeded, many sections would come back empty. The AI then generates documentation "from thin air" because it receives no actual data.
 
-1. **Upload Page** — User drags & drops (or browses for) their Sophos Config Viewer HTML export file
-2. **Branding Setup** — User optionally adds their MSP company name and logo
-3. **AI Processing** — The app reads the HTML config file, sends it to AI (Lovable AI), which interprets every section (interfaces, firewall rules, NAT, VPN, DHCP, DNS, routing, etc.) and writes it out in plain English
-4. **Document Preview** — A beautifully formatted, printable document is shown on screen, organized by section with clear headings, descriptions, and settings explained in IT-admin-friendly language
-5. **PDF Download** — User can download the document as a branded PDF
+## Solution: Client-Side Extraction
 
-## Document Sections (AI-generated from config)
+Move the HTML parsing to the **browser**, where the native DOM parser handles even massive files with no issues. The browser extracts all section data into a compact JSON object, then only that structured data is sent to the edge function for AI processing.
 
-The AI will parse and describe sections like:
-- **Network Interfaces & Zones** — IPs, VLANs, bridge configs
-- **Firewall Rules** — Source, destination, services, actions explained in plain English
-- **NAT Rules** — Port forwards, masquerading
-- **VPN Configuration** — IPsec, SSL VPN, remote access
-- **DHCP & DNS Settings**
-- **Web Filtering & Application Control Policies**
-- **Routing** — Static routes, SD-WAN
-- **Authentication & User Settings**
-- **System Settings** — Admin access, logging, alerts
+## Changes
 
-Each section will explain what's configured and why it matters, so another IT admin could replicate it on a fresh Sophos firewall.
+### 1. New client-side extraction utility (`src/lib/extract-sections.ts`)
 
-## Key Features
+- Create a function that uses `DOMParser` in the browser to parse the uploaded HTML
+- Find all sidebar section labels (elements with `data-section-key` and `data-section-name`)
+- For each section key, locate the matching `section-content-{kebab-case-key}` div
+- Extract table data as arrays of objects (header row becomes keys, body rows become values)
+- For non-table sections, extract plain text content
+- Return a `Record<string, any>` mapping section names to their extracted data
 
-- **File upload** for Sophos Config Viewer HTML exports
-- **MSP branding** — add company logo and name to the output document
-- **AI-powered translation** of raw config into readable English documentation
-- **On-screen preview** with clean formatting and print-friendly layout
-- **PDF download** with branding included
-- **No login required** — simple, instant tool
+### 2. Update `src/lib/stream-ai.ts`
 
-## Tech Approach
+- Instead of sending raw `htmlContent`, send the pre-extracted `sections` JSON object
+- This drastically reduces the payload size (from ~50MB to maybe 200KB of actual data)
 
-- Frontend-only upload & preview UI
-- Lovable Cloud backend with an edge function calling Lovable AI to interpret the config
-- Client-side PDF generation for download
+### 3. Update `src/pages/Index.tsx`
+
+- After file upload, call the client-side extraction function
+- Pass extracted sections data to the stream function instead of raw HTML
+
+### 4. Rewrite edge function (`supabase/functions/parse-config/index.ts`)
+
+- Remove all the `deno_dom` HTML parsing code (it was not working)
+- Accept `sections` (pre-extracted JSON) instead of `htmlContent`
+- Pass the sections data directly to the AI with a revised system prompt
+- The system prompt will instruct the AI to write plain-English documentation for each section (not JSON), formatted as Markdown
+- Fix the TypeScript build error (`'tr' is of type 'unknown'`) by removing the unused DOM code
+- Change from "strict data transformer" to "documentation writer" -- the AI should produce human-readable Markdown describing each firewall section in plain English, suitable for an IT admin to replicate the configuration
+
+### 5. Update system prompt
+
+The current prompt asks for JSON output. Change it to produce **Markdown documentation** with clear section headings, explaining each configuration in plain English so another IT admin could replicate it on a fresh Sophos firewall.
+
+## Technical Details
+
+The HTML structure uses:
+- Sidebar labels with `data-section-key` (camelCase like `firewallRules`) and `data-section-name` (display name like "Firewall Rules")
+- Content divs with IDs like `section-content-firewall-rules` (kebab-case derived from the wrapper div ID)
+- Tables with `sophos-table` class, using `sophos-table-header` for headers and `sophos-table-cell` for data
+- Some sections have expandable detail rows (e.g., firewall rule details)
+
+The client-side extractor will handle all of these patterns automatically by iterating the sidebar to discover all available sections, rather than hardcoding a fixed list.
