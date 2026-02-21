@@ -6,12 +6,14 @@ import { FileUpload } from "@/components/FileUpload";
 import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { streamConfigParse } from "@/lib/stream-ai";
+import { extractSections, ExtractedSections } from "@/lib/extract-sections";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { toast } = useToast();
   const [htmlContent, setHtmlContent] = useState("");
   const [fileName, setFileName] = useState("");
+  const [extractedData, setExtractedData] = useState<ExtractedSections | null>(null);
   const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null });
   const [markdown, setMarkdown] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -20,15 +22,19 @@ const Index = () => {
     setHtmlContent(content);
     setFileName(name);
     setMarkdown("");
+    // Extract sections client-side
+    const sections = extractSections(content);
+    setExtractedData(sections);
+    console.log(`Extracted ${Object.keys(sections).length} sections from ${name}`);
   }, []);
 
   const generate = async () => {
-    if (!htmlContent) return;
+    if (!extractedData) return;
     setIsLoading(true);
     setMarkdown("");
 
     await streamConfigParse({
-      htmlContent,
+      sections: extractedData,
       onDelta: (text) => setMarkdown((prev) => prev + text),
       onDone: () => setIsLoading(false),
       onError: (err) => {
@@ -85,7 +91,7 @@ const Index = () => {
             )}
 
             {/* Generate button */}
-            {htmlContent && (
+            {extractedData && (
               <Button size="lg" onClick={generate} className="gap-2 text-base">
                 <Sparkles className="h-5 w-5" /> Generate Documentation
               </Button>
@@ -105,6 +111,7 @@ const Index = () => {
                 setMarkdown("");
                 setHtmlContent("");
                 setFileName("");
+                setExtractedData(null);
               }}
             >
               ← Start Over
