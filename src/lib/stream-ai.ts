@@ -4,12 +4,13 @@ type StreamOptions = {
   sections: ExtractedSections;
   environment?: string;
   country?: string;
+  customerName?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
 };
 
-export async function streamConfigParse({ sections, environment, country, onDelta, onDone, onError }: StreamOptions) {
+export async function streamConfigParse({ sections, environment, country, customerName, onDelta, onDone, onError }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const resp = await fetch(url, {
@@ -18,7 +19,7 @@ export async function streamConfigParse({ sections, environment, country, onDelt
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ sections, environment, country }),
+    body: JSON.stringify({ sections, environment, country, customerName }),
   });
 
   if (!resp.ok) {

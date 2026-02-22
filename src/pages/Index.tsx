@@ -37,6 +37,7 @@ const Index = () => {
       sections: extractedData,
       environment: branding.environment || undefined,
       country: branding.country || undefined,
+      customerName: branding.customerName || undefined,
       onDelta: (text) => setMarkdown((prev) => prev + text),
       onDone: () => setIsLoading(false),
       onError: (err) => {
