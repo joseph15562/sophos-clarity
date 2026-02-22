@@ -40,6 +40,8 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const sections = body?.sections;
+    const environment: string | undefined = body?.environment;
+    const country: string | undefined = body?.country;
 
     if (!sections || typeof sections !== "object") {
       return new Response(
@@ -62,6 +64,26 @@ serve(async (req) => {
 
     const payload = JSON.stringify(sections, null, 2);
 
+    // Build compliance context for the AI
+    let complianceContext = "";
+    if (environment || country) {
+      complianceContext = "\n\n## Compliance Context\n";
+      if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
+      if (country) complianceContext += `- **Country**: ${country}\n`;
+      complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country. For example:\n`;
+      complianceContext += `- UK Education → KCSIE (Keeping Children Safe in Education), DfE filtering/monitoring standards, email alerting (Sophos v22+)\n`;
+      complianceContext += `- UK any sector → GDPR, UK Cyber Essentials, NCSC guidelines\n`;
+      complianceContext += `- US Healthcare → HIPAA, HITECH\n`;
+      complianceContext += `- US Government → NIST 800-53, FedRAMP, CMMC\n`;
+      complianceContext += `- Financial Services → PCI DSS, SOX\n`;
+      complianceContext += `- Operational Technology → IEC 62443, NIST 800-82\n`;
+      complianceContext += `- Critical Infrastructure → NIS2 (EU), NERC CIP (US)\n`;
+      complianceContext += `- Defence → MOD Cyber, ITAR, CMMC\n`;
+      complianceContext += `Be specific about which standards apply and cite actual requirements where possible. Flag any configuration gaps against these standards.\n`;
+    }
+
+    const systemPrompt = SYSTEM_PROMPT + complianceContext;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -71,7 +93,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
             content:

@@ -2,12 +2,14 @@ import type { ExtractedSections } from "./extract-sections";
 
 type StreamOptions = {
   sections: ExtractedSections;
+  environment?: string;
+  country?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
 };
 
-export async function streamConfigParse({ sections, onDelta, onDone, onError }: StreamOptions) {
+export async function streamConfigParse({ sections, environment, country, onDelta, onDone, onError }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const resp = await fetch(url, {
@@ -16,7 +18,7 @@ export async function streamConfigParse({ sections, onDelta, onDone, onError }: 
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ sections }),
+    body: JSON.stringify({ sections, environment, country }),
   });
 
   if (!resp.ok) {
