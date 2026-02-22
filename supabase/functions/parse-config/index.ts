@@ -42,6 +42,7 @@ serve(async (req) => {
     const sections = body?.sections;
     const environment: string | undefined = body?.environment;
     const country: string | undefined = body?.country;
+    const customerName: string | undefined = body?.customerName;
 
     if (!sections || typeof sections !== "object") {
       return new Response(
@@ -66,8 +67,11 @@ serve(async (req) => {
 
     // Build compliance context for the AI
     let complianceContext = "";
+    if (customerName) {
+      complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Address the customer by name throughout the document (e.g. "This report documents the firewall configuration for ${customerName}"). Use the customer name in the Executive Summary and Overall Security Recommendations.\n`;
+    }
     if (environment || country) {
-      complianceContext = "\n\n## Compliance Context\n";
+      complianceContext += "\n\n## Compliance Context\n";
       if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
       if (country) complianceContext += `- **Country**: ${country}\n`;
       complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country. For example:\n`;
