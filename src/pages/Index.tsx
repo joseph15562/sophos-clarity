@@ -14,7 +14,7 @@ const Index = () => {
   const [htmlContent, setHtmlContent] = useState("");
   const [fileName, setFileName] = useState("");
   const [extractedData, setExtractedData] = useState<ExtractedSections | null>(null);
-  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null });
+  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, environment: "", country: "" });
   const [markdown, setMarkdown] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,6 +35,8 @@ const Index = () => {
 
     await streamConfigParse({
       sections: extractedData,
+      environment: branding.environment || undefined,
+      country: branding.country || undefined,
       onDelta: (text) => setMarkdown((prev) => prev + text),
       onDone: () => setIsLoading(false),
       onError: (err) => {
