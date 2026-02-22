@@ -14,7 +14,7 @@ const Index = () => {
   const [htmlContent, setHtmlContent] = useState("");
   const [fileName, setFileName] = useState("");
   const [extractedData, setExtractedData] = useState<ExtractedSections | null>(null);
-  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, environment: "", country: "" });
+  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "" });
   const [markdown, setMarkdown] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 

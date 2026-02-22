@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, ImageIcon, Globe, Landmark } from "lucide-react";
+import { Building2, ImageIcon, Globe, Landmark, User } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -44,6 +44,7 @@ export const COUNTRIES = [
 export type BrandingData = {
   companyName: string;
   logoUrl: string | null;
+  customerName: string;
   environment: string;
   country: string;
 };
@@ -98,6 +99,21 @@ export function BrandingSetup({ branding, onChange }: Props) {
             className="max-w-xs"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="customerName" className="flex items-center gap-2">
+          <User className="h-4 w-4" /> Customer Name
+        </Label>
+        <Input
+          id="customerName"
+          placeholder="Customer / Client Name"
+          value={branding.customerName}
+          onChange={(e) => onChange({ ...branding, customerName: e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">
+          The end-client whose firewall configuration is being documented.
+        </p>
       </div>
 
       <div className="space-y-2">
