@@ -1,55 +1,131 @@
 import { useState, useCallback } from "react";
-import { Shield, FileText, Sparkles } from "lucide-react";
+import { Shield, Sparkles, FileStack, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileUpload } from "@/components/FileUpload";
+import { Card, CardContent } from "@/components/ui/card";
+import { FileUpload, UploadedFile } from "@/components/FileUpload";
 import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
-import { DocumentPreview } from "@/components/DocumentPreview";
+import { DocumentPreview, ReportEntry } from "@/components/DocumentPreview";
 import { streamConfigParse } from "@/lib/stream-ai";
 import { extractSections, ExtractedSections } from "@/lib/extract-sections";
 import { useToast } from "@/hooks/use-toast";
 
+type ParsedFile = UploadedFile & { extractedData: ExtractedSections };
+
 const Index = () => {
   const { toast } = useToast();
-  const [htmlContent, setHtmlContent] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [extractedData, setExtractedData] = useState<ExtractedSections | null>(null);
+  const [files, setFiles] = useState<ParsedFile[]>([]);
   const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "" });
-  const [markdown, setMarkdown] = useState("");
+  const [reports, setReports] = useState<ReportEntry[]>([]);
+  const [activeReportId, setActiveReportId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingReportId, setLoadingReportId] = useState<string | null>(null);
 
-  const onFileLoaded = useCallback((content: string, name: string) => {
-    setHtmlContent(content);
-    setFileName(name);
-    setMarkdown("");
-    // Extract sections client-side
-    const sections = extractSections(content);
-    setExtractedData(sections);
-    console.log(`Extracted ${Object.keys(sections).length} sections from ${name}`);
-  }, []);
-
-  const generate = async () => {
-    if (!extractedData) return;
-    setIsLoading(true);
-    setMarkdown("");
-
-    await streamConfigParse({
-      sections: extractedData,
-      environment: branding.environment || undefined,
-      country: branding.country || undefined,
-      customerName: branding.customerName || undefined,
-      onDelta: (text) => setMarkdown((prev) => prev + text),
-      onDone: () => setIsLoading(false),
-      onError: (err) => {
-        setIsLoading(false);
-        toast({ title: "Error", description: err, variant: "destructive" });
-      },
+  const handleFilesChange = useCallback((uploaded: UploadedFile[]) => {
+    // Parse any new files
+    const parsed: ParsedFile[] = uploaded.map((f) => {
+      // Check if already parsed
+      const existing = files.find((pf) => pf.id === f.id);
+      if (existing) return existing;
+      const extractedData = extractSections(f.content);
+      console.log(`Extracted ${Object.keys(extractedData).length} sections from ${f.fileName}`);
+      return { ...f, extractedData };
     });
+    setFiles(parsed);
+    // Clear reports when files change
+    if (reports.length > 0) {
+      setReports([]);
+      setActiveReportId("");
+    }
+  }, [files, reports.length]);
+
+  const generateIndividual = async () => {
+    if (files.length === 0) return;
+    setIsLoading(true);
+    setReports([]);
+
+    // Generate one report per file sequentially
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const reportId = `report-${f.id}`;
+      const label = f.fileName.replace(/\.(html|htm)$/i, "");
+
+      // Add empty report entry
+      setReports((prev) => [...prev, { id: reportId, label, markdown: "" }]);
+      if (i === 0) setActiveReportId(reportId);
+      setLoadingReportId(reportId);
+
+      await new Promise<void>((resolve) => {
+        streamConfigParse({
+          sections: f.extractedData,
+          environment: branding.environment || undefined,
+          country: branding.country || undefined,
+          customerName: branding.customerName || undefined,
+          onDelta: (text) => setReports((prev) =>
+            prev.map((r) => r.id === reportId ? { ...r, markdown: r.markdown + text } : r)
+          ),
+          onDone: () => resolve(),
+          onError: (err) => {
+            toast({ title: "Error", description: err, variant: "destructive" });
+            resolve();
+          },
+        });
+      });
+    }
+
+    setLoadingReportId(null);
+    setIsLoading(false);
   };
+
+  const generateExecutive = async () => {
+    if (files.length < 2) return;
+    setIsLoading(true);
+
+    // Merge all sections under labelled keys
+    const mergedSections: Record<string, ExtractedSections> = {};
+    const labels: string[] = [];
+    files.forEach((f) => {
+      const label = f.fileName.replace(/\.(html|htm)$/i, "");
+      labels.push(label);
+      mergedSections[label] = f.extractedData;
+    });
+
+    const execId = "report-executive";
+    // Add or reset executive report
+    setReports((prev) => {
+      const without = prev.filter((r) => r.id !== execId);
+      return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
+    });
+    setActiveReportId(execId);
+    setLoadingReportId(execId);
+
+    await new Promise<void>((resolve) => {
+      streamConfigParse({
+        sections: mergedSections as unknown as ExtractedSections,
+        environment: branding.environment || undefined,
+        country: branding.country || undefined,
+        customerName: branding.customerName || undefined,
+        executive: true,
+        firewallLabels: labels,
+        onDelta: (text) => setReports((prev) =>
+          prev.map((r) => r.id === execId ? { ...r, markdown: r.markdown + text } : r)
+        ),
+        onDone: () => resolve(),
+        onError: (err) => {
+          toast({ title: "Error", description: err, variant: "destructive" });
+          resolve();
+        },
+      });
+    });
+
+    setLoadingReportId(null);
+    setIsLoading(false);
+  };
+
+  const hasReports = reports.length > 0;
+  const hasFiles = files.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10 no-print">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
@@ -67,23 +143,27 @@ const Index = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        {/* Step 1 — Upload */}
-        {!markdown && !isLoading && (
+        {/* Upload + Branding — hide once reports are showing */}
+        {!hasReports && !isLoading && (
           <>
             <section className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold">1</span>
-                <h2 className="text-lg font-semibold text-foreground">Upload Config Export</h2>
+                <h2 className="text-lg font-semibold text-foreground">Upload Config Exports</h2>
               </div>
-              <FileUpload onFileLoaded={onFileLoaded} />
+              <FileUpload files={files} onFilesChange={handleFilesChange} />
+              {files.length > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  {files.length} firewalls loaded — you can generate individual reports and a combined executive summary.
+                </p>
+              )}
             </section>
 
-            {/* Step 2 — Branding */}
-            {htmlContent && (
+            {hasFiles && (
               <section className="space-y-4">
                 <div className="flex items-center gap-2">
                   <span className="flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold">2</span>
-                  <h2 className="text-lg font-semibold text-foreground">Branding (Optional)</h2>
+                  <h2 className="text-lg font-semibold text-foreground">Branding & Context (Optional)</h2>
                 </div>
                 <Card>
                   <CardContent className="pt-6">
@@ -93,32 +173,50 @@ const Index = () => {
               </section>
             )}
 
-            {/* Generate button */}
-            {extractedData && (
-              <Button size="lg" onClick={generate} className="gap-2 text-base">
-                <Sparkles className="h-5 w-5" /> Generate Documentation
-              </Button>
+            {hasFiles && (
+              <div className="flex flex-wrap gap-3">
+                <Button size="lg" onClick={generateIndividual} className="gap-2 text-base">
+                  <Sparkles className="h-5 w-5" />
+                  {files.length === 1 ? "Generate Documentation" : `Generate ${files.length} Individual Reports`}
+                </Button>
+                {files.length >= 2 && (
+                  <Button size="lg" variant="secondary" onClick={generateExecutive} className="gap-2 text-base">
+                    <BookOpen className="h-5 w-5" /> Generate Executive Summary
+                  </Button>
+                )}
+              </div>
             )}
           </>
         )}
 
-        {/* Document preview + loading */}
-        <DocumentPreview markdown={markdown} isLoading={isLoading} branding={branding} />
+        {/* Reports */}
+        <DocumentPreview
+          reports={reports}
+          activeReportId={activeReportId}
+          onActiveChange={setActiveReportId}
+          isLoading={isLoading}
+          loadingReportId={loadingReportId}
+          branding={branding}
+        />
 
         {/* Start over */}
-        {markdown && !isLoading && (
-          <div className="no-print">
+        {hasReports && !isLoading && (
+          <div className="no-print flex gap-3">
             <Button
               variant="outline"
               onClick={() => {
-                setMarkdown("");
-                setHtmlContent("");
-                setFileName("");
-                setExtractedData(null);
+                setReports([]);
+                setActiveReportId("");
+                setFiles([]);
               }}
             >
               ← Start Over
             </Button>
+            {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
+              <Button variant="secondary" onClick={generateExecutive} className="gap-2">
+                <BookOpen className="h-4 w-4" /> Add Executive Summary
+              </Button>
+            )}
           </div>
         )}
       </main>
