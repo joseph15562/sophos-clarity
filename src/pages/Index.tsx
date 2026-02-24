@@ -38,18 +38,16 @@ const Index = () => {
     }
   }, [files, reports.length]);
 
-  const generateIndividual = async () => {
+  const generateIndividual = async (keepLoading = false) => {
     if (files.length === 0) return;
     setIsLoading(true);
     setReports([]);
 
-    // Generate one report per file sequentially
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       const reportId = `report-${f.id}`;
       const label = f.fileName.replace(/\.(html|htm)$/i, "");
 
-      // Add empty report entry
       setReports((prev) => [...prev, { id: reportId, label, markdown: "" }]);
       if (i === 0) setActiveReportId(reportId);
       setLoadingReportId(reportId);
@@ -73,12 +71,14 @@ const Index = () => {
     }
 
     setLoadingReportId(null);
-    setIsLoading(false);
+    if (!keepLoading) setIsLoading(false);
   };
 
-  const generateExecutive = async () => {
+  const generateExecutive = async (existingReports?: boolean) => {
     if (files.length < 2) return;
-    setIsLoading(true);
+    if (!existingReports) {
+      setIsLoading(true);
+    }
 
     // Merge all sections under labelled keys
     const mergedSections: Record<string, ExtractedSections> = {};
@@ -119,6 +119,12 @@ const Index = () => {
 
     setLoadingReportId(null);
     setIsLoading(false);
+  };
+
+  const generateAll = async () => {
+    if (files.length < 2) return;
+    await generateIndividual(true);
+    await generateExecutive(true);
   };
 
   const hasReports = reports.length > 0;
@@ -175,14 +181,19 @@ const Index = () => {
 
             {hasFiles && (
               <div className="flex flex-wrap gap-3">
-                <Button size="lg" onClick={generateIndividual} className="gap-2 text-base">
+                <Button size="lg" onClick={() => generateIndividual()} className="gap-2 text-base">
                   <Sparkles className="h-5 w-5" />
                   {files.length === 1 ? "Generate Documentation" : `Generate ${files.length} Individual Reports`}
                 </Button>
                 {files.length >= 2 && (
-                  <Button size="lg" variant="secondary" onClick={generateExecutive} className="gap-2 text-base">
-                    <BookOpen className="h-5 w-5" /> Generate Executive Summary
-                  </Button>
+                  <>
+                    <Button size="lg" variant="secondary" onClick={() => generateExecutive()} className="gap-2 text-base">
+                      <BookOpen className="h-5 w-5" /> Executive Summary Only
+                    </Button>
+                    <Button size="lg" onClick={generateAll} className="gap-2 text-base bg-gradient-to-r from-primary to-primary/80">
+                      <FileStack className="h-5 w-5" /> Generate All Reports + Executive
+                    </Button>
+                  </>
                 )}
               </div>
             )}
@@ -213,7 +224,7 @@ const Index = () => {
               ← Start Over
             </Button>
             {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
-              <Button variant="secondary" onClick={generateExecutive} className="gap-2">
+              <Button variant="secondary" onClick={() => generateExecutive()} className="gap-2">
                 <BookOpen className="h-4 w-4" /> Add Executive Summary
               </Button>
             )}
