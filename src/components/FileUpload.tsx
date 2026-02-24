@@ -1,93 +1,128 @@
 import { useCallback, useState } from "react";
-import { Upload, FileText, X } from "lucide-react";
+import { Upload, FileText, X, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-type Props = {
-  onFileLoaded: (content: string, fileName: string) => void;
+export type UploadedFile = {
+  id: string;
+  fileName: string;
+  content: string;
 };
 
-export function FileUpload({ onFileLoaded }: Props) {
-  const [dragActive, setDragActive] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+type Props = {
+  files: UploadedFile[];
+  onFilesChange: (files: UploadedFile[]) => void;
+};
 
-  const handleFile = useCallback(
-    (file: File) => {
-      if (!file.name.endsWith(".html") && !file.name.endsWith(".htm")) {
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        setFileName(file.name);
-        onFileLoaded(content, file.name);
-      };
-      reader.readAsText(file);
+let fileIdCounter = 0;
+
+export function FileUpload({ files, onFilesChange }: Props) {
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleFiles = useCallback(
+    (fileList: FileList) => {
+      const newFiles: UploadedFile[] = [];
+      const promises: Promise<void>[] = [];
+
+      Array.from(fileList).forEach((file) => {
+        if (!file.name.endsWith(".html") && !file.name.endsWith(".htm")) return;
+        promises.push(
+          new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              newFiles.push({
+                id: `file-${++fileIdCounter}`,
+                fileName: file.name,
+                content: e.target?.result as string,
+              });
+              resolve();
+            };
+            reader.readAsText(file);
+          })
+        );
+      });
+
+      Promise.all(promises).then(() => {
+        if (newFiles.length > 0) {
+          onFilesChange([...files, ...newFiles]);
+        }
+      });
     },
-    [onFileLoaded]
+    [files, onFilesChange]
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragActive(false);
-      if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
     },
-    [handleFile]
+    [handleFiles]
   );
 
   const onBrowse = () => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".html,.htm";
+    input.multiple = true;
     input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) handleFile(file);
+      const fl = (e.target as HTMLInputElement).files;
+      if (fl?.length) handleFiles(fl);
     };
     input.click();
   };
 
-  const clear = () => {
-    setFileName(null);
-    onFileLoaded("", "");
+  const removeFile = (id: string) => {
+    onFilesChange(files.filter((f) => f.id !== id));
   };
 
-  if (fileName) {
-    return (
-      <Card className="border-2 border-primary/30 bg-primary/5">
-        <CardContent className="flex items-center gap-4 p-6">
-          <FileText className="h-10 w-10 text-primary shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground truncate">{fileName}</p>
-            <p className="text-sm text-muted-foreground">Ready to process</p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={clear}>
-            <X className="h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-      onDragLeave={() => setDragActive(false)}
-      onDrop={onDrop}
-      onClick={onBrowse}
-      className={`cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition-all ${
-        dragActive
-          ? "border-primary bg-primary/5 scale-[1.01]"
-          : "border-border hover:border-primary/50 hover:bg-muted/50"
-      }`}
-    >
-      <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-      <p className="text-lg font-semibold text-foreground mb-1">
-        Drop your Sophos Config HTML file here
-      </p>
-      <p className="text-sm text-muted-foreground">
-        or click to browse • Accepts .html / .htm files
-      </p>
+    <div className="space-y-3">
+      {/* File list */}
+      {files.map((f) => (
+        <Card key={f.id} className="border-2 border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center gap-4 p-4">
+            <FileText className="h-8 w-8 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-foreground truncate text-sm">{f.fileName}</p>
+              <p className="text-xs text-muted-foreground">Ready to process</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => removeFile(f.id)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Drop zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={onDrop}
+        onClick={onBrowse}
+        className={`cursor-pointer rounded-xl border-2 border-dashed p-${files.length > 0 ? "6" : "12"} text-center transition-all ${
+          dragActive
+            ? "border-primary bg-primary/5 scale-[1.01]"
+            : "border-border hover:border-primary/50 hover:bg-muted/50"
+        }`}
+      >
+        {files.length > 0 ? (
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Plus className="h-5 w-5" />
+            <span className="text-sm font-medium">Add another firewall config</span>
+          </div>
+        ) : (
+          <>
+            <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold text-foreground mb-1">
+              Drop your Sophos Config HTML file(s) here
+            </p>
+            <p className="text-sm text-muted-foreground">
+              or click to browse • Accepts .html / .htm files • Multiple files supported
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }

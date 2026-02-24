@@ -32,6 +32,29 @@ Write well-structured Markdown with:
 - Start with the Executive Summary, then proceed section by section
 - End with a **## Overall Security Recommendations** section covering cross-cutting best practices based on the entire configuration`;
 
+const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing a consolidated executive summary report for an MSP covering MULTIPLE firewall configurations.
+
+You receive structured JSON data where each top-level key is a firewall name/label, and its value contains the extracted configuration sections for that firewall.
+
+## Output Format
+
+Write a comprehensive executive Markdown document with:
+- A **## Executive Overview** summarising the entire estate: how many firewalls, their roles/purposes, overall security posture
+- A **## Per-Firewall Summary** section with a subsection for each firewall, including: key stats (rule count, zones, networks), security posture score, top concerns
+- A **## Cross-Estate Findings** section identifying: common misconfigurations, inconsistencies between firewalls, shared vulnerabilities
+- A **## Risk Matrix** as a Markdown table: Finding | Severity | Affected Firewalls | Recommendation
+- A **## Strategic Recommendations** section with prioritised actions for the entire estate
+- An **## Appendix** briefly listing each firewall's configuration highlights
+
+## Rules
+- Compare and contrast configurations across firewalls
+- Identify patterns and inconsistencies
+- Prioritise findings by risk severity
+- Use the actual data provided — never invent details
+- Reference specific firewalls by their label names
+- Do NOT reproduce every individual rule — summarise and highlight exceptions
+- Use Markdown tables for structured data`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,6 +66,8 @@ serve(async (req) => {
     const environment: string | undefined = body?.environment;
     const country: string | undefined = body?.country;
     const customerName: string | undefined = body?.customerName;
+    const executive: boolean = body?.executive === true;
+    const firewallLabels: string[] | undefined = body?.firewallLabels;
 
     if (!sections || typeof sections !== "object") {
       return new Response(
@@ -51,7 +76,7 @@ serve(async (req) => {
       );
     }
 
-    // Debug mode: return extracted data without calling AI
+    // Debug mode
     const url = new URL(req.url);
     if (url.searchParams.get("debug") === "1") {
       return new Response(JSON.stringify({ sections, sectionCount: Object.keys(sections).length }), {
@@ -65,7 +90,7 @@ serve(async (req) => {
 
     const payload = JSON.stringify(sections, null, 2);
 
-    // Build compliance context for the AI
+    // Build compliance context
     let complianceContext = "";
     if (customerName) {
       complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Address the customer by name throughout the document (e.g. "This report documents the firewall configuration for ${customerName}"). Use the customer name in the Executive Summary and Overall Security Recommendations.\n`;
@@ -86,7 +111,15 @@ serve(async (req) => {
       complianceContext += `Be specific about which standards apply and cite actual requirements where possible. Flag any configuration gaps against these standards.\n`;
     }
 
-    const systemPrompt = SYSTEM_PROMPT + complianceContext;
+    const basePrompt = executive ? EXECUTIVE_SYSTEM_PROMPT : SYSTEM_PROMPT;
+    const systemPrompt = basePrompt + complianceContext;
+
+    let userMessage: string;
+    if (executive && firewallLabels) {
+      userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
+    } else {
+      userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -98,12 +131,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content:
-              "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" +
-              payload,
-          },
+          { role: "user", content: userMessage },
         ],
         stream: true,
       }),
