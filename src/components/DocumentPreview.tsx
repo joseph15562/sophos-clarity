@@ -1,9 +1,11 @@
 import { useMemo, useRef } from "react";
 import { BrandingData } from "./BrandingSetup";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { marked } from "marked";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { saveAs } from "file-saver";
 
 export type ReportEntry = {
   id: string;
@@ -19,6 +21,93 @@ type Props = {
   loadingReportId: string | null;
   branding: BrandingData;
 };
+
+function markdownToDocxParagraphs(md: string): Paragraph[] {
+  const lines = md.split("\n");
+  const paragraphs: Paragraph[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      paragraphs.push(new Paragraph({ text: "" }));
+      continue;
+    }
+
+    // Headings
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const headingMap: Record<number, typeof HeadingLevel[keyof typeof HeadingLevel]> = {
+        1: HeadingLevel.HEADING_1,
+        2: HeadingLevel.HEADING_2,
+        3: HeadingLevel.HEADING_3,
+        4: HeadingLevel.HEADING_4,
+        5: HeadingLevel.HEADING_5,
+        6: HeadingLevel.HEADING_6,
+      };
+      paragraphs.push(new Paragraph({
+        heading: headingMap[level] || HeadingLevel.HEADING_6,
+        children: parseInlineFormatting(headingMatch[2]),
+      }));
+      continue;
+    }
+
+    // Bullet points
+    const bulletMatch = trimmed.match(/^[-*+]\s+(.*)/);
+    if (bulletMatch) {
+      paragraphs.push(new Paragraph({
+        bullet: { level: 0 },
+        children: parseInlineFormatting(bulletMatch[1]),
+      }));
+      continue;
+    }
+
+    // Numbered list
+    const numberedMatch = trimmed.match(/^\d+\.\s+(.*)/);
+    if (numberedMatch) {
+      paragraphs.push(new Paragraph({
+        numbering: { reference: "default-numbering", level: 0 },
+        children: parseInlineFormatting(numberedMatch[1]),
+      }));
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      paragraphs.push(new Paragraph({
+        border: { bottom: { color: "999999", space: 1, style: "single" as any, size: 6 } },
+        children: [new TextRun("")],
+      }));
+      continue;
+    }
+
+    // Regular paragraph
+    paragraphs.push(new Paragraph({ children: parseInlineFormatting(trimmed) }));
+  }
+
+  return paragraphs;
+}
+
+function parseInlineFormatting(text: string): TextRun[] {
+  const runs: TextRun[] = [];
+  // Match bold+italic, bold, italic, inline code, or plain text
+  const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|([^*`]+))/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match[2]) {
+      runs.push(new TextRun({ text: match[2], bold: true, italics: true }));
+    } else if (match[3]) {
+      runs.push(new TextRun({ text: match[3], bold: true }));
+    } else if (match[4]) {
+      runs.push(new TextRun({ text: match[4], italics: true }));
+    } else if (match[5]) {
+      runs.push(new TextRun({ text: match[5], font: "Courier New", size: 20 }));
+    } else if (match[6]) {
+      runs.push(new TextRun({ text: match[6] }));
+    }
+  }
+  return runs.length > 0 ? runs : [new TextRun(text)];
+}
 
 function ReportContent({ markdown, isLoading, branding, pdfFilename }: { markdown: string; isLoading: boolean; branding: BrandingData; pdfFilename: string }) {
   const docRef = useRef<HTMLDivElement>(null);
@@ -41,13 +130,51 @@ function ReportContent({ markdown, isLoading, branding, pdfFilename }: { markdow
     }).from(el).save();
   };
 
+  const handleWord = async () => {
+    if (!markdown) return;
+
+    const headerParagraphs: Paragraph[] = [];
+    if (branding.companyName) {
+      headerParagraphs.push(new Paragraph({
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.LEFT,
+        children: [new TextRun({ text: branding.companyName, bold: true, size: 36 })],
+      }));
+      headerParagraphs.push(new Paragraph({
+        children: [new TextRun({ text: "Firewall Configuration Report", color: "666666", size: 24 })],
+      }));
+      headerParagraphs.push(new Paragraph({ text: "" }));
+    }
+
+    const doc = new Document({
+      numbering: {
+        config: [{
+          reference: "default-numbering",
+          levels: [{ level: 0, format: "decimal" as any, text: "%1.", alignment: AlignmentType.START }],
+        }],
+      },
+      sections: [{
+        children: [...headerParagraphs, ...markdownToDocxParagraphs(markdown)],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    const wordFilename = pdfFilename.replace(/\.pdf$/, ".docx");
+    saveAs(blob, wordFilename);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end no-print">
+      <div className="flex items-center justify-end gap-2 no-print">
         {markdown && !isLoading && (
-          <Button onClick={handlePdf} className="gap-2">
-            <Download className="h-4 w-4" /> Download PDF
-          </Button>
+          <>
+            <Button variant="secondary" onClick={handleWord} className="gap-2">
+              <FileText className="h-4 w-4" /> Download Word
+            </Button>
+            <Button onClick={handlePdf} className="gap-2">
+              <Download className="h-4 w-4" /> Download PDF
+            </Button>
+          </>
         )}
       </div>
 
