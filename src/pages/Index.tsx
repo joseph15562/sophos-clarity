@@ -46,7 +46,7 @@ const Index = () => {
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       const reportId = `report-${f.id}`;
-      const label = f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
 
       setReports((prev) => [...prev, { id: reportId, label, markdown: "" }]);
       if (i === 0) setActiveReportId(reportId);
@@ -84,7 +84,7 @@ const Index = () => {
     const mergedSections: Record<string, ExtractedSections> = {};
     const labels: string[] = [];
     files.forEach((f) => {
-      const label = f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
       labels.push(label);
       mergedSections[label] = f.extractedData;
     });

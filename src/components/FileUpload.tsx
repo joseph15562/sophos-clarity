@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 export type UploadedFile = {
   id: string;
   fileName: string;
+  label: string;
   content: string;
 };
 
@@ -33,6 +34,7 @@ export function FileUpload({ files, onFilesChange }: Props) {
               newFiles.push({
                 id: `file-${++fileIdCounter}`,
                 fileName: file.name,
+                label: file.name.replace(/\.(html|htm)$/i, ""),
                 content: e.target?.result as string,
               });
               resolve();
@@ -83,9 +85,20 @@ export function FileUpload({ files, onFilesChange }: Props) {
         <Card key={f.id} className="border-2 border-primary/30 bg-primary/5">
           <CardContent className="flex items-center gap-4 p-4">
             <FileText className="h-8 w-8 text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-foreground truncate text-sm">{f.fileName}</p>
-              <p className="text-xs text-muted-foreground">Ready to process</p>
+            <div className="flex-1 min-w-0 space-y-1">
+              <input
+                type="text"
+                value={f.label}
+                onChange={(e) => {
+                  const updated = files.map((file) =>
+                    file.id === f.id ? { ...file, label: e.target.value } : file
+                  );
+                  onFilesChange(updated);
+                }}
+                placeholder="Firewall name (e.g. JM-Home)"
+                className="w-full bg-transparent border-b border-primary/30 focus:border-primary outline-none font-semibold text-foreground text-sm pb-0.5"
+              />
+              <p className="text-xs text-muted-foreground">{f.fileName}</p>
             </div>
             <Button variant="ghost" size="icon" onClick={() => removeFile(f.id)}>
               <X className="h-4 w-4" />
