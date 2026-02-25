@@ -4,7 +4,7 @@ import { Loader2, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { marked } from "marked";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
 import { saveAs } from "file-saver";
 
 export type ReportEntry = {
@@ -22,14 +22,76 @@ type Props = {
   branding: BrandingData;
 };
 
-function markdownToDocxParagraphs(md: string): Paragraph[] {
-  const lines = md.split("\n");
-  const paragraphs: Paragraph[] = [];
+function isTableRow(line: string): boolean {
+  return /^\|(.+\|)+\s*$/.test(line.trim());
+}
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+function isSeparatorRow(line: string): boolean {
+  return /^\|(\s*:?-+:?\s*\|)+\s*$/.test(line.trim());
+}
+
+function parseTableRow(line: string): string[] {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+}
+
+function buildDocxTable(tableLines: string[]): Table {
+  const dataRows = tableLines.filter(l => !isSeparatorRow(l));
+  const cellBorders = {
+    top: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+    bottom: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+    left: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+    right: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+  };
+
+  const rows = dataRows.map((line, rowIdx) => {
+    const cells = parseTableRow(line);
+    return new TableRow({
+      children: cells.map(cell =>
+        new TableCell({
+          borders: cellBorders,
+          children: [new Paragraph({
+            children: [new TextRun({
+              text: cell,
+              bold: rowIdx === 0,
+              size: rowIdx === 0 ? 22 : 20,
+            })],
+          })],
+        })
+      ),
+    });
+  });
+
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+  });
+}
+
+function markdownToDocxElements(md: string): (Paragraph | Table)[] {
+  const lines = md.split("\n");
+  const elements: (Paragraph | Table)[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+
+    // Detect table blocks
+    if (isTableRow(trimmed)) {
+      const tableLines: string[] = [];
+      while (i < lines.length && (isTableRow(lines[i].trim()) || isSeparatorRow(lines[i].trim()))) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      if (tableLines.length >= 2) {
+        elements.push(buildDocxTable(tableLines));
+        elements.push(new Paragraph({ text: "" }));
+      }
+      continue;
+    }
+
     if (!trimmed) {
-      paragraphs.push(new Paragraph({ text: "" }));
+      elements.push(new Paragraph({ text: "" }));
+      i++;
       continue;
     }
 
@@ -45,47 +107,52 @@ function markdownToDocxParagraphs(md: string): Paragraph[] {
         5: HeadingLevel.HEADING_5,
         6: HeadingLevel.HEADING_6,
       };
-      paragraphs.push(new Paragraph({
+      elements.push(new Paragraph({
         heading: headingMap[level] || HeadingLevel.HEADING_6,
         children: parseInlineFormatting(headingMatch[2]),
       }));
+      i++;
       continue;
     }
 
     // Bullet points
     const bulletMatch = trimmed.match(/^[-*+]\s+(.*)/);
     if (bulletMatch) {
-      paragraphs.push(new Paragraph({
+      elements.push(new Paragraph({
         bullet: { level: 0 },
         children: parseInlineFormatting(bulletMatch[1]),
       }));
+      i++;
       continue;
     }
 
     // Numbered list
     const numberedMatch = trimmed.match(/^\d+\.\s+(.*)/);
     if (numberedMatch) {
-      paragraphs.push(new Paragraph({
+      elements.push(new Paragraph({
         numbering: { reference: "default-numbering", level: 0 },
         children: parseInlineFormatting(numberedMatch[1]),
       }));
+      i++;
       continue;
     }
 
     // Horizontal rule
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
-      paragraphs.push(new Paragraph({
+      elements.push(new Paragraph({
         border: { bottom: { color: "999999", space: 1, style: "single" as any, size: 6 } },
         children: [new TextRun("")],
       }));
+      i++;
       continue;
     }
 
     // Regular paragraph
-    paragraphs.push(new Paragraph({ children: parseInlineFormatting(trimmed) }));
+    elements.push(new Paragraph({ children: parseInlineFormatting(trimmed) }));
+    i++;
   }
 
-  return paragraphs;
+  return elements;
 }
 
 function parseInlineFormatting(text: string): TextRun[] {
@@ -154,7 +221,7 @@ function ReportContent({ markdown, isLoading, branding, pdfFilename }: { markdow
         }],
       },
       sections: [{
-        children: [...headerParagraphs, ...markdownToDocxParagraphs(markdown)],
+        children: [...headerParagraphs, ...markdownToDocxElements(markdown)],
       }],
     });
 
