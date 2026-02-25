@@ -95,7 +95,7 @@ export function FileUpload({ files, onFilesChange }: Props) {
                   );
                   onFilesChange(updated);
                 }}
-                placeholder="Firewall name (e.g. JM-Home)"
+                placeholder="Firewall name (e.g. Sophos Firewall)"
                 className="w-full bg-transparent border-b border-primary/30 focus:border-primary outline-none font-semibold text-foreground text-sm pb-0.5"
               />
               <p className="text-xs text-muted-foreground">{f.fileName}</p>
