@@ -25,7 +25,7 @@ const Index = () => {
     const parsed: ParsedFile[] = uploaded.map((f) => {
       // Check if already parsed
       const existing = files.find((pf) => pf.id === f.id);
-      if (existing) return existing;
+      if (existing) return { ...existing, label: f.label };
       const extractedData = extractSections(f.content);
       console.log(`Extracted ${Object.keys(extractedData).length} sections from ${f.fileName}`);
       return { ...f, extractedData };
