@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Shield, Sparkles, FileStack, BookOpen } from "lucide-react";
+import { Shield, Sparkles, FileStack, BookOpen, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
@@ -18,12 +18,11 @@ const Index = () => {
   const [reports, setReports] = useState<ReportEntry[]>([]);
   const [activeReportId, setActiveReportId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingReportId, setLoadingReportId] = useState<string | null>(null);
+  const [loadingReportIds, setLoadingReportIds] = useState<Set<string>>(new Set());
+  const [failedReportIds, setFailedReportIds] = useState<Set<string>>(new Set());
 
   const handleFilesChange = useCallback((uploaded: UploadedFile[]) => {
-    // Parse any new files
     const parsed: ParsedFile[] = uploaded.map((f) => {
-      // Check if already parsed
       const existing = files.find((pf) => pf.id === f.id);
       if (existing) return { ...existing, label: f.label };
       const extractedData = extractSections(f.content);
@@ -31,56 +30,95 @@ const Index = () => {
       return { ...f, extractedData };
     });
     setFiles(parsed);
-    // Clear reports when files change
     if (reports.length > 0) {
       setReports([]);
       setActiveReportId("");
     }
   }, [files, reports.length]);
 
-  const generateIndividual = async (keepLoading = false) => {
-    if (files.length === 0) return;
-    setIsLoading(true);
-    setReports([]);
+  /** Generate a single report by reportId — used for initial gen and retry */
+  const generateSingleReport = useCallback(async (
+    reportId: string,
+    sections: ExtractedSections,
+    opts?: { executive?: boolean; firewallLabels?: string[]; compliance?: boolean }
+  ) => {
+    setLoadingReportIds((prev) => new Set(prev).add(reportId));
+    setFailedReportIds((prev) => { const n = new Set(prev); n.delete(reportId); return n; });
+    // Reset markdown for this report
+    setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, markdown: "" } : r));
 
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      const reportId = `report-${f.id}`;
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+    const MAX_RETRIES = 2;
+    let attempt = 0;
+    let succeeded = false;
 
-      setReports((prev) => [...prev, { id: reportId, label, markdown: "" }]);
-      if (i === 0) setActiveReportId(reportId);
-      setLoadingReportId(reportId);
+    while (attempt <= MAX_RETRIES && !succeeded) {
+      if (attempt > 0) {
+        // Wait before retry with exponential backoff
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+        setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, markdown: "" } : r));
+      }
 
-      await new Promise<void>((resolve) => {
+      succeeded = await new Promise<boolean>((resolve) => {
         streamConfigParse({
-          sections: f.extractedData,
+          sections,
           environment: branding.environment || undefined,
           country: branding.country || undefined,
           customerName: branding.customerName || undefined,
+          executive: opts?.executive,
+          firewallLabels: opts?.firewallLabels,
+          compliance: opts?.compliance,
           onDelta: (text) => setReports((prev) =>
             prev.map((r) => r.id === reportId ? { ...r, markdown: r.markdown + text } : r)
           ),
-          onDone: () => resolve(),
+          onDone: () => resolve(true),
           onError: (err) => {
-            toast({ title: "Error", description: err, variant: "destructive" });
-            resolve();
+            console.error(`Report ${reportId} attempt ${attempt + 1} failed:`, err);
+            if (attempt >= MAX_RETRIES) {
+              toast({ title: "Error", description: `${err} — use the retry button to try again.`, variant: "destructive" });
+            }
+            resolve(false);
           },
         });
       });
+      attempt++;
     }
 
-    setLoadingReportId(null);
+    if (!succeeded) {
+      setFailedReportIds((prev) => new Set(prev).add(reportId));
+    }
+    setLoadingReportIds((prev) => { const n = new Set(prev); n.delete(reportId); return n; });
+    return succeeded;
+  }, [branding, toast]);
+
+  const generateIndividual = async (keepLoading = false) => {
+    if (files.length === 0) return;
+    setIsLoading(true);
+    setFailedReportIds(new Set());
+
+    // Create all report entries upfront
+    const newReports: ReportEntry[] = files.map((f) => ({
+      id: `report-${f.id}`,
+      label: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
+      markdown: "",
+    }));
+    setReports(newReports);
+    setActiveReportId(newReports[0].id);
+
+    // Generate all in parallel
+    await Promise.all(
+      files.map((f) => {
+        const reportId = `report-${f.id}`;
+        return generateSingleReport(reportId, f.extractedData);
+      })
+    );
+
     if (!keepLoading) setIsLoading(false);
   };
 
   const generateExecutive = async (existingReports?: boolean) => {
     if (files.length < 2) return;
-    if (!existingReports) {
-      setIsLoading(true);
-    }
+    if (!existingReports) setIsLoading(true);
 
-    // Merge all sections under labelled keys
     const mergedSections: Record<string, ExtractedSections> = {};
     const labels: string[] = [];
     files.forEach((f) => {
@@ -90,42 +128,106 @@ const Index = () => {
     });
 
     const execId = "report-executive";
-    // Add or reset executive report
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== execId);
       return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
     });
     setActiveReportId(execId);
-    setLoadingReportId(execId);
 
-    await new Promise<void>((resolve) => {
-      streamConfigParse({
-        sections: mergedSections as unknown as ExtractedSections,
-        environment: branding.environment || undefined,
-        country: branding.country || undefined,
-        customerName: branding.customerName || undefined,
-        executive: true,
-        firewallLabels: labels,
-        onDelta: (text) => setReports((prev) =>
-          prev.map((r) => r.id === execId ? { ...r, markdown: r.markdown + text } : r)
-        ),
-        onDone: () => resolve(),
-        onError: (err) => {
-          toast({ title: "Error", description: err, variant: "destructive" });
-          resolve();
-        },
-      });
+    await generateSingleReport(execId, mergedSections as unknown as ExtractedSections, {
+      executive: true,
+      firewallLabels: labels,
     });
 
-    setLoadingReportId(null);
+    setIsLoading(false);
+  };
+
+  const generateCompliance = async () => {
+    if (files.length === 0) return;
+    setIsLoading(true);
+
+    // Merge all firewall data for compliance pack
+    const mergedSections: Record<string, ExtractedSections> = {};
+    const labels: string[] = [];
+    files.forEach((f) => {
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      labels.push(label);
+      mergedSections[label] = f.extractedData;
+    });
+
+    const complianceId = "report-compliance";
+    setReports((prev) => {
+      const without = prev.filter((r) => r.id !== complianceId);
+      return [...without, { id: complianceId, label: "🛡️ Compliance Evidence Pack", markdown: "" }];
+    });
+    setActiveReportId(complianceId);
+
+    await generateSingleReport(
+      complianceId,
+      files.length === 1 ? files[0].extractedData : mergedSections as unknown as ExtractedSections,
+      { compliance: true, firewallLabels: labels }
+    );
+
     setIsLoading(false);
   };
 
   const generateAll = async () => {
     if (files.length < 2) return;
-    await generateIndividual(true);
+    setIsLoading(true);
+    setFailedReportIds(new Set());
+
+    // Create all report entries upfront (individual + executive)
+    const newReports: ReportEntry[] = files.map((f) => ({
+      id: `report-${f.id}`,
+      label: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
+      markdown: "",
+    }));
+    setReports(newReports);
+    setActiveReportId(newReports[0].id);
+
+    // Generate all individual in parallel
+    await Promise.all(
+      files.map((f) => generateSingleReport(`report-${f.id}`, f.extractedData))
+    );
+
+    // Then executive
     await generateExecutive(true);
   };
+
+  const handleRetry = useCallback((reportId: string) => {
+    // Find what to regenerate
+    if (reportId === "report-executive") {
+      const mergedSections: Record<string, ExtractedSections> = {};
+      const labels: string[] = [];
+      files.forEach((f) => {
+        const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+        labels.push(label);
+        mergedSections[label] = f.extractedData;
+      });
+      generateSingleReport(reportId, mergedSections as unknown as ExtractedSections, {
+        executive: true,
+        firewallLabels: labels,
+      });
+    } else if (reportId === "report-compliance") {
+      const mergedSections: Record<string, ExtractedSections> = {};
+      const labels: string[] = [];
+      files.forEach((f) => {
+        const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+        labels.push(label);
+        mergedSections[label] = f.extractedData;
+      });
+      generateSingleReport(
+        reportId,
+        files.length === 1 ? files[0].extractedData : mergedSections as unknown as ExtractedSections,
+        { compliance: true, firewallLabels: labels }
+      );
+    } else {
+      const file = files.find((f) => `report-${f.id}` === reportId);
+      if (file) {
+        generateSingleReport(reportId, file.extractedData);
+      }
+    }
+  }, [files, generateSingleReport]);
 
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
@@ -149,7 +251,6 @@ const Index = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        {/* Upload + Branding — hide once reports are showing */}
         {!hasReports && !isLoading && (
           <>
             <section className="space-y-4">
@@ -195,30 +296,34 @@ const Index = () => {
                     </Button>
                   </>
                 )}
+                <Button size="lg" variant="outline" onClick={generateCompliance} className="gap-2 text-base">
+                  <ClipboardCheck className="h-5 w-5" /> Compliance Evidence Pack
+                </Button>
               </div>
             )}
           </>
         )}
 
-        {/* Reports */}
         <DocumentPreview
           reports={reports}
           activeReportId={activeReportId}
           onActiveChange={setActiveReportId}
           isLoading={isLoading}
-          loadingReportId={loadingReportId}
+          loadingReportIds={loadingReportIds}
+          failedReportIds={failedReportIds}
+          onRetry={handleRetry}
           branding={branding}
         />
 
-        {/* Start over */}
         {hasReports && !isLoading && (
-          <div className="no-print flex gap-3">
+          <div className="no-print flex flex-wrap gap-3">
             <Button
               variant="outline"
               onClick={() => {
                 setReports([]);
                 setActiveReportId("");
                 setFiles([]);
+                setFailedReportIds(new Set());
               }}
             >
               ← Start Over
@@ -226,6 +331,11 @@ const Index = () => {
             {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
               <Button variant="secondary" onClick={() => generateExecutive()} className="gap-2">
                 <BookOpen className="h-4 w-4" /> Add Executive Summary
+              </Button>
+            )}
+            {!reports.find((r) => r.id === "report-compliance") && (
+              <Button variant="outline" onClick={generateCompliance} className="gap-2">
+                <ClipboardCheck className="h-4 w-4" /> Add Compliance Evidence Pack
               </Button>
             )}
           </div>

@@ -9,12 +9,14 @@ type StreamOptions = {
   executive?: boolean;
   /** Labels for each firewall when generating executive summary */
   firewallLabels?: string[];
+  /** When true, generates a compliance evidence pack */
+  compliance?: boolean;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
 };
 
-export async function streamConfigParse({ sections, environment, country, customerName, executive, firewallLabels, onDelta, onDone, onError }: StreamOptions) {
+export async function streamConfigParse({ sections, environment, country, customerName, executive, firewallLabels, compliance, onDelta, onDone, onError }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const resp = await fetch(url, {
@@ -23,7 +25,7 @@ export async function streamConfigParse({ sections, environment, country, custom
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ sections, environment, country, customerName, executive, firewallLabels }),
+    body: JSON.stringify({ sections, environment, country, customerName, executive, firewallLabels, compliance }),
   });
 
   if (!resp.ok) {

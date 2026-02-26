@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { BrandingData } from "./BrandingSetup";
-import { Loader2, Download, FileText } from "lucide-react";
+import { Loader2, Download, FileText, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { marked } from "marked";
@@ -18,7 +18,9 @@ type Props = {
   activeReportId: string;
   onActiveChange: (id: string) => void;
   isLoading: boolean;
-  loadingReportId: string | null;
+  loadingReportIds: Set<string>;
+  failedReportIds: Set<string>;
+  onRetry: (reportId: string) => void;
   branding: BrandingData;
 };
 
@@ -75,7 +77,6 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
   while (i < lines.length) {
     const trimmed = lines[i].trim();
 
-    // Detect table blocks
     if (isTableRow(trimmed)) {
       const tableLines: string[] = [];
       while (i < lines.length && (isTableRow(lines[i].trim()) || isSeparatorRow(lines[i].trim()))) {
@@ -95,7 +96,6 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
       continue;
     }
 
-    // Headings
     const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)/);
     if (headingMatch) {
       const level = headingMatch[1].length;
@@ -115,7 +115,6 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
       continue;
     }
 
-    // Bullet points
     const bulletMatch = trimmed.match(/^[-*+]\s+(.*)/);
     if (bulletMatch) {
       elements.push(new Paragraph({
@@ -126,7 +125,6 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
       continue;
     }
 
-    // Numbered list
     const numberedMatch = trimmed.match(/^\d+\.\s+(.*)/);
     if (numberedMatch) {
       elements.push(new Paragraph({
@@ -137,7 +135,6 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
       continue;
     }
 
-    // Horizontal rule
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
       elements.push(new Paragraph({
         border: { bottom: { color: "999999", space: 1, style: "single" as any, size: 6 } },
@@ -147,7 +144,6 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
       continue;
     }
 
-    // Regular paragraph
     elements.push(new Paragraph({ children: parseInlineFormatting(trimmed) }));
     i++;
   }
@@ -157,7 +153,6 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
 
 function parseInlineFormatting(text: string): TextRun[] {
   const runs: TextRun[] = [];
-  // Match bold+italic, bold, italic, inline code, or plain text
   const regex = /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|([^*`]+))/g;
   let match;
   while ((match = regex.exec(text)) !== null) {
@@ -176,7 +171,14 @@ function parseInlineFormatting(text: string): TextRun[] {
   return runs.length > 0 ? runs : [new TextRun(text)];
 }
 
-function ReportContent({ markdown, isLoading, branding, pdfFilename }: { markdown: string; isLoading: boolean; branding: BrandingData; pdfFilename: string }) {
+function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename }: {
+  markdown: string;
+  isLoading: boolean;
+  isFailed: boolean;
+  onRetry: () => void;
+  branding: BrandingData;
+  pdfFilename: string;
+}) {
   const docRef = useRef<HTMLDivElement>(null);
 
   const html = useMemo(() => {
@@ -233,7 +235,12 @@ function ReportContent({ markdown, isLoading, branding, pdfFilename }: { markdow
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2 no-print">
-        {markdown && !isLoading && (
+        {isFailed && (
+          <Button variant="destructive" onClick={onRetry} className="gap-2">
+            <RefreshCw className="h-4 w-4" /> Retry
+          </Button>
+        )}
+        {markdown && !isLoading && !isFailed && (
           <>
             <Button variant="secondary" onClick={handleWord} className="gap-2">
               <FileText className="h-4 w-4" /> Download Word
@@ -268,6 +275,16 @@ function ReportContent({ markdown, isLoading, branding, pdfFilename }: { markdow
           </div>
         )}
 
+        {isFailed && !markdown && (
+          <div className="flex flex-col items-center justify-center py-16 text-destructive">
+            <p className="text-lg font-medium mb-2">Generation failed</p>
+            <p className="text-sm text-muted-foreground mb-4">The AI service may be overloaded. Click retry to try again.</p>
+            <Button variant="destructive" onClick={onRetry} className="gap-2">
+              <RefreshCw className="h-4 w-4" /> Retry Generation
+            </Button>
+          </div>
+        )}
+
         {html && <div dangerouslySetInnerHTML={{ __html: html }} />}
 
         {isLoading && markdown && (
@@ -281,10 +298,9 @@ function ReportContent({ markdown, isLoading, branding, pdfFilename }: { markdow
   );
 }
 
-export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportId, branding }: Props) {
+export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding }: Props) {
   if (reports.length === 0 && !isLoading) return null;
 
-  // Single report — no tabs needed
   if (reports.length === 1 && !isLoading) {
     const r = reports[0];
     return (
@@ -292,7 +308,9 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
         <h2 className="text-xl font-bold text-foreground no-print">Document Preview</h2>
         <ReportContent
           markdown={r.markdown}
-          isLoading={loadingReportId === r.id}
+          isLoading={loadingReportIds.has(r.id)}
+          isFailed={failedReportIds.has(r.id)}
+          onRetry={() => onRetry(r.id)}
           branding={branding}
           pdfFilename={`${r.label.replace(/\s+/g, "-").toLowerCase()}-report.pdf`}
         />
@@ -300,12 +318,11 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     );
   }
 
-  // If still loading the very first report with no content yet
   if (reports.length === 0 && isLoading) {
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-foreground no-print">Document Preview</h2>
-        <ReportContent markdown="" isLoading={true} branding={branding} pdfFilename="report.pdf" />
+        <ReportContent markdown="" isLoading={true} isFailed={false} onRetry={() => {}} branding={branding} pdfFilename="report.pdf" />
       </div>
     );
   }
@@ -318,7 +335,8 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
           {reports.map((r) => (
             <TabsTrigger key={r.id} value={r.id} className="text-xs">
               {r.label}
-              {loadingReportId === r.id && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
+              {loadingReportIds.has(r.id) && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
+              {failedReportIds.has(r.id) && <span className="ml-1 text-destructive">⚠</span>}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -326,7 +344,9 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
           <TabsContent key={r.id} value={r.id}>
             <ReportContent
               markdown={r.markdown}
-              isLoading={loadingReportId === r.id}
+              isLoading={loadingReportIds.has(r.id)}
+              isFailed={failedReportIds.has(r.id)}
+              onRetry={() => onRetry(r.id)}
               branding={branding}
               pdfFilename={`${r.label.replace(/\s+/g, "-").toLowerCase()}-report.pdf`}
             />

@@ -55,6 +55,85 @@ Write a comprehensive executive Markdown document with:
 - Do NOT reproduce every individual rule — summarise and highlight exceptions
 - Use Markdown tables for structured data`;
 
+const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity auditor producing an audit-ready Compliance Evidence Pack from firewall configuration data. This document must be formatted for direct inclusion as an appendix in compliance audits.
+
+## Output Format
+
+Write a structured Markdown document with these sections:
+
+### 1. Document Header
+- **Title**: "Compliance Evidence Pack — Firewall Configuration Audit"
+- **Date**: Current assessment date
+- **Scope**: Firewalls assessed, environment type
+
+### 2. Control → Evidence Mapping Tables
+For EACH applicable framework below, produce a Markdown table with columns:
+| Control ID | Control Description | Status | Evidence | Config Excerpt | Notes |
+
+Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A
+
+### 3. Frameworks to Assess
+
+**Cyber Essentials / CE+**
+- Boundary firewalls and internet gateways
+- Secure configuration
+- Access control
+- Malware protection
+- Patch management (where visible in config)
+
+**ISO 27001 Annex A (2022)**
+- A.8.20 Network security
+- A.8.21 Security of network services
+- A.8.22 Segregation in networks
+- A.8.23 Web filtering
+- A.5.15 Access control
+- A.8.9 Configuration management
+- Other applicable controls from the config
+
+**NCSC Guidance Alignment**
+- 10 Steps to Cyber Security alignment
+- Cloud Security Principles (where applicable)
+- Network security guidance
+
+**KCSIE (Keeping Children Safe in Education)**
+- Content filtering evidence
+- Monitoring capabilities
+- Logging and alerting
+- Age-appropriate filtering
+
+**PCI DSS v4.0 Firewall Controls**
+- Requirement 1: Install and maintain network security controls
+- 1.2.1 Restrict inbound/outbound traffic
+- 1.2.5 Services, protocols, ports permitted
+- 1.3 Network access to cardholder data environment
+- 1.4 Network connections between trusted/untrusted
+
+### 4. Textual Evidence Sections
+For each control area, provide:
+- **Configuration excerpts** — quote actual rule names, zone configurations, policy settings from the data
+- **What was observed** — factual statement of what the config shows
+- **Assessment** — whether this meets the control requirement
+
+### 5. Not Applicable Justifications
+For any control marked N/A, provide a clear justification statement suitable for an auditor.
+
+### 6. Residual Risk Statements
+List identified residual risks in a table:
+| Risk ID | Description | Affected Controls | Severity | Recommended Mitigation |
+
+### 7. Summary of Findings
+- Total controls assessed per framework
+- Met / Partial / Not Met / N/A counts
+- Overall compliance posture statement
+
+## Rules
+- Use ONLY the actual configuration data provided — never invent details
+- Quote specific rule names, IP ranges, zones, and policy names as evidence
+- Be specific about which rules/settings satisfy which controls
+- If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
+- Format for direct use as an audit appendix — professional, factual, no narrative fluff
+- Every claim must be traceable to config data`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -67,6 +146,7 @@ serve(async (req) => {
     const country: string | undefined = body?.country;
     const customerName: string | undefined = body?.customerName;
     const executive: boolean = body?.executive === true;
+    const compliance: boolean = body?.compliance === true;
     const firewallLabels: string[] | undefined = body?.firewallLabels;
 
     if (!sections || typeof sections !== "object") {
@@ -99,23 +179,25 @@ serve(async (req) => {
       complianceContext += "\n\n## Compliance Context\n";
       if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
       if (country) complianceContext += `- **Country**: ${country}\n`;
-      complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country. For example:\n`;
-      complianceContext += `- UK Education → KCSIE (Keeping Children Safe in Education), DfE filtering/monitoring standards, email alerting (Sophos v22+)\n`;
-      complianceContext += `- UK any sector → GDPR, UK Cyber Essentials, NCSC guidelines\n`;
-      complianceContext += `- US Healthcare → HIPAA, HITECH\n`;
-      complianceContext += `- US Government → NIST 800-53, FedRAMP, CMMC\n`;
-      complianceContext += `- Financial Services → PCI DSS, SOX\n`;
-      complianceContext += `- Operational Technology → IEC 62443, NIST 800-82\n`;
-      complianceContext += `- Critical Infrastructure → NIS2 (EU), NERC CIP (US)\n`;
-      complianceContext += `- Defence → MOD Cyber, ITAR, CMMC\n`;
-      complianceContext += `Be specific about which standards apply and cite actual requirements where possible. Flag any configuration gaps against these standards.\n`;
+      complianceContext += `\nIMPORTANT: Tailor ALL recommendations and assessments to focus on compliance frameworks and regulatory requirements relevant to this environment and country. Prioritise frameworks most relevant to this context.\n`;
     }
 
-    const basePrompt = executive ? EXECUTIVE_SYSTEM_PROMPT : SYSTEM_PROMPT;
+    let basePrompt: string;
+    if (compliance) {
+      basePrompt = COMPLIANCE_SYSTEM_PROMPT;
+    } else if (executive) {
+      basePrompt = EXECUTIVE_SYSTEM_PROMPT;
+    } else {
+      basePrompt = SYSTEM_PROMPT;
+    }
     const systemPrompt = basePrompt + complianceContext;
 
     let userMessage: string;
-    if (executive && firewallLabels) {
+    if (compliance && firewallLabels && firewallLabels.length > 1) {
+      userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a comprehensive Compliance Evidence Pack covering all firewalls:\n\n${payload}`;
+    } else if (compliance) {
+      userMessage = `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Evidence Pack:\n\n${payload}`;
+    } else if (executive && firewallLabels) {
       userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
     } else {
       userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
