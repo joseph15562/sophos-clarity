@@ -74,57 +74,6 @@ Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A
 
 ### 3. Frameworks to Assess
 
-**Cyber Essentials / CE+**
-- Boundary firewalls and internet gateways
-- Secure configuration
-- Access control
-- Malware protection
-- Patch management (where visible in config)
-
-**ISO 27001 Annex A (2022)**
-- A.8.20 Network security
-- A.8.21 Security of network services
-- A.8.22 Segregation in networks
-- A.8.23 Web filtering
-- A.5.15 Access control
-- A.8.9 Configuration management
-- Other applicable controls from the config
-
-**NCSC Guidance Alignment**
-- 10 Steps to Cyber Security alignment
-- Cloud Security Principles (where applicable)
-- Network security guidance
-
-**KCSIE (Keeping Children Safe in Education)**
-- Content filtering evidence
-- Monitoring capabilities
-- Logging and alerting
-- Age-appropriate filtering
-
-**PCI DSS v4.0 Firewall Controls**
-- Requirement 1: Install and maintain network security controls
-- 1.2.1 Restrict inbound/outbound traffic
-- 1.2.5 Services, protocols, ports permitted
-- 1.3 Network access to cardholder data environment
-- 1.4 Network connections between trusted/untrusted
-
-### 4. Textual Evidence Sections
-For each control area, provide:
-- **Configuration excerpts** — quote actual rule names, zone configurations, policy settings from the data
-- **What was observed** — factual statement of what the config shows
-- **Assessment** — whether this meets the control requirement
-
-### 5. Not Applicable Justifications
-For any control marked N/A, provide a clear justification statement suitable for an auditor.
-
-### 6. Residual Risk Statements
-List identified residual risks in a table:
-| Risk ID | Description | Affected Controls | Severity | Recommended Mitigation |
-
-### 7. Summary of Findings
-- Total controls assessed per framework
-- Met / Partial / Not Met / N/A counts
-- Overall compliance posture statement
 
 ## Rules
 - Use ONLY the actual configuration data provided — never invent details
@@ -170,16 +119,26 @@ serve(async (req) => {
 
     const payload = JSON.stringify(sections, null, 2);
 
-    // Build compliance context
+  // Build compliance context
     let complianceContext = "";
     if (customerName) {
-      complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Address the customer by name throughout the document (e.g. "This report documents the firewall configuration for ${customerName}"). Use the customer name in the Executive Summary and Overall Security Recommendations.\n`;
+      complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Address the customer by name throughout the document (e.g. "This report documents the firewall configuration for ${customerName}"). Use the customer name in the Executive Summary, Overall Security Recommendations and Frameworks to Assess.\n`;
     }
+    
     if (environment || country) {
       complianceContext += "\n\n## Compliance Context\n";
       if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
       if (country) complianceContext += `- **Country**: ${country}\n`;
-      complianceContext += `\nIMPORTANT: Tailor ALL recommendations and assessments to focus on compliance frameworks and regulatory requirements relevant to this environment and country. Prioritise frameworks most relevant to this context.\n`;
+      complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country. For example:\n`;
+      complianceContext += `- UK Education → KCSIE (Keeping Children Safe in Education), DfE filtering/monitoring standards, email alerting (Sophos v22+)\n`;
+      complianceContext += `- UK any sector → GDPR, UK Cyber Essentials, NCSC guidelines\n`;
+      complianceContext += `- US Healthcare → HIPAA, HITECH\n`;
+      complianceContext += `- US Government → NIST 800-53, FedRAMP, CMMC\n`;
+      complianceContext += `- Financial Services → PCI DSS, SOX\n`;
+      complianceContext += `- Operational Technology → IEC 62443, NIST 800-82\n`;
+      complianceContext += `- Critical Infrastructure → NIS2 (EU), NERC CIP (US)\n`;
+      complianceContext += `- Defence → MOD Cyber, ITAR, CMMC\n`;
+      complianceContext += `Be specific about which standards apply and cite actual requirements where possible. Flag any configuration gaps against these standards.\n`;
     }
 
     let basePrompt: string;
