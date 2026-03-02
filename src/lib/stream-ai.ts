@@ -5,18 +5,16 @@ type StreamOptions = {
   environment?: string;
   country?: string;
   customerName?: string;
-  /** When true, signals the edge function to produce an executive summary across multiple firewalls */
+  selectedFrameworks?: string[];
   executive?: boolean;
-  /** Labels for each firewall when generating executive summary */
   firewallLabels?: string[];
-  /** When true, generates a compliance evidence pack */
   compliance?: boolean;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
 };
 
-export async function streamConfigParse({ sections, environment, country, customerName, executive, firewallLabels, compliance, onDelta, onDone, onError }: StreamOptions) {
+export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, onDelta, onDone, onError }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const resp = await fetch(url, {
@@ -25,7 +23,7 @@ export async function streamConfigParse({ sections, environment, country, custom
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ sections, environment, country, customerName, executive, firewallLabels, compliance }),
+    body: JSON.stringify({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance }),
   });
 
   if (!resp.ok) {
