@@ -15,7 +15,7 @@ Output Format
 Write well-structured Markdown with:
 - An Executive Summary at the top with a brief overview of the firewall configuration (number of rules, key security posture observations, overall assessment)
 - Clear Section headings for each configuration area
-- Markdown tables for listing rules, hosts, networks, and settings — use tables instead of bullet lists wherever data has consistent columns
+- Markdown tables for listing rules, hosts, interfaces & networks, and settings — use tables instead of bullet lists wherever data has consistent columns
 - After each section's table(s), include a Summary paragraph explaining the purpose and overall pattern of that section
 - After each section, include a Best Practice Recommendations subsection with actionable advice specific to the configuration shown (e.g. unused rules, overly permissive access, missing logging, disabled security features)
 
@@ -30,7 +30,7 @@ Rules
 - If a section has no data, write "No configuration found in export."
 - Do NOT output raw JSON — write documentation in Markdown tables and prose
 - Start with the Executive Summary, then proceed section by section
-- End with a **## Overall Security Recommendations** section covering cross-cutting best practices based on the entire configuration`;
+- End with a Overall Security Recommendations section covering cross-cutting best practices based on the entire configuration`;
 
 const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing a consolidated executive summary report for an MSP covering MULTIPLE firewall configurations.
 
@@ -57,7 +57,7 @@ Rules
 
 const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity auditor producing an audit-ready Compliance Evidence Pack from firewall configuration data. This document must be formatted for direct inclusion as an appendix in compliance audits.
 
-## Output Format
+Output Format
 
 Write a structured Markdown document with these sections:
 
