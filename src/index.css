@@ -122,12 +122,17 @@
   }
   .doc-section table {
     @apply w-full text-sm border-collapse mb-4;
+    table-layout: fixed;
   }
   .doc-section th {
-    @apply bg-muted text-left px-3 py-2 font-semibold text-foreground border border-border;
+    @apply bg-muted text-left px-2 py-1.5 font-semibold text-foreground border border-border text-xs;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   .doc-section td {
-    @apply px-3 py-2 border border-border text-muted-foreground;
+    @apply px-2 py-1.5 border border-border text-muted-foreground text-xs;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 }
 
