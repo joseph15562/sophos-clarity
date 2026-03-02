@@ -1,10 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// --- CORS: restrict to known origins ---
+const ALLOWED_ORIGINS = [
+  "https://id-preview--dbd2afbe-47ab-4a48-ab73-3b2c2ec34606.lovable.app",
+  "http://localhost:8080",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
+
+// --- Input validation constants ---
+const MAX_SECTIONS = 50;
+const MAX_PAYLOAD_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_STRING_LENGTH = 500;
+const MAX_FRAMEWORKS = 30;
+const MAX_LABELS = 20;
 
 const SYSTEM_PROMPT = `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover.
 
@@ -84,6 +102,8 @@ Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A
 - Every claim must be traceable to config data`;
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -99,21 +119,66 @@ serve(async (req) => {
     const firewallLabels: string[] | undefined = body?.firewallLabels;
     const selectedFrameworks: string[] | undefined = body?.selectedFrameworks;
 
-    if (!sections || typeof sections !== "object") {
+    // --- Input validation ---
+    if (!sections || typeof sections !== "object" || Array.isArray(sections)) {
       return new Response(
-        JSON.stringify({ error: "Missing sections field. Expected pre-extracted JSON." }),
+        JSON.stringify({ error: "Missing or invalid sections field." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Debug mode
-    const url = new URL(req.url);
-    if (url.searchParams.get("debug") === "1") {
-      return new Response(JSON.stringify({ sections, sectionCount: Object.keys(sections).length }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const sectionKeys = Object.keys(sections);
+    if (sectionKeys.length === 0 || sectionKeys.length > MAX_SECTIONS) {
+      return new Response(
+        JSON.stringify({ error: `Sections count must be between 1 and ${MAX_SECTIONS}.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const payloadSize = JSON.stringify(sections).length;
+    if (payloadSize > MAX_PAYLOAD_SIZE) {
+      return new Response(
+        JSON.stringify({ error: "Payload exceeds maximum allowed size." }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (environment && (typeof environment !== "string" || environment.length > MAX_STRING_LENGTH)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid environment parameter." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (country && (typeof country !== "string" || country.length > MAX_STRING_LENGTH)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid country parameter." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (customerName && (typeof customerName !== "string" || customerName.length > MAX_STRING_LENGTH)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid customerName parameter." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (selectedFrameworks && (!Array.isArray(selectedFrameworks) || selectedFrameworks.length > MAX_FRAMEWORKS || !selectedFrameworks.every((f: unknown) => typeof f === "string" && f.length < MAX_STRING_LENGTH))) {
+      return new Response(
+        JSON.stringify({ error: "Invalid selectedFrameworks parameter." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (firewallLabels && (!Array.isArray(firewallLabels) || firewallLabels.length > MAX_LABELS || !firewallLabels.every((l: unknown) => typeof l === "string" && l.length < MAX_STRING_LENGTH))) {
+      return new Response(
+        JSON.stringify({ error: "Invalid firewallLabels parameter." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Debug mode removed for security
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -209,7 +274,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("parse-config error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "An internal error occurred." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
