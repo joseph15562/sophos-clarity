@@ -14,7 +14,7 @@ type ParsedFile = UploadedFile & { extractedData: ExtractedSections };
 const Index = () => {
   const { toast } = useToast();
   const [files, setFiles] = useState<ParsedFile[]>([]);
-  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "" });
+  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] });
   const [reports, setReports] = useState<ReportEntry[]>([]);
   const [activeReportId, setActiveReportId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,6 +64,7 @@ const Index = () => {
           environment: branding.environment || undefined,
           country: branding.country || undefined,
           customerName: branding.customerName || undefined,
+          selectedFrameworks: branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined,
           executive: opts?.executive,
           firewallLabels: opts?.firewallLabels,
           compliance: opts?.compliance,

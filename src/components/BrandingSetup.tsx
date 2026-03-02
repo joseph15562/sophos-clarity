@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, ImageIcon, Globe, Landmark, User } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -8,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEffect } from "react";
 
 export const ENVIRONMENT_TYPES = [
   "Education",
@@ -41,12 +43,90 @@ export const COUNTRIES = [
   "Japan",
 ] as const;
 
+export const ALL_FRAMEWORKS = [
+  "GDPR",
+  "Cyber Essentials / CE+",
+  "NCSC Guidelines",
+  "DfE / KCSIE",
+  "ISO 27001",
+  "PCI DSS",
+  "HIPAA",
+  "HITECH",
+  "NIST 800-53",
+  "FedRAMP",
+  "CMMC",
+  "SOX",
+  "IEC 62443",
+  "NIST 800-82",
+  "NIS2",
+  "NERC CIP",
+  "MOD Cyber / ITAR",
+] as const;
+
+export type ComplianceFramework = (typeof ALL_FRAMEWORKS)[number];
+
+/** Returns default frameworks for a given environment + country combo */
+function getDefaultFrameworks(environment: string, country: string): ComplianceFramework[] {
+  const fw: ComplianceFramework[] = [];
+  const isUK = country === "United Kingdom";
+  const isUS = country === "United States";
+  const isEU = ["Germany", "France", "Netherlands", "Ireland"].includes(country);
+
+  // Country-level defaults
+  if (isUK) {
+    fw.push("GDPR", "Cyber Essentials / CE+", "NCSC Guidelines");
+  }
+  if (isUS) {
+    fw.push("NIST 800-53");
+  }
+  if (isEU) {
+    fw.push("GDPR", "NIS2");
+  }
+  // Australia, Canada, NZ etc get ISO by default
+  if (["Australia", "Canada", "New Zealand"].includes(country)) {
+    fw.push("ISO 27001");
+  }
+
+  // Environment-level defaults
+  switch (environment) {
+    case "Education":
+      if (isUK) fw.push("DfE / KCSIE");
+      break;
+    case "Healthcare":
+      if (isUS) fw.push("HIPAA", "HITECH");
+      break;
+    case "Government":
+      if (isUS) fw.push("FedRAMP", "CMMC");
+      break;
+    case "Financial Services":
+      fw.push("PCI DSS", "SOX");
+      break;
+    case "Operational Technology":
+      fw.push("IEC 62443", "NIST 800-82");
+      break;
+    case "Critical Infrastructure":
+      if (isEU) fw.push("NIS2");
+      if (isUS) fw.push("NERC CIP");
+      break;
+    case "Defence":
+      fw.push("MOD Cyber / ITAR", "CMMC");
+      break;
+    case "Retail & Hospitality":
+      fw.push("PCI DSS");
+      break;
+  }
+
+  // Deduplicate
+  return [...new Set(fw)];
+}
+
 export type BrandingData = {
   companyName: string;
   logoUrl: string | null;
   customerName: string;
   environment: string;
   country: string;
+  selectedFrameworks: ComplianceFramework[];
 };
 
 type Props = {
@@ -55,6 +135,15 @@ type Props = {
 };
 
 export function BrandingSetup({ branding, onChange }: Props) {
+  // Auto-populate frameworks when environment or country changes
+  useEffect(() => {
+    if (branding.environment || branding.country) {
+      const defaults = getDefaultFrameworks(branding.environment, branding.country);
+      onChange({ ...branding, selectedFrameworks: defaults });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branding.environment, branding.country]);
+
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -63,6 +152,14 @@ export function BrandingSetup({ branding, onChange }: Props) {
       onChange({ ...branding, logoUrl: ev.target?.result as string });
     };
     reader.readAsDataURL(file);
+  };
+
+  const toggleFramework = (fw: ComplianceFramework) => {
+    const current = branding.selectedFrameworks;
+    const next = current.includes(fw)
+      ? current.filter((f) => f !== fw)
+      : [...current, fw];
+    onChange({ ...branding, selectedFrameworks: next });
   };
 
   return (
@@ -160,8 +257,32 @@ export function BrandingSetup({ branding, onChange }: Props) {
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Local regulatory compliance (e.g. GDPR, KCSIE, HIPAA) will be applied based on country.
+          Local regulatory compliance will be applied based on country.
         </p>
+      </div>
+
+      {/* Compliance Frameworks */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4" /> Compliance Frameworks
+        </Label>
+        <p className="text-xs text-muted-foreground">
+          Auto-selected based on environment & country. Tick or untick to customise.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+          {ALL_FRAMEWORKS.map((fw) => (
+            <label
+              key={fw}
+              className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5 transition-colors"
+            >
+              <Checkbox
+                checked={branding.selectedFrameworks.includes(fw)}
+                onCheckedChange={() => toggleFramework(fw)}
+              />
+              <span className="select-none">{fw}</span>
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   );

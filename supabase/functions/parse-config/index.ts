@@ -97,6 +97,7 @@ serve(async (req) => {
     const executive: boolean = body?.executive === true;
     const compliance: boolean = body?.compliance === true;
     const firewallLabels: string[] | undefined = body?.firewallLabels;
+    const selectedFrameworks: string[] | undefined = body?.selectedFrameworks;
 
     if (!sections || typeof sections !== "object") {
       return new Response(
@@ -129,16 +130,17 @@ serve(async (req) => {
       complianceContext += "\n\n## Compliance Context\n";
       if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
       if (country) complianceContext += `- **Country**: ${country}\n`;
-      complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country. For example:\n`;
-      complianceContext += `- UK Education → KCSIE (Keeping Children Safe in Education), DfE filtering/monitoring standards, email alerting (Sophos v22+)\n`;
-      complianceContext += `- UK any sector → GDPR, UK Cyber Essentials, NCSC guidelines\n`;
-      complianceContext += `- US Healthcare → HIPAA, HITECH\n`;
-      complianceContext += `- US Government → NIST 800-53, FedRAMP, CMMC\n`;
-      complianceContext += `- Financial Services → PCI DSS, SOX\n`;
-      complianceContext += `- Operational Technology → IEC 62443, NIST 800-82\n`;
-      complianceContext += `- Critical Infrastructure → NIS2 (EU), NERC CIP (US)\n`;
-      complianceContext += `- Defence → MOD Cyber, ITAR, CMMC\n`;
-      complianceContext += `Be specific about which standards apply and cite actual requirements where possible. Flag any configuration gaps against these standards.\n`;
+    }
+
+    // Add selected frameworks
+    if (selectedFrameworks && selectedFrameworks.length > 0) {
+      complianceContext += `\n\n## Selected Compliance Frameworks\nThe following frameworks have been selected for this assessment. You MUST assess against ALL of these and ONLY these frameworks:\n`;
+      selectedFrameworks.forEach((fw) => {
+        complianceContext += `- **${fw}**\n`;
+      });
+      complianceContext += `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
+    } else if (environment || country) {
+      complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
     }
 
     let basePrompt: string;
