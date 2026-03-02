@@ -1,17 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // --- CORS: restrict to known origins ---
-const ALLOWED_ORIGINS = [
-  "https://id-preview--dbd2afbe-47ab-4a48-ab73-3b2c2ec34606.lovable.app",
-  "http://localhost:8080",
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
+const PROJECT_ID = "dbd2afbe-47ab-4a48-ab73-3b2c2ec34606";
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  // Allow localhost dev servers
+  if (/^http:\/\/localhost:(3000|5173|8080)$/.test(origin)) return true;
+  // Allow any Lovable preview/published URL for this project
+  if (origin.includes(PROJECT_ID)) return true;
+  return false;
+}
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : `https://${PROJECT_ID}.lovableproject.com`,
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };
