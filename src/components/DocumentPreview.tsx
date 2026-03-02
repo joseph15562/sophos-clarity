@@ -1,4 +1,5 @@
 import { useMemo, useRef } from "react";
+import DOMPurify from "dompurify";
 import { BrandingData } from "./BrandingSetup";
 import { Loader2, Download, FileText, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -183,7 +184,8 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
 
   const html = useMemo(() => {
     if (!markdown) return "";
-    return marked.parse(markdown, { async: false }) as string;
+    const rawHtml = marked.parse(markdown, { async: false }) as string;
+    return DOMPurify.sanitize(rawHtml);
   }, [markdown]);
 
   const handlePdf = async () => {
