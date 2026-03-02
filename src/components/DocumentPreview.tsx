@@ -189,14 +189,40 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   const handlePdf = async () => {
     const el = docRef.current;
     if (!el) return;
-    const html2pdf = (await import("html2pdf.js")).default;
-    html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: pdfFilename,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-    }).from(el).save();
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const styles = Array.from(document.styleSheets)
+      .map((sheet) => {
+        try {
+          return Array.from(sheet.cssRules).map((rule) => rule.cssText).join("\n");
+        } catch {
+          return "";
+        }
+      })
+      .join("\n");
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${pdfFilename.replace(/\.pdf$/i, "")}</title>
+          <style>
+            ${styles}
+            @media print {
+              body { margin: 10mm; }
+              @page { size: A4; margin: 10mm; }
+            }
+          </style>
+        </head>
+        <body>${el.innerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   const handleWord = async () => {
