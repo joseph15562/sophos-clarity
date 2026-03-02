@@ -1,32 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// --- CORS: restrict to known origins ---
-const PROJECT_ID = "dbd2afbe-47ab-4a48-ab73-3b2c2ec34606";
-
-function isAllowedOrigin(origin: string): boolean {
-  if (!origin) return false;
-  // Allow localhost dev servers
-  if (/^http:\/\/localhost:(3000|5173|8080)$/.test(origin)) return true;
-  // Allow any Lovable preview/published URL for this project
-  if (origin.includes(PROJECT_ID)) return true;
-  return false;
-}
-
-function getCorsHeaders(req: Request) {
-  const origin = req.headers.get("origin") || "";
-  return {
-    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : `https://${PROJECT_ID}.lovableproject.com`,
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  };
-}
-
-// --- Input validation constants ---
-const MAX_SECTIONS = 50;
-const MAX_PAYLOAD_SIZE = 2 * 1024 * 1024; // 2MB
-const MAX_STRING_LENGTH = 500;
-const MAX_FRAMEWORKS = 30;
-const MAX_LABELS = 20;
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 const SYSTEM_PROMPT = `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover.
 
@@ -96,6 +74,23 @@ Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A
 
 ### 3. Frameworks to Assess
 
+### 4. Textual Evidence Sections
+For each control area, provide:
+- **Configuration excerpts** — quote actual rule names, zone configurations, policy settings from the data
+- **What was observed** — factual statement of what the config shows
+- **Assessment** — whether this meets the control requirement
+
+### 5. Not Applicable Justifications
+For any control marked N/A, provide a clear justification statement suitable for an auditor.
+
+### 6. Residual Risk Statements
+List identified residual risks in a table:
+| Risk ID | Description | Affected Controls | Severity | Recommended Mitigation |
+
+### 7. Summary of Findings
+- Total controls assessed per framework
+- Met / Partial / Not Met / N/A counts
+- Overall compliance posture statement
 
 ## Rules
 - Use ONLY the actual configuration data provided — never invent details
@@ -106,8 +101,6 @@ Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A
 - Every claim must be traceable to config data`;
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
-
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -123,69 +116,25 @@ serve(async (req) => {
     const firewallLabels: string[] | undefined = body?.firewallLabels;
     const selectedFrameworks: string[] | undefined = body?.selectedFrameworks;
 
-    // --- Input validation ---
-    if (!sections || typeof sections !== "object" || Array.isArray(sections)) {
+    if (!sections || typeof sections !== "object") {
       return new Response(
-        JSON.stringify({ error: "Missing or invalid sections field." }),
+        JSON.stringify({ error: "Missing sections field. Expected pre-extracted JSON." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const sectionKeys = Object.keys(sections);
-    if (sectionKeys.length === 0 || sectionKeys.length > MAX_SECTIONS) {
-      return new Response(
-        JSON.stringify({ error: `Sections count must be between 1 and ${MAX_SECTIONS}.` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Debug mode
+    const url = new URL(req.url);
+    if (url.searchParams.get("debug") === "1") {
+      return new Response(JSON.stringify({ sections, sectionCount: Object.keys(sections).length }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const payloadSize = JSON.stringify(sections).length;
-    if (payloadSize > MAX_PAYLOAD_SIZE) {
-      return new Response(
-        JSON.stringify({ error: "Payload exceeds maximum allowed size." }),
-        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (environment && (typeof environment !== "string" || environment.length > MAX_STRING_LENGTH)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid environment parameter." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (country && (typeof country !== "string" || country.length > MAX_STRING_LENGTH)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid country parameter." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (customerName && (typeof customerName !== "string" || customerName.length > MAX_STRING_LENGTH)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid customerName parameter." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (selectedFrameworks && (!Array.isArray(selectedFrameworks) || selectedFrameworks.length > MAX_FRAMEWORKS || !selectedFrameworks.every((f: unknown) => typeof f === "string" && f.length < MAX_STRING_LENGTH))) {
-      return new Response(
-        JSON.stringify({ error: "Invalid selectedFrameworks parameter." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (firewallLabels && (!Array.isArray(firewallLabels) || firewallLabels.length > MAX_LABELS || !firewallLabels.every((l: unknown) => typeof l === "string" && l.length < MAX_STRING_LENGTH))) {
-      return new Response(
-        JSON.stringify({ error: "Invalid firewallLabels parameter." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Debug mode removed for security
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    // Updated to use Gemini API Key
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const payload = JSON.stringify(sections, null, 2);
 
@@ -211,7 +160,6 @@ serve(async (req) => {
     } else if (environment || country) {
       complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
     }
-
     let basePrompt: string;
     if (compliance) {
       basePrompt = COMPLIANCE_SYSTEM_PROMPT;
@@ -233,36 +181,32 @@ serve(async (req) => {
       userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Updated endpoint and model for Gemini
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + LOVABLE_API_KEY,
+        "Authorization": `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
+          { role: "user", content: userMessage }
         ],
         stream: true,
+        temperature: 0.1
       }),
     });
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("AI gateway error:", response.status, text);
+      console.error("Gemini API error:", response.status, text);
 
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -278,7 +222,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("parse-config error:", e);
     return new Response(
-      JSON.stringify({ error: "An internal error occurred." }),
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
