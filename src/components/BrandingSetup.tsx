@@ -50,6 +50,8 @@ export const ALL_FRAMEWORKS = [
   "DfE / KCSIE",
   "ISO 27001",
   "PCI DSS",
+  "FCA",
+  "PRA",
   "HIPAA",
   "HITECH",
   "NIST 800-53",
@@ -100,6 +102,7 @@ function getDefaultFrameworks(environment: string, country: string): ComplianceF
       break;
     case "Financial Services":
       fw.push("PCI DSS", "SOX");
+      if (isUK) fw.push("FCA", "PRA");
       break;
     case "Operational Technology":
       fw.push("IEC 62443", "NIST 800-82");
