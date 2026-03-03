@@ -8,6 +8,7 @@ import { marked } from "marked";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
+import PptxGenJS from "pptxgenjs";
 
 export type ReportEntry = {
   id: string;
@@ -317,6 +318,213 @@ async function generateWordBlob(markdown: string, branding: BrandingData): Promi
   return Packer.toBlob(doc);
 }
 
+/** Generate a PowerPoint presentation from markdown report */
+async function generatePptxBlob(markdown: string, reportLabel: string, branding: BrandingData): Promise<Blob> {
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.author = branding.companyName || "Firewall Report";
+  pptx.title = `${reportLabel} - Firewall Report`;
+
+  const PRIMARY = "1a1a2e";
+  const ACCENT = "6366f1";
+  const GRAY = "64748b";
+  const LIGHT_BG = "f1f5f9";
+
+  // --- Title slide ---
+  const titleSlide = pptx.addSlide();
+  titleSlide.background = { color: PRIMARY };
+  if (branding.companyName) {
+    titleSlide.addText(branding.companyName, {
+      x: 0.8, y: 1.2, w: 11, h: 1,
+      fontSize: 36, bold: true, color: "FFFFFF",
+      fontFace: "Segoe UI",
+    });
+  }
+  titleSlide.addText(reportLabel, {
+    x: 0.8, y: 2.4, w: 11, h: 0.8,
+    fontSize: 24, color: "c7d2fe",
+    fontFace: "Segoe UI",
+  });
+  titleSlide.addText("Firewall Configuration Report", {
+    x: 0.8, y: 3.4, w: 11, h: 0.6,
+    fontSize: 16, color: "94a3b8",
+    fontFace: "Segoe UI",
+  });
+  titleSlide.addText(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), {
+    x: 0.8, y: 4.4, w: 11, h: 0.5,
+    fontSize: 12, color: "94a3b8",
+    fontFace: "Segoe UI",
+  });
+
+  // Parse markdown into sections
+  const lines = markdown.split("\n");
+  let currentH2 = "";
+  let currentBullets: string[] = [];
+  const sections: { title: string; bullets: string[]; tables: { headers: string[]; rows: string[][] }[] }[] = [];
+  let currentTables: { headers: string[]; rows: string[][] }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const h2Match = line.match(/^##\s+(.*)/);
+    const h3Match = line.match(/^###\s+(.*)/);
+
+    if (h2Match || h3Match) {
+      if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0)) {
+        sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables] });
+      }
+      currentH2 = (h2Match || h3Match)![1];
+      currentBullets = [];
+      currentTables = [];
+      continue;
+    }
+
+    // Collect table
+    if (isTableRow(line)) {
+      const tableLines: string[] = [];
+      while (i < lines.length && (isTableRow(lines[i].trim()) || isSeparatorRow(lines[i].trim()))) {
+        tableLines.push(lines[i].trim());
+        i++;
+      }
+      i--; // step back
+      const dataLines = tableLines.filter(l => !isSeparatorRow(l));
+      if (dataLines.length >= 2) {
+        const headers = parseTableRow(dataLines[0]);
+        const rows = dataLines.slice(1).map(l => parseTableRow(l));
+        currentTables.push({ headers, rows });
+      }
+      continue;
+    }
+
+    // Collect bullet points and key text
+    const bulletMatch = line.match(/^[-*+]\s+(.*)/);
+    if (bulletMatch) {
+      currentBullets.push(bulletMatch[1].replace(/\*\*/g, ""));
+      continue;
+    }
+
+    // Collect numbered items
+    const numMatch = line.match(/^\d+\.\s+(.*)/);
+    if (numMatch) {
+      currentBullets.push(numMatch[1].replace(/\*\*/g, ""));
+      continue;
+    }
+
+    // Collect bold key-value lines as bullets
+    if (line.startsWith("**") && line.includes(":")) {
+      currentBullets.push(line.replace(/\*\*/g, ""));
+    }
+  }
+  // Push last section
+  if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0)) {
+    sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables] });
+  }
+
+  // --- Generate slides for each section ---
+  for (const section of sections) {
+    // Section title slide
+    const sectionSlide = pptx.addSlide();
+    sectionSlide.addText(section.title, {
+      x: 0.8, y: 0.3, w: 11, h: 0.7,
+      fontSize: 22, bold: true, color: PRIMARY,
+      fontFace: "Segoe UI",
+    });
+    sectionSlide.addShape(pptx.ShapeType.rect, {
+      x: 0.8, y: 0.95, w: 2.5, h: 0.04,
+      fill: { color: ACCENT },
+    });
+
+    // Bullets (paginate if >8)
+    if (section.bullets.length > 0) {
+      const chunks = chunkArray(section.bullets, 8);
+      const isFirst = true;
+      let slideRef = sectionSlide;
+
+      for (let ci = 0; ci < chunks.length; ci++) {
+        if (ci > 0) {
+          slideRef = pptx.addSlide();
+          slideRef.addText(`${section.title} (cont.)`, {
+            x: 0.8, y: 0.3, w: 11, h: 0.7,
+            fontSize: 18, bold: true, color: PRIMARY,
+            fontFace: "Segoe UI",
+          });
+        }
+        const yStart = ci === 0 && isFirst ? 1.2 : 1.0;
+        const bulletTexts = chunks[ci].map(b => ({
+          text: b,
+          options: { fontSize: 13, color: "334155", bullet: { code: "2022" }, fontFace: "Segoe UI", breakLine: true as const },
+        }));
+        slideRef.addText(bulletTexts as any, {
+          x: 0.8, y: yStart, w: 11, h: 5.5 - yStart,
+          valign: "top",
+          lineSpacingMultiple: 1.3,
+        });
+      }
+    }
+
+    // Tables (one slide per table, paginate rows if needed)
+    for (const table of section.tables) {
+      const maxRowsPerSlide = 12;
+      const rowChunks = chunkArray(table.rows, maxRowsPerSlide);
+
+      for (let ci = 0; ci < rowChunks.length; ci++) {
+        const tSlide = pptx.addSlide();
+        const suffix = rowChunks.length > 1 ? ` (${ci + 1}/${rowChunks.length})` : "";
+        tSlide.addText(`${section.title}${suffix}`, {
+          x: 0.8, y: 0.2, w: 11, h: 0.6,
+          fontSize: 18, bold: true, color: PRIMARY,
+          fontFace: "Segoe UI",
+        });
+
+        const colW = 11.8 / table.headers.length;
+        const headerRow: PptxGenJS.TableRow = table.headers.map(h => ({
+          text: h,
+          options: { bold: true, fontSize: 10, color: "FFFFFF", fill: { color: ACCENT }, fontFace: "Segoe UI", align: "left" as const, valign: "middle" as const },
+        }));
+        const dataRows: PptxGenJS.TableRow[] = rowChunks[ci].map((row, ri) => 
+          row.map(cell => ({
+            text: cell,
+            options: { fontSize: 9, color: "334155", fill: { color: ri % 2 === 0 ? "FFFFFF" : LIGHT_BG }, fontFace: "Segoe UI", valign: "top" as const },
+          }))
+        );
+
+        tSlide.addTable([headerRow, ...dataRows], {
+          x: 0.3, y: 0.9, w: 12.4,
+          colW: Array(table.headers.length).fill(colW),
+          border: { pt: 0.5, color: "cbd5e1" },
+          autoPage: false,
+          margin: [3, 5, 3, 5],
+        });
+      }
+    }
+  }
+
+  // --- Summary / closing slide ---
+  const endSlide = pptx.addSlide();
+  endSlide.background = { color: PRIMARY };
+  endSlide.addText("Thank You", {
+    x: 0.8, y: 2.0, w: 11, h: 1,
+    fontSize: 36, bold: true, color: "FFFFFF",
+    fontFace: "Segoe UI", align: "center",
+  });
+  if (branding.companyName) {
+    endSlide.addText(`Prepared by ${branding.companyName}`, {
+      x: 0.8, y: 3.2, w: 11, h: 0.6,
+      fontSize: 16, color: "94a3b8",
+      fontFace: "Segoe UI", align: "center",
+    });
+  }
+
+  return (await pptx.write({ outputType: "blob" })) as Blob;
+}
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
 function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename }: {
   markdown: string;
   isLoading: boolean;
@@ -430,19 +638,25 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
   const handleDownloadAll = async () => {
     if (!allDone) return;
     const zip = new JSZip();
+    const reportsFolder = zip.folder("reports")!;
+    const presentationsFolder = zip.folder("presentations")!;
 
     for (const report of reports) {
       const baseName = report.label.replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").toLowerCase();
 
       // Word
       const wordBlob = await generateWordBlob(report.markdown, branding);
-      zip.file(`${baseName}-report.docx`, wordBlob);
+      reportsFolder.file(`${baseName}-report.docx`, wordBlob);
 
       // PDF (as styled HTML)
       const rawHtml = marked.parse(report.markdown, { async: false }) as string;
       const sanitized = DOMPurify.sanitize(rawHtml);
       const pdfHtml = buildPdfHtml(sanitized, baseName);
-      zip.file(`${baseName}-report.html`, pdfHtml);
+      reportsFolder.file(`${baseName}-report.html`, pdfHtml);
+
+      // PowerPoint presentation
+      const pptxBlob = await generatePptxBlob(report.markdown, report.label, branding);
+      presentationsFolder.file(`${baseName}-presentation.pptx`, pptxBlob);
     }
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
