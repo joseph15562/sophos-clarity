@@ -1,12 +1,13 @@
 import { useMemo, useRef } from "react";
 import DOMPurify from "dompurify";
 import { BrandingData } from "./BrandingSetup";
-import { Loader2, Download, FileText, RefreshCw } from "lucide-react";
+import { Loader2, Download, FileText, RefreshCw, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { marked } from "marked";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
 import { saveAs } from "file-saver";
+import JSZip from "jszip";
 
 export type ReportEntry = {
   id: string;
@@ -172,6 +173,150 @@ function parseInlineFormatting(text: string): TextRun[] {
   return runs.length > 0 ? runs : [new TextRun(text)];
 }
 
+/** Build a standalone HTML document string for PDF generation */
+function buildPdfHtml(innerHTML: string, title: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #1a1a2e;
+      padding: 12mm;
+    }
+    h1 { font-size: 20px; font-weight: 700; margin: 16px 0 8px; }
+    h2 { font-size: 16px; font-weight: 700; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+    h3 { font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+    h4, h5, h6 { font-size: 12px; font-weight: 600; margin: 8px 0 4px; }
+    p { margin: 0 0 6px; }
+    ul, ol { margin: 0 0 6px; padding-left: 20px; }
+    li { margin: 2px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0;
+      font-size: 10px;
+      table-layout: fixed;
+      page-break-inside: auto;
+    }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    th {
+      background: #f0f0f5;
+      font-weight: 600;
+      text-align: left;
+      padding: 4px 6px;
+      border: 1px solid #ccc;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    td {
+      padding: 3px 6px;
+      border: 1px solid #ccc;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #fafafa; }
+    code {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      background: #f5f5f5;
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 8px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 6px 0;
+      font-size: 10px;
+    }
+    hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
+    @media print {
+      body { padding: 0; }
+      @page { size: A4; margin: 10mm; }
+    }
+  </style>
+</head>
+<body>${innerHTML}</body>
+</html>`;
+}
+
+/** Generate a PDF blob from HTML content */
+async function generatePdfBlob(innerHTML: string, title: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-9999px";
+    iframe.style.width = "210mm";
+    iframe.style.height = "297mm";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      reject(new Error("Could not create iframe"));
+      return;
+    }
+
+    doc.open();
+    doc.write(buildPdfHtml(innerHTML, title));
+    doc.close();
+
+    // Wait for content to render then print
+    setTimeout(() => {
+      try {
+        // Use the iframe's print for individual downloads
+        // For blob generation, we'll use a different approach
+        const htmlContent = doc.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: "text/html" });
+        document.body.removeChild(iframe);
+        resolve(blob);
+      } catch (err) {
+        document.body.removeChild(iframe);
+        reject(err);
+      }
+    }, 200);
+  });
+}
+
+/** Generate Word blob from markdown */
+async function generateWordBlob(markdown: string, branding: BrandingData): Promise<Blob> {
+  const headerParagraphs: Paragraph[] = [];
+  if (branding.companyName) {
+    headerParagraphs.push(new Paragraph({
+      heading: HeadingLevel.TITLE,
+      alignment: AlignmentType.LEFT,
+      children: [new TextRun({ text: branding.companyName, bold: true, size: 36 })],
+    }));
+    headerParagraphs.push(new Paragraph({
+      children: [new TextRun({ text: "Firewall Configuration Report", color: "666666", size: 24 })],
+    }));
+    headerParagraphs.push(new Paragraph({ text: "" }));
+  }
+
+  const doc = new Document({
+    numbering: {
+      config: [{
+        reference: "default-numbering",
+        levels: [{ level: 0, format: "decimal" as any, text: "%1.", alignment: AlignmentType.START }],
+      }],
+    },
+    sections: [{
+      children: [...headerParagraphs, ...markdownToDocxElements(markdown)],
+    }],
+  });
+
+  return Packer.toBlob(doc);
+}
+
 function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename }: {
   markdown: string;
   isLoading: boolean;
@@ -195,67 +340,18 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    const styles = Array.from(document.styleSheets)
-      .map((sheet) => {
-        try {
-          return Array.from(sheet.cssRules).map((rule) => rule.cssText).join("\n");
-        } catch {
-          return "";
-        }
-      })
-      .join("\n");
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${pdfFilename.replace(/\.pdf$/i, "")}</title>
-          <style>
-            ${styles}
-            @media print {
-              body { margin: 10mm; }
-              @page { size: A4; margin: 10mm; }
-            }
-          </style>
-        </head>
-        <body>${el.innerHTML}</body>
-      </html>
-    `);
+    const title = pdfFilename.replace(/\.pdf$/i, "");
+    printWindow.document.write(buildPdfHtml(el.innerHTML, title));
     printWindow.document.close();
     printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 300);
   };
 
   const handleWord = async () => {
     if (!markdown) return;
-
-    const headerParagraphs: Paragraph[] = [];
-    if (branding.companyName) {
-      headerParagraphs.push(new Paragraph({
-        heading: HeadingLevel.TITLE,
-        alignment: AlignmentType.LEFT,
-        children: [new TextRun({ text: branding.companyName, bold: true, size: 36 })],
-      }));
-      headerParagraphs.push(new Paragraph({
-        children: [new TextRun({ text: "Firewall Configuration Report", color: "666666", size: 24 })],
-      }));
-      headerParagraphs.push(new Paragraph({ text: "" }));
-    }
-
-    const doc = new Document({
-      numbering: {
-        config: [{
-          reference: "default-numbering",
-          levels: [{ level: 0, format: "decimal" as any, text: "%1.", alignment: AlignmentType.START }],
-        }],
-      },
-      sections: [{
-        children: [...headerParagraphs, ...markdownToDocxElements(markdown)],
-      }],
-    });
-
-    const blob = await Packer.toBlob(doc);
+    const blob = await generateWordBlob(markdown, branding);
     const wordFilename = pdfFilename.replace(/\.pdf$/, ".docx");
     saveAs(blob, wordFilename);
   };
@@ -329,6 +425,33 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
 export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding }: Props) {
   if (reports.length === 0 && !isLoading) return null;
 
+  const allDone = reports.length > 0 && !isLoading && reports.every(r => r.markdown && !failedReportIds.has(r.id));
+
+  const handleDownloadAll = async () => {
+    if (!allDone) return;
+    const zip = new JSZip();
+
+    for (const report of reports) {
+      const baseName = report.label.replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").toLowerCase();
+
+      // Word
+      const wordBlob = await generateWordBlob(report.markdown, branding);
+      zip.file(`${baseName}-report.docx`, wordBlob);
+
+      // PDF (as styled HTML)
+      const rawHtml = marked.parse(report.markdown, { async: false }) as string;
+      const sanitized = DOMPurify.sanitize(rawHtml);
+      const pdfHtml = buildPdfHtml(sanitized, baseName);
+      zip.file(`${baseName}-report.html`, pdfHtml);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const zipName = branding.companyName
+      ? `${branding.companyName.replace(/\s+/g, "-").toLowerCase()}-firewall-reports.zip`
+      : "firewall-reports.zip";
+    saveAs(zipBlob, zipName);
+  };
+
   if (reports.length === 1 && !isLoading) {
     const r = reports[0];
     return (
@@ -357,7 +480,14 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-foreground no-print">Document Preview</h2>
+      <div className="flex items-center justify-between no-print">
+        <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
+        {allDone && reports.length > 1 && (
+          <Button onClick={handleDownloadAll} className="gap-2">
+            <Archive className="h-4 w-4" /> Download All (.zip)
+          </Button>
+        )}
+      </div>
       <Tabs value={activeReportId} onValueChange={onActiveChange} className="no-print-tabs">
         <TabsList className="no-print flex-wrap h-auto gap-1">
           {reports.map((r) => (
