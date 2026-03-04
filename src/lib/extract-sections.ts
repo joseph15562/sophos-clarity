@@ -136,7 +136,8 @@ function extractDetailBlocks(container: Element): DetailBlock[] {
 }
 
 function extractSectionContent(doc: Document, htmlId: string): SectionData | null {
-  const container = doc.getElementById(`section-content-${htmlId}`);
+  // Try the mapped hyphenated ID first, then the raw key as-is
+  let container = doc.getElementById(`section-content-${htmlId}`);
   if (!container) return null;
 
   // Extract all tables in this section
@@ -191,13 +192,24 @@ export function extractSections(html: string): ExtractedSections {
     const parent = cb.closest("[data-section-name]");
     const displayName = parent?.getAttribute("data-section-name") ?? sectionKey;
 
-    // Map to HTML ID
-    const htmlId = SECTION_ID_MAP[sectionKey];
-    if (!htmlId) return;
+    // Try mapped ID first, then use sectionKey directly
+    const mappedId = SECTION_ID_MAP[sectionKey];
+    let data: SectionData | null = null;
 
-    const data = extractSectionContent(doc, htmlId);
+    if (mappedId) {
+      data = extractSectionContent(doc, mappedId);
+    }
+    // Fallback: try the sectionKey itself as the htmlId
+    if (!data) {
+      data = extractSectionContent(doc, sectionKey);
+    }
+
     if (data) {
-      sections[displayName] = data;
+      // Add readable spacing to camelCase names
+      const readableName = displayName === sectionKey
+        ? sectionKey.replace(/([A-Z])/g, " $1").trim()
+        : displayName;
+      sections[readableName] = data;
     }
   });
 
