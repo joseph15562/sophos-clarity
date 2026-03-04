@@ -329,6 +329,10 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
   const ACCENT = "6366f1";
   const GRAY = "64748b";
   const LIGHT_BG = "f1f5f9";
+  const RED = "ef4444";
+  const ORANGE = "f97316";
+  const YELLOW = "eab308";
+  const GREEN = "22c55e";
 
   // --- Title slide ---
   const titleSlide = pptx.addSlide();
@@ -356,25 +360,49 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
     fontFace: "Segoe UI",
   });
 
-  // Parse markdown into sections
+  // Parse markdown into sections with enhanced detail extraction
   const lines = markdown.split("\n");
   let currentH2 = "";
   let currentBullets: string[] = [];
-  const sections: { title: string; bullets: string[]; tables: { headers: string[]; rows: string[][] }[] }[] = [];
+  let currentFindings: { text: string; severity: string }[] = [];
+  let currentRecommendations: string[] = [];
+  let currentParagraphs: string[] = [];
+  const sections: {
+    title: string;
+    bullets: string[];
+    tables: { headers: string[]; rows: string[][] }[];
+    findings: { text: string; severity: string }[];
+    recommendations: string[];
+    paragraphs: string[];
+  }[] = [];
   let currentTables: { headers: string[]; rows: string[][] }[] = [];
+  let inFindingsSection = false;
+  let inRecommendationsSection = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     const h2Match = line.match(/^##\s+(.*)/);
     const h3Match = line.match(/^###\s+(.*)/);
 
-    if (h2Match || h3Match) {
-      if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0)) {
-        sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables] });
+    if (h2Match) {
+      if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0 || currentFindings.length > 0 || currentRecommendations.length > 0 || currentParagraphs.length > 0)) {
+        sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables], findings: [...currentFindings], recommendations: [...currentRecommendations], paragraphs: [...currentParagraphs] });
       }
-      currentH2 = (h2Match || h3Match)![1];
+      currentH2 = h2Match[1];
       currentBullets = [];
       currentTables = [];
+      currentFindings = [];
+      currentRecommendations = [];
+      currentParagraphs = [];
+      inFindingsSection = false;
+      inRecommendationsSection = false;
+      continue;
+    }
+
+    if (h3Match) {
+      const h3Title = h3Match[1].toLowerCase();
+      inFindingsSection = h3Title.includes("finding");
+      inRecommendationsSection = h3Title.includes("recommendation") || h3Title.includes("best practice");
       continue;
     }
 
@@ -395,33 +423,64 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
       continue;
     }
 
-    // Collect bullet points and key text
+    // Collect bullet points
     const bulletMatch = line.match(/^[-*+]\s+(.*)/);
     if (bulletMatch) {
-      currentBullets.push(bulletMatch[1].replace(/\*\*/g, ""));
+      const bulletText = bulletMatch[1].replace(/\*\*/g, "");
+      if (inFindingsSection) {
+        // Detect severity emoji
+        let severity = "medium";
+        if (line.includes("🔴") || line.toLowerCase().includes("critical")) severity = "critical";
+        else if (line.includes("🟠") || line.toLowerCase().includes("high")) severity = "high";
+        else if (line.includes("🟡") || line.toLowerCase().includes("medium")) severity = "medium";
+        else if (line.includes("🟢") || line.toLowerCase().includes("low")) severity = "low";
+        currentFindings.push({ text: bulletText.replace(/🔴|🟠|🟡|🟢/g, "").trim(), severity });
+      } else if (inRecommendationsSection) {
+        currentRecommendations.push(bulletText);
+      } else {
+        currentBullets.push(bulletText);
+      }
       continue;
     }
 
     // Collect numbered items
     const numMatch = line.match(/^\d+\.\s+(.*)/);
     if (numMatch) {
-      currentBullets.push(numMatch[1].replace(/\*\*/g, ""));
+      const numText = numMatch[1].replace(/\*\*/g, "");
+      if (inFindingsSection) {
+        let severity = "medium";
+        if (line.includes("🔴") || line.toLowerCase().includes("critical")) severity = "critical";
+        else if (line.includes("🟠") || line.toLowerCase().includes("high")) severity = "high";
+        else if (line.includes("🟡")) severity = "medium";
+        else if (line.includes("🟢")) severity = "low";
+        currentFindings.push({ text: numText.replace(/🔴|🟠|🟡|🟢/g, "").trim(), severity });
+      } else if (inRecommendationsSection) {
+        currentRecommendations.push(numText);
+      } else {
+        currentBullets.push(numText);
+      }
       continue;
     }
 
     // Collect bold key-value lines as bullets
     if (line.startsWith("**") && line.includes(":")) {
       currentBullets.push(line.replace(/\*\*/g, ""));
+      continue;
+    }
+
+    // Collect paragraph text for summaries
+    if (line.length > 30 && !line.startsWith("#") && !line.startsWith("|") && !line.startsWith("---")) {
+      currentParagraphs.push(line.replace(/\*\*/g, ""));
     }
   }
   // Push last section
-  if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0)) {
-    sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables] });
+  if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0 || currentFindings.length > 0 || currentRecommendations.length > 0 || currentParagraphs.length > 0)) {
+    sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables], findings: [...currentFindings], recommendations: [...currentRecommendations], paragraphs: [...currentParagraphs] });
   }
 
   // --- Generate slides for each section ---
   for (const section of sections) {
-    // Section title slide
+    // Section title slide with summary
     const sectionSlide = pptx.addSlide();
     sectionSlide.addText(section.title, {
       x: 0.8, y: 0.3, w: 11, h: 0.7,
@@ -433,11 +492,22 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
       fill: { color: ACCENT },
     });
 
+    // Add summary paragraph if available
+    if (section.paragraphs.length > 0) {
+      const summaryText = section.paragraphs.slice(0, 3).join("\n\n");
+      sectionSlide.addText(summaryText, {
+        x: 0.8, y: 1.15, w: 11.4, h: 1.2,
+        fontSize: 11, color: GRAY,
+        fontFace: "Segoe UI",
+        valign: "top",
+      });
+    }
+
     // Bullets (paginate if >8)
     if (section.bullets.length > 0) {
       const chunks = chunkArray(section.bullets, 8);
-      const isFirst = true;
       let slideRef = sectionSlide;
+      const yOffset = section.paragraphs.length > 0 ? 2.5 : 1.2;
 
       for (let ci = 0; ci < chunks.length; ci++) {
         if (ci > 0) {
@@ -448,15 +518,96 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
             fontFace: "Segoe UI",
           });
         }
-        const yStart = ci === 0 && isFirst ? 1.2 : 1.0;
+        const yStart = ci === 0 ? yOffset : 1.0;
         const bulletTexts = chunks[ci].map(b => ({
           text: b,
-          options: { fontSize: 13, color: "334155", bullet: { code: "2022" }, fontFace: "Segoe UI", breakLine: true as const },
+          options: { fontSize: 12, color: "334155", bullet: { code: "2022" }, fontFace: "Segoe UI", breakLine: true as const },
         }));
         slideRef.addText(bulletTexts as any, {
           x: 0.8, y: yStart, w: 11, h: 5.5 - yStart,
           valign: "top",
           lineSpacingMultiple: 1.3,
+        });
+      }
+    }
+
+    // --- Findings slide(s) ---
+    if (section.findings.length > 0) {
+      const severityColor = (s: string) => {
+        if (s === "critical") return RED;
+        if (s === "high") return ORANGE;
+        if (s === "medium") return YELLOW;
+        return GREEN;
+      };
+      const severityLabel = (s: string) => {
+        if (s === "critical") return "CRITICAL";
+        if (s === "high") return "HIGH";
+        if (s === "medium") return "MEDIUM";
+        return "LOW";
+      };
+
+      const findingChunks = chunkArray(section.findings, 6);
+      for (let ci = 0; ci < findingChunks.length; ci++) {
+        const fSlide = pptx.addSlide();
+        const suffix = findingChunks.length > 1 ? ` (${ci + 1}/${findingChunks.length})` : "";
+        fSlide.addText(`⚠ Findings — ${section.title}${suffix}`, {
+          x: 0.8, y: 0.2, w: 11, h: 0.6,
+          fontSize: 18, bold: true, color: PRIMARY,
+          fontFace: "Segoe UI",
+        });
+        fSlide.addShape(pptx.ShapeType.rect, {
+          x: 0.8, y: 0.75, w: 1.5, h: 0.04,
+          fill: { color: ORANGE },
+        });
+
+        let yPos = 1.0;
+        for (const finding of findingChunks[ci]) {
+          // Severity badge
+          fSlide.addShape(pptx.ShapeType.roundRect, {
+            x: 0.8, y: yPos, w: 1.0, h: 0.35,
+            fill: { color: severityColor(finding.severity) },
+            rectRadius: 0.05,
+          });
+          fSlide.addText(severityLabel(finding.severity), {
+            x: 0.8, y: yPos, w: 1.0, h: 0.35,
+            fontSize: 9, bold: true, color: "FFFFFF",
+            fontFace: "Segoe UI", align: "center", valign: "middle",
+          });
+          // Finding text
+          fSlide.addText(finding.text, {
+            x: 2.0, y: yPos, w: 10.2, h: 0.35,
+            fontSize: 11, color: "334155",
+            fontFace: "Segoe UI", valign: "middle",
+          });
+          yPos += 0.65;
+        }
+      }
+    }
+
+    // --- Best Practice Recommendations slide(s) ---
+    if (section.recommendations.length > 0) {
+      const recChunks = chunkArray(section.recommendations, 5);
+      for (let ci = 0; ci < recChunks.length; ci++) {
+        const rSlide = pptx.addSlide();
+        const suffix = recChunks.length > 1 ? ` (${ci + 1}/${recChunks.length})` : "";
+        rSlide.addText(`✅ Best Practices — ${section.title}${suffix}`, {
+          x: 0.8, y: 0.2, w: 11, h: 0.6,
+          fontSize: 18, bold: true, color: PRIMARY,
+          fontFace: "Segoe UI",
+        });
+        rSlide.addShape(pptx.ShapeType.rect, {
+          x: 0.8, y: 0.75, w: 1.5, h: 0.04,
+          fill: { color: GREEN },
+        });
+
+        const recTexts = recChunks[ci].map((r, idx) => ({
+          text: `${idx + 1 + ci * 5}. ${r}`,
+          options: { fontSize: 12, color: "334155", fontFace: "Segoe UI", breakLine: true as const, paraSpaceAfter: 8 },
+        }));
+        rSlide.addText(recTexts as any, {
+          x: 0.8, y: 1.0, w: 11.4, h: 5.5,
+          valign: "top",
+          lineSpacingMultiple: 1.4,
         });
       }
     }
@@ -502,17 +653,27 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
   const endSlide = pptx.addSlide();
   endSlide.background = { color: PRIMARY };
   endSlide.addText("Thank You", {
-    x: 0.8, y: 2.0, w: 11, h: 1,
+    x: 0.8, y: 1.5, w: 11, h: 1,
     fontSize: 36, bold: true, color: "FFFFFF",
+    fontFace: "Segoe UI", align: "center",
+  });
+  endSlide.addText("Questions & Next Steps", {
+    x: 0.8, y: 2.6, w: 11, h: 0.6,
+    fontSize: 20, color: "c7d2fe",
     fontFace: "Segoe UI", align: "center",
   });
   if (branding.companyName) {
     endSlide.addText(`Prepared by ${branding.companyName}`, {
-      x: 0.8, y: 3.2, w: 11, h: 0.6,
+      x: 0.8, y: 3.5, w: 11, h: 0.6,
       fontSize: 16, color: "94a3b8",
       fontFace: "Segoe UI", align: "center",
     });
   }
+  endSlide.addText(new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }), {
+    x: 0.8, y: 4.2, w: 11, h: 0.5,
+    fontSize: 12, color: "94a3b8",
+    fontFace: "Segoe UI", align: "center",
+  });
 
   return (await pptx.write({ outputType: "blob" })) as Blob;
 }
