@@ -25,6 +25,7 @@ Rules
 - Document EVERY rule, host, network, and setting provided — do not skip or summarize
 - For firewall rules: create a table with columns: Rule Name, Status, Action, Source Zone, Source Networks, Destination Zone, Destination Networks, Services, Security Features, **Web Filter** (or "Web Filter Policy"). The Web Filter column is required for compliance: show which web filter policy/profile is applied to each rule (e.g. policy name, "None", "Default", or the value from the export). If the extracted data has web filter information in the main table or in rule details, include it in this column. If no web filter data is present for a rule, state "None" or "Not specified".
 - For NAT rules: create a table explaining the translation (what maps to what)
+- For **Interfaces & Network** (or Zones, Networks, Ports): create a table with columns: **Interface / VLAN** (name of the interface or VLAN, e.g. "Port2 (WAN)", "VLAN: Servers"), **VLAN** (VLAN ID or "-" if not applicable), **Zone**, **IP Address**, **Description** (or Details — e.g. "Primary WAN", "Server Segment"). Use all columns present in the extracted data; do not reduce to only IP Address and Zone. Include every interface, port, and VLAN from the data.
 - For hosts/networks: list all entries in a table with relevant columns
 - For policies: describe what each policy does in a table
 - Use the actual data provided — never invent or assume configuration details
