@@ -137,13 +137,9 @@ serve(async (req) => {
       });
     }
 
-    // Use Claude if ANTHROPIC_API_KEY is set, otherwise Gemini
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    // Gemini API key (required)
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-
-    if (!ANTHROPIC_API_KEY && !GEMINI_API_KEY) {
-      throw new Error("Configure ANTHROPIC_API_KEY or GEMINI_API_KEY in Supabase Edge Function secrets.");
-    }
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const payload = JSON.stringify(sections, null, 2);
 
@@ -190,96 +186,6 @@ serve(async (req) => {
       userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
     }
 
-    if (ANTHROPIC_API_KEY) {
-      // Claude (Anthropic) Messages API
-      const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 8192,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
-          stream: true,
-        }),
-      });
-
-      if (!anthropicRes.ok) {
-        const text = await anthropicRes.text();
-        console.error("Anthropic API error:", anthropicRes.status, text);
-        if (anthropicRes.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        return new Response(
-          JSON.stringify({ error: "AI processing failed" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Convert Anthropic SSE to OpenAI-style SSE for the frontend
-      const reader = anthropicRes.body!.getReader();
-      const decoder = new TextDecoder();
-      const stream = new ReadableStream({
-        async pull(controller) {
-          let buffer = "";
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const raw = line.slice(6);
-                if (raw === "[DONE]") {
-                  controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-                  continue;
-                }
-                try {
-                  const event = JSON.parse(raw);
-                  if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
-                    const chunk = JSON.stringify({ choices: [{ delta: { content: event.delta.text } }] });
-                    controller.enqueue(new TextEncoder().encode("data: " + chunk + "\n\n"));
-                  }
-                  if (event.type === "message_stop") {
-                    controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-                  }
-                } catch (_) {}
-              }
-            }
-          }
-          if (buffer.trim()) {
-            const line = buffer.trim();
-            if (line.startsWith("data: ")) {
-              const raw = line.slice(6);
-              if (raw !== "[DONE]") {
-                try {
-                  const event = JSON.parse(raw);
-                  if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
-                    controller.enqueue(new TextEncoder().encode("data: " + JSON.stringify({ choices: [{ delta: { content: event.delta.text } }] }) + "\n\n"));
-                  }
-                } catch (_) {}
-              }
-            }
-          }
-          controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
-          controller.close();
-        },
-      });
-
-      return new Response(stream, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-      });
-    }
-
-    // Gemini (Google)
     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
