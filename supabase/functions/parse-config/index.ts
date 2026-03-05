@@ -17,7 +17,8 @@ Write well-structured Markdown with:
 - Clear Section headings for each configuration area
 - Markdown tables for listing rules, hosts, interfaces & networks, and settings — use tables instead of bullet lists wherever data has consistent columns
 - After each section's table(s), include a Summary paragraph explaining the purpose and overall pattern of that section
-- After each section, include a Best Practice Recommendations subsection with actionable advice specific to the configuration shown (e.g. unused rules, overly permissive access, missing logging, disabled security features). For firewall rules, note where Web Filter is missing or set to None — this is often required for compliance (e.g. Cyber Essentials, KCSIE).
+- After each section, include a **Findings** subsection listing specific issues found (e.g. disabled rules, overly permissive access, missing features). For each finding, indicate severity: 🔴 Critical, 🟠 High, 🟡 Medium, 🟢 Low
+- After each section, include a **Best Practice Recommendations** subsection with actionable, detailed advice specific to the configuration shown (e.g. unused rules, overly permissive access, missing logging, disabled security features). Each recommendation should explain WHY it matters and HOW to remediate it.
 
 Rules
 
@@ -30,7 +31,9 @@ Rules
 - If a section has no data, write "No configuration found in export."
 - Do NOT output raw JSON — write documentation in Markdown tables and prose
 - Start with the Executive Summary, then proceed section by section
-- End with a Overall Security Recommendations section covering cross-cutting best practices based on the entire configuration`;
+- End with a Overall Security Recommendations section covering cross-cutting best practices based on the entire configuration
+
+**Authentication & OTP Settings**: If the payload contains a section named "Authentication & OTP Settings", "OTP Settings", or "OTPSettings" with tables or data, you MUST document it. Create an "## Authentication & OTP Settings" section with a Markdown table (columns **Setting** and **Value**) for every row present (e.g. otp, allUsers, tokenAutoCreation, otpUserPortal, otpVPNPortal, otpSSLVPN, otpWebAdmin, otpIPsec — values are typically "Enabled" or "Disabled"). Add a brief summary and recommendations for MFA where disabled. Do NOT say "No configuration found in export" for this section when that data exists in the payload.`;
 
 const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing a consolidated executive summary report for an MSP covering MULTIPLE firewall configurations.
 

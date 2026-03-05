@@ -20,6 +20,8 @@ const SECTION_ID_MAP: Record<string, string> = {
   Network: "networks",
   REDDevice: "red-devices",
   WirelessAccessPoint: "wireless-access-points",
+  // OTP & auth sections use "additional-<Key>" in Sophos HTML
+  OTPSettings: "additional-OTPSettings",
 };
 
 export interface ExtractedSections {
@@ -135,6 +137,30 @@ function extractDetailBlocks(container: Element): DetailBlock[] {
   return blocks;
 }
 
+/**
+ * Extract key-value pairs from Sophos OTP/settings sections that use grid divs
+ * (display:grid with two columns) instead of tables. Used for OTPSettings.
+ */
+function extractKeyValueGrids(container: Element): TableData | null {
+  const rows: Record<string, string>[] = [];
+  const gridRows = container.querySelectorAll(
+    'div[style*="display"][style*="grid"], div[style*="grid-template-columns"]'
+  );
+  gridRows.forEach((row) => {
+    const children = row.querySelectorAll(":scope > div");
+    if (children.length !== 2) return;
+    const key = (children[0].textContent ?? "").replace(/\s+/g, " ").trim();
+    let val = (children[1].textContent ?? "").replace(/\s+/g, " ").trim();
+    if (!val) {
+      const span = children[1].querySelector("span");
+      if (span) val = (span.textContent ?? "").trim();
+    }
+    if (key) rows.push({ Setting: key, Value: val });
+  });
+  if (rows.length === 0) return null;
+  return { headers: ["Setting", "Value"], rows };
+}
+
 function extractSectionContent(doc: Document, htmlId: string): SectionData | null {
   const container = doc.getElementById(`section-content-${htmlId}`);
   if (!container) return null;
@@ -156,6 +182,10 @@ function extractSectionContent(doc: Document, htmlId: string): SectionData | nul
     const data = extractTable(table);
     if (data.rows.length > 0) tables.push(data);
   });
+
+  // OTP/settings sections use grid divs (not tables); extract as Setting/Value table
+  const gridTable = extractKeyValueGrids(container);
+  if (gridTable) tables.push(gridTable);
 
   // Extract detail blocks (expanded rule details)
   const details = extractDetailBlocks(container);
@@ -191,13 +221,24 @@ export function extractSections(html: string): ExtractedSections {
     const parent = cb.closest("[data-section-name]");
     const displayName = parent?.getAttribute("data-section-name") ?? sectionKey;
 
-    // Map to HTML ID
-    const htmlId = SECTION_ID_MAP[sectionKey];
-    if (!htmlId) return;
+    const mappedId = SECTION_ID_MAP[sectionKey];
+    let data: SectionData | null = null;
 
-    const data = extractSectionContent(doc, htmlId);
+    if (mappedId) {
+      data = extractSectionContent(doc, mappedId);
+    }
+    if (!data) {
+      data = extractSectionContent(doc, sectionKey);
+    }
+    if (!data) {
+      data = extractSectionContent(doc, `additional-${sectionKey}`);
+    }
+
     if (data) {
-      sections[displayName] = data;
+      const readableName = displayName === sectionKey
+        ? sectionKey.replace(/([A-Z])/g, " $1").trim()
+        : displayName;
+      sections[readableName] = data;
     }
   });
 
@@ -214,6 +255,17 @@ export function extractSections(html: string): ExtractedSections {
       // Use the key as name, add spaces before capitals
       const name = key.replace(/([A-Z])/g, " $1").trim();
       sections[name] = data;
+    }
+  }
+
+  // Ensure OTP section is present when HTML has it (section-content-additional-OTPSettings)
+  const hasOtp = Object.keys(sections).some((name) =>
+    /otpsettings|otp settings/i.test(name.replace(/\s+/g, ""))
+  );
+  if (!hasOtp) {
+    const otpData = extractSectionContent(doc, "additional-OTPSettings");
+    if (otpData) {
+      sections["Authentication & OTP Settings"] = otpData;
     }
   }
 
