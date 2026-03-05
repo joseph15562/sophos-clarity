@@ -17,12 +17,12 @@ Write well-structured Markdown with:
 - Clear Section headings for each configuration area
 - Markdown tables for listing rules, hosts, interfaces & networks, and settings — use tables instead of bullet lists wherever data has consistent columns
 - After each section's table(s), include a Summary paragraph explaining the purpose and overall pattern of that section
-- After each section, include a Best Practice Recommendations subsection with actionable advice specific to the configuration shown (e.g. unused rules, overly permissive access, missing logging, disabled security features)
+- After each section, include a Best Practice Recommendations subsection with actionable advice specific to the configuration shown (e.g. unused rules, overly permissive access, missing logging, disabled security features). For firewall rules, note where Web Filter is missing or set to None — this is often required for compliance (e.g. Cyber Essentials, KCSIE).
 
 Rules
 
 - Document EVERY rule, host, network, and setting provided — do not skip or summarize
-- For firewall rules: create a table with columns: Rule Name, Status, Action, Source Zone, Source Networks, Destination Zone, Destination Networks, Services, Security Features
+- For firewall rules: create a table with columns: Rule Name, Status, Action, Source Zone, Source Networks, Destination Zone, Destination Networks, Services, Security Features, **Web Filter** (or "Web Filter Policy"). The Web Filter column is required for compliance: show which web filter policy/profile is applied to each rule (e.g. policy name, "None", "Default", or the value from the export). If the extracted data has web filter information in the main table or in rule details, include it in this column. If no web filter data is present for a rule, state "None" or "Not specified".
 - For NAT rules: create a table explaining the translation (what maps to what)
 - For hosts/networks: list all entries in a table with relevant columns
 - For policies: describe what each policy does in a table
@@ -95,6 +95,7 @@ List identified residual risks in a table:
 Rules
 - Use ONLY the actual configuration data provided — never invent details
 - Quote specific rule names, IP ranges, zones, and policy names as evidence
+- When citing firewall rules, include **Web Filter** (or web filtering policy) applied to each rule where the data provides it — this is required for filtering/monitoring-related controls (e.g. KCSIE, Cyber Essentials).
 - Be specific about which rules/settings satisfy which controls
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
