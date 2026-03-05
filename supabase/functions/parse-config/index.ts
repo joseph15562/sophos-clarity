@@ -207,15 +207,28 @@ serve(async (req) => {
       const text = await response.text();
       console.error("Gemini API error:", response.status, text);
 
-      if (response.status === 429) {
+      // Parse Gemini error body when possible for a clearer message
+      let message = "AI processing failed";
+      try {
+        const errJson = JSON.parse(text);
+        const detail = errJson.error?.message ?? errJson.message ?? errJson.error;
+        if (typeof detail === "string") message = detail;
+      } catch { /* use default */ }
+
+      // Rate limit or quota (free tier: 20 RPD, 5 RPM, 250K TPM)
+      if (response.status === 429 || response.status === 403) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+          JSON.stringify({
+            error: message.includes("rate") || message.includes("quota") || message.includes("resource")
+              ? message
+              : "Gemini rate limit or daily quota exceeded (free tier: 20 requests/day, 5/min). Set up billing in Google Cloud to increase limits.",
+          }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
-        JSON.stringify({ error: "AI processing failed" }),
+        JSON.stringify({ error: message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
