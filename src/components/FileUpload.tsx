@@ -106,6 +106,11 @@ export function FileUpload({ files, onFilesChange }: Props) {
           </CardContent>
         </Card>
       ))}
+      {files.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Click on the config name above to rename the firewall for the report.
+        </p>
+      )}
 
       {/* Drop zone */}
       <div

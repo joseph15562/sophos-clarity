@@ -109,30 +109,75 @@
 
 @layer utilities {
   .doc-section h2 {
-    @apply text-2xl font-bold text-foreground mb-3 pb-2 border-b border-border;
+    @apply text-2xl font-bold mb-3 pb-2 border-b-2;
+    color: hsl(var(--primary));
+    border-color: hsl(var(--primary) / 0.3);
   }
   .doc-section h3 {
-    @apply text-lg font-semibold text-foreground mb-2;
+    @apply text-lg font-semibold mb-2;
+    color: hsl(var(--foreground));
+  }
+  .doc-section h4 {
+    @apply text-base font-semibold mb-1.5 mt-3;
+    color: hsl(var(--primary) / 0.9);
   }
   .doc-section p {
-    @apply text-muted-foreground leading-relaxed mb-3;
+    @apply leading-relaxed mb-3;
+    color: hsl(var(--muted-foreground));
   }
   .doc-section ul {
-    @apply list-disc list-inside space-y-1 mb-3 text-muted-foreground;
+    @apply list-disc list-inside space-y-1 mb-3;
+    color: hsl(var(--muted-foreground));
+  }
+  .doc-section li {
+    @apply leading-relaxed;
   }
   .doc-section table {
-    @apply w-full text-sm border-collapse mb-4;
+    @apply w-full text-sm border-collapse mb-4 rounded-lg overflow-hidden shadow-sm;
     table-layout: fixed;
+    border: 1px solid hsl(var(--border));
   }
   .doc-section th {
-    @apply bg-muted text-left px-2 py-1.5 font-semibold text-foreground border border-border text-xs;
+    @apply text-left px-3 py-2.5 font-semibold border-b border-r border-border text-xs;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
+  .doc-section th:last-child {
+    @apply border-r-0;
+  }
   .doc-section td {
-    @apply px-2 py-1.5 border border-border text-muted-foreground text-xs;
+    @apply px-3 py-2 border-b border-r border-border text-xs;
     word-wrap: break-word;
     overflow-wrap: break-word;
+  }
+  .doc-section td:last-child {
+    @apply border-r-0;
+  }
+  .doc-section tr:nth-child(even) td {
+    background: hsl(var(--muted) / 0.5);
+  }
+  .doc-section tr:nth-child(odd) td {
+    background: hsl(var(--card));
+  }
+  .doc-section tr:hover td {
+    background: hsl(var(--primary) / 0.06);
+  }
+  .doc-section strong {
+    @apply font-semibold;
+    color: hsl(var(--foreground));
+  }
+  .doc-section hr {
+    @apply my-4 border-t;
+    border-color: hsl(var(--border));
+  }
+  /* Findings / severity in report text */
+  .doc-section blockquote {
+    @apply border-l-4 pl-3 py-1 my-2 italic;
+    border-color: hsl(var(--primary));
+    background: hsl(var(--primary) / 0.06);
+    color: hsl(var(--muted-foreground));
   }
 }
 
