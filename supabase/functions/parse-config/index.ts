@@ -132,7 +132,7 @@ List identified residual risks in a table:
 Rules
 - Use ONLY the actual configuration data provided — never invent details
 - Quote specific rule names, IP ranges, zones, and policy names as evidence
-- When citing firewall rules, include **Web Filter** (or web filtering policy) applied to each rule where the data provides it — this is required for filtering/monitoring-related controls (e.g. KCSIE, Cyber Essentials).
+- When citing firewall rules, include **Web Filter** (or web filtering policy) where the data provides it. **For KCSIE**: web filtering is required only for **outbound traffic to WAN** (e.g. rules from internal/LAN to WAN/internet); do not require web filtering on every rule or for internal-only traffic.
 - Be specific about which rules/settings satisfy which controls
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
@@ -170,9 +170,9 @@ serve(async (req) => {
       });
     }
 
-    // Lovable AI Gateway key (required)
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    // Gemini API key (required)
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     // Compact payload: no pretty-print (saves tokens), strip empty fields
     const compactSections = pruneEmpty(sections) as Record<string, unknown>;
@@ -221,14 +221,14 @@ serve(async (req) => {
       userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
     }
 
-    const model = "google/gemini-3-flash-preview";
+    const model = "gemini-3-flash-preview";
     const maxTokens = 8192;
 
     const doRequest = () =>
-      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Authorization": `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -254,7 +254,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("AI gateway error:", response.status, text.slice(0, 500));
+      console.error("Gemini API error:", response.status, text.slice(0, 500));
 
       let message = "AI processing failed";
       try {
