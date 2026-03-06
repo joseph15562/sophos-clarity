@@ -161,6 +161,47 @@ function extractKeyValueGrids(container: Element): TableData | null {
   return { headers: ["Setting", "Value"], rows };
 }
 
+const KNOWN_OTP_KEYS = [
+  "otp", "allUsers", "tokenAutoCreation", "otpUserPortal", "otpVPNPortal",
+  "otpSSLVPN", "otpWebAdmin", "otpIPsec"
+];
+
+/** Fallback: find OTP key-value pairs when grid structure varies (e.g. otpIPsec in different layout). */
+function extractOtpKeyValueFallback(container: Element): TableData | null {
+  const rows: Record<string, string>[] = [];
+  const seen = new Set<string>();
+  // (1) Any div with exactly two direct children where first looks like an OTP key
+  container.querySelectorAll("div").forEach((div) => {
+    const children = div.querySelectorAll(":scope > div");
+    if (children.length !== 2) return;
+    const key = (children[0].textContent ?? "").replace(/\s+/g, " ").trim();
+    const keyNorm = key.replace(/\s+/g, "");
+    if (!KNOWN_OTP_KEYS.some((k) => keyNorm.toLowerCase().includes(k.toLowerCase()))) return;
+    if (seen.has(keyNorm)) return;
+    seen.add(keyNorm);
+    let val = (children[1].textContent ?? "").replace(/\s+/g, " ").trim();
+    if (!val) {
+      const span = children[1].querySelector("span");
+      if (span) val = (span.textContent ?? "").trim();
+    }
+    if (key && val) rows.push({ Setting: key, Value: val });
+  });
+  // (2) Text scan: look for "otpIPsec" etc. followed by Enabled/Disabled (handles spans or inline layout)
+  const text = (container.textContent ?? "").replace(/\s+/g, " ");
+  KNOWN_OTP_KEYS.forEach((key) => {
+    const keyNorm = key.replace(/\s+/g, "");
+    if (seen.has(keyNorm)) return;
+    const re = new RegExp(`${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[:\\s]+(Enabled|Disabled|On|Off|Yes|No)`, "i`);
+    const m = text.match(re);
+    if (m) {
+      seen.add(keyNorm);
+      rows.push({ Setting: key, Value: m[1] });
+    }
+  });
+  if (rows.length === 0) return null;
+  return { headers: ["Setting", "Value"], rows };
+}
+
 const INTERFACES_HEADERS = ["Interface / VLAN", "VLAN", "Zone", "IP Address", "Description"];
 
 /**
@@ -306,6 +347,19 @@ function extractSectionContent(doc: Document, htmlId: string): SectionData | nul
   // OTP/settings sections use grid divs (not tables); extract as Setting/Value table
   const gridTable = extractKeyValueGrids(container);
   if (gridTable) tables.push(gridTable);
+  // OTP fallback: capture keys like otpIPsec when in a different grid/layout
+  if (htmlId === "additional-OTPSettings" || htmlId === "OTPSettings") {
+    const otpFallback = extractOtpKeyValueFallback(container);
+    if (otpFallback?.rows.length) {
+      const existingKeys = new Set(
+        (gridTable?.rows ?? []).map((r) => (r.Setting ?? (r as Record<string, string>)["Setting"] ?? "").toString().toLowerCase())
+      );
+      const newRows = otpFallback.rows.filter(
+        (r) => !existingKeys.has((r.Setting ?? "").toString().toLowerCase())
+      );
+      if (newRows.length) tables.push({ headers: otpFallback.headers, rows: newRows });
+    }
+  }
 
   // Extract detail blocks (expanded rule details)
   const details = extractDetailBlocks(container);
