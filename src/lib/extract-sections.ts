@@ -191,7 +191,8 @@ function extractOtpKeyValueFallback(container: Element): TableData | null {
   KNOWN_OTP_KEYS.forEach((key) => {
     const keyNorm = key.replace(/\s+/g, "");
     if (seen.has(keyNorm)) return;
-    const re = new RegExp(`${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[:\\s]+(Enabled|Disabled|On|Off|Yes|No)`, "i`);
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(escaped + "\\s*[:\\s]+(Enabled|Disabled|On|Off|Yes|No)", "i");
     const m = text.match(re);
     if (m) {
       seen.add(keyNorm);
