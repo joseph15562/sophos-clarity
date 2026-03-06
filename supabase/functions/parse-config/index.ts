@@ -133,6 +133,7 @@ Rules
 - Use ONLY the actual configuration data provided — never invent details
 - Quote specific rule names, IP ranges, zones, and policy names as evidence
 - When citing firewall rules, include **Web Filter** (or web filtering policy) where the data provides it. **For KCSIE**: web filtering is required only for **outbound traffic to WAN** (e.g. rules from internal/LAN to WAN/internet); do not require web filtering on every rule or for internal-only traffic.
+- **Logging / monitoring**: For any control that relates to monitoring, logging, or audit trail (e.g. "enable logging", "log traffic", "audit", "monitoring"), **fail that control (❌ Not Met)** if the config shows one or more firewall rules with logging disabled (e.g. "Log" off, "Logging" disabled, or no log option enabled). Note which rule(s) have logging off in Evidence/Notes. Compliance for monitoring/logging controls requires logging to be enabled on the relevant rules.
 - Be specific about which rules/settings satisfy which controls
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
