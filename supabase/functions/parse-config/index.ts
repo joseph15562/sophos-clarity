@@ -39,32 +39,36 @@ function pruneEmpty(value: unknown): unknown {
 
 
 
-const SYSTEM_PROMPT = `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover. The level of detail must be suitable for compliance and audit: document all relevant settings, not just summaries.
+const SYSTEM_PROMPT = `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover. The level of detail must be suitable for compliance and audit: document all relevant settings, and pull every column and detail from the data — do not omit or summarise away important fields.
 
-You receive structured JSON data extracted from a Sophos XGS firewall configuration export. Each key is a section name, and the value contains tables, detail blocks, and/or text.
+You receive structured JSON data extracted from a Sophos XGS firewall configuration export. Each section may contain:
+- **tables**: array of { headers, rows } — use every column in the headers and every row; do not drop columns.
+- **details** (or **detail blocks**): per-rule or per-item expansion data with "title" and "fields". You MUST merge this into your report: for each rule/item, if there is a matching detail block, include all fields (e.g. Security Features, Web Filter, Logging, Application Control) in your table or in a clear subsection so the report is complete.
 
 Output Format
 
 Write well-structured Markdown with:
 - An Executive Summary at the top with a brief overview of the firewall configuration (number of rules, key security posture observations, overall assessment)
 - Clear Section headings for each configuration area
-- Markdown tables for listing rules, hosts, interfaces & networks, and settings — use tables instead of bullet lists wherever data has consistent columns
-- After each section's table(s), include a Summary paragraph explaining the purpose and overall pattern of that section
-- After each section, include a **Findings** subsection listing specific issues found (e.g. disabled rules, overly permissive access, missing features). For each finding, indicate severity: 🔴 Critical, 🟠 High, 🟡 Medium, 🟢 Low
-- After each section, include a **Best Practice Recommendations** subsection with actionable, detailed advice specific to the configuration shown (e.g. unused rules, overly permissive access, missing logging, disabled security features). Each recommendation should explain WHY it matters and HOW to remediate it.
+- Markdown tables that include **every column** from the extracted data — Rule Name, Status, Action, Source Zone, Source Networks, Destination Zone, Destination Networks, Services, **Security Features**, **Web Filter** (or "Web Filter Policy"), **Logging** (if present). If a column exists in the export or in rule details, it must appear in your table. Merge detail-block fields into the rule table so each rule shows Security Features, Web Filter, and Logging.
+- After each section's table(s), include a Summary paragraph that is specific and compliance-focused: e.g. how many rules have Web Filter "None", how many have logging disabled, reliance on "Any" services, and one-line recommendations.
+- After each section, include a **Findings** subsection listing specific issues. You MUST include: (1) every rule with Web Filter "None" or "Not specified" — list rule names and state "No web filtering; consider DPI for compliance"; (2) every rule with logging disabled — list rule names; (3) rules with no or minimal Security Features. For each finding, indicate severity: 🔴 Critical, 🟠 High, 🟡 Medium, 🟢 Low.
+- After each section, include a **Best Practice Recommendations** subsection with actionable, detailed advice specific to the configuration shown. Each recommendation should explain WHY it matters and HOW to remediate it.
 
 **Required sections when data exists** (include with full detail for compliance):
 - **SSL/TLS Settings**: Document all SSL/TLS-related configuration present in the export (e.g. TLS version, SSL inspection, certificate settings, TLS profiles). Use a table where appropriate. Include a brief best-practice note on TLS versions and inspection.
-- **Web Filtering / Inspection Method**: State clearly whether **DPI (Deep Packet Inspection)** or **Web proxy** (or both) is in use for web traffic. If the config shows no web filtering or proxy for outbound web traffic, add a prominent **Best Practice** recommendation: "Consider moving to DPI (Deep Packet Inspection) for outbound web traffic to gain visibility, control, and compliance; currently no web filtering or proxy is in use."
+- **Web Filtering / Inspection Method**: State clearly whether **DPI (Deep Packet Inspection)** or **Web proxy** (or both) is in use for web traffic. If the config shows no web filtering or proxy for outbound web traffic (or many rules with Web Filter "None"), add a prominent **Best Practice** recommendation: "Consider moving to DPI (Deep Packet Inspection) for outbound web traffic to gain visibility, control, and compliance; currently no web filtering or proxy is in use."
 
 - End with an **Overall Security Recommendations** section covering cross-cutting best practices based on the entire configuration, including SSL/TLS and web inspection where relevant.
 
 Rules
 
-- Document EVERY rule, host, network, and setting provided — do not skip or summarize; level of detail must support compliance and audit
-- For firewall rules: create a table with columns: Rule Name, Status, Action, Source Zone, Source Networks, Destination Zone, Destination Networks, Services, Security Features, **Web Filter** (or "Web Filter Policy"). The Web Filter column is required for compliance: show which web filter policy/profile is applied to each rule (e.g. policy name, "None", "Default", or the value from the export). If the extracted data has web filter information in the main table or in rule details, include it in this column. If no web filter data is present for a rule, state "None" or "Not specified".
+- Document EVERY rule, host, network, and setting provided — do not skip or summarise; level of detail must support compliance and audit
+- **Firewall rules table MUST include every rule row** from the payload. Count the total number of rows in the firewall rules table(s) in the payload; your output table must have the same number of rows. Do not omit, summarise, or combine rules — list each rule on its own row.
+- **Use all columns** from the extracted tables and merge in any fields from detail blocks (e.g. Security Features, Web Filter, Logging) so the report pulls everything
+- For firewall rules: the table MUST include columns for Security Features, Web Filter (or Web Filter Policy), Logging, and App Control when that data exists in the payload (main table or details). Include every column from the export (e.g. #, Rule Name, Status, Action, Source Zone, Source Networks, Dest Zone, Dest Networks, Service, Web Filter, App Control, IPS, Logging, AV/Zero-Day). If no web filter data for a rule, show "None" or "Not specified" and call it out in Findings
 - For NAT rules: create a table explaining the translation (what maps to what)
-- For **Interfaces & Network** (or Zones, Networks, Ports): create a table with columns: **Interface / VLAN** (name of the interface or VLAN, e.g. "Port2 (WAN)", "VLAN: Servers"), **VLAN** (VLAN ID or "-" if not applicable), **Zone**, **IP Address**, **Description** (or Details — e.g. "Primary WAN", "Server Segment"). Use all columns present in the extracted data; do not reduce to only IP Address and Zone. Include every interface, port, and VLAN from the data. Copy **Interface / VLAN** names exactly as given (e.g. Port1.99, Port2:0, Port3.250) — do not rename or infer different port names.
+- For **Interfaces & Network** (or Zones, Networks, Ports): create a table with all columns present; include every interface, port, and VLAN. Copy **Interface / VLAN** names exactly as given (e.g. Port1.99, Port2:0, Port3.250)
 - For hosts/networks: list all entries in a table with relevant columns
 - For policies: describe what each policy does in a table
 - Use the actual data provided — never invent or assume configuration details
@@ -243,7 +247,7 @@ serve(async (req) => {
     } else if (executive && firewallLabels) {
       userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
     } else {
-      userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
+      userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely. Use every column from each table; if a section has a 'details' or 'detail blocks' array, merge those fields (e.g. Security Features, Web Filter, Logging) into your rule table so the report is complete and suitable for compliance.\n\n" + payload;
     }
 
     const model = "gemini-3-flash-preview";

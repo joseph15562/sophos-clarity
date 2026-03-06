@@ -76,11 +76,11 @@ function extractTable(tableEl: Element): TableData {
     const cells = tr.querySelectorAll("td, .sophos-table-cell");
     if (cells.length === 0) return;
 
-    // If we have headers, map to them; otherwise use indices
-    if (headers.length > 0 && cells.length <= headers.length) {
+    // If we have headers, map cells by index (first N to headers, any extra to colN) so we never drop rows or columns
+    if (headers.length > 0) {
       const row: Record<string, string> = {};
       cells.forEach((cell, i) => {
-        const key = headers[i] || `col${i}`;
+        const key = i < headers.length ? (headers[i] || `col${i}`) : `col${i}`;
         row[key] = (cell.textContent ?? "").replace(/\s+/g, " ").trim();
       });
       if (Object.values(row).some((v) => v)) rows.push(row);
@@ -99,6 +99,29 @@ function extractTable(tableEl: Element): TableData {
   });
 
   return { headers, rows };
+}
+
+/** Merge tables that have the same headers (or compatible) into one table with all rows. Ensures no firewall rules are lost when HTML has multiple tables. */
+function mergeTablesWithSameHeaders(tables: TableData[]): TableData[] {
+  if (tables.length <= 1) return tables;
+  const merged: TableData[] = [];
+  const byHeaderKey = new Map<string, TableData>();
+
+  function headerKey(headers: string[]): string {
+    return headers.map((h) => h.trim().toLowerCase()).join("|");
+  }
+
+  for (const t of tables) {
+    const key = headerKey(t.headers);
+    const existing = byHeaderKey.get(key);
+    if (existing) {
+      existing.rows.push(...t.rows);
+    } else {
+      byHeaderKey.set(key, { headers: t.headers, rows: [...t.rows] });
+    }
+  }
+
+  return Array.from(byHeaderKey.values());
 }
 
 function extractDetailBlocks(container: Element): DetailBlock[] {
@@ -365,14 +388,17 @@ function extractSectionContent(doc: Document, htmlId: string): SectionData | nul
   // Extract detail blocks (expanded rule details)
   const details = extractDetailBlocks(container);
 
+  // Merge tables with identical headers so we don't lose rows (e.g. firewall rules split across multiple tables)
+  const mergedTables = mergeTablesWithSameHeaders(tables);
+
   // Get plain text as fallback
-  const text = tables.length === 0 && details.length === 0
+  const text = mergedTables.length === 0 && details.length === 0
     ? (container.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 5000)
     : "";
 
-  if (tables.length === 0 && details.length === 0 && !text) return null;
+  if (mergedTables.length === 0 && details.length === 0 && !text) return null;
 
-  return { tables, text, details };
+  return { tables: mergedTables, text, details };
 }
 
 /**
