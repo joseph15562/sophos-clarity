@@ -178,10 +178,10 @@ function parseInlineFormatting(text: string): TextRun[] {
   return runs.length > 0 ? runs : [new TextRun(text)];
 }
 
-/** Build a standalone HTML document string for PDF generation */
+/** Build a standalone HTML document string for PDF/print and zip export. A4 format, clear to read. */
 function buildPdfHtml(innerHTML: string, title: string): string {
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>${title}</title>
@@ -189,68 +189,68 @@ function buildPdfHtml(innerHTML: string, title: string): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 11px;
-      line-height: 1.5;
+      font-size: 11pt;
+      line-height: 1.45;
       color: #1a1a2e;
-      padding: 12mm;
+      padding: 0;
+      max-width: 186mm;
+      margin: 0 auto;
+      background: #fff;
     }
-    h1 { font-size: 20px; font-weight: 700; margin: 16px 0 8px; }
-    h2 { font-size: 16px; font-weight: 700; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
-    h3 { font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
-    h4, h5, h6 { font-size: 12px; font-weight: 600; margin: 8px 0 4px; }
-    p { margin: 0 0 6px; }
-    ul, ol { margin: 0 0 6px; padding-left: 20px; }
-    li { margin: 2px 0; }
+    .print-content { padding: 12mm 0; }
+    h1 { font-size: 18pt; font-weight: 700; margin: 14px 0 8px; color: #1a1a2e; }
+    h2 { font-size: 14pt; font-weight: 700; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #2563eb; color: #1e40af; }
+    h3 { font-size: 12pt; font-weight: 600; margin: 10px 0 4px; color: #1a1a2e; }
+    h4, h5, h6 { font-size: 11pt; font-weight: 600; margin: 8px 0 4px; color: #334155; }
+    p { margin: 0 0 8px; color: #475569; }
+    ul, ol { margin: 0 0 8px; padding-left: 22px; color: #475569; }
+    li { margin: 3px 0; }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin: 8px 0;
-      font-size: 10px;
+      margin: 10px 0;
+      font-size: 9.5pt;
       table-layout: fixed;
       page-break-inside: auto;
+      border: 1px solid #cbd5e1;
     }
     thead { display: table-header-group; }
     tr { page-break-inside: avoid; page-break-after: auto; }
     th {
-      background: #f0f0f5;
+      background: #2563eb;
+      color: #fff;
       font-weight: 600;
       text-align: left;
-      padding: 4px 6px;
-      border: 1px solid #ccc;
+      padding: 5px 6px;
+      border: 1px solid #1d4ed8;
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
     td {
-      padding: 3px 6px;
-      border: 1px solid #ccc;
+      padding: 4px 6px;
+      border: 1px solid #e2e8f0;
       word-wrap: break-word;
       overflow-wrap: break-word;
       vertical-align: top;
+      color: #334155;
     }
-    tr:nth-child(even) td { background: #fafafa; }
-    code {
-      font-family: 'Courier New', monospace;
-      font-size: 10px;
-      background: #f5f5f5;
-      padding: 1px 3px;
-      border-radius: 2px;
-    }
-    pre {
-      background: #f5f5f5;
-      padding: 8px;
-      border-radius: 4px;
-      overflow-x: auto;
-      margin: 6px 0;
-      font-size: 10px;
-    }
-    hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    tr:nth-child(odd) td { background: #fff; }
+    code { font-family: 'Courier New', monospace; font-size: 9pt; background: #f1f5f9; padding: 2px 4px; border-radius: 3px; }
+    pre { background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; margin: 8px 0; font-size: 9pt; }
+    hr { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
+    blockquote { border-left: 4px solid #2563eb; padding-left: 10px; margin: 8px 0; background: #eff6ff; color: #475569; font-style: italic; }
+    strong { font-weight: 600; color: #1a1a2e; }
     @media print {
-      body { padding: 0; }
-      @page { size: A4; margin: 10mm; }
+      body { padding: 0; max-width: none; }
+      .print-content { padding: 0; max-width: 186mm; margin: 0 auto; }
+      @page { size: A4; margin: 12mm; }
+      table { font-size: 9pt; }
+      th, td { padding: 4px 5px; }
     }
   </style>
 </head>
-<body>${innerHTML}</body>
+<body><div class="print-content">${innerHTML}</div></body>
 </html>`;
 }
 

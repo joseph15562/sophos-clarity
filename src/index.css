@@ -185,4 +185,26 @@
   .no-print {
     display: none !important;
   }
+  /* A4 format and clear to read when printing report from app */
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  body {
+    max-width: 186mm;
+    margin: 0 auto;
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+  .doc-section {
+    max-width: 186mm;
+    margin: 0 auto;
+  }
+  .doc-section table {
+    font-size: 9pt;
+  }
+  .doc-section th,
+  .doc-section td {
+    padding: 4px 5px;
+  }
 }

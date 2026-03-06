@@ -265,7 +265,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      <main className={`mx-auto px-4 py-8 space-y-8 ${reports.length > 0 ? "max-w-full w-full" : "max-w-5xl"}`}>
         {!hasReports && !isLoading && (
           <>
             <section className="space-y-4">
