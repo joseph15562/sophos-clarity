@@ -202,11 +202,7 @@ serve(async (req) => {
 
     // Compact payload: no pretty-print (saves tokens), strip empty fields
     const compactSections = pruneEmpty(sections) as Record<string, unknown>;
-    let payload = JSON.stringify(compactSections);
-    if (executive && payload.length > EXECUTIVE_MAX_PAYLOAD_CHARS) {
-      const condensed = maybeCondenseExecutive(compactSections, payload.length);
-      payload = JSON.stringify(condensed);
-    }
+    const payload = JSON.stringify(compactSections);
 
   // Build compliance context
     let complianceContext = "";
