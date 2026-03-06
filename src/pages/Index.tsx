@@ -75,7 +75,11 @@ const Index = () => {
           onError: (err) => {
             console.error(`Report ${reportId} attempt ${attempt + 1} failed:`, err);
             if (attempt >= MAX_RETRIES) {
-              toast({ title: "Error", description: `${err} — use the retry button to try again.`, variant: "destructive" });
+              const isExecutive = reportId === "report-executive";
+              const description = isExecutive
+                ? `Executive summary uses data from all firewalls and often hits API limits. ${err} Try retry in a few minutes or use fewer configs.`
+                : `${err} — use the retry button to try again.`;
+              toast({ title: "Error", description, variant: "destructive" });
             }
             resolve(false);
           },
@@ -191,7 +195,8 @@ const Index = () => {
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
-    // Then executive
+    // Then executive — delay first so we're not in the same TPM window as the last individual report
+    await new Promise((r) => setTimeout(r, 6000));
     await generateExecutive(true);
   };
 
