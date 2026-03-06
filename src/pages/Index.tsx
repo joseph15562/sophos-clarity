@@ -105,13 +105,12 @@ const Index = () => {
     setReports(newReports);
     setActiveReportId(newReports[0].id);
 
-    // Generate all in parallel
-    await Promise.all(
-      files.map((f) => {
-        const reportId = `report-${f.id}`;
-        return generateSingleReport(reportId, f.extractedData);
-      })
-    );
+    // Generate one at a time to stay under Gemini's 250K tokens/minute limit
+    for (const f of files) {
+      const reportId = `report-${f.id}`;
+      await generateSingleReport(reportId, f.extractedData);
+      if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
+    }
 
     if (!keepLoading) setIsLoading(false);
   };
@@ -186,10 +185,11 @@ const Index = () => {
     setReports(newReports);
     setActiveReportId(newReports[0].id);
 
-    // Generate all individual in parallel
-    await Promise.all(
-      files.map((f) => generateSingleReport(`report-${f.id}`, f.extractedData))
-    );
+    // Generate individual reports one at a time to stay under 250K TPM
+    for (const f of files) {
+      await generateSingleReport(`report-${f.id}`, f.extractedData);
+      if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
+    }
 
     // Then executive
     await generateExecutive(true);
