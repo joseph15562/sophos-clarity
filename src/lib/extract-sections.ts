@@ -161,20 +161,140 @@ function extractKeyValueGrids(container: Element): TableData | null {
   return { headers: ["Setting", "Value"], rows };
 }
 
+const INTERFACES_HEADERS = ["Interface / VLAN", "VLAN", "Zone", "IP Address", "Description"];
+
+/**
+ * Extract Interfaces & Network table from the ports-vlans-aliases section.
+ * The HTML uses cards (divs with h4 + nested VLANs/Aliases) instead of a table,
+ * so we parse the card layout into one row per interface/VLAN/alias.
+ */
+function extractPortsVlansTable(container: Element): TableData | null {
+  const rows: Record<string, string>[] = [];
+  // Cards are direct children of the flex column (first child of container)
+  const wrapper = container.querySelector(":scope > div");
+  if (!wrapper) return null;
+  const cards = wrapper.querySelectorAll(":scope > div[style*='border']");
+  if (cards.length === 0) return null;
+
+  function getGridPairs(parent: Element): Record<string, string> {
+    const out: Record<string, string> = {};
+    const grid = parent.querySelector("div[style*='grid']");
+    if (grid) {
+      grid.querySelectorAll(":scope > div").forEach((d) => {
+        const t = (d.textContent ?? "").trim();
+        const m = t.match(/^(IP|Zone|IPv4|Hardware|Speed)\s*:\s*(.+)$/i);
+        if (m) out[m[1]] = m[2].trim();
+      });
+    }
+    if (Object.keys(out).length === 0) {
+      parent.querySelectorAll("div").forEach((d) => {
+        const t = (d.textContent ?? "").trim();
+        const m = t.match(/^(IP|Zone|IPv4|Hardware|Speed)\s*:\s*(.+)$/i);
+        if (m) out[m[1]] = m[2].trim();
+      });
+    }
+    return out;
+  }
+
+  cards.forEach((card) => {
+    const h4 = card.querySelector("h4");
+    const baseName = (h4?.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (!baseName) return;
+
+    // VLANs subsection: divs with purple border-left (VLAN blocks)
+    const vlanSection = Array.from(card.querySelectorAll("h5")).find((h) =>
+      (h.textContent ?? "").toLowerCase().includes("vlan")
+    );
+    if (vlanSection) {
+      const vlanContainer = vlanSection.parentElement?.nextElementSibling ?? vlanSection.closest("div")?.nextElementSibling;
+      const vlanBlocks = vlanContainer
+        ? vlanContainer.querySelectorAll('[style*="border-left"][style*="solid"]')
+        : card.querySelectorAll('[style*="border-left"][style*="a855f7"]');
+      vlanBlocks.forEach((block) => {
+        const text = (block.textContent ?? "").replace(/\s+/g, " ");
+        const idMatch = text.match(/ID:\s*(\d+)/i);
+        const vlanId = idMatch ? idMatch[1] : "-";
+        const nameSpan = block.querySelector('span[style*="font-weight"]');
+        const desc = (nameSpan?.textContent ?? "").trim() || (text.match(/^([^I]+?)(?=\s*ID:|\s*ON\s|$)/)?.[1]?.trim() ?? "").replace(/\s+/g, " ") || baseName + "." + vlanId;
+        const pairs = getGridPairs(block);
+        const ip = pairs["IP"] ?? pairs["IPv4"] ?? "";
+        const zone = pairs["Zone"] ?? "";
+        const ifName = vlanId !== "-" ? `${baseName}.${vlanId}` : baseName;
+        rows.push({
+          "Interface / VLAN": ifName,
+          VLAN: vlanId,
+          Zone: zone,
+          "IP Address": ip,
+          Description: desc,
+        });
+      });
+    }
+
+    // Aliases subsection
+    const aliasSection = Array.from(card.querySelectorAll("h5")).find((h) =>
+      (h.textContent ?? "").toLowerCase().includes("alias")
+    );
+    if (aliasSection) {
+      const aliasContainer = aliasSection.parentElement?.nextElementSibling ?? aliasSection.closest("div")?.nextElementSibling;
+      const aliasBlocks = aliasContainer
+        ? aliasContainer.querySelectorAll('[style*="border-left"][style*="solid"]')
+        : [];
+      aliasBlocks.forEach((block) => {
+        const text = (block.textContent ?? "").replace(/\s+/g, " ");
+        const nameEl = block.querySelector("div[style*='font-weight']") ?? block.querySelector("span[style*='font-weight']") ?? block.firstElementChild;
+        const aliasName = (nameEl?.textContent ?? "").trim() || text.split("IPv4")[0]?.trim() || baseName + ":0";
+        const ipMatch = text.match(/IPv4:\s*([\d./]+)/i) ?? text.match(/IP:\s*([\d./]+)/i);
+        const ip = ipMatch ? ipMatch[1].trim() : "";
+        rows.push({
+          "Interface / VLAN": aliasName,
+          VLAN: "-",
+          Zone: "-",
+          "IP Address": ip,
+          Description: "Alias",
+        });
+      });
+    }
+
+    // Port-level only (no VLANs/Aliases): single row from card header grid
+    if (!vlanSection && !aliasSection) {
+      const headerArea = card.querySelector("[style*='linear-gradient']");
+      const pairs = headerArea ? getGridPairs(headerArea) : getGridPairs(card);
+      const ip = pairs["IP"] ?? pairs["IPv4"] ?? "";
+      const zone = pairs["Zone"] ?? "-";
+      // Skip duplicate sub-interface cards (e.g. Port1.99 XFRM card when we already have Port1.99 from Port1 VLANs)
+      if (baseName.includes(".") && !ip) return;
+      rows.push({
+        "Interface / VLAN": baseName,
+        VLAN: "-",
+        Zone: zone,
+        "IP Address": ip,
+        Description: baseName === "HA link" ? "HA link" : "",
+      });
+    }
+  });
+
+  if (rows.length === 0) return null;
+  return { headers: INTERFACES_HEADERS, rows };
+}
+
 function extractSectionContent(doc: Document, htmlId: string): SectionData | null {
   const container = doc.getElementById(`section-content-${htmlId}`);
   if (!container) return null;
 
-  // Extract all tables in this section
   const tables: TableData[] = [];
-  // Get the main table (direct child or first-level)
+
+  // Interfaces & Network: parse card layout into a single table (no <table> in HTML)
+  if (htmlId === "ports-vlans-aliases") {
+    const ifTable = extractPortsVlansTable(container);
+    if (ifTable) tables.push(ifTable);
+  }
+
+  // Extract all tables in this section
   const mainTables = container.querySelectorAll(":scope > div > table, :scope > table, .sophos-table");
-  // Fallback: any table that isn't inside a details row
   const allTables = mainTables.length > 0 ? mainTables : container.querySelectorAll("table");
 
   const processedTables = new Set<Element>();
   allTables.forEach((table) => {
-    // Skip tables inside detail expansion rows
     if (table.closest('[id^="details-"]') || table.closest('[id^="rule-content-"]')) return;
     if (processedTables.has(table)) return;
     processedTables.add(table);
