@@ -274,34 +274,18 @@ serve(async (req) => {
       });
 
     let response = await doRequest();
-    const max429Retries = 2; // wait for quota window to reset (e.g. TPM)
+    const max429Retries = 2;
     for (let retries = 0; response.status === 429 && retries < max429Retries; retries++) {
-      const text429 = await response.text();
-      let retrySec = 60;
-      try {
-        const errJson = JSON.parse(text429);
-        const details = errJson.error?.details ?? [];
-        const retryInfo = details.find((d: { "@type"?: string; retryDelay?: string }) => d["@type"]?.includes("RetryInfo"));
-        const delay = retryInfo?.retryDelay;
-        if (delay && typeof delay === "string") {
-          const match = delay.match(/^(\d+(?:\.\d+)?)s$/);
-          if (match) retrySec = Math.min(Math.ceil(Number(match[1])) + 2, 65);
-        }
-      } catch { /* use default 60 */ }
-      console.log(`parse-config: Gemini 429 (quota). Waiting ${retrySec}s before retry (attempt ${retries + 1}/${max429Retries}).`);
+      const retrySec = 15 + retries * 15; // 15s, 30s backoff
+      console.log(`parse-config: 429 rate limit. Waiting ${retrySec}s before retry (attempt ${retries + 1}/${max429Retries}).`);
       await new Promise((r) => setTimeout(r, retrySec * 1000));
       response = await doRequest();
     }
 
     if (!response.ok) {
       const text = await response.text();
-      if (response.status === 429) {
-        console.error("parse-config: returning 429 after retries. Gemini API error:", response.status, text.slice(0, 500));
-      } else {
-        console.error("Gemini API error:", response.status, text);
-      }
+      console.error("AI gateway error:", response.status, text.slice(0, 500));
 
-      // Parse Gemini error body when possible for a clearer message
       let message = "AI processing failed";
       try {
         const errJson = JSON.parse(text);
@@ -309,15 +293,16 @@ serve(async (req) => {
         if (typeof detail === "string") message = detail;
       } catch { /* use default */ }
 
-      // Rate limit or quota (free tier: 20 RPD, 5 RPM, 250K TPM)
-      if (response.status === 429 || response.status === 403) {
+      if (response.status === 429) {
         return new Response(
-          JSON.stringify({
-            error: message.includes("rate") || message.includes("quota") || message.includes("resource")
-              ? message
-              : "Gemini rate limit or daily quota exceeded (free tier: 20 requests/day, 5/min). Set up billing in Google Cloud to increase limits.",
-          }),
+          JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
