@@ -196,9 +196,9 @@ serve(async (req) => {
       });
     }
 
-    // Gemini API key (required)
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+    // Lovable AI Gateway key (required)
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     // Compact payload: no pretty-print (saves tokens), strip empty fields
     const compactSections = pruneEmpty(sections) as Record<string, unknown>;
