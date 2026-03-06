@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import DOMPurify from "dompurify";
 import { BrandingData } from "./BrandingSetup";
 import { Loader2, Download, FileText, RefreshCw, Archive } from "lucide-react";
@@ -29,6 +29,8 @@ type Props = {
   failedReportIds: Set<string>;
   onRetry: (reportId: string) => void;
   branding: BrandingData;
+  /** Rendered at the top when reports exist (e.g. Add Compliance Evidence Pack) */
+  topActions?: ReactNode;
 };
 
 function isTableRow(line: string): boolean {
@@ -690,7 +692,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   );
 }
 
-export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding }: Props) {
+export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions }: Props) {
   if (reports.length === 0 && !isLoading) return null;
 
   const allDone = reports.length > 0 && !isLoading && reports.every(r => r.markdown && !failedReportIds.has(r.id));
@@ -731,6 +733,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     const oneReportDone = r.markdown && !failedReportIds.has(r.id);
     return (
       <div className="space-y-4">
+        {topActions}
         <div className="flex items-center justify-between no-print">
           <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
           {oneReportDone && (
@@ -767,6 +770,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
 
   return (
     <div className="space-y-4">
+      {topActions}
       <div className="flex items-center justify-between no-print">
         <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
         {allDone && (

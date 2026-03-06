@@ -339,6 +339,22 @@ const Index = () => {
           failedReportIds={failedReportIds}
           onRetry={handleRetry}
           branding={branding}
+          topActions={
+            hasReports && !isLoading ? (
+              <div className="no-print flex flex-wrap gap-3 mb-4">
+                {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
+                  <Button variant="secondary" onClick={() => generateExecutive()} className="gap-2">
+                    <BookOpen className="h-4 w-4" /> Add Executive Summary
+                  </Button>
+                )}
+                {!reports.find((r) => r.id === "report-compliance") && (
+                  <Button variant="outline" onClick={generateCompliance} className="gap-2">
+                    <ClipboardCheck className="h-4 w-4" /> Add Compliance Evidence Pack
+                  </Button>
+                )}
+              </div>
+            ) : null
+          }
         />
 
         {hasReports && !isLoading && (
@@ -354,16 +370,6 @@ const Index = () => {
             >
               ← Start Over
             </Button>
-            {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
-              <Button variant="secondary" onClick={() => generateExecutive()} className="gap-2">
-                <BookOpen className="h-4 w-4" /> Add Executive Summary
-              </Button>
-            )}
-            {!reports.find((r) => r.id === "report-compliance") && (
-              <Button variant="outline" onClick={generateCompliance} className="gap-2">
-                <ClipboardCheck className="h-4 w-4" /> Add Compliance Evidence Pack
-              </Button>
-            )}
           </div>
         )}
       </main>
