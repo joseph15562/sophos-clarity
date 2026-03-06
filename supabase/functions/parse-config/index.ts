@@ -36,34 +36,8 @@ function pruneEmpty(value: unknown): unknown {
   return value;
 }
 
-/** Cap string length (for executive payload to stay under 250K input tokens). */
-const EXECUTIVE_MAX_PAYLOAD_CHARS = 320_000; // leave room for system prompt
-const EXECUTIVE_MAX_CHARS_PER_SECTION = 8_000;
 
-function condenseForExecutive(value: unknown, maxSectionChars: number): unknown {
-  if (value === null || value === undefined) return value;
-  if (typeof value === "string") {
-    if (value.length <= maxSectionChars) return value;
-    return value.slice(0, maxSectionChars) + "\n\n… [truncated for length; use the above for key findings]";
-  }
-  if (Array.isArray(value)) {
-    return value.map((v) => condenseForExecutive(v, maxSectionChars));
-  }
-  if (typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, condenseForExecutive(v, maxSectionChars)])
-    );
-  }
-  return value;
-}
 
-/** If payload is too large for executive (250K TPM), return a condensed version. */
-function maybeCondenseExecutive(sections: Record<string, unknown>, currentPayloadLength: number): Record<string, unknown> {
-  if (currentPayloadLength <= EXECUTIVE_MAX_PAYLOAD_CHARS) return sections;
-  const cap = EXECUTIVE_MAX_CHARS_PER_SECTION;
-  console.log(`parse-config: executive payload ${currentPayloadLength} chars exceeds limit; condensing (max ${cap} chars per section).`);
-  return condenseForExecutive(sections, cap) as Record<string, unknown>;
-}
 
 const SYSTEM_PROMPT = `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover.
 
