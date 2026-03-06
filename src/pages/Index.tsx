@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { Shield, Sparkles, FileStack, BookOpen, ClipboardCheck } from "lucide-react";
+import { Shield, Sparkles, FileStack, BookOpen, ClipboardCheck, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
@@ -13,6 +14,7 @@ type ParsedFile = UploadedFile & { extractedData: ExtractedSections };
 
 const Index = () => {
   const { toast } = useToast();
+  const { setTheme, resolvedTheme } = useTheme();
   const [files, setFiles] = useState<ParsedFile[]>([]);
   const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] });
   const [reports, setReports] = useState<ReportEntry[]>([]);
@@ -254,7 +256,7 @@ const Index = () => {
           <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-bold text-foreground leading-tight">
               Sophos Config Documenter
             </h1>
@@ -262,6 +264,15 @@ const Index = () => {
               Transform firewall exports into readable documentation
             </p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="shrink-0"
+            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
         </div>
       </header>
 
