@@ -251,15 +251,14 @@ serve(async (req) => {
       userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
     }
 
-    // Stable model (avoid preview in production). Use gemini-1.5-flash if 2.0 not available for your key.
-    const model = "gemini-3-flash-preview";
+    const model = "google/gemini-3-flash-preview";
     const maxTokens = 8192;
 
     const doRequest = () =>
-      fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${GEMINI_API_KEY}`,
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
