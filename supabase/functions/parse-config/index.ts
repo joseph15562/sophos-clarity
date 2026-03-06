@@ -196,9 +196,9 @@ serve(async (req) => {
       });
     }
 
-    // Gemini API key (required)
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+    // Lovable AI Gateway key (required)
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     // Compact payload: no pretty-print (saves tokens), strip empty fields
     const compactSections = pruneEmpty(sections) as Record<string, unknown>;
@@ -251,15 +251,14 @@ serve(async (req) => {
       userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely:\n\n" + payload;
     }
 
-    // Stable model (avoid preview in production). Use gemini-1.5-flash if 2.0 not available for your key.
-    const model = "gemini-3-flash-preview";
+    const model = "google/gemini-3-flash-preview";
     const maxTokens = 8192;
 
     const doRequest = () =>
-      fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${GEMINI_API_KEY}`,
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -275,34 +274,18 @@ serve(async (req) => {
       });
 
     let response = await doRequest();
-    const max429Retries = 2; // wait for quota window to reset (e.g. TPM)
+    const max429Retries = 2;
     for (let retries = 0; response.status === 429 && retries < max429Retries; retries++) {
-      const text429 = await response.text();
-      let retrySec = 60;
-      try {
-        const errJson = JSON.parse(text429);
-        const details = errJson.error?.details ?? [];
-        const retryInfo = details.find((d: { "@type"?: string; retryDelay?: string }) => d["@type"]?.includes("RetryInfo"));
-        const delay = retryInfo?.retryDelay;
-        if (delay && typeof delay === "string") {
-          const match = delay.match(/^(\d+(?:\.\d+)?)s$/);
-          if (match) retrySec = Math.min(Math.ceil(Number(match[1])) + 2, 65);
-        }
-      } catch { /* use default 60 */ }
-      console.log(`parse-config: Gemini 429 (quota). Waiting ${retrySec}s before retry (attempt ${retries + 1}/${max429Retries}).`);
+      const retrySec = 15 + retries * 15; // 15s, 30s backoff
+      console.log(`parse-config: 429 rate limit. Waiting ${retrySec}s before retry (attempt ${retries + 1}/${max429Retries}).`);
       await new Promise((r) => setTimeout(r, retrySec * 1000));
       response = await doRequest();
     }
 
     if (!response.ok) {
       const text = await response.text();
-      if (response.status === 429) {
-        console.error("parse-config: returning 429 after retries. Gemini API error:", response.status, text.slice(0, 500));
-      } else {
-        console.error("Gemini API error:", response.status, text);
-      }
+      console.error("AI gateway error:", response.status, text.slice(0, 500));
 
-      // Parse Gemini error body when possible for a clearer message
       let message = "AI processing failed";
       try {
         const errJson = JSON.parse(text);
@@ -310,15 +293,16 @@ serve(async (req) => {
         if (typeof detail === "string") message = detail;
       } catch { /* use default */ }
 
-      // Rate limit or quota (free tier: 20 RPD, 5 RPM, 250K TPM)
-      if (response.status === 429 || response.status === 403) {
+      if (response.status === 429) {
         return new Response(
-          JSON.stringify({
-            error: message.includes("rate") || message.includes("quota") || message.includes("resource")
-              ? message
-              : "Gemini rate limit or daily quota exceeded (free tier: 20 requests/day, 5/min). Set up billing in Google Cloud to increase limits.",
-          }),
+          JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
