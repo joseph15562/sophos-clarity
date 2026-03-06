@@ -17,14 +17,30 @@ type StreamOptions = {
 export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, onDelta, onDone, onError }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
-    body: JSON.stringify({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance }),
-  });
+  const timeoutMs = 150_000; // 2.5 min — backend may retry 429 with ~60s waits
+  const ac = new AbortController();
+  const timeoutId = setTimeout(() => ac.abort(), timeoutMs);
+
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      method: "POST",
+      signal: ac.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance }),
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    const msg = e instanceof Error && e.name === "AbortError"
+      ? "Request timed out. The executive summary may have hit API limits — try again in a minute or use fewer configs."
+      : (e instanceof Error ? e.message : "Request failed");
+    onError(msg);
+    return;
+  }
+  clearTimeout(timeoutId);
 
   if (!resp.ok) {
     const body = await resp.json().catch(() => ({ error: "Request failed" }));

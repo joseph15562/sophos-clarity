@@ -134,7 +134,9 @@ const Index = () => {
     const execId = "report-executive";
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== execId);
-      return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
+      const existing = prev.find((r) => r.id === execId);
+      const keepPlaceholder = existing?.markdown?.includes("Waiting for API quota");
+      return [...without, { id: execId, label: "📋 Executive Summary", markdown: keepPlaceholder ? existing!.markdown : "" }];
     });
     setActiveReportId(execId);
 
