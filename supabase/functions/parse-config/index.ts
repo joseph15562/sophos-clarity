@@ -219,7 +219,7 @@ serve(async (req) => {
     }
 
     // Stable model (avoid preview in production). Use gemini-1.5-flash if 2.0 not available for your key.
-    const model = "gemini-30-flash-preview";
+    const model = "gemini-3-flash-preview";
     const maxTokens = 8192;
 
     const doRequest = () =>
@@ -242,7 +242,8 @@ serve(async (req) => {
       });
 
     let response = await doRequest();
-    if (response.status === 429) {
+    const max429Retries = 2; // wait for quota window to reset (e.g. TPM)
+    for (let retries = 0; response.status === 429 && retries < max429Retries; retries++) {
       const text429 = await response.text();
       let retrySec = 60;
       try {

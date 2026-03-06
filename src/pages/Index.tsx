@@ -195,8 +195,14 @@ const Index = () => {
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
-    // Then executive — delay first so we're not in the same TPM window as the last individual report
-    await new Promise((r) => setTimeout(r, 6000));
+    // Then executive — add placeholder and wait for a new TPM window (250K/min) so the single large request doesn't 429
+    const execId = "report-executive";
+    setReports((prev) => {
+      const without = prev.filter((r) => r.id !== execId);
+      return [...without, { id: execId, label: "📋 Executive Summary", markdown: "*Waiting for API quota window (about 1 minute)…*" }];
+    });
+    setActiveReportId(execId);
+    await new Promise((r) => setTimeout(r, 65_000));
     await generateExecutive(true);
   };
 
