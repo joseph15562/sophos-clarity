@@ -219,7 +219,8 @@ serve(async (req) => {
     }
 
     // Stable model (avoid preview in production). Use gemini-1.5-flash if 2.0 not available for your key.
-    const model = "gemini-2.0-flash";
+    const model = "gemini-30-flash-preview";
+    const maxTokens = 8192;
 
     const doRequest = () =>
       fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -242,7 +243,19 @@ serve(async (req) => {
 
     let response = await doRequest();
     if (response.status === 429) {
-      await new Promise((r) => setTimeout(r, 2000));
+      const text429 = await response.text();
+      let retrySec = 60;
+      try {
+        const errJson = JSON.parse(text429);
+        const details = errJson.error?.details ?? [];
+        const retryInfo = details.find((d: { "@type"?: string; retryDelay?: string }) => d["@type"]?.includes("RetryInfo"));
+        const delay = retryInfo?.retryDelay;
+        if (delay && typeof delay === "string") {
+          const match = delay.match(/^(\d+(?:\.\d+)?)s$/);
+          if (match) retrySec = Math.min(Math.ceil(Number(match[1])) + 2, 65);
+        }
+      } catch { /* use default 60 */ }
+      await new Promise((r) => setTimeout(r, retrySec * 1000));
       response = await doRequest();
     }
 
