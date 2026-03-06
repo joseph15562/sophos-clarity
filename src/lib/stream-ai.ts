@@ -12,15 +12,18 @@ type StreamOptions = {
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
+  /** Optional: progress text for diagnosis (e.g. "Sending request…", "Generating…") */
+  onStatus?: (status: string) => void;
 };
 
-export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, onDelta, onDone, onError }: StreamOptions) {
+export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, onDelta, onDone, onError, onStatus }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const timeoutMs = 150_000; // 2.5 min — backend may retry 429 with ~60s waits
   const ac = new AbortController();
   const timeoutId = setTimeout(() => ac.abort(), timeoutMs);
 
+  onStatus?.("Sending request…");
   let resp: Response;
   try {
     resp = await fetch(url, {
@@ -34,6 +37,7 @@ export async function streamConfigParse({ sections, environment, country, custom
     });
   } catch (e) {
     clearTimeout(timeoutId);
+    onStatus?.("");
     const msg = e instanceof Error && e.name === "AbortError"
       ? "Request timed out. The executive summary may have hit API limits — try again in a minute or use fewer configs."
       : (e instanceof Error ? e.message : "Request failed");
@@ -43,23 +47,32 @@ export async function streamConfigParse({ sections, environment, country, custom
   clearTimeout(timeoutId);
 
   if (!resp.ok) {
+    onStatus?.("");
     const body = await resp.json().catch(() => ({ error: "Request failed" }));
-    onError(body.error || `Error ${resp.status}`);
+    const msg = body.error || `Error ${resp.status}`;
+    onError(msg);
     return;
   }
 
   if (!resp.body) {
+    onStatus?.("");
     onError("No response body");
     return;
   }
 
+  onStatus?.("Waiting for response…");
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let hasReceivedContent = false;
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
+    if (!hasReceivedContent) {
+      hasReceivedContent = true;
+      onStatus?.("Generating…");
+    }
     buffer += decoder.decode(value, { stream: true });
 
     let newlineIdx: number;
@@ -73,6 +86,7 @@ export async function streamConfigParse({ sections, environment, country, custom
 
       const jsonStr = line.slice(6).trim();
       if (jsonStr === "[DONE]") {
+        onStatus?.("");
         onDone();
         return;
       }
@@ -104,5 +118,6 @@ export async function streamConfigParse({ sections, environment, country, custom
     }
   }
 
+  onStatus?.("");
   onDone();
 }

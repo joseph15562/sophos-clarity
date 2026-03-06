@@ -14,6 +14,10 @@ export type ReportEntry = {
   id: string;
   label: string;
   markdown: string;
+  /** Shown in the failed state so you can see why generation failed */
+  errorMessage?: string;
+  /** Shown under the spinner during loading for diagnosis */
+  loadingStatus?: string;
 };
 
 type Props = {
@@ -525,13 +529,15 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
-function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename }: {
+function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename, errorMessage, loadingStatus }: {
   markdown: string;
   isLoading: boolean;
   isFailed: boolean;
   onRetry: () => void;
   branding: BrandingData;
   pdfFilename: string;
+  errorMessage?: string;
+  loadingStatus?: string;
 }) {
   const docRef = useRef<HTMLDivElement>(null);
 
@@ -603,14 +609,20 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin mb-4" />
             <p className="text-lg font-medium">Analysing configuration...</p>
-            <p className="text-sm">This may take a minute for large configs</p>
+            {loadingStatus && <p className="text-sm mt-1 font-medium text-foreground">{loadingStatus}</p>}
+            <p className="text-sm mt-1">This may take a minute for large configs</p>
           </div>
         )}
 
         {isFailed && !markdown && (
           <div className="flex flex-col items-center justify-center py-16 text-destructive">
             <p className="text-lg font-medium mb-2">Generation failed</p>
-            <p className="text-sm text-muted-foreground mb-4">The AI service may be overloaded. Click retry to try again.</p>
+            {errorMessage && (
+              <p className="text-sm text-left max-w-xl mb-4 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30 break-words">
+                {errorMessage}
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground mb-4">Click retry to try again, or wait a minute if the API hit its rate limit.</p>
             <Button variant="destructive" onClick={onRetry} className="gap-2">
               <RefreshCw className="h-4 w-4" /> Retry Generation
             </Button>
@@ -678,6 +690,8 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
           onRetry={() => onRetry(r.id)}
           branding={branding}
           pdfFilename={`${r.label.replace(/\s+/g, "-").toLowerCase()}-report.pdf`}
+          errorMessage={r.errorMessage}
+          loadingStatus={r.loadingStatus}
         />
       </div>
     );
@@ -687,7 +701,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-foreground no-print">Document Preview</h2>
-        <ReportContent markdown="" isLoading={true} isFailed={false} onRetry={() => {}} branding={branding} pdfFilename="report.pdf" />
+        <ReportContent markdown="" isLoading={true} isFailed={false} onRetry={() => {}} branding={branding} pdfFilename="report.pdf" loadingStatus="Starting…" />
       </div>
     );
   }
@@ -721,6 +735,8 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
               onRetry={() => onRetry(r.id)}
               branding={branding}
               pdfFilename={`${r.label.replace(/\s+/g, "-").toLowerCase()}-report.pdf`}
+              errorMessage={r.errorMessage}
+              loadingStatus={r.loadingStatus}
             />
           </TabsContent>
         ))}

@@ -256,13 +256,18 @@ serve(async (req) => {
           if (match) retrySec = Math.min(Math.ceil(Number(match[1])) + 2, 65);
         }
       } catch { /* use default 60 */ }
+      console.log(`parse-config: Gemini 429 (quota). Waiting ${retrySec}s before retry (attempt ${retries + 1}/${max429Retries}).`);
       await new Promise((r) => setTimeout(r, retrySec * 1000));
       response = await doRequest();
     }
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("Gemini API error:", response.status, text);
+      if (response.status === 429) {
+        console.error("parse-config: returning 429 after retries. Gemini API error:", response.status, text.slice(0, 500));
+      } else {
+        console.error("Gemini API error:", response.status, text);
+      }
 
       // Parse Gemini error body when possible for a clearer message
       let message = "AI processing failed";

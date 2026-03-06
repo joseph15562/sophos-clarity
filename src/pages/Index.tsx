@@ -44,8 +44,7 @@ const Index = () => {
   ) => {
     setLoadingReportIds((prev) => new Set(prev).add(reportId));
     setFailedReportIds((prev) => { const n = new Set(prev); n.delete(reportId); return n; });
-    // Reset markdown for this report
-    setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, markdown: "" } : r));
+    setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, markdown: "", errorMessage: undefined, loadingStatus: undefined } : r));
 
     const MAX_RETRIES = 2;
     let attempt = 0;
@@ -53,9 +52,8 @@ const Index = () => {
 
     while (attempt <= MAX_RETRIES && !succeeded) {
       if (attempt > 0) {
-        // Wait before retry with exponential backoff
         await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
-        setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, markdown: "" } : r));
+        setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, markdown: "", errorMessage: undefined, loadingStatus: undefined } : r));
       }
 
       succeeded = await new Promise<boolean>((resolve) => {
@@ -73,6 +71,7 @@ const Index = () => {
           ),
           onDone: () => resolve(true),
           onError: (err) => {
+            setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, errorMessage: err } : r));
             console.error(`Report ${reportId} attempt ${attempt + 1} failed:`, err);
             if (attempt >= MAX_RETRIES) {
               const isExecutive = reportId === "report-executive";
@@ -83,6 +82,9 @@ const Index = () => {
             }
             resolve(false);
           },
+          onStatus: (status) => setReports((prev) =>
+            prev.map((r) => r.id === reportId ? { ...r, loadingStatus: status } : r)
+          ),
         });
       });
       attempt++;
