@@ -360,11 +360,12 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
     fontFace: "Segoe UI",
   });
 
-  // Parse markdown into sections
+  // Parse markdown into sections (include paragraphs so no slide is left blank)
   const lines = markdown.split("\n");
   let currentH2 = "";
   let currentBullets: string[] = [];
-  const sections: { title: string; bullets: string[]; tables: { headers: string[]; rows: string[][] }[] }[] = [];
+  let currentParagraphs: string[] = [];
+  const sections: { title: string; bullets: string[]; paragraphs: string[]; tables: { headers: string[]; rows: string[][] }[] }[] = [];
   let currentTables: { headers: string[]; rows: string[][] }[] = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -373,11 +374,13 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
     const h3Match = line.match(/^###\s+(.*)/);
 
     if (h2Match || h3Match) {
-      if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0)) {
-        sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables] });
+      // Push previous section even if no bullets/tables (so we get a slide; we'll use paragraphs or placeholder)
+      if (currentH2) {
+        sections.push({ title: currentH2, bullets: [...currentBullets], paragraphs: [...currentParagraphs], tables: [...currentTables] });
       }
       currentH2 = (h2Match || h3Match)![1];
       currentBullets = [];
+      currentParagraphs = [];
       currentTables = [];
       continue;
     }
@@ -416,20 +419,29 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
     // Collect bold key-value lines as bullets
     if (line.startsWith("**") && line.includes(":")) {
       currentBullets.push(line.replace(/\*\*/g, ""));
+      continue;
+    }
+
+    // Collect paragraph text (non-empty lines that aren't structure)
+    if (line.length > 0 && line.length < 500) {
+      currentParagraphs.push(line.replace(/\*\*/g, "").trim());
     }
   }
   // Push last section
-  if (currentH2 && (currentBullets.length > 0 || currentTables.length > 0)) {
-    sections.push({ title: currentH2, bullets: [...currentBullets], tables: [...currentTables] });
+  if (currentH2) {
+    sections.push({ title: currentH2, bullets: [...currentBullets], paragraphs: [...currentParagraphs], tables: [...currentTables] });
   }
 
   // --- Generate slides for each section ---
+  const MAX_PARAGRAPH_LINES_ON_TITLE = 5;
+  const PLACEHOLDER_TEXT = "Key findings and recommendations for this area are in the full report. Use the Word/HTML export for full detail.";
+
   for (const section of sections) {
-    // Section title slide
+    // Section title slide — always add body content so no blank slides
     const sectionSlide = pptx.addSlide();
     sectionSlide.addText(section.title, {
       x: 0.8, y: 0.3, w: 11, h: 0.7,
-      fontSize: 22, bold: true, color: PRIMARY,
+      fontSize: 24, bold: true, color: PRIMARY,
       fontFace: "Segoe UI",
     });
     sectionSlide.addShape(pptx.ShapeType.rect, {
@@ -437,25 +449,56 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
       fill: { color: ACCENT },
     });
 
-    // Bullets (paginate if >8)
-    if (section.bullets.length > 0) {
-      const chunks = chunkArray(section.bullets, 8);
-      const isFirst = true;
-      let slideRef = sectionSlide;
+    // Body: paragraphs first (good for presenting findings), then bullets, or placeholder
+    const paraLines = section.paragraphs.slice(0, MAX_PARAGRAPH_LINES_ON_TITLE);
+    const hasContent = paraLines.length > 0 || section.bullets.length > 0 || section.tables.some(t => t.rows.length > 0);
+    let bodyY = 1.15;
 
+    if (paraLines.length > 0) {
+      const bodyText = paraLines.join("\n");
+      sectionSlide.addText(bodyText, {
+        x: 0.8, y: bodyY, w: 11, h: 4,
+        fontSize: 14, color: "334155",
+        fontFace: "Segoe UI",
+        valign: "top",
+        breakLine: true,
+        lineSpacingMultiple: 1.25,
+      });
+      bodyY += Math.min(paraLines.length * 0.35, 2.5);
+    }
+
+    if (!hasContent) {
+      sectionSlide.addText(PLACEHOLDER_TEXT, {
+        x: 0.8, y: 1.15, w: 11, h: 1.5,
+        fontSize: 14, color: GRAY,
+        fontFace: "Segoe UI",
+        italic: true,
+        valign: "top",
+      });
+    }
+
+    // Bullets (paginate if >6 for readability when presenting)
+    if (section.bullets.length > 0) {
+      const chunks = chunkArray(section.bullets, 6);
+      const bulletsStartOnNewSlide = paraLines.length > 0; // keep title slide for paragraph body only
       for (let ci = 0; ci < chunks.length; ci++) {
-        if (ci > 0) {
-          slideRef = pptx.addSlide();
-          slideRef.addText(`${section.title} (cont.)`, {
+        const slideRef = (ci === 0 && !bulletsStartOnNewSlide) ? sectionSlide : (() => {
+          const s = pptx.addSlide();
+          s.addText(ci === 0 ? section.title : `${section.title} (continued)`, {
             x: 0.8, y: 0.3, w: 11, h: 0.7,
-            fontSize: 18, bold: true, color: PRIMARY,
+            fontSize: 20, bold: true, color: PRIMARY,
             fontFace: "Segoe UI",
           });
-        }
-        const yStart = ci === 0 && isFirst ? 1.2 : 1.0;
+          s.addShape(pptx.ShapeType.rect, {
+            x: 0.8, y: 0.95, w: 2.5, h: 0.04,
+            fill: { color: ACCENT },
+          });
+          return s;
+        })();
+        const yStart = 1.0;
         const bulletTexts = chunks[ci].map(b => ({
-          text: b,
-          options: { fontSize: 13, color: "334155", bullet: { code: "2022" }, fontFace: "Segoe UI", breakLine: true as const },
+          text: b.length > 120 ? b.slice(0, 117) + "…" : b,
+          options: { fontSize: 14, color: "334155", bullet: { code: "2022" }, fontFace: "Segoe UI", breakLine: true as const },
         }));
         slideRef.addText(bulletTexts as any, {
           x: 0.8, y: yStart, w: 11, h: 5.5 - yStart,
@@ -465,9 +508,10 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
       }
     }
 
-    // Tables (one slide per table, paginate rows if needed)
+    // Tables (one slide per table with data; skip empty tables)
     for (const table of section.tables) {
-      const maxRowsPerSlide = 12;
+      if (table.rows.length === 0) continue;
+      const maxRowsPerSlide = 10;
       const rowChunks = chunkArray(table.rows, maxRowsPerSlide);
 
       for (let ci = 0; ci < rowChunks.length; ci++) {
@@ -475,24 +519,28 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
         const suffix = rowChunks.length > 1 ? ` (${ci + 1}/${rowChunks.length})` : "";
         tSlide.addText(`${section.title}${suffix}`, {
           x: 0.8, y: 0.2, w: 11, h: 0.6,
-          fontSize: 18, bold: true, color: PRIMARY,
+          fontSize: 20, bold: true, color: PRIMARY,
           fontFace: "Segoe UI",
+        });
+        tSlide.addShape(pptx.ShapeType.rect, {
+          x: 0.8, y: 0.75, w: 2.5, h: 0.03,
+          fill: { color: ACCENT },
         });
 
         const colW = 11.8 / table.headers.length;
         const headerRow: PptxGenJS.TableRow = table.headers.map(h => ({
-          text: h,
-          options: { bold: true, fontSize: 10, color: "FFFFFF", fill: { color: ACCENT }, fontFace: "Segoe UI", align: "left" as const, valign: "middle" as const },
+          text: String(h).slice(0, 80),
+          options: { bold: true, fontSize: 11, color: "FFFFFF", fill: { color: ACCENT }, fontFace: "Segoe UI", align: "left" as const, valign: "middle" as const },
         }));
-        const dataRows: PptxGenJS.TableRow[] = rowChunks[ci].map((row, ri) => 
+        const dataRows: PptxGenJS.TableRow[] = rowChunks[ci].map((row, ri) =>
           row.map(cell => ({
-            text: cell,
-            options: { fontSize: 9, color: "334155", fill: { color: ri % 2 === 0 ? "FFFFFF" : LIGHT_BG }, fontFace: "Segoe UI", valign: "top" as const },
+            text: String(cell).slice(0, 100),
+            options: { fontSize: 10, color: "334155", fill: { color: ri % 2 === 0 ? "FFFFFF" : LIGHT_BG }, fontFace: "Segoe UI", valign: "top" as const },
           }))
         );
 
         tSlide.addTable([headerRow, ...dataRows], {
-          x: 0.3, y: 0.9, w: 12.4,
+          x: 0.3, y: 0.95, w: 12.4,
           colW: Array(table.headers.length).fill(colW),
           border: { pt: 0.5, color: "cbd5e1" },
           autoPage: false,
