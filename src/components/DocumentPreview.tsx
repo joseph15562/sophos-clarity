@@ -680,9 +680,20 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
 
   if (reports.length === 1 && !isLoading) {
     const r = reports[0];
+    const oneReportDone = r.markdown && !failedReportIds.has(r.id);
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-foreground no-print">Document Preview</h2>
+        <div className="flex items-center justify-between no-print">
+          <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
+          {oneReportDone && (
+            <div className="flex flex-col items-end gap-1">
+              <Button onClick={handleDownloadAll} className="gap-2">
+                <Archive className="h-4 w-4" /> Download All (.zip)
+              </Button>
+              <p className="text-xs text-muted-foreground">Powerpoint presentations, HTML reports and Docx reports</p>
+            </div>
+          )}
+        </div>
         <ReportContent
           markdown={r.markdown}
           isLoading={loadingReportIds.has(r.id)}
@@ -710,10 +721,13 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     <div className="space-y-4">
       <div className="flex items-center justify-between no-print">
         <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
-        {allDone && reports.length > 1 && (
-          <Button onClick={handleDownloadAll} className="gap-2">
-            <Archive className="h-4 w-4" /> Download All (.zip)
-          </Button>
+        {allDone && (
+          <div className="flex flex-col items-end gap-1">
+            <Button onClick={handleDownloadAll} className="gap-2">
+              <Archive className="h-4 w-4" /> Download All (.zip)
+            </Button>
+            <p className="text-xs text-muted-foreground">Powerpoint presentations, HTML reports and Docx reports</p>
+          </div>
         )}
       </div>
       <Tabs value={activeReportId} onValueChange={onActiveChange} className="no-print-tabs">
