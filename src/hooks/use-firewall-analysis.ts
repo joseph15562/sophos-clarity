@@ -34,36 +34,32 @@ export function useFirewallAnalysis(files: ParsedFile[]) {
 
   const aggregatedPosture = useMemo<InspectionPosture>(() => {
     const agg: InspectionPosture = {
-      totalWanRules: 0,
-      enabledWanRules: 0,
-      disabledWanRules: 0,
-      webFilterableRules: 0,
-      withWebFilter: 0,
-      withoutWebFilter: 0,
-      withAppControl: 0,
-      withIps: 0,
-      withSslInspection: 0,
-      wanRuleNames: [],
-      totalDisabledRules: 0,
-      dpiEngineEnabled: null,
+      totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
+      webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
+      withAppControl: 0, withIps: 0, withSslInspection: 0,
+      sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [],
+      wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
     };
-    let anyDpiOff = false;
-    let anyDpiOn = false;
     for (const r of Object.values(analysisResults)) {
-      agg.totalWanRules += r.inspectionPosture.totalWanRules;
-      agg.enabledWanRules += r.inspectionPosture.enabledWanRules;
-      agg.disabledWanRules += r.inspectionPosture.disabledWanRules;
-      agg.webFilterableRules += r.inspectionPosture.webFilterableRules;
-      agg.withWebFilter += r.inspectionPosture.withWebFilter;
-      agg.withoutWebFilter += r.inspectionPosture.withoutWebFilter;
-      agg.withAppControl += r.inspectionPosture.withAppControl;
-      agg.withIps += r.inspectionPosture.withIps;
-      agg.withSslInspection += r.inspectionPosture.withSslInspection;
-      agg.totalDisabledRules += r.inspectionPosture.totalDisabledRules;
-      if (r.inspectionPosture.dpiEngineEnabled === false) anyDpiOff = true;
-      if (r.inspectionPosture.dpiEngineEnabled === true) anyDpiOn = true;
+      const ip = r.inspectionPosture;
+      agg.totalWanRules += ip.totalWanRules;
+      agg.enabledWanRules += ip.enabledWanRules;
+      agg.disabledWanRules += ip.disabledWanRules;
+      agg.webFilterableRules += ip.webFilterableRules;
+      agg.withWebFilter += ip.withWebFilter;
+      agg.withoutWebFilter += ip.withoutWebFilter;
+      agg.withAppControl += ip.withAppControl;
+      agg.withIps += ip.withIps;
+      agg.withSslInspection += ip.withSslInspection;
+      agg.sslDecryptRules += ip.sslDecryptRules;
+      agg.sslExclusionRules += ip.sslExclusionRules;
+      agg.sslRules.push(...ip.sslRules);
+      agg.sslUncoveredZones.push(...ip.sslUncoveredZones);
+      agg.totalDisabledRules += ip.totalDisabledRules;
     }
-    agg.dpiEngineEnabled = anyDpiOff ? false : anyDpiOn ? true : null;
+    // DPI is active if any firewall has SSL/TLS Decrypt rules
+    agg.dpiEngineEnabled = agg.sslDecryptRules > 0;
+    agg.sslUncoveredZones = [...new Set(agg.sslUncoveredZones)];
     return agg;
   }, [analysisResults]);
 

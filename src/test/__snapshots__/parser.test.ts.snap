@@ -49,8 +49,13 @@ exports[`analyseConfig > snapshot of findings 1`] = `
   },
   {
     "section": "SSL/TLS Inspection",
-    "severity": "medium",
-    "title": "No SSL/TLS inspection rules configured",
+    "severity": "critical",
+    "title": "No SSL/TLS inspection rules configured (DPI inactive)",
+  },
+  {
+    "section": "NAT Rules",
+    "severity": "high",
+    "title": "1 DNAT/port forwarding rule expose internal services",
   },
 ]
 `;

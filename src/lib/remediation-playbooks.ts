@@ -41,7 +41,7 @@ export function generatePlaybook(finding: Finding): Playbook | null {
         { step: 4 + Math.min(ruleNames.length, 5), action: "Repeat for any remaining rules listed in the finding" },
       ],
       verifyStep: "Run a new Sophos Clarity assessment — WAN rules without web filtering count should drop to 0.",
-      notes: "Web policies are managed under Web > Policies. For education environments (DfE/KCSIE), ensure the policy blocks inappropriate content categories. If using DPI mode, ensure matching SSL/TLS inspection rules are in place for HTTPS decryption.",
+      notes: "Web policies are managed under Web > Policies. For education environments (DfE/KCSIE), ensure the policy blocks inappropriate content categories. Ensure matching SSL/TLS inspection rules are in place for HTTPS decryption — without them, the firewall cannot inspect encrypted web traffic.",
     };
   }
 
@@ -252,12 +252,215 @@ export function generatePlaybook(finding: Finding): Playbook | null {
         { step: 7, action: "Enable the rules and click Save" },
         {
           step: 8,
-          action: "Ensure your firewall rules use DPI engine mode (not web proxy) for SSL/TLS inspection to apply. Check under each firewall rule's Web filtering section",
-          docUrl: `${DOCS_BASE}/Web/HowToArticles/WebProxyDPITLSDecryption/`,
+          action: "Verify that SSL/TLS inspection rules are applied to the correct zones and traffic types. Check under Rules and policies > SSL/TLS inspection rules for active rules",
+          docUrl: `${DOCS_BASE}/RulesAndPolicies/SSL/TLSInspectionRules/`,
         },
       ],
       verifyStep: "Browse HTTPS sites from a managed endpoint — verify the certificate chain shows the Sophos signing CA. Re-run assessment to confirm SSL/TLS inspection rules are detected.",
       notes: "The firewall evaluates SSL/TLS rules top-down. Place exclusion rules above decrypt rules. Three decryption profiles are available by default: Maximum compatibility, Block insecure SSL, and Strict compliance (PCI DSS). Start with a small user group before rolling out broadly.",
+    };
+  }
+
+  if (title.includes("not covered by ssl/tls")) {
+    return {
+      findingId: finding.id,
+      title: "Extend SSL/TLS Decrypt Coverage to Missing Zones",
+      severity: finding.severity,
+      estimatedMinutes: 15,
+      steps: [
+        {
+          step: 1,
+          action: "Go to Rules and policies > SSL/TLS inspection rules",
+          path: "Rules and policies > SSL/TLS inspection rules",
+          docUrl: `${DOCS_BASE}/RulesAndPolicies/SSL/TLSInspectionRules/`,
+        },
+        { step: 2, action: "Identify the existing Decrypt rule and note which source zones it covers" },
+        { step: 3, action: "Edit the Decrypt rule → add the missing source zones listed in the finding (or create additional Decrypt rules for each uncovered zone)" },
+        { step: 4, action: "Ensure the signing CA certificate is deployed to endpoints in the newly covered zones via GPO, MDM, or Sophos Central" },
+        { step: 5, action: "Add exclusion rules ('Don't decrypt') above the Decrypt rule for any services in the new zones that are incompatible with TLS decryption" },
+        { step: 6, action: "Save and test HTTPS browsing from a device in each newly covered zone" },
+      ],
+      verifyStep: "Re-run assessment — the zone gap finding should be resolved. Browse HTTPS sites from each zone and verify the Sophos signing CA appears in the certificate chain.",
+      notes: "Each zone added to SSL/TLS decryption will increase CPU load on the firewall. Monitor performance after changes. Consider separate Decrypt rules per zone if different decryption profiles are needed.",
+    };
+  }
+
+  if (title.includes("admin console accessible from wan")) {
+    return {
+      findingId: finding.id,
+      title: "Disable Admin Console Access from WAN",
+      severity: finding.severity,
+      estimatedMinutes: 10,
+      steps: [
+        { step: 1, action: "Go to Administration > Device access", path: "Administration > Device access", docUrl: `${DOCS_BASE}/Administration/DeviceAccess/` },
+        { step: 2, action: "In the Local service ACL table, find the HTTPS/Admin row. Untick the WAN zone checkbox" },
+        { step: 3, action: "If remote admin access is required, set up an IPsec or SSL VPN tunnel and access the admin console through the VPN instead" },
+        { step: 4, action: "Alternatively, use the ACL exception list to restrict HTTPS admin access to specific trusted external IP addresses only" },
+        { step: 5, action: "Click Apply to save changes" },
+      ],
+      verifyStep: "From an external network (outside VPN), attempt to browse to https://<firewall-WAN-IP>:4444. The connection should be refused. Re-run assessment to confirm the finding is resolved.",
+    };
+  }
+
+  if (title.includes("ssh accessible from wan")) {
+    return {
+      findingId: finding.id,
+      title: "Disable SSH Access from WAN",
+      severity: finding.severity,
+      estimatedMinutes: 5,
+      steps: [
+        { step: 1, action: "Go to Administration > Device access", path: "Administration > Device access", docUrl: `${DOCS_BASE}/Administration/DeviceAccess/` },
+        { step: 2, action: "In the Local service ACL table, find the SSH row. Untick the WAN zone checkbox" },
+        { step: 3, action: "For remote CLI management, use VPN access or Sophos Central remote management instead" },
+        { step: 4, action: "Click Apply" },
+      ],
+      verifyStep: "Attempt SSH to the firewall WAN IP from an external network — the connection should time out. Re-run assessment.",
+    };
+  }
+
+  if (title.includes("snmp exposed")) {
+    return {
+      findingId: finding.id,
+      title: "Restrict SNMP to Trusted Zones",
+      severity: finding.severity,
+      estimatedMinutes: 10,
+      steps: [
+        { step: 1, action: "Go to Administration > Device access", path: "Administration > Device access", docUrl: `${DOCS_BASE}/Administration/DeviceAccess/` },
+        { step: 2, action: "Untick SNMP for all untrusted zones (WAN, DMZ, Guest). Only enable for LAN / management VLAN" },
+        { step: 3, action: "Go to System services > SNMP and ensure SNMPv3 is configured with auth+priv (encryption). Disable SNMPv1/v2c if possible", path: "System services > SNMP" },
+        { step: 4, action: "Click Apply" },
+      ],
+      verifyStep: "From the WAN or DMZ, run snmpwalk against the firewall — it should fail. Re-run assessment.",
+    };
+  }
+
+  if (title.includes("management service") && title.includes("exposed")) {
+    return {
+      findingId: finding.id,
+      title: "Restrict Management Services to Trusted Zones",
+      severity: finding.severity,
+      estimatedMinutes: 10,
+      steps: [
+        { step: 1, action: "Go to Administration > Device access", path: "Administration > Device access", docUrl: `${DOCS_BASE}/Administration/DeviceAccess/` },
+        { step: 2, action: "Review the Local service ACL table. Untick all services for untrusted zones (WAN, DMZ, Guest)" },
+        { step: 3, action: "Only LAN and dedicated management zones should have admin service access" },
+        { step: 4, action: "Click Apply" },
+      ],
+      verifyStep: "Verify management services are not reachable from untrusted zones. Re-run assessment.",
+    };
+  }
+
+  if (title.includes("dnat") || title.includes("port forwarding")) {
+    return {
+      findingId: finding.id,
+      title: "Secure DNAT / Port Forwarding Rules",
+      severity: finding.severity,
+      estimatedMinutes: 15,
+      steps: [
+        { step: 1, action: "Go to Rules and policies > NAT rules. Review each DNAT rule", path: "Rules and policies > NAT rules", docUrl: `${DOCS_BASE}/RulesAndPolicies/NATRules/` },
+        { step: 2, action: "For each DNAT rule, ensure the matching firewall rule has IPS enabled to detect exploit attempts against the forwarded service" },
+        { step: 3, action: "Restrict source IPs using geo-IP restrictions or specific IP ranges where possible, rather than allowing 'Any' source" },
+        { step: 4, action: "Enable logging on each DNAT rule's matching firewall rule for audit trail" },
+        { step: 5, action: "Consider using Web Application Firewall (WAF) rules for HTTP/HTTPS services instead of raw DNAT where possible" },
+      ],
+      verifyStep: "Re-run assessment. Check that matching firewall rules have IPS, logging, and source restrictions configured.",
+      notes: "Each DNAT rule creates an entry point into the network. Minimise the number of forwarded ports and use WAF for web services.",
+    };
+  }
+
+  if (title.includes("broad") && title.includes("nat")) {
+    return {
+      findingId: finding.id,
+      title: "Restrict Broad NAT Rules",
+      severity: finding.severity,
+      estimatedMinutes: 10,
+      steps: [
+        { step: 1, action: "Go to Rules and policies > NAT rules", path: "Rules and policies > NAT rules" },
+        { step: 2, action: "Review each NAT rule with overly broad source/destination. Replace 'Any' with specific network objects" },
+        { step: 3, action: "Create IP host or host group objects as needed under Hosts and services > IP hosts" },
+        { step: 4, action: "Save and test connectivity" },
+      ],
+      verifyStep: "Re-run assessment — broad NAT rule count should decrease.",
+    };
+  }
+
+  if (title.includes("web filter policy allows") || title.includes("high-risk categor")) {
+    return {
+      findingId: finding.id,
+      title: "Block High-Risk Web Categories",
+      severity: finding.severity,
+      estimatedMinutes: 10,
+      steps: [
+        { step: 1, action: "Go to Web > Policies", path: "Web > Policies", docUrl: `${DOCS_BASE}/WebProtection/Policies/` },
+        { step: 2, action: "Edit the active web filter policy" },
+        { step: 3, action: "Set Proxy/VPN and Anonymizer categories to 'Block' — these allow users to bypass firewall controls" },
+        { step: 4, action: "Set Malware, Phishing, Spyware, and Botnet categories to 'Block'" },
+        { step: 5, action: "Consider setting P2P/Torrents to 'Block' to prevent unauthorised file sharing" },
+        { step: 6, action: "Save the policy and test" },
+      ],
+      verifyStep: "Attempt to browse to a known proxy/VPN site — it should be blocked. Re-run assessment.",
+    };
+  }
+
+  if (title.includes("ips policy") && (title.includes("default action") || title.includes("allow"))) {
+    return {
+      findingId: finding.id,
+      title: "Harden IPS Policy Default Action",
+      severity: finding.severity,
+      estimatedMinutes: 5,
+      steps: [
+        { step: 1, action: "Go to Intrusion prevention > IPS policies", path: "Intrusion prevention > IPS policies", docUrl: `${DOCS_BASE}/IntrusionPrevention/IPSPolicies/` },
+        { step: 2, action: "Edit the policy and set the default action to 'Drop'" },
+        { step: 3, action: "Review IPS alerts over the next week and add exceptions only for confirmed false positives" },
+      ],
+      verifyStep: "Re-run assessment — the IPS policy should no longer show a permissive default action.",
+    };
+  }
+
+  if (title.includes("no ips policies")) {
+    return {
+      findingId: finding.id,
+      title: "Create and Apply IPS Policies",
+      severity: finding.severity,
+      estimatedMinutes: 15,
+      steps: [
+        { step: 1, action: "Go to Intrusion prevention > IPS policies", path: "Intrusion prevention > IPS policies", docUrl: `${DOCS_BASE}/IntrusionPrevention/IPSPolicies/` },
+        { step: 2, action: "Click Add and create a new policy using the default template (e.g. 'lantowan_general')" },
+        { step: 3, action: "Apply the policy to WAN-facing firewall rules under Rules and policies > Firewall rules → Other security features" },
+      ],
+      verifyStep: "Re-run assessment — IPS coverage should increase.",
+    };
+  }
+
+  if (title.includes("virus scanning disabled")) {
+    return {
+      findingId: finding.id,
+      title: "Enable Virus Scanning for All Protocols",
+      severity: finding.severity,
+      estimatedMinutes: 10,
+      steps: [
+        { step: 1, action: "Go to Protection > Web protection for HTTP/HTTPS scanning", path: "Protection > Web protection", docUrl: `${DOCS_BASE}/WebProtection/` },
+        { step: 2, action: "Enable malware scanning and select the Sophos anti-malware engine" },
+        { step: 3, action: "Go to Protection > Email protection for SMTP/POP3/IMAP scanning", path: "Protection > Email protection" },
+        { step: 4, action: "Enable malware scanning for all email protocols" },
+        { step: 5, action: "Ensure the engine signatures are set to auto-update" },
+      ],
+      verifyStep: "Download an EICAR test file via HTTP — it should be blocked. Re-run assessment.",
+    };
+  }
+
+  if (title.includes("sandboxing") || title.includes("zero-day")) {
+    return {
+      findingId: finding.id,
+      title: "Enable Sophos Sandstorm (Sandboxing)",
+      severity: finding.severity,
+      estimatedMinutes: 5,
+      steps: [
+        { step: 1, action: "Verify an active Sandstorm licence under System > Administration > Licensing" },
+        { step: 2, action: "Go to Protection > Web protection > Enable 'Sophos Sandstorm' analysis", path: "Protection > Web protection" },
+        { step: 3, action: "Optionally configure exclusions for file types that should not be sandboxed" },
+      ],
+      verifyStep: "Upload a file through an HTTP session — check under Reports > Sandstorm activity that the file was analysed.",
     };
   }
 

@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, lazy, Suspense } from "react";
-import { ArrowLeftRight, RotateCcw } from "lucide-react";
+import { useState, useCallback, useEffect, lazy, Suspense, type ReactNode } from "react";
+import { ArrowLeftRight, ChevronDown, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
@@ -19,8 +19,36 @@ const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybook
 const ComplianceHeatmap = lazy(() => import("@/components/ComplianceHeatmap").then((m) => ({ default: m.ComplianceHeatmap })));
 const AssessmentHistory = lazy(() => import("@/components/AssessmentHistory").then((m) => ({ default: m.AssessmentHistory })));
 const AIChatPanel = lazy(() => import("@/components/AIChatPanel").then((m) => ({ default: m.AIChatPanel })));
+const ScoreSimulator = lazy(() => import("@/components/ScoreSimulator").then((m) => ({ default: m.ScoreSimulator })));
+const AttackSurfaceMap = lazy(() => import("@/components/AttackSurfaceMap").then((m) => ({ default: m.AttackSurfaceMap })));
+const ConsistencyChecker = lazy(() => import("@/components/ConsistencyChecker").then((m) => ({ default: m.ConsistencyChecker })));
+const PeerBenchmark = lazy(() => import("@/components/PeerBenchmark").then((m) => ({ default: m.PeerBenchmark })));
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
+
+function CollapsibleSection({ title, subtitle, icon, iconBg, defaultOpen = false, badge, children }: {
+  title: string; subtitle?: string; icon: ReactNode; iconBg: string;
+  defaultOpen?: boolean; badge?: ReactNode; children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="rounded-xl border border-border bg-card overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/30 transition-colors"
+      >
+        <div className={`h-7 w-7 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>{icon}</div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-sm font-display font-bold text-foreground">{title}</h2>
+          {subtitle && <p className="text-[10px] text-muted-foreground leading-tight">{subtitle}</p>}
+        </div>
+        {badge && <div className="shrink-0">{badge}</div>}
+        <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="border-t border-border">{children}</div>}
+    </section>
+  );
+}
 
 const Index = () => {
   const [files, setFiles] = useState<ParsedFile[]>([]);
@@ -123,9 +151,9 @@ const Index = () => {
                   Turn Sophos Firewall Exports into Audit-Ready Documentation
                 </h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed">
-                  Upload one or more Sophos XGS configuration HTML exports. Sophos FireComply extracts every rule,
-                  setting, and policy, runs a deterministic security analysis, then generates branded technical reports,
-                  executive summaries, and compliance evidence packs — ready for customer handoff or audit.
+                  Drop in your Sophos XGS configuration exports and get instant security findings, risk scoring,
+                  and compliance mapping — no AI required. Generate branded reports, remediation playbooks,
+                  and evidence packs ready for customer handoff or audit.
                 </p>
                 <div className="flex flex-wrap justify-center gap-6 pt-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" /> Technical Reports</span>
@@ -161,81 +189,6 @@ const Index = () => {
               </section>
             )}
 
-            {/* Initial Findings header */}
-            {hasFiles && totalFindings > 0 && (
-              <div className="flex items-center gap-3 pt-2">
-                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#EA0022] text-white text-xs font-bold ring-4 ring-[#EA0022]/15 dark:ring-[#EA0022]/25">
-                  <img src="/icons/sophos-alert.svg" alt="" className="h-3.5 w-3.5 brightness-0 invert" />
-                </span>
-                <div>
-                  <h2 className="text-lg font-display font-bold text-foreground">Initial Findings</h2>
-                  <p className="text-xs text-muted-foreground">{totalFindings} issue{totalFindings !== 1 ? "s" : ""} detected across {files.length} firewall{files.length !== 1 ? "s" : ""} — rule-based analysis, no AI required</p>
-                </div>
-              </div>
-            )}
-
-            {hasFiles && (
-              <EstateOverview
-                fileCount={files.length}
-                analysisResults={analysisResults}
-                totalFindings={totalFindings}
-                totalRules={totalRules}
-                totalSections={totalSections}
-                totalPopulated={totalPopulated}
-                extractionPct={extractionPct}
-                aggregatedPosture={aggregatedPosture}
-                selectedFrameworks={branding.selectedFrameworks}
-              />
-            )}
-
-            {/* Risk Score Dashboard */}
-            {hasFiles && (
-              <Suspense fallback={null}>
-                <RiskScoreDashboard analysisResults={analysisResults} />
-              </Suspense>
-            )}
-
-            {/* Quick Remediation Playbooks header */}
-            {hasFiles && totalFindings > 0 && (
-              <div className="flex items-center gap-3 pt-2">
-                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#00995a] text-white text-xs font-bold ring-4 ring-[#00995a]/15 dark:ring-[#00995a]/25">
-                  <img src="/icons/sophos-security.svg" alt="" className="h-3.5 w-3.5 brightness-0 invert" />
-                </span>
-                <div>
-                  <h2 className="text-lg font-display font-bold text-foreground">Quick Remediation Playbooks</h2>
-                  <p className="text-xs text-muted-foreground">Step-by-step Sophos Firewall instructions to resolve each finding</p>
-                </div>
-              </div>
-            )}
-
-            {/* Remediation Playbooks */}
-            {hasFiles && totalFindings > 0 && (
-              <Suspense fallback={null}>
-                <RemediationPlaybooks analysisResults={analysisResults} />
-              </Suspense>
-            )}
-
-            {/* Compliance Heatmap */}
-            {hasFiles && (
-              <Suspense fallback={null}>
-                <ComplianceHeatmap
-                  analysisResults={analysisResults}
-                  selectedFrameworks={branding.selectedFrameworks}
-                />
-              </Suspense>
-            )}
-
-            {/* Assessment History */}
-            {hasFiles && (
-              <Suspense fallback={null}>
-                <AssessmentHistory
-                  analysisResults={analysisResults}
-                  customerName={branding.customerName}
-                  environment={branding.environment}
-                />
-              </Suspense>
-            )}
-
             {/* Privacy banner */}
             {hasFiles && (
               <div className="rounded-xl border border-[#00995a]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00995a] dark:border-l-[#00F2B3] bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
@@ -248,7 +201,7 @@ const Index = () => {
               </div>
             )}
 
-            {/* Step 3 — Generate reports */}
+            {/* Generate Reports — always visible */}
             {hasFiles && (
               <ReportCards
                 fileCount={files.length}
@@ -259,20 +212,164 @@ const Index = () => {
               />
             )}
 
+            {/* Detailed Analysis divider */}
+            {hasFiles && (
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-background px-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Detailed Security Analysis
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {hasFiles && (
+              <CollapsibleSection
+                title="Initial Findings &amp; Estate Overview"
+                subtitle={`${totalFindings} issue${totalFindings !== 1 ? "s" : ""} · ${totalRules} rules · ${files.length} firewall${files.length !== 1 ? "s" : ""}`}
+                icon={<img src="/icons/sophos-alert.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
+                iconBg={totalFindings > 0 ? "bg-[#EA0022]" : "bg-[#00995a]"}
+                defaultOpen
+                badge={totalFindings > 0 ? (
+                  <div className="flex items-center gap-1">
+                    {(() => {
+                      const counts: Record<string, number> = {};
+                      Object.values(analysisResults).forEach((r) =>
+                        r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
+                      );
+                      return Object.entries(counts).map(([sev, count]) => (
+                        <span key={sev} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
+                          {count}{sev[0].toUpperCase()}
+                        </span>
+                      ));
+                    })()}
+                  </div>
+                ) : undefined}
+              >
+                <div className="p-5 space-y-6">
+                  <EstateOverview
+                    fileCount={files.length}
+                    analysisResults={analysisResults}
+                    totalFindings={totalFindings}
+                    totalRules={totalRules}
+                    totalSections={totalSections}
+                    totalPopulated={totalPopulated}
+                    extractionPct={extractionPct}
+                    aggregatedPosture={aggregatedPosture}
+                    selectedFrameworks={branding.selectedFrameworks}
+                  />
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* Risk Score & Benchmark */}
+            {hasFiles && (
+              <CollapsibleSection
+                title="Security Risk Score &amp; Benchmark"
+                subtitle={`Risk scoring with peer comparison${branding.environment ? ` (${branding.environment})` : ""}`}
+                icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" />}
+                iconBg="bg-[#2006F7]/10 dark:bg-[#00EDFF]/10"
+                defaultOpen
+              >
+                <div className="p-5 space-y-6">
+                  <Suspense fallback={null}>
+                    <RiskScoreDashboard analysisResults={analysisResults} />
+                  </Suspense>
+                  <Suspense fallback={null}>
+                    <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
+                  </Suspense>
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* What-If Score Simulator */}
+            {hasFiles && totalFindings > 0 && (
+              <Suspense fallback={null}>
+                <ScoreSimulator analysisResults={analysisResults} />
+              </Suspense>
+            )}
+
+            {/* Attack Surface Map */}
+            {hasFiles && (
+              <Suspense fallback={null}>
+                <AttackSurfaceMap files={files} />
+              </Suspense>
+            )}
+
+            {/* Multi-Firewall Consistency */}
+            {hasFiles && files.length >= 2 && (
+              <Suspense fallback={null}>
+                <ConsistencyChecker analysisResults={analysisResults} />
+              </Suspense>
+            )}
+
+            {/* Remediation Playbooks */}
+            {hasFiles && totalFindings > 0 && (
+              <CollapsibleSection
+                title="Quick Remediation Playbooks"
+                subtitle="Step-by-step Sophos Firewall instructions to resolve each finding"
+                icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
+                iconBg="bg-[#00995a]"
+              >
+                <div className="p-5">
+                  <Suspense fallback={null}>
+                    <RemediationPlaybooks analysisResults={analysisResults} />
+                  </Suspense>
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* Compliance Heatmap */}
+            {hasFiles && (
+              <CollapsibleSection
+                title="Compliance Heatmap"
+                subtitle={branding.selectedFrameworks.length > 0 ? `${branding.selectedFrameworks.length} framework${branding.selectedFrameworks.length !== 1 ? "s" : ""} selected` : "Select frameworks in Assessment Context to populate"}
+                icon={<img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />}
+                iconBg="bg-[#5A00FF]/10"
+              >
+                <div className="p-5">
+                  <Suspense fallback={null}>
+                    <ComplianceHeatmap
+                      analysisResults={analysisResults}
+                      selectedFrameworks={branding.selectedFrameworks}
+                    />
+                  </Suspense>
+                </div>
+              </CollapsibleSection>
+            )}
+
+            {/* Assessment History */}
+            {hasFiles && (
+              <CollapsibleSection
+                title="Assessment History"
+                subtitle="Previous assessments stored locally for trend comparison"
+                icon={<span className="text-sm">📈</span>}
+                iconBg="bg-[#10037C]/10 dark:bg-[#2006F7]/10"
+              >
+                <div className="p-5">
+                  <Suspense fallback={null}>
+                    <AssessmentHistory
+                      analysisResults={analysisResults}
+                      customerName={branding.customerName}
+                      environment={branding.environment}
+                    />
+                  </Suspense>
+                </div>
+              </CollapsibleSection>
+            )}
+
             {/* Config diff — compare two configs */}
             {files.length >= 2 && (
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#10037C] text-white text-xs font-bold ring-4 ring-[#10037C]/15 dark:ring-[#10037C]/25">
-                    <ArrowLeftRight className="h-3.5 w-3.5" />
-                  </span>
-                  <h2 className="text-lg font-display font-bold text-foreground">Compare Configurations</h2>
-                  <span className="text-xs text-muted-foreground">(side-by-side diff)</span>
-                </div>
-                <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Select two configurations to compare. Useful for tracking changes between firmware upgrades, pre/post change reviews, or auditing drift across your estate.
-                  </p>
+              <CollapsibleSection
+                title="Compare Configurations"
+                subtitle="Side-by-side diff for change reviews and drift auditing"
+                icon={<ArrowLeftRight className="h-4 w-4 text-white" />}
+                iconBg="bg-[#10037C]"
+              >
+                <div className="p-5 space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
@@ -316,7 +413,7 @@ const Index = () => {
                     <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
                   </Button>
                 </div>
-              </section>
+              </CollapsibleSection>
             )}
           </>
         )}

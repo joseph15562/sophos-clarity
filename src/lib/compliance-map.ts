@@ -30,25 +30,25 @@ function hasFindings(result: AnalysisResult, pattern: RegExp): Finding[] {
 
 const SHARED_CONTROLS: Record<string, ControlDef> = {
   dpiEngine: {
-    id: "DPI", name: "DPI Engine", category: "Traffic Inspection",
+    id: "TLS-DPI", name: "SSL/TLS Inspection (DPI)", category: "Traffic Inspection",
     check: (r) => {
       const ip = r.inspectionPosture;
-      if (ip.dpiEngineEnabled === true) return { status: "pass", evidence: "DPI engine is enabled — web filtering, IPS, and app control can function", findings: [] };
-      if (ip.dpiEngineEnabled === false) {
-        const f = hasFindings(r, /DPI engine/);
-        return { status: "fail", evidence: "DPI engine is disabled — all inspection features (web filter, IPS, app control) are non-functional", findings: f.map((x) => x.id) };
+      if (ip.totalWanRules === 0) return { status: "na", evidence: "No WAN rules detected", findings: [] };
+      if (ip.dpiEngineEnabled && ip.sslUncoveredZones.length === 0) {
+        return { status: "pass", evidence: `${ip.sslDecryptRules} Decrypt rule${ip.sslDecryptRules !== 1 ? "s" : ""} covering all firewall WAN source zones`, findings: [] };
       }
-      return { status: "na", evidence: "DPI engine status not detected in export", findings: [] };
+      if (ip.dpiEngineEnabled && ip.sslUncoveredZones.length > 0) {
+        const f = hasFindings(r, /zone.*not covered|uncovered/i);
+        return { status: "partial", evidence: `${ip.sslDecryptRules} Decrypt rule${ip.sslDecryptRules !== 1 ? "s" : ""} but ${ip.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")} zones not covered`, findings: f.map((x) => x.id) };
+      }
+      const f = hasFindings(r, /SSL\/TLS inspection/);
+      return { status: "fail", evidence: "No SSL/TLS Decrypt rules — DPI is inactive, encrypted traffic not inspected", findings: f.map((x) => x.id) };
     },
   },
   webFilter: {
     id: "WF", name: "Web Content Filtering", category: "Traffic Inspection",
     check: (r) => {
       const ip = r.inspectionPosture;
-      if (ip.dpiEngineEnabled === false) {
-        const f = hasFindings(r, /DPI engine/);
-        return { status: "fail", evidence: "DPI engine is off — web filtering cannot function regardless of rule configuration", findings: f.map((x) => x.id) };
-      }
       if (ip.webFilterableRules === 0) return { status: "na", evidence: "No enabled WAN rules with HTTP/HTTPS/ANY service", findings: [] };
       const pct = Math.round((ip.withWebFilter / ip.webFilterableRules) * 100);
       const f = hasFindings(r, /missing web filtering/);
@@ -61,10 +61,6 @@ const SHARED_CONTROLS: Record<string, ControlDef> = {
     id: "IPS", name: "Intrusion Prevention System", category: "Traffic Inspection",
     check: (r) => {
       const ip = r.inspectionPosture;
-      if (ip.dpiEngineEnabled === false) {
-        const f = hasFindings(r, /DPI engine/);
-        return { status: "fail", evidence: "DPI engine is off — IPS cannot function regardless of rule configuration", findings: f.map((x) => x.id) };
-      }
       if (ip.enabledWanRules === 0) return { status: "na", evidence: "No enabled WAN rules", findings: [] };
       const pct = Math.round((ip.withIps / ip.enabledWanRules) * 100);
       const f = hasFindings(r, /without IPS/);
@@ -77,10 +73,6 @@ const SHARED_CONTROLS: Record<string, ControlDef> = {
     id: "AC", name: "Application Control", category: "Traffic Inspection",
     check: (r) => {
       const ip = r.inspectionPosture;
-      if (ip.dpiEngineEnabled === false) {
-        const f = hasFindings(r, /DPI engine/);
-        return { status: "fail", evidence: "DPI engine is off — app control cannot function regardless of rule configuration", findings: f.map((x) => x.id) };
-      }
       if (ip.enabledWanRules === 0) return { status: "na", evidence: "No enabled WAN rules", findings: [] };
       const pct = Math.round((ip.withAppControl / ip.enabledWanRules) * 100);
       const f = hasFindings(r, /without Application Control/);
@@ -117,11 +109,18 @@ const SHARED_CONTROLS: Record<string, ControlDef> = {
     },
   },
   sslInspection: {
-    id: "TLS", name: "TLS Inspection", category: "Traffic Inspection",
+    id: "TLS", name: "SSL/TLS Inspection", category: "Traffic Inspection",
     check: (r) => {
+      const ip = r.inspectionPosture;
+      if (ip.dpiEngineEnabled && ip.sslUncoveredZones.length === 0) {
+        return { status: "pass", evidence: `${ip.sslDecryptRules} Decrypt rule${ip.sslDecryptRules !== 1 ? "s" : ""} with full zone coverage`, findings: [] };
+      }
+      if (ip.dpiEngineEnabled && ip.sslUncoveredZones.length > 0) {
+        const f = hasFindings(r, /zone.*not covered|SSL\/TLS/i);
+        return { status: "partial", evidence: `Decrypt active but ${ip.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")} zones bypass inspection`, findings: f.map((x) => x.id) };
+      }
       const f = hasFindings(r, /SSL\/TLS inspection/);
-      if (f.length === 0) return { status: "pass", evidence: "SSL/TLS inspection rules configured", findings: [] };
-      return { status: "fail", evidence: "No SSL/TLS inspection rules detected", findings: f.map((x) => x.id) };
+      return { status: "fail", evidence: "No SSL/TLS Decrypt rules — encrypted traffic not inspected", findings: f.map((x) => x.id) };
     },
   },
   ruleHygiene: {
@@ -132,28 +131,54 @@ const SHARED_CONTROLS: Record<string, ControlDef> = {
       return { status: "partial", evidence: dupes[0].detail, findings: dupes.map((x) => x.id) };
     },
   },
+  adminAccess: {
+    id: "ADM", name: "Admin Access Restriction", category: "Access Control",
+    check: (r) => {
+      const f = hasFindings(r, /admin console|ssh accessible|snmp exposed|management service.*exposed/i);
+      if (f.length === 0) return { status: "pass", evidence: "No management services exposed to untrusted zones", findings: [] };
+      const critical = f.some((x) => x.severity === "critical");
+      return { status: critical ? "fail" : "partial", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
+  natSecurity: {
+    id: "NAT", name: "NAT Rule Security", category: "Traffic Inspection",
+    check: (r) => {
+      const f = hasFindings(r, /DNAT|port forwarding|broad.*NAT/i);
+      if (f.length === 0) return { status: "pass", evidence: "No insecure NAT rules detected", findings: [] };
+      return { status: "partial", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
+  antiMalware: {
+    id: "AV", name: "Anti-Malware / Virus Scanning", category: "Traffic Inspection",
+    check: (r) => {
+      const f = hasFindings(r, /virus scanning|sandboxing|zero-day/i);
+      if (f.length === 0) return { status: "pass", evidence: "Anti-malware scanning active", findings: [] };
+      const critical = f.some((x) => x.severity === "high" || x.severity === "critical");
+      return { status: critical ? "fail" : "partial", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
 };
 
 const FRAMEWORK_CONTROLS: Record<string, string[]> = {
-  "NCSC Guidelines": ["dpiEngine", "webFilter", "ips", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "Cyber Essentials / CE+": ["dpiEngine", "webFilter", "mfa", "segmentation", "logging"],
-  "GDPR": ["logging", "mfa", "segmentation", "sslInspection"],
-  "DfE / KCSIE": ["dpiEngine", "webFilter", "logging", "sslInspection"],
-  "ISO 27001": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "PCI DSS": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "NIST 800-53": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "HIPAA": ["logging", "mfa", "segmentation", "sslInspection"],
-  "NIS2": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "sslInspection"],
-  "SOX": ["logging", "mfa", "segmentation"],
-  "FCA": ["logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "PRA": ["logging", "mfa", "segmentation", "sslInspection"],
-  "FedRAMP": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "CMMC": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation"],
-  "HITECH": ["logging", "mfa", "segmentation"],
-  "IEC 62443": ["dpiEngine", "ips", "segmentation", "logging", "mfa"],
-  "NIST 800-82": ["dpiEngine", "ips", "segmentation", "logging"],
-  "NERC CIP": ["dpiEngine", "ips", "logging", "mfa", "segmentation"],
-  "MOD Cyber / ITAR": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection"],
+  "NCSC Guidelines": ["dpiEngine", "webFilter", "ips", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "antiMalware"],
+  "Cyber Essentials / CE+": ["dpiEngine", "webFilter", "mfa", "segmentation", "logging", "adminAccess", "antiMalware"],
+  "GDPR": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess"],
+  "DfE / KCSIE": ["dpiEngine", "webFilter", "logging", "sslInspection", "antiMalware"],
+  "ISO 27001": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
+  "PCI DSS": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
+  "NIST 800-53": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
+  "HIPAA": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware"],
+  "NIS2": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware"],
+  "SOX": ["logging", "mfa", "segmentation", "adminAccess"],
+  "FCA": ["logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess"],
+  "PRA": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess"],
+  "FedRAMP": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
+  "CMMC": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "adminAccess", "antiMalware"],
+  "HITECH": ["logging", "mfa", "segmentation", "antiMalware"],
+  "IEC 62443": ["dpiEngine", "ips", "segmentation", "logging", "mfa", "adminAccess"],
+  "NIST 800-82": ["dpiEngine", "ips", "segmentation", "logging", "adminAccess"],
+  "NERC CIP": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "adminAccess"],
+  "MOD Cyber / ITAR": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware"],
 };
 
 export function mapToFramework(
@@ -199,8 +224,11 @@ export const CONTROL_CATEGORIES = [
   "Configuration Management",
 ] as const;
 
+export const ALL_FRAMEWORK_NAMES = Object.keys(FRAMEWORK_CONTROLS);
+
 const FINDING_TO_CONTROL: [RegExp, string][] = [
-  [/DPI engine/i, "dpiEngine"],
+  [/SSL\/TLS inspection|DPI inactive/i, "dpiEngine"],
+  [/zone.*not covered.*SSL|source zone.*not covered/i, "sslInspection"],
   [/missing web filtering/i, "webFilter"],
   [/without IPS/i, "ips"],
   [/without Application Control/i, "appControl"],
@@ -211,6 +239,11 @@ const FINDING_TO_CONTROL: [RegExp, string][] = [
   [/SSL\/TLS inspection/i, "sslInspection"],
   [/overlapping/i, "ruleHygiene"],
   [/disabled.*WAN/i, "ruleHygiene"],
+  [/admin console|ssh accessible|snmp exposed|management service.*exposed/i, "adminAccess"],
+  [/DNAT|port forwarding|broad.*NAT/i, "natSecurity"],
+  [/virus scanning|sandboxing|zero-day/i, "antiMalware"],
+  [/web filter policy allows|high-risk categor/i, "webFilter"],
+  [/ips policy/i, "ips"],
 ];
 
 export function findingToFrameworks(findingTitle: string, selectedFrameworks: string[]): string[] {

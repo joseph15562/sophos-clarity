@@ -19,6 +19,14 @@ export interface ConfigStats {
   sectionNames: string[];
 }
 
+export interface SslTlsRule {
+  name: string;
+  action: "decrypt" | "exclude";
+  sourceZones: string[];
+  destZones: string[];
+  enabled: boolean;
+}
+
 export interface InspectionPosture {
   totalWanRules: number;
   enabledWanRules: number;
@@ -29,10 +37,20 @@ export interface InspectionPosture {
   withoutWebFilter: number;
   withAppControl: number;
   withIps: number;
+  /** Total SSL/TLS inspection rules (Decrypt + Do-not-decrypt) */
   withSslInspection: number;
+  /** Only Decrypt rules (actual inspection) */
+  sslDecryptRules: number;
+  /** Do-not-decrypt exclusion rules */
+  sslExclusionRules: number;
+  /** Parsed SSL/TLS rules with zone/action detail */
+  sslRules: SslTlsRule[];
+  /** Firewall WAN source zones not covered by any SSL/TLS Decrypt rule */
+  sslUncoveredZones: string[];
   wanRuleNames: string[];
   totalDisabledRules: number;
-  dpiEngineEnabled: boolean | null;
+  /** true when at least one SSL/TLS Decrypt rule exists (DPI active on Sophos XGS) */
+  dpiEngineEnabled: boolean;
 }
 
 export interface Finding {
@@ -179,69 +197,82 @@ function findOtpSection(sections: ExtractedSections): SectionData | null {
   return null;
 }
 
-function findDpiEngineStatus(sections: ExtractedSections): boolean | null {
-  const DPI_KEY = /dpi|deep\s*packet|scan\s*engine|security\s*engine|inspection\s*mode|fastpath/i;
-  const ENABLED_VAL = /^(enabled|on|active|yes|dpi\s*mode|dpi)$/i;
-  const DISABLED_VAL = /^(disabled|off|inactive|no|fastpath|bypass)$/i;
-
-  // Scan ALL sections — real Sophos exports may put DPI under Device Access, Admin, General, etc.
-  for (const section of Object.values(sections)) {
-    // Check tables
-    for (const t of section.tables) {
+/** Parse SSL/TLS inspection rules with action (Decrypt vs Do-not-decrypt) and zone coverage. */
+function parseSslTlsRules(sections: ExtractedSections): SslTlsRule[] {
+  const rules: SslTlsRule[] = [];
+  for (const key of Object.keys(sections)) {
+    if (!/ssl.*tls.*inspection|tls.*inspection/i.test(key)) continue;
+    for (const t of sections[key].tables) {
       for (const row of t.rows) {
-        // Case 1: Column header mentions DPI (e.g. "DPI Mode" column)
-        for (const [k, v] of Object.entries(row)) {
-          if (DPI_KEY.test(k)) {
-            const val = v.toLowerCase().trim();
-            if (ENABLED_VAL.test(val)) return true;
-            if (DISABLED_VAL.test(val)) return false;
-          }
-        }
+        const name = row["Rule Name"] ?? row["Name"] ?? row["Rule"] ?? "Unnamed";
+        const actionRaw = (
+          row["Decrypt Action"] ?? row["Action"] ?? row["Decrypt action"] ?? ""
+        ).toLowerCase().trim();
+        const source = (
+          row["Source"] ?? row["Source Zones"] ?? row["Source Zone"] ?? ""
+        ).trim();
+        const dest = (
+          row["Destination"] ?? row["Destination Zones"] ?? row["Destination Zone"] ?? ""
+        ).trim();
+        const status = (row["Status"] ?? "").toLowerCase().trim();
 
-        // Case 2: Key-value table (Setting/Value) where value row mentions DPI
-        const settingKey = row["Setting"] ?? row["Name"] ?? row["Parameter"] ?? row["Option"] ?? "";
-        const settingVal = row["Value"] ?? row["Status"] ?? row["State"] ?? row["Configuration"] ?? "";
-        if (DPI_KEY.test(settingKey) && settingVal) {
-          const val = settingVal.toLowerCase().trim();
-          if (ENABLED_VAL.test(val)) return true;
-          if (DISABLED_VAL.test(val)) return false;
-        }
+        const isExclude = actionRaw.includes("do not") || actionRaw.includes("don't") || actionRaw.includes("bypass");
+        const splitZones = (z: string) =>
+          z.toLowerCase() === "any" ? ["any"] : z.split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
 
-        // Case 3: Any cell value mentions DPI alongside an enabled/disabled value
-        const allValues = Object.values(row);
-        const hasDpiRef = allValues.some((v) => DPI_KEY.test(v));
-        if (hasDpiRef) {
-          const statusVal = allValues.find((v) =>
-            /^(enabled|disabled|on|off|active|inactive)$/i.test(v.trim())
-          );
-          if (statusVal) {
-            const s = statusVal.toLowerCase().trim();
-            return s === "enabled" || s === "on" || s === "active";
-          }
-        }
+        rules.push({
+          name,
+          action: isExclude ? "exclude" : "decrypt",
+          sourceZones: splitZones(source),
+          destZones: splitZones(dest),
+          enabled: !status.includes("off") && !status.includes("disabled") && !status.includes("inactive"),
+        });
       }
     }
+  }
+  return rules;
+}
 
-    // Check detail blocks (expanded rule details)
-    for (const d of section.details) {
-      for (const [k, v] of Object.entries(d.fields)) {
-        if (DPI_KEY.test(k)) {
-          const val = v.toLowerCase().trim();
-          if (ENABLED_VAL.test(val)) return true;
-          if (DISABLED_VAL.test(val)) return false;
-        }
-      }
-    }
+/**
+ * Cross-reference firewall WAN rules with SSL/TLS Decrypt rules.
+ * Returns source zones that have firewall rules going to WAN
+ * but are NOT covered by any enabled Decrypt SSL/TLS rule.
+ */
+function findUncoveredZones(
+  wanRules: Array<{ name: string; row: Record<string, string>; enabled: boolean }>,
+  sslRules: SslTlsRule[],
+): string[] {
+  const decryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled);
+  if (decryptRules.length === 0) return [];
 
-    // Check raw text
-    if (section.text) {
-      const t = section.text.toLowerCase();
-      if (/(?:dpi|deep\s*packet|inspection)\s*(?:engine|mode)?\s*[:=]?\s*(?:enabled|on|active)/i.test(t)) return true;
-      if (/(?:dpi|deep\s*packet|inspection)\s*(?:engine|mode)?\s*[:=]?\s*(?:disabled|off|inactive|fastpath)/i.test(t)) return false;
+  // Build set of source zones used by enabled firewall WAN rules
+  const fwSourceZones = new Set<string>();
+  for (const { row, enabled } of wanRules) {
+    if (!enabled) continue;
+    const sz = (
+      row["Source Zones"] ?? row["Source Zone"] ?? row["Src Zone"] ?? row["Source"] ?? ""
+    ).toLowerCase().trim();
+    if (sz && sz !== "any") {
+      sz.split(/[,;]/).forEach((z) => {
+        const trimmed = z.trim();
+        if (trimmed) fwSourceZones.add(trimmed);
+      });
     }
   }
 
-  return null;
+  if (fwSourceZones.size === 0) return [];
+
+  // Check which FW source zones are covered by a Decrypt rule destined for WAN
+  const uncovered: string[] = [];
+  for (const zone of fwSourceZones) {
+    const isCovered = decryptRules.some((r) => {
+      const srcMatch = r.sourceZones.includes("any") || r.sourceZones.includes(zone);
+      const dstMatch = r.destZones.includes("any") || r.destZones.some((d) => d.includes("wan"));
+      return srcMatch && dstMatch;
+    });
+    if (!isCovered) uncovered.push(zone);
+  }
+  return uncovered;
 }
 
 function countRows(sections: ExtractedSections, pattern: RegExp): number {
@@ -287,8 +318,9 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
   const emptyPosture: InspectionPosture = {
     totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
     webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
-    withAppControl: 0, withIps: 0, withSslInspection: 0, wanRuleNames: [],
-    totalDisabledRules: 0, dpiEngineEnabled: null,
+    withAppControl: 0, withIps: 0, withSslInspection: 0,
+    sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [],
+    wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
   };
 
   if (!rulesTable || totalRules === 0) {
@@ -329,14 +361,13 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     if (hasAppControl(row)) withAppControl++;
     if (hasIps(row)) withIps++;
   }
-  // SSL/TLS inspection rules (from dedicated section)
-  for (const key of Object.keys(sections)) {
-    if (/ssl.*tls.*inspection|tls.*inspection/i.test(key)) {
-      for (const t of sections[key].tables) withSslInspection += t.rows.length;
-    }
-  }
-
-  const dpiEngineEnabled = findDpiEngineStatus(sections);
+  // SSL/TLS inspection rules = DPI engine on Sophos XGS
+  const sslRules = parseSslTlsRules(sections);
+  withSslInspection = sslRules.length;
+  const sslDecryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled).length;
+  const sslExclusionRules = sslRules.filter((r) => r.action === "exclude").length;
+  const dpiEngineEnabled = sslDecryptRules > 0;
+  const sslUncoveredZones = findUncoveredZones(wanRules, sslRules);
 
   const inspectionPosture: InspectionPosture = {
     totalWanRules: wanRules.length,
@@ -344,6 +375,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     disabledWanRules: disabledWanRules.length,
     webFilterableRules, withWebFilter, withoutWebFilter,
     withAppControl, withIps, withSslInspection,
+    sslDecryptRules, sslExclusionRules, sslRules, sslUncoveredZones,
     wanRuleNames: wanRules.map((w) => w.name),
     totalDisabledRules,
     dpiEngineEnabled,
@@ -375,17 +407,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     }
   }
 
-  // --- DPI engine check ---
-  if (dpiEngineEnabled === false) {
-    findings.push({
-      id: `f${++fid}`,
-      severity: "critical",
-      title: "DPI engine is disabled",
-      detail: "The Deep Packet Inspection engine is turned off. Without DPI, web filtering, IPS, application control, and SSL/TLS inspection cannot function regardless of rule-level settings.",
-      section: "DPI Engine",
-      remediation: "The DPI engine must be enabled for web filtering, IPS, and app control to function. Check your firewall's system settings to ensure the DPI engine is active. Note: enabling DPI may increase CPU utilisation — monitor after enabling.",
-    });
-  }
+  // (SSL/TLS inspection = DPI engine — covered in the SSL/TLS finding below)
 
   // --- WAN rules with no web filtering (enabled rules only) ---
   const wanNoFilter: string[] = [];
@@ -534,17 +556,54 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     });
   }
 
-  // --- SSL/TLS inspection coverage ---
+  // --- SSL/TLS inspection (DPI engine) coverage ---
   if (withSslInspection === 0 && wanRules.length > 0) {
     findings.push({
       id: `f${++fid}`,
-      severity: "medium",
-      title: "No SSL/TLS inspection rules configured",
-      detail: "No SSL/TLS inspection rules were found. Without TLS decryption, the firewall cannot inspect encrypted traffic for threats, significantly reducing security coverage for web-based attacks.",
+      severity: "critical",
+      title: "No SSL/TLS inspection rules configured (DPI inactive)",
+      detail: "No SSL/TLS inspection rules were found. On Sophos XGS, SSL/TLS inspection is the DPI engine — without it, the firewall cannot decrypt and inspect HTTPS traffic for threats, significantly reducing the effectiveness of web filtering, IPS, and application control on encrypted traffic.",
       section: "SSL/TLS Inspection",
       remediation: "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints. Add exclusion rules ('Don't decrypt') above for incompatible services.",
     });
+  } else if (withSslInspection > 0 && sslDecryptRules === 0 && wanRules.length > 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: "critical",
+      title: `${withSslInspection} SSL/TLS rule${withSslInspection !== 1 ? "s" : ""} but none decrypt traffic (DPI inactive)`,
+      detail: `All ${withSslInspection} SSL/TLS inspection rules are exclusions ("Do not decrypt"). Without at least one Decrypt rule, no encrypted traffic is being inspected — web filtering, IPS, and application control cannot operate on HTTPS traffic.`,
+      section: "SSL/TLS Inspection",
+      remediation: "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic below the exclusion rules. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints.",
+    });
   }
+
+  // --- SSL/TLS zone coverage gaps ---
+  if (sslUncoveredZones.length > 0 && sslDecryptRules > 0) {
+    const zoneList = sslUncoveredZones.map((z) => z.toUpperCase()).join(", ");
+    findings.push({
+      id: `f${++fid}`,
+      severity: "high",
+      title: `${sslUncoveredZones.length} source zone${sslUncoveredZones.length > 1 ? "s" : ""} not covered by SSL/TLS Decrypt rules`,
+      detail: `Firewall rules send traffic from ${zoneList} to WAN, but no SSL/TLS Decrypt rule covers ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}. Encrypted traffic from ${zoneList} bypasses DPI — web filtering, IPS, and app control cannot inspect it.`,
+      section: "SSL/TLS Inspection",
+      remediation: `Go to Rules and policies > SSL/TLS inspection rules. Add or update a Decrypt rule to include ${zoneList} as source zone${sslUncoveredZones.length > 1 ? "s" : ""}. Ensure the signing CA certificate is deployed to all endpoints in ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}.`,
+    });
+  }
+
+  // --- Admin Access Exposure (Local Service ACL) ---
+  analyseLocalServiceAcl(sections, findings, () => ++fid);
+
+  // --- NAT Rule Security Analysis ---
+  analyseNatRules(sections, findings, () => ++fid);
+
+  // --- Web Filter Policy Deep Dive ---
+  analyseWebFilterPolicies(sections, findings, () => ++fid);
+
+  // --- IPS Policy Deep Dive ---
+  analyseIpsPolicies(sections, findings, () => ++fid);
+
+  // --- Virus Scanning Analysis ---
+  analyseVirusScanning(sections, findings, () => ++fid);
 
   // --- Empty sections warning ---
   const emptySections: string[] = [];
@@ -564,6 +623,271 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
   }
 
   return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers };
+}
+
+// ---------------------------------------------------------------------------
+// Extended analysis functions — analyse sections beyond firewall rules
+// ---------------------------------------------------------------------------
+
+function findSection(sections: ExtractedSections, pattern: RegExp): SectionData | null {
+  for (const key of Object.keys(sections)) {
+    if (pattern.test(key)) return sections[key];
+  }
+  return null;
+}
+
+/** Admin Access Exposure — flag management services accessible from untrusted zones */
+function analyseLocalServiceAcl(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const acl = findSection(sections, /local\s*service\s*acl|device\s*access|admin\s*service/i);
+  if (!acl) return;
+
+  const SENSITIVE_SERVICES = /https|ssh|admin|webadmin|gui|snmp|api|telnet/i;
+  const UNTRUSTED_ZONES = /wan|any|dmz|guest|untrust|external|public/i;
+
+  const exposed: { service: string; zones: string }[] = [];
+  for (const t of acl.tables) {
+    for (const row of t.rows) {
+      const service = row["Service"] ?? row["Name"] ?? row["Service Name"] ?? Object.values(row)[0] ?? "";
+      if (!SENSITIVE_SERVICES.test(service)) continue;
+
+      for (const [key, val] of Object.entries(row)) {
+        if (key === "Service" || key === "Name" || key === "Service Name") continue;
+        const v = val.toLowerCase().trim();
+        if (v === "enable" || v === "enabled" || v === "on" || v === "yes" || v === "allow" || v === "✓" || v.includes("✓")) {
+          if (UNTRUSTED_ZONES.test(key)) {
+            exposed.push({ service, zones: key });
+          }
+        }
+      }
+    }
+  }
+
+  if (exposed.length > 0) {
+    const sshWan = exposed.filter((e) => /ssh|telnet/i.test(e.service) && /wan/i.test(e.zones));
+    const adminWan = exposed.filter((e) => /https|admin|gui|webadmin|api/i.test(e.service) && /wan/i.test(e.zones));
+    const snmpExposed = exposed.filter((e) => /snmp/i.test(e.service));
+
+    if (adminWan.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "critical",
+        title: "Admin console accessible from WAN",
+        detail: `Management service${adminWan.length > 1 ? "s" : ""} (${adminWan.map((e) => e.service).join(", ")}) ${adminWan.length > 1 ? "are" : "is"} enabled on the WAN zone. This exposes the firewall admin interface to the internet, allowing brute-force and exploitation attempts.`,
+        section: "Local Service ACL",
+        remediation: "Go to Administration > Device access. Disable HTTPS/Admin access for the WAN zone. If remote admin access is required, use an IPsec or SSL VPN tunnel instead, or restrict to specific IP addresses using the ACL exception list.",
+      });
+    }
+    if (sshWan.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "critical",
+        title: "SSH accessible from WAN",
+        detail: `SSH is enabled on the WAN zone. This allows remote command-line access from the internet — a high-value target for attackers using credential stuffing and exploit attacks.`,
+        section: "Local Service ACL",
+        remediation: "Go to Administration > Device access. Disable SSH for the WAN zone. Use VPN for remote CLI access. If SSH must remain, restrict to specific IP addresses and ensure MFA is enabled.",
+      });
+    }
+    if (snmpExposed.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "high",
+        title: `SNMP exposed to ${snmpExposed.map((e) => e.zones).join(", ")}`,
+        detail: `SNMP is enabled on ${snmpExposed.map((e) => e.zones).join(", ")}. SNMP (especially v1/v2c) leaks device information and can be used for reconnaissance. If v3 is not enforced, community strings are sent in cleartext.`,
+        section: "Local Service ACL",
+        remediation: "Go to Administration > Device access. Disable SNMP on untrusted zones. If monitoring is needed, use SNMPv3 with authentication and encryption, and restrict to management VLANs only.",
+      });
+    }
+
+    const otherExposed = exposed.filter(
+      (e) => !adminWan.includes(e) && !sshWan.includes(e) && !snmpExposed.includes(e)
+    );
+    if (otherExposed.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "medium",
+        title: `${otherExposed.length} management service${otherExposed.length > 1 ? "s" : ""} exposed to untrusted zones`,
+        detail: `Services exposed: ${otherExposed.map((e) => `${e.service} (${e.zones})`).join(", ")}. Minimise the attack surface by restricting management access to trusted zones only.`,
+        section: "Local Service ACL",
+        remediation: "Go to Administration > Device access. Review each service and disable access from untrusted zones (WAN, DMZ, Guest). Only LAN and dedicated management zones should have admin access.",
+      });
+    }
+  }
+}
+
+/** NAT Rule Security Analysis */
+function analyseNatRules(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const natSection = findSection(sections, /nat\s*rule/i);
+  if (!natSection) return;
+
+  const dnatRules: string[] = [];
+  const broadNat: string[] = [];
+  for (const t of natSection.tables) {
+    for (const row of t.rows) {
+      const name = row["Rule Name"] ?? row["Name"] ?? row["#"] ?? "Unnamed";
+      const type = (
+        row["Type"] ?? row["NAT Type"] ?? row["Rule Type"] ?? row["Action"] ?? ""
+      ).toLowerCase().trim();
+      const origDest = (
+        row["Original Destination"] ?? row["Destination"] ?? row["Dest"] ?? ""
+      ).toLowerCase().trim();
+      const transTo = (
+        row["Translated To"] ?? row["Translated Destination"] ?? row["Translation"] ?? row["Mapped To"] ?? ""
+      ).toLowerCase().trim();
+      const origSrc = (
+        row["Original Source"] ?? row["Source"] ?? ""
+      ).toLowerCase().trim();
+
+      if (type.includes("dnat") || type.includes("destination") || type.includes("port forward") || transTo) {
+        dnatRules.push(name);
+      }
+      if ((origSrc === "any" || origSrc === "") && (origDest === "any" || origDest === "")) {
+        broadNat.push(name);
+      }
+    }
+  }
+
+  if (dnatRules.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: `${dnatRules.length} DNAT/port forwarding rule${dnatRules.length > 1 ? "s" : ""} expose internal services`,
+      detail: `DNAT rules forward inbound traffic to internal servers: ${dnatRules.slice(0, 6).join(", ")}${dnatRules.length > 6 ? ` (+${dnatRules.length - 6} more)` : ""}. Each forwarded port is an entry point — ensure IPS, web filtering, and logging are enabled on the corresponding firewall rules.`,
+      section: "NAT Rules",
+      remediation: "Review each DNAT rule under Rules and policies > NAT rules. Ensure the matching firewall rule has IPS enabled to detect exploits against the exposed service. Consider restricting source IPs where possible (geo-IP or known partner ranges).",
+    });
+  }
+  if (broadNat.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: `${broadNat.length} NAT rule${broadNat.length > 1 ? "s" : ""} with broad source/destination`,
+      detail: `NAT rules with overly broad scope: ${broadNat.slice(0, 6).join(", ")}${broadNat.length > 6 ? ` (+${broadNat.length - 6} more)` : ""}. Broad NAT rules can unintentionally expose services or masquerade traffic.`,
+      section: "NAT Rules",
+      remediation: "Go to Rules and policies > NAT rules. Restrict original source and destination to specific network objects rather than 'Any'. This reduces the blast radius if the rule is misconfigured.",
+    });
+  }
+}
+
+/** Web Filter Policy Deep Dive */
+function analyseWebFilterPolicies(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const wfSection = findSection(sections, /web\s*filter\s*polic/i);
+  if (!wfSection) return;
+
+  const RISKY_CATEGORIES = /proxy|vpn|anonymi|p2p|peer|torrent|malware|phish|spyware|botnet|crypto\s*min/i;
+  const riskyAllowed: string[] = [];
+
+  for (const t of wfSection.tables) {
+    for (const row of t.rows) {
+      for (const [key, val] of Object.entries(row)) {
+        if (RISKY_CATEGORIES.test(key) || RISKY_CATEGORIES.test(val)) {
+          const action = (val ?? "").toLowerCase().trim();
+          if (action === "allow" || action === "permitted" || action === "warn" || action === "enabled") {
+            riskyAllowed.push(key);
+          }
+        }
+      }
+    }
+  }
+
+  if (riskyAllowed.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: `Web filter policy allows ${riskyAllowed.length} high-risk categor${riskyAllowed.length > 1 ? "ies" : "y"}`,
+      detail: `High-risk web categories are not blocked: ${riskyAllowed.slice(0, 6).join(", ")}${riskyAllowed.length > 6 ? ` (+${riskyAllowed.length - 6} more)` : ""}. Proxy/VPN categories can bypass security controls; malware categories should always be blocked.`,
+      section: "Web Filter Policies",
+      remediation: "Go to Web > Policies. Edit the active policy and set high-risk categories (Proxy/VPN, Anonymizers, P2P, Malware, Phishing) to 'Block'. Consider 'Warn' for grey-area categories like social media.",
+    });
+  }
+}
+
+/** IPS Policy Deep Dive */
+function analyseIpsPolicies(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const ipsSection = findSection(sections, /ips\s*polic/i);
+  if (!ipsSection) return;
+
+  let totalPolicies = 0;
+  let hasRules = false;
+  for (const t of ipsSection.tables) {
+    totalPolicies += t.rows.length;
+    for (const row of t.rows) {
+      const ruleCount = row["Rules"] ?? row["Rule Count"] ?? row["Signatures"] ?? "";
+      if (ruleCount && parseInt(ruleCount) > 0) hasRules = true;
+      const action = (row["Action"] ?? row["Default Action"] ?? "").toLowerCase();
+      if (action.includes("allow") || action.includes("permit")) {
+        findings.push({
+          id: `f${nextId()}`, severity: "medium",
+          title: `IPS policy "${row["Name"] ?? row["Policy Name"] ?? "Unknown"}" default action is Allow`,
+          detail: `An IPS policy is configured with a default action of Allow/Permit. This means unclassified traffic bypasses IPS inspection. Consider setting the default action to Drop for WAN-facing rules.`,
+          section: "IPS Policies",
+          remediation: "Go to Intrusion prevention > IPS policies. Edit the policy and set the default action to 'Drop' for maximum protection. Review IPS alerts and add exceptions only for verified false positives.",
+        });
+      }
+    }
+  }
+
+  if (totalPolicies === 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "No IPS policies configured",
+      detail: "No IPS policies were found in the export. Without IPS policies, intrusion prevention cannot be applied to firewall rules even if the IPS feature is licensed.",
+      section: "IPS Policies",
+      remediation: "Go to Intrusion prevention > IPS policies. Create a policy using the default template (e.g. 'lantowan_general'). Then apply it to WAN-facing firewall rules.",
+    });
+  }
+}
+
+/** Virus Scanning Analysis */
+function analyseVirusScanning(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const vsSection = findSection(sections, /virus|malware|anti.?virus|scanning/i);
+  if (!vsSection) return;
+
+  const disabledProtocols: string[] = [];
+  let sandboxFound = false;
+  let sandboxEnabled = false;
+
+  for (const t of vsSection.tables) {
+    for (const row of t.rows) {
+      const setting = row["Setting"] ?? row["Protocol"] ?? row["Name"] ?? Object.keys(row)[0] ?? "";
+      const value = (row["Value"] ?? row["Status"] ?? row[setting] ?? "").toLowerCase().trim();
+
+      if (/sandbox/i.test(setting)) {
+        sandboxFound = true;
+        if (value === "enabled" || value === "on" || value === "yes" || value.includes("✓")) {
+          sandboxEnabled = true;
+        }
+      }
+
+      if (/http|smtp|ftp|pop3|imap|mail/i.test(setting)) {
+        if (value === "disabled" || value === "off" || value === "no" || value.includes("✗")) {
+          disabledProtocols.push(setting);
+        }
+      }
+    }
+  }
+
+  if (disabledProtocols.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: `Virus scanning disabled for ${disabledProtocols.length} protocol${disabledProtocols.length > 1 ? "s" : ""}`,
+      detail: `Anti-malware scanning is not active for: ${disabledProtocols.join(", ")}. Malware can enter the network through unscanned traffic. HTTP scanning is especially critical as it catches drive-by downloads.`,
+      section: "Virus Scanning",
+      remediation: "Go to Protection > Web protection (for HTTP/HTTPS) or Email protection (for SMTP/POP3/IMAP). Enable malware scanning for each protocol. Ensure the Sophos anti-malware engine is selected and up to date.",
+    });
+  }
+
+  if (sandboxFound && !sandboxEnabled) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "Sandboxing / Zero-day protection not enabled",
+      detail: "The Sophos Sandstorm (sandboxing) feature is available but not enabled. Without sandboxing, zero-day malware that evades signature-based detection will not be caught. This requires a valid Sophos Central / Sandstorm licence.",
+      section: "Virus Scanning",
+      remediation: "Go to Protection > Web protection > Enable Sophos Sandstorm analysis. This sends suspicious files to the cloud sandbox for detonation analysis. Requires an active Sandstorm licence.",
+    });
+  }
 }
 
 /**

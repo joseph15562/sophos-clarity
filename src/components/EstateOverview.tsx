@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Download } from "lucide-react";
 import type { AnalysisResult, Severity, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
 import { findingToFrameworks } from "@/lib/compliance-map";
+import { downloadCsv, downloadFindingsPdf } from "@/lib/findings-export";
 
 interface EstateOverviewProps {
   fileCount: number;
@@ -161,11 +162,14 @@ function ParserDiagnostics({ analysisResults }: { analysisResults: Record<string
                   <span className="font-medium">Web filterable (HTTP/HTTPS/ANY):</span>{" "}
                   {r.inspectionPosture.webFilterableRules} rules, {r.inspectionPosture.withWebFilter} with filter, {r.inspectionPosture.withoutWebFilter} without
                 </p>
-                <p className={r.inspectionPosture.dpiEngineEnabled === null ? "text-[#F29400]" : "text-muted-foreground"}>
-                  <span className="font-medium">DPI engine:</span>{" "}
-                  {r.inspectionPosture.dpiEngineEnabled === true ? "Detected (enabled)" :
-                   r.inspectionPosture.dpiEngineEnabled === false ? "Detected (DISABLED)" :
-                   "Not detected in export — check if DPI/Deep Packet Inspection settings are included in the config export"}
+                <p className={!r.inspectionPosture.dpiEngineEnabled && r.inspectionPosture.totalWanRules > 0 ? "text-[#F29400]" : "text-muted-foreground"}>
+                  <span className="font-medium">SSL/TLS Inspection (DPI):</span>{" "}
+                  {r.inspectionPosture.withSslInspection === 0
+                    ? "No SSL/TLS inspection rules found — DPI is inactive"
+                    : `${r.inspectionPosture.withSslInspection} rules (${r.inspectionPosture.sslDecryptRules} Decrypt, ${r.inspectionPosture.sslExclusionRules} exclusions)${r.inspectionPosture.dpiEngineEnabled ? " — DPI active" : " — no Decrypt rules, DPI inactive"}`}
+                  {r.inspectionPosture.sslUncoveredZones.length > 0
+                    ? ` | Zone gaps: ${r.inspectionPosture.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")}`
+                    : ""}
                 </p>
               </div>
             </div>
@@ -262,10 +266,14 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
         {bar("IPS / Intrusion Prevention", posture.withIps, barColor(posture.withIps))}
         {bar("Application Control", posture.withAppControl, barColor(posture.withAppControl))}
       </div>
-      {posture.dpiEngineEnabled === false && (
+      {!posture.dpiEngineEnabled && posture.totalWanRules > 0 && (
         <div className="rounded-md bg-[#EA0022]/10 px-3 py-2 flex items-center gap-2">
-          <span className="text-[#EA0022] font-bold text-[10px]">DPI ENGINE OFF</span>
-          <span className="text-[10px] text-[#EA0022]/80">Web filtering, IPS, and app control cannot function without the DPI engine enabled</span>
+          <span className="text-[#EA0022] font-bold text-[10px]">SSL/TLS INSPECTION OFF</span>
+          <span className="text-[10px] text-[#EA0022]/80">
+            {posture.withSslInspection === 0
+              ? "No SSL/TLS inspection rules configured — encrypted traffic is not being inspected (DPI inactive)"
+              : `${posture.withSslInspection} SSL/TLS rule${posture.withSslInspection !== 1 ? "s" : ""} found but all are exclusions (Do not decrypt) — no traffic is being decrypted`}
+          </span>
         </div>
       )}
       {posture.disabledWanRules > 0 && (
@@ -273,10 +281,63 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
           {posture.disabledWanRules} of {posture.totalWanRules} WAN rules are disabled — coverage scores based on {posture.enabledWanRules} enabled rule{posture.enabledWanRules !== 1 ? "s" : ""}
         </p>
       )}
-      {posture.withSslInspection > 0 ? (
-        <p className="text-[10px] text-muted-foreground">{posture.withSslInspection} SSL/TLS inspection rule{posture.withSslInspection !== 1 ? "s" : ""} configured</p>
-      ) : (
-        <p className="text-[10px] text-[#c47800] dark:text-[#F29400]">No SSL/TLS inspection rules detected — encrypted traffic is not being inspected</p>
+      {posture.withSslInspection > 0 && (
+        <div className="text-[10px] space-y-0.5">
+          <p className={posture.dpiEngineEnabled ? "text-muted-foreground" : "text-[#c47800] dark:text-[#F29400]"}>
+            {posture.withSslInspection} SSL/TLS inspection rule{posture.withSslInspection !== 1 ? "s" : ""}:
+            {posture.sslDecryptRules > 0 ? ` ${posture.sslDecryptRules} Decrypt` : ""}
+            {posture.sslExclusionRules > 0 ? `${posture.sslDecryptRules > 0 ? "," : ""} ${posture.sslExclusionRules} Do-not-decrypt` : ""}
+            {posture.dpiEngineEnabled ? " (DPI active)" : ""}
+          </p>
+          {posture.sslUncoveredZones.length > 0 && (
+            <p className="text-[#c47800] dark:text-[#F29400]">
+              Zone gap: {posture.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")} → WAN traffic is not covered by any Decrypt rule
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FindingCard({ finding, label, fileCount, selectedFrameworks }: {
+  finding: { id: string; severity: Severity; title: string; detail: string; section: string; remediation?: string };
+  label: string; fileCount: number; selectedFrameworks: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const frameworks = selectedFrameworks.length > 0
+    ? findingToFrameworks(finding.title, selectedFrameworks)
+    : [];
+
+  return (
+    <div className={`rounded-lg border border-border border-l-4 ${SEVERITY_BORDER[finding.severity]} bg-card shadow-sm overflow-hidden`}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+      >
+        <span className="text-lg shrink-0" title={finding.severity}>{severityIcon(finding.severity)}</span>
+        <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
+          <span className={`font-bold text-sm ${SEVERITY_COLOR[finding.severity]}`}>{finding.title}</span>
+          {fileCount > 1 && (
+            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
+          )}
+          {frameworks.map((fw) => (
+            <span key={fw} className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/20 dark:text-[#ff6b6b]">
+              {fw}
+            </span>
+          ))}
+        </div>
+        <span className="text-muted-foreground text-xs shrink-0">{open ? "▼" : "▶"}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3.5 pl-[3.25rem] space-y-2">
+          <p className="text-xs text-muted-foreground leading-relaxed">{finding.detail}</p>
+          {finding.remediation && (
+            <div className="px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
+              <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {finding.remediation}</p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -291,38 +352,34 @@ function FindingsPanel({ analysisResults, fileCount, selectedFrameworks }: {
         <img src="/icons/sophos-alert.svg" alt="" className="h-5 w-5 sophos-icon" />
         <h3 className="text-sm font-semibold text-foreground">Deterministic Findings</h3>
         <span className="text-xs text-muted-foreground">(rule-based analysis — pre-AI)</span>
+        <div className="ml-auto flex items-center gap-1.5">
+          <button
+            onClick={() => downloadCsv(analysisResults)}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted/50 transition-colors"
+            title="Export findings as CSV"
+          >
+            <Download className="h-3 w-3" /> CSV
+          </button>
+          <button
+            onClick={() => downloadFindingsPdf(analysisResults)}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted/50 transition-colors"
+            title="Export findings as printable PDF"
+          >
+            <Download className="h-3 w-3" /> PDF
+          </button>
+        </div>
       </div>
-      <div className="grid gap-2.5">
+      <div className="grid gap-2">
         {Object.entries(analysisResults).map(([label, result]) =>
-          result.findings.map((f) => {
-            const frameworks = selectedFrameworks.length > 0
-              ? findingToFrameworks(f.title, selectedFrameworks)
-              : [];
-            return (
-              <div key={`${label}-${f.id}`} className={`rounded-lg border border-border border-l-4 ${SEVERITY_BORDER[f.severity]} bg-card px-4 py-3.5 flex items-start gap-3 text-sm shadow-sm`}>
-                <span className="mt-0.5 text-lg shrink-0" title={f.severity}>{severityIcon(f.severity)}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className={`font-bold text-sm ${SEVERITY_COLOR[f.severity]}`}>{f.title}</span>
-                    {fileCount > 1 && (
-                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
-                    )}
-                    {frameworks.map((fw) => (
-                      <span key={fw} className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/20 dark:text-[#ff6b6b]">
-                        {fw}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{f.detail}</p>
-                  {f.remediation && (
-                    <div className="mt-2 px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
-                      <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {f.remediation}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
+          result.findings.map((f) => (
+            <FindingCard
+              key={`${label}-${f.id}`}
+              finding={f}
+              label={label}
+              fileCount={fileCount}
+              selectedFrameworks={selectedFrameworks}
+            />
+          ))
         )}
       </div>
     </section>

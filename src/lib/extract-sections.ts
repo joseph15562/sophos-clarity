@@ -22,9 +22,6 @@ const SECTION_ID_MAP: Record<string, string> = {
   WirelessAccessPoint: "wireless-access-points",
   WebFilterPolicy: "webfilter-policies",
   IPSPolicy: "ips-policies",
-  dpiEngine: "dpi-engine",
-  SecurityEngine: "security-engine",
-  DeepPacketInspection: "deep-packet-inspection",
   // OTP & auth sections use "additional-<Key>" in Sophos HTML
   OTPSettings: "additional-OTPSettings",
 };
@@ -501,8 +498,9 @@ export function extractSections(html: string): ExtractedSections {
   // Also try direct ID lookup for any sections we might have missed
   for (const [key, htmlId] of Object.entries(SECTION_ID_MAP)) {
     // Check if we already got this from sidebar
+    const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
     const alreadyFound = Object.keys(sections).some(
-      (name) => name.toLowerCase().replace(/\s+/g, "") === key.toLowerCase()
+      (name) => normalise(name) === normalise(key)
     );
     if (alreadyFound) continue;
 

@@ -97,14 +97,11 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
       : `${loggingDisabledCount} rule${loggingDisabledCount > 1 ? "s" : ""} with logging disabled`,
   });
 
-  // 6. Rule Hygiene & DPI — penalise broad rules, duplicates, disabled rules, DPI engine off
+  // 6. Rule Hygiene & SSL/TLS Inspection — penalise broad rules, duplicates, disabled rules, missing SSL/TLS
   const broadFindings = findings.filter((f) => f.title.includes("broad source"));
   const dupeFindings = findings.filter((f) => f.title.includes("overlapping"));
   const anyServiceFindings = findings.filter((f) => f.title.includes('"ANY" service'));
   let segScore = 100;
-
-  // DPI engine off = catastrophic — no inspection works at all
-  if (ip.dpiEngineEnabled === false) segScore -= 40;
 
   if (broadFindings.length > 0) segScore -= 20;
   if (anyServiceFindings.length > 0) {
@@ -112,7 +109,10 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
     segScore -= Math.min(25, anyCount * 5);
   }
   if (dupeFindings.length > 0) segScore -= 10;
-  if (ip.withSslInspection === 0 && ip.totalWanRules > 0) segScore -= 10;
+  // No SSL/TLS Decrypt = DPI inactive on Sophos XGS — significant penalty
+  if (!ip.dpiEngineEnabled && ip.totalWanRules > 0) segScore -= 25;
+  // Zone gaps in SSL/TLS coverage
+  if (ip.sslUncoveredZones.length > 0) segScore -= Math.min(15, ip.sslUncoveredZones.length * 5);
 
   // Penalise for disabled WAN rules — suggests abandoned or incomplete policy
   if (ip.disabledWanRules > 0 && ip.totalWanRules > 0) {
@@ -122,12 +122,12 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
 
   segScore = clamp(segScore);
   const segDetails: string[] = [];
-  if (ip.dpiEngineEnabled === false) segDetails.push("DPI engine disabled");
+  if (!ip.dpiEngineEnabled && ip.totalWanRules > 0) segDetails.push("no SSL/TLS Decrypt rules (DPI inactive)");
+  if (ip.sslUncoveredZones.length > 0) segDetails.push(`zone gaps: ${ip.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")}`);
   if (ip.disabledWanRules > 0) segDetails.push(`${ip.disabledWanRules} disabled WAN rules`);
   if (broadFindings.length > 0) segDetails.push("broad rules detected");
   if (anyServiceFindings.length > 0) segDetails.push("ANY service rules");
   if (dupeFindings.length > 0) segDetails.push("overlapping rules");
-  if (ip.withSslInspection === 0 && ip.totalWanRules > 0) segDetails.push("no SSL/TLS inspection");
 
   categories.push({
     label: "Rule Hygiene",
@@ -135,20 +135,41 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
     maxScore: 100,
     pct: segScore,
     details: segDetails.length === 0
-      ? "Good rule hygiene and DPI engine active"
+      ? "Good rule hygiene and SSL/TLS inspection active"
       : segDetails.join(", "),
   });
 
-  // If DPI engine is off, cap the inspection-dependent categories
-  if (ip.dpiEngineEnabled === false) {
-    for (const cat of categories) {
-      if (["Web Filtering", "Intrusion Prevention", "Application Control"].includes(cat.label)) {
-        cat.pct = 0;
-        cat.score = 0;
-        cat.details = `DPI engine disabled — ${cat.label.toLowerCase()} cannot function`;
-      }
-    }
-  }
+  // 7. Admin Access Exposure
+  const adminFindings = findings.filter((f) =>
+    /admin console|ssh accessible|snmp exposed|management service.*exposed/i.test(f.title)
+  );
+  const adminScore = adminFindings.length === 0 ? 100 : clamp(100 - adminFindings.reduce((s, f) =>
+    s + (f.severity === "critical" ? 40 : f.severity === "high" ? 25 : 10), 0
+  ));
+  categories.push({
+    label: "Admin Access",
+    score: adminScore,
+    maxScore: 100,
+    pct: adminScore,
+    details: adminFindings.length === 0
+      ? "No management services exposed to untrusted zones"
+      : `${adminFindings.length} admin exposure issue${adminFindings.length > 1 ? "s" : ""} detected`,
+  });
+
+  // 8. Anti-Malware
+  const avFindings = findings.filter((f) => /virus scanning|sandboxing|zero-day/i.test(f.title));
+  const avScore = avFindings.length === 0 ? 100 : clamp(100 - avFindings.reduce((s, f) =>
+    s + (f.severity === "high" ? 30 : 15), 0
+  ));
+  categories.push({
+    label: "Anti-Malware",
+    score: avScore,
+    maxScore: 100,
+    pct: avScore,
+    details: avFindings.length === 0
+      ? "Anti-malware scanning active across protocols"
+      : `${avFindings.length} malware scanning gap${avFindings.length > 1 ? "s" : ""} detected`,
+  });
 
   const overall = Math.round(categories.reduce((sum, c) => sum + c.pct, 0) / categories.length);
   const grade: RiskScoreResult["grade"] =

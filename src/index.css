@@ -25,7 +25,7 @@
     --muted: 213 27% 90%;            /* #BBCFDE area */
     --muted-foreground: 210 25% 40%; /* Darker than #6A889B for readability */
 
-    --accent: 184 100% 50%;          /* #00EDFF Cyber Blue */
+    --accent: 220 28% 93%;           /* Subtle highlight for dropdowns/focus */
     --accent-foreground: 215 52% 14%;
 
     --destructive: 352 100% 46%;     /* #EA0022 */
@@ -83,8 +83,8 @@
     --muted: 215 45% 20%;
     --muted-foreground: 210 20% 65%; /* Brighter muted text */
 
-    --accent: 184 100% 50%;          /* Cyber Blue */
-    --accent-foreground: 0 0% 100%;
+    --accent: 215 45% 25%;           /* Subtle highlight for dropdowns/focus */
+    --accent-foreground: 0 0% 96%;
 
     --destructive: 352 90% 50%;
     --destructive-foreground: 0 0% 100%;

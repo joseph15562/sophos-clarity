@@ -127,8 +127,12 @@ describe("analyseConfig", () => {
     expect(finding!.detail).toContain("Guest-Web");
   });
 
-  it("DPI engine status is null when no DPI section exists", () => {
-    expect(result.inspectionPosture.dpiEngineEnabled).toBeNull();
+  it("SSL/TLS inspection (DPI) is false when no SSL/TLS inspection rules exist", () => {
+    expect(result.inspectionPosture.dpiEngineEnabled).toBe(false);
+    expect(result.inspectionPosture.sslDecryptRules).toBe(0);
+    expect(result.inspectionPosture.sslExclusionRules).toBe(0);
+    expect(result.inspectionPosture.sslRules).toHaveLength(0);
+    expect(result.inspectionPosture.sslUncoveredZones).toHaveLength(0);
   });
 
   it("flags logging disabled", () => {
@@ -163,9 +167,11 @@ describe("analyseConfig", () => {
     expect(finding!.detail).toContain("otpIPsec");
   });
 
-  it("flags missing SSL/TLS inspection", () => {
+  it("flags missing SSL/TLS inspection (DPI inactive)", () => {
     const finding = result.findings.find((f) => f.title.includes("SSL/TLS inspection"));
     expect(finding).toBeDefined();
+    expect(finding!.severity).toBe("critical");
+    expect(finding!.title).toContain("DPI inactive");
   });
 
   it("all findings have remediation text", () => {
