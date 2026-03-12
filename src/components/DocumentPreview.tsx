@@ -1,4 +1,4 @@
-import { useMemo, useRef, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import DOMPurify from "dompurify";
 import { BrandingData } from "./BrandingSetup";
 import type { AnalysisResult } from "@/lib/analyse-config";
@@ -335,10 +335,10 @@ async function generatePptxBlob(markdown: string, reportLabel: string, branding:
   pptx.author = branding.companyName || "Firewall Report";
   pptx.title = `${reportLabel} - Firewall Report`;
 
-  const PRIMARY = "1a1a2e";
-  const ACCENT = "6366f1";
-  const GRAY = "64748b";
-  const LIGHT_BG = "f1f5f9";
+  const PRIMARY = "001A47";
+  const ACCENT = "2006F7";
+  const GRAY = "6A889B";
+  const LIGHT_BG = "EDF2F9";
 
   // --- Title slide ---
   const titleSlide = pptx.addSlide();
@@ -583,6 +583,61 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
+function extractTocHeadings(md: string): { id: string; text: string; level: number }[] {
+  const headings: { id: string; text: string; level: number }[] = [];
+  for (const line of md.split("\n")) {
+    const match = line.trim().match(/^(#{2,3})\s+(.*)/);
+    if (match) {
+      const text = match[2].replace(/\*\*/g, "").replace(/`/g, "").trim();
+      const id = text.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "");
+      headings.push({ id, text, level: match[1].length });
+    }
+  }
+  return headings;
+}
+
+function ReportToc({ markdown }: { markdown: string }) {
+  const [open, setOpen] = useState(false);
+  const headings = useMemo(() => extractTocHeadings(markdown), [markdown]);
+
+  if (headings.length < 3) return null;
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="no-print mb-4">
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-xs font-semibold text-[#2006F7] dark:text-[#009CFB] hover:underline flex items-center gap-1.5"
+      >
+        <img src="/icons/sophos-document.svg" alt="" className="h-3.5 w-3.5 sophos-icon" />
+        {open ? "Hide" : "Show"} Table of Contents ({headings.length} sections)
+      </button>
+      {open && (
+        <nav className="mt-2 rounded-lg border border-border bg-muted/30 p-3 max-h-64 overflow-y-auto space-y-0.5">
+          {headings.map((h, i) => (
+            <button
+              key={`${h.id}-${i}`}
+              onClick={() => scrollTo(h.id)}
+              className={`block w-full text-left text-xs hover:text-[#2006F7] dark:hover:text-[#009CFB] transition-colors truncate ${
+                h.level === 2 ? "font-semibold text-foreground py-1" : "text-muted-foreground pl-4 py-0.5"
+              }`}
+            >
+              {h.text}
+            </button>
+          ))}
+        </nav>
+      )}
+    </div>
+  );
+}
+
 function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename, errorMessage, loadingStatus }: {
   markdown: string;
   isLoading: boolean;
@@ -720,6 +775,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
           </div>
         )}
 
+        {html && !isLoading && <ReportToc markdown={markdown} />}
         {html && <div dangerouslySetInnerHTML={{ __html: html }} />}
 
         {isLoading && markdown && (

@@ -21,35 +21,29 @@ export function FileUpload({ files, onFilesChange }: Props) {
 
   const handleFiles = useCallback(
     (fileList: FileList) => {
-      const newFiles: UploadedFile[] = [];
-      const promises: Promise<void>[] = [];
+      const readFile = (file: File): Promise<UploadedFile> =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) =>
+            resolve({
+              id: `file-${++fileIdCounter}`,
+              fileName: file.name,
+              label: file.name.replace(/\.(html|htm)$/i, ""),
+              content: e.target?.result as string,
+            });
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(file);
+        });
 
-      Array.from(fileList).forEach((file) => {
-        if (!file.name.endsWith(".html") && !file.name.endsWith(".htm")) return;
-        promises.push(
-          new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              newFiles.push({
-                id: `file-${++fileIdCounter}`,
-                fileName: file.name,
-                label: file.name.replace(/\.(html|htm)$/i, ""),
-                content: e.target?.result as string,
-              });
-              resolve();
-            };
-            reader.readAsText(file);
-          })
-        );
-      });
+      const valid = Array.from(fileList).filter(
+        (f) => f.name.endsWith(".html") || f.name.endsWith(".htm"),
+      );
 
-      Promise.all(promises).then(() => {
-        if (newFiles.length > 0) {
-          onFilesChange([...files, ...newFiles]);
-        }
+      Promise.all(valid.map(readFile)).then((parsed) => {
+        if (parsed.length > 0) onFilesChange([...files, ...parsed]);
       });
     },
-    [files, onFilesChange]
+    [files, onFilesChange],
   );
 
   const onDrop = useCallback(

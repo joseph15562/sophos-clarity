@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export const ENVIRONMENT_TYPES = [
   "Education",
@@ -138,8 +138,10 @@ type Props = {
 };
 
 export function BrandingSetup({ branding, onChange }: Props) {
-  // Auto-populate frameworks when environment or country changes
+  const userTouchedFrameworks = useRef(false);
+
   useEffect(() => {
+    if (userTouchedFrameworks.current) return;
     if (branding.environment || branding.country) {
       const defaults = getDefaultFrameworks(branding.environment, branding.country);
       onChange({ ...branding, selectedFrameworks: defaults });
@@ -158,6 +160,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
   };
 
   const toggleFramework = (fw: ComplianceFramework) => {
+    userTouchedFrameworks.current = true;
     const current = branding.selectedFrameworks;
     const next = current.includes(fw)
       ? current.filter((f) => f !== fw)

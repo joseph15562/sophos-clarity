@@ -288,12 +288,14 @@ serve(async (req) => {
       const text = await response.text();
       console.error("Gemini API error:", response.status, text.slice(0, 500));
 
-      let message = "AI processing failed";
+      let message = `AI processing failed (HTTP ${response.status})`;
       try {
         const errJson = JSON.parse(text);
         const detail = errJson.error?.message ?? errJson.message ?? errJson.error;
         if (typeof detail === "string") message = detail;
-      } catch { /* use default */ }
+      } catch {
+        if (text.length > 0 && text.length < 200) message = text;
+      }
 
       if (response.status === 429) {
         return new Response(
