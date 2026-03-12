@@ -573,10 +573,10 @@ const Index = () => {
                             <div className="flex items-center justify-between mb-0.5">
                               <span className="text-xs font-semibold text-foreground truncate">{label}</span>
                               <div className="flex items-center gap-1.5 text-[10px] shrink-0">
-                                {criticals > 0 && <span className="text-[#EA0022] font-bold">{criticals}C</span>}
-                                {highs > 0 && <span className="text-[#c47800] dark:text-[#F29400] font-bold">{highs}H</span>}
-                                {mediums > 0 && <span className="text-[#b8a200] dark:text-[#F8E300] font-bold">{mediums}M</span>}
-                                <span className="text-muted-foreground">{result.stats.totalRules}r</span>
+                                {criticals > 0 && <span className="text-[#EA0022] font-bold" title={`${criticals} Critical finding${criticals !== 1 ? "s" : ""}`}>{criticals}C</span>}
+                                {highs > 0 && <span className="text-[#c47800] dark:text-[#F29400] font-bold" title={`${highs} High finding${highs !== 1 ? "s" : ""}`}>{highs}H</span>}
+                                {mediums > 0 && <span className="text-[#b8a200] dark:text-[#F8E300] font-bold" title={`${mediums} Medium finding${mediums !== 1 ? "s" : ""}`}>{mediums}M</span>}
+                                <span className="text-muted-foreground" title={`${result.stats.totalRules} rules parsed`}>{result.stats.totalRules}r</span>
                               </div>
                             </div>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -587,7 +587,10 @@ const Index = () => {
                       );
                     })}
                 </div>
-                <p className="text-[10px] text-muted-foreground">Ranked by weighted risk score: Critical ×10, High ×5, Medium ×2, Low ×1</p>
+                <div className="text-[10px] text-muted-foreground space-y-0.5">
+                  <p><span className="text-[#EA0022] font-semibold">C</span> = Critical &middot; <span className="text-[#c47800] dark:text-[#F29400] font-semibold">H</span> = High &middot; <span className="text-[#b8a200] dark:text-[#F8E300] font-semibold">M</span> = Medium &middot; <span className="font-semibold">r</span> = rules parsed</p>
+                  <p>Ranked by weighted risk score: Critical ×10, High ×5, Medium ×2, Low ×1</p>
+                </div>
               </div>
             )}
 
