@@ -316,8 +316,6 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
     /* ── Content area ── */
     .print-content {
       padding: 28px clamp(16px, 4vw, 48px) 48px;
-      max-width: 1200px;
-      margin: 0 auto;
     }
 
     h1 {
