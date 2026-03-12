@@ -12,6 +12,7 @@ import {
 
 interface Props {
   onLoadReports: (reports: SavedReportEntry[], customerName: string, environment: string) => void;
+  refreshTrigger?: number;
 }
 
 type SortField = "customer" | "type" | "score" | "date";
@@ -29,7 +30,7 @@ function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function SavedReportsLibrary({ onLoadReports }: Props) {
+export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
   const { isGuest, org } = useAuth();
   const useCloud = !isGuest && !!org;
 
@@ -49,7 +50,7 @@ export function SavedReportsLibrary({ onLoadReports }: Props) {
     setLoading(false);
   }, [useCloud]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh, refreshTrigger]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (useCloud) await deleteSavedReportCloud(id);

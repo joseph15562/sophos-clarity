@@ -68,6 +68,7 @@ function InnerApp() {
   const [restoredSession, setRestoredSession] = useState(false);
   const [savingReports, setSavingReports] = useState(false);
   const [reportsSaved, setReportsSaved] = useState(false);
+  const [savedReportsTrigger, setSavedReportsTrigger] = useState(0);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -121,6 +122,7 @@ function InnerApp() {
         await saveReportLocal(branding.customerName, branding.environment, reportEntries, analysisResults);
       }
       setReportsSaved(true);
+      setSavedReportsTrigger((n) => n + 1);
       setTimeout(() => setReportsSaved(false), 3000);
     } catch { /* ignore */ }
     setSavingReports(false);
@@ -458,7 +460,7 @@ function InnerApp() {
               iconBg="bg-[#10037C]/10 dark:bg-[#2006F7]/10"
             >
               <Suspense fallback={null}>
-                <SavedReportsLibrary onLoadReports={handleLoadSavedReports} />
+                <SavedReportsLibrary onLoadReports={handleLoadSavedReports} refreshTrigger={savedReportsTrigger} />
               </Suspense>
             </CollapsibleSection>
 
