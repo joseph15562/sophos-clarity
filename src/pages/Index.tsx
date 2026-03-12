@@ -161,6 +161,19 @@ const Index = () => {
               </section>
             )}
 
+            {/* Initial Findings header */}
+            {hasFiles && totalFindings > 0 && (
+              <div className="flex items-center gap-3 pt-2">
+                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#EA0022] text-white text-xs font-bold ring-4 ring-[#EA0022]/15 dark:ring-[#EA0022]/25">
+                  <img src="/icons/sophos-alert.svg" alt="" className="h-3.5 w-3.5 brightness-0 invert" />
+                </span>
+                <div>
+                  <h2 className="text-lg font-display font-bold text-foreground">Initial Findings</h2>
+                  <p className="text-xs text-muted-foreground">{totalFindings} issue{totalFindings !== 1 ? "s" : ""} detected across {files.length} firewall{files.length !== 1 ? "s" : ""} — rule-based analysis, no AI required</p>
+                </div>
+              </div>
+            )}
+
             {hasFiles && (
               <EstateOverview
                 fileCount={files.length}
@@ -180,6 +193,19 @@ const Index = () => {
               <Suspense fallback={null}>
                 <RiskScoreDashboard analysisResults={analysisResults} />
               </Suspense>
+            )}
+
+            {/* Quick Remediation Playbooks header */}
+            {hasFiles && totalFindings > 0 && (
+              <div className="flex items-center gap-3 pt-2">
+                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#00995a] text-white text-xs font-bold ring-4 ring-[#00995a]/15 dark:ring-[#00995a]/25">
+                  <img src="/icons/sophos-security.svg" alt="" className="h-3.5 w-3.5 brightness-0 invert" />
+                </span>
+                <div>
+                  <h2 className="text-lg font-display font-bold text-foreground">Quick Remediation Playbooks</h2>
+                  <p className="text-xs text-muted-foreground">Step-by-step Sophos Firewall instructions to resolve each finding</p>
+                </div>
+              </div>
             )}
 
             {/* Remediation Playbooks */}
