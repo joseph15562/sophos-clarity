@@ -65,15 +65,20 @@ export function severityIcon(s: Severity): string {
 }
 
 function isWanDest(row: Record<string, string>): boolean {
+  // Prefer detail-block "Destination Zones" over main-table "Destination" (which may also be zone)
   const dz = (
-    row["Destination Zone"] ?? row["Dest Zone"] ?? row["DestZone"] ??
-    row["Dest zone"] ?? row["Destination zone"] ?? row["DstZone"] ?? ""
+    row["Destination Zones"] ?? row["Destination Zone"] ?? row["Dest Zone"] ??
+    row["DestZone"] ?? row["Dest zone"] ?? row["Destination zone"] ?? row["DstZone"] ??
+    row["Destination"] ?? ""
   ).toLowerCase().trim();
   return dz === "wan" || dz.includes("wan");
 }
 
 function isWebService(row: Record<string, string>): boolean {
-  const svc = (row["Service"] ?? row["Services"] ?? row["service"] ?? row["Services Used"] ?? "").toLowerCase().trim();
+  const svc = (
+    row["Service"] ?? row["Services"] ?? row["Services/Ports"] ??
+    row["service"] ?? row["Services Used"] ?? ""
+  ).toLowerCase().trim();
   if (svc === "any") return true;
   if (svc.includes("http")) return true;
   if (svc.includes("web")) return true;
@@ -91,7 +96,9 @@ function hasWebFilter(row: Record<string, string>): boolean {
 }
 
 function isLoggingOff(row: Record<string, string>): boolean {
-  const log = (row["Log"] ?? row["Logging"] ?? row["logging"] ?? "").toLowerCase().trim();
+  const log = (
+    row["Log"] ?? row["Log Traffic"] ?? row["Logging"] ?? row["logging"] ?? ""
+  ).toLowerCase().trim();
   return log === "disabled" || log === "off" || log === "disable" || log === "no";
 }
 
@@ -99,11 +106,16 @@ function isRuleDisabled(row: Record<string, string>): boolean {
   const status = (
     row["Status"] ?? row["Rule Status"] ?? row["Enabled"] ?? row["Active"] ?? ""
   ).toLowerCase().trim();
-  return status === "disabled" || status === "off" || status === "inactive" || status === "no" || status === "false";
+  // Real Sophos exports use "✓ On" / "✗ Off" or "✓ Enabled" / "✗ Disabled"
+  if (status.includes("off") || status.includes("disabled") || status.includes("inactive")) return true;
+  if (status === "no" || status === "false") return true;
+  return false;
 }
 
 function isAnyService(row: Record<string, string>): boolean {
-  const svc = (row["Service"] ?? row["Services"] ?? row["service"] ?? "").toLowerCase().trim();
+  const svc = (
+    row["Service"] ?? row["Services"] ?? row["Services/Ports"] ?? row["service"] ?? ""
+  ).toLowerCase().trim();
   return svc === "any";
 }
 
@@ -144,9 +156,9 @@ function hasIps(row: Record<string, string>): boolean {
 function ruleSignature(row: Record<string, string>): string {
   const src = (row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? "").toLowerCase().trim();
   const dst = (row["Destination Networks"] ?? row["Destination"] ?? row["Dest Networks"] ?? "").toLowerCase().trim();
-  const svc = (row["Service"] ?? row["Services"] ?? row["service"] ?? "").toLowerCase().trim();
-  const srcZ = (row["Source Zone"] ?? row["Src Zone"] ?? "").toLowerCase().trim();
-  const dstZ = (row["Destination Zone"] ?? row["Dest Zone"] ?? row["DestZone"] ?? "").toLowerCase().trim();
+  const svc = (row["Service"] ?? row["Services"] ?? row["Services/Ports"] ?? row["service"] ?? "").toLowerCase().trim();
+  const srcZ = (row["Source Zone"] ?? row["Source Zones"] ?? row["Src Zone"] ?? "").toLowerCase().trim();
+  const dstZ = (row["Destination Zone"] ?? row["Destination Zones"] ?? row["Dest Zone"] ?? row["DestZone"] ?? "").toLowerCase().trim();
   return `${srcZ}|${src}|${dstZ}|${dst}|${svc}`;
 }
 

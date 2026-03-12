@@ -20,21 +20,32 @@ describe("extractSections", () => {
     expect(fw.tables[0].rows.length).toBe(6);
   });
 
-  it("preserves header columns", () => {
+  it("preserves main table header columns", () => {
     const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k))!;
     const headers = sections[fwKey].tables[0].headers;
     expect(headers).toContain("Rule Name");
-    expect(headers).toContain("Service");
-    expect(headers).toContain("Web Filter");
-    expect(headers).toContain("IPS");
+    expect(headers).toContain("Services");
+    expect(headers).toContain("Status");
   });
 
-  it("maps row values to header keys", () => {
+  it("merges detail block data into rule rows", () => {
+    const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k))!;
+    const headers = sections[fwKey].tables[0].headers;
+    expect(headers).toContain("Destination Zones");
+    expect(headers).toContain("Web Filter");
+    expect(headers).toContain("Intrusion Prevention");
+    expect(headers).toContain("Application Control");
+    expect(headers).toContain("Log Traffic");
+  });
+
+  it("maps row values to header keys including detail data", () => {
     const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k))!;
     const row0 = sections[fwKey].tables[0].rows[0];
     expect(row0["Rule Name"]).toBe("Allow-Internet");
-    expect(row0["Destination Zone"]).toBe("WAN");
+    expect(row0["Destination Zones"]).toBe("WAN");
     expect(row0["Web Filter"]).toBe("Default Policy");
+    expect(row0["Log Traffic"]).toBe("Enable");
+    expect(row0["Intrusion Prevention"]).toBe("GeneralPolicy");
   });
 
   it("extracts NAT rules", () => {
@@ -59,7 +70,7 @@ describe("extractSections", () => {
     expect(vpnPortal!["Value"]).toBe("Disabled");
   });
 
-  it("extracts web filter section", () => {
+  it("extracts web filter policies section", () => {
     const wfKey = Object.keys(sections).find((k) => /web\s*filter/i.test(k));
     expect(wfKey).toBeDefined();
     expect(sections[wfKey!].tables[0].rows.length).toBe(1);
@@ -98,11 +109,15 @@ describe("analyseConfig", () => {
     expect(result.inspectionPosture.disabledWanRules).toBe(1);
   });
 
+  it("counts web-filterable enabled WAN rules", () => {
+    expect(result.inspectionPosture.webFilterableRules).toBe(3);
+  });
+
   it("flags enabled WAN rules missing web filtering (excludes disabled)", () => {
     const finding = result.findings.find((f) => f.title.includes("missing web filtering"));
     expect(finding).toBeDefined();
     expect(finding!.severity).toBe("critical");
-    expect(finding!.detail).not.toContain("Guest-Web"); // disabled rule excluded
+    expect(finding!.detail).not.toContain("Guest-Web");
     expect(finding!.detail).toContain("Open-WAN");
   });
 
@@ -112,8 +127,8 @@ describe("analyseConfig", () => {
     expect(finding!.detail).toContain("Guest-Web");
   });
 
-  it("detects DPI engine status", () => {
-    expect(result.inspectionPosture.dpiEngineEnabled).toBe(true);
+  it("DPI engine status is null when no DPI section exists", () => {
+    expect(result.inspectionPosture.dpiEngineEnabled).toBeNull();
   });
 
   it("flags logging disabled", () => {

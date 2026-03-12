@@ -3,11 +3,14 @@
   Mirrors the structure of a real export with:
   - Sidebar checkboxes (data-section-key)
   - Section content containers (section-content-*)
-  - Firewall rules table with headers
+  - Firewall rules table with summary columns + expandable detail blocks
   - NAT rules table
   - Interfaces card layout
   - OTP settings grid
   - SSL/TLS inspection section (empty)
+  - Web filter policies
+  - IPS policies
+  Real Sophos exports do NOT have a DPI Engine section.
 -->
 <!DOCTYPE html>
 <html>
@@ -30,128 +33,254 @@
     <div data-section-name="OTP Settings">
       <input type="checkbox" data-section-key="OTPSettings" checked />
     </div>
-    <div data-section-name="DPI Engine">
-      <input type="checkbox" data-section-key="dpiEngine" checked />
+    <div data-section-name="Web Filter Policies">
+      <input type="checkbox" data-section-key="WebFilterPolicy" checked />
     </div>
-    <div data-section-name="Web Filters">
-      <input type="checkbox" data-section-key="WebFilter" checked />
-    </div>
-    <div data-section-name="Intrusion Prevention">
-      <input type="checkbox" data-section-key="IntrusionPrevention" checked />
+    <div data-section-name="IPS Policies">
+      <input type="checkbox" data-section-key="IPSPolicy" checked />
     </div>
   </div>
 
-  <!-- Firewall Rules section -->
+  <!-- Firewall Rules section — matches real Sophos export structure -->
   <div id="section-content-firewall-rules">
-    <div>
-      <table>
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
         <thead>
           <tr>
             <th>#</th>
             <th>Rule Name</th>
             <th>Status</th>
-            <th>Source Zone</th>
-            <th>Source Networks</th>
-            <th>Destination Zone</th>
-            <th>Destination Networks</th>
-            <th>Service</th>
             <th>Action</th>
-            <th>Web Filter</th>
-            <th>Log</th>
-            <th>IPS</th>
-            <th>Application Control</th>
+            <th>Source</th>
+            <th>Destination</th>
+            <th>Services</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <!-- Rule 1: Allow-Internet — enabled, WAN, HTTPS, has web filter + IPS + app control -->
+          <tr id="row-fw-rule-0">
             <td>1</td>
             <td>Allow-Internet</td>
-            <td>Enabled</td>
+            <td><span>✓ On</span></td>
+            <td><span>Accept</span></td>
             <td>LAN</td>
-            <td>Any</td>
             <td>WAN</td>
-            <td>Any</td>
             <td>HTTPS</td>
-            <td>Allow</td>
-            <td>Default Policy</td>
-            <td>Enabled</td>
-            <td>GeneralPolicy</td>
-            <td>AllowAll</td>
           </tr>
-          <tr>
+          <tr id="details-fw-rule-0" style="display: none;">
+            <td colspan="7">
+              <div id="rule-content-rule-0">
+                <table><tbody>
+                  <tr><td>Transaction ID</td><td>N/A</td></tr>
+                  <tr><td>Policy Type</td><td>Network</td></tr>
+                  <tr><td>IP Family</td><td>IPv4</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Action</td><td>Accept</td></tr>
+                  <tr><td>Log Traffic</td><td>Enable</td></tr>
+                  <tr><td>Schedule</td><td>All The Time</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Source Zones</td><td>LAN</td></tr>
+                  <tr><td>Source Networks</td><td>Any</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Destination Zones</td><td>WAN</td></tr>
+                  <tr><td>Destination Networks</td><td>Any</td></tr>
+                  <tr><td>Services/Ports</td><td>HTTPS</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Web Filter</td><td>Default Policy</td></tr>
+                  <tr><td>Application Control</td><td>AllowAll</td></tr>
+                  <tr><td>Intrusion Prevention</td><td>GeneralPolicy</td></tr>
+                  <tr><td>Virus Scanning</td><td>Disable</td></tr>
+                  <tr><td>Zero Day Protection</td><td>Disable</td></tr>
+                  <tr><td>Proxy Mode</td><td>Disable</td></tr>
+                  <tr><td>HTTPS Decryption</td><td>Disable</td></tr>
+                </tbody></table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Rule 2: Guest-Web — DISABLED, WAN, HTTP, no web filter -->
+          <tr id="row-fw-rule-1">
             <td>2</td>
             <td>Guest-Web</td>
-            <td>Disabled</td>
+            <td><span>✗ Off</span></td>
+            <td><span>Accept</span></td>
             <td>DMZ</td>
-            <td>GuestNet</td>
             <td>WAN</td>
-            <td>Any</td>
             <td>HTTP</td>
-            <td>Allow</td>
-            <td>None</td>
-            <td>Disabled</td>
-            <td>None</td>
-            <td>None</td>
           </tr>
-          <tr>
+          <tr id="details-fw-rule-1" style="display: none;">
+            <td colspan="7">
+              <div id="rule-content-rule-1">
+                <table><tbody>
+                  <tr><td>Transaction ID</td><td>N/A</td></tr>
+                  <tr><td>Policy Type</td><td>Network</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Action</td><td>Accept</td></tr>
+                  <tr><td>Log Traffic</td><td>Disable</td></tr>
+                  <tr><td>Schedule</td><td>All The Time</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Source Zones</td><td>DMZ</td></tr>
+                  <tr><td>Source Networks</td><td>GuestNet</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Destination Zones</td><td>WAN</td></tr>
+                  <tr><td>Destination Networks</td><td>Any</td></tr>
+                  <tr><td>Services/Ports</td><td>HTTP</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Web Filter</td><td>None</td></tr>
+                  <tr><td>Application Control</td><td>None</td></tr>
+                  <tr><td>Intrusion Prevention</td><td>None</td></tr>
+                  <tr><td>Virus Scanning</td><td>Disable</td></tr>
+                </tbody></table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Rule 3: Internal-DNS — enabled, LAN-to-LAN, DNS (not WAN) -->
+          <tr id="row-fw-rule-2">
             <td>3</td>
             <td>Internal-DNS</td>
-            <td>Enabled</td>
+            <td><span>✓ On</span></td>
+            <td><span>Accept</span></td>
             <td>LAN</td>
-            <td>Any</td>
             <td>LAN</td>
-            <td>DNS-Server</td>
             <td>DNS</td>
-            <td>Allow</td>
-            <td></td>
-            <td>Enabled</td>
-            <td></td>
-            <td></td>
           </tr>
-          <tr>
+          <tr id="details-fw-rule-2" style="display: none;">
+            <td colspan="7">
+              <div id="rule-content-rule-2">
+                <table><tbody>
+                  <tr><td>Action</td><td>Accept</td></tr>
+                  <tr><td>Log Traffic</td><td>Enable</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Source Zones</td><td>LAN</td></tr>
+                  <tr><td>Source Networks</td><td>Any</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Destination Zones</td><td>LAN</td></tr>
+                  <tr><td>Destination Networks</td><td>DNS-Server</td></tr>
+                  <tr><td>Services/Ports</td><td>DNS</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Web Filter</td><td>None</td></tr>
+                  <tr><td>Application Control</td><td>None</td></tr>
+                  <tr><td>Intrusion Prevention</td><td>None</td></tr>
+                </tbody></table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Rule 4: Open-WAN — enabled, WAN, ANY service, no web filter/IPS/app control -->
+          <tr id="row-fw-rule-3">
             <td>4</td>
             <td>Open-WAN</td>
-            <td>Enabled</td>
+            <td><span>✓ On</span></td>
+            <td><span>Accept</span></td>
             <td>LAN</td>
-            <td>Any</td>
             <td>WAN</td>
             <td>Any</td>
-            <td>ANY</td>
-            <td>Allow</td>
-            <td>None</td>
-            <td>Enabled</td>
-            <td>None</td>
-            <td>None</td>
           </tr>
-          <tr>
+          <tr id="details-fw-rule-3" style="display: none;">
+            <td colspan="7">
+              <div id="rule-content-rule-3">
+                <table><tbody>
+                  <tr><td>Action</td><td>Accept</td></tr>
+                  <tr><td>Log Traffic</td><td>Enable</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Source Zones</td><td>LAN</td></tr>
+                  <tr><td>Source Networks</td><td>Any</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Destination Zones</td><td>WAN</td></tr>
+                  <tr><td>Destination Networks</td><td>Any</td></tr>
+                  <tr><td>Services/Ports</td><td>Any</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Web Filter</td><td>None</td></tr>
+                  <tr><td>Application Control</td><td>None</td></tr>
+                  <tr><td>Intrusion Prevention</td><td>None</td></tr>
+                </tbody></table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Rule 5: VPN-Access — enabled, LAN dest (not WAN) -->
+          <tr id="row-fw-rule-4">
             <td>5</td>
             <td>VPN-Access</td>
-            <td>Enabled</td>
+            <td><span>✓ On</span></td>
+            <td><span>Accept</span></td>
             <td>VPN</td>
-            <td>VPNPool</td>
             <td>LAN</td>
-            <td>ServerNet</td>
-            <td>ANY</td>
-            <td>Allow</td>
-            <td></td>
-            <td>Enabled</td>
-            <td></td>
-            <td></td>
+            <td>Any</td>
           </tr>
-          <tr>
+          <tr id="details-fw-rule-4" style="display: none;">
+            <td colspan="7">
+              <div id="rule-content-rule-4">
+                <table><tbody>
+                  <tr><td>Action</td><td>Accept</td></tr>
+                  <tr><td>Log Traffic</td><td>Enable</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Source Zones</td><td>VPN</td></tr>
+                  <tr><td>Source Networks</td><td>VPNPool</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Destination Zones</td><td>LAN</td></tr>
+                  <tr><td>Destination Networks</td><td>ServerNet</td></tr>
+                  <tr><td>Services/Ports</td><td>Any</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Web Filter</td><td>None</td></tr>
+                  <tr><td>Application Control</td><td>None</td></tr>
+                  <tr><td>Intrusion Prevention</td><td>None</td></tr>
+                </tbody></table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Rule 6: Duplicate-WAN — enabled, WAN, ANY, no web filter (duplicate rule) -->
+          <tr id="row-fw-rule-5">
             <td>6</td>
             <td>Duplicate-WAN</td>
-            <td>Enabled</td>
+            <td><span>✓ On</span></td>
+            <td><span>Accept</span></td>
             <td>LAN</td>
-            <td>Any</td>
             <td>WAN</td>
             <td>Any</td>
-            <td>ANY</td>
-            <td>Allow</td>
-            <td>None</td>
-            <td>Enabled</td>
-            <td>None</td>
-            <td>None</td>
+          </tr>
+          <tr id="details-fw-rule-5" style="display: none;">
+            <td colspan="7">
+              <div id="rule-content-rule-5">
+                <table><tbody>
+                  <tr><td>Action</td><td>Accept</td></tr>
+                  <tr><td>Log Traffic</td><td>Enable</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Source Zones</td><td>LAN</td></tr>
+                  <tr><td>Source Networks</td><td>Any</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Destination Zones</td><td>WAN</td></tr>
+                  <tr><td>Destination Networks</td><td>Any</td></tr>
+                  <tr><td>Services/Ports</td><td>Any</td></tr>
+                </tbody></table>
+                <table><tbody>
+                  <tr><td>Web Filter</td><td>None</td></tr>
+                  <tr><td>Application Control</td><td>None</td></tr>
+                  <tr><td>Intrusion Prevention</td><td>None</td></tr>
+                </tbody></table>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -208,8 +337,8 @@
     </div>
   </div>
 
-  <!-- Web Filters section -->
-  <div id="section-content-web-filters">
+  <!-- Web Filter Policies section -->
+  <div id="section-content-webfilter-policies">
     <div>
       <table>
         <thead><tr><th>Policy Name</th><th>Status</th></tr></thead>
@@ -220,21 +349,8 @@
     </div>
   </div>
 
-  <!-- DPI Engine / Security Engine section -->
-  <div id="section-content-dpi-engine">
-    <div>
-      <table>
-        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
-        <tbody>
-          <tr><td>DPI Engine</td><td>Enabled</td></tr>
-          <tr><td>Fastpath Offload</td><td>Enabled</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Intrusion Prevention section -->
-  <div id="section-content-intrusion-prevention">
+  <!-- IPS Policies section -->
+  <div id="section-content-ips-policies">
     <div>
       <table>
         <thead><tr><th>Policy Name</th><th>Status</th></tr></thead>

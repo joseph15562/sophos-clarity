@@ -20,6 +20,8 @@ const SECTION_ID_MAP: Record<string, string> = {
   Network: "networks",
   REDDevice: "red-devices",
   WirelessAccessPoint: "wireless-access-points",
+  WebFilterPolicy: "webfilter-policies",
+  IPSPolicy: "ips-policies",
   dpiEngine: "dpi-engine",
   SecurityEngine: "security-engine",
   DeepPacketInspection: "deep-packet-inspection",
@@ -73,8 +75,9 @@ function extractTable(tableEl: Element): TableData {
   allRows.forEach((tr, idx) => {
     // Skip header row
     if (idx === 0 && headers.length > 0) return;
-    // Skip detail/expansion rows
+    // Skip detail/expansion rows and any rows nested inside them
     if (tr.id?.startsWith("details-")) return;
+    if (tr.closest('[id^="details-"]') || tr.closest('[id^="rule-content-"]')) return;
 
     const cells = tr.querySelectorAll("td, .sophos-table-cell");
     if (cells.length === 0) return;
@@ -345,11 +348,54 @@ function extractPortsVlansTable(container: Element): TableData | null {
   return { headers: INTERFACES_HEADERS, rows };
 }
 
+/**
+ * For firewall rules sections: extract the key-value pairs from each rule's
+ * expandable detail block and merge them into the corresponding main table row.
+ * Real Sophos exports store Source Zones, Destination Zones, Web Filter, IPS,
+ * Application Control, Log Traffic, etc. inside detail blocks, not in the main table.
+ */
+function mergeRuleDetails(container: Element, mainTable: TableData): TableData {
+  const enrichedRows: Record<string, string>[] = [];
+  const enrichedHeaders = new Set(mainTable.headers);
+
+  for (let i = 0; i < mainTable.rows.length; i++) {
+    const row = { ...mainTable.rows[i] };
+
+    // Detail rows have IDs like "details-fw-rule-0", "details-fw-rule-1", etc.
+    const detailRow = container.querySelector(`[id="details-fw-rule-${i}"]`);
+    if (!detailRow) {
+      enrichedRows.push(row);
+      continue;
+    }
+
+    // Extract all key-value pairs from sub-tables inside the detail block
+    const subTables = detailRow.querySelectorAll("table");
+    subTables.forEach((table) => {
+      table.querySelectorAll("tr").forEach((tr) => {
+        const cells = tr.querySelectorAll("td");
+        if (cells.length === 2) {
+          const key = (cells[0].textContent ?? "").replace(/\s+/g, " ").trim();
+          const val = (cells[1].textContent ?? "").replace(/\s+/g, " ").trim();
+          if (key && !row[key]) {
+            row[key] = val;
+            enrichedHeaders.add(key);
+          }
+        }
+      });
+    });
+
+    enrichedRows.push(row);
+  }
+
+  return { headers: Array.from(enrichedHeaders), rows: enrichedRows };
+}
+
 function extractSectionContent(doc: Document, htmlId: string): SectionData | null {
   const container = doc.getElementById(`section-content-${htmlId}`);
   if (!container) return null;
 
   const tables: TableData[] = [];
+  const isFirewallRules = htmlId === "firewall-rules";
 
   // Interfaces & Network: parse card layout into a single table (no <table> in HTML)
   if (htmlId === "ports-vlans-aliases") {
@@ -367,8 +413,14 @@ function extractSectionContent(doc: Document, htmlId: string): SectionData | nul
     if (processedTables.has(table)) return;
     processedTables.add(table);
 
-    const data = extractTable(table);
-    if (data.rows.length > 0) tables.push(data);
+    let data = extractTable(table);
+    if (data.rows.length > 0) {
+      // For firewall rules: merge detail block data into each row
+      if (isFirewallRules) {
+        data = mergeRuleDetails(container, data);
+      }
+      tables.push(data);
+    }
   });
 
   // OTP/settings sections use grid divs (not tables); extract as Setting/Value table
