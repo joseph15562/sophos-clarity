@@ -84,17 +84,21 @@ function isAnyService(row: Record<string, string>): boolean {
 }
 
 function isBroadSource(row: Record<string, string>): boolean {
-  const src = (row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? "").toLowerCase().trim();
-  return src === "any" || src === "";
+  const raw = row["Source Networks"] ?? row["Source"] ?? row["Src Networks"];
+  if (raw === undefined) return false;
+  const src = raw.toLowerCase().trim();
+  return src === "any";
 }
 
 function isBroadDest(row: Record<string, string>): boolean {
-  const dst = (row["Destination Networks"] ?? row["Destination"] ?? row["Dest Networks"] ?? "").toLowerCase().trim();
-  return dst === "any" || dst === "";
+  const raw = row["Destination Networks"] ?? row["Destination"] ?? row["Dest Networks"];
+  if (raw === undefined) return false;
+  const dst = raw.toLowerCase().trim();
+  return dst === "any";
 }
 
 function ruleName(row: Record<string, string>): string {
-  return row["Rule Name"] ?? row["Name"] ?? row["Rule"] ?? row["col1"] ?? "Unnamed";
+  return row["Rule Name"] ?? row["Name"] ?? row["Rule"] ?? row["#"] ?? "Unnamed";
 }
 
 function hasAppControl(row: Record<string, string>): boolean {
