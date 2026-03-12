@@ -74,7 +74,12 @@ const Index = () => {
           ),
           onDone: () => resolve(true),
           onError: (err) => {
-            setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, errorMessage: err } : r));
+            setReports((prev) => prev.map((r) => r.id === reportId ? {
+              ...r,
+              errorMessage: r.markdown
+                ? `Generation interrupted after partial output. ${err}`
+                : err,
+            } : r));
             console.error(`Report ${reportId} attempt ${attempt + 1} failed:`, err);
             if (attempt >= MAX_RETRIES) {
               const isExecutive = reportId === "report-executive";
@@ -721,6 +726,7 @@ const Index = () => {
           failedReportIds={failedReportIds}
           onRetry={handleRetry}
           branding={branding}
+          analysisResults={analysisResults}
           topActions={
             hasReports && !isLoading ? (
               <div className="no-print space-y-3 mb-4">

@@ -1,6 +1,7 @@
 import { useMemo, useRef, type ReactNode } from "react";
 import DOMPurify from "dompurify";
 import { BrandingData } from "./BrandingSetup";
+import type { AnalysisResult } from "@/lib/analyse-config";
 import { Loader2, Download, FileText, RefreshCw, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +32,8 @@ type Props = {
   branding: BrandingData;
   /** Rendered at the top when reports exist (e.g. Add Compliance Evidence Pack) */
   topActions?: ReactNode;
+  /** Per-firewall analysis results for evidence verification sidebar */
+  analysisResults?: Record<string, AnalysisResult>;
 };
 
 function isTableRow(line: string): boolean {
@@ -641,18 +644,27 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
         )}
       </div>
 
-      <div ref={docRef} className="bg-card rounded-xl border border-border shadow-sm p-8 md:p-12 doc-section">
+      {/* Enterprise document studio shell */}
+      <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">
+        <div className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex items-center justify-between no-print">
+          <div className="flex items-center gap-3">
+            <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5 opacity-60" />
+            <span className="text-[11px] font-semibold text-white/70 uppercase tracking-widest">Sophos FireComply — Document</span>
+          </div>
+          <span className="text-[10px] text-white/40">{new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+        </div>
+        <div ref={docRef} className="bg-card p-8 md:p-12">
         {(branding.companyName || branding.logoUrl) && (
-          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-border">
+          <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-[#2006F7]/20 dark:border-[#2006F7]/30">
             {branding.logoUrl && (
               <img src={branding.logoUrl} alt="Company logo" className="h-14 w-auto max-w-[200px] object-contain" />
             )}
-            {branding.companyName && (
-              <div>
-                <p className="text-lg font-bold text-foreground">{branding.companyName}</p>
-                <p className="text-sm text-muted-foreground">Firewall Configuration Report</p>
-              </div>
-            )}
+            <div className="flex-1">
+              {branding.companyName && (
+                <p className="text-lg font-display font-bold text-foreground">{branding.companyName}</p>
+              )}
+              <p className="text-sm text-muted-foreground">Firewall Configuration Assessment Report</p>
+            </div>
           </div>
         )}
 
@@ -695,6 +707,19 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
           </div>
         )}
 
+        {isFailed && markdown && (
+          <div className="mb-4 rounded-lg border border-[#F29400]/30 bg-[#F29400]/5 dark:bg-[#F29400]/10 px-4 py-3 flex items-center gap-3 no-print">
+            <span className="text-[#c47800] dark:text-[#F29400] text-lg">⚠</span>
+            <div className="flex-1 text-sm">
+              <p className="font-semibold text-[#c47800] dark:text-[#F29400]">Partial output recovered</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{errorMessage || "Generation was interrupted. The content below may be incomplete."}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={onRetry} className="gap-1.5 shrink-0">
+              <RefreshCw className="h-3 w-3" /> Retry
+            </Button>
+          </div>
+        )}
+
         {html && <div dangerouslySetInnerHTML={{ __html: html }} />}
 
         {isLoading && markdown && (
@@ -703,12 +728,50 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
             <span className="text-sm">Still generating...</span>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
 }
 
-export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions }: Props) {
+function EvidenceVerification({ analysisResults, reportLabel }: { analysisResults?: Record<string, AnalysisResult>; reportLabel: string }) {
+  if (!analysisResults) return null;
+  const result = analysisResults[reportLabel];
+  if (!result) {
+    const totalRules = Object.values(analysisResults).reduce((s, r) => s + r.stats.totalRules, 0);
+    const totalFindings = Object.values(analysisResults).reduce((s, r) => s + r.findings.length, 0);
+    if (totalRules === 0 && totalFindings === 0) return null;
+    return (
+      <div className="no-print rounded-lg border border-border bg-muted/30 px-4 py-3 mt-3">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Evidence Verification — Estate</p>
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
+          <span><span className="font-semibold text-foreground">{Object.keys(analysisResults).length}</span> firewalls</span>
+          <span><span className="font-semibold text-foreground">{totalRules}</span> rules parsed</span>
+          <span><span className="font-semibold text-foreground">{totalFindings}</span> deterministic findings</span>
+        </div>
+      </div>
+    );
+  }
+  const { stats, findings, inspectionPosture } = result;
+  return (
+    <div className="no-print rounded-lg border border-border bg-muted/30 px-4 py-3 mt-3">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Evidence Verification — {reportLabel}</p>
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
+        <span><span className="font-semibold text-foreground">{stats.totalRules}</span> rules</span>
+        <span><span className="font-semibold text-foreground">{stats.totalNatRules}</span> NAT rules</span>
+        <span><span className="font-semibold text-foreground">{stats.interfaces}</span> interfaces</span>
+        <span><span className="font-semibold text-foreground">{stats.totalHosts}</span> hosts/networks</span>
+        <span><span className="font-semibold text-foreground">{stats.populatedSections}/{stats.totalSections}</span> sections</span>
+        <span><span className="font-semibold text-foreground">{findings.length}</span> findings</span>
+        {inspectionPosture.totalWanRules > 0 && (
+          <span><span className="font-semibold text-foreground">{inspectionPosture.withWebFilter}/{inspectionPosture.totalWanRules}</span> WAN rules filtered</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions, analysisResults }: Props) {
   if (reports.length === 0 && !isLoading) return null;
 
   const allDone = reports.length > 0 && !isLoading && reports.every(r => r.markdown && !failedReportIds.has(r.id));
@@ -771,6 +834,9 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
           errorMessage={r.errorMessage}
           loadingStatus={r.loadingStatus}
         />
+        {r.markdown && !loadingReportIds.has(r.id) && (
+          <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} />
+        )}
       </div>
     );
   }
@@ -824,6 +890,9 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
               errorMessage={r.errorMessage}
               loadingStatus={r.loadingStatus}
             />
+            {r.markdown && !loadingReportIds.has(r.id) && (
+              <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} />
+            )}
           </TabsContent>
         ))}
       </Tabs>
