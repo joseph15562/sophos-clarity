@@ -189,6 +189,10 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
   const customerName = branding?.customerName || "";
   const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
+  const sophosLogoLight = `<svg viewBox="0 0 600 65" xmlns="http://www.w3.org/2000/svg"><path fill="#2006F7" d="M4.48,4.35v28.3c0,4.8,2.6,9.21,6.79,11.54l29.46,16.35.19.11,29.6-16.45c4.19-2.33,6.79-6.74,6.79-11.53V4.35H4.48ZM51.89,37.88c-2.2,1.22-4.67,1.86-7.18,1.86l-27.32-.08,15.32-8.54c1.48-.83,3.14-1.26,4.84-1.27l28.92-.09-14.57,8.13ZM51.47,23.9c-1.48.83-3.14,1.26-4.84,1.27l-28.92.09,14.57-8.13c2.2-1.22,4.67-1.86,7.18-1.86l27.32.08-15.32,8.54Z"/><g fill="#001a47"><path d="M578.8,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4s0-12.88,0-12.88h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86,0,2.12-1.72,3.77-3.84,3.77h-60.53v12.88h60.53c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M228.84,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM228.84,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><path d="M483.22,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM483.22,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><polygon points="410.52 4.53 410.52 24.96 360.14 24.96 360.14 4.53 347.24 4.53 347.24 58.42 360.14 58.42 360.14 37.86 410.52 37.86 410.52 58.42 423.42 58.42 423.42 4.53 410.52 4.53"/><path d="M155.11,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4V4.44h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86s-1.72,3.77-3.84,3.77h-60.53v12.88s60.53,0,60.53,0c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M319.66,4.53h-43.49s-5.2,0-5.2,0h-7.7s0,53.89,0,53.89h12.9s0-14.44,0-14.44h43.49c10.88,0,19.73-8.85,19.73-19.73,0-10.88-8.85-19.73-19.73-19.73ZM319.66,31.08h-43.49s0-13.66,0-13.66h43.49c3.77,0,6.83,3.06,6.83,6.83,0,3.77-3.06,6.83-6.83,6.83Z"/></g></svg>`;
+
+  const sophosLogoDark = `<svg viewBox="0 0 600 65" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M4.48,4.35v28.3c0,4.8,2.6,9.21,6.79,11.54l29.46,16.35.19.11,29.6-16.45c4.19-2.33,6.79-6.74,6.79-11.53V4.35H4.48ZM51.89,37.88c-2.2,1.22-4.67,1.86-7.18,1.86l-27.32-.08,15.32-8.54c1.48-.83,3.14-1.26,4.84-1.27l28.92-.09-14.57,8.13ZM51.47,23.9c-1.48.83-3.14,1.26-4.84,1.27l-28.92.09,14.57-8.13c2.2-1.22,4.67-1.86,7.18-1.86l27.32.08-15.32,8.54Z"/><g fill="#fff"><path d="M578.8,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4s0-12.88,0-12.88h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86,0,2.12-1.72,3.77-3.84,3.77h-60.53v12.88h60.53c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M228.84,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM228.84,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><path d="M483.22,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM483.22,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><polygon points="410.52 4.53 410.52 24.96 360.14 24.96 360.14 4.53 347.24 4.53 347.24 58.42 360.14 58.42 360.14 37.86 410.52 37.86 410.52 58.42 423.42 58.42 423.42 4.53 410.52 4.53"/><path d="M155.11,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4V4.44h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86s-1.72,3.77-3.84,3.77h-60.53v12.88s60.53,0,60.53,0c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M319.66,4.53h-43.49s-5.2,0-5.2,0h-7.7s0,53.89,0,53.89h12.9s0-14.44,0-14.44h43.49c10.88,0,19.73-8.85,19.73-19.73,0-10.88-8.85-19.73-19.73-19.73ZM319.66,31.08h-43.49s0-13.66,0-13.66h43.49c3.77,0,6.83,3.06,6.83,6.83,0,3.77-3.06,6.83-6.83,6.83Z"/></g></svg>`;
+
   return `<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -196,78 +200,94 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} — Sophos FireComply</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700&family=Zalando+Sans+Expanded:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
     :root {
       --bg: #ffffff;
       --bg-surface: #f8fafc;
       --bg-muted: #f1f5f9;
       --border: #e2e8f0;
-      --text: #0f172a;
-      --text-secondary: #475569;
+      --text: #001A47;
+      --text-secondary: #334155;
       --text-muted: #94a3b8;
       --accent: #2006F7;
-      --accent-light: rgba(32, 6, 247, 0.08);
+      --accent-light: rgba(32, 6, 247, 0.06);
       --accent-dark: #10037C;
       --th-bg: #10037C;
       --th-text: #ffffff;
       --row-even: #f8fafc;
       --row-odd: #ffffff;
       --code-bg: #f1f5f9;
-      --green: #059669;
-      --green-bg: rgba(5, 150, 105, 0.08);
     }
-
     [data-theme="dark"] {
       --bg: #0B1120;
-      --bg-surface: #131B2E;
+      --bg-surface: #111827;
       --bg-muted: #1a2335;
       --border: #1e2d44;
       --text: #e2e8f0;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --accent: #6366f1;
-      --accent-light: rgba(99, 102, 241, 0.1);
+      --accent: #6B5BFF;
+      --accent-light: rgba(107, 91, 255, 0.08);
       --accent-dark: #818cf8;
       --th-bg: #1e2d44;
       --th-text: #e2e8f0;
-      --row-even: #131B2E;
+      --row-even: #111827;
       --row-odd: #0B1120;
       --code-bg: #1a2335;
-      --green: #34d399;
-      --green-bg: rgba(52, 211, 153, 0.1);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 10.5pt;
       line-height: 1.6;
       color: var(--text);
       background: var(--bg);
       padding: 0;
-      max-width: 900px;
-      margin: 0 auto;
+      margin: 0;
       -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
 
     /* ── Header bar ── */
     .report-header {
       background: var(--accent-dark);
       color: #fff;
-      padding: 20px 28px;
+      padding: 18px clamp(16px, 4vw, 48px);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-radius: 0 0 12px 12px;
-      margin-bottom: 28px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
-    [data-theme="dark"] .report-header { background: var(--bg-surface); border: 1px solid var(--border); border-top: none; }
-    .report-header .brand { display: flex; align-items: center; gap: 10px; }
-    .report-header .brand svg { width: 22px; height: 22px; }
-    .report-header .brand-text { font-weight: 700; font-size: 12pt; letter-spacing: -0.3px; }
-    .report-header .meta { text-align: right; font-size: 8.5pt; opacity: 0.85; line-height: 1.5; }
+    [data-theme="dark"] .report-header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .report-header .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .report-header .sophos-logo { height: 22px; width: auto; flex-shrink: 0; }
+    .report-header .brand-divider { width: 1px; height: 28px; background: rgba(255,255,255,0.25); flex-shrink: 0; }
+    [data-theme="dark"] .report-header .brand-divider { background: var(--border); }
+    .report-header .brand-sub {
+      font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif;
+      font-weight: 600;
+      font-size: 9pt;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+    .report-header .meta {
+      text-align: right;
+      font-size: 8.5pt;
+      opacity: 0.85;
+      line-height: 1.6;
+    }
+    @media (max-width: 600px) {
+      .report-header { flex-direction: column; align-items: flex-start; }
+      .report-header .meta { text-align: left; }
+    }
 
     /* ── Dark mode toggle ── */
     .theme-toggle {
@@ -277,58 +297,68 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
       z-index: 100;
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 10px;
+      border-radius: 10px;
+      padding: 7px 14px;
       cursor: pointer;
       font-size: 9pt;
       font-family: inherit;
       color: var(--text-secondary);
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       transition: all 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      backdrop-filter: blur(8px);
     }
-    .theme-toggle:hover { background: var(--bg-muted); color: var(--text); }
+    .theme-toggle:hover { background: var(--bg-muted); color: var(--text); box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    [data-theme="dark"] .theme-toggle { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 
     /* ── Content area ── */
-    .print-content { padding: 0 28px 40px; }
+    .print-content {
+      padding: 28px clamp(16px, 4vw, 48px) 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
     h1 {
-      font-size: 20pt;
-      font-weight: 800;
-      margin: 28px 0 10px;
+      font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif;
+      font-size: clamp(16pt, 3vw, 22pt);
+      font-weight: 700;
+      margin: 28px 0 12px;
       color: var(--text);
       letter-spacing: -0.5px;
       line-height: 1.2;
     }
     h2 {
-      font-size: 14pt;
+      font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif;
+      font-size: clamp(12pt, 2vw, 15pt);
       font-weight: 700;
-      margin: 24px 0 8px;
-      padding-bottom: 6px;
+      margin: 28px 0 10px;
+      padding-bottom: 8px;
       border-bottom: 2px solid var(--accent);
       color: var(--text);
       letter-spacing: -0.3px;
     }
     h3 {
+      font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif;
       font-size: 12pt;
       font-weight: 600;
-      margin: 18px 0 6px;
+      margin: 20px 0 8px;
       color: var(--text);
     }
-    h4, h5, h6 { font-size: 10.5pt; font-weight: 600; margin: 12px 0 4px; color: var(--text-secondary); }
-    p { margin: 0 0 10px; color: var(--text-secondary); }
-    ul, ol { margin: 0 0 10px; padding-left: 24px; color: var(--text-secondary); }
-    li { margin: 4px 0; }
+    h4, h5, h6 { font-size: 10.5pt; font-weight: 600; margin: 14px 0 6px; color: var(--text-secondary); }
+    p { margin: 0 0 12px; color: var(--text-secondary); line-height: 1.7; }
+    ul, ol { margin: 0 0 12px; padding-left: 24px; color: var(--text-secondary); }
+    li { margin: 5px 0; line-height: 1.6; }
     li::marker { color: var(--text-muted); }
 
     /* ── Tables ── */
     .table-wrapper {
       overflow-x: auto;
-      margin: 14px 0;
-      border-radius: 10px;
+      margin: 16px 0;
+      border-radius: 12px;
       border: 1px solid var(--border);
+      -webkit-overflow-scrolling: touch;
     }
     table {
       width: 100%;
@@ -336,25 +366,29 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
       border-spacing: 0;
       font-size: 9pt;
       table-layout: auto;
+      min-width: 500px;
     }
     thead { display: table-header-group; }
-    tr { page-break-inside: avoid; }
+    tr { page-break-inside: avoid; transition: background 0.15s; }
     th {
       background: var(--th-bg);
       color: var(--th-text);
       font-weight: 600;
       text-align: left;
-      padding: 8px 10px;
+      padding: 10px 14px;
       border-bottom: 1px solid var(--border);
       white-space: nowrap;
-      font-size: 8.5pt;
+      font-size: 8pt;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
-    th:first-child { border-top-left-radius: 9px; }
-    th:last-child { border-top-right-radius: 9px; }
+    th:first-child { border-top-left-radius: 11px; }
+    th:last-child { border-top-right-radius: 11px; }
     td {
-      padding: 7px 10px;
+      padding: 9px 14px;
       border-bottom: 1px solid var(--border);
       word-wrap: break-word;
       overflow-wrap: break-word;
@@ -362,40 +396,40 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
       color: var(--text-secondary);
     }
     tr:last-child td { border-bottom: none; }
-    tr:last-child td:first-child { border-bottom-left-radius: 9px; }
-    tr:last-child td:last-child { border-bottom-right-radius: 9px; }
-    tr:nth-child(even) td { background: var(--row-even); }
-    tr:nth-child(odd) td { background: var(--row-odd); }
-    tr:hover td { background: var(--accent-light); }
+    tr:last-child td:first-child { border-bottom-left-radius: 11px; }
+    tr:last-child td:last-child { border-bottom-right-radius: 11px; }
+    tbody tr:nth-child(even) td { background: var(--row-even); }
+    tbody tr:nth-child(odd) td { background: var(--row-odd); }
+    tbody tr:hover td { background: var(--accent-light); }
 
     /* ── Code ── */
     code {
-      font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
       font-size: 8.5pt;
       background: var(--code-bg);
-      padding: 2px 5px;
-      border-radius: 4px;
+      padding: 2px 6px;
+      border-radius: 5px;
       color: var(--accent);
     }
     pre {
       background: var(--code-bg);
-      padding: 14px 16px;
-      border-radius: 8px;
+      padding: 16px 18px;
+      border-radius: 10px;
       overflow-x: auto;
-      margin: 10px 0;
+      margin: 12px 0;
       font-size: 8.5pt;
       border: 1px solid var(--border);
     }
     pre code { background: none; padding: 0; color: var(--text); }
 
     /* ── Misc ── */
-    hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
     blockquote {
       border-left: 3px solid var(--accent);
-      padding: 10px 14px;
-      margin: 10px 0;
+      padding: 12px 16px;
+      margin: 12px 0;
       background: var(--accent-light);
-      border-radius: 0 8px 8px 0;
+      border-radius: 0 10px 10px 0;
       color: var(--text-secondary);
       font-style: italic;
     }
@@ -405,42 +439,42 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
 
     /* ── Footer ── */
     .report-footer {
-      margin-top: 40px;
-      padding: 16px 28px;
+      margin-top: 48px;
+      padding: 20px clamp(16px, 4vw, 48px);
       text-align: center;
       font-size: 8pt;
       color: var(--text-muted);
       border-top: 1px solid var(--border);
     }
+    .report-footer .footer-logo { height: 16px; width: auto; opacity: 0.4; margin-bottom: 6px; }
 
     /* ── Print ── */
     @media print {
-      body { padding: 0; max-width: none; background: #fff; color: #0f172a; }
+      body { padding: 0; background: #fff !important; color: #001A47 !important; }
       .print-content { padding: 0; max-width: 186mm; margin: 0 auto; }
-      .report-header { border-radius: 0; margin-bottom: 14px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      .theme-toggle { display: none; }
+      .report-header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .theme-toggle { display: none !important; }
       .report-footer { display: none; }
       @page { size: A4; margin: 12mm; }
-      table { font-size: 8.5pt; }
-      th, td { padding: 4px 6px; }
+      table { font-size: 8.5pt; min-width: 0; }
+      th, td { padding: 5px 7px; }
       th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      tr:nth-child(even) td { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      tbody tr:nth-child(even) td { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .table-wrapper { overflow: visible; border-radius: 0; }
     }
   </style>
 </head>
 <body>
-  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">&#9789; Dark Mode</button>
 
   <div class="report-header">
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="currentColor" stroke-width="1.5" fill="rgba(255,255,255,0.15)"/>
-        <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <span class="brand-text">SOPHOS FIRECOMPLY</span>
+      <span class="sophos-logo">${sophosLogoDark}</span>
+      <span class="brand-divider"></span>
+      <span class="brand-sub">FireComply</span>
     </div>
     <div class="meta">
-      ${companyName ? `<div>${companyName}</div>` : ""}
+      ${companyName ? `<div style="font-weight:600">${companyName}</div>` : ""}
       ${customerName ? `<div>${customerName}</div>` : ""}
       <div>${dateStr}</div>
     </div>
@@ -449,29 +483,26 @@ function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData)
   <div class="print-content">${innerHTML}</div>
 
   <div class="report-footer">
-    Generated by Sophos FireComply &mdash; ${dateStr}${companyName ? ` &mdash; ${companyName}` : ""}
+    <div>Generated by Sophos FireComply</div>
+    <div>${dateStr}${companyName ? ` &mdash; ${companyName}` : ""}</div>
   </div>
 
   <script>
     function toggleTheme() {
-      const html = document.documentElement;
-      const btn = document.getElementById('themeBtn');
-      if (html.getAttribute('data-theme') === 'dark') {
-        html.setAttribute('data-theme', 'light');
-        btn.textContent = '🌙 Dark Mode';
-      } else {
-        html.setAttribute('data-theme', 'dark');
-        btn.textContent = '☀️ Light Mode';
-      }
+      var html = document.documentElement;
+      var btn = document.getElementById('themeBtn');
+      var isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      btn.innerHTML = isDark ? '&#9789; Dark Mode' : '&#9788; Light Mode';
     }
 
     /* Wrap bare tables in .table-wrapper for rounded corners + scroll */
     document.querySelectorAll('table').forEach(function(t) {
       if (t.parentElement && t.parentElement.classList.contains('table-wrapper')) return;
-      var wrapper = document.createElement('div');
-      wrapper.className = 'table-wrapper';
-      t.parentNode.insertBefore(wrapper, t);
-      wrapper.appendChild(t);
+      var w = document.createElement('div');
+      w.className = 'table-wrapper';
+      t.parentNode.insertBefore(w, t);
+      w.appendChild(t);
     });
   </script>
 </body>
