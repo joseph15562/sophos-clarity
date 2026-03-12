@@ -48,6 +48,8 @@ export interface AnalysisResult {
   stats: ConfigStats;
   findings: Finding[];
   inspectionPosture: InspectionPosture;
+  /** Column headers found in the firewall rules table — useful for diagnosing detection gaps */
+  ruleColumns?: string[];
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {
@@ -63,20 +65,29 @@ export function severityIcon(s: Severity): string {
 }
 
 function isWanDest(row: Record<string, string>): boolean {
-  const dz = (row["Destination Zone"] ?? row["Dest Zone"] ?? row["DestZone"] ?? row["Dest zone"] ?? "").toLowerCase();
-  return dz === "wan";
+  const dz = (
+    row["Destination Zone"] ?? row["Dest Zone"] ?? row["DestZone"] ??
+    row["Dest zone"] ?? row["Destination zone"] ?? row["DstZone"] ?? ""
+  ).toLowerCase().trim();
+  return dz === "wan" || dz.includes("wan");
 }
 
 function isWebService(row: Record<string, string>): boolean {
-  const svc = (row["Service"] ?? row["Services"] ?? row["service"] ?? "").toLowerCase();
-  return svc.includes("http") || svc.includes("https") || svc === "any";
+  const svc = (row["Service"] ?? row["Services"] ?? row["service"] ?? row["Services Used"] ?? "").toLowerCase().trim();
+  if (svc === "any") return true;
+  if (svc.includes("http")) return true;
+  if (svc.includes("web")) return true;
+  if (/\b(80|443|8080|8443)\b/.test(svc)) return true;
+  return false;
 }
 
 function hasWebFilter(row: Record<string, string>): boolean {
   const wf = (
-    row["Web Filter"] ?? row["Web Filter Policy"] ?? row["WebFilter"] ?? ""
+    row["Web Filter"] ?? row["Web Filter Policy"] ?? row["WebFilter"] ??
+    row["Web Policy"] ?? row["Web Filtering"] ?? row["Content Filter"] ??
+    row["Web filter"] ?? ""
   ).toLowerCase().trim();
-  return wf !== "" && wf !== "none" && wf !== "not specified" && wf !== "-";
+  return wf !== "" && wf !== "none" && wf !== "not specified" && wf !== "-" && wf !== "n/a";
 }
 
 function isLoggingOff(row: Record<string, string>): boolean {
@@ -115,13 +126,19 @@ function ruleName(row: Record<string, string>): string {
 }
 
 function hasAppControl(row: Record<string, string>): boolean {
-  const ac = (row["Application Control"] ?? row["App Control"] ?? row["AppControl"] ?? "").toLowerCase().trim();
-  return ac !== "" && ac !== "none" && ac !== "not specified" && ac !== "-";
+  const ac = (
+    row["Application Control"] ?? row["App Control"] ?? row["AppControl"] ??
+    row["Application Filter"] ?? row["Application filter"] ?? row["App Filter"] ?? ""
+  ).toLowerCase().trim();
+  return ac !== "" && ac !== "none" && ac !== "not specified" && ac !== "-" && ac !== "n/a";
 }
 
 function hasIps(row: Record<string, string>): boolean {
-  const ips = (row["IPS"] ?? row["Intrusion Prevention"] ?? row["IPS Policy"] ?? "").toLowerCase().trim();
-  return ips !== "" && ips !== "none" && ips !== "not specified" && ips !== "-" && ips !== "disabled" && ips !== "off";
+  const ips = (
+    row["IPS"] ?? row["Intrusion Prevention"] ?? row["IPS Policy"] ??
+    row["IPS policy"] ?? row["Intrusion prevention"] ?? ""
+  ).toLowerCase().trim();
+  return ips !== "" && ips !== "none" && ips !== "not specified" && ips !== "-" && ips !== "disabled" && ips !== "off" && ips !== "n/a";
 }
 
 function ruleSignature(row: Record<string, string>): string {
@@ -151,52 +168,67 @@ function findOtpSection(sections: ExtractedSections): SectionData | null {
 }
 
 function findDpiEngineStatus(sections: ExtractedSections): boolean | null {
-  const DPI_PATTERN = /dpi|deep\s*packet|scan\s*engine|security\s*engine/i;
+  const DPI_KEY = /dpi|deep\s*packet|scan\s*engine|security\s*engine|inspection\s*mode|fastpath/i;
+  const ENABLED_VAL = /^(enabled|on|active|yes|dpi\s*mode|dpi)$/i;
+  const DISABLED_VAL = /^(disabled|off|inactive|no|fastpath|bypass)$/i;
 
-  for (const key of Object.keys(sections)) {
-    if (!DPI_PATTERN.test(key)) continue;
-    const section = sections[key];
-
+  // Scan ALL sections — real Sophos exports may put DPI under Device Access, Admin, General, etc.
+  for (const section of Object.values(sections)) {
+    // Check tables
     for (const t of section.tables) {
       for (const row of t.rows) {
+        // Case 1: Column header mentions DPI (e.g. "DPI Mode" column)
+        for (const [k, v] of Object.entries(row)) {
+          if (DPI_KEY.test(k)) {
+            const val = v.toLowerCase().trim();
+            if (ENABLED_VAL.test(val)) return true;
+            if (DISABLED_VAL.test(val)) return false;
+          }
+        }
+
+        // Case 2: Key-value table (Setting/Value) where value row mentions DPI
+        const settingKey = row["Setting"] ?? row["Name"] ?? row["Parameter"] ?? row["Option"] ?? "";
+        const settingVal = row["Value"] ?? row["Status"] ?? row["State"] ?? row["Configuration"] ?? "";
+        if (DPI_KEY.test(settingKey) && settingVal) {
+          const val = settingVal.toLowerCase().trim();
+          if (ENABLED_VAL.test(val)) return true;
+          if (DISABLED_VAL.test(val)) return false;
+        }
+
+        // Case 3: Any cell value mentions DPI alongside an enabled/disabled value
         const allValues = Object.values(row);
-        const hasDpiRef = allValues.some((v) => DPI_PATTERN.test(v));
+        const hasDpiRef = allValues.some((v) => DPI_KEY.test(v));
         if (hasDpiRef) {
           const statusVal = allValues.find((v) =>
-            /^(enabled|disabled|on|off|active|inactive|yes|no)$/i.test(v.trim())
+            /^(enabled|disabled|on|off|active|inactive)$/i.test(v.trim())
           );
           if (statusVal) {
             const s = statusVal.toLowerCase().trim();
-            return s === "enabled" || s === "on" || s === "active" || s === "yes";
-          }
-        }
-
-        for (const [k, v] of Object.entries(row)) {
-          if (DPI_PATTERN.test(k)) {
-            const val = v.toLowerCase().trim();
-            if (val === "enabled" || val === "on" || val === "active" || val === "yes") return true;
-            if (val === "disabled" || val === "off" || val === "inactive" || val === "no") return false;
+            return s === "enabled" || s === "on" || s === "active";
           }
         }
       }
     }
 
+    // Check detail blocks (expanded rule details)
     for (const d of section.details) {
       for (const [k, v] of Object.entries(d.fields)) {
-        if (DPI_PATTERN.test(k)) {
+        if (DPI_KEY.test(k)) {
           const val = v.toLowerCase().trim();
-          if (val === "enabled" || val === "on" || val === "active" || val === "yes") return true;
-          if (val === "disabled" || val === "off" || val === "inactive" || val === "no") return false;
+          if (ENABLED_VAL.test(val)) return true;
+          if (DISABLED_VAL.test(val)) return false;
         }
       }
     }
 
+    // Check raw text
     if (section.text) {
       const t = section.text.toLowerCase();
-      if (/dpi.*enabled|engine.*enabled|deep.*packet.*enabled/i.test(t)) return true;
-      if (/dpi.*disabled|engine.*disabled|deep.*packet.*disabled/i.test(t)) return false;
+      if (/(?:dpi|deep\s*packet|inspection)\s*(?:engine|mode)?\s*[:=]?\s*(?:enabled|on|active)/i.test(t)) return true;
+      if (/(?:dpi|deep\s*packet|inspection)\s*(?:engine|mode)?\s*[:=]?\s*(?:disabled|off|inactive|fastpath)/i.test(t)) return false;
     }
   }
+
   return null;
 }
 
@@ -255,7 +287,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: "The parser did not extract any firewall rules from this configuration export.",
       section: "Firewall Rules",
     });
-    return { stats, findings, inspectionPosture: emptyPosture };
+    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [] };
   }
 
   // --- Track disabled rules across all rules ---
@@ -519,7 +551,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     });
   }
 
-  return { stats, findings, inspectionPosture };
+  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers };
 }
 
 /**

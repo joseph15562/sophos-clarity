@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import type { AnalysisResult, Severity, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
@@ -114,7 +115,61 @@ export function EstateOverview({
           <span className="text-muted-foreground">AI-driven assessment will provide deeper coverage.</span>
         </div>
       )}
+
+      {/* Parser diagnostics (collapsible) */}
+      <ParserDiagnostics analysisResults={analysisResults} />
     </>
+  );
+}
+
+function ParserDiagnostics({ analysisResults }: { analysisResults: Record<string, AnalysisResult> }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-border bg-card">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span className="font-semibold uppercase tracking-wider">Parser Diagnostics</span>
+        <span>{open ? "▼" : "▶"}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 space-y-3 border-t border-border text-[10px]">
+          {Object.entries(analysisResults).map(([label, r]) => (
+            <div key={label} className="space-y-1.5">
+              <p className="font-semibold text-foreground">{label}</p>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Sections parsed:</span>{" "}
+                  {r.stats.sectionNames.join(", ")}
+                </p>
+                {r.ruleColumns && r.ruleColumns.length > 0 && (
+                  <p className="text-muted-foreground">
+                    <span className="font-medium">Rule columns:</span>{" "}
+                    {r.ruleColumns.join(", ")}
+                  </p>
+                )}
+                <p className="text-muted-foreground">
+                  <span className="font-medium">WAN rules:</span>{" "}
+                  {r.inspectionPosture.totalWanRules} total, {r.inspectionPosture.enabledWanRules} enabled, {r.inspectionPosture.disabledWanRules} disabled
+                </p>
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Web filterable (HTTP/HTTPS/ANY):</span>{" "}
+                  {r.inspectionPosture.webFilterableRules} rules, {r.inspectionPosture.withWebFilter} with filter, {r.inspectionPosture.withoutWebFilter} without
+                </p>
+                <p className={r.inspectionPosture.dpiEngineEnabled === null ? "text-[#F29400]" : "text-muted-foreground"}>
+                  <span className="font-medium">DPI engine:</span>{" "}
+                  {r.inspectionPosture.dpiEngineEnabled === true ? "Detected (enabled)" :
+                   r.inspectionPosture.dpiEngineEnabled === false ? "Detected (DISABLED)" :
+                   "Not detected in export — check if DPI/Deep Packet Inspection settings are included in the config export"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
