@@ -57,6 +57,11 @@ exports[`analyseConfig > snapshot of findings 1`] = `
     "severity": "high",
     "title": "1 DNAT/port forwarding rule expose internal services",
   },
+  {
+    "section": "High Availability",
+    "severity": "info",
+    "title": "No High Availability (HA) configuration detected",
+  },
 ]
 `;
 
