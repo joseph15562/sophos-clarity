@@ -173,6 +173,9 @@ function extractKeyValueGrids(container: Element): TableData | null {
     'div[style*="display"][style*="grid"], div[style*="grid-template-columns"]'
   );
   gridRows.forEach((row) => {
+    // Skip grids inside rule detail/expansion rows to avoid
+    // inflating settings-style data with per-rule config fields
+    if (row.closest('[id^="details-"]') || row.closest('[id^="rule-content-"]')) return;
     const children = row.querySelectorAll(":scope > div");
     if (children.length !== 2) return;
     const key = (children[0].textContent ?? "").replace(/\s+/g, " ").trim();
@@ -238,8 +241,12 @@ const INTERFACES_HEADERS = ["Interface / VLAN", "VLAN", "Zone", "IP Address", "D
  */
 function extractPortsVlansTable(container: Element): TableData | null {
   const rows: Record<string, string>[] = [];
-  // Cards are direct children of the flex column (first child of container)
-  const wrapper = container.querySelector(":scope > div");
+  // V2 reports wrap cards in a div with data-table-id="interfaces" after a search bar;
+  // V1 reports use the first child div directly
+  const wrapper =
+    container.querySelector('[data-table-id="interfaces"]') ??
+    container.querySelector('div[style*="flex-direction"][style*="column"]') ??
+    container.querySelector(":scope > div");
   if (!wrapper) return null;
   const cards = wrapper.querySelectorAll(":scope > div[style*='border']");
   if (cards.length === 0) return null;

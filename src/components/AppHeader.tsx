@@ -1,6 +1,7 @@
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 
 interface AppHeaderProps {
   hasFiles: boolean;
@@ -13,6 +14,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount }: AppHeaderProps) {
   const { setTheme, resolvedTheme } = useTheme();
+  const { user, org, isGuest, signOut } = useAuth();
 
   const showContext = hasFiles || customerName || selectedFrameworks.length > 0;
 
@@ -29,6 +31,37 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               Firewall Configuration Assessment & Compliance Reporting
             </p>
           </div>
+
+          {/* Auth status */}
+          {!isGuest && (
+            <div className="flex items-center gap-2 shrink-0">
+              {org && (
+                <span className="flex items-center gap-1.5 text-[10px] text-[#6A889B]">
+                  <Building2 className="h-3 w-3" />
+                  <span className="font-medium text-white/80 max-w-[120px] truncate">{org.name}</span>
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
+                <User className="h-3 w-3" />
+                <span className="max-w-[100px] truncate">{user?.email?.split("@")[0]}</span>
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={signOut}
+                className="shrink-0 text-[#6A889B] hover:text-white hover:bg-[#10037C]/40 h-7 w-7"
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {isGuest && (
+            <span className="text-[9px] text-[#6A889B] px-2 py-0.5 rounded bg-white/5 shrink-0">Guest</span>
+          )}
+
           <Button
             variant="ghost"
             size="icon"

@@ -1,13 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
-import { History, Trash2, TrendingUp, TrendingDown, Minus, Save, ChevronDown, ChevronRight } from "lucide-react";
+import { History, Trash2, TrendingUp, TrendingDown, Minus, Save, ChevronDown, ChevronRight, Pencil, Check, X, Cloud, HardDrive } from "lucide-react";
 import {
   loadHistory,
   saveAssessment,
   deleteAssessment,
+  renameAssessment,
   clearHistory,
   detectDrift,
   type AssessmentSnapshot,
 } from "@/lib/assessment-history";
+import {
+  saveAssessmentCloud,
+  loadHistoryCloud,
+  deleteAssessmentCloud,
+  renameAssessmentCloud,
+} from "@/lib/assessment-cloud";
+import { useAuth } from "@/hooks/use-auth";
 import type { AnalysisResult } from "@/lib/analyse-config";
 
 interface Props {
@@ -25,17 +33,23 @@ const GRADE_COLORS: Record<string, string> = {
 };
 
 export function AssessmentHistory({ analysisResults, customerName, environment }: Props) {
+  const { isGuest, org } = useAuth();
+  const useCloud = !isGuest && !!org;
+
   const [history, setHistory] = useState<AssessmentSnapshot[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEnv, setEditEnv] = useState("");
 
   const refresh = useCallback(async () => {
     try {
-      const items = await loadHistory();
+      const items = useCloud ? await loadHistoryCloud() : await loadHistory();
       setHistory(items);
-    } catch { /* IndexedDB not available */ }
-  }, []);
+    } catch { /* storage not available */ }
+  }, [useCloud]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -43,7 +57,11 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
     if (Object.keys(analysisResults).length === 0) return;
     setSaving(true);
     try {
-      await saveAssessment(analysisResults, customerName, environment);
+      if (useCloud && org) {
+        await saveAssessmentCloud(analysisResults, customerName, environment, org.id);
+      } else {
+        await saveAssessment(analysisResults, customerName, environment);
+      }
       await refresh();
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2000);
@@ -52,13 +70,38 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteAssessment(id);
+    if (useCloud) await deleteAssessmentCloud(id);
+    else await deleteAssessment(id);
     await refresh();
   };
 
   const handleClearAll = async () => {
-    await clearHistory();
+    if (useCloud) {
+      for (const snap of history) await deleteAssessmentCloud(snap.id);
+    } else {
+      await clearHistory();
+    }
     setHistory([]);
+  };
+
+  const startEditing = (snap: AssessmentSnapshot) => {
+    setEditingId(snap.id);
+    setEditName(snap.customerName);
+    setEditEnv(snap.environment);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditName("");
+    setEditEnv("");
+  };
+
+  const confirmRename = async () => {
+    if (!editingId || !editName.trim()) return;
+    if (useCloud) await renameAssessmentCloud(editingId, editName.trim(), editEnv.trim() || "Unknown");
+    else await renameAssessment(editingId, editName.trim(), editEnv.trim() || "Unknown");
+    setEditingId(null);
+    await refresh();
   };
 
   const toggle = (id: string) => {
@@ -86,6 +129,10 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
           {history.length > 0 && (
             <span className="text-[10px] text-muted-foreground">{history.length} snapshot{history.length !== 1 ? "s" : ""}</span>
           )}
+          <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded ${useCloud ? "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF]" : "bg-muted text-muted-foreground"}`}>
+            {useCloud ? <Cloud className="h-2.5 w-2.5" /> : <HardDrive className="h-2.5 w-2.5" />}
+            {useCloud ? "Cloud" : "Local"}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {hasResults && (
@@ -126,17 +173,53 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
 
             return (
               <div key={snap.id} className="rounded-lg border border-border bg-card">
-                <button onClick={() => toggle(snap.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
+                <button onClick={() => editingId !== snap.id && toggle(snap.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
                   {isOpen
                     ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   }
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-foreground">{snap.customerName}</span>
-                      <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{snap.environment}</span>
-                      <span className="text-[9px] text-muted-foreground">{formatDate(snap.timestamp)}</span>
-                    </div>
+                    {editingId === snap.id ? (
+                      <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); if (e.key === "Escape") cancelEditing(); }}
+                          placeholder="Customer name"
+                          autoFocus
+                          className="text-xs font-medium text-foreground bg-muted border border-border rounded px-2 py-1 w-36 outline-none focus:ring-1 focus:ring-[#2006F7]"
+                        />
+                        <input
+                          type="text"
+                          value={editEnv}
+                          onChange={(e) => setEditEnv(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); if (e.key === "Escape") cancelEditing(); }}
+                          placeholder="Environment"
+                          className="text-[9px] text-muted-foreground bg-muted border border-border rounded px-2 py-1 w-24 outline-none focus:ring-1 focus:ring-[#2006F7]"
+                        />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); confirmRename(); }}
+                          className="p-1 rounded-md text-[#00995a] hover:bg-[#00995a]/10 transition-colors"
+                          title="Save"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cancelEditing(); }}
+                          className="p-1 rounded-md text-muted-foreground hover:text-[#EA0022] transition-colors"
+                          title="Cancel"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-medium text-foreground">{snap.customerName}</span>
+                        <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{snap.environment}</span>
+                        <span className="text-[9px] text-muted-foreground">{formatDate(snap.timestamp)}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-sm font-extrabold ${GRADE_COLORS[snap.overallGrade] ?? ""}`}>{snap.overallScore}</span>
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ring-1 ring-current/20 ${GRADE_COLORS[snap.overallGrade] ?? ""}`}>{snap.overallGrade}</span>
@@ -154,13 +237,22 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(snap.id); }}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-[#EA0022] transition-colors shrink-0"
-                    title="Delete snapshot"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); startEditing(snap); }}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-[#2006F7] transition-colors"
+                      title="Rename snapshot"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(snap.id); }}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-[#EA0022] transition-colors"
+                      title="Delete snapshot"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </button>
 
                 {isOpen && (

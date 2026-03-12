@@ -1,0 +1,194 @@
+import { supabase } from "@/integrations/supabase/client";
+import type { AnalysisResult } from "./analyse-config";
+import { computeRiskScore } from "./risk-score";
+
+export interface SavedReportEntry {
+  id: string;
+  label: string;
+  markdown: string;
+}
+
+export interface AnalysisSummary {
+  totalFindings: number;
+  overallScore: number;
+  overallGrade: string;
+  categories: { label: string; pct: number }[];
+  totalRules: number;
+}
+
+export interface SavedReportPackage {
+  id: string;
+  customerName: string;
+  environment: string;
+  reportType: "full" | "pre-ai";
+  reports: SavedReportEntry[];
+  analysisSummary: AnalysisSummary;
+  createdAt: number;
+  createdBy?: string | null;
+}
+
+function buildAnalysisSummary(analysisResults: Record<string, AnalysisResult>): AnalysisSummary {
+  const allFindings = Object.values(analysisResults).flatMap((r) => r.findings);
+  const scores = Object.values(analysisResults).map((r) => computeRiskScore(r));
+  const avgScore = scores.length > 0
+    ? Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length)
+    : 0;
+  const grade = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+  const totalRules = Object.values(analysisResults).reduce((s, r) => s + r.stats.totalRules, 0);
+
+  const catMap = new Map<string, number[]>();
+  for (const s of scores) {
+    for (const c of s.categories) {
+      if (!catMap.has(c.label)) catMap.set(c.label, []);
+      catMap.get(c.label)!.push(c.pct);
+    }
+  }
+  const categories = [...catMap.entries()].map(([label, vals]) => ({
+    label,
+    pct: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
+  }));
+
+  return { totalFindings: allFindings.length, overallScore: avgScore, overallGrade: grade, categories, totalRules };
+}
+
+// ── Cloud (Supabase) ──
+
+export async function saveReportCloud(
+  orgId: string,
+  customerName: string,
+  environment: string,
+  reports: SavedReportEntry[],
+  analysisResults: Record<string, AnalysisResult>,
+): Promise<SavedReportPackage | null> {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return null;
+
+  const reportType = reports.length > 0 ? "full" : "pre-ai";
+  const analysisSummary = buildAnalysisSummary(analysisResults);
+
+  const { data, error } = await supabase
+    .from("saved_reports")
+    .insert({
+      org_id: orgId,
+      created_by: user.user.id,
+      customer_name: customerName || "Unnamed",
+      environment: environment || "",
+      report_type: reportType,
+      reports: reports as unknown as Record<string, unknown>,
+      analysis_summary: analysisSummary as unknown as Record<string, unknown>,
+    })
+    .select("id, created_at")
+    .single();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    customerName: customerName || "Unnamed",
+    environment: environment || "",
+    reportType,
+    reports,
+    analysisSummary,
+    createdAt: new Date(data.created_at).getTime(),
+    createdBy: user.user.id,
+  };
+}
+
+export async function loadSavedReportsCloud(): Promise<SavedReportPackage[]> {
+  const { data, error } = await supabase
+    .from("saved_reports")
+    .select("id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by")
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    customerName: row.customer_name,
+    environment: row.environment,
+    reportType: row.report_type as "full" | "pre-ai",
+    reports: row.reports as unknown as SavedReportEntry[],
+    analysisSummary: row.analysis_summary as unknown as AnalysisSummary,
+    createdAt: new Date(row.created_at).getTime(),
+    createdBy: row.created_by,
+  }));
+}
+
+export async function deleteSavedReportCloud(id: string): Promise<void> {
+  await supabase.from("saved_reports").delete().eq("id", id);
+}
+
+// ── Local (IndexedDB) ──
+
+const LOCAL_DB_NAME = "sophos-firecomply";
+const LOCAL_STORE = "saved_reports";
+const LOCAL_DB_VERSION = 2;
+
+function openLocalDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(LOCAL_DB_NAME, LOCAL_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("assessments")) {
+        const store = db.createObjectStore("assessments", { keyPath: "id" });
+        store.createIndex("timestamp", "timestamp", { unique: false });
+        store.createIndex("customerName", "customerName", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(LOCAL_STORE)) {
+        const store = db.createObjectStore(LOCAL_STORE, { keyPath: "id" });
+        store.createIndex("createdAt", "createdAt", { unique: false });
+        store.createIndex("customerName", "customerName", { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function saveReportLocal(
+  customerName: string,
+  environment: string,
+  reports: SavedReportEntry[],
+  analysisResults: Record<string, AnalysisResult>,
+): Promise<SavedReportPackage> {
+  const reportType = reports.length > 0 ? "full" : "pre-ai";
+  const analysisSummary = buildAnalysisSummary(analysisResults);
+  const pkg: SavedReportPackage = {
+    id: `sr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    customerName: customerName || "Unnamed",
+    environment: environment || "",
+    reportType,
+    reports,
+    analysisSummary,
+    createdAt: Date.now(),
+  };
+
+  const db = await openLocalDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(LOCAL_STORE, "readwrite");
+    tx.objectStore(LOCAL_STORE).put(pkg);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  return pkg;
+}
+
+export async function loadSavedReportsLocal(): Promise<SavedReportPackage[]> {
+  const db = await openLocalDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(LOCAL_STORE, "readonly");
+    const req = tx.objectStore(LOCAL_STORE).index("createdAt").getAll();
+    req.onsuccess = () => resolve((req.result as SavedReportPackage[]).reverse());
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function deleteSavedReportLocal(id: string): Promise<void> {
+  const db = await openLocalDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(LOCAL_STORE, "readwrite");
+    tx.objectStore(LOCAL_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}

@@ -95,6 +95,24 @@ export async function deleteAssessment(id: string): Promise<void> {
   });
 }
 
+export async function renameAssessment(id: string, customerName: string, environment: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const snap = req.result as AssessmentSnapshot;
+      if (!snap) return resolve();
+      snap.customerName = customerName;
+      snap.environment = environment;
+      store.put(snap);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export async function clearHistory(): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {

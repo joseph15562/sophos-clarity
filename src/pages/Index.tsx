@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, lazy, Suspense, type ReactNode } from "react";
-import { ArrowLeftRight, ChevronDown, RotateCcw } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
@@ -11,6 +11,10 @@ import { extractSections } from "@/lib/extract-sections";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-persistence";
+import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
+import { AuthGate } from "@/components/AuthGate";
+import { OrgSetup } from "@/components/OrgSetup";
+import { saveReportCloud, saveReportLocal, type SavedReportEntry } from "@/lib/saved-reports";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
@@ -23,6 +27,12 @@ const ScoreSimulator = lazy(() => import("@/components/ScoreSimulator").then((m)
 const AttackSurfaceMap = lazy(() => import("@/components/AttackSurfaceMap").then((m) => ({ default: m.AttackSurfaceMap })));
 const ConsistencyChecker = lazy(() => import("@/components/ConsistencyChecker").then((m) => ({ default: m.ConsistencyChecker })));
 const PeerBenchmark = lazy(() => import("@/components/PeerBenchmark").then((m) => ({ default: m.PeerBenchmark })));
+const SophosBestPractice = lazy(() => import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })));
+const RuleOptimiser = lazy(() => import("@/components/RuleOptimiser").then((m) => ({ default: m.RuleOptimiser })));
+const PriorityMatrix = lazy(() => import("@/components/PriorityMatrix").then((m) => ({ default: m.PriorityMatrix })));
+const TenantDashboard = lazy(() => import("@/components/TenantDashboard").then((m) => ({ default: m.TenantDashboard })));
+const InviteStaff = lazy(() => import("@/components/InviteStaff").then((m) => ({ default: m.InviteStaff })));
+const SavedReportsLibrary = lazy(() => import("@/components/SavedReportsLibrary").then((m) => ({ default: m.SavedReportsLibrary })));
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -50,11 +60,14 @@ function CollapsibleSection({ title, subtitle, icon, iconBg, defaultOpen = false
   );
 }
 
-const Index = () => {
+function InnerApp() {
+  const { isGuest, org } = useAuth();
   const [files, setFiles] = useState<ParsedFile[]>([]);
   const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] });
   const [diffSelection, setDiffSelection] = useState<DiffSelection>(null);
   const [restoredSession, setRestoredSession] = useState(false);
+  const [savingReports, setSavingReports] = useState(false);
+  const [reportsSaved, setReportsSaved] = useState(false);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -92,7 +105,34 @@ const Index = () => {
       setReports([]);
       setActiveReportId("");
     }
+    setReportsSaved(false);
   }, [files, reports.length, setReports, setActiveReportId]);
+
+  const handleSaveReports = useCallback(async (includeReports: boolean) => {
+    if (Object.keys(analysisResults).length === 0) return;
+    setSavingReports(true);
+    try {
+      const reportEntries: SavedReportEntry[] = includeReports
+        ? reports.filter((r) => r.markdown).map((r) => ({ id: r.id, label: r.label, markdown: r.markdown }))
+        : [];
+      if (!isGuest && org) {
+        await saveReportCloud(org.id, branding.customerName, branding.environment, reportEntries, analysisResults);
+      } else {
+        await saveReportLocal(branding.customerName, branding.environment, reportEntries, analysisResults);
+      }
+      setReportsSaved(true);
+      setTimeout(() => setReportsSaved(false), 3000);
+    } catch { /* ignore */ }
+    setSavingReports(false);
+  }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment]);
+
+  const handleLoadSavedReports = useCallback((savedReports: SavedReportEntry[], customerName: string, environment: string) => {
+    if (savedReports.length > 0) {
+      setReports(savedReports.map((r) => ({ id: r.id, label: r.label, markdown: r.markdown })));
+      setActiveReportId(savedReports[0].id);
+    }
+    setBranding((prev) => ({ ...prev, customerName, environment }));
+  }, [setReports, setActiveReportId]);
 
   const handleStartOver = useCallback(() => {
     setReports([]);
@@ -212,6 +252,24 @@ const Index = () => {
               />
             )}
 
+            {/* Save Assessment (pre-AI) */}
+            {hasFiles && totalFindings > 0 && !hasReports && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() => handleSaveReports(false)}
+                  disabled={savingReports}
+                  className={`no-print flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+                    reportsSaved
+                      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                      : "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
+                  }`}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {reportsSaved ? "Saved!" : savingReports ? "Saving…" : "Save Assessment (Pre-AI)"}
+                </button>
+              </div>
+            )}
+
             {/* Detailed Analysis divider */}
             {hasFiles && (
               <div className="relative py-2">
@@ -281,6 +339,9 @@ const Index = () => {
                   <Suspense fallback={null}>
                     <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
                   </Suspense>
+                  <Suspense fallback={null}>
+                    <SophosBestPractice analysisResults={analysisResults} />
+                  </Suspense>
                 </div>
               </CollapsibleSection>
             )}
@@ -297,6 +358,20 @@ const Index = () => {
               <Suspense fallback={null}>
                 <AttackSurfaceMap files={files} />
               </Suspense>
+            )}
+
+            {/* Rule Optimisation */}
+            {hasFiles && (
+              <CollapsibleSection
+                title="Rule Optimisation Engine"
+                subtitle="Detect duplicate, shadowed, and mergeable firewall rules"
+                icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
+                iconBg="bg-[#10037C]"
+              >
+                <Suspense fallback={null}>
+                  <RuleOptimiser files={files} />
+                </Suspense>
+              </CollapsibleSection>
             )}
 
             {/* Multi-Firewall Consistency */}
@@ -341,6 +416,20 @@ const Index = () => {
               </CollapsibleSection>
             )}
 
+            {/* Finding Priority Matrix */}
+            {hasFiles && totalFindings > 0 && (
+              <CollapsibleSection
+                title="Finding Priority Matrix"
+                subtitle="Impact vs effort quadrant to prioritise remediation"
+                icon={<img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />}
+                iconBg="bg-[#5A00FF]/10"
+              >
+                <Suspense fallback={null}>
+                  <PriorityMatrix analysisResults={analysisResults} />
+                </Suspense>
+              </CollapsibleSection>
+            )}
+
             {/* Assessment History */}
             {hasFiles && (
               <CollapsibleSection
@@ -360,6 +449,44 @@ const Index = () => {
                 </div>
               </CollapsibleSection>
             )}
+
+            {/* Saved Reports Library */}
+            <CollapsibleSection
+              title="Saved Reports"
+              subtitle="Previously saved reports and assessments"
+              icon={<img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" />}
+              iconBg="bg-[#10037C]/10 dark:bg-[#2006F7]/10"
+            >
+              <Suspense fallback={null}>
+                <SavedReportsLibrary onLoadReports={handleLoadSavedReports} />
+              </Suspense>
+            </CollapsibleSection>
+
+            {/* Multi-Tenant Dashboard */}
+            <CollapsibleSection
+              title="Multi-Tenant Dashboard"
+              subtitle="Overview of all customer assessments"
+              icon={<img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
+              iconBg="bg-[#2006F7]"
+            >
+              <Suspense fallback={null}>
+                <TenantDashboard />
+              </Suspense>
+              <Suspense fallback={null}>
+                <div className="px-5 pb-5">
+                  <CollapsibleSection
+                    title="Team Management"
+                    subtitle="Invite staff to your organisation"
+                    icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" />}
+                    iconBg="bg-[#2006F7]/10"
+                  >
+                    <div className="p-4">
+                      <InviteStaff />
+                    </div>
+                  </CollapsibleSection>
+                </div>
+              </Suspense>
+            </CollapsibleSection>
 
             {/* Config diff — compare two configs */}
             {files.length >= 2 && (
@@ -478,6 +605,18 @@ const Index = () => {
             <Button variant="outline" onClick={handleStartOver}>
               ← Start Over
             </Button>
+            <button
+              onClick={() => handleSaveReports(true)}
+              disabled={savingReports}
+              className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
+                reportsSaved
+                  ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                  : "bg-[#2006F7] text-white hover:bg-[#10037C]"
+              }`}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
+            </button>
           </div>
         )}
       </main>
@@ -494,6 +633,65 @@ const Index = () => {
         </Suspense>
       )}
     </div>
+  );
+}
+
+const Index = () => {
+  const auth = useAuthProvider();
+  const [guestMode, setGuestMode] = useState(false);
+
+  if (auth.isLoading) {
+    return (
+      <AuthProvider value={auth}>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <span className="animate-spin h-6 w-6 border-2 border-[#2006F7]/30 border-t-[#2006F7] rounded-full" />
+        </div>
+      </AuthProvider>
+    );
+  }
+
+  if (auth.isGuest && !guestMode) {
+    return (
+      <AuthProvider value={auth}>
+        <div className="min-h-screen bg-background">
+          <header className="border-b border-[#10037C]/20 bg-[#001A47]">
+            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+              <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
+              <div className="flex-1">
+                <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">Sophos FireComply</h1>
+                <p className="text-[11px] text-[#6A889B]">Firewall Configuration Assessment & Compliance Reporting</p>
+              </div>
+            </div>
+          </header>
+          <AuthGate onSignIn={auth.signIn} onSignUp={auth.signUp} onSkip={() => setGuestMode(true)} />
+        </div>
+      </AuthProvider>
+    );
+  }
+
+  if (auth.needsOrg) {
+    return (
+      <AuthProvider value={auth}>
+        <div className="min-h-screen bg-background">
+          <header className="border-b border-[#10037C]/20 bg-[#001A47]">
+            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+              <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
+              <div className="flex-1">
+                <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">Sophos FireComply</h1>
+                <p className="text-[11px] text-[#6A889B]">Firewall Configuration Assessment & Compliance Reporting</p>
+              </div>
+            </div>
+          </header>
+          <OrgSetup userEmail={auth.user?.email ?? ""} onCreateOrg={auth.createOrg} onSignOut={auth.signOut} />
+        </div>
+      </AuthProvider>
+    );
+  }
+
+  return (
+    <AuthProvider value={auth}>
+      <InnerApp />
+    </AuthProvider>
   );
 };
 

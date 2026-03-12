@@ -14,13 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      organisations: {
+        Row: { id: string; name: string; created_at: string }
+        Insert: { id?: string; name: string; created_at?: string }
+        Update: { id?: string; name?: string; created_at?: string }
+        Relationships: []
+      }
+      org_members: {
+        Row: { id: string; org_id: string; user_id: string; role: string; joined_at: string }
+        Insert: { id?: string; org_id: string; user_id: string; role?: string; joined_at?: string }
+        Update: { id?: string; org_id?: string; user_id?: string; role?: string; joined_at?: string }
+        Relationships: [
+          { foreignKeyName: "org_members_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      assessments: {
+        Row: { id: string; org_id: string; created_by: string | null; customer_name: string; environment: string; firewalls: Json; overall_score: number; overall_grade: string; created_at: string }
+        Insert: { id?: string; org_id: string; created_by?: string | null; customer_name?: string; environment?: string; firewalls?: Json; overall_score?: number; overall_grade?: string; created_at?: string }
+        Update: { id?: string; org_id?: string; created_by?: string | null; customer_name?: string; environment?: string; firewalls?: Json; overall_score?: number; overall_grade?: string; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "assessments_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      org_invites: {
+        Row: { id: string; org_id: string; email: string; invited_by: string | null; created_at: string }
+        Insert: { id?: string; org_id: string; email: string; invited_by?: string | null; created_at?: string }
+        Update: { id?: string; org_id?: string; email?: string; invited_by?: string | null; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "org_invites_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      saved_reports: {
+        Row: { id: string; org_id: string; created_by: string | null; customer_name: string; environment: string; report_type: string; reports: Json; analysis_summary: Json; created_at: string }
+        Insert: { id?: string; org_id: string; created_by?: string | null; customer_name: string; environment?: string; report_type?: string; reports?: Json; analysis_summary?: Json; created_at?: string }
+        Update: { id?: string; org_id?: string; created_by?: string | null; customer_name?: string; environment?: string; report_type?: string; reports?: Json; analysis_summary?: Json; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "saved_reports_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_org_id: { Args: Record<string, never>; Returns: string }
+      create_organisation: { Args: { org_name: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
