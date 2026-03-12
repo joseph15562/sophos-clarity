@@ -486,7 +486,6 @@ const Index = () => {
       {hasFiles && (
         <Suspense fallback={null}>
           <AIChatPanel
-            sections={files[0]?.extractedData ?? {}}
             analysisResults={analysisResults}
             reports={reports}
             customerName={branding.customerName}

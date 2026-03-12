@@ -170,6 +170,17 @@ Rules
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
 - Every claim must be traceable to config data`;
 
+const CHAT_SYSTEM_PROMPT = `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
+
+Your role:
+- Answer questions about the assessment concisely and accurately
+- Cite specific rule names, findings, and data when relevant
+- Provide actionable remediation advice referencing Sophos XGS administration
+- Use markdown formatting (bold, lists, code) for clarity
+- Keep responses focused — aim for 200-400 words unless the user asks for detail
+- If asked about compliance, reference the relevant framework controls
+- Never invent configuration data — only reference what's provided in the context`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -177,6 +188,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
+    const chat: boolean = body?.chat === true;
+    const chatContext: string | undefined = body?.chatContext;
     const sections = body?.sections;
     const environment: string | undefined = body?.environment;
     const country: string | undefined = body?.country;
@@ -186,7 +199,14 @@ serve(async (req) => {
     const firewallLabels: string[] | undefined = body?.firewallLabels;
     const selectedFrameworks: string[] | undefined = body?.selectedFrameworks;
 
-    if (!sections || typeof sections !== "object") {
+    if (chat) {
+      if (!chatContext || typeof chatContext !== "string") {
+        return new Response(
+          JSON.stringify({ error: "Missing chatContext for chat mode." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (!sections || typeof sections !== "object") {
       return new Response(
         JSON.stringify({ error: "Missing sections field. Expected pre-extracted JSON." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -196,7 +216,7 @@ serve(async (req) => {
     // Debug mode
     const url = new URL(req.url);
     if (url.searchParams.get("debug") === "1") {
-      return new Response(JSON.stringify({ sections, sectionCount: Object.keys(sections).length }), {
+      return new Response(JSON.stringify({ sections, sectionCount: sections ? Object.keys(sections).length : 0 }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -206,55 +226,65 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
-    // Compact payload: no pretty-print (saves tokens), strip empty fields
-    const compactSections = pruneEmpty(sections) as Record<string, unknown>;
-    const payload = JSON.stringify(compactSections);
-
-  // Build compliance context
-    let complianceContext = "";
-    if (customerName) {
-      complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Address the customer by name throughout the document (e.g. "This report documents the firewall configuration for ${customerName}"). Use the customer name in the Executive Summary, Overall Security Recommendations and Frameworks to Assess.\n`;
-    }
-    
-    if (environment || country) {
-      complianceContext += "\n\n## Compliance Context\n";
-      if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
-      if (country) complianceContext += `- **Country**: ${country}\n`;
-    }
-
-    // Add selected frameworks
-    if (selectedFrameworks && selectedFrameworks.length > 0) {
-      complianceContext += `\n\n## Selected Compliance Frameworks\nThe following frameworks have been selected for this assessment. You MUST assess against ALL of these and ONLY these frameworks:\n`;
-      selectedFrameworks.forEach((fw) => {
-        complianceContext += `- **${fw}**\n`;
-      });
-      complianceContext += `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
-    } else if (environment || country) {
-      complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
-    }
-    let basePrompt: string;
-    if (compliance) {
-      basePrompt = COMPLIANCE_SYSTEM_PROMPT;
-    } else if (executive) {
-      basePrompt = EXECUTIVE_SYSTEM_PROMPT;
-    } else {
-      basePrompt = SYSTEM_PROMPT;
-    }
-    const systemPrompt = basePrompt + complianceContext;
-
+    let systemPrompt: string;
     let userMessage: string;
-    if (compliance && firewallLabels && firewallLabels.length > 1) {
-      userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a comprehensive Compliance Evidence Pack covering all firewalls:\n\n${payload}`;
-    } else if (compliance) {
-      userMessage = `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Evidence Pack:\n\n${payload}`;
-    } else if (executive && firewallLabels) {
-      userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
+    let maxTokens: number;
+
+    if (chat) {
+      systemPrompt = CHAT_SYSTEM_PROMPT;
+      userMessage = chatContext!;
+      maxTokens = 2048;
     } else {
-      userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely. Use every column from each table; if a section has a 'details' or 'detail blocks' array, merge those fields (e.g. Security Features, Web Filter, Logging) into your rule table so the report is complete and suitable for compliance.\n\n" + payload;
+      // Compact payload: no pretty-print (saves tokens), strip empty fields
+      const compactSections = pruneEmpty(sections) as Record<string, unknown>;
+      const payload = JSON.stringify(compactSections);
+
+      // Build compliance context
+      let complianceContext = "";
+      if (customerName) {
+        complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Address the customer by name throughout the document (e.g. "This report documents the firewall configuration for ${customerName}"). Use the customer name in the Executive Summary, Overall Security Recommendations and Frameworks to Assess.\n`;
+      }
+      
+      if (environment || country) {
+        complianceContext += "\n\n## Compliance Context\n";
+        if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
+        if (country) complianceContext += `- **Country**: ${country}\n`;
+      }
+
+      if (selectedFrameworks && selectedFrameworks.length > 0) {
+        complianceContext += `\n\n## Selected Compliance Frameworks\nThe following frameworks have been selected for this assessment. You MUST assess against ALL of these and ONLY these frameworks:\n`;
+        selectedFrameworks.forEach((fw) => {
+          complianceContext += `- **${fw}**\n`;
+        });
+        complianceContext += `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
+      } else if (environment || country) {
+        complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
+      }
+
+      let basePrompt: string;
+      if (compliance) {
+        basePrompt = COMPLIANCE_SYSTEM_PROMPT;
+      } else if (executive) {
+        basePrompt = EXECUTIVE_SYSTEM_PROMPT;
+      } else {
+        basePrompt = SYSTEM_PROMPT;
+      }
+      systemPrompt = basePrompt + complianceContext;
+
+      if (compliance && firewallLabels && firewallLabels.length > 1) {
+        userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a comprehensive Compliance Evidence Pack covering all firewalls:\n\n${payload}`;
+      } else if (compliance) {
+        userMessage = `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Evidence Pack:\n\n${payload}`;
+      } else if (executive && firewallLabels) {
+        userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
+      } else {
+        userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely. Use every column from each table; if a section has a 'details' or 'detail blocks' array, merge those fields (e.g. Security Features, Web Filter, Logging) into your rule table so the report is complete and suitable for compliance.\n\n" + payload;
+      }
+
+      maxTokens = 8192;
     }
 
     const model = "gemini-3-flash-preview";
-    const maxTokens = 8192;
 
     const doRequest = () =>
       fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {

@@ -1,13 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageCircle, X, Send, Loader2, Trash2 } from "lucide-react";
-import { streamConfigParse } from "@/lib/stream-ai";
-import type { ExtractedSections } from "@/lib/extract-sections";
+import { streamChat } from "@/lib/stream-ai";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
 interface Props {
-  sections: ExtractedSections;
   analysisResults: Record<string, AnalysisResult>;
   reports: { id: string; label: string; markdown: string }[];
   customerName?: string;
@@ -29,7 +27,7 @@ const SUGGESTED_QUESTIONS = [
   "Are there any compliance gaps for Cyber Essentials?",
 ];
 
-export function AIChatPanel({ sections, analysisResults, reports, customerName, environment }: Props) {
+export function AIChatPanel({ analysisResults, reports, customerName, environment }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -99,24 +97,11 @@ ${reportSummary}`;
       .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
       .join("\n\n");
 
-    const enrichedSections: ExtractedSections = {
-      ...sections,
-      __chat_context: [{
-        header: "Chat Context",
-        rows: [{
-          "System Prompt": `You are a Sophos firewall security expert assistant. The user has uploaded firewall config(s) and you have access to the analysis results. Answer questions helpfully, cite specific rules/findings when possible. Be concise but thorough. Use markdown formatting.`,
-          "Context": context,
-          "Conversation History": conversationHistory,
-          "User Question": text.trim(),
-        }],
-      }],
-    };
+    const chatContext = `${context}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nUSER QUESTION:\n${text.trim()}`;
 
     try {
-      await streamConfigParse({
-        sections: enrichedSections,
-        environment,
-        customerName,
+      await streamChat({
+        chatContext,
         onDelta: (chunk) => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -148,7 +133,7 @@ ${reportSummary}`;
       );
       setIsStreaming(false);
     }
-  }, [isStreaming, messages, sections, environment, customerName, buildContext]);
+  }, [isStreaming, messages, buildContext]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
