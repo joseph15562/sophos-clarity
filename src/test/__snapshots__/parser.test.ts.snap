@@ -1,0 +1,64 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`analyseConfig > snapshot of findings 1`] = `
+[
+  {
+    "section": "Firewall Rules",
+    "severity": "critical",
+    "title": "3 WAN rules missing web filtering",
+  },
+  {
+    "section": "Firewall Rules",
+    "severity": "high",
+    "title": "1 rule with logging disabled",
+  },
+  {
+    "section": "Firewall Rules",
+    "severity": "medium",
+    "title": "3 rules using "ANY" service",
+  },
+  {
+    "section": "Firewall Rules",
+    "severity": "medium",
+    "title": "3 rules with broad source and destination",
+  },
+  {
+    "section": "Authentication & OTP",
+    "severity": "high",
+    "title": "MFA/OTP disabled for 2 areas",
+  },
+  {
+    "section": "Firewall Rules",
+    "severity": "medium",
+    "title": "2 rules in 1 overlapping group",
+  },
+  {
+    "section": "Intrusion Prevention",
+    "severity": "high",
+    "title": "3 WAN rules without IPS (75%)",
+  },
+  {
+    "section": "Application Control",
+    "severity": "low",
+    "title": "3 WAN rules without Application Control (75%)",
+  },
+  {
+    "section": "SSL/TLS Inspection",
+    "severity": "medium",
+    "title": "No SSL/TLS inspection rules configured",
+  },
+]
+`;
+
+exports[`extractSections > snapshot of all section keys 1`] = `
+[
+  "Firewall Rules",
+  "Intrusion Prevention",
+  "NAT Rule",
+  "OTP Settings",
+  "Web Filter",
+  "Web Filters",
+  "Zone",
+  "Zones",
+]
+`;

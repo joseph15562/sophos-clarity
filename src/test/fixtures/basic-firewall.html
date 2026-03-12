@@ -1,0 +1,225 @@
+<!--
+  Synthetic Sophos XGS Config Viewer HTML fixture.
+  Mirrors the structure of a real export with:
+  - Sidebar checkboxes (data-section-key)
+  - Section content containers (section-content-*)
+  - Firewall rules table with headers
+  - NAT rules table
+  - Interfaces card layout
+  - OTP settings grid
+  - SSL/TLS inspection section (empty)
+-->
+<!DOCTYPE html>
+<html>
+<head><title>Sophos Config Viewer</title></head>
+<body>
+  <!-- Sidebar with section checkboxes -->
+  <div id="sidebar">
+    <div data-section-name="Firewall Rules">
+      <input type="checkbox" data-section-key="firewallRules" checked />
+    </div>
+    <div data-section-name="NAT Rule">
+      <input type="checkbox" data-section-key="NATRule" checked />
+    </div>
+    <div data-section-name="Zones">
+      <input type="checkbox" data-section-key="Zone" checked />
+    </div>
+    <div data-section-name="SSL TLS Inspection Rules">
+      <input type="checkbox" data-section-key="sslTlsInspectionRules" checked />
+    </div>
+    <div data-section-name="OTP Settings">
+      <input type="checkbox" data-section-key="OTPSettings" checked />
+    </div>
+    <div data-section-name="Web Filters">
+      <input type="checkbox" data-section-key="WebFilter" checked />
+    </div>
+    <div data-section-name="Intrusion Prevention">
+      <input type="checkbox" data-section-key="IntrusionPrevention" checked />
+    </div>
+  </div>
+
+  <!-- Firewall Rules section -->
+  <div id="section-content-firewall-rules">
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Rule Name</th>
+            <th>Source Zone</th>
+            <th>Source Networks</th>
+            <th>Destination Zone</th>
+            <th>Destination Networks</th>
+            <th>Service</th>
+            <th>Action</th>
+            <th>Web Filter</th>
+            <th>Log</th>
+            <th>IPS</th>
+            <th>Application Control</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Allow-Internet</td>
+            <td>LAN</td>
+            <td>Any</td>
+            <td>WAN</td>
+            <td>Any</td>
+            <td>HTTPS</td>
+            <td>Allow</td>
+            <td>Default Policy</td>
+            <td>Enabled</td>
+            <td>GeneralPolicy</td>
+            <td>AllowAll</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Guest-Web</td>
+            <td>DMZ</td>
+            <td>GuestNet</td>
+            <td>WAN</td>
+            <td>Any</td>
+            <td>HTTP</td>
+            <td>Allow</td>
+            <td>None</td>
+            <td>Disabled</td>
+            <td>None</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Internal-DNS</td>
+            <td>LAN</td>
+            <td>Any</td>
+            <td>LAN</td>
+            <td>DNS-Server</td>
+            <td>DNS</td>
+            <td>Allow</td>
+            <td></td>
+            <td>Enabled</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Open-WAN</td>
+            <td>LAN</td>
+            <td>Any</td>
+            <td>WAN</td>
+            <td>Any</td>
+            <td>ANY</td>
+            <td>Allow</td>
+            <td>None</td>
+            <td>Enabled</td>
+            <td>None</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>VPN-Access</td>
+            <td>VPN</td>
+            <td>VPNPool</td>
+            <td>LAN</td>
+            <td>ServerNet</td>
+            <td>ANY</td>
+            <td>Allow</td>
+            <td></td>
+            <td>Enabled</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Duplicate-WAN</td>
+            <td>LAN</td>
+            <td>Any</td>
+            <td>WAN</td>
+            <td>Any</td>
+            <td>ANY</td>
+            <td>Allow</td>
+            <td>None</td>
+            <td>Enabled</td>
+            <td>None</td>
+            <td>None</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NAT Rules section -->
+  <div id="section-content-nat-rules">
+    <div>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Rule Name</th><th>Type</th><th>Source</th><th>Destination</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Masquerade-LAN</td><td>Masquerade</td><td>LAN Subnet</td><td>WAN</td></tr>
+          <tr><td>2</td><td>DNAT-WebServer</td><td>DNAT</td><td>Any</td><td>WebServer</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Zones section -->
+  <div id="section-content-zones">
+    <div>
+      <table>
+        <thead><tr><th>Zone</th><th>Type</th></tr></thead>
+        <tbody>
+          <tr><td>LAN</td><td>LAN</td></tr>
+          <tr><td>WAN</td><td>WAN</td></tr>
+          <tr><td>DMZ</td><td>DMZ</td></tr>
+          <tr><td>VPN</td><td>VPN</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SSL/TLS Inspection Rules (empty — no rules configured) -->
+  <div id="section-content-ssl-tls-inspection-rules">
+  </div>
+
+  <!-- OTP Settings section (grid-based layout) -->
+  <div id="section-content-additional-OTPSettings">
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>OTP</div><div>Enabled</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>otpWebAdmin</div><div>Enabled</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>otpVPNPortal</div><div>Disabled</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>otpIPsec</div><div>Disabled</div>
+    </div>
+  </div>
+
+  <!-- Web Filters section -->
+  <div id="section-content-web-filters">
+    <div>
+      <table>
+        <thead><tr><th>Policy Name</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Default Policy</td><td>Active</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Intrusion Prevention section -->
+  <div id="section-content-intrusion-prevention">
+    <div>
+      <table>
+        <thead><tr><th>Policy Name</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>GeneralPolicy</td><td>Active</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
