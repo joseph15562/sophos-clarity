@@ -29,40 +29,64 @@ function hasFindings(result: AnalysisResult, pattern: RegExp): Finding[] {
 }
 
 const SHARED_CONTROLS: Record<string, ControlDef> = {
+  dpiEngine: {
+    id: "DPI", name: "DPI Engine", category: "Traffic Inspection",
+    check: (r) => {
+      const ip = r.inspectionPosture;
+      if (ip.dpiEngineEnabled === true) return { status: "pass", evidence: "DPI engine is enabled — web filtering, IPS, and app control can function", findings: [] };
+      if (ip.dpiEngineEnabled === false) {
+        const f = hasFindings(r, /DPI engine/);
+        return { status: "fail", evidence: "DPI engine is disabled — all inspection features (web filter, IPS, app control) are non-functional", findings: f.map((x) => x.id) };
+      }
+      return { status: "na", evidence: "DPI engine status not detected in export", findings: [] };
+    },
+  },
   webFilter: {
     id: "WF", name: "Web Content Filtering", category: "Traffic Inspection",
     check: (r) => {
       const ip = r.inspectionPosture;
-      if (ip.totalWanRules === 0) return { status: "na", evidence: "No WAN rules", findings: [] };
-      const pct = Math.round((ip.withWebFilter / ip.totalWanRules) * 100);
+      if (ip.dpiEngineEnabled === false) {
+        const f = hasFindings(r, /DPI engine/);
+        return { status: "fail", evidence: "DPI engine is off — web filtering cannot function regardless of rule configuration", findings: f.map((x) => x.id) };
+      }
+      if (ip.webFilterableRules === 0) return { status: "na", evidence: "No enabled WAN rules with HTTP/HTTPS/ANY service", findings: [] };
+      const pct = Math.round((ip.withWebFilter / ip.webFilterableRules) * 100);
       const f = hasFindings(r, /missing web filtering/);
-      if (pct >= 100) return { status: "pass", evidence: `All ${ip.totalWanRules} WAN rules have web filtering`, findings: [] };
-      if (pct >= 50) return { status: "partial", evidence: `${ip.withWebFilter}/${ip.totalWanRules} WAN rules filtered (${pct}%)`, findings: f.map((x) => x.id) };
-      return { status: "fail", evidence: `Only ${ip.withWebFilter}/${ip.totalWanRules} WAN rules have web filtering`, findings: f.map((x) => x.id) };
+      if (pct >= 100) return { status: "pass", evidence: `All ${ip.webFilterableRules} enabled WAN rules (HTTP/HTTPS/ANY) have web filtering`, findings: [] };
+      if (pct >= 50) return { status: "partial", evidence: `${ip.withWebFilter}/${ip.webFilterableRules} enabled WAN rules (HTTP/HTTPS/ANY) filtered (${pct}%)`, findings: f.map((x) => x.id) };
+      return { status: "fail", evidence: `Only ${ip.withWebFilter}/${ip.webFilterableRules} enabled WAN rules (HTTP/HTTPS/ANY) have web filtering`, findings: f.map((x) => x.id) };
     },
   },
   ips: {
     id: "IPS", name: "Intrusion Prevention System", category: "Traffic Inspection",
     check: (r) => {
       const ip = r.inspectionPosture;
-      if (ip.totalWanRules === 0) return { status: "na", evidence: "No WAN rules", findings: [] };
-      const pct = Math.round((ip.withIps / ip.totalWanRules) * 100);
+      if (ip.dpiEngineEnabled === false) {
+        const f = hasFindings(r, /DPI engine/);
+        return { status: "fail", evidence: "DPI engine is off — IPS cannot function regardless of rule configuration", findings: f.map((x) => x.id) };
+      }
+      if (ip.enabledWanRules === 0) return { status: "na", evidence: "No enabled WAN rules", findings: [] };
+      const pct = Math.round((ip.withIps / ip.enabledWanRules) * 100);
       const f = hasFindings(r, /without IPS/);
-      if (pct >= 100) return { status: "pass", evidence: `All WAN rules have IPS`, findings: [] };
-      if (pct >= 50) return { status: "partial", evidence: `${ip.withIps}/${ip.totalWanRules} WAN rules have IPS`, findings: f.map((x) => x.id) };
-      return { status: "fail", evidence: `Only ${ip.withIps}/${ip.totalWanRules} WAN rules have IPS`, findings: f.map((x) => x.id) };
+      if (pct >= 100) return { status: "pass", evidence: `All ${ip.enabledWanRules} enabled WAN rules have IPS`, findings: [] };
+      if (pct >= 50) return { status: "partial", evidence: `${ip.withIps}/${ip.enabledWanRules} enabled WAN rules have IPS`, findings: f.map((x) => x.id) };
+      return { status: "fail", evidence: `Only ${ip.withIps}/${ip.enabledWanRules} enabled WAN rules have IPS`, findings: f.map((x) => x.id) };
     },
   },
   appControl: {
     id: "AC", name: "Application Control", category: "Traffic Inspection",
     check: (r) => {
       const ip = r.inspectionPosture;
-      if (ip.totalWanRules === 0) return { status: "na", evidence: "No WAN rules", findings: [] };
-      const pct = Math.round((ip.withAppControl / ip.totalWanRules) * 100);
+      if (ip.dpiEngineEnabled === false) {
+        const f = hasFindings(r, /DPI engine/);
+        return { status: "fail", evidence: "DPI engine is off — app control cannot function regardless of rule configuration", findings: f.map((x) => x.id) };
+      }
+      if (ip.enabledWanRules === 0) return { status: "na", evidence: "No enabled WAN rules", findings: [] };
+      const pct = Math.round((ip.withAppControl / ip.enabledWanRules) * 100);
       const f = hasFindings(r, /without Application Control/);
-      if (pct >= 80) return { status: "pass", evidence: `${ip.withAppControl}/${ip.totalWanRules} WAN rules have app control`, findings: [] };
-      if (pct >= 40) return { status: "partial", evidence: `${ip.withAppControl}/${ip.totalWanRules} WAN rules have app control`, findings: f.map((x) => x.id) };
-      return { status: "fail", evidence: `Only ${ip.withAppControl}/${ip.totalWanRules} WAN rules have app control`, findings: f.map((x) => x.id) };
+      if (pct >= 80) return { status: "pass", evidence: `${ip.withAppControl}/${ip.enabledWanRules} enabled WAN rules have app control`, findings: [] };
+      if (pct >= 40) return { status: "partial", evidence: `${ip.withAppControl}/${ip.enabledWanRules} enabled WAN rules have app control`, findings: f.map((x) => x.id) };
+      return { status: "fail", evidence: `Only ${ip.withAppControl}/${ip.enabledWanRules} enabled WAN rules have app control`, findings: f.map((x) => x.id) };
     },
   },
   logging: {
@@ -111,25 +135,25 @@ const SHARED_CONTROLS: Record<string, ControlDef> = {
 };
 
 const FRAMEWORK_CONTROLS: Record<string, string[]> = {
-  "NCSC Guidelines": ["webFilter", "ips", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "Cyber Essentials / CE+": ["webFilter", "mfa", "segmentation", "logging"],
+  "NCSC Guidelines": ["dpiEngine", "webFilter", "ips", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
+  "Cyber Essentials / CE+": ["dpiEngine", "webFilter", "mfa", "segmentation", "logging"],
   "GDPR": ["logging", "mfa", "segmentation", "sslInspection"],
-  "DfE / KCSIE": ["webFilter", "logging", "sslInspection"],
-  "ISO 27001": ["webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "PCI DSS": ["webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "NIST 800-53": ["webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
+  "DfE / KCSIE": ["dpiEngine", "webFilter", "logging", "sslInspection"],
+  "ISO 27001": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
+  "PCI DSS": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
+  "NIST 800-53": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
   "HIPAA": ["logging", "mfa", "segmentation", "sslInspection"],
-  "NIS2": ["ips", "logging", "mfa", "segmentation", "sslInspection"],
+  "NIS2": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "sslInspection"],
   "SOX": ["logging", "mfa", "segmentation"],
   "FCA": ["logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
   "PRA": ["logging", "mfa", "segmentation", "sslInspection"],
-  "FedRAMP": ["webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
-  "CMMC": ["ips", "appControl", "logging", "mfa", "segmentation"],
+  "FedRAMP": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene"],
+  "CMMC": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation"],
   "HITECH": ["logging", "mfa", "segmentation"],
-  "IEC 62443": ["ips", "segmentation", "logging", "mfa"],
-  "NIST 800-82": ["ips", "segmentation", "logging"],
-  "NERC CIP": ["ips", "logging", "mfa", "segmentation"],
-  "MOD Cyber / ITAR": ["ips", "appControl", "logging", "mfa", "segmentation", "sslInspection"],
+  "IEC 62443": ["dpiEngine", "ips", "segmentation", "logging", "mfa"],
+  "NIST 800-82": ["dpiEngine", "ips", "segmentation", "logging"],
+  "NERC CIP": ["dpiEngine", "ips", "logging", "mfa", "segmentation"],
+  "MOD Cyber / ITAR": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection"],
 };
 
 export function mapToFramework(

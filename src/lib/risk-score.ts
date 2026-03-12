@@ -30,16 +30,16 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
   // Use enabled WAN rules as the baseline — disabled rules don't provide protection
   const activeWan = ip.enabledWanRules;
 
-  // 1. Web Filtering — scored against enabled WAN rules only
-  const wfPct = pctScore(ip.withWebFilter, activeWan);
+  // 1. Web Filtering — scored against enabled WAN rules with HTTP/HTTPS/ANY service
+  const wfPct = pctScore(ip.withWebFilter, ip.webFilterableRules);
   categories.push({
     label: "Web Filtering",
     score: wfPct,
     maxScore: 100,
     pct: wfPct,
-    details: activeWan > 0
-      ? `${ip.withWebFilter}/${activeWan} enabled WAN rules have web filtering${ip.disabledWanRules > 0 ? ` (${ip.disabledWanRules} disabled)` : ""}`
-      : "No enabled WAN rules detected",
+    details: ip.webFilterableRules > 0
+      ? `${ip.withWebFilter}/${ip.webFilterableRules} enabled WAN rules (HTTP/HTTPS/ANY) have web filtering${ip.disabledWanRules > 0 ? ` (${ip.disabledWanRules} disabled)` : ""}`
+      : "No enabled WAN rules with HTTP/HTTPS/ANY service",
   });
 
   // 2. Intrusion Prevention — scored against enabled WAN rules

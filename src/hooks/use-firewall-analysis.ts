@@ -37,6 +37,7 @@ export function useFirewallAnalysis(files: ParsedFile[]) {
       totalWanRules: 0,
       enabledWanRules: 0,
       disabledWanRules: 0,
+      webFilterableRules: 0,
       withWebFilter: 0,
       withoutWebFilter: 0,
       withAppControl: 0,
@@ -52,6 +53,7 @@ export function useFirewallAnalysis(files: ParsedFile[]) {
       agg.totalWanRules += r.inspectionPosture.totalWanRules;
       agg.enabledWanRules += r.inspectionPosture.enabledWanRules;
       agg.disabledWanRules += r.inspectionPosture.disabledWanRules;
+      agg.webFilterableRules += r.inspectionPosture.webFilterableRules;
       agg.withWebFilter += r.inspectionPosture.withWebFilter;
       agg.withoutWebFilter += r.inspectionPosture.withoutWebFilter;
       agg.withAppControl += r.inspectionPosture.withAppControl;

@@ -23,6 +23,8 @@ export interface InspectionPosture {
   totalWanRules: number;
   enabledWanRules: number;
   disabledWanRules: number;
+  /** Enabled WAN rules with HTTP/HTTPS/ANY service that should have web filtering */
+  webFilterableRules: number;
   withWebFilter: number;
   withoutWebFilter: number;
   withAppControl: number;
@@ -240,7 +242,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
 
   const emptyPosture: InspectionPosture = {
     totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
-    withWebFilter: 0, withoutWebFilter: 0,
+    webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
     withAppControl: 0, withIps: 0, withSslInspection: 0, wanRuleNames: [],
     totalDisabledRules: 0, dpiEngineEnabled: null,
   };
@@ -272,10 +274,14 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
   const enabledWanRules = wanRules.filter((r) => r.enabled);
   const disabledWanRules = wanRules.filter((r) => !r.enabled);
 
-  let withWebFilter = 0, withoutWebFilter = 0, withAppControl = 0, withIps = 0, withSslInspection = 0;
+  let webFilterableRules = 0, withWebFilter = 0, withoutWebFilter = 0;
+  let withAppControl = 0, withIps = 0, withSslInspection = 0;
   for (const { row, enabled } of wanRules) {
     if (!enabled) continue; // only score enabled rules
-    if (hasWebFilter(row)) withWebFilter++; else withoutWebFilter++;
+    if (isWebService(row)) {
+      webFilterableRules++;
+      if (hasWebFilter(row)) withWebFilter++; else withoutWebFilter++;
+    }
     if (hasAppControl(row)) withAppControl++;
     if (hasIps(row)) withIps++;
   }
@@ -292,7 +298,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     totalWanRules: wanRules.length,
     enabledWanRules: enabledWanRules.length,
     disabledWanRules: disabledWanRules.length,
-    withWebFilter, withoutWebFilter, withAppControl, withIps, withSslInspection,
+    webFilterableRules, withWebFilter, withoutWebFilter,
+    withAppControl, withIps, withSslInspection,
     wanRuleNames: wanRules.map((w) => w.name),
     totalDisabledRules,
     dpiEngineEnabled,
