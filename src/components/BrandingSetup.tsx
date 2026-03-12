@@ -144,7 +144,6 @@ type Props = {
 export function BrandingSetup({ branding, onChange }: Props) {
   const { isGuest, org } = useAuth();
   const userTouchedFrameworks = useRef(false);
-  const companyAutoFilled = useRef(false);
 
   const [knownCustomers, setKnownCustomers] = useState<string[]>([]);
   const [customerReportCounts, setCustomerReportCounts] = useState<Record<string, number>>({});
@@ -152,8 +151,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
   // Auto-fill company name from org when logged in
   useEffect(() => {
-    if (!isGuest && org && !companyAutoFilled.current && !branding.companyName) {
-      companyAutoFilled.current = true;
+    if (!isGuest && org && branding.companyName !== org.name) {
       onChange({ ...branding, companyName: org.name });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
