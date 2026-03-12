@@ -20,6 +20,9 @@ const SECTION_ID_MAP: Record<string, string> = {
   Network: "networks",
   REDDevice: "red-devices",
   WirelessAccessPoint: "wireless-access-points",
+  dpiEngine: "dpi-engine",
+  SecurityEngine: "security-engine",
+  DeepPacketInspection: "deep-packet-inspection",
   // OTP & auth sections use "additional-<Key>" in Sophos HTML
   OTPSettings: "additional-OTPSettings",
 };

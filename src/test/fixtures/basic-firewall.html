@@ -30,6 +30,9 @@
     <div data-section-name="OTP Settings">
       <input type="checkbox" data-section-key="OTPSettings" checked />
     </div>
+    <div data-section-name="DPI Engine">
+      <input type="checkbox" data-section-key="dpiEngine" checked />
+    </div>
     <div data-section-name="Web Filters">
       <input type="checkbox" data-section-key="WebFilter" checked />
     </div>
@@ -46,6 +49,7 @@
           <tr>
             <th>#</th>
             <th>Rule Name</th>
+            <th>Status</th>
             <th>Source Zone</th>
             <th>Source Networks</th>
             <th>Destination Zone</th>
@@ -62,6 +66,7 @@
           <tr>
             <td>1</td>
             <td>Allow-Internet</td>
+            <td>Enabled</td>
             <td>LAN</td>
             <td>Any</td>
             <td>WAN</td>
@@ -76,6 +81,7 @@
           <tr>
             <td>2</td>
             <td>Guest-Web</td>
+            <td>Disabled</td>
             <td>DMZ</td>
             <td>GuestNet</td>
             <td>WAN</td>
@@ -90,6 +96,7 @@
           <tr>
             <td>3</td>
             <td>Internal-DNS</td>
+            <td>Enabled</td>
             <td>LAN</td>
             <td>Any</td>
             <td>LAN</td>
@@ -104,6 +111,7 @@
           <tr>
             <td>4</td>
             <td>Open-WAN</td>
+            <td>Enabled</td>
             <td>LAN</td>
             <td>Any</td>
             <td>WAN</td>
@@ -118,6 +126,7 @@
           <tr>
             <td>5</td>
             <td>VPN-Access</td>
+            <td>Enabled</td>
             <td>VPN</td>
             <td>VPNPool</td>
             <td>LAN</td>
@@ -132,6 +141,7 @@
           <tr>
             <td>6</td>
             <td>Duplicate-WAN</td>
+            <td>Enabled</td>
             <td>LAN</td>
             <td>Any</td>
             <td>WAN</td>
@@ -205,6 +215,19 @@
         <thead><tr><th>Policy Name</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>Default Policy</td><td>Active</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DPI Engine / Security Engine section -->
+  <div id="section-content-dpi-engine">
+    <div>
+      <table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>DPI Engine</td><td>Enabled</td></tr>
+          <tr><td>Fastpath Offload</td><td>Enabled</td></tr>
         </tbody>
       </table>
     </div>

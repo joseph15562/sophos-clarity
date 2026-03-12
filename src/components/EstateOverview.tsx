@@ -204,6 +204,17 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
         {bar("IPS / Intrusion Prevention", posture.withIps, barColor(posture.withIps))}
         {bar("Application Control", posture.withAppControl, barColor(posture.withAppControl))}
       </div>
+      {posture.dpiEngineEnabled === false && (
+        <div className="rounded-md bg-[#EA0022]/10 px-3 py-2 flex items-center gap-2">
+          <span className="text-[#EA0022] font-bold text-[10px]">DPI ENGINE OFF</span>
+          <span className="text-[10px] text-[#EA0022]/80">Web filtering, IPS, and app control cannot function without the DPI engine enabled</span>
+        </div>
+      )}
+      {posture.disabledWanRules > 0 && (
+        <p className="text-[10px] text-[#c47800] dark:text-[#F29400]">
+          {posture.disabledWanRules} of {posture.totalWanRules} WAN rules are disabled — coverage scores based on {posture.enabledWanRules} enabled rule{posture.enabledWanRules !== 1 ? "s" : ""}
+        </p>
+      )}
       {posture.withSslInspection > 0 ? (
         <p className="text-[10px] text-muted-foreground">{posture.withSslInspection} SSL/TLS inspection rule{posture.withSslInspection !== 1 ? "s" : ""} configured</p>
       ) : (

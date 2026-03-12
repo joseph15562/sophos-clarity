@@ -4,8 +4,13 @@ exports[`analyseConfig > snapshot of findings 1`] = `
 [
   {
     "section": "Firewall Rules",
+    "severity": "medium",
+    "title": "1 WAN rule disabled",
+  },
+  {
+    "section": "Firewall Rules",
     "severity": "critical",
-    "title": "3 WAN rules missing web filtering",
+    "title": "2 enabled WAN rules missing web filtering",
   },
   {
     "section": "Firewall Rules",
@@ -35,12 +40,12 @@ exports[`analyseConfig > snapshot of findings 1`] = `
   {
     "section": "Intrusion Prevention",
     "severity": "high",
-    "title": "3 WAN rules without IPS (75%)",
+    "title": "2 enabled WAN rules without IPS (67%)",
   },
   {
     "section": "Application Control",
     "severity": "low",
-    "title": "3 WAN rules without Application Control (75%)",
+    "title": "2 enabled WAN rules without Application Control (67%)",
   },
   {
     "section": "SSL/TLS Inspection",
@@ -52,6 +57,7 @@ exports[`analyseConfig > snapshot of findings 1`] = `
 
 exports[`extractSections > snapshot of all section keys 1`] = `
 [
+  "DPI Engine",
   "Firewall Rules",
   "Intrusion Prevention",
   "NAT Rule",

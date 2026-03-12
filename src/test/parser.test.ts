@@ -91,16 +91,29 @@ describe("analyseConfig", () => {
     expect(result.inspectionPosture.totalWanRules).toBe(4);
   });
 
-  it("detects web filter coverage", () => {
+  it("detects web filter coverage (enabled rules only)", () => {
     expect(result.inspectionPosture.withWebFilter).toBe(1);
-    expect(result.inspectionPosture.withoutWebFilter).toBe(3);
+    expect(result.inspectionPosture.withoutWebFilter).toBe(2);
+    expect(result.inspectionPosture.enabledWanRules).toBe(3);
+    expect(result.inspectionPosture.disabledWanRules).toBe(1);
   });
 
-  it("flags WAN rules missing web filtering", () => {
+  it("flags enabled WAN rules missing web filtering (excludes disabled)", () => {
     const finding = result.findings.find((f) => f.title.includes("missing web filtering"));
     expect(finding).toBeDefined();
     expect(finding!.severity).toBe("critical");
+    expect(finding!.detail).not.toContain("Guest-Web"); // disabled rule excluded
+    expect(finding!.detail).toContain("Open-WAN");
+  });
+
+  it("flags disabled WAN rules", () => {
+    const finding = result.findings.find((f) => f.title.includes("disabled"));
+    expect(finding).toBeDefined();
     expect(finding!.detail).toContain("Guest-Web");
+  });
+
+  it("detects DPI engine status", () => {
+    expect(result.inspectionPosture.dpiEngineEnabled).toBe(true);
   });
 
   it("flags logging disabled", () => {
