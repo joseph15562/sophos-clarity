@@ -8,7 +8,7 @@ import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
 import { DocumentPreview, ReportEntry } from "@/components/DocumentPreview";
 import { streamConfigParse } from "@/lib/stream-ai";
 import { extractSections, ExtractedSections } from "@/lib/extract-sections";
-import { analyseConfig, severityIcon, type AnalysisResult, type Severity } from "@/lib/analyse-config";
+import { analyseConfig, severityIcon, type AnalysisResult, type Severity, type InspectionPosture } from "@/lib/analyse-config";
 import { useToast } from "@/hooks/use-toast";
 
 type ParsedFile = UploadedFile & { extractedData: ExtractedSections };
@@ -451,13 +451,61 @@ const Index = () => {
               </div>
             )}
 
+            {/* DPI / Inspection posture dashboard */}
+            {hasFiles && (() => {
+              const agg: InspectionPosture = {
+                totalWanRules: 0, withWebFilter: 0, withoutWebFilter: 0,
+                withAppControl: 0, withIps: 0, withSslInspection: 0, wanRuleNames: [],
+              };
+              for (const r of Object.values(analysisResults)) {
+                agg.totalWanRules += r.inspectionPosture.totalWanRules;
+                agg.withWebFilter += r.inspectionPosture.withWebFilter;
+                agg.withoutWebFilter += r.inspectionPosture.withoutWebFilter;
+                agg.withAppControl += r.inspectionPosture.withAppControl;
+                agg.withIps += r.inspectionPosture.withIps;
+                agg.withSslInspection += r.inspectionPosture.withSslInspection;
+              }
+              if (agg.totalWanRules === 0) return null;
+              const pct = (n: number) => agg.totalWanRules > 0 ? Math.round((n / agg.totalWanRules) * 100) : 0;
+              const bar = (label: string, value: number, color: string) => (
+                <div key={label} className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-muted-foreground font-medium">{label}</span>
+                    <span className="font-bold text-foreground">{value}/{agg.totalWanRules} <span className="text-muted-foreground font-normal">({pct(value)}%)</span></span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct(value)}%` }} />
+                  </div>
+                </div>
+              );
+              return (
+                <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
+                    <h3 className="text-sm font-semibold text-foreground">Inspection Posture</h3>
+                    <span className="text-[10px] text-muted-foreground">across {agg.totalWanRules} WAN-facing rule{agg.totalWanRules !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    {bar("Web Filtering", agg.withWebFilter, pct(agg.withWebFilter) >= 80 ? "bg-[#00995a] dark:bg-[#00F2B3]" : pct(agg.withWebFilter) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]")}
+                    {bar("IPS / Intrusion Prevention", agg.withIps, pct(agg.withIps) >= 80 ? "bg-[#00995a] dark:bg-[#00F2B3]" : pct(agg.withIps) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]")}
+                    {bar("Application Control", agg.withAppControl, pct(agg.withAppControl) >= 80 ? "bg-[#00995a] dark:bg-[#00F2B3]" : pct(agg.withAppControl) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]")}
+                  </div>
+                  {agg.withSslInspection > 0 ? (
+                    <p className="text-[10px] text-muted-foreground">{agg.withSslInspection} SSL/TLS inspection rule{agg.withSslInspection !== 1 ? "s" : ""} configured</p>
+                  ) : (
+                    <p className="text-[10px] text-[#c47800] dark:text-[#F29400]">No SSL/TLS inspection rules detected — encrypted traffic is not being inspected</p>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Pre-AI findings panel */}
             {hasFiles && totalFindings > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2">
                   <img src="/icons/sophos-alert.svg" alt="" className="h-5 w-5 sophos-icon" />
-                  <h3 className="text-sm font-semibold text-foreground">Pre-Analysis Findings</h3>
-                  <span className="text-xs text-muted-foreground">(deterministic — before AI)</span>
+                  <h3 className="text-sm font-semibold text-foreground">Deterministic Findings</h3>
+                  <span className="text-xs text-muted-foreground">(rule-based analysis — pre-AI)</span>
                 </div>
                 <div className="grid gap-2.5">
                   {Object.entries(analysisResults).map(([label, result]) =>
@@ -480,6 +528,11 @@ const Index = () => {
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{f.detail}</p>
+                            {f.remediation && (
+                              <div className="mt-2 px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
+                                <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {f.remediation}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -489,11 +542,55 @@ const Index = () => {
               </section>
             )}
 
+            {/* Estate risk comparison — per-firewall ranking */}
+            {hasFiles && files.length >= 2 && (
+              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <img src="/icons/sophos-orchestration.svg" alt="" className="h-5 w-5 sophos-icon" />
+                  <h3 className="text-sm font-semibold text-foreground">Estate Risk Comparison</h3>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(analysisResults)
+                    .sort(([, a], [, b]) => {
+                      const weight = (r: AnalysisResult) => r.findings.reduce((s, f) => s + (f.severity === "critical" ? 10 : f.severity === "high" ? 5 : f.severity === "medium" ? 2 : f.severity === "low" ? 1 : 0), 0);
+                      return weight(b) - weight(a);
+                    })
+                    .map(([label, result], idx) => {
+                      const criticals = result.findings.filter((f) => f.severity === "critical").length;
+                      const highs = result.findings.filter((f) => f.severity === "high").length;
+                      const mediums = result.findings.filter((f) => f.severity === "medium").length;
+                      const score = criticals * 10 + highs * 5 + mediums * 2;
+                      const maxScore = Math.max(1, ...Object.values(analysisResults).map((r) => r.findings.reduce((s, f) => s + (f.severity === "critical" ? 10 : f.severity === "high" ? 5 : f.severity === "medium" ? 2 : f.severity === "low" ? 1 : 0), 0)));
+                      return (
+                        <div key={label} className="flex items-center gap-3">
+                          <span className="text-[10px] font-bold text-muted-foreground w-5 text-right">{idx + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-xs font-semibold text-foreground truncate">{label}</span>
+                              <div className="flex items-center gap-1.5 text-[10px] shrink-0">
+                                {criticals > 0 && <span className="text-[#EA0022] font-bold">{criticals}C</span>}
+                                {highs > 0 && <span className="text-[#c47800] dark:text-[#F29400] font-bold">{highs}H</span>}
+                                {mediums > 0 && <span className="text-[#b8a200] dark:text-[#F8E300] font-bold">{mediums}M</span>}
+                                <span className="text-muted-foreground">{result.stats.totalRules}r</span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-500 ${score === 0 ? "bg-[#00995a] dark:bg-[#00F2B3]" : score <= 5 ? "bg-[#F8E300]" : score <= 15 ? "bg-[#F29400]" : "bg-[#EA0022]"}`} style={{ width: `${Math.max(3, Math.round((score / maxScore) * 100))}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Ranked by weighted risk score: Critical ×10, High ×5, Medium ×2, Low ×1</p>
+              </div>
+            )}
+
             {hasFiles && totalFindings === 0 && (
               <div className="rounded-md border border-[#00995a]/30 dark:border-[#00F2B3]/30 bg-[#00995a]/5 dark:bg-[#00F2B3]/5 px-4 py-3 flex items-center gap-3 text-sm">
                 <CheckCircle2 className="h-4 w-4 text-[#00774a] dark:text-[#00F2B3] shrink-0" />
-                <span className="text-[#00774a] dark:text-[#00F2B3] font-medium">No issues detected in pre-analysis.</span>
-                <span className="text-muted-foreground">The AI report will provide deeper assessment.</span>
+                <span className="text-[#00774a] dark:text-[#00F2B3] font-medium">No issues detected in deterministic analysis.</span>
+                <span className="text-muted-foreground">AI-driven assessment will provide deeper coverage.</span>
               </div>
             )}
 
@@ -548,7 +645,7 @@ const Index = () => {
                         <span className="font-display font-bold text-foreground text-[15px]">Technical Report</span>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Detailed per-firewall documentation covering every rule, interface, host, policy, and security setting. Includes findings, best practice recommendations, and compliance notes.
+                        Comprehensive per-firewall assessment covering rules, NAT, interfaces, hosts, policies, and security posture. Includes prioritised findings, NCSC-aligned recommendations, and remediation guidance.
                       </p>
                       <Button size="sm" className="w-full gap-2 bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-sm">
                         <img src="/icons/sophos-ai-white.svg" alt="" className="h-4 w-4" />
@@ -595,7 +692,7 @@ const Index = () => {
                         <span className="font-display font-bold text-foreground text-[15px]">Compliance Evidence Pack</span>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Audit-ready compliance appendix with control-to-evidence mapping across your selected frameworks. Includes gap analysis, residual risks, and per-firewall compliance posture.
+                        Audit-ready evidence appendix mapping firewall controls to your selected compliance frameworks. Includes control status assessment, gap analysis, residual risk register, and remediation priorities.
                       </p>
                       <Button size="sm" variant="outline" className="w-full gap-2">
                         <ClipboardCheck className="h-3.5 w-3.5" /> Generate Compliance Pack

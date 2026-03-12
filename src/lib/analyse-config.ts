@@ -8,14 +8,6 @@ import type { ExtractedSections, SectionData, TableData } from "./extract-sectio
 
 export type Severity = "critical" | "high" | "medium" | "low" | "info";
 
-export interface Finding {
-  id: string;
-  severity: Severity;
-  title: string;
-  detail: string;
-  section: string;
-}
-
 export interface ConfigStats {
   totalRules: number;
   totalSections: number;
@@ -27,9 +19,29 @@ export interface ConfigStats {
   sectionNames: string[];
 }
 
+export interface InspectionPosture {
+  totalWanRules: number;
+  withWebFilter: number;
+  withoutWebFilter: number;
+  withAppControl: number;
+  withIps: number;
+  withSslInspection: number;
+  wanRuleNames: string[];
+}
+
+export interface Finding {
+  id: string;
+  severity: Severity;
+  title: string;
+  detail: string;
+  section: string;
+  remediation?: string;
+}
+
 export interface AnalysisResult {
   stats: ConfigStats;
   findings: Finding[];
+  inspectionPosture: InspectionPosture;
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {
@@ -83,6 +95,25 @@ function isBroadDest(row: Record<string, string>): boolean {
 
 function ruleName(row: Record<string, string>): string {
   return row["Rule Name"] ?? row["Name"] ?? row["Rule"] ?? row["col1"] ?? "Unnamed";
+}
+
+function hasAppControl(row: Record<string, string>): boolean {
+  const ac = (row["Application Control"] ?? row["App Control"] ?? row["AppControl"] ?? "").toLowerCase().trim();
+  return ac !== "" && ac !== "none" && ac !== "not specified" && ac !== "-";
+}
+
+function hasIps(row: Record<string, string>): boolean {
+  const ips = (row["IPS"] ?? row["Intrusion Prevention"] ?? row["IPS Policy"] ?? "").toLowerCase().trim();
+  return ips !== "" && ips !== "none" && ips !== "not specified" && ips !== "-" && ips !== "disabled" && ips !== "off";
+}
+
+function ruleSignature(row: Record<string, string>): string {
+  const src = (row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? "").toLowerCase().trim();
+  const dst = (row["Destination Networks"] ?? row["Destination"] ?? row["Dest Networks"] ?? "").toLowerCase().trim();
+  const svc = (row["Service"] ?? row["Services"] ?? row["service"] ?? "").toLowerCase().trim();
+  const srcZ = (row["Source Zone"] ?? row["Src Zone"] ?? "").toLowerCase().trim();
+  const dstZ = (row["Destination Zone"] ?? row["Dest Zone"] ?? row["DestZone"] ?? "").toLowerCase().trim();
+  return `${srcZ}|${src}|${dstZ}|${dst}|${svc}`;
 }
 
 function findFirewallRulesTable(sections: ExtractedSections): TableData | null {
@@ -142,6 +173,11 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     populatedSections, emptySections: emptySectionCount, sectionNames,
   };
 
+  const emptyPosture: InspectionPosture = {
+    totalWanRules: 0, withWebFilter: 0, withoutWebFilter: 0,
+    withAppControl: 0, withIps: 0, withSslInspection: 0, wanRuleNames: [],
+  };
+
   if (!rulesTable || totalRules === 0) {
     findings.push({
       id: `f${++fid}`,
@@ -150,15 +186,36 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: "The parser did not extract any firewall rules from this configuration export.",
       section: "Firewall Rules",
     });
-    return { stats, findings };
+    return { stats, findings, inspectionPosture: emptyPosture };
   }
+
+  // --- Build inspection posture for WAN rules ---
+  const wanRules: Array<{ name: string; row: Record<string, string> }> = [];
+  for (const row of rulesTable.rows) {
+    if (isWanDest(row)) wanRules.push({ name: ruleName(row), row });
+  }
+  let withWebFilter = 0, withoutWebFilter = 0, withAppControl = 0, withIps = 0, withSslInspection = 0;
+  for (const { row } of wanRules) {
+    if (hasWebFilter(row)) withWebFilter++; else withoutWebFilter++;
+    if (hasAppControl(row)) withAppControl++;
+    if (hasIps(row)) withIps++;
+  }
+  // SSL/TLS inspection rules (from dedicated section)
+  for (const key of Object.keys(sections)) {
+    if (/ssl.*tls.*inspection|tls.*inspection/i.test(key)) {
+      for (const t of sections[key].tables) withSslInspection += t.rows.length;
+    }
+  }
+  const inspectionPosture: InspectionPosture = {
+    totalWanRules: wanRules.length,
+    withWebFilter, withoutWebFilter, withAppControl, withIps, withSslInspection,
+    wanRuleNames: wanRules.map((w) => w.name),
+  };
 
   // --- WAN rules with no web filtering ---
   const wanNoFilter: string[] = [];
-  for (const row of rulesTable.rows) {
-    if (isWanDest(row) && isWebService(row) && !hasWebFilter(row)) {
-      wanNoFilter.push(ruleName(row));
-    }
+  for (const { name, row } of wanRules) {
+    if (isWebService(row) && !hasWebFilter(row)) wanNoFilter.push(name);
   }
   if (wanNoFilter.length > 0) {
     findings.push({
@@ -167,6 +224,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${wanNoFilter.length} WAN rule${wanNoFilter.length > 1 ? "s" : ""} missing web filtering`,
       detail: `Rules with Destination Zone WAN and Service HTTP/HTTPS/ANY have no Web Filter applied: ${wanNoFilter.slice(0, 8).join(", ")}${wanNoFilter.length > 8 ? ` (+${wanNoFilter.length - 8} more)` : ""}. This is a KCSIE/DfE compliance gap.`,
       section: "Firewall Rules",
+      remediation: "Apply a Web Filter policy to all WAN-facing rules that permit HTTP, HTTPS, or ANY services. Use the default or a custom policy aligned to your organisation's acceptable use standards.",
     });
   }
 
@@ -182,6 +240,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${loggingOff.length} rule${loggingOff.length > 1 ? "s" : ""} with logging disabled`,
       detail: `Logging is turned off on: ${loggingOff.slice(0, 8).join(", ")}${loggingOff.length > 8 ? ` (+${loggingOff.length - 8} more)` : ""}. Disabled logging creates gaps in audit trails and monitoring.`,
       section: "Firewall Rules",
+      remediation: "Enable logging on all firewall rules. At minimum, enable \"Log when connection is established\" for critical traffic paths to support incident response and compliance auditing.",
     });
   }
 
@@ -197,6 +256,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${anySvc.length} rule${anySvc.length > 1 ? "s" : ""} using "ANY" service`,
       detail: `Rules permitting all services: ${anySvc.slice(0, 8).join(", ")}${anySvc.length > 8 ? ` (+${anySvc.length - 8} more)` : ""}. Broad service rules increase attack surface — restrict to required protocols where possible.`,
       section: "Firewall Rules",
+      remediation: "Replace \"ANY\" service with specific service objects or groups that match the actual traffic requirements. Start by reviewing traffic logs to identify which protocols are in use.",
     });
   }
 
@@ -212,6 +272,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${broadRules.length} rule${broadRules.length > 1 ? "s" : ""} with broad source and destination`,
       detail: `Rules with both Source and Destination set to "Any" or blank: ${broadRules.slice(0, 6).join(", ")}${broadRules.length > 6 ? ` (+${broadRules.length - 6} more)` : ""}. Consider restricting to specific networks.`,
       section: "Firewall Rules",
+      remediation: "Restrict source and destination to named network or host objects. Avoid \"Any-to-Any\" rules — use zone-based segmentation and explicit network groups.",
     });
   }
 
@@ -235,8 +296,79 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
         title: `MFA/OTP disabled for ${otpDisabled.length} area${otpDisabled.length > 1 ? "s" : ""}`,
         detail: `Multi-factor authentication is not enabled for: ${otpDisabled.join(", ")}. All admin and VPN access should require MFA.`,
         section: "Authentication & OTP",
+        remediation: "Enable OTP/MFA for all administrator and VPN user access. Configure TOTP tokens via Sophos Authenticator or a compatible authenticator app for all admin accounts.",
       });
     }
+  }
+
+  // --- Duplicate / overlapping rules ---
+  const sigMap = new Map<string, string[]>();
+  for (const row of rulesTable.rows) {
+    const sig = ruleSignature(row);
+    if (!sig || sig === "||||") continue;
+    const name = ruleName(row);
+    const existing = sigMap.get(sig);
+    if (existing) existing.push(name);
+    else sigMap.set(sig, [name]);
+  }
+  const duplicateGroups = [...sigMap.values()].filter((g) => g.length > 1);
+  if (duplicateGroups.length > 0) {
+    const totalDupes = duplicateGroups.reduce((s, g) => s + g.length, 0);
+    const examples = duplicateGroups.slice(0, 3).map((g) => g.join(" / ")).join("; ");
+    findings.push({
+      id: `f${++fid}`,
+      severity: "medium",
+      title: `${totalDupes} rules in ${duplicateGroups.length} overlapping group${duplicateGroups.length > 1 ? "s" : ""}`,
+      detail: `Rules with identical source zone, source network, destination zone, destination network, and service: ${examples}${duplicateGroups.length > 3 ? ` (+${duplicateGroups.length - 3} more groups)` : ""}. Overlapping rules may cause shadowing or redundant processing.`,
+      section: "Firewall Rules",
+      remediation: "Review overlapping rules and consolidate where possible. Remove shadowed rules that will never be matched. Use rule ordering to ensure the most specific rules are evaluated first.",
+    });
+  }
+
+  // --- WAN rules without IPS ---
+  const wanNoIps: string[] = [];
+  for (const { name, row } of wanRules) {
+    if (!hasIps(row)) wanNoIps.push(name);
+  }
+  if (wanNoIps.length > 0 && wanRules.length > 0) {
+    const pct = Math.round((wanNoIps.length / wanRules.length) * 100);
+    findings.push({
+      id: `f${++fid}`,
+      severity: pct > 50 ? "high" : "low",
+      title: `${wanNoIps.length} WAN rule${wanNoIps.length > 1 ? "s" : ""} without IPS (${pct}%)`,
+      detail: `Intrusion Prevention is not applied on: ${wanNoIps.slice(0, 6).join(", ")}${wanNoIps.length > 6 ? ` (+${wanNoIps.length - 6} more)` : ""}. WAN-facing traffic should have IPS enabled to detect exploit attempts.`,
+      section: "Intrusion Prevention",
+      remediation: "Apply an IPS policy to all WAN-facing firewall rules. Use the recommended Sophos IPS policy as a baseline and tune for false positives after deployment.",
+    });
+  }
+
+  // --- WAN rules without Application Control ---
+  const wanNoApp: string[] = [];
+  for (const { name, row } of wanRules) {
+    if (!hasAppControl(row)) wanNoApp.push(name);
+  }
+  if (wanNoApp.length > 0 && wanRules.length > 0) {
+    const pct = Math.round((wanNoApp.length / wanRules.length) * 100);
+    findings.push({
+      id: `f${++fid}`,
+      severity: pct > 75 ? "medium" : "low",
+      title: `${wanNoApp.length} WAN rule${wanNoApp.length > 1 ? "s" : ""} without Application Control (${pct}%)`,
+      detail: `Application Control is not enabled on: ${wanNoApp.slice(0, 6).join(", ")}${wanNoApp.length > 6 ? ` (+${wanNoApp.length - 6} more)` : ""}. Application-layer visibility is limited without this feature.`,
+      section: "Application Control",
+      remediation: "Enable Application Control on WAN-facing rules to gain visibility into application-level traffic and enforce acceptable use policies.",
+    });
+  }
+
+  // --- SSL/TLS inspection coverage ---
+  if (withSslInspection === 0 && wanRules.length > 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: "medium",
+      title: "No SSL/TLS inspection rules configured",
+      detail: "No SSL/TLS inspection rules were found. Without TLS decryption, the firewall cannot inspect encrypted traffic for threats, significantly reducing security coverage for web-based attacks.",
+      section: "SSL/TLS Inspection",
+      remediation: "Configure SSL/TLS inspection rules for outbound web traffic. Deploy the Sophos CA certificate to managed endpoints. Start with a permissive exclusion list and tighten over time.",
+    });
   }
 
   // --- Empty sections warning ---
@@ -256,7 +388,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     });
   }
 
-  return { stats, findings };
+  return { stats, findings, inspectionPosture };
 }
 
 /**
