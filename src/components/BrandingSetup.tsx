@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, Search } from "lucide-react";
+import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
@@ -148,10 +148,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
   const [knownCustomers, setKnownCustomers] = useState<string[]>([]);
   const [customerReportCounts, setCustomerReportCounts] = useState<Record<string, number>>({});
-  const [customerSearch, setCustomerSearch] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
   const [addingNew, setAddingNew] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Auto-fill company name from org when logged in
   useEffect(() => {
@@ -188,27 +185,8 @@ export function BrandingSetup({ branding, onChange }: Props) {
     load();
   }, [isGuest, org]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return knownCustomers;
-    const q = customerSearch.toLowerCase();
-    return knownCustomers.filter((c) => c.toLowerCase().includes(q));
-  }, [knownCustomers, customerSearch]);
-
   const selectCustomer = useCallback((name: string) => {
     onChange({ ...branding, customerName: name });
-    setCustomerSearch("");
-    setShowDropdown(false);
     setAddingNew(false);
   }, [branding, onChange]);
 
@@ -286,98 +264,65 @@ export function BrandingSetup({ branding, onChange }: Props) {
           <User className="h-4 w-4" /> Customer Name
         </Label>
 
-        {/* Searchable customer dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <div className="flex gap-2">
-            <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                value={showDropdown ? customerSearch : branding.customerName}
-                onChange={(e) => {
-                  setCustomerSearch(e.target.value);
-                  if (!showDropdown) setShowDropdown(true);
-                  if (addingNew) {
-                    onChange({ ...branding, customerName: e.target.value });
-                  }
-                }}
-                onFocus={() => {
-                  if (!addingNew && knownCustomers.length > 0) {
-                    setShowDropdown(true);
-                    setCustomerSearch("");
-                  }
-                }}
-                placeholder={knownCustomers.length > 0 ? "Search or select customer…" : "Customer / Client Name"}
-                className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+        {addingNew || knownCustomers.length === 0 ? (
+          <>
+            <div className="flex gap-2 max-w-xs">
+              <Input
+                id="customerName"
+                placeholder="Enter customer / client name"
+                value={branding.customerName}
+                onChange={(e) => onChange({ ...branding, customerName: e.target.value })}
+                autoFocus={addingNew}
               />
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setAddingNew(true);
-                setShowDropdown(false);
-                setCustomerSearch("");
-                onChange({ ...branding, customerName: "" });
-              }}
-              className="flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
-              title="Add new customer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">New</span>
-            </button>
-          </div>
-
-          {/* Dropdown list */}
-          {showDropdown && !addingNew && knownCustomers.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full max-w-xs rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto">
-              {filteredCustomers.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  No matching customers.
-                  <button
-                    onClick={() => {
-                      setAddingNew(true);
-                      setShowDropdown(false);
-                      onChange({ ...branding, customerName: customerSearch });
-                    }}
-                    className="ml-1 text-[#2006F7] dark:text-[#00EDFF] hover:underline"
-                  >
-                    Add "{customerSearch}"
-                  </button>
-                </div>
-              ) : (
-                filteredCustomers.map((name) => (
-                  <button
-                    key={name}
-                    onClick={() => selectCustomer(name)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between ${
-                      branding.customerName === name ? "bg-[#2006F7]/5 font-medium text-foreground" : "text-foreground"
-                    }`}
-                  >
-                    <span>{name}</span>
-                    {customerReportCounts[name] > 0 && (
-                      <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded ml-2 shrink-0">
-                        {customerReportCounts[name]} report{customerReportCounts[name] !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </button>
-                ))
+              {knownCustomers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAddingNew(false)}
+                  className="flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">List</span>
+                </button>
               )}
             </div>
-          )}
-        </div>
-
-        {addingNew && (
-          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-            <Plus className="h-2.5 w-2.5" /> Adding new customer.
-            {knownCustomers.length > 0 && (
-              <button
-                onClick={() => setAddingNew(false)}
-                className="text-[#2006F7] dark:text-[#00EDFF] hover:underline ml-1"
-              >
-                Back to list
-              </button>
+            {addingNew && knownCustomers.length > 0 && (
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Plus className="h-2.5 w-2.5" /> Adding new customer.
+                <button
+                  onClick={() => { setAddingNew(false); onChange({ ...branding, customerName: "" }); }}
+                  className="text-[#2006F7] dark:text-[#00EDFF] hover:underline ml-1"
+                >
+                  Back to list
+                </button>
+              </p>
             )}
-          </p>
+          </>
+        ) : (
+          <div className="flex gap-2 max-w-xs">
+            <select
+              id="customerName"
+              value={branding.customerName}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "__new__") {
+                  setAddingNew(true);
+                  onChange({ ...branding, customerName: "" });
+                } else {
+                  selectCustomer(val);
+                }
+              }}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30 appearance-none cursor-pointer"
+              style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}
+            >
+              <option value="" disabled>Select customer…</option>
+              {knownCustomers.map((name) => (
+                <option key={name} value={name}>
+                  {name}{customerReportCounts[name] > 0 ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})` : ""}
+                </option>
+              ))}
+              <option value="__new__">＋ Add New Customer</option>
+            </select>
+          </div>
         )}
 
         <p className="text-xs text-muted-foreground">

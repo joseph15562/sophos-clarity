@@ -109,22 +109,32 @@ function InnerApp() {
     setReportsSaved(false);
   }, [files, reports.length, setReports, setActiveReportId]);
 
+  const [saveError, setSaveError] = useState("");
+
   const handleSaveReports = useCallback(async (includeReports: boolean) => {
     if (Object.keys(analysisResults).length === 0) return;
     setSavingReports(true);
+    setSaveError("");
     try {
       const reportEntries: SavedReportEntry[] = includeReports
         ? reports.filter((r) => r.markdown).map((r) => ({ id: r.id, label: r.label, markdown: r.markdown }))
         : [];
+      let result: unknown;
       if (!isGuest && org) {
-        await saveReportCloud(org.id, branding.customerName, branding.environment, reportEntries, analysisResults);
+        result = await saveReportCloud(org.id, branding.customerName, branding.environment, reportEntries, analysisResults);
       } else {
-        await saveReportLocal(branding.customerName, branding.environment, reportEntries, analysisResults);
+        result = await saveReportLocal(branding.customerName, branding.environment, reportEntries, analysisResults);
       }
-      setReportsSaved(true);
-      setSavedReportsTrigger((n) => n + 1);
-      setTimeout(() => setReportsSaved(false), 3000);
-    } catch { /* ignore */ }
+      if (!result) {
+        setSaveError("Save failed — have you run the 003_saved_reports.sql migration in Supabase?");
+      } else {
+        setReportsSaved(true);
+        setSavedReportsTrigger((n) => n + 1);
+        setTimeout(() => setReportsSaved(false), 3000);
+      }
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Save failed");
+    }
     setSavingReports(false);
   }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment]);
 
@@ -256,7 +266,8 @@ function InnerApp() {
 
             {/* Save Assessment (pre-AI) */}
             {hasFiles && totalFindings > 0 && !hasReports && (
-              <div className="flex justify-end">
+              <div className="flex items-center justify-end gap-3">
+                {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
                 <button
                   onClick={() => handleSaveReports(false)}
                   disabled={savingReports}
@@ -619,6 +630,7 @@ function InnerApp() {
               <Save className="h-3.5 w-3.5" />
               {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
             </button>
+            {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
           </div>
         )}
       </main>
