@@ -357,7 +357,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${disabledWanRules.length} WAN rule${disabledWanRules.length > 1 ? "s" : ""} disabled`,
       detail: `Disabled WAN-facing rules: ${disabledWanRules.map((r) => r.name).slice(0, 6).join(", ")}${disabledWanRules.length > 6 ? ` (+${disabledWanRules.length - 6} more)` : ""}. These rules provide no protection — verify if they should be re-enabled or removed.`,
       section: "Firewall Rules",
-      remediation: "Review disabled WAN rules. If no longer needed, delete them to reduce clutter. If they should be active, re-enable them and ensure proper DPI features are applied.",
+      remediation: "Go to Rules and policies > Firewall rules. Review disabled WAN rules — if no longer needed, delete them. If they should be active, re-enable them and configure web filtering, IPS, and app control.",
     });
   }
 
@@ -383,7 +383,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: "DPI engine is disabled",
       detail: "The Deep Packet Inspection engine is turned off. Without DPI, web filtering, IPS, application control, and SSL/TLS inspection cannot function regardless of rule-level settings.",
       section: "DPI Engine",
-      remediation: "Navigate to System → Administration → Device Access or Protection → Inspection Settings and enable the DPI engine. Note: this may increase CPU utilisation — monitor after enabling.",
+      remediation: "The DPI engine must be enabled for web filtering, IPS, and app control to function. Check your firewall's system settings to ensure the DPI engine is active. Note: enabling DPI may increase CPU utilisation — monitor after enabling.",
     });
   }
 
@@ -399,7 +399,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${wanNoFilter.length} enabled WAN rule${wanNoFilter.length > 1 ? "s" : ""} missing web filtering`,
       detail: `Active rules with Destination Zone WAN and Service HTTP/HTTPS/ANY have no Web Filter applied: ${wanNoFilter.slice(0, 8).join(", ")}${wanNoFilter.length > 8 ? ` (+${wanNoFilter.length - 8} more)` : ""}. This is a KCSIE/DfE compliance gap.`,
       section: "Firewall Rules",
-      remediation: "Apply a Web Filter policy to all WAN-facing rules that permit HTTP, HTTPS, or ANY services. Use the default or a custom policy aligned to your organisation's acceptable use standards.",
+      remediation: "Go to Rules and policies > Firewall rules. Edit each affected rule → expand Web filtering → set a Web policy. Manage policies under Web > Policies. Ensure the policy blocks inappropriate content for your environment.",
     });
   }
 
@@ -415,7 +415,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${loggingOff.length} rule${loggingOff.length > 1 ? "s" : ""} with logging disabled`,
       detail: `Logging is turned off on: ${loggingOff.slice(0, 8).join(", ")}${loggingOff.length > 8 ? ` (+${loggingOff.length - 8} more)` : ""}. Disabled logging creates gaps in audit trails and monitoring.`,
       section: "Firewall Rules",
-      remediation: "Enable logging on all firewall rules. At minimum, enable \"Log when connection is established\" for critical traffic paths to support incident response and compliance auditing.",
+      remediation: "Go to Rules and policies > Firewall rules. Edit each affected rule → tick 'Log firewall traffic' (near the top, below the Action setting). To send logs externally, configure System services > Log settings.",
     });
   }
 
@@ -431,7 +431,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${anySvc.length} rule${anySvc.length > 1 ? "s" : ""} using "ANY" service`,
       detail: `Rules permitting all services: ${anySvc.slice(0, 8).join(", ")}${anySvc.length > 8 ? ` (+${anySvc.length - 8} more)` : ""}. Broad service rules increase attack surface — restrict to required protocols where possible.`,
       section: "Firewall Rules",
-      remediation: "Replace \"ANY\" service with specific service objects or groups that match the actual traffic requirements. Start by reviewing traffic logs to identify which protocols are in use.",
+      remediation: "Review traffic logs via the Log viewer (upper-right corner) to identify which protocols are in use. Create specific service objects under Hosts and services > Services. Edit each rule to replace 'Any' with specific services.",
     });
   }
 
@@ -447,7 +447,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${broadRules.length} rule${broadRules.length > 1 ? "s" : ""} with broad source and destination`,
       detail: `Rules with both Source and Destination set to "Any" or blank: ${broadRules.slice(0, 6).join(", ")}${broadRules.length > 6 ? ` (+${broadRules.length - 6} more)` : ""}. Consider restricting to specific networks.`,
       section: "Firewall Rules",
-      remediation: "Restrict source and destination to named network or host objects. Avoid \"Any-to-Any\" rules — use zone-based segmentation and explicit network groups.",
+      remediation: "Create specific IP host or IP host group objects under Hosts and services. Edit each broad rule under Rules and policies > Firewall rules to replace 'Any' source/destination with named network objects.",
     });
   }
 
@@ -471,7 +471,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
         title: `MFA/OTP disabled for ${otpDisabled.length} area${otpDisabled.length > 1 ? "s" : ""}`,
         detail: `Multi-factor authentication is not enabled for: ${otpDisabled.join(", ")}. All admin and VPN access should require MFA.`,
         section: "Authentication & OTP",
-        remediation: "Enable OTP/MFA for all administrator and VPN user access. Configure TOTP tokens via Sophos Authenticator or a compatible authenticator app for all admin accounts.",
+        remediation: "Go to Authentication > Multi-factor authentication. Set One-time password to 'All users'. Select all services: Web admin console, User portal, VPN portal, SSL VPN, IPsec. Enable 'Generate OTP token with next sign-in'.",
       });
     }
   }
@@ -496,7 +496,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${totalDupes} rules in ${duplicateGroups.length} overlapping group${duplicateGroups.length > 1 ? "s" : ""}`,
       detail: `Rules with identical source zone, source network, destination zone, destination network, and service: ${examples}${duplicateGroups.length > 3 ? ` (+${duplicateGroups.length - 3} more groups)` : ""}. Overlapping rules may cause shadowing or redundant processing.`,
       section: "Firewall Rules",
-      remediation: "Review overlapping rules and consolidate where possible. Remove shadowed rules that will never be matched. Use rule ordering to ensure the most specific rules are evaluated first.",
+      remediation: "Go to Rules and policies > Firewall rules. Review overlapping rule groups and consolidate or delete duplicates. Sophos Firewall evaluates rules top-down — shadowed rules never fire. Use rule groups to organise.",
     });
   }
 
@@ -513,7 +513,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${wanNoIps.length} enabled WAN rule${wanNoIps.length > 1 ? "s" : ""} without IPS (${pct}%)`,
       detail: `Intrusion Prevention is not applied on active rules: ${wanNoIps.slice(0, 6).join(", ")}${wanNoIps.length > 6 ? ` (+${wanNoIps.length - 6} more)` : ""}. WAN-facing traffic should have IPS enabled to detect exploit attempts.`,
       section: "Intrusion Prevention",
-      remediation: "Apply an IPS policy to all WAN-facing firewall rules. Use the recommended Sophos IPS policy as a baseline and tune for false positives after deployment.",
+      remediation: "Go to Intrusion prevention > IPS policies and ensure IPS protection is turned on. Create or select a policy. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Detect and prevent exploits (IPS)'.",
     });
   }
 
@@ -530,7 +530,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${wanNoApp.length} enabled WAN rule${wanNoApp.length > 1 ? "s" : ""} without Application Control (${pct}%)`,
       detail: `Application Control is not enabled on active rules: ${wanNoApp.slice(0, 6).join(", ")}${wanNoApp.length > 6 ? ` (+${wanNoApp.length - 6} more)` : ""}. Application-layer visibility is limited without this feature.`,
       section: "Application Control",
-      remediation: "Enable Application Control on WAN-facing rules to gain visibility into application-level traffic and enforce acceptable use policies.",
+      remediation: "Create an application filter policy under Applications > Application filter. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Identify and control applications (App control)'.",
     });
   }
 
@@ -542,7 +542,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: "No SSL/TLS inspection rules configured",
       detail: "No SSL/TLS inspection rules were found. Without TLS decryption, the firewall cannot inspect encrypted traffic for threats, significantly reducing security coverage for web-based attacks.",
       section: "SSL/TLS Inspection",
-      remediation: "Configure SSL/TLS inspection rules for outbound web traffic. Deploy the Sophos CA certificate to managed endpoints. Start with a permissive exclusion list and tighten over time.",
+      remediation: "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints. Add exclusion rules ('Don't decrypt') above for incompatible services.",
     });
   }
 
