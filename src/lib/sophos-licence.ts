@@ -629,6 +629,8 @@ export interface BPCheckResult {
   status: CheckStatus;
   detail: string;
   applicable: boolean;
+  /** True when the user manually marked this check as compliant */
+  manualOverride?: boolean;
 }
 
 export interface SophosBPScore {
@@ -645,6 +647,7 @@ export interface SophosBPScore {
 export function computeSophosBPScore(
   analysisResult: AnalysisResult,
   licence: LicenceSelection,
+  manualOverrides?: Set<string>,
 ): SophosBPScore {
   const activeModules = getActiveModules(licence);
 
@@ -653,7 +656,13 @@ export function computeSophosBPScore(
     if (!applicable) {
       return { check, status: "na" as CheckStatus, detail: `Requires ${MODULES[check.requiredModule!].label} module`, applicable: false };
     }
-    const { status, detail } = check.evaluate(analysisResult);
+    let { status, detail } = check.evaluate(analysisResult);
+    if (status === ("unknown" as CheckStatus)) status = "warn";
+
+    const overridden = manualOverrides?.has(check.id) && status === "warn";
+    if (overridden) {
+      return { check, status: "pass" as CheckStatus, detail: `Manually confirmed compliant — ${detail}`, applicable: true, manualOverride: true };
+    }
     return { check, status, detail, applicable: true };
   });
 

@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, UserCheck, Undo2 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import {
   type LicenceTier,
@@ -65,6 +65,20 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
   );
 }
 
+const OVERRIDES_KEY = "sophos-bp-manual-overrides";
+
+function loadOverrides(): Set<string> {
+  try {
+    const raw = localStorage.getItem(OVERRIDES_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch { /* ignore */ }
+  return new Set();
+}
+
+function saveOverrides(overrides: Set<string>) {
+  localStorage.setItem(OVERRIDES_KEY, JSON.stringify([...overrides]));
+}
+
 export function SophosBestPractice({ analysisResults }: Props) {
   const [tier, setTier] = useState<LicenceTier>("xstream");
   const [individualModules, setIndividualModules] = useState<ModuleId[]>([
@@ -72,6 +86,9 @@ export function SophosBestPractice({ analysisResults }: Props) {
     "webProtection",
   ]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [manualOverrides, setManualOverrides] = useState<Set<string>>(loadOverrides);
+
+  useEffect(() => { saveOverrides(manualOverrides); }, [manualOverrides]);
 
   const licence: LicenceSelection = useMemo(
     () => ({ tier, modules: individualModules }),
@@ -94,6 +111,14 @@ export function SophosBestPractice({ analysisResults }: Props) {
     });
   }, []);
 
+  const toggleOverride = useCallback((checkId: string) => {
+    setManualOverrides((prev) => {
+      const next = new Set(prev);
+      next.has(checkId) ? next.delete(checkId) : next.add(checkId);
+      return next;
+    });
+  }, []);
+
   const aggregateResult = useMemo(() => {
     const entries = Object.values(analysisResults);
     if (entries.length === 0) return null;
@@ -108,10 +133,12 @@ export function SophosBestPractice({ analysisResults }: Props) {
 
   const bpScore = useMemo(() => {
     if (!aggregateResult) return null;
-    return computeSophosBPScore(aggregateResult, licence);
-  }, [aggregateResult, licence]);
+    return computeSophosBPScore(aggregateResult, licence, manualOverrides);
+  }, [aggregateResult, licence, manualOverrides]);
 
   if (!bpScore) return null;
+
+  const manualCount = bpScore.results.filter((r) => r.manualOverride).length;
 
   const grouped = new Map<string, typeof bpScore.results>();
   for (const r of bpScore.results) {
@@ -188,7 +215,15 @@ export function SophosBestPractice({ analysisResults }: Props) {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-6">
-          <GaugeRing score={bpScore.overall} grade={bpScore.grade} />
+          <div className="flex flex-col items-center gap-1">
+            <GaugeRing score={bpScore.overall} grade={bpScore.grade} />
+            {manualCount > 0 && (
+              <span className="flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <UserCheck className="h-2.5 w-2.5" />
+                {manualCount} manually confirmed
+              </span>
+            )}
+          </div>
 
           <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="text-center">
@@ -248,6 +283,8 @@ export function SophosBestPractice({ analysisResults }: Props) {
               {isExpanded && (
                 <div className="border-t border-border divide-y divide-border">
                   {checks.map((result) => {
+                    const isOverridden = result.manualOverride === true;
+                    const isWarnAndOverrideable = result.status === "warn" && result.applicable;
                     const cfg = STATUS_CONFIG[result.status];
                     const Icon = cfg.icon;
                     return (
@@ -256,12 +293,42 @@ export function SophosBestPractice({ analysisResults }: Props) {
                           <Icon className={`h-3 w-3 ${cfg.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground">{result.check.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-medium text-foreground">{result.check.title}</p>
+                            {isOverridden && (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400">
+                                Manual
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{result.detail}</p>
                           {result.status === "fail" && (
                             <p className="text-[10px] text-amber-400/90 mt-1 leading-relaxed">
                               <span className="font-medium">Sophos recommendation:</span> {result.check.recommendation}
                             </p>
+                          )}
+                          {/* Manual comply toggle for checks not verifiable from export */}
+                          {(isWarnAndOverrideable || isOverridden) && (
+                            <button
+                              onClick={() => toggleOverride(result.check.id)}
+                              className={`mt-2 flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-md transition-colors ${
+                                isOverridden
+                                  ? "bg-emerald-500/10 text-emerald-400 hover:bg-red-500/10 hover:text-red-400"
+                                  : "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
+                              }`}
+                            >
+                              {isOverridden ? (
+                                <>
+                                  <Undo2 className="h-3 w-3" />
+                                  Revert to Unverified
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="h-3 w-3" />
+                                  Mark as Compliant
+                                </>
+                              )}
+                            </button>
                           )}
                         </div>
                         <a
