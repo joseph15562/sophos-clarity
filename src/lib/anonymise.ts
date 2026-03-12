@@ -66,7 +66,8 @@ export function buildAnonymisationMap(
 
 /**
  * Deep-replace all mapped values in a JSON-serialisable object.
- * Longer strings are replaced first to avoid partial matches.
+ * Uses word-boundary regex to prevent partial IP matches
+ * (e.g. replacing `10.0.0.1` inside `10.0.0.10`).
  */
 export function anonymiseData<T>(data: T, map: AnonymisationMap): T {
   if (map.forward.size === 0) return data;
@@ -78,7 +79,7 @@ export function anonymiseData<T>(data: T, map: AnonymisationMap): T {
 
   for (const [real, placeholder] of sorted) {
     const escaped = real.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    json = json.replace(new RegExp(escaped, "g"), placeholder);
+    json = json.replace(new RegExp(`(?<![\\w.])${escaped}(?![\\w.])`, "g"), placeholder);
   }
 
   return JSON.parse(json) as T;
@@ -97,7 +98,8 @@ export function anonymiseString(
   );
   let result = text;
   for (const [real, placeholder] of sorted) {
-    result = result.replaceAll(real, placeholder);
+    const escaped = real.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp(`(?<![\\w.])${escaped}(?![\\w.])`, "g"), placeholder);
   }
   return result;
 }
@@ -105,6 +107,8 @@ export function anonymiseString(
 /**
  * Streaming de-anonymiser.  Buffers the tail of each chunk so that
  * placeholders spanning two chunks are still caught.
+ * Uses word-boundary-aware regex to prevent partial IP matches
+ * (e.g. `192.0.2.1` matching inside `192.0.2.10`).
  */
 export function createStreamDeanonymiser(map: AnonymisationMap) {
   const entries = Array.from(map.reverse.entries()).sort(
@@ -115,18 +119,23 @@ export function createStreamDeanonymiser(map: AnonymisationMap) {
     return { push: (chunk: string) => chunk, flush: () => "" };
   }
 
-  const holdback = Math.max(...entries.map(([p]) => p.length));
+  const patterns = entries.map(([placeholder, real]) => {
+    const escaped = placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return { re: new RegExp(`(?<![\\w.])${escaped}(?![\\w.])`, "g"), real };
+  });
+
+  const holdback = Math.max(...entries.map(([p]) => p.length)) + 2;
   let buffer = "";
 
   function replaceAll(text: string): string {
-    for (const [placeholder, real] of entries) {
-      text = text.replaceAll(placeholder, real);
+    for (const { re, real } of patterns) {
+      re.lastIndex = 0;
+      text = text.replace(re, real);
     }
     return text;
   }
 
   return {
-    /** Process a chunk. Returns de-anonymised text safe to display. */
     push(chunk: string): string {
       buffer += chunk;
       if (buffer.length <= holdback) return "";
@@ -134,7 +143,6 @@ export function createStreamDeanonymiser(map: AnonymisationMap) {
       buffer = buffer.slice(-holdback);
       return replaceAll(safe);
     },
-    /** Flush remaining buffer (call when stream ends). */
     flush(): string {
       const result = replaceAll(buffer);
       buffer = "";
