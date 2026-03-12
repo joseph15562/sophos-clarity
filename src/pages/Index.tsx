@@ -14,6 +14,11 @@ import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-pers
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
+const RiskScoreDashboard = lazy(() => import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })));
+const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })));
+const ComplianceHeatmap = lazy(() => import("@/components/ComplianceHeatmap").then((m) => ({ default: m.ComplianceHeatmap })));
+const AssessmentHistory = lazy(() => import("@/components/AssessmentHistory").then((m) => ({ default: m.AssessmentHistory })));
+const AIChatPanel = lazy(() => import("@/components/AIChatPanel").then((m) => ({ default: m.AIChatPanel })));
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -151,6 +156,41 @@ const Index = () => {
                 extractionPct={extractionPct}
                 aggregatedPosture={aggregatedPosture}
               />
+            )}
+
+            {/* Risk Score Dashboard */}
+            {hasFiles && (
+              <Suspense fallback={null}>
+                <RiskScoreDashboard analysisResults={analysisResults} />
+              </Suspense>
+            )}
+
+            {/* Remediation Playbooks */}
+            {hasFiles && totalFindings > 0 && (
+              <Suspense fallback={null}>
+                <RemediationPlaybooks analysisResults={analysisResults} />
+              </Suspense>
+            )}
+
+            {/* Compliance Heatmap */}
+            {hasFiles && (
+              <Suspense fallback={null}>
+                <ComplianceHeatmap
+                  analysisResults={analysisResults}
+                  selectedFrameworks={branding.selectedFrameworks}
+                />
+              </Suspense>
+            )}
+
+            {/* Assessment History */}
+            {hasFiles && (
+              <Suspense fallback={null}>
+                <AssessmentHistory
+                  analysisResults={analysisResults}
+                  customerName={branding.customerName}
+                  environment={branding.environment}
+                />
+              </Suspense>
             )}
 
             {/* Step 2 — Assessment Context */}
@@ -317,6 +357,19 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      {/* AI Chat — floating panel, available whenever files are loaded */}
+      {hasFiles && (
+        <Suspense fallback={null}>
+          <AIChatPanel
+            sections={files[0]?.extractedData ?? {}}
+            analysisResults={analysisResults}
+            reports={reports}
+            customerName={branding.customerName}
+            environment={branding.environment}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
