@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Shield, Sparkles, FileStack, BookOpen, ClipboardCheck, Moon, Sun } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { BookOpen, ClipboardCheck, Moon, Sun, CheckCircle2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
 import { DocumentPreview, ReportEntry } from "@/components/DocumentPreview";
 import { streamConfigParse } from "@/lib/stream-ai";
 import { extractSections, ExtractedSections } from "@/lib/extract-sections";
+import { analyseConfig, severityIcon, type AnalysisResult, type Severity } from "@/lib/analyse-config";
 import { useToast } from "@/hooks/use-toast";
 
 type ParsedFile = UploadedFile & { extractedData: ExtractedSections };
@@ -116,7 +117,8 @@ const Index = () => {
     // Generate one at a time to stay under Gemini's 250K tokens/minute limit
     for (const f of files) {
       const reportId = `report-${f.id}`;
-      await generateSingleReport(reportId, f.extractedData);
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      await generateSingleReport(reportId, f.extractedData, { firewallLabels: [label] });
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
@@ -197,7 +199,8 @@ const Index = () => {
 
     // Generate individual reports one at a time to stay under 250K TPM
     for (const f of files) {
-      await generateSingleReport(`report-${f.id}`, f.extractedData);
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      await generateSingleReport(`report-${f.id}`, f.extractedData, { firewallLabels: [label] });
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
@@ -241,7 +244,8 @@ const Index = () => {
     } else {
       const file = files.find((f) => `report-${f.id}` === reportId);
       if (file) {
-        generateSingleReport(reportId, file.extractedData);
+        const label = file.label || file.fileName.replace(/\.(html|htm)$/i, "");
+        generateSingleReport(reportId, file.extractedData, { firewallLabels: [label] });
       }
     }
   }, [files, generateSingleReport]);
@@ -249,54 +253,257 @@ const Index = () => {
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
 
+  // Deterministic pre-AI analysis — runs client-side on extracted data
+  const analysisResults = useMemo<Record<string, AnalysisResult>>(() => {
+    const results: Record<string, AnalysisResult> = {};
+    for (const f of files) {
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      results[label] = analyseConfig(f.extractedData);
+    }
+    return results;
+  }, [files]);
+
+  const totalFindings = useMemo(
+    () => Object.values(analysisResults).reduce((sum, r) => sum + r.findings.length, 0),
+    [analysisResults],
+  );
+  const totalRules = useMemo(
+    () => Object.values(analysisResults).reduce((sum, r) => sum + r.stats.totalRules, 0),
+    [analysisResults],
+  );
+  const totalSections = useMemo(
+    () => Object.values(analysisResults).reduce((sum, r) => sum + r.stats.totalSections, 0),
+    [analysisResults],
+  );
+  const totalPopulated = useMemo(
+    () => Object.values(analysisResults).reduce((sum, r) => sum + r.stats.populatedSections, 0),
+    [analysisResults],
+  );
+  const extractionPct = totalSections > 0 ? Math.round((totalPopulated / totalSections) * 100) : 0;
+
+  const severityColor: Record<Severity, string> = {
+    critical: "text-[#EA0022]",
+    high: "text-[#c47800] dark:text-[#F29400]",
+    medium: "text-[#b8a200] dark:text-[#F8E300]",
+    low: "text-[#00995a] dark:text-[#00F2B3]",
+    info: "text-[#0077cc] dark:text-[#009CFB]",
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10 no-print">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-            <Shield className="h-5 w-5 text-primary-foreground" />
-          </div>
+      {/* Sophos branded header */}
+      <header className="border-b border-[#10037C]/20 bg-[#001A47] sticky top-0 z-10 no-print">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+          <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-foreground leading-tight">
-              Sophos Config Documenter
+            <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">
+              Sophos Clarity
             </h1>
-            <p className="text-xs text-muted-foreground">
-              Transform firewall exports into readable documentation
+            <p className="text-[11px] text-[#6A889B]">
+              Firewall Configuration Assessment & Compliance Reporting
             </p>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="shrink-0"
+            className="shrink-0 text-[#6A889B] hover:text-white hover:bg-[#10037C]/40"
             aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
-            {resolvedTheme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         </div>
       </header>
 
+      {/* Workspace context strip — persistent when context exists */}
+      {(hasFiles || branding.customerName || branding.selectedFrameworks.length > 0) && (
+        <div className="border-b border-border bg-muted/50 no-print">
+          <div className="max-w-5xl mx-auto px-4 py-1.5 flex items-center gap-4 text-[11px] text-muted-foreground overflow-x-auto">
+            {branding.customerName && (
+              <span className="flex items-center gap-1.5 shrink-0">
+                <span className="font-semibold text-foreground">{branding.customerName}</span>
+                {branding.environment && <span className="opacity-60">· {branding.environment}</span>}
+              </span>
+            )}
+            {hasFiles && (
+              <span className="flex items-center gap-1 shrink-0">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00995a] dark:bg-[#00F2B3]" />
+                {files.length} firewall{files.length !== 1 ? "s" : ""} loaded
+              </span>
+            )}
+            {branding.selectedFrameworks.length > 0 && (
+              <span className="flex items-center gap-1.5 shrink-0">
+                <span className="opacity-60">Frameworks:</span>
+                {branding.selectedFrameworks.map((fw) => (
+                  <span key={fw} className="px-1.5 py-0.5 rounded bg-[#2006F7]/10 dark:bg-[#2006F7]/20 text-[#10037C] dark:text-[#009CFB] font-medium">
+                    {fw}
+                  </span>
+                ))}
+              </span>
+            )}
+            {reports.length > 0 && (
+              <span className="flex items-center gap-1 shrink-0 ml-auto">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#2006F7]" />
+                {reports.length} report{reports.length !== 1 ? "s" : ""} generated
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className={`mx-auto px-4 py-8 space-y-8 ${reports.length > 0 ? "max-w-full w-full" : "max-w-5xl"}`}>
         {!hasReports && !isLoading && (
           <>
+            {/* Landing hero — only when no files uploaded */}
+            {!hasFiles && (
+              <section className="text-center py-6 space-y-4">
+                <h2 className="text-2xl font-display font-bold text-foreground tracking-tight">
+                  Turn Sophos Firewall Exports into Audit-Ready Documentation
+                </h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed">
+                  Upload one or more Sophos XGS configuration HTML exports. Sophos Clarity extracts every rule,
+                  setting, and policy, runs a deterministic security analysis, then generates branded technical reports,
+                  executive summaries, and compliance evidence packs — ready for customer handoff or audit.
+                </p>
+                <div className="flex flex-wrap justify-center gap-6 pt-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" /> Technical Reports</span>
+                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" /> Executive Briefs</span>
+                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Compliance Packs</span>
+                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" /> Data Anonymised</span>
+                </div>
+              </section>
+            )}
+
+            {/* Step 1 — Upload */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold">1</span>
-                <h2 className="text-lg font-semibold text-foreground">Upload Config Exports</h2>
+                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">1</span>
+                <h2 className="text-lg font-display font-bold text-foreground">Upload Firewall Exports</h2>
               </div>
               <FileUpload files={files} onFilesChange={handleFilesChange} />
-              {files.length > 1 && (
-                <p className="text-xs text-muted-foreground">
-                  {files.length} firewalls loaded — you can generate individual reports and a combined executive summary.
-                </p>
-              )}
             </section>
 
+            {/* Estate summary cards — after upload */}
+            {hasFiles && (
+              <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.06] p-5 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
+                    <img src="/icons/sophos-network.svg" alt="" className="h-7 w-7 sophos-icon" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-[#2006F7] dark:text-[#00EDFF] leading-none">{files.length}</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-1">Firewall{files.length !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-[#10037C]/15 dark:border-[#2006F7]/20 bg-[#10037C]/[0.03] dark:bg-[#2006F7]/[0.06] p-5 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-lg bg-[#10037C]/10 dark:bg-[#2006F7]/10 flex items-center justify-center shrink-0">
+                    <img src="/icons/sophos-governance.svg" alt="" className="h-7 w-7 sophos-icon" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-[#001A47] dark:text-white leading-none">{totalRules}</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-1">Rules Parsed</p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-[#5A00FF]/15 dark:border-[#5A00FF]/20 bg-[#5A00FF]/[0.03] dark:bg-[#5A00FF]/[0.06] p-5 flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-lg bg-[#5A00FF]/10 dark:bg-[#5A00FF]/10 flex items-center justify-center shrink-0">
+                    <img src="/icons/sophos-search.svg" alt="" className="h-7 w-7 sophos-icon" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-extrabold text-[#001A47] dark:text-white leading-none">{totalSections}</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-1">Sections</p>
+                  </div>
+                </div>
+                <div className={`rounded-xl border p-5 flex items-center gap-4 ${totalFindings > 0 ? "border-[#EA0022]/20 dark:border-[#F29400]/25 bg-[#EA0022]/[0.04] dark:bg-[#F29400]/[0.06]" : "border-[#00995a]/20 dark:border-[#00F2B3]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"}`}>
+                  <div className={`h-12 w-12 rounded-lg flex items-center justify-center shrink-0 ${totalFindings > 0 ? "bg-[#EA0022]/10 dark:bg-[#F29400]/10" : "bg-[#00995a]/10 dark:bg-[#00F2B3]/10"}`}>
+                    <img src="/icons/sophos-alert.svg" alt="" className="h-7 w-7 sophos-icon" />
+                  </div>
+                  <div>
+                    <p className={`text-3xl font-extrabold leading-none ${totalFindings > 0 ? "text-[#EA0022] dark:text-[#F29400]" : "text-[#00995a] dark:text-[#00F2B3]"}`}>{totalFindings}</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-1">Issues</p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Extraction coverage bar */}
+            {hasFiles && (
+              <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-semibold text-foreground">Extraction Coverage</span>
+                    <span className={`text-xs font-bold ${extractionPct >= 80 ? "text-[#00995a] dark:text-[#00F2B3]" : extractionPct >= 50 ? "text-[#b8a200] dark:text-[#F8E300]" : "text-[#EA0022]"}`}>{extractionPct}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${extractionPct >= 80 ? "bg-[#00995a] dark:bg-[#00F2B3]" : extractionPct >= 50 ? "bg-[#b8a200] dark:bg-[#F8E300]" : "bg-[#EA0022]"}`}
+                      style={{ width: `${extractionPct}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                    {totalPopulated} of {totalSections} sections contain parseable data &middot; {totalRules} rules &middot; {Object.values(analysisResults).reduce((s, r) => s + r.stats.totalNatRules, 0)} NAT rules &middot; {Object.values(analysisResults).reduce((s, r) => s + r.stats.interfaces, 0)} interfaces
+                  </p>
+                </div>
+                {extractionPct < 80 && (
+                  <div className="text-[10px] text-muted-foreground max-w-[180px] leading-tight">
+                    Some sections parsed empty. This may indicate an unsupported export format or unconfigured areas.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Pre-AI findings panel */}
+            {hasFiles && totalFindings > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <img src="/icons/sophos-alert.svg" alt="" className="h-5 w-5 sophos-icon" />
+                  <h3 className="text-sm font-semibold text-foreground">Pre-Analysis Findings</h3>
+                  <span className="text-xs text-muted-foreground">(deterministic — before AI)</span>
+                </div>
+                <div className="grid gap-2.5">
+                  {Object.entries(analysisResults).map(([label, result]) =>
+                    result.findings.map((f) => {
+                      const borderMap: Record<Severity, string> = {
+                        critical: "border-l-[#EA0022]",
+                        high: "border-l-[#c47800] dark:border-l-[#F29400]",
+                        medium: "border-l-[#b8a200] dark:border-l-[#F8E300]",
+                        low: "border-l-[#00995a] dark:border-l-[#00F2B3]",
+                        info: "border-l-[#0077cc] dark:border-l-[#009CFB]",
+                      };
+                      return (
+                        <div key={`${label}-${f.id}`} className={`rounded-lg border border-border border-l-4 ${borderMap[f.severity]} bg-card px-4 py-3.5 flex items-start gap-3 text-sm shadow-sm`}>
+                          <span className="mt-0.5 text-lg shrink-0" title={f.severity}>{severityIcon(f.severity)}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className={`font-bold text-sm ${severityColor[f.severity]}`}>{f.title}</span>
+                              {files.length > 1 && (
+                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{f.detail}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            )}
+
+            {hasFiles && totalFindings === 0 && (
+              <div className="rounded-md border border-[#00995a]/30 dark:border-[#00F2B3]/30 bg-[#00995a]/5 dark:bg-[#00F2B3]/5 px-4 py-3 flex items-center gap-3 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-[#00774a] dark:text-[#00F2B3] shrink-0" />
+                <span className="text-[#00774a] dark:text-[#00F2B3] font-medium">No issues detected in pre-analysis.</span>
+                <span className="text-muted-foreground">The AI report will provide deeper assessment.</span>
+              </div>
+            )}
+
+            {/* Step 2 — Assessment Context */}
             {hasFiles && (
               <section className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-primary text-primary-foreground text-sm font-bold">2</span>
-                  <h2 className="text-lg font-semibold text-foreground">Branding & Context (Optional)</h2>
+                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">2</span>
+                <h2 className="text-lg font-display font-bold text-foreground">Assessment Context</h2>
+                  <span className="text-xs text-muted-foreground">(optional)</span>
                 </div>
                 <Card>
                   <CardContent className="pt-6">
@@ -306,26 +513,104 @@ const Index = () => {
               </section>
             )}
 
+            {/* Privacy banner */}
             {hasFiles && (
-              <div className="flex flex-wrap gap-3">
-                <Button size="lg" onClick={() => generateIndividual()} className="gap-2 text-base">
-                  <Sparkles className="h-5 w-5" />
-                  {files.length === 1 ? "Generate Documentation" : `Generate ${files.length} Individual Reports`}
-                </Button>
-                {files.length >= 2 && (
-                  <>
-                    <Button size="lg" variant="secondary" onClick={() => generateExecutive()} className="gap-2 text-base">
-                      <BookOpen className="h-5 w-5" /> Executive Summary Only
-                    </Button>
-                    <Button size="lg" onClick={generateAll} className="gap-2 text-base bg-gradient-to-r from-primary to-primary/80">
-                      <FileStack className="h-5 w-5" /> Generate All Reports + Executive
-                    </Button>
-                  </>
-                )}
-                <Button size="lg" variant="outline" onClick={generateCompliance} className="gap-2 text-base">
-                  <ClipboardCheck className="h-5 w-5" /> Compliance Evidence Pack
-                </Button>
+              <div className="rounded-xl border border-[#00995a]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00995a] dark:border-l-[#00F2B3] bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
+                <div className="h-10 w-10 rounded-lg bg-[#00995a]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
+                </div>
+                <div className="text-sm text-muted-foreground leading-relaxed">
+                  <span className="font-bold text-[#00774a] dark:text-[#00F2B3]">Data Privacy Protected</span> — All IP addresses, customer names, and firewall identifiers are automatically anonymised before being sent to the AI. Your sensitive network data never leaves the browser; only sanitised structural data is transmitted for analysis. Real values are restored locally in the final report.
+                </div>
               </div>
+            )}
+
+            {/* Step 3 — Generate reports (report mode hierarchy) */}
+            {hasFiles && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">3</span>
+                <h2 className="text-lg font-display font-bold text-foreground">Generate Reports</h2>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {/* Technical Report */}
+                  <div
+                    className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-[#2006F7]/30 dark:hover:border-[#2006F7]/40 transition-all duration-200 cursor-pointer group overflow-hidden"
+                    onClick={() => generateIndividual()}
+                  >
+                    <div className="h-1 bg-gradient-to-r from-[#2006F7] to-[#5A00FF]" />
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0 group-hover:bg-[#2006F7]/15 dark:group-hover:bg-[#2006F7]/25 transition-colors">
+                          <img src="/icons/sophos-document.svg" alt="" className="h-6 w-6 sophos-icon" />
+                        </div>
+                        <span className="font-display font-bold text-foreground text-[15px]">Technical Report</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Detailed per-firewall documentation covering every rule, interface, host, policy, and security setting. Includes findings, best practice recommendations, and compliance notes.
+                      </p>
+                      <Button size="sm" className="w-full gap-2 bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-sm">
+                        <img src="/icons/sophos-ai-white.svg" alt="" className="h-4 w-4" />
+                        {files.length === 1 ? "Generate Report" : `Generate ${files.length} Reports`}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Executive Brief */}
+                  <div
+                    className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${files.length >= 2 ? "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group" : "opacity-45 pointer-events-none"}`}
+                    onClick={files.length >= 2 ? () => generateExecutive() : undefined}
+                  >
+                    <div className="h-1 bg-gradient-to-r from-[#5A00FF] to-[#B529F7]" />
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-lg bg-[#5A00FF]/10 dark:bg-[#5A00FF]/15 flex items-center justify-center shrink-0">
+                          <img src="/icons/sophos-chart.svg" alt="" className="h-6 w-6 sophos-icon" />
+                        </div>
+                        <span className="font-display font-bold text-foreground text-[15px]">Executive Brief</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {files.length >= 2
+                          ? "Consolidated estate summary comparing all firewalls. Risk matrix, cross-estate findings, strategic recommendations — designed for management and stakeholder reporting."
+                          : "Upload 2+ firewall exports to unlock the consolidated executive brief across your estate."}
+                      </p>
+                      <Button size="sm" variant="secondary" className="w-full gap-2" disabled={files.length < 2}>
+                        <BookOpen className="h-3.5 w-3.5" /> Generate Executive Brief
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Compliance Evidence Pack */}
+                  <div
+                    className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-[#009CFB]/30 dark:hover:border-[#009CFB]/40 transition-all duration-200 cursor-pointer group overflow-hidden"
+                    onClick={generateCompliance}
+                  >
+                    <div className="h-1 bg-gradient-to-r from-[#009CFB] to-[#00EDFF]" />
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-lg bg-[#009CFB]/10 dark:bg-[#009CFB]/15 flex items-center justify-center shrink-0 group-hover:bg-[#009CFB]/15 dark:group-hover:bg-[#009CFB]/25 transition-colors">
+                          <img src="/icons/sophos-governance.svg" alt="" className="h-6 w-6 sophos-icon" />
+                        </div>
+                        <span className="font-display font-bold text-foreground text-[15px]">Compliance Evidence Pack</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Audit-ready compliance appendix with control-to-evidence mapping across your selected frameworks. Includes gap analysis, residual risks, and per-firewall compliance posture.
+                      </p>
+                      <Button size="sm" variant="outline" className="w-full gap-2">
+                        <ClipboardCheck className="h-3.5 w-3.5" /> Generate Compliance Pack
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Generate All — only when 2+ firewalls */}
+                {files.length >= 2 && (
+                  <Button size="lg" onClick={generateAll} className="w-full gap-2 text-base bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white">
+                    <img src="/icons/sophos-orchestration-white.svg" alt="" className="h-5 w-5" /> Generate All Reports + Executive Brief
+                  </Button>
+                )}
+              </section>
             )}
           </>
         )}
@@ -341,17 +626,43 @@ const Index = () => {
           branding={branding}
           topActions={
             hasReports && !isLoading ? (
-              <div className="no-print flex flex-wrap gap-3 mb-4">
-                {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
-                  <Button variant="secondary" onClick={() => generateExecutive()} className="gap-2">
-                    <BookOpen className="h-4 w-4" /> Add Executive Summary
-                  </Button>
-                )}
-                {!reports.find((r) => r.id === "report-compliance") && (
-                  <Button variant="outline" onClick={generateCompliance} className="gap-2">
-                    <ClipboardCheck className="h-4 w-4" /> Add Compliance Evidence Pack
-                  </Button>
-                )}
+              <div className="no-print space-y-3 mb-4">
+                <div className="flex flex-wrap gap-3">
+                  {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
+                    <Button variant="secondary" onClick={() => generateExecutive()} className="gap-2">
+                      <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" /> Add Executive Brief
+                    </Button>
+                  )}
+                  {!reports.find((r) => r.id === "report-compliance") && (
+                    <Button variant="outline" onClick={generateCompliance} className="gap-2">
+                      <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Add Compliance Evidence Pack
+                    </Button>
+                  )}
+                </div>
+                {/* Report summary strip */}
+                <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]">
+                  <span className="font-semibold text-foreground mr-1">{reports.length} report{reports.length !== 1 ? "s" : ""}</span>
+                  <span className="w-px h-3 bg-border" />
+                  <span className="text-muted-foreground">{files.length} firewall{files.length !== 1 ? "s" : ""}</span>
+                  <span className="w-px h-3 bg-border" />
+                  <span className="text-muted-foreground">{totalRules} rules</span>
+                  {totalFindings > 0 && (
+                    <>
+                      <span className="w-px h-3 bg-border" />
+                      {(() => {
+                        const counts: Record<string, number> = {};
+                        Object.values(analysisResults).forEach((r) =>
+                          r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
+                        );
+                        return Object.entries(counts).map(([sev, count]) => (
+                          <span key={sev} className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
+                            {count} {sev}
+                          </span>
+                        ));
+                      })()}
+                    </>
+                  )}
+                </div>
               </div>
             ) : null
           }

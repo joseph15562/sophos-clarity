@@ -1,4 +1,5 @@
 import type { ExtractedSections } from "./extract-sections";
+import { buildAnonymisationMap, anonymiseData, anonymiseString, createStreamDeanonymiser } from "./anonymise";
 
 type StreamOptions = {
   sections: ExtractedSections;
@@ -19,6 +20,13 @@ type StreamOptions = {
 export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, onDelta, onDone, onError, onStatus }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
+  // Anonymise sensitive data before sending to cloud API
+  const anonMap = buildAnonymisationMap(sections, customerName, firewallLabels);
+  const anonSections = anonymiseData(sections, anonMap);
+  const anonCustomerName = customerName ? anonymiseString(customerName, anonMap) : undefined;
+  const anonLabels = firewallLabels?.map((l) => anonymiseString(l, anonMap));
+  const deanon = createStreamDeanonymiser(anonMap);
+
   const timeoutMs = 150_000; // 2.5 min — backend may retry 429 with ~60s waits
   const ac = new AbortController();
   const timeoutId = setTimeout(() => ac.abort(), timeoutMs);
@@ -33,7 +41,7 @@ export async function streamConfigParse({ sections, environment, country, custom
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance }),
+      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance }),
     });
   } catch (e) {
     clearTimeout(timeoutId);
@@ -86,6 +94,8 @@ export async function streamConfigParse({ sections, environment, country, custom
 
       const jsonStr = line.slice(6).trim();
       if (jsonStr === "[DONE]") {
+        const remaining = deanon.flush();
+        if (remaining) onDelta(remaining);
         onStatus?.("");
         onDone();
         return;
@@ -94,7 +104,10 @@ export async function streamConfigParse({ sections, environment, country, custom
       try {
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
+        if (content) {
+          const decoded = deanon.push(content);
+          if (decoded) onDelta(decoded);
+        }
       } catch {
         buffer = line + "\n" + buffer;
         break;
@@ -113,11 +126,16 @@ export async function streamConfigParse({ sections, environment, country, custom
       try {
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
+        if (content) {
+          const decoded = deanon.push(content);
+          if (decoded) onDelta(decoded);
+        }
       } catch { /* ignore */ }
     }
   }
 
+  const trailing = deanon.flush();
+  if (trailing) onDelta(trailing);
   onStatus?.("");
   onDone();
 }

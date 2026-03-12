@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
-import { Upload, FileText, X, Plus } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type UploadedFile = {
@@ -82,32 +81,32 @@ export function FileUpload({ files, onFilesChange }: Props) {
     <div className="space-y-3">
       {/* File list */}
       {files.map((f) => (
-        <Card key={f.id} className="border-2 border-primary/30 bg-primary/5">
-          <CardContent className="flex items-center gap-4 p-4">
-            <FileText className="h-8 w-8 text-primary shrink-0" />
-            <div className="flex-1 min-w-0 space-y-1">
-              <input
-                type="text"
-                value={f.label}
-                onChange={(e) => {
-                  const updated = files.map((file) =>
-                    file.id === f.id ? { ...file, label: e.target.value } : file
-                  );
-                  onFilesChange(updated);
-                }}
-                placeholder="Firewall name (e.g. Sophos Firewall)"
-                className="w-full bg-transparent border-b border-primary/30 focus:border-primary outline-none font-semibold text-foreground text-sm pb-0.5"
-              />
-              <p className="text-xs text-muted-foreground">{f.fileName}</p>
-            </div>
-            <Button variant="ghost" size="icon" onClick={() => removeFile(f.id)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
+        <div key={f.id} className="rounded-xl border border-[#2006F7]/25 dark:border-[#2006F7]/30 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] flex items-center gap-4 p-4">
+          <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
+            <img src="/icons/sophos-document.svg" alt="" className="h-5 w-5 sophos-icon" />
+          </div>
+          <div className="flex-1 min-w-0 space-y-1">
+            <input
+              type="text"
+              value={f.label}
+              onChange={(e) => {
+                const updated = files.map((file) =>
+                  file.id === f.id ? { ...file, label: e.target.value } : file
+                );
+                onFilesChange(updated);
+              }}
+              placeholder="Firewall name (e.g. Sophos Firewall)"
+              className="w-full bg-transparent border-b border-[#2006F7]/25 focus:border-[#2006F7] outline-none font-bold text-foreground text-sm pb-0.5"
+            />
+            <p className="text-[11px] text-muted-foreground">{f.fileName}</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => removeFile(f.id)} className="shrink-0 opacity-50 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       ))}
       {files.length > 0 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[11px] text-muted-foreground">
           Click on the config name above to rename the firewall for the report.
         </p>
       )}
@@ -118,10 +117,12 @@ export function FileUpload({ files, onFilesChange }: Props) {
         onDragLeave={() => setDragActive(false)}
         onDrop={onDrop}
         onClick={onBrowse}
-        className={`cursor-pointer rounded-xl border-2 border-dashed p-${files.length > 0 ? "6" : "12"} text-center transition-all ${
+        className={`cursor-pointer rounded-xl border-2 border-dashed text-center transition-all duration-200 ${
+          files.length > 0 ? "p-5" : "p-10"
+        } ${
           dragActive
-            ? "border-primary bg-primary/5 scale-[1.01]"
-            : "border-border hover:border-primary/50 hover:bg-muted/50"
+            ? "border-[#2006F7] bg-[#2006F7]/5 scale-[1.01]"
+            : "border-border/60 dark:border-border hover:border-[#2006F7]/40 hover:bg-[#2006F7]/[0.02] dark:hover:bg-[#2006F7]/[0.04]"
         }`}
       >
         {files.length > 0 ? (
@@ -131,12 +132,14 @@ export function FileUpload({ files, onFilesChange }: Props) {
           </div>
         ) : (
           <>
-            <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold text-foreground mb-1">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center mb-4">
+              <img src="/icons/sophos-network.svg" alt="" className="h-8 w-8 sophos-icon" />
+            </div>
+            <p className="text-base font-display font-bold text-foreground mb-1">
               Drop your Sophos Config HTML file(s) here
             </p>
             <p className="text-sm text-muted-foreground">
-              or click to browse • Accepts .html / .htm files • Multiple files supported
+              or click to browse &middot; Accepts .html / .htm &middot; Multiple files supported
             </p>
           </>
         )}

@@ -188,24 +188,25 @@ function buildPdfHtml(innerHTML: string, title: string): string {
   <meta charset="utf-8">
   <title>${title}</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700&family=Zalando+Sans+Expanded:wght@400;500;600;700&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 11pt;
       line-height: 1.45;
-      color: #1a1a2e;
+      color: #001A47;
       padding: 0;
       max-width: 186mm;
       margin: 0 auto;
       background: #fff;
     }
     .print-content { padding: 12mm 0; }
-    h1 { font-size: 18pt; font-weight: 700; margin: 14px 0 8px; color: #1a1a2e; }
-    h2 { font-size: 14pt; font-weight: 700; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #2563eb; color: #1e40af; }
-    h3 { font-size: 12pt; font-weight: 600; margin: 10px 0 4px; color: #1a1a2e; }
-    h4, h5, h6 { font-size: 11pt; font-weight: 600; margin: 8px 0 4px; color: #334155; }
-    p { margin: 0 0 8px; color: #475569; }
-    ul, ol { margin: 0 0 8px; padding-left: 22px; color: #475569; }
+    h1 { font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif; font-size: 18pt; font-weight: 700; margin: 14px 0 8px; color: #001A47; }
+    h2 { font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif; font-size: 14pt; font-weight: 700; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #2006F7; color: #10037C; }
+    h3 { font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif; font-size: 12pt; font-weight: 600; margin: 10px 0 4px; color: #001A47; }
+    h4, h5, h6 { font-size: 11pt; font-weight: 600; margin: 8px 0 4px; color: #223E4C; }
+    p { margin: 0 0 8px; color: #223E4C; }
+    ul, ol { margin: 0 0 8px; padding-left: 22px; color: #223E4C; }
     li { margin: 3px 0; }
     table {
       width: 100%;
@@ -214,35 +215,35 @@ function buildPdfHtml(innerHTML: string, title: string): string {
       font-size: 9.5pt;
       table-layout: fixed;
       page-break-inside: auto;
-      border: 1px solid #cbd5e1;
+      border: 1px solid #BBCFDE;
     }
     thead { display: table-header-group; }
     tr { page-break-inside: avoid; page-break-after: auto; }
     th {
-      background: #2563eb;
+      background: #2006F7;
       color: #fff;
       font-weight: 600;
       text-align: left;
       padding: 5px 6px;
-      border: 1px solid #1d4ed8;
+      border: 1px solid #10037C;
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
     td {
       padding: 4px 6px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #BBCFDE;
       word-wrap: break-word;
       overflow-wrap: break-word;
       vertical-align: top;
-      color: #334155;
+      color: #223E4C;
     }
-    tr:nth-child(even) td { background: #f8fafc; }
+    tr:nth-child(even) td { background: #EDF2F9; }
     tr:nth-child(odd) td { background: #fff; }
-    code { font-family: 'Courier New', monospace; font-size: 9pt; background: #f1f5f9; padding: 2px 4px; border-radius: 3px; }
-    pre { background: #f1f5f9; padding: 8px; border-radius: 4px; overflow-x: auto; margin: 8px 0; font-size: 9pt; }
-    hr { border: none; border-top: 1px solid #e2e8f0; margin: 12px 0; }
-    blockquote { border-left: 4px solid #2563eb; padding-left: 10px; margin: 8px 0; background: #eff6ff; color: #475569; font-style: italic; }
-    strong { font-weight: 600; color: #1a1a2e; }
+    code { font-family: 'Courier New', monospace; font-size: 9pt; background: #EDF2F9; padding: 2px 4px; border-radius: 3px; }
+    pre { background: #EDF2F9; padding: 8px; border-radius: 4px; overflow-x: auto; margin: 8px 0; font-size: 9pt; }
+    hr { border: none; border-top: 1px solid #BBCFDE; margin: 12px 0; }
+    blockquote { border-left: 4px solid #2006F7; padding-left: 10px; margin: 8px 0; background: #EDF2F9; color: #223E4C; font-style: italic; }
+    strong { font-weight: 600; color: #001A47; }
     @media print {
       body { padding: 0; max-width: none; }
       .print-content { padding: 0; max-width: 186mm; margin: 0 auto; }
@@ -657,10 +658,25 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
 
         {isLoading && !markdown && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin mb-4" />
-            <p className="text-lg font-medium">Analysing configuration...</p>
-            {loadingStatus && <p className="text-sm mt-1 font-medium text-foreground">{loadingStatus}</p>}
-            <p className="text-sm mt-1">This may take a minute for large configs</p>
+            <Loader2 className="h-8 w-8 animate-spin mb-6 text-primary" />
+            <p className="text-lg font-semibold text-foreground mb-4">Analysing configuration</p>
+            <div className="flex items-center gap-2 text-xs">
+              {["Sending request", "Waiting for response", "Generating"].map((step, i) => {
+                const currentIdx = !loadingStatus ? -1 : loadingStatus.startsWith("Sending") ? 0 : loadingStatus.startsWith("Waiting") ? 1 : loadingStatus.startsWith("Generating") ? 2 : -1;
+                const isActive = i === currentIdx;
+                const isDone = i < currentIdx;
+                return (
+                  <span key={step} className="flex items-center gap-1.5">
+                    {i > 0 && <span className={`w-6 h-px ${isDone ? "bg-[#00995a] dark:bg-[#00F2B3]" : "bg-border"}`} />}
+                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${isDone ? "bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/15 dark:text-[#00F2B3]" : isActive ? "bg-primary/15 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"}`}>
+                      {isDone ? "✓" : i + 1}
+                    </span>
+                    <span className={`${isActive ? "font-semibold text-foreground" : isDone ? "text-[#00995a] dark:text-[#00F2B3]" : "text-muted-foreground"}`}>{step}</span>
+                  </span>
+                );
+              })}
+            </div>
+            <p className="text-xs mt-4 text-muted-foreground">This may take a minute for large configs</p>
           </div>
         )}
 
@@ -784,13 +800,17 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
       </div>
       <Tabs value={activeReportId} onValueChange={onActiveChange} className="no-print-tabs">
         <TabsList className="no-print flex-wrap h-auto gap-1">
-          {reports.map((r) => (
-            <TabsTrigger key={r.id} value={r.id} className="text-xs">
-              {r.label}
-              {loadingReportIds.has(r.id) && <Loader2 className="h-3 w-3 animate-spin ml-1" />}
-              {failedReportIds.has(r.id) && <span className="ml-1 text-destructive">⚠</span>}
-            </TabsTrigger>
-          ))}
+          {reports.map((r) => {
+            const done = r.markdown && !loadingReportIds.has(r.id) && !failedReportIds.has(r.id);
+            return (
+              <TabsTrigger key={r.id} value={r.id} className="text-xs gap-1.5">
+                {r.label}
+                {loadingReportIds.has(r.id) && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                {failedReportIds.has(r.id) && <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-destructive/10 text-destructive text-[10px]">✕</span>}
+                {done && <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/15 dark:text-[#00F2B3] text-[10px]">✓</span>}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
         {reports.map((r) => (
           <TabsContent key={r.id} value={r.id}>

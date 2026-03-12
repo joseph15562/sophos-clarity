@@ -1,93 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700&family=Zalando+Sans+Expanded:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 30% 12%;
+    /* Sophos Brand — Light Mode */
+    --background: 220 28% 95%;       /* #EDF2F9 Light Neutral */
+    --foreground: 215 52% 14%;       /* #001A47 Dark Blue */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 30% 12%;
+    --card-foreground: 215 52% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 12%;
+    --popover-foreground: 215 52% 14%;
 
-    --primary: 215 80% 48%;
+    --primary: 243 95% 50%;          /* #2006F7 Sophos Blue */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 220 30% 12%;
+    --secondary: 220 28% 95%;        /* #EDF2F9 Light Neutral */
+    --secondary-foreground: 215 52% 14%;
 
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 213 27% 90%;            /* #BBCFDE area */
+    --muted-foreground: 210 25% 40%; /* Darker than #6A889B for readability */
 
-    --accent: 200 75% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 184 100% 50%;          /* #00EDFF Cyber Blue */
+    --accent-foreground: 215 52% 14%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 352 100% 46%;     /* #EA0022 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 88%;
-    --input: 220 14% 88%;
-    --ring: 215 80% 48%;
+    --border: 213 27% 78%;           /* Slightly stronger than #BBCFDE */
+    --input: 213 27% 78%;
+    --ring: 243 95% 50%;             /* Sophos Blue */
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-foreground: 215 52% 14%;
+    --sidebar-primary: 243 95% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 28% 95%;
+    --sidebar-accent-foreground: 215 52% 14%;
+    --sidebar-border: 213 27% 80%;
+    --sidebar-ring: 243 95% 50%;
 
-    --success: 152 60% 40%;
+    --success: 160 100% 30%;         /* Darker green for light-bg readability */
     --success-foreground: 0 0% 100%;
+
+    /* Sophos brand tokens */
+    --sophos-dark: #001A47;
+    --sophos-blue: #2006F7;
+    --sophos-deep: #10037C;
+    --sophos-purple: #5A00FF;
+    --sophos-violet: #B529F7;
+    --sophos-sky: #009CFB;
+    --sophos-cyber-blue: #00EDFF;
+    --sophos-cyber-green: #00F2B3;
+    --sophos-neutral: #EDF2F9;
+    --sophos-grey: #6A889B;
+    --sophos-dark-grey: #223E4C;
   }
 
   .dark {
-    --background: 224 30% 8%;
-    --foreground: 210 20% 92%;
+    /* Sophos Brand — Dark Mode (high contrast) */
+    --background: 216 100% 8%;       /* Deep navy — darker than #001A47 */
+    --foreground: 0 0% 96%;          /* Near-white for max readability */
 
-    --card: 224 25% 12%;
-    --card-foreground: 210 20% 92%;
+    --card: 215 60% 14%;             /* #001A47-ish — distinct from background */
+    --card-foreground: 0 0% 96%;
 
-    --popover: 224 25% 12%;
-    --popover-foreground: 210 20% 92%;
+    --popover: 215 60% 14%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 215 80% 55%;
+    --primary: 243 100% 62%;         /* Sophos Blue — bright on dark */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 224 20% 18%;
-    --secondary-foreground: 210 20% 92%;
+    --secondary: 215 50% 20%;        /* Lighter than card for secondary elements */
+    --secondary-foreground: 0 0% 92%;
 
-    --muted: 224 20% 18%;
-    --muted-foreground: 215 15% 60%;
+    --muted: 215 45% 20%;
+    --muted-foreground: 210 20% 65%; /* Brighter muted text */
 
-    --accent: 200 75% 50%;
+    --accent: 184 100% 50%;          /* Cyber Blue */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 352 90% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 224 20% 20%;
-    --input: 224 20% 20%;
-    --ring: 215 80% 55%;
+    --border: 215 40% 25%;           /* More visible borders */
+    --input: 215 40% 25%;
+    --ring: 243 100% 62%;
 
-    --sidebar-background: 224 30% 8%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 216 100% 8%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 243 100% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 215 45% 20%;
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 215 40% 25%;
+    --sidebar-ring: 243 100% 62%;
 
-    --success: 152 60% 45%;
+    --success: 160 100% 47%;
     --success-foreground: 0 0% 100%;
   }
 }
@@ -99,12 +114,26 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Zalando Sans', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Zalando Sans Expanded', 'Zalando Sans', system-ui, sans-serif;
   }
 
   code, pre {
     font-family: 'JetBrains Mono', monospace;
   }
+}
+
+/* Sophos brand icons — white in dark mode, blue in light mode */
+.sophos-icon {
+  transition: filter 0.15s ease;
+}
+.dark .sophos-icon {
+  filter: brightness(0) invert(1);
 }
 
 @layer utilities {
