@@ -198,3 +198,26 @@ export const CONTROL_CATEGORIES = [
   "Monitoring & Logging",
   "Configuration Management",
 ] as const;
+
+const FINDING_TO_CONTROL: [RegExp, string][] = [
+  [/DPI engine/i, "dpiEngine"],
+  [/missing web filtering/i, "webFilter"],
+  [/without IPS/i, "ips"],
+  [/without Application Control/i, "appControl"],
+  [/logging disabled/i, "logging"],
+  [/MFA|OTP/i, "mfa"],
+  [/broad source/i, "segmentation"],
+  [/"ANY" service/i, "segmentation"],
+  [/SSL\/TLS inspection/i, "sslInspection"],
+  [/overlapping/i, "ruleHygiene"],
+  [/disabled.*WAN/i, "ruleHygiene"],
+];
+
+export function findingToFrameworks(findingTitle: string, selectedFrameworks: string[]): string[] {
+  const controlKey = FINDING_TO_CONTROL.find(([re]) => re.test(findingTitle))?.[1];
+  if (!controlKey) return [];
+  return selectedFrameworks.filter((fw) => {
+    const controls = FRAMEWORK_CONTROLS[fw];
+    return controls?.includes(controlKey);
+  });
+}

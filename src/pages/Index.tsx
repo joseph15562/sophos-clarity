@@ -145,6 +145,22 @@ const Index = () => {
               <FileUpload files={files} onFilesChange={handleFilesChange} />
             </section>
 
+            {/* Step 2 — Assessment Context (before findings so compliance tags are dynamic) */}
+            {hasFiles && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">2</span>
+                  <h2 className="text-lg font-display font-bold text-foreground">Assessment Context</h2>
+                  <span className="text-xs text-muted-foreground">(optional — select frameworks to tag findings)</span>
+                </div>
+                <Card>
+                  <CardContent className="pt-6">
+                    <BrandingSetup branding={branding} onChange={setBranding} />
+                  </CardContent>
+                </Card>
+              </section>
+            )}
+
             {hasFiles && (
               <EstateOverview
                 fileCount={files.length}
@@ -155,6 +171,7 @@ const Index = () => {
                 totalPopulated={totalPopulated}
                 extractionPct={extractionPct}
                 aggregatedPosture={aggregatedPosture}
+                selectedFrameworks={branding.selectedFrameworks}
               />
             )}
 
@@ -191,22 +208,6 @@ const Index = () => {
                   environment={branding.environment}
                 />
               </Suspense>
-            )}
-
-            {/* Step 2 — Assessment Context */}
-            {hasFiles && (
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">2</span>
-                  <h2 className="text-lg font-display font-bold text-foreground">Assessment Context</h2>
-                  <span className="text-xs text-muted-foreground">(optional)</span>
-                </div>
-                <Card>
-                  <CardContent className="pt-6">
-                    <BrandingSetup branding={branding} onChange={setBranding} />
-                  </CardContent>
-                </Card>
-              </section>
             )}
 
             {/* Privacy banner */}

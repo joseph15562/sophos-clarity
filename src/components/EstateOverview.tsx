@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import type { AnalysisResult, Severity, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
+import { findingToFrameworks } from "@/lib/compliance-map";
 
 interface EstateOverviewProps {
   fileCount: number;
@@ -12,6 +13,7 @@ interface EstateOverviewProps {
   totalPopulated: number;
   extractionPct: number;
   aggregatedPosture: InspectionPosture;
+  selectedFrameworks?: string[];
 }
 
 const SEVERITY_COLOR: Record<Severity, string> = {
@@ -39,6 +41,7 @@ export function EstateOverview({
   totalPopulated,
   extractionPct,
   aggregatedPosture,
+  selectedFrameworks = [],
 }: EstateOverviewProps) {
   return (
     <>
@@ -99,7 +102,7 @@ export function EstateOverview({
 
       {/* Deterministic findings panel */}
       {totalFindings > 0 && (
-        <FindingsPanel analysisResults={analysisResults} fileCount={fileCount} />
+        <FindingsPanel analysisResults={analysisResults} fileCount={fileCount} selectedFrameworks={selectedFrameworks} />
       )}
 
       {/* Estate risk comparison */}
@@ -279,8 +282,8 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   );
 }
 
-function FindingsPanel({ analysisResults, fileCount }: {
-  analysisResults: Record<string, AnalysisResult>; fileCount: number;
+function FindingsPanel({ analysisResults, fileCount, selectedFrameworks }: {
+  analysisResults: Record<string, AnalysisResult>; fileCount: number; selectedFrameworks: string[];
 }) {
   return (
     <section className="space-y-3">
@@ -291,25 +294,35 @@ function FindingsPanel({ analysisResults, fileCount }: {
       </div>
       <div className="grid gap-2.5">
         {Object.entries(analysisResults).map(([label, result]) =>
-          result.findings.map((f) => (
-            <div key={`${label}-${f.id}`} className={`rounded-lg border border-border border-l-4 ${SEVERITY_BORDER[f.severity]} bg-card px-4 py-3.5 flex items-start gap-3 text-sm shadow-sm`}>
-              <span className="mt-0.5 text-lg shrink-0" title={f.severity}>{severityIcon(f.severity)}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className={`font-bold text-sm ${SEVERITY_COLOR[f.severity]}`}>{f.title}</span>
-                  {fileCount > 1 && (
-                    <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
+          result.findings.map((f) => {
+            const frameworks = selectedFrameworks.length > 0
+              ? findingToFrameworks(f.title, selectedFrameworks)
+              : [];
+            return (
+              <div key={`${label}-${f.id}`} className={`rounded-lg border border-border border-l-4 ${SEVERITY_BORDER[f.severity]} bg-card px-4 py-3.5 flex items-start gap-3 text-sm shadow-sm`}>
+                <span className="mt-0.5 text-lg shrink-0" title={f.severity}>{severityIcon(f.severity)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className={`font-bold text-sm ${SEVERITY_COLOR[f.severity]}`}>{f.title}</span>
+                    {fileCount > 1 && (
+                      <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
+                    )}
+                    {frameworks.map((fw) => (
+                      <span key={fw} className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/20 dark:text-[#ff6b6b]">
+                        {fw}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{f.detail}</p>
+                  {f.remediation && (
+                    <div className="mt-2 px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
+                      <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {f.remediation}</p>
+                    </div>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{f.detail}</p>
-                {f.remediation && (
-                  <div className="mt-2 px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
-                    <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {f.remediation}</p>
-                  </div>
-                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </section>
