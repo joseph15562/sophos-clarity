@@ -183,80 +183,298 @@ function parseInlineFormatting(text: string): TextRun[] {
   return runs.length > 0 ? runs : [new TextRun(text)];
 }
 
-/** Build a standalone HTML document string for PDF/print and zip export. A4 format, clear to read. */
-function buildPdfHtml(innerHTML: string, title: string): string {
+/** Build a standalone HTML document string for PDF/print and zip export. */
+function buildPdfHtml(innerHTML: string, title: string, branding?: BrandingData): string {
+  const companyName = branding?.companyName || "";
+  const customerName = branding?.customerName || "";
+  const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <title>${title}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} — Sophos FireComply</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700&family=Zalando+Sans+Expanded:wght@400;500;600;700&display=swap');
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 11pt;
-      line-height: 1.45;
-      color: #001A47;
-      padding: 0;
-      max-width: 186mm;
-      margin: 0 auto;
-      background: #fff;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #ffffff;
+      --bg-surface: #f8fafc;
+      --bg-muted: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent: #2006F7;
+      --accent-light: rgba(32, 6, 247, 0.08);
+      --accent-dark: #10037C;
+      --th-bg: #10037C;
+      --th-text: #ffffff;
+      --row-even: #f8fafc;
+      --row-odd: #ffffff;
+      --code-bg: #f1f5f9;
+      --green: #059669;
+      --green-bg: rgba(5, 150, 105, 0.08);
     }
-    .print-content { padding: 12mm 0; }
-    h1 { font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif; font-size: 18pt; font-weight: 700; margin: 14px 0 8px; color: #001A47; }
-    h2 { font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif; font-size: 14pt; font-weight: 700; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #2006F7; color: #10037C; }
-    h3 { font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif; font-size: 12pt; font-weight: 600; margin: 10px 0 4px; color: #001A47; }
-    h4, h5, h6 { font-size: 11pt; font-weight: 600; margin: 8px 0 4px; color: #223E4C; }
-    p { margin: 0 0 8px; color: #223E4C; }
-    ul, ol { margin: 0 0 8px; padding-left: 22px; color: #223E4C; }
-    li { margin: 3px 0; }
+
+    [data-theme="dark"] {
+      --bg: #0B1120;
+      --bg-surface: #131B2E;
+      --bg-muted: #1a2335;
+      --border: #1e2d44;
+      --text: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #6366f1;
+      --accent-light: rgba(99, 102, 241, 0.1);
+      --accent-dark: #818cf8;
+      --th-bg: #1e2d44;
+      --th-text: #e2e8f0;
+      --row-even: #131B2E;
+      --row-odd: #0B1120;
+      --code-bg: #1a2335;
+      --green: #34d399;
+      --green-bg: rgba(52, 211, 153, 0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+      padding: 0;
+      max-width: 900px;
+      margin: 0 auto;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header bar ── */
+    .report-header {
+      background: var(--accent-dark);
+      color: #fff;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 0 0 12px 12px;
+      margin-bottom: 28px;
+    }
+    [data-theme="dark"] .report-header { background: var(--bg-surface); border: 1px solid var(--border); border-top: none; }
+    .report-header .brand { display: flex; align-items: center; gap: 10px; }
+    .report-header .brand svg { width: 22px; height: 22px; }
+    .report-header .brand-text { font-weight: 700; font-size: 12pt; letter-spacing: -0.3px; }
+    .report-header .meta { text-align: right; font-size: 8.5pt; opacity: 0.85; line-height: 1.5; }
+
+    /* ── Dark mode toggle ── */
+    .theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 100;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 9pt;
+      font-family: inherit;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .theme-toggle:hover { background: var(--bg-muted); color: var(--text); }
+
+    /* ── Content area ── */
+    .print-content { padding: 0 28px 40px; }
+
+    h1 {
+      font-size: 20pt;
+      font-weight: 800;
+      margin: 28px 0 10px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    h2 {
+      font-size: 14pt;
+      font-weight: 700;
+      margin: 24px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--accent);
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    h3 {
+      font-size: 12pt;
+      font-weight: 600;
+      margin: 18px 0 6px;
+      color: var(--text);
+    }
+    h4, h5, h6 { font-size: 10.5pt; font-weight: 600; margin: 12px 0 4px; color: var(--text-secondary); }
+    p { margin: 0 0 10px; color: var(--text-secondary); }
+    ul, ol { margin: 0 0 10px; padding-left: 24px; color: var(--text-secondary); }
+    li { margin: 4px 0; }
+    li::marker { color: var(--text-muted); }
+
+    /* ── Tables ── */
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 14px 0;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
     table {
       width: 100%;
-      border-collapse: collapse;
-      margin: 10px 0;
-      font-size: 9.5pt;
-      table-layout: fixed;
-      page-break-inside: auto;
-      border: 1px solid #BBCFDE;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 9pt;
+      table-layout: auto;
     }
     thead { display: table-header-group; }
-    tr { page-break-inside: avoid; page-break-after: auto; }
+    tr { page-break-inside: avoid; }
     th {
-      background: #2006F7;
-      color: #fff;
+      background: var(--th-bg);
+      color: var(--th-text);
       font-weight: 600;
       text-align: left;
-      padding: 5px 6px;
-      border: 1px solid #10037C;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
+    th:first-child { border-top-left-radius: 9px; }
+    th:last-child { border-top-right-radius: 9px; }
     td {
-      padding: 4px 6px;
-      border: 1px solid #BBCFDE;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
       word-wrap: break-word;
       overflow-wrap: break-word;
       vertical-align: top;
-      color: #223E4C;
+      color: var(--text-secondary);
     }
-    tr:nth-child(even) td { background: #EDF2F9; }
-    tr:nth-child(odd) td { background: #fff; }
-    code { font-family: 'Courier New', monospace; font-size: 9pt; background: #EDF2F9; padding: 2px 4px; border-radius: 3px; }
-    pre { background: #EDF2F9; padding: 8px; border-radius: 4px; overflow-x: auto; margin: 8px 0; font-size: 9pt; }
-    hr { border: none; border-top: 1px solid #BBCFDE; margin: 12px 0; }
-    blockquote { border-left: 4px solid #2006F7; padding-left: 10px; margin: 8px 0; background: #EDF2F9; color: #223E4C; font-style: italic; }
-    strong { font-weight: 600; color: #001A47; }
+    tr:last-child td { border-bottom: none; }
+    tr:last-child td:first-child { border-bottom-left-radius: 9px; }
+    tr:last-child td:last-child { border-bottom-right-radius: 9px; }
+    tr:nth-child(even) td { background: var(--row-even); }
+    tr:nth-child(odd) td { background: var(--row-odd); }
+    tr:hover td { background: var(--accent-light); }
+
+    /* ── Code ── */
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+      font-size: 8.5pt;
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+    pre {
+      background: var(--code-bg);
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+      font-size: 8.5pt;
+      border: 1px solid var(--border);
+    }
+    pre code { background: none; padding: 0; color: var(--text); }
+
+    /* ── Misc ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    blockquote {
+      border-left: 3px solid var(--accent);
+      padding: 10px 14px;
+      margin: 10px 0;
+      background: var(--accent-light);
+      border-radius: 0 8px 8px 0;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+    strong { font-weight: 600; color: var(--text); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    .report-footer {
+      margin-top: 40px;
+      padding: 16px 28px;
+      text-align: center;
+      font-size: 8pt;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Print ── */
     @media print {
-      body { padding: 0; max-width: none; }
+      body { padding: 0; max-width: none; background: #fff; color: #0f172a; }
       .print-content { padding: 0; max-width: 186mm; margin: 0 auto; }
+      .report-header { border-radius: 0; margin-bottom: 14px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .theme-toggle { display: none; }
+      .report-footer { display: none; }
       @page { size: A4; margin: 12mm; }
-      table { font-size: 9pt; }
-      th, td { padding: 4px 5px; }
+      table { font-size: 8.5pt; }
+      th, td { padding: 4px 6px; }
+      th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      tr:nth-child(even) td { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     }
   </style>
 </head>
-<body><div class="print-content">${innerHTML}</div></body>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
+
+  <div class="report-header">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="currentColor" stroke-width="1.5" fill="rgba(255,255,255,0.15)"/>
+        <path d="M12 8v4m0 4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-text">SOPHOS FIRECOMPLY</span>
+    </div>
+    <div class="meta">
+      ${companyName ? `<div>${companyName}</div>` : ""}
+      ${customerName ? `<div>${customerName}</div>` : ""}
+      <div>${dateStr}</div>
+    </div>
+  </div>
+
+  <div class="print-content">${innerHTML}</div>
+
+  <div class="report-footer">
+    Generated by Sophos FireComply &mdash; ${dateStr}${companyName ? ` &mdash; ${companyName}` : ""}
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const btn = document.getElementById('themeBtn');
+      if (html.getAttribute('data-theme') === 'dark') {
+        html.setAttribute('data-theme', 'light');
+        btn.textContent = '🌙 Dark Mode';
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        btn.textContent = '☀️ Light Mode';
+      }
+    }
+
+    /* Wrap bare tables in .table-wrapper for rounded corners + scroll */
+    document.querySelectorAll('table').forEach(function(t) {
+      if (t.parentElement && t.parentElement.classList.contains('table-wrapper')) return;
+      var wrapper = document.createElement('div');
+      wrapper.className = 'table-wrapper';
+      t.parentNode.insertBefore(wrapper, t);
+      wrapper.appendChild(t);
+    });
+  </script>
+</body>
 </html>`;
 }
 
@@ -664,7 +882,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     if (!printWindow) return;
 
     const title = pdfFilename.replace(/\.pdf$/i, "");
-    printWindow.document.write(buildPdfHtml(el.innerHTML, title));
+    printWindow.document.write(buildPdfHtml(el.innerHTML, title, branding));
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => {
@@ -845,10 +1063,10 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
       const wordBlob = await generateWordBlob(report.markdown, branding);
       reportsFolder.file(`${baseName}-report.docx`, wordBlob);
 
-      // PDF (as styled HTML)
+      // Styled HTML report
       const rawHtml = marked.parse(report.markdown, { async: false }) as string;
       const sanitized = DOMPurify.sanitize(rawHtml);
-      const pdfHtml = buildPdfHtml(sanitized, baseName);
+      const pdfHtml = buildPdfHtml(sanitized, baseName, branding);
       reportsFolder.file(`${baseName}-report.html`, pdfHtml);
 
       // PowerPoint presentation
