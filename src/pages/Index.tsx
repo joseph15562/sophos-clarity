@@ -14,7 +14,8 @@ import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-pers
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { AuthGate } from "@/components/AuthGate";
 import { OrgSetup } from "@/components/OrgSetup";
-import { saveReportCloud, saveReportLocal, type SavedReportEntry } from "@/lib/saved-reports";
+import { saveReportCloud, saveReportLocal, type SavedReportEntry, type AnalysisSummary } from "@/lib/saved-reports";
+import type { LoadSavedReportArgs } from "@/components/SavedReportsLibrary";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
@@ -138,12 +139,19 @@ function InnerApp() {
     setSavingReports(false);
   }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment]);
 
-  const handleLoadSavedReports = useCallback((savedReports: SavedReportEntry[], customerName: string, environment: string) => {
+  const [loadedSavedSummary, setLoadedSavedSummary] = useState<{ customerName: string; summary: AnalysisSummary } | null>(null);
+
+  const handleLoadSavedReports = useCallback((args: LoadSavedReportArgs) => {
+    const { reports: savedReports, customerName, environment, analysisSummary } = args;
     if (savedReports.length > 0) {
       setReports(savedReports.map((r) => ({ id: r.id, label: r.label, markdown: r.markdown })));
       setActiveReportId(savedReports[0].id);
+      setLoadedSavedSummary(null);
+    } else {
+      setLoadedSavedSummary({ customerName, summary: analysisSummary });
     }
     setBranding((prev) => ({ ...prev, customerName, environment }));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [setReports, setActiveReportId]);
 
   const handleStartOver = useCallback(() => {
@@ -178,6 +186,57 @@ function InnerApp() {
             <RotateCcw className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
             <span className="text-foreground">Previous session restored — {reports.length} report{reports.length !== 1 ? "s" : ""} recovered.</span>
             <span className="text-muted-foreground text-xs">Reports are saved locally for 24 hours.</span>
+          </div>
+        )}
+
+        {/* Loaded from saved Pre-AI assessment */}
+        {loadedSavedSummary && (
+          <div className="no-print rounded-xl border border-[#00995a]/20 dark:border-[#00F2B3]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-[#00995a]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center">
+                  <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Saved Assessment — {loadedSavedSummary.customerName}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Pre-AI deterministic analysis loaded from saved reports
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setLoadedSavedSummary(null)} className="text-muted-foreground hover:text-foreground text-xs px-2 py-1 rounded hover:bg-muted/50 transition-colors">
+                Dismiss
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
+                loadedSavedSummary.summary.overallScore >= 75 ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                loadedSavedSummary.summary.overallScore >= 50 ? "bg-[#F29400]/10 text-[#F29400]" :
+                "bg-[#EA0022]/10 text-[#EA0022]"
+              }`}>
+                Score: {loadedSavedSummary.summary.overallScore} ({loadedSavedSummary.summary.overallGrade})
+              </span>
+              <span className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground">
+                {loadedSavedSummary.summary.totalFindings} findings
+              </span>
+              <span className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground">
+                {loadedSavedSummary.summary.totalRules} rules
+              </span>
+              {loadedSavedSummary.summary.categories.map((c) => (
+                <span key={c.label} className={`text-[10px] px-2 py-1 rounded-md ${
+                  c.pct >= 80 ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                  c.pct >= 50 ? "bg-[#F29400]/10 text-[#F29400]" :
+                  "bg-[#EA0022]/10 text-[#EA0022]"
+                }`}>
+                  {c.label}: {c.pct}%
+                </span>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Upload the firewall config to run a full analysis, or generate AI reports from the live data.
+            </p>
           </div>
         )}
 

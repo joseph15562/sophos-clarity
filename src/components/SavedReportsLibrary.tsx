@@ -10,8 +10,15 @@ import {
   type SavedReportEntry,
 } from "@/lib/saved-reports";
 
+export interface LoadSavedReportArgs {
+  reports: SavedReportEntry[];
+  customerName: string;
+  environment: string;
+  analysisSummary: import("@/lib/saved-reports").AnalysisSummary;
+}
+
 interface Props {
-  onLoadReports: (reports: SavedReportEntry[], customerName: string, environment: string) => void;
+  onLoadReports: (args: LoadSavedReportArgs) => void;
   refreshTrigger?: number;
 }
 
@@ -211,7 +218,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
 
                   {/* Load button */}
                   <button
-                    onClick={() => onLoadReports(pkg.reports, pkg.customerName, pkg.environment)}
+                    onClick={() => onLoadReports({ reports: pkg.reports, customerName: pkg.customerName, environment: pkg.environment, analysisSummary: pkg.analysisSummary })}
                     className="flex items-center gap-1.5 text-[10px] font-medium px-3 py-1.5 rounded-lg bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20 transition-colors"
                   >
                     <ExternalLink className="h-3 w-3" />
