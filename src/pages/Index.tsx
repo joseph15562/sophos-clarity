@@ -297,7 +297,7 @@ const Index = () => {
           <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
           <div className="flex-1">
             <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">
-              Sophos Clarity
+              Sophos FireComply
             </h1>
             <p className="text-[11px] text-[#6A889B]">
               Firewall Configuration Assessment & Compliance Reporting
@@ -361,7 +361,7 @@ const Index = () => {
                   Turn Sophos Firewall Exports into Audit-Ready Documentation
                 </h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed">
-                  Upload one or more Sophos XGS configuration HTML exports. Sophos Clarity extracts every rule,
+                  Upload one or more Sophos XGS configuration HTML exports. Sophos FireComply extracts every rule,
                   setting, and policy, runs a deterministic security analysis, then generates branded technical reports,
                   executive summaries, and compliance evidence packs — ready for customer handoff or audit.
                 </p>

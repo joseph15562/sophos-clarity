@@ -11,7 +11,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="sophos-clarity-theme">
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="sophos-firecomply-theme">
       <TooltipProvider>
         <Toaster />
         <Sonner />
