@@ -39,7 +39,6 @@ const STATUS_STYLES: Record<ControlStatus, { cell: string; label: string; dot: s
 };
 
 export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props) {
-  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [selectedFw, setSelectedFw] = useState<string | null>(null);
 
   const firstResult = Object.values(analysisResults)[0];
@@ -107,20 +106,17 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   const status: ControlStatus = ctrl?.status ?? "na";
                   const s = STATUS_STYLES[status];
                   const cellKey = `${m.framework}-${controlName}`;
-                  const isHovered = hoveredCell === cellKey;
 
                   return (
                     <td
                       key={cellKey}
-                      className={`p-1.5 text-center border-t border-border/50 rounded-sm transition-colors relative group ${s.cell}`}
-                      onMouseEnter={() => setHoveredCell(cellKey)}
-                      onMouseLeave={() => setHoveredCell(null)}
+                      className={`p-1.5 text-center border-t border-border/50 rounded-sm transition-colors relative group/cell ${s.cell}`}
                     >
                       <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[11px] font-bold ${s.iconColor}`}>
                         {s.icon}
                       </span>
-                      {isHovered && ctrl && (
-                        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-lg text-left min-w-[200px] max-w-[280px] pointer-events-none">
+                      {ctrl && (
+                        <div className="hidden group-hover/cell:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-lg text-left min-w-[200px] max-w-[280px] pointer-events-none">
                           <p className="font-semibold text-foreground text-[11px]">{ctrl.controlName}</p>
                           <p className="text-muted-foreground mt-0.5 text-[10px]">{ctrl.evidence || "No evidence gathered"}</p>
                           <p className="mt-1">
