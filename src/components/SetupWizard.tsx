@@ -1,8 +1,8 @@
 import { useState, lazy, Suspense } from "react";
 import {
   ArrowRight, ArrowLeft, Building2, Wifi, Upload, Sparkles, Check, X, RotateCcw,
-  FileText, LayoutDashboard, Settings, Eye, Save, Download, MousePointerClick,
-  ChevronDown, Shield, BarChart3, History,
+  FileText, LayoutDashboard, Settings, Eye, Download, MousePointerClick,
+  ChevronDown, Shield, BarChart3, History, Users, Activity, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,17 +83,6 @@ function GuideStep({ number, title, description, icon, color }: {
   );
 }
 
-function FeatureCard({ icon, title, desc, color }: { icon: React.ReactNode; title: string; desc: string; color: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-lg bg-muted/20 p-2.5">
-      <div className={`shrink-0 mt-0.5 ${color}`}>{icon}</div>
-      <div>
-        <p className="text-[10px] font-semibold text-foreground">{title}</p>
-        <p className="text-[9px] text-muted-foreground leading-relaxed">{desc}</p>
-      </div>
-    </div>
-  );
-}
 
 function Skeleton() {
   return (
@@ -105,8 +94,361 @@ function Skeleton() {
   );
 }
 
+/* ── Overlay infrastructure ── */
+
+function FeatureOverlay({ title, subtitle, onClose, children }: {
+  title: string; subtitle: string; onClose: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="absolute inset-0 z-10 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-150">
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card shrink-0">
+        <button onClick={onClose} className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground">{title}</p>
+          <p className="text-[10px] text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+    </div>
+  );
+}
+
+function FeatureButton({ icon, title, desc, color, onClick }: {
+  icon: React.ReactNode; title: string; desc: string; color: string; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-left hover:border-[#2006F7]/30 hover:bg-muted/30 transition-all group"
+    >
+      <div className={`h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 ${color} group-hover:scale-110 transition-transform`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-semibold text-foreground">{title}</p>
+        <p className="text-[9px] text-muted-foreground leading-relaxed">{desc}</p>
+      </div>
+      <ExternalLink className="h-3 w-3 text-muted-foreground/40 group-hover:text-[#2006F7] transition-colors shrink-0" />
+    </button>
+  );
+}
+
+/* ── Mock UI components for overlays ── */
+
+function MockGauge({ score, grade, color }: { score: number; grade: string; color: string }) {
+  const r = 40;
+  const c = 2 * Math.PI * r;
+  const offset = c - (score / 100) * c;
+  return (
+    <svg width="100" height="100" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/20" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="5"
+        strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+        transform="rotate(-90 50 50)" />
+      <text x="50" y="46" textAnchor="middle" fill={color} fontSize="22" fontWeight="700">{score}</text>
+      <text x="50" y="62" textAnchor="middle" fill={color} fontSize="10" fontWeight="600">Grade {grade}</text>
+    </svg>
+  );
+}
+
+function MockRadar() {
+  const labels = ["Web Filter", "IPS", "App Control", "Auth", "Logging", "Rule Hygiene", "Admin", "Anti-Malware"];
+  const cx = 90, cy = 90, r = 70;
+  const points = labels.map((_, i) => {
+    const angle = (Math.PI * 2 * i) / labels.length - Math.PI / 2;
+    const v = [0.0, 0.0, 1.0, 1.0, 1.0, 0.29, 1.0, 1.0][i];
+    return { x: cx + r * v * Math.cos(angle), y: cy + r * v * Math.sin(angle), lx: cx + (r + 14) * Math.cos(angle), ly: cy + (r + 14) * Math.sin(angle), label: labels[i] };
+  });
+  const polyPoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+  return (
+    <svg width="180" height="180" viewBox="0 0 180 180" className="mx-auto">
+      {[1, 0.75, 0.5, 0.25].map((s) => (
+        <polygon key={s} points={labels.map((_, i) => { const a = (Math.PI * 2 * i) / labels.length - Math.PI / 2; return `${cx + r * s * Math.cos(a)},${cy + r * s * Math.sin(a)}`; }).join(" ")} fill="none" stroke="currentColor" strokeWidth="0.5" className="text-muted/30" />
+      ))}
+      <polygon points={polyPoints} fill="#2006F7" fillOpacity="0.15" stroke="#2006F7" strokeWidth="1.5" />
+      {points.map((p, i) => (
+        <text key={i} x={p.lx} y={p.ly} textAnchor="middle" dominantBaseline="middle" fontSize="6" fill="currentColor" className="text-muted-foreground">{p.label}</text>
+      ))}
+    </svg>
+  );
+}
+
+function MockSeverityBar() {
+  const items = [
+    { label: "Critical", count: 3, color: "#EA0022", pct: 10 },
+    { label: "High", count: 8, color: "#F29400", pct: 25 },
+    { label: "Medium", count: 14, color: "#F8E300", pct: 44 },
+    { label: "Low", count: 7, color: "#00995a", pct: 21 },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="flex h-3 rounded-full overflow-hidden">
+        {items.map((s) => (<div key={s.label} style={{ width: `${s.pct}%`, backgroundColor: s.color }} />))}
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {items.map((s) => (
+          <div key={s.label} className="text-center">
+            <p className="text-lg font-bold" style={{ color: s.color }}>{s.count}</p>
+            <p className="text-[9px] text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MockInspectionPosture() {
+  const stats = [
+    { label: "TOTAL", value: "33" }, { label: "WAN", value: "13" }, { label: "DISABLED", value: "2" },
+    { label: "NAT", value: "6" }, { label: "HOSTS", value: "41" }, { label: "INTERFACES", value: "18" },
+  ];
+  const coverage = [
+    { label: "Web Filtering", pct: 0 }, { label: "Intrusion Prevention", pct: 0 },
+    { label: "App Control", pct: 0 }, { label: "SSL/TLS Inspection", pct: 38 },
+  ];
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[10px] font-semibold text-foreground mb-2">Configuration Health</p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded border border-border bg-muted/20 p-1.5 text-center">
+              <p className="text-sm font-bold text-foreground">{s.value}</p>
+              <p className="text-[7px] text-muted-foreground uppercase tracking-wider">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-[10px] font-semibold text-foreground mb-2">Feature Coverage <span className="font-normal text-muted-foreground">13 WAN rules</span></p>
+        <div className="grid grid-cols-2 gap-2">
+          {coverage.map((c) => (
+            <div key={c.label} className="rounded border border-border bg-muted/20 p-2">
+              <p className="text-[9px] text-muted-foreground mb-1">{c.label}</p>
+              <p className={`text-lg font-bold ${c.pct === 0 ? "text-[#EA0022]" : "text-[#F29400]"}`}>{c.pct}%</p>
+              <div className="h-1 rounded-full bg-muted mt-1 overflow-hidden">
+                <div className={`h-full rounded-full ${c.pct === 0 ? "bg-[#EA0022]" : "bg-[#F29400]"}`} style={{ width: `${Math.max(c.pct, 3)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockComplianceGrid() {
+  const frameworks = ["ISO 27001", "NIST CSF", "PCI DSS", "Cyber Essentials"];
+  const controls = ["Access Control", "Encryption", "Monitoring", "Incident Resp.", "Config Mgmt"];
+  return (
+    <div className="overflow-hidden rounded-lg border border-border">
+      <table className="w-full text-[9px]">
+        <thead>
+          <tr className="bg-muted/30">
+            <th className="px-2 py-1.5 text-left font-semibold text-foreground">Framework</th>
+            {controls.map((c) => (<th key={c} className="px-1.5 py-1.5 text-center font-medium text-muted-foreground">{c}</th>))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {frameworks.map((fw, fi) => (
+            <tr key={fw} className="hover:bg-muted/10">
+              <td className="px-2 py-1.5 font-medium text-foreground">{fw}</td>
+              {controls.map((c, ci) => {
+                const status = [(fi + ci) % 3 === 0 ? "pass" : (fi + ci) % 3 === 1 ? "fail" : "partial"][0];
+                return (
+                  <td key={c} className="px-1.5 py-1.5 text-center">
+                    <span className={`inline-block w-4 h-4 rounded text-[8px] font-bold leading-4 ${
+                      status === "pass" ? "bg-[#00995a]/15 text-[#00995a]" :
+                      status === "fail" ? "bg-[#EA0022]/15 text-[#EA0022]" :
+                      "bg-[#F29400]/15 text-[#F29400]"
+                    }`}>
+                      {status === "pass" ? "\u2713" : status === "fail" ? "\u2717" : "~"}
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MockReportViewer({ type }: { type: "individual" | "executive" | "compliance" }) {
+  const tabs = ["Individual Firewall", "Executive Summary", "Compliance Report"];
+  const activeIdx = type === "individual" ? 0 : type === "executive" ? 1 : 2;
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1 border-b border-border pb-0">
+        {tabs.map((t, i) => (
+          <div key={t} className={`px-2.5 py-1.5 text-[9px] font-medium border-b-2 ${i === activeIdx ? "border-[#2006F7] text-[#2006F7]" : "border-transparent text-muted-foreground"}`}>{t}</div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border bg-muted/10 p-3 space-y-2">
+        {type === "individual" && (
+          <>
+            <div className="h-3 bg-foreground/10 rounded w-2/3" />
+            <div className="h-2 bg-foreground/5 rounded w-full" />
+            <div className="h-2 bg-foreground/5 rounded w-5/6" />
+            <div className="mt-3 space-y-1.5">
+              <p className="text-[10px] font-semibold text-foreground">Finding: Admin services exposed to WAN</p>
+              <p className="text-[9px] text-muted-foreground">HTTPS and SSH admin access is enabled on the WAN interface, exposing the management console to the internet...</p>
+              <div className="flex gap-1.5">
+                <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#EA0022]/10 text-[#EA0022]">HIGH</span>
+                <span className="px-1.5 py-0.5 rounded text-[8px] bg-muted text-muted-foreground">Device Hardening</span>
+              </div>
+            </div>
+          </>
+        )}
+        {type === "executive" && (
+          <>
+            <p className="text-[10px] font-semibold text-foreground">Executive Summary</p>
+            <div className="grid grid-cols-3 gap-2 my-2">
+              <div className="rounded border border-border bg-card p-2 text-center">
+                <p className="text-lg font-bold text-[#F29400]">54</p>
+                <p className="text-[8px] text-muted-foreground">Risk Score</p>
+              </div>
+              <div className="rounded border border-border bg-card p-2 text-center">
+                <p className="text-lg font-bold text-[#EA0022]">32</p>
+                <p className="text-[8px] text-muted-foreground">Findings</p>
+              </div>
+              <div className="rounded border border-border bg-card p-2 text-center">
+                <p className="text-lg font-bold text-[#00995a]">8</p>
+                <p className="text-[8px] text-muted-foreground">Recommendations</p>
+              </div>
+            </div>
+            <div className="h-2 bg-foreground/5 rounded w-full" />
+            <div className="h-2 bg-foreground/5 rounded w-4/5" />
+          </>
+        )}
+        {type === "compliance" && (
+          <>
+            <p className="text-[10px] font-semibold text-foreground">ISO 27001 Compliance Assessment</p>
+            <div className="space-y-1.5 mt-2">
+              {["A.9 Access Control", "A.10 Cryptography", "A.12 Operations Security", "A.13 Communications Security"].map((c) => (
+                <div key={c} className="flex items-center gap-2 text-[9px]">
+                  <span className={`w-1.5 h-1.5 rounded-full ${c.includes("Crypto") ? "bg-[#EA0022]" : "bg-[#00995a]"}`} />
+                  <span className="text-foreground flex-1">{c}</span>
+                  <span className={`font-bold ${c.includes("Crypto") ? "text-[#EA0022]" : "text-[#00995a]"}`}>{c.includes("Crypto") ? "FAIL" : "PASS"}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      <div className="flex gap-1.5">
+        <div className="px-2 py-1 rounded text-[9px] font-medium bg-[#2006F7]/10 text-[#2006F7]">PDF</div>
+        <div className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">Word</div>
+        <div className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">PPTX</div>
+        <div className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">ZIP</div>
+      </div>
+    </div>
+  );
+}
+
+function MockTenantDashboard() {
+  const customers = [
+    { name: "Acme Corp", score: 78, grade: "B", firewalls: 2, color: "#00995a" },
+    { name: "Global Bank Ltd", score: 54, grade: "D", firewalls: 4, color: "#F29400" },
+    { name: "MediHealth", score: 91, grade: "A", firewalls: 1, color: "#00995a" },
+  ];
+  return (
+    <div className="space-y-2">
+      {customers.map((c) => (
+        <div key={c.name} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+          <div className="h-8 w-8 rounded-lg bg-muted/30 flex items-center justify-center">
+            <span className="text-sm font-bold" style={{ color: c.color }}>{c.score}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-foreground">{c.name}</p>
+            <p className="text-[9px] text-muted-foreground">{c.firewalls} firewall{c.firewalls !== 1 ? "s" : ""} · Grade {c.grade}</p>
+          </div>
+          <div className="h-6 w-16 rounded bg-muted/20 overflow-hidden flex items-end">
+            {[40, 55, 60, 72, c.score].map((v, i) => (
+              <div key={i} className="flex-1 mx-px rounded-t" style={{ height: `${v}%`, backgroundColor: c.color, opacity: 0.3 + i * 0.17 }} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockSavedReports() {
+  const reports = [
+    { customer: "Acme Corp", type: "Executive", date: "4 Mar 2026", score: 78 },
+    { customer: "Global Bank", type: "Compliance", date: "2 Mar 2026", score: 54 },
+    { customer: "MediHealth", type: "Individual", date: "28 Feb 2026", score: 91 },
+  ];
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <div className="grid grid-cols-[1fr_80px_80px_40px] gap-2 px-3 py-1.5 bg-muted/30 text-[8px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <span>Customer</span><span>Type</span><span>Date</span><span>Score</span>
+      </div>
+      {reports.map((r) => (
+        <div key={r.customer + r.type} className="grid grid-cols-[1fr_80px_80px_40px] gap-2 px-3 py-2 border-t border-border items-center">
+          <span className="text-[10px] font-medium text-foreground">{r.customer}</span>
+          <span className="text-[9px] text-muted-foreground">{r.type}</span>
+          <span className="text-[9px] text-muted-foreground">{r.date}</span>
+          <span className="text-[10px] font-bold" style={{ color: r.score >= 75 ? "#00995a" : r.score >= 50 ? "#F29400" : "#EA0022" }}>{r.score}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockHistoryChart() {
+  const points = [42, 48, 55, 54, 62, 68, 78];
+  const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+  const maxV = 100;
+  const w = 280, h = 100, pad = 20;
+  const plotW = w - pad * 2, plotH = h - pad;
+  return (
+    <svg width="100%" viewBox={`0 0 ${w} ${h + 10}`} className="text-muted-foreground">
+      {[25, 50, 75].map((v) => (
+        <line key={v} x1={pad} x2={w - pad} y1={h - pad - (v / maxV) * plotH} y2={h - pad - (v / maxV) * plotH} stroke="currentColor" strokeWidth="0.5" opacity="0.2" />
+      ))}
+      <polyline
+        fill="none" stroke="#2006F7" strokeWidth="2" strokeLinejoin="round"
+        points={points.map((v, i) => `${pad + (i / (points.length - 1)) * plotW},${h - pad - (v / maxV) * plotH}`).join(" ")}
+      />
+      {points.map((v, i) => (
+        <g key={i}>
+          <circle cx={pad + (i / (points.length - 1)) * plotW} cy={h - pad - (v / maxV) * plotH} r="3" fill="#2006F7" />
+          <text x={pad + (i / (points.length - 1)) * plotW} y={h} textAnchor="middle" fontSize="7" fill="currentColor">{months[i]}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function MockSettingsPanel() {
+  return (
+    <div className="space-y-2">
+      {[
+        { icon: <Wifi className="h-3.5 w-3.5 text-[#005BC8]" />, title: "Sophos Central API", desc: "Connected · Partner account · Last synced 3m ago" },
+        { icon: <Users className="h-3.5 w-3.5 text-[#2006F7]" />, title: "Team Management", desc: "3 members · 1 pending invite" },
+        { icon: <Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />, title: "Activity Log", desc: "47 events · Last: report.saved 2h ago" },
+      ].map((s) => (
+        <div key={s.title} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{s.icon}</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-foreground">{s.title}</p>
+            <p className="text-[9px] text-muted-foreground">{s.desc}</p>
+          </div>
+          <ChevronDown className="h-3 w-3 text-muted-foreground/40 -rotate-90" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName }: Props) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -120,10 +462,14 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
       onClose();
       return;
     }
+    setActiveOverlay(null);
     setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const handleBack = () => setCurrentStep((s) => Math.max(s - 1, 0));
+  const handleBack = () => {
+    setActiveOverlay(null);
+    setCurrentStep((s) => Math.max(s - 1, 0));
+  };
 
   const handleSkip = () => {
     markSetupComplete();
@@ -321,49 +667,79 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
             )}
 
             {step.id === "guide-pre-ai" && (
-              <div className="space-y-5">
+              <div className="space-y-5 relative">
+                {activeOverlay === "risk-score" && (
+                  <FeatureOverlay title="Risk Score & Grade" subtitle="A-F rating based on weighted security checks" onClose={() => setActiveOverlay(null)}>
+                    <div className="flex flex-col items-center gap-4">
+                      <MockGauge score={54} grade="D" color="#F29400" />
+                      <MockRadar />
+                      <div className="w-full grid grid-cols-4 gap-1.5">
+                        {[
+                          { label: "Network", pct: 45 }, { label: "Access", pct: 62 },
+                          { label: "Logging", pct: 80 }, { label: "Hardening", pct: 35 },
+                        ].map((c) => (
+                          <div key={c.label} className="rounded border border-border bg-muted/20 p-2 text-center">
+                            <p className="text-sm font-bold text-foreground">{c.pct}%</p>
+                            <p className="text-[8px] text-muted-foreground">{c.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Each security check is weighted by severity. The gauge shows the overall risk score (0–100) and assigns a letter grade. The radar chart breaks down scores by category.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "findings" && (
+                  <FeatureOverlay title="Findings & Severity" subtitle="Critical, high, medium, low categorised issues" onClose={() => setActiveOverlay(null)}>
+                    <MockSeverityBar />
+                    <div className="mt-4 space-y-1.5">
+                      {[
+                        { severity: "CRITICAL", title: "Default admin password unchanged", color: "#EA0022" },
+                        { severity: "HIGH", title: "WAN admin services exposed", color: "#F29400" },
+                        { severity: "MEDIUM", title: "DNS rebinding protection disabled", color: "#F8E300" },
+                        { severity: "LOW", title: "SNMP community string is 'public'", color: "#00995a" },
+                      ].map((f) => (
+                        <div key={f.title} className="flex items-center gap-2 rounded border border-border bg-card p-2">
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ backgroundColor: f.color + "15", color: f.color }}>{f.severity}</span>
+                          <span className="text-[10px] text-foreground">{f.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Every parsed configuration item is checked against known security anti-patterns. Findings are categorised by severity and grouped by domain.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "inspection" && (
+                  <FeatureOverlay title="Inspection Posture" subtitle="IPS, web filter, app control, SSL/TLS coverage" onClose={() => setActiveOverlay(null)}>
+                    <MockInspectionPosture />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> FireComply examines every firewall rule to determine which security features (IPS, web filter, app control, SSL/TLS inspection) are applied and reports the coverage as a percentage of WAN-facing rules.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "compliance" && (
+                  <FeatureOverlay title="Compliance Mapping" subtitle="ISO 27001, NIST, PCI DSS, Cyber Essentials" onClose={() => setActiveOverlay(null)}>
+                    <MockComplianceGrid />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Firewall findings are mapped to controls from selected compliance frameworks. Each control is marked as pass, fail, or partial based on the configuration analysis.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold text-foreground">Pre-AI Assessment (Instant)</h3>
                   <p className="text-[11px] text-muted-foreground">
-                    As soon as you upload a config, FireComply runs a <strong className="text-foreground">deterministic analysis</strong> — no AI needed. This is instant and always consistent.
+                    As soon as you upload a config, FireComply runs a <strong className="text-foreground">deterministic analysis</strong> — no AI needed. Click each panel below to preview.
                   </p>
                 </div>
 
-                {/* Visual flow diagram */}
-                <div className="rounded-lg border border-border bg-card overflow-hidden">
-                  <div className="bg-muted/30 px-3 py-2 border-b border-border">
-                    <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">What you get instantly</span>
-                  </div>
-                  <div className="p-3 grid grid-cols-2 gap-2">
-                    <FeatureCard icon={<Shield className="h-4 w-4" />} title="Risk Score & Grade" desc="A-F rating based on weighted security checks" color="text-[#00995a]" />
-                    <FeatureCard icon={<BarChart3 className="h-4 w-4" />} title="Findings & Severity" desc="Critical, high, medium, low categorised issues" color="text-[#EA0022]" />
-                    <FeatureCard icon={<Eye className="h-4 w-4" />} title="Inspection Posture" desc="IPS, web filter, app control, SSL/TLS coverage" color="text-[#2006F7]" />
-                    <FeatureCard icon={<FileText className="h-4 w-4" />} title="Compliance Mapping" desc="ISO 27001, NIST, PCI DSS, Cyber Essentials" color="text-[#6B5BFF]" />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <GuideStep
-                    number={1}
-                    title="Automatic on upload"
-                    description="The Pre-AI assessment runs as soon as you drop a config file — no buttons to click. Findings, risk score, and dashboards populate immediately."
-                    icon={<Upload className="h-4 w-4" />}
-                    color="text-[#2006F7]"
-                  />
-                  <GuideStep
-                    number={2}
-                    title="Best Practice scoring"
-                    description="The Sophos Best Practice Score checks 25+ items based on official Sophos documentation. Your licence tier is auto-detected from Central."
-                    icon={<Shield className="h-4 w-4" />}
-                    color="text-[#00995a]"
-                  />
-                  <GuideStep
-                    number={3}
-                    title='Save Pre-AI assessment'
-                    description={'Click "Save Assessment (Pre-AI)" to save the deterministic scores before generating AI reports. This populates the multi-tenant dashboard and assessment history.'}
-                    icon={<Save className="h-4 w-4" />}
-                    color="text-[#005BC8]"
-                  />
+                <div className="grid grid-cols-2 gap-2.5">
+                  <FeatureButton icon={<Shield className="h-4 w-4" />} title="Risk Score & Grade" desc="A-F rating with radar chart and category scores" color="text-[#00995a]" onClick={() => setActiveOverlay("risk-score")} />
+                  <FeatureButton icon={<BarChart3 className="h-4 w-4" />} title="Findings & Severity" desc="Critical, high, medium, low categorised issues" color="text-[#EA0022]" onClick={() => setActiveOverlay("findings")} />
+                  <FeatureButton icon={<Eye className="h-4 w-4" />} title="Inspection Posture" desc="IPS, web filter, app control, SSL/TLS coverage" color="text-[#2006F7]" onClick={() => setActiveOverlay("inspection")} />
+                  <FeatureButton icon={<FileText className="h-4 w-4" />} title="Compliance Mapping" desc="ISO 27001, NIST, PCI DSS, Cyber Essentials" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("compliance")} />
                 </div>
 
                 <div className="rounded-lg bg-[#00995a]/5 border border-[#00995a]/15 p-3">
@@ -375,79 +751,43 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
             )}
 
             {step.id === "guide-ai-reports" && (
-              <div className="space-y-5">
+              <div className="space-y-5 relative">
+                {activeOverlay === "report-individual" && (
+                  <FeatureOverlay title="Individual Firewall Report" subtitle="Deep-dive analysis per firewall with finding-level detail" onClose={() => setActiveOverlay(null)}>
+                    <MockReportViewer type="individual" />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you get:</strong> A detailed, AI-generated narrative for each firewall covering every finding, remediation steps, and priority ranking. If linked to Central, live firmware and alert data is woven in.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "report-executive" && (
+                  <FeatureOverlay title="Executive Summary" subtitle="High-level overview for management" onClose={() => setActiveOverlay(null)}>
+                    <MockReportViewer type="executive" />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you get:</strong> A management-friendly document with key metrics, risk posture overview, and prioritised recommendations — ideal for board-level or stakeholder reporting.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "report-compliance" && (
+                  <FeatureOverlay title="Compliance Report" subtitle="Maps findings against selected compliance frameworks" onClose={() => setActiveOverlay(null)}>
+                    <MockReportViewer type="compliance" />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you get:</strong> Findings mapped to ISO 27001, NIST CSF, PCI DSS, or Cyber Essentials controls. Each control is assessed as pass, fail, or partial with remediation guidance.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold text-foreground">AI-Powered Reports</h3>
                   <p className="text-[11px] text-muted-foreground">
-                    After the Pre-AI assessment, generate <strong className="text-foreground">AI narrative reports</strong> for your customers — professional documents enriched with Central data.
+                    After the Pre-AI assessment, generate <strong className="text-foreground">AI narrative reports</strong> for your customers. Click each to preview.
                   </p>
                 </div>
 
-                {/* Report type cards */}
-                <div className="rounded-lg border border-border bg-card overflow-hidden">
-                  <div className="bg-muted/30 px-3 py-2 border-b border-border">
-                    <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Report types</span>
-                  </div>
-                  <div className="divide-y divide-border">
-                    <div className="px-3 py-2.5 flex items-center gap-3">
-                      <div className="h-7 w-7 rounded-lg bg-[#2006F7]/10 flex items-center justify-center shrink-0">
-                        <FileText className="h-3.5 w-3.5 text-[#2006F7]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold text-foreground">Individual Firewall</p>
-                        <p className="text-[9px] text-muted-foreground">Deep-dive analysis per firewall with finding-level detail</p>
-                      </div>
-                    </div>
-                    <div className="px-3 py-2.5 flex items-center gap-3">
-                      <div className="h-7 w-7 rounded-lg bg-[#6B5BFF]/10 flex items-center justify-center shrink-0">
-                        <BarChart3 className="h-3.5 w-3.5 text-[#6B5BFF]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold text-foreground">Executive Summary</p>
-                        <p className="text-[9px] text-muted-foreground">High-level overview for management with key metrics and recommendations</p>
-                      </div>
-                    </div>
-                    <div className="px-3 py-2.5 flex items-center gap-3">
-                      <div className="h-7 w-7 rounded-lg bg-[#005BC8]/10 flex items-center justify-center shrink-0">
-                        <Shield className="h-3.5 w-3.5 text-[#005BC8]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-semibold text-foreground">Compliance Report</p>
-                        <p className="text-[9px] text-muted-foreground">Maps findings against your selected compliance frameworks</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <GuideStep
-                    number={1}
-                    title="Click a report card or Generate All"
-                    description='Select which report to generate from the report cards section, or hit "Generate All Reports" to create everything in one go.'
-                    icon={<Sparkles className="h-4 w-4" />}
-                    color="text-[#2006F7]"
-                  />
-                  <GuideStep
-                    number={2}
-                    title="AI enriches with Central data"
-                    description="If your firewall is linked to Central, the AI receives live firmware, licence, alert, and HA data to make reports more accurate."
-                    icon={<Wifi className="h-4 w-4" />}
-                    color="text-[#005BC8]"
-                  />
-                  <GuideStep
-                    number={3}
-                    title="Review in the built-in viewer"
-                    description="Reports open in a tabbed viewer with live markdown rendering. Switch between reports using tabs or number keys 1-9."
-                    icon={<Eye className="h-4 w-4" />}
-                    color="text-[#6B5BFF]"
-                  />
-                  <GuideStep
-                    number={4}
-                    title="Export & save"
-                    description="Export to branded PDF, Word (.docx), PowerPoint (.pptx), or download all as a ZIP. Save to the cloud for your team."
-                    icon={<Download className="h-4 w-4" />}
-                    color="text-[#00995a]"
-                  />
+                <div className="space-y-2.5">
+                  <FeatureButton icon={<FileText className="h-4 w-4" />} title="Individual Firewall Report" desc="Deep-dive analysis per firewall with finding-level detail and remediation" color="text-[#2006F7]" onClick={() => setActiveOverlay("report-individual")} />
+                  <FeatureButton icon={<BarChart3 className="h-4 w-4" />} title="Executive Summary" desc="High-level overview for management with key metrics and recommendations" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("report-executive")} />
+                  <FeatureButton icon={<Shield className="h-4 w-4" />} title="Compliance Report" desc="Maps findings against ISO 27001, NIST, PCI DSS, Cyber Essentials" color="text-[#005BC8]" onClick={() => setActiveOverlay("report-compliance")} />
                 </div>
 
                 <div className="rounded-lg bg-muted/30 border border-border p-3 flex items-start gap-2">
@@ -463,11 +803,44 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
             )}
 
             {step.id === "guide-management" && (
-              <div className="space-y-5">
+              <div className="space-y-5 relative">
+                {activeOverlay === "mgmt-dashboard" && (
+                  <FeatureOverlay title="Multi-Tenant Dashboard" subtitle="Overview of all customer assessments" onClose={() => setActiveOverlay(null)}>
+                    <MockTenantDashboard />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you see:</strong> Every customer's latest risk score, grade, firewall count, and score trend at a glance. Includes licence expiry warnings for your managed estate.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "mgmt-reports" && (
+                  <FeatureOverlay title="Saved Reports" subtitle="Browse and reload previously saved reports" onClose={() => setActiveOverlay(null)}>
+                    <MockSavedReports />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you see:</strong> A searchable library of every report your team has saved. Filter by customer, report type, or date. Click any row to reload the full report in the viewer.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "mgmt-history" && (
+                  <FeatureOverlay title="Assessment History" subtitle="Track scores over time per customer" onClose={() => setActiveOverlay(null)}>
+                    <MockHistoryChart />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you see:</strong> A trend line of risk scores for each customer over time. Demonstrate security improvements and track the impact of your remediation work.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "mgmt-settings" && (
+                  <FeatureOverlay title="Settings" subtitle="Central API, team management, and audit log" onClose={() => setActiveOverlay(null)}>
+                    <MockSettingsPanel />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you see:</strong> Manage your Sophos Central API connection, invite and manage team members, and review all activity across your workspace.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
                 <div className="space-y-1">
                   <h3 className="text-sm font-semibold text-foreground">The Management Panel</h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Click your <strong className="text-foreground">organisation name</strong> in the top navbar to open the Management panel — your central hub for everything.
+                    Click your <strong className="text-foreground">organisation name</strong> in the top navbar to open it. Click each tab below to preview.
                   </p>
                 </div>
 
@@ -486,42 +859,10 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <LayoutDashboard className="h-3.5 w-3.5 text-[#2006F7]" />
-                      <span className="text-[10px] font-semibold text-foreground">Dashboard</span>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground leading-relaxed">
-                      Multi-tenant overview of all customer assessments and licence expiry across your estate.
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="h-3.5 w-3.5 text-[#2006F7]" />
-                      <span className="text-[10px] font-semibold text-foreground">Reports</span>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground leading-relaxed">
-                      Browse and reload all previously saved reports. Filter by customer, type, or date.
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <History className="h-3.5 w-3.5 text-[#2006F7]" />
-                      <span className="text-[10px] font-semibold text-foreground">History</span>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground leading-relaxed">
-                      Track assessment scores over time per customer to demonstrate security improvements.
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Settings className="h-3.5 w-3.5 text-[#2006F7]" />
-                      <span className="text-[10px] font-semibold text-foreground">Settings</span>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground leading-relaxed">
-                      Sophos Central API config, team management, activity audit log, and re-run this setup.
-                    </p>
-                  </div>
+                  <FeatureButton icon={<LayoutDashboard className="h-4 w-4" />} title="Dashboard" desc="Multi-tenant overview of all customer scores and licence expiry" color="text-[#2006F7]" onClick={() => setActiveOverlay("mgmt-dashboard")} />
+                  <FeatureButton icon={<FileText className="h-4 w-4" />} title="Reports" desc="Browse and reload all previously saved reports" color="text-[#2006F7]" onClick={() => setActiveOverlay("mgmt-reports")} />
+                  <FeatureButton icon={<History className="h-4 w-4" />} title="History" desc="Track assessment scores over time per customer" color="text-[#2006F7]" onClick={() => setActiveOverlay("mgmt-history")} />
+                  <FeatureButton icon={<Settings className="h-4 w-4" />} title="Settings" desc="Central API, team management, activity log, and re-run setup" color="text-[#2006F7]" onClick={() => setActiveOverlay("mgmt-settings")} />
                 </div>
               </div>
             )}
