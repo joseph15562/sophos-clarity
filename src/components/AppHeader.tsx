@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,6 +13,7 @@ interface AppHeaderProps {
   selectedFrameworks: string[];
   reportCount: number;
   notificationSlot?: React.ReactNode;
+  onOrgClick?: () => void;
 }
 
 function CentralStatusDot({ orgId }: { orgId: string }) {
@@ -118,7 +119,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
   );
 }
 
-export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount, notificationSlot }: AppHeaderProps) {
+export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount, notificationSlot, onOrgClick }: AppHeaderProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { user, org, isGuest, signOut } = useAuth();
 
@@ -142,10 +143,15 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
           {!isGuest && (
             <div className="flex items-center gap-2 shrink-0">
               {org && (
-                <span className="flex items-center gap-1.5 text-[10px] text-[#6A889B]">
+                <button
+                  onClick={onOrgClick}
+                  className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+                  title="Open management panel"
+                >
                   <Building2 className="h-3 w-3" />
                   <span className="font-medium text-white/80 max-w-[120px] truncate">{org.name}</span>
-                </span>
+                  <ChevronDown className="h-2.5 w-2.5" />
+                </button>
               )}
               {org && <CentralStatusDot orgId={org.id} />}
               {notificationSlot}
@@ -167,7 +173,15 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
           )}
 
           {isGuest && (
-            <span className="text-[9px] text-[#6A889B] px-2 py-0.5 rounded bg-white/5 shrink-0">Guest</span>
+            <button
+              onClick={onOrgClick}
+              className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-2 py-1 rounded hover:bg-[#10037C]/40"
+              title="Open management panel"
+            >
+              <Building2 className="h-3 w-3" />
+              <span className="font-medium">Management</span>
+              <ChevronDown className="h-2.5 w-2.5" />
+            </button>
           )}
 
           <Button

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
-import { ArrowLeftRight, ChevronDown, Clock, RotateCcw, Save } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
@@ -26,13 +26,13 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { NotificationCentre } from "@/components/NotificationCentre";
 import { useKeyboardShortcuts, type ShortcutAction } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
+import { ManagementDrawer } from "@/components/ManagementDrawer";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
 const RiskScoreDashboard = lazy(() => import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })));
 const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })));
 const ComplianceHeatmap = lazy(() => import("@/components/ComplianceHeatmap").then((m) => ({ default: m.ComplianceHeatmap })));
-const AssessmentHistory = lazy(() => import("@/components/AssessmentHistory").then((m) => ({ default: m.AssessmentHistory })));
 const AIChatPanel = lazy(() => import("@/components/AIChatPanel").then((m) => ({ default: m.AIChatPanel })));
 const ScoreSimulator = lazy(() => import("@/components/ScoreSimulator").then((m) => ({ default: m.ScoreSimulator })));
 const AttackSurfaceMap = lazy(() => import("@/components/AttackSurfaceMap").then((m) => ({ default: m.AttackSurfaceMap })));
@@ -41,20 +41,14 @@ const PeerBenchmark = lazy(() => import("@/components/PeerBenchmark").then((m) =
 const SophosBestPractice = lazy(() => import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })));
 const RuleOptimiser = lazy(() => import("@/components/RuleOptimiser").then((m) => ({ default: m.RuleOptimiser })));
 const PriorityMatrix = lazy(() => import("@/components/PriorityMatrix").then((m) => ({ default: m.PriorityMatrix })));
-const TenantDashboard = lazy(() => import("@/components/TenantDashboard").then((m) => ({ default: m.TenantDashboard })));
-const InviteStaff = lazy(() => import("@/components/InviteStaff").then((m) => ({ default: m.InviteStaff })));
-const SavedReportsLibrary = lazy(() => import("@/components/SavedReportsLibrary").then((m) => ({ default: m.SavedReportsLibrary })));
-const CentralIntegration = lazy(() => import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })));
 const FirewallLinker = lazy(() => import("@/components/FirewallLinker").then((m) => ({ default: m.FirewallLinker })));
 const CentralEnrichment = lazy(() => import("@/components/CentralEnrichment").then((m) => ({ default: m.CentralEnrichment })));
-const LicenceExpiryWidget = lazy(() => import("@/components/LicenceExpiryWidget").then((m) => ({ default: m.LicenceExpiryWidget })));
 const SeverityBreakdown = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SeverityBreakdown })));
 const SecurityFeatureCoverage = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SecurityFeatureCoverage })));
 const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.ZoneTrafficFlow })));
 const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
 const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
 const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
-const AuditLog = lazy(() => import("@/components/AuditLog").then((m) => ({ default: m.AuditLog })));
 const OnboardingChecklist = lazy(() => import("@/components/OnboardingChecklist").then((m) => ({ default: m.OnboardingChecklist })));
 import { DashboardLoadingSkeleton, SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 
@@ -282,6 +276,7 @@ function InnerApp() {
       setActiveReportId(savedReports[0].id);
       setLoadedSavedSummary(null);
       setViewingReports(true);
+      setDrawerOpen(false);
     } else {
       setLoadedSavedSummary({ customerName, summary: analysisSummary });
     }
@@ -300,6 +295,7 @@ function InnerApp() {
 
   const [viewingReports, setViewingReports] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
@@ -308,6 +304,7 @@ function InnerApp() {
     { key: "?", description: "Show keyboard shortcuts", handler: () => setShortcutsOpen((v) => !v) },
     { key: "Escape", description: "Go back / close modal", handler: () => {
       if (shortcutsOpen) { setShortcutsOpen(false); return; }
+      if (drawerOpen) { setDrawerOpen(false); return; }
       if (viewingReports) setViewingReports(false);
       if (inDiffMode) setDiffSelection(null);
     }},
@@ -318,7 +315,7 @@ function InnerApp() {
       description: `Switch to report tab ${i + 1}`,
       handler: () => { if (viewingReports && reports[i]) setActiveReportId(reports[i].id); },
     })),
-  ], [shortcutsOpen, viewingReports, inDiffMode, hasReports, hasFiles, totalFindings, isLoading, reports, handleSaveReports, generateAll, setActiveReportId]);
+  ], [shortcutsOpen, drawerOpen, viewingReports, inDiffMode, hasReports, hasFiles, totalFindings, isLoading, reports, handleSaveReports, generateAll, setActiveReportId]);
 
   useKeyboardShortcuts(keyboardShortcuts);
 
@@ -333,6 +330,7 @@ function InnerApp() {
         environment={branding.environment}
         selectedFrameworks={branding.selectedFrameworks}
         reportCount={reports.length}
+        onOrgClick={() => setDrawerOpen(true)}
         notificationSlot={
           <NotificationCentre
             notifications={notifications}
@@ -760,88 +758,6 @@ function InnerApp() {
               </CollapsibleSection>
             )}
 
-            {/* Assessment History */}
-            {hasFiles && (
-              <CollapsibleSection
-                title="Assessment History"
-                subtitle="Previous assessments stored locally for trend comparison"
-                icon={<span className="text-sm">📈</span>}
-                iconBg="bg-[#10037C]/10 dark:bg-[#2006F7]/10"
-              >
-                <div className="p-5">
-                  <Suspense fallback={null}>
-                    <AssessmentHistory
-                      analysisResults={analysisResults}
-                      customerName={branding.customerName}
-                      environment={branding.environment}
-                    />
-                  </Suspense>
-                </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Saved Reports Library */}
-            <CollapsibleSection
-              title="Saved Reports"
-              subtitle="Previously saved reports and assessments"
-              icon={<img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" />}
-              iconBg="bg-[#10037C]/10 dark:bg-[#2006F7]/10"
-            >
-              <Suspense fallback={<SectionSkeleton />}>
-                <SavedReportsLibrary onLoadReports={handleLoadSavedReports} refreshTrigger={savedReportsTrigger} />
-              </Suspense>
-            </CollapsibleSection>
-
-            {/* Multi-Tenant Dashboard */}
-            <CollapsibleSection
-              title="Multi-Tenant Dashboard"
-              subtitle="Overview of all customer assessments"
-              icon={<img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
-              iconBg="bg-[#2006F7]"
-            >
-              <Suspense fallback={<SectionSkeleton />}>
-                <TenantDashboard />
-              </Suspense>
-              <Suspense fallback={null}>
-                <div className="px-5">
-                  <LicenceExpiryWidget />
-                </div>
-              </Suspense>
-              <Suspense fallback={null}>
-                <div className="px-5 pb-5 space-y-4">
-                  <CollapsibleSection
-                    title="Sophos Central API"
-                    subtitle="Link your Sophos Central Partner or Tenant account for live firewall data"
-                    icon={<img src="/icons/sophos-icon-white.svg" alt="" className="h-4 w-4" />}
-                    iconBg="bg-[#005BC8]"
-                  >
-                    <div className="p-4">
-                      <CentralIntegration />
-                    </div>
-                  </CollapsibleSection>
-                  <CollapsibleSection
-                    title="Team Management"
-                    subtitle="Invite staff to your organisation"
-                    icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" />}
-                    iconBg="bg-[#2006F7]/10"
-                  >
-                    <div className="p-4">
-                      <InviteStaff />
-                    </div>
-                  </CollapsibleSection>
-                  <CollapsibleSection
-                    title="Activity Log"
-                    subtitle="Tamper-evident audit trail of all actions"
-                    icon={<Clock className="h-4 w-4 text-white" />}
-                    iconBg="bg-[#10037C]"
-                  >
-                    <Suspense fallback={null}>
-                      <AuditLog />
-                    </Suspense>
-                  </CollapsibleSection>
-                </div>
-              </Suspense>
-            </CollapsibleSection>
 
             {/* Config diff — compare two configs */}
             {files.length >= 2 && (
@@ -1008,6 +924,20 @@ function InnerApp() {
           />
         </Suspense>
       )}
+
+      {/* Management Drawer */}
+      <ManagementDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        isGuest={isGuest}
+        orgName={org?.name}
+        analysisResults={analysisResults}
+        customerName={branding.customerName}
+        environment={branding.environment}
+        onLoadReports={handleLoadSavedReports}
+        savedReportsTrigger={savedReportsTrigger}
+        hasFiles={hasFiles}
+      />
 
       {/* Keyboard shortcut hint */}
       <div className="fixed bottom-4 right-4 z-10 no-print">
