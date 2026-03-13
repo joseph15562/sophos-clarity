@@ -44,7 +44,6 @@ const LicenceExpiryWidget = lazy(() => import("@/components/LicenceExpiryWidget"
 const SeverityBreakdown = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SeverityBreakdown })));
 const SecurityFeatureCoverage = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SecurityFeatureCoverage })));
 const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.ZoneTrafficFlow })));
-const CategoryScoreBars = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.CategoryScoreBars })));
 const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
 const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
 const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
@@ -523,29 +522,26 @@ function InnerApp() {
                 defaultOpen
               >
                 <div className="p-5 space-y-6">
-                  {/* Row 1: Risk Score + Category Bars side by side */}
+                  {/* Risk Score + Config Health side by side */}
                   <div className="grid gap-6 lg:grid-cols-2">
                     <Suspense fallback={null}>
                       <RiskScoreDashboard analysisResults={analysisResults} />
                     </Suspense>
                     <div className="space-y-6">
                       <Suspense fallback={null}>
-                        <CategoryScoreBars analysisResults={analysisResults} />
+                        <RuleHealthOverview analysisResults={analysisResults} />
                       </Suspense>
                       <Suspense fallback={null}>
-                        <RuleHealthOverview analysisResults={analysisResults} />
+                        <SecurityFeatureCoverage analysisResults={analysisResults} />
                       </Suspense>
                     </div>
                   </div>
 
-                  {/* Row 2: Severity Donut + Feature Coverage + Findings by Section */}
+                  {/* Severity Donut + Findings by Section */}
                   {totalFindings > 0 && (
-                    <div className="grid gap-6 lg:grid-cols-3">
+                    <div className="grid gap-6 lg:grid-cols-2">
                       <Suspense fallback={null}>
                         <SeverityBreakdown analysisResults={analysisResults} />
-                      </Suspense>
-                      <Suspense fallback={null}>
-                        <SecurityFeatureCoverage analysisResults={analysisResults} />
                       </Suspense>
                       <Suspense fallback={null}>
                         <FindingsBySection analysisResults={analysisResults} />
@@ -553,7 +549,7 @@ function InnerApp() {
                     </div>
                   )}
 
-                  {/* Row 3: Zone Traffic Flow + Top Findings */}
+                  {/* Zone Traffic Flow + Top Findings */}
                   <div className="grid gap-6 lg:grid-cols-2">
                     <Suspense fallback={null}>
                       <ZoneTrafficFlow files={files} />
@@ -565,7 +561,7 @@ function InnerApp() {
                     )}
                   </div>
 
-                  {/* Row 4: Peer Benchmark + Best Practice */}
+                  {/* Peer Benchmark + Best Practice */}
                   <Suspense fallback={null}>
                     <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
                   </Suspense>
@@ -574,10 +570,10 @@ function InnerApp() {
                   </Suspense>
 
                   {/* Compliance Heatmap */}
-                  <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                  <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                     <div className="flex items-center gap-2">
                       <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
-                      <h3 className="text-sm font-display font-bold text-foreground">Compliance Heatmap</h3>
+                      <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
                       {branding.selectedFrameworks.length > 0 && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
                           {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
@@ -594,10 +590,10 @@ function InnerApp() {
 
                   {/* Finding Priority Matrix */}
                   {totalFindings > 0 && (
-                    <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                       <div className="flex items-center gap-2">
                         <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />
-                        <h3 className="text-sm font-display font-bold text-foreground">Finding Priority Matrix</h3>
+                        <h3 className="text-sm font-semibold text-foreground">Finding Priority Matrix</h3>
                         <span className="text-[10px] text-muted-foreground">Impact vs effort quadrant</span>
                       </div>
                       <Suspense fallback={null}>
