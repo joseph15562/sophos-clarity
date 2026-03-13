@@ -251,15 +251,27 @@ serve(async (req) => {
     if (mode === "tenants") {
       if (creds.partnerType === "tenant") {
         const identity = await whoami(token);
-        return json({
-          items: [{
-            id: identity.id,
-            name: "(This tenant)",
-            dataRegion: identity.apiHosts.dataRegion?.replace("https://api-", "").replace(".central.sophos.com", "") ?? "",
-            apiHost: identity.apiHosts.dataRegion ?? identity.apiHosts.global,
-            billingType: "",
-          }],
-        });
+        const tenantItem = {
+          id: identity.id,
+          name: "(This tenant)",
+          dataRegion: identity.apiHosts.dataRegion?.replace("https://api-", "").replace(".central.sophos.com", "") ?? "",
+          apiHost: identity.apiHosts.dataRegion ?? identity.apiHosts.global,
+          billingType: "",
+        };
+
+        const sb = adminClient();
+        await sb.from("central_tenants").upsert({
+          org_id: orgId,
+          central_tenant_id: tenantItem.id,
+          name: tenantItem.name,
+          data_region: tenantItem.dataRegion,
+          api_host: tenantItem.apiHost,
+          billing_type: tenantItem.billingType,
+          synced_at: new Date().toISOString(),
+        }, { onConflict: "org_id,central_tenant_id" });
+        await sb.from("central_credentials").update({ last_synced_at: new Date().toISOString() }).eq("org_id", orgId);
+
+        return json({ items: [tenantItem] });
       }
 
       const endpoint = creds.partnerType === "partner"
