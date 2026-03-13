@@ -198,6 +198,7 @@ serve(async (req) => {
     const compliance: boolean = body?.compliance === true;
     const firewallLabels: string[] | undefined = body?.firewallLabels;
     const selectedFrameworks: string[] | undefined = body?.selectedFrameworks;
+    const centralEnrichment: Record<string, unknown> | undefined = body?.centralEnrichment;
 
     if (chat) {
       if (!chatContext || typeof chatContext !== "string") {
@@ -259,6 +260,11 @@ serve(async (req) => {
         complianceContext += `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
       } else if (environment || country) {
         complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
+      }
+
+      if (centralEnrichment && Object.keys(centralEnrichment).length > 0) {
+        complianceContext += "\n\n## Sophos Central Live Data\nThe following live data was retrieved from Sophos Central API for this firewall. Include this in the report under a dedicated **Sophos Central Status** section near the top (after the Executive Summary). Use it to enrich findings — for example, confirm the firewall is centrally managed, note the firmware version, HA status, and flag any active alerts.\n";
+        complianceContext += "```json\n" + JSON.stringify(centralEnrichment) + "\n```\n";
       }
 
       let basePrompt: string;

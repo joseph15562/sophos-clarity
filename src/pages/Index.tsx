@@ -12,6 +12,9 @@ import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-persistence";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { getCentralStatus, getCachedFirewalls, getAlerts } from "@/lib/sophos-central";
+import type { CentralEnrichment as CentralEnrichmentType } from "@/lib/stream-ai";
 import { AuthGate } from "@/components/AuthGate";
 import { OrgSetup } from "@/components/OrgSetup";
 import { saveReportCloud, saveReportLocal, type SavedReportEntry, type AnalysisSummary } from "@/lib/saved-reports";
@@ -124,6 +127,79 @@ function InnerApp() {
     }
     setReportsSaved(false);
   }, [files, reports.length, setReports, setActiveReportId]);
+
+  // Enrich files with Sophos Central live data when firewalls are linked
+  const [centralEnriched, setCentralEnriched] = useState(false);
+  const fileIds = useMemo(() => files.map((f) => f.id).join(","), [files]);
+
+  useEffect(() => { setCentralEnriched(false); }, [fileIds]);
+
+  useEffect(() => {
+    if (!org?.id || isGuest || files.length === 0 || centralEnriched) return;
+    let cancelled = false;
+    const orgId = org.id;
+
+    (async () => {
+      try {
+        const status = await getCentralStatus(orgId);
+        if (!status?.connected || cancelled) return;
+
+        const hashes = files.map((f) => f.id);
+        const { data: links } = await supabase
+          .from("firewall_config_links")
+          .select("config_hash, central_firewall_id, central_tenant_id")
+          .eq("org_id", orgId)
+          .in("config_hash", hashes);
+
+        if (!links || links.length === 0 || cancelled) return;
+
+        const cachedFws = await getCachedFirewalls(orgId);
+        const tenantIds = [...new Set(links.map((l) => l.central_tenant_id))];
+
+        const alertsByTenant: Record<string, Awaited<ReturnType<typeof getAlerts>>> = {};
+        for (const tid of tenantIds) {
+          try { alertsByTenant[tid] = await getAlerts(orgId, tid); } catch { alertsByTenant[tid] = []; }
+        }
+
+        if (cancelled) return;
+
+        const enrichments: Record<string, CentralEnrichmentType> = {};
+        for (const link of links) {
+          const fw = cachedFws.find((f) => f.firewallId === link.central_firewall_id);
+          if (!fw) continue;
+          const fwAlerts = (alertsByTenant[link.central_tenant_id] ?? [])
+            .filter((a) => a.managedAgent?.id === link.central_firewall_id);
+
+          const cluster = fw.cluster as { mode?: string; status?: string } | null;
+
+          enrichments[link.config_hash] = {
+            firmware: fw.firmwareVersion,
+            model: fw.model,
+            serialNumber: fw.serialNumber,
+            connected: (fw.status as { connected?: boolean } | null)?.connected ?? false,
+            haCluster: cluster ? { mode: cluster.mode, status: cluster.status } : undefined,
+            alerts: fwAlerts.map((a) => ({
+              severity: a.severity,
+              description: a.description,
+              category: a.category,
+              raisedAt: a.raisedAt,
+            })),
+          };
+        }
+
+        if (cancelled || Object.keys(enrichments).length === 0) return;
+
+        setFiles((prev) =>
+          prev.map((f) =>
+            enrichments[f.id] ? { ...f, centralEnrichment: enrichments[f.id] } : f
+          )
+        );
+        setCentralEnriched(true);
+      } catch { /* Central not available — no enrichment */ }
+    })();
+
+    return () => { cancelled = true; };
+  }, [org?.id, isGuest, files.length, centralEnriched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [saveError, setSaveError] = useState("");
 
@@ -322,6 +398,7 @@ function InnerApp() {
                   configs={configMetas}
                   customerName={branding.customerName}
                   analysisResults={analysisResults}
+                  onLink={() => setCentralEnriched(false)}
                 />
               </Suspense>
             )}

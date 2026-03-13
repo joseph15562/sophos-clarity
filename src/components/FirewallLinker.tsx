@@ -13,6 +13,7 @@ interface FirewallLinkerProps {
   configs: Array<{ label: string; hostname?: string; configHash: string }>;
   customerName: string;
   analysisResults: Record<string, AnalysisResult>;
+  onLink?: () => void;
 }
 
 interface LinkState {
@@ -22,7 +23,7 @@ interface LinkState {
   method: "auto" | "serial" | "manual";
 }
 
-export function FirewallLinker({ configs, customerName, analysisResults }: FirewallLinkerProps) {
+export function FirewallLinker({ configs, customerName, analysisResults, onLink }: FirewallLinkerProps) {
   const { org, isGuest } = useAuth();
   const central = useCentral();
 
@@ -119,7 +120,8 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
       central_firewall_id: fw.id,
       central_tenant_id: matchedTenant.id,
     }, { onConflict: "org_id,config_hash" });
-  }, [matchedTenant, orgId, configs]);
+    onLink?.();
+  }, [matchedTenant, orgId, configs, onLink]);
 
   const handleUnlink = useCallback(async (configHash: string) => {
     setLinks((prev) => {
