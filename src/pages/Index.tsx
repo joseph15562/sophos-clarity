@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
-import { ArrowLeftRight, ChevronDown, RotateCcw, Save } from "lucide-react";
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
+import { ArrowLeftRight, RotateCcw, Save, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
@@ -51,32 +52,9 @@ const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m
 const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
 const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
 import { DashboardLoadingSkeleton, SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
+import type { RiskScoreResult } from "@/lib/risk-score";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
-
-function CollapsibleSection({ title, subtitle, icon, iconBg, defaultOpen = false, badge, children }: {
-  title: string; subtitle?: string; icon: ReactNode; iconBg: string;
-  defaultOpen?: boolean; badge?: ReactNode; children: ReactNode;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/30 transition-colors"
-      >
-        <div className={`h-7 w-7 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>{icon}</div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-display font-bold text-foreground">{title}</h2>
-          {subtitle && <p className="text-[10px] text-muted-foreground leading-tight">{subtitle}</p>}
-        </div>
-        {badge && <div className="shrink-0">{badge}</div>}
-        <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && <div className="border-t border-border">{children}</div>}
-    </section>
-  );
-}
 
 function InnerApp() {
   const { isGuest, org } = useAuth();
@@ -297,9 +275,16 @@ function InnerApp() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
+  const [analysisTab, setAnalysisTab] = useState("overview");
+  const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
+
+  useEffect(() => {
+    if (analysisTab === "remediation" && totalFindings === 0) setAnalysisTab("overview");
+    if (analysisTab === "compare" && files.length < 2) setAnalysisTab("overview");
+  }, [analysisTab, totalFindings, files.length]);
 
   const keyboardShortcuts = useMemo<ShortcutAction[]>(() => [
     { key: "?", description: "Show keyboard shortcuts", handler: () => setShortcutsOpen((v) => !v) },
@@ -541,44 +526,52 @@ function InnerApp() {
               </div>
             )}
 
-            {/* Detailed Analysis divider */}
+            {/* Tabbed Analysis */}
             {hasFiles && (
-              <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-border" />
+              <Tabs value={analysisTab} onValueChange={setAnalysisTab}>
+                <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm">
+                  <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2">Detailed Security Analysis</h2>
+                  <TabsList className="flex-wrap">
+                    <TabsTrigger value="overview" className="gap-2">
+                      <LayoutDashboard className="h-3.5 w-3.5" />
+                      Overview
+                      {totalFindings > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#EA0022]/10 text-[#EA0022] tabular-nums">{totalFindings}</span>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger value="security" className="gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Security Analysis
+                    </TabsTrigger>
+                    <TabsTrigger value="compliance" className="gap-2">
+                      <ClipboardCheck className="h-3.5 w-3.5" />
+                      Compliance
+                    </TabsTrigger>
+                    <TabsTrigger value="optimisation" className="gap-2">
+                      <Zap className="h-3.5 w-3.5" />
+                      Optimisation
+                    </TabsTrigger>
+                    <TabsTrigger value="tools" className="gap-2">
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      Tools
+                    </TabsTrigger>
+                    {totalFindings > 0 && (
+                      <TabsTrigger value="remediation" className="gap-2">
+                        <Wrench className="h-3.5 w-3.5" />
+                        Remediation
+                      </TabsTrigger>
+                    )}
+                    {files.length >= 2 && (
+                      <TabsTrigger value="compare" className="gap-2">
+                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                        Compare
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
                 </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-background px-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Detailed Security Analysis
-                  </span>
-                </div>
-              </div>
-            )}
 
-            {hasFiles && (
-              <CollapsibleSection
-                title="Initial Findings &amp; Estate Overview"
-                subtitle={`${totalFindings} issue${totalFindings !== 1 ? "s" : ""} · ${totalRules} rules · ${files.length} firewall${files.length !== 1 ? "s" : ""}`}
-                icon={<img src="/icons/sophos-alert.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
-                iconBg={totalFindings > 0 ? "bg-[#EA0022]" : "bg-[#00995a]"}
-                defaultOpen
-                badge={totalFindings > 0 ? (
-                  <div className="flex items-center gap-1">
-                    {(() => {
-                      const counts: Record<string, number> = {};
-                      Object.values(analysisResults).forEach((r) =>
-                        r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
-                      );
-                      return Object.entries(counts).map(([sev, count]) => (
-                        <span key={sev} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
-                          {count}{sev[0].toUpperCase()}
-                        </span>
-                      ));
-                    })()}
-                  </div>
-                ) : undefined}
-              >
-                <div className="p-5 space-y-6">
+                {/* Overview */}
+                <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
                   <EstateOverview
                     fileCount={files.length}
                     analysisResults={analysisResults}
@@ -598,26 +591,14 @@ function InnerApp() {
                       />
                     </Suspense>
                   )}
-                </div>
-              </CollapsibleSection>
-            )}
+                </TabsContent>
 
-            {/* Security Risk Score, Compliance & Benchmark */}
-            {hasFiles && (
-              <CollapsibleSection
-                title="Security Risk Score, Compliance &amp; Benchmark"
-                subtitle={`Risk scoring, compliance mapping${branding.environment ? `, peer comparison (${branding.environment})` : ""}`}
-                icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" />}
-                iconBg="bg-[#2006F7]/10 dark:bg-[#00EDFF]/10"
-                defaultOpen
-              >
-                <div className="p-5 space-y-6">
-                  {/* Risk Score — full width */}
+                {/* Security Analysis */}
+                <TabsContent value="security" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
                   <Suspense fallback={<ChartSkeleton height={220} />}>
                     <RiskScoreDashboard analysisResults={analysisResults} />
                   </Suspense>
 
-                  {/* Config Health + Feature Coverage side by side */}
                   <div className="grid gap-6 lg:grid-cols-2">
                     <Suspense fallback={<StatGridSkeleton />}>
                       <RuleHealthOverview analysisResults={analysisResults} />
@@ -627,7 +608,6 @@ function InnerApp() {
                     </Suspense>
                   </div>
 
-                  {/* Severity Donut + Findings by Section */}
                   {totalFindings > 0 && (
                     <div className="grid gap-6 lg:grid-cols-2">
                       <Suspense fallback={<ChartSkeleton />}>
@@ -639,7 +619,6 @@ function InnerApp() {
                     </div>
                   )}
 
-                  {/* Zone Traffic Flow + Top Findings */}
                   <div className="grid gap-6 lg:grid-cols-2">
                     <Suspense fallback={<ChartSkeleton />}>
                       <ZoneTrafficFlow files={files} />
@@ -651,7 +630,16 @@ function InnerApp() {
                     )}
                   </div>
 
-                  {/* Peer Benchmark + Best Practice */}
+                  {totalFindings > 0 && (
+                    <Suspense fallback={<ChartSkeleton />}>
+                      <PriorityMatrix analysisResults={analysisResults} />
+                    </Suspense>
+                  )}
+
+                </TabsContent>
+
+                {/* Compliance */}
+                <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
                   <Suspense fallback={<CardSkeleton />}>
                     <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
                   </Suspense>
@@ -662,7 +650,6 @@ function InnerApp() {
                     />
                   </Suspense>
 
-                  {/* Compliance Heatmap */}
                   <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                     <div className="flex items-center gap-2">
                       <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
@@ -680,120 +667,92 @@ function InnerApp() {
                       />
                     </Suspense>
                   </div>
+                </TabsContent>
 
-                  {/* Finding Priority Matrix */}
-                  {totalFindings > 0 && (
-                    <Suspense fallback={<ChartSkeleton />}>
-                      <PriorityMatrix analysisResults={analysisResults} />
+                {/* Optimisation */}
+                <TabsContent value="optimisation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+                  <Suspense fallback={<SectionSkeleton />}>
+                    <RuleOptimiser files={files} />
+                  </Suspense>
+                  {files.length >= 2 && (
+                    <Suspense fallback={null}>
+                      <ConsistencyChecker analysisResults={analysisResults} />
                     </Suspense>
                   )}
+                </TabsContent>
 
-                  {/* What-If Score Simulator */}
+                {/* Tools */}
+                <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+                  <Suspense fallback={<ChartSkeleton height={220} />}>
+                    <RiskScoreDashboard analysisResults={analysisResults} projected={projectedScore} />
+                  </Suspense>
+
                   {totalFindings > 0 && (
                     <Suspense fallback={<CardSkeleton />}>
-                      <ScoreSimulator analysisResults={analysisResults} />
+                      <ScoreSimulator analysisResults={analysisResults} onProjectedChange={setProjectedScore} />
                     </Suspense>
                   )}
 
-                  {/* Attack Surface Map */}
                   <Suspense fallback={<CardSkeleton />}>
                     <AttackSurfaceMap files={files} />
                   </Suspense>
-                </div>
-              </CollapsibleSection>
-            )}
+                </TabsContent>
 
-            {/* Rule Optimisation */}
-            {hasFiles && (
-              <CollapsibleSection
-                title="Rule Optimisation Engine"
-                subtitle="Detect duplicate, shadowed, and mergeable firewall rules"
-                icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
-                iconBg="bg-[#10037C]"
-              >
-              <Suspense fallback={<SectionSkeleton />}>
-                <RuleOptimiser files={files} />
-              </Suspense>
-              </CollapsibleSection>
-            )}
-
-            {/* Multi-Firewall Consistency */}
-            {hasFiles && files.length >= 2 && (
-              <Suspense fallback={null}>
-                <ConsistencyChecker analysisResults={analysisResults} />
-              </Suspense>
-            )}
-
-            {/* Remediation Playbooks */}
-            {hasFiles && totalFindings > 0 && (
-              <CollapsibleSection
-                title="Quick Remediation Playbooks"
-                subtitle="Step-by-step Sophos Firewall instructions to resolve each finding"
-                icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
-                iconBg="bg-[#00995a]"
-              >
-                <div className="p-5">
+                {/* Remediation */}
+                <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
                   <Suspense fallback={null}>
                     <RemediationPlaybooks analysisResults={analysisResults} />
                   </Suspense>
-                </div>
-              </CollapsibleSection>
-            )}
+                </TabsContent>
 
-
-            {/* Config diff — compare two configs */}
-            {files.length >= 2 && (
-              <CollapsibleSection
-                title="Compare Configurations"
-                subtitle="Side-by-side diff for change reviews and drift auditing"
-                icon={<ArrowLeftRight className="h-4 w-4 text-white" />}
-                iconBg="bg-[#10037C]"
-              >
-                <div className="p-5 space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
-                      <select
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-                        value={diffSelection?.beforeIdx ?? 0}
-                        onChange={(e) => setDiffSelection((prev) => ({
-                          beforeIdx: Number(e.target.value),
-                          afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
-                        }))}
-                      >
-                        {files.map((f, i) => (
-                          <option key={f.id} value={i}>{fileLabel(f)}</option>
-                        ))}
-                      </select>
+                {/* Compare */}
+                <TabsContent value="compare" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
+                        <select
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                          value={diffSelection?.beforeIdx ?? 0}
+                          onChange={(e) => setDiffSelection((prev) => ({
+                            beforeIdx: Number(e.target.value),
+                            afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
+                          }))}
+                        >
+                          {files.map((f, i) => (
+                            <option key={f.id} value={i}>{fileLabel(f)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
+                        <select
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                          value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
+                          onChange={(e) => setDiffSelection((prev) => ({
+                            beforeIdx: prev?.beforeIdx ?? 0,
+                            afterIdx: Number(e.target.value),
+                          }))}
+                        >
+                          {files.map((f, i) => (
+                            <option key={f.id} value={i}>{fileLabel(f)}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
-                      <select
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-                        value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
-                        onChange={(e) => setDiffSelection((prev) => ({
-                          beforeIdx: prev?.beforeIdx ?? 0,
-                          afterIdx: Number(e.target.value),
-                        }))}
-                      >
-                        {files.map((f, i) => (
-                          <option key={f.id} value={i}>{fileLabel(f)}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setDiffSelection({
+                        beforeIdx: diffSelection?.beforeIdx ?? 0,
+                        afterIdx: diffSelection?.afterIdx ?? Math.min(1, files.length - 1),
+                      })}
+                    >
+                      <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setDiffSelection({
-                      beforeIdx: diffSelection?.beforeIdx ?? 0,
-                      afterIdx: diffSelection?.afterIdx ?? Math.min(1, files.length - 1),
-                    })}
-                  >
-                    <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
-                  </Button>
-                </div>
-              </CollapsibleSection>
+                </TabsContent>
+              </Tabs>
             )}
           </>
         )}

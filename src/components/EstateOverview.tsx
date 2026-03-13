@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { CheckCircle2, Download } from "lucide-react";
-import type { AnalysisResult, Severity, InspectionPosture } from "@/lib/analyse-config";
+import { useState, useRef, useMemo, useCallback } from "react";
+import { CheckCircle2, Download, Shield, Globe, Lock, Network, AlertTriangle, Settings, Bug, Eye, Activity, Server, Clock, Key, Database, Wifi, FileWarning, ChevronDown, ChevronRight } from "lucide-react";
+import type { AnalysisResult, Severity, Finding, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
 import { findingToFrameworks } from "@/lib/compliance-map";
 import { downloadCsv, downloadFindingsPdf } from "@/lib/findings-export";
@@ -44,6 +44,15 @@ export function EstateOverview({
   aggregatedPosture,
   selectedFrameworks = [],
 }: EstateOverviewProps) {
+  const findingsRef = useRef<HTMLDivElement>(null);
+
+  const scrollToFindings = useCallback(() => {
+    if (!findingsRef.current) return;
+    findingsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    findingsRef.current.classList.add("ring-2", "ring-[#F29400]/40");
+    setTimeout(() => findingsRef.current?.classList.remove("ring-2", "ring-[#F29400]/40"), 1500);
+  }, []);
+
   return (
     <>
       {/* Estate summary cards */}
@@ -83,6 +92,7 @@ export function EstateOverview({
           bg={totalFindings > 0 ? "bg-[#EA0022]/[0.04] dark:bg-[#F29400]/[0.06]" : "bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"}
           iconBg={totalFindings > 0 ? "bg-[#EA0022]/10 dark:bg-[#F29400]/10" : "bg-[#00995a]/10 dark:bg-[#00F2B3]/10"}
           valueColor={totalFindings > 0 ? "text-[#EA0022] dark:text-[#F29400]" : "text-[#00995a] dark:text-[#00F2B3]"}
+          onClick={totalFindings > 0 ? scrollToFindings : undefined}
         />
       </section>
 
@@ -103,7 +113,9 @@ export function EstateOverview({
 
       {/* Deterministic findings panel */}
       {totalFindings > 0 && (
-        <FindingsPanel analysisResults={analysisResults} fileCount={fileCount} selectedFrameworks={selectedFrameworks} />
+        <div ref={findingsRef} className="scroll-mt-20 rounded-xl transition-all duration-500">
+          <FindingsPanel analysisResults={analysisResults} fileCount={fileCount} selectedFrameworks={selectedFrameworks} />
+        </div>
       )}
 
       {/* Estate risk comparison */}
@@ -180,12 +192,17 @@ function ParserDiagnostics({ analysisResults }: { analysisResults: Record<string
   );
 }
 
-function StatCard({ icon, value, label, border, bg, iconBg, valueColor }: {
+function StatCard({ icon, value, label, border, bg, iconBg, valueColor, onClick }: {
   icon: string; value: number; label: string;
   border: string; bg: string; iconBg: string; valueColor: string;
+  onClick?: () => void;
 }) {
+  const Wrapper = onClick ? "button" : "div";
   return (
-    <div className={`rounded-xl border ${border} ${bg} p-5 flex items-center gap-4`}>
+    <Wrapper
+      className={`rounded-xl border ${border} ${bg} p-5 flex items-center gap-4 text-left ${onClick ? "cursor-pointer hover:brightness-110 hover:shadow-md transition-all" : ""}`}
+      onClick={onClick}
+    >
       <div className={`h-12 w-12 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
         <img src={icon} alt="" className="h-7 w-7 sophos-icon" />
       </div>
@@ -193,7 +210,7 @@ function StatCard({ icon, value, label, border, bg, iconBg, valueColor }: {
         <p className={`text-3xl font-extrabold ${valueColor} leading-none`}>{value}</p>
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-1">{label}</p>
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
@@ -343,16 +360,100 @@ function FindingCard({ finding, label, fileCount, selectedFrameworks }: {
   );
 }
 
+const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  "Firewall Rules": Shield,
+  "NAT Rules": Network,
+  "SSL/TLS Inspection": Lock,
+  "Intrusion Prevention": Eye,
+  "Application Control": Activity,
+  "Web Filter Policies": Globe,
+  "Local Service ACL": Server,
+  "Authentication & OTP": Key,
+  "Admin Settings": Settings,
+  "Virus Scanning": Bug,
+  "High Availability": Database,
+  "Active Threat Response": AlertTriangle,
+  "Backup & Restore": Database,
+  "Notification Settings": Settings,
+  "Pattern Downloads": Download,
+  "Time Settings": Clock,
+  "Authentication Servers": Key,
+  "Hotfix Settings": Settings,
+  "Application Classification": Activity,
+  "Extraction": FileWarning,
+  "Wireless": Wifi,
+};
+
+const SEV_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
+
+const SEV_BADGE: Record<Severity, { bg: string; text: string; label: string }> = {
+  critical: { bg: "bg-[#EA0022]/10", text: "text-[#EA0022]", label: "C" },
+  high: { bg: "bg-[#F29400]/10", text: "text-[#c47800] dark:text-[#F29400]", label: "H" },
+  medium: { bg: "bg-[#F8E300]/10", text: "text-[#b8a200] dark:text-[#F8E300]", label: "M" },
+  low: { bg: "bg-[#00995a]/10", text: "text-[#00995a] dark:text-[#00F2B3]", label: "L" },
+  info: { bg: "bg-[#009CFB]/10", text: "text-[#0077cc] dark:text-[#009CFB]", label: "I" },
+};
+
+interface SectionGroupData {
+  section: string;
+  findings: (Finding & { firewall: string })[];
+  sevCounts: Record<Severity, number>;
+  highestSeverity: number;
+}
+
 function FindingsPanel({ analysisResults, fileCount, selectedFrameworks }: {
   analysisResults: Record<string, AnalysisResult>; fileCount: number; selectedFrameworks: string[];
 }) {
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+
+  const groups: SectionGroupData[] = useMemo(() => {
+    const map = new Map<string, (Finding & { firewall: string })[]>();
+    for (const [label, result] of Object.entries(analysisResults)) {
+      for (const f of result.findings) {
+        const key = f.section;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push({ ...f, firewall: label });
+      }
+    }
+    return [...map.entries()]
+      .map(([section, findings]) => {
+        const sevCounts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+        for (const f of findings) sevCounts[f.severity]++;
+        const highestSeverity = SEV_ORDER.findIndex((s) => sevCounts[s] > 0);
+        return { section, findings, sevCounts, highestSeverity: highestSeverity === -1 ? 99 : highestSeverity };
+      })
+      .sort((a, b) => a.highestSeverity - b.highestSeverity || b.findings.length - a.findings.length);
+  }, [analysisResults]);
+
+  const toggleSection = useCallback((section: string) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(section)) next.delete(section); else next.add(section);
+      return next;
+    });
+  }, []);
+
+  const expandAll = useCallback(() => {
+    setOpenSections(new Set(groups.map((g) => g.section)));
+  }, [groups]);
+
+  const collapseAll = useCallback(() => setOpenSections(new Set()), []);
+
+  const totalCount = groups.reduce((s, g) => s + g.findings.length, 0);
+
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <img src="/icons/sophos-alert.svg" alt="" className="h-5 w-5 sophos-icon" />
         <h3 className="text-sm font-semibold text-foreground">Deterministic Findings</h3>
-        <span className="text-xs text-muted-foreground">(rule-based analysis — pre-AI)</span>
+        <span className="text-xs text-muted-foreground">{totalCount} issues across {groups.length} sections</span>
         <div className="ml-auto flex items-center gap-1.5">
+          <button
+            onClick={openSections.size > 0 ? collapseAll : expandAll}
+            className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted/50 transition-colors"
+          >
+            {openSections.size > 0 ? "Collapse all" : "Expand all"}
+          </button>
           <button
             onClick={() => downloadCsv(analysisResults)}
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted/50 transition-colors"
@@ -369,18 +470,54 @@ function FindingsPanel({ analysisResults, fileCount, selectedFrameworks }: {
           </button>
         </div>
       </div>
-      <div className="grid gap-2">
-        {Object.entries(analysisResults).map(([label, result]) =>
-          result.findings.map((f) => (
-            <FindingCard
-              key={`${label}-${f.id}`}
-              finding={f}
-              label={label}
-              fileCount={fileCount}
-              selectedFrameworks={selectedFrameworks}
-            />
-          ))
-        )}
+
+      <div className="space-y-2">
+        {groups.map((g) => {
+          const isOpen = openSections.has(g.section);
+          const Icon = SECTION_ICONS[g.section] ?? AlertTriangle;
+          const borderSev = SEV_ORDER[g.highestSeverity] ?? "info";
+          return (
+            <div key={g.section} className={`rounded-xl border border-border border-l-4 ${SEVERITY_BORDER[borderSev]} bg-card overflow-hidden transition-all`}>
+              <button
+                onClick={() => toggleSection(g.section)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/20 transition-colors"
+              >
+                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-semibold text-foreground flex-1 min-w-0 truncate">{g.section}</span>
+                <span className="flex items-center gap-1 shrink-0">
+                  {SEV_ORDER.map((sev) => {
+                    const count = g.sevCounts[sev];
+                    if (count === 0) return null;
+                    const badge = SEV_BADGE[sev];
+                    return (
+                      <span key={sev} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.bg} ${badge.text}`}>
+                        {count}{badge.label}
+                      </span>
+                    );
+                  })}
+                </span>
+                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-6 text-right">{g.findings.length}</span>
+                {isOpen
+                  ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                }
+              </button>
+              {isOpen && (
+                <div className="px-3 pb-3 space-y-1.5 border-t border-border/50 pt-2">
+                  {g.findings.map((f, i) => (
+                    <FindingCard
+                      key={`${f.firewall}-${f.id}-${i}`}
+                      finding={f}
+                      label={f.firewall}
+                      fileCount={fileCount}
+                      selectedFrameworks={selectedFrameworks}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

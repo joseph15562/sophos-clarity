@@ -41,11 +41,22 @@ export function LicenceExpiryWidget() {
     setLoading(false);
   }, [orgId, central.isConnected, central.tenants]);
 
+  const [hasFetched, setHasFetched] = useState(false);
+  const [fetchedWithTenants, setFetchedWithTenants] = useState(false);
+
   useEffect(() => {
-    if (central.isConnected && central.tenants.length > 0 && firewallLicences.length === 0 && !loading) {
+    if (central.isConnected && !hasFetched && !loading) {
+      setHasFetched(true);
       fetchLicences();
     }
-  }, [central.isConnected, central.tenants.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [central.isConnected, hasFetched, loading, fetchLicences]);
+
+  useEffect(() => {
+    if (central.isConnected && hasFetched && !fetchedWithTenants && central.tenants.length > 0 && firewallLicences.length === 0 && !loading) {
+      setFetchedWithTenants(true);
+      fetchLicences();
+    }
+  }, [central.isConnected, hasFetched, fetchedWithTenants, central.tenants.length, firewallLicences.length, loading, fetchLicences]);
 
   const flattened = useMemo<FlattenedLicence[]>(() => {
     const items: FlattenedLicence[] = [];
@@ -134,15 +145,15 @@ export function LicenceExpiryWidget() {
         <div className="border-t border-border px-4 py-3 space-y-3">
           {/* Summary cards */}
           <div className="grid grid-cols-4 gap-2">
-            <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "all" ? "ring-2 ring-[#2006F7]" : ""} bg-muted/40`} onClick={() => setFilterMode("all")}>
+            <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "all" ? "bg-muted/80 ring-1 ring-border" : "bg-muted/40 hover:bg-muted/60"}`} onClick={() => setFilterMode("all")}>
               <p className="text-sm font-bold text-foreground">{flattened.length}</p>
               <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Total</p>
             </div>
-            <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "expired" ? "ring-2 ring-[#EA0022]" : ""} bg-[#EA0022]/5`} onClick={() => setFilterMode("expired")}>
+            <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "expired" ? "bg-[#EA0022]/10 ring-1 ring-[#EA0022]/30" : "bg-[#EA0022]/5 hover:bg-[#EA0022]/10"}`} onClick={() => setFilterMode("expired")}>
               <p className={`text-sm font-bold ${expired > 0 ? "text-[#EA0022]" : "text-foreground"}`}>{expired}</p>
               <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Expired</p>
             </div>
-            <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "expiring" ? "ring-2 ring-[#F29400]" : ""} bg-[#F29400]/5`} onClick={() => setFilterMode("expiring")}>
+            <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "expiring" ? "bg-[#F29400]/10 ring-1 ring-[#F29400]/30" : "bg-[#F29400]/5 hover:bg-[#F29400]/10"}`} onClick={() => setFilterMode("expiring")}>
               <p className={`text-sm font-bold ${(expiringSoon + expiringMedium) > 0 ? "text-[#F29400]" : "text-foreground"}`}>{expiringSoon + expiringMedium}</p>
               <p className="text-[8px] text-muted-foreground uppercase tracking-wider">&lt;90 Days</p>
             </div>
@@ -164,7 +175,7 @@ export function LicenceExpiryWidget() {
                 <RefreshCw className="h-3 w-3" /> Retry
               </Button>
             </div>
-          ) : filtered.length > 0 ? (
+          ) : filtered.length > 0 || flattened.length > 0 ? (
             <>
               <div className="rounded-lg border border-border overflow-hidden">
                 <div className="grid grid-cols-[100px_1fr_90px_80px_70px] gap-2 px-3 py-1.5 bg-muted/50 text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -244,11 +255,16 @@ export function LicenceExpiryWidget() {
               </p>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground text-center py-3">
-              {flattened.length === 0
-                ? "No firewall licence data available. Ensure your API credentials have licensing scope."
-                : "No licences match this filter."}
-            </p>
+            <div className="text-center py-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {flattened.length === 0
+                  ? "No firewall licence data available. Ensure your API credentials have licensing scope."
+                  : "No licences match this filter."}
+              </p>
+              <Button variant="outline" size="sm" onClick={() => { setHasFetched(false); }} disabled={loading} className="gap-1 text-[10px] h-7">
+                <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Retry
+              </Button>
+            </div>
           )}
         </div>
       )}

@@ -13,6 +13,7 @@ import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
+  projected?: RiskScoreResult | null;
 }
 
 const GRADE_COLORS: Record<string, { ring: string; text: string; bg: string }> = {
@@ -23,23 +24,42 @@ const GRADE_COLORS: Record<string, { ring: string; text: string; bg: string }> =
   F: { ring: "ring-[#EA0022]/30", text: "text-[#EA0022]", bg: "bg-[#EA0022]/10" },
 };
 
-function GaugeRing({ score, grade }: { score: number; grade: string }) {
+function GaugeRing({ score, grade, projectedScore, projectedGrade }: {
+  score: number; grade: string; projectedScore?: number; projectedGrade?: string;
+}) {
   const r = 54;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;
   const colors = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
+  const hasProjection = projectedScore != null && projectedScore !== score;
 
   const strokeColor =
     grade === "A" || grade === "B" ? "#00995a" : grade === "C" ? "#F8E300" : grade === "D" ? "#F29400" : "#EA0022";
+
+  const projOffset = hasProjection ? circumference - (projectedScore / 100) * circumference : circumference;
+  const projColors = projectedGrade ? (GRADE_COLORS[projectedGrade] ?? GRADE_COLORS.C) : colors;
+  const delta = hasProjection ? projectedScore - score : 0;
 
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
       <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 120 120">
         <circle cx="60" cy="60" r={r} fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+        {hasProjection && (
+          <circle
+            cx="60" cy="60" r={r} fill="none"
+            stroke="#00EDFF"
+            strokeWidth="8"
+            strokeDasharray={circumference}
+            strokeDashoffset={projOffset}
+            strokeLinecap="round"
+            className="transition-all duration-700"
+            opacity={0.5}
+          />
+        )}
         <circle
           cx="60" cy="60" r={r} fill="none"
           stroke={strokeColor}
-          strokeWidth="8"
+          strokeWidth={hasProjection ? 4 : 8}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
@@ -48,13 +68,26 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
       </svg>
       <div className="text-center z-10">
         <span className={`text-3xl font-extrabold ${colors.text}`}>{score}</span>
-        <span className={`block text-xs font-bold ${colors.text} mt-0.5`}>Grade {grade}</span>
+        {hasProjection && (
+          <span className="block text-sm font-extrabold text-[#00b8d4] dark:text-[#00EDFF]">
+            → {projectedScore}
+            <span className="text-[10px] ml-0.5">{delta > 0 ? `+${delta}` : delta}</span>
+          </span>
+        )}
+        {!hasProjection && (
+          <span className={`block text-xs font-bold ${colors.text} mt-0.5`}>Grade {grade}</span>
+        )}
+        {hasProjection && (
+          <span className="block text-[10px] font-bold text-[#00b8d4] dark:text-[#00EDFF]">
+            {projectedGrade !== grade ? `${grade} → ${projectedGrade}` : `Grade ${grade}`}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-export function RiskScoreDashboard({ analysisResults }: Props) {
+export function RiskScoreDashboard({ analysisResults, projected }: Props) {
   const perFirewall = useMemo(() => {
     const entries: { label: string; result: RiskScoreResult }[] = [];
     for (const [label, ar] of Object.entries(analysisResults)) {
@@ -77,11 +110,15 @@ export function RiskScoreDashboard({ analysisResults }: Props) {
     return { overall, grade, categories };
   }, [perFirewall]);
 
-  const radarData = aggregated.categories.map((c) => ({
-    category: c.label,
-    score: c.pct,
-    fullMark: 100,
-  }));
+  const radarData = aggregated.categories.map((c) => {
+    const projCat = projected?.categories.find((p) => p.label === c.label);
+    return {
+      category: c.label,
+      score: c.pct,
+      projected: projCat ? projCat.pct : c.pct,
+      fullMark: 100,
+    };
+  });
 
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-5">
@@ -96,9 +133,16 @@ export function RiskScoreDashboard({ analysisResults }: Props) {
       <div className="grid gap-6 md:grid-cols-2 items-center">
         {/* Gauge + legend */}
         <div className="flex flex-col items-center gap-4">
-          <GaugeRing score={aggregated.overall} grade={aggregated.grade} />
+          <GaugeRing
+            score={aggregated.overall}
+            grade={aggregated.grade}
+            projectedScore={projected?.overall}
+            projectedGrade={projected?.grade}
+          />
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
             {aggregated.categories.map((c) => {
+              const projCat = projected?.categories.find((p) => p.label === c.label);
+              const delta = projCat ? projCat.pct - c.pct : 0;
               const color =
                 c.pct >= 80 ? "text-[#00995a] dark:text-[#00F2B3]" :
                 c.pct >= 50 ? "text-[#b8a200] dark:text-[#F8E300]" :
@@ -106,6 +150,9 @@ export function RiskScoreDashboard({ analysisResults }: Props) {
               return (
                 <div key={c.label} className="flex items-center gap-2">
                   <span className={`font-bold tabular-nums ${color}`}>{c.pct}%</span>
+                  {delta > 0 && (
+                    <span className="font-bold tabular-nums text-[#00b8d4] dark:text-[#00EDFF] text-[10px]">→{projCat!.pct}%</span>
+                  )}
                   <span className="text-muted-foreground">{c.label}</span>
                 </div>
               );
@@ -120,6 +167,16 @@ export function RiskScoreDashboard({ analysisResults }: Props) {
               <PolarGrid stroke="hsl(var(--border))" />
               <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
               <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+              {projected && (
+                <Radar
+                  dataKey="projected"
+                  stroke="#00EDFF"
+                  fill="#00EDFF"
+                  fillOpacity={0.1}
+                  strokeWidth={2}
+                  strokeDasharray="4 3"
+                />
+              )}
               <Radar
                 dataKey="score"
                 stroke="#2006F7"
@@ -129,7 +186,10 @@ export function RiskScoreDashboard({ analysisResults }: Props) {
               />
               <Tooltip
                 contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
-                formatter={(value: number) => [`${value}%`, "Score"]}
+                formatter={(value: number, name: string) => [
+                  `${value}%`,
+                  name === "projected" ? "Projected" : "Current",
+                ]}
               />
             </RadarChart>
           </ResponsiveContainer>

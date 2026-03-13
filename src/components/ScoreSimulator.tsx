@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import type { AnalysisResult, InspectionPosture, Finding } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
+  onProjectedChange?: (projected: RiskScoreResult | null) => void;
 }
 
 interface Toggle {
@@ -122,7 +123,7 @@ const TOGGLES: Toggle[] = [
   },
 ];
 
-export function ScoreSimulator({ analysisResults }: Props) {
+export function ScoreSimulator({ analysisResults, onProjectedChange }: Props) {
   const [active, setActive] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
 
@@ -174,6 +175,10 @@ export function ScoreSimulator({ analysisResults }: Props) {
 
     return { current: avg(currentScores), projected: avg(projectedScores) };
   }, [analysisResults, active]);
+
+  useEffect(() => {
+    onProjectedChange?.(active.size > 0 ? projected : null);
+  }, [projected, active.size, onProjectedChange]);
 
   const delta = projected.overall - current.overall;
   const findingsResolved = useMemo(() => {
