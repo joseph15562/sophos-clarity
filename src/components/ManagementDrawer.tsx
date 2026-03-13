@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense, type ReactNode } from "react";
 import { X, LayoutDashboard, FileText, History, Settings, ChevronRight } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import { RerunSetupButton } from "@/components/SetupWizard";
 
 const TenantDashboard = lazy(() => import("@/components/TenantDashboard").then((m) => ({ default: m.TenantDashboard })));
 const LicenceExpiryWidget = lazy(() => import("@/components/LicenceExpiryWidget").then((m) => ({ default: m.LicenceExpiryWidget })));
@@ -38,6 +39,7 @@ interface Props {
   savedReportsTrigger?: number;
   hasFiles: boolean;
   initialTab?: TabId;
+  onRerunSetup?: () => void;
 }
 
 function Skeleton() {
@@ -78,6 +80,7 @@ export function ManagementDrawer({
   savedReportsTrigger,
   hasFiles,
   initialTab,
+  onRerunSetup,
 }: Props) {
   const visibleTabs = TABS.filter((t) => t.guestVisible || !isGuest);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? visibleTabs[0]?.id ?? "reports");
@@ -178,6 +181,7 @@ export function ManagementDrawer({
 
           {currentTab === "settings" && (
             <div className="p-4 space-y-3">
+              {onRerunSetup && <RerunSetupButton onClick={onRerunSetup} />}
               <SettingsSection title="Sophos Central API">
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>

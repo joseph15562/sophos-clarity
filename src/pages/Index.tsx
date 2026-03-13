@@ -27,6 +27,7 @@ import { NotificationCentre } from "@/components/NotificationCentre";
 import { useKeyboardShortcuts, type ShortcutAction } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 import { ManagementDrawer } from "@/components/ManagementDrawer";
+import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
@@ -49,7 +50,6 @@ const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").the
 const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
 const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
 const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
-const OnboardingChecklist = lazy(() => import("@/components/OnboardingChecklist").then((m) => ({ default: m.OnboardingChecklist })));
 import { DashboardLoadingSkeleton, SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
@@ -296,6 +296,7 @@ function InnerApp() {
   const [viewingReports, setViewingReports] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
@@ -439,18 +440,6 @@ function InnerApp() {
               </section>
             )}
 
-            {/* Onboarding Checklist */}
-            {!hasFiles && (
-              <Suspense fallback={null}>
-                <OnboardingChecklist
-                  hasFiles={hasFiles}
-                  hasBranding={!!branding.companyName}
-                  hasCentral={centralEnriched}
-                  hasReports={hasReports}
-                  hasTeam={!isGuest && !!org}
-                />
-              </Suspense>
-            )}
 
             {/* Step 1 — Upload */}
             <section className="space-y-4">
@@ -925,6 +914,15 @@ function InnerApp() {
         </Suspense>
       )}
 
+      {/* First-Time Setup Wizard */}
+      <SetupWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        branding={branding}
+        onBrandingChange={setBranding}
+        orgName={org?.name}
+      />
+
       {/* Management Drawer */}
       <ManagementDrawer
         open={drawerOpen}
@@ -937,6 +935,7 @@ function InnerApp() {
         onLoadReports={handleLoadSavedReports}
         savedReportsTrigger={savedReportsTrigger}
         hasFiles={hasFiles}
+        onRerunSetup={() => { resetSetupFlag(); setDrawerOpen(false); setWizardOpen(true); }}
       />
 
       {/* Keyboard shortcut hint */}
