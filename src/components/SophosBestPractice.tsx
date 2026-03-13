@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, UserCheck, Undo2 } from "lucide-react";
+import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, UserCheck, Undo2, Lock } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import {
   type LicenceTier,
@@ -16,6 +16,7 @@ import { getCentralStatus } from "@/lib/sophos-central";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
+  centralLicences?: Array<{ product: string; endDate: string; type: string }>;
 }
 
 const TIER_INFO: Record<LicenceTier, { label: string; description: string }> = {
@@ -82,9 +83,20 @@ function saveOverrides(overrides: Set<string>) {
   localStorage.setItem(OVERRIDES_KEY, JSON.stringify([...overrides]));
 }
 
-export function SophosBestPractice({ analysisResults }: Props) {
+function detectTierFromCentral(licences: Array<{ product: string; endDate: string; type: string }> | undefined): LicenceTier | null {
+  if (!licences || licences.length === 0) return null;
+  const names = licences.map((l) => l.product.toLowerCase());
+  if (names.some((n) => n.includes("xstream"))) return "xstream";
+  if (names.some((n) => n.includes("standard"))) return "standard";
+  return null;
+}
+
+export function SophosBestPractice({ analysisResults, centralLicences }: Props) {
   const { org, isGuest } = useAuth();
   const orgId = org?.id ?? "";
+
+  const detectedTier = useMemo(() => detectTierFromCentral(centralLicences), [centralLicences]);
+  const isLocked = detectedTier !== null;
 
   const [tier, setTier] = useState<LicenceTier>("xstream");
   const [individualModules, setIndividualModules] = useState<ModuleId[]>([
@@ -94,6 +106,10 @@ export function SophosBestPractice({ analysisResults }: Props) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [manualOverrides, setManualOverrides] = useState<Set<string>>(loadOverrides);
   const [centralLinked, setCentralLinked] = useState(false);
+
+  useEffect(() => {
+    if (detectedTier) setTier(detectedTier);
+  }, [detectedTier]);
 
   useEffect(() => { saveOverrides(manualOverrides); }, [manualOverrides]);
 
@@ -184,25 +200,47 @@ export function SophosBestPractice({ analysisResults }: Props) {
         <div className="flex items-center gap-2 mb-4">
           <Shield className="h-4 w-4 text-[#2006F7]" />
           <h3 className="text-sm font-display font-bold text-foreground">Sophos Licence Selection</h3>
+          {isLocked && (
+            <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] ml-auto">
+              <Lock className="h-2.5 w-2.5" />
+              Auto-detected from Sophos Central
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          {(Object.entries(TIER_INFO) as [LicenceTier, typeof TIER_INFO.standard][]).map(([key, info]) => (
-            <button
-              key={key}
-              onClick={() => setTier(key)}
-              className={`rounded-lg border p-3 text-left transition-all ${
-                tier === key
-                  ? "border-[#2006F7] bg-[#2006F7]/10 ring-1 ring-[#2006F7]/30"
-                  : "border-border hover:border-muted-foreground/30"
-              }`}
-            >
-              <p className={`text-xs font-semibold ${tier === key ? "text-[#2006F7] dark:text-[#6B5BFF]" : "text-foreground"}`}>
-                {info.label}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{info.description}</p>
-            </button>
-          ))}
+          {(Object.entries(TIER_INFO) as [LicenceTier, typeof TIER_INFO.standard][]).map(([key, info]) => {
+            const isSelected = tier === key;
+            const isDisabled = isLocked && !isSelected;
+            return (
+              <button
+                key={key}
+                onClick={() => !isLocked && setTier(key)}
+                disabled={isLocked}
+                className={`rounded-lg border p-3 text-left transition-all ${
+                  isSelected
+                    ? isLocked
+                      ? "border-[#00995a] bg-[#00995a]/10 ring-1 ring-[#00995a]/30"
+                      : "border-[#2006F7] bg-[#2006F7]/10 ring-1 ring-[#2006F7]/30"
+                    : isDisabled
+                      ? "border-border opacity-40 cursor-not-allowed"
+                      : "border-border hover:border-muted-foreground/30"
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <p className={`text-xs font-semibold ${
+                    isSelected
+                      ? isLocked ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#2006F7] dark:text-[#6B5BFF]"
+                      : "text-foreground"
+                  }`}>
+                    {info.label}
+                  </p>
+                  {isSelected && isLocked && <Lock className="h-3 w-3 text-[#00995a] dark:text-[#00F2B3]" />}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{info.description}</p>
+              </button>
+            );
+          })}
         </div>
 
         {/* Individual module checkboxes */}

@@ -669,7 +669,10 @@ function InnerApp() {
                     <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
                   </Suspense>
                   <Suspense fallback={<CardSkeleton />}>
-                    <SophosBestPractice analysisResults={analysisResults} />
+                    <SophosBestPractice
+                      analysisResults={analysisResults}
+                      centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
+                    />
                   </Suspense>
 
                   {/* Compliance Heatmap */}
