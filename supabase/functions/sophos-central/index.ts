@@ -345,6 +345,19 @@ serve(async (req) => {
       return json({ items });
     }
 
+    // ── Mode: firewall-detail ── return full raw API response for a single firewall (for discovering available fields)
+    if (mode === "firewall-detail") {
+      const { tenantId, firewallId } = body as { tenantId: string; firewallId: string };
+      if (!tenantId || !firewallId) return json({ error: "Missing tenantId or firewallId" }, 400);
+      const apiHost = await resolveApiHost(orgId, tenantId, creds, token);
+      const data = await sophosGet(
+        `${apiHost}/firewall/v1/firewalls/${firewallId}`,
+        token,
+        { "X-Tenant-ID": tenantId },
+      );
+      return json(data);
+    }
+
     // ── Mode: firewall-groups ── list firewall groups for a tenant
     if (mode === "firewall-groups") {
       const { tenantId } = body as { tenantId: string };

@@ -77,14 +77,10 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
       try { alerts = await getAlerts(orgId, tenantId); } catch { /* ignore */ }
       try { allLicences = await getLicences(orgId, tenantId); } catch { /* ignore */ }
 
-      // Filter to firewall-relevant licences only
-      const FIREWALL_LICENCE_KEYWORDS = /firewall|protection|xgs|sfos|xg\s|web\s*server|network\s*protection|enhanced\s*support|enhanced\s*plus/i;
-      const NON_FIREWALL_KEYWORDS = /switch|access\s*point|wireless|email|mobile|intercept|cloud\s*optix|phish|encryption|dmarc|xdr|zero\s*trust|managed\s*risk/i;
+      // Only show licences explicitly related to firewalls
       const licences = allLicences.filter((l) => {
-        const name = l.product?.name || l.product?.code || l.type || "";
-        if (FIREWALL_LICENCE_KEYWORDS.test(name)) return true;
-        if (NON_FIREWALL_KEYWORDS.test(name)) return false;
-        return true;
+        const name = (l.product?.name || l.product?.code || l.type || "").toLowerCase();
+        return name.includes("firewall") || name.includes("xgs") || name.includes("sfos");
       });
 
       for (const link of tenantLinks) {
@@ -263,7 +259,7 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
               {data.licences.length > 0 && (
                 <div className="space-y-1">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-                    <Shield className="h-3 w-3" /> Licences
+                    <Shield className="h-3 w-3" /> Firewall Subscriptions
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {data.licences.map((l, idx) => {
