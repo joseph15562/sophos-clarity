@@ -506,11 +506,11 @@ function InnerApp() {
               </CollapsibleSection>
             )}
 
-            {/* Risk Score & Benchmark */}
+            {/* Security Risk Score, Compliance & Benchmark */}
             {hasFiles && (
               <CollapsibleSection
-                title="Security Risk Score &amp; Benchmark"
-                subtitle={`Risk scoring with peer comparison${branding.environment ? ` (${branding.environment})` : ""}`}
+                title="Security Risk Score, Compliance &amp; Benchmark"
+                subtitle={`Risk scoring, compliance mapping${branding.environment ? `, peer comparison (${branding.environment})` : ""}`}
                 icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" />}
                 iconBg="bg-[#2006F7]/10 dark:bg-[#00EDFF]/10"
                 defaultOpen
@@ -525,22 +525,53 @@ function InnerApp() {
                   <Suspense fallback={null}>
                     <SophosBestPractice analysisResults={analysisResults} />
                   </Suspense>
+
+                  {/* Compliance Heatmap */}
+                  <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
+                      <h3 className="text-sm font-display font-bold text-foreground">Compliance Heatmap</h3>
+                      {branding.selectedFrameworks.length > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
+                          {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                    <Suspense fallback={null}>
+                      <ComplianceHeatmap
+                        analysisResults={analysisResults}
+                        selectedFrameworks={branding.selectedFrameworks}
+                      />
+                    </Suspense>
+                  </div>
+
+                  {/* Finding Priority Matrix */}
+                  {totalFindings > 0 && (
+                    <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />
+                        <h3 className="text-sm font-display font-bold text-foreground">Finding Priority Matrix</h3>
+                        <span className="text-[10px] text-muted-foreground">Impact vs effort quadrant</span>
+                      </div>
+                      <Suspense fallback={null}>
+                        <PriorityMatrix analysisResults={analysisResults} />
+                      </Suspense>
+                    </div>
+                  )}
+
+                  {/* What-If Score Simulator */}
+                  {totalFindings > 0 && (
+                    <Suspense fallback={null}>
+                      <ScoreSimulator analysisResults={analysisResults} />
+                    </Suspense>
+                  )}
+
+                  {/* Attack Surface Map */}
+                  <Suspense fallback={null}>
+                    <AttackSurfaceMap files={files} />
+                  </Suspense>
                 </div>
               </CollapsibleSection>
-            )}
-
-            {/* What-If Score Simulator */}
-            {hasFiles && totalFindings > 0 && (
-              <Suspense fallback={null}>
-                <ScoreSimulator analysisResults={analysisResults} />
-              </Suspense>
-            )}
-
-            {/* Attack Surface Map */}
-            {hasFiles && (
-              <Suspense fallback={null}>
-                <AttackSurfaceMap files={files} />
-              </Suspense>
             )}
 
             {/* Rule Optimisation */}
@@ -577,39 +608,6 @@ function InnerApp() {
                     <RemediationPlaybooks analysisResults={analysisResults} />
                   </Suspense>
                 </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Compliance Heatmap */}
-            {hasFiles && (
-              <CollapsibleSection
-                title="Compliance Heatmap"
-                subtitle={branding.selectedFrameworks.length > 0 ? `${branding.selectedFrameworks.length} framework${branding.selectedFrameworks.length !== 1 ? "s" : ""} selected` : "Select frameworks in Assessment Context to populate"}
-                icon={<img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />}
-                iconBg="bg-[#5A00FF]/10"
-              >
-                <div className="p-5">
-                  <Suspense fallback={null}>
-                    <ComplianceHeatmap
-                      analysisResults={analysisResults}
-                      selectedFrameworks={branding.selectedFrameworks}
-                    />
-                  </Suspense>
-                </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Finding Priority Matrix */}
-            {hasFiles && totalFindings > 0 && (
-              <CollapsibleSection
-                title="Finding Priority Matrix"
-                subtitle="Impact vs effort quadrant to prioritise remediation"
-                icon={<img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />}
-                iconBg="bg-[#5A00FF]/10"
-              >
-                <Suspense fallback={null}>
-                  <PriorityMatrix analysisResults={analysisResults} />
-                </Suspense>
               </CollapsibleSection>
             )}
 
