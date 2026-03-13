@@ -35,14 +35,18 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
   const orgId = org?.id ?? "";
 
   const matchedTenant = useMemo(() => {
-    if (!central.isConnected || !customerName) return null;
+    if (!central.isConnected) return null;
     if (central.status?.partner_type === "tenant") {
-      return central.tenants[0] ?? null;
+      // For single-tenant accounts, use cached tenant or fall back to status partner_id
+      return central.tenants[0] ?? (central.status?.partner_id
+        ? { id: central.status.partner_id, name: "(This tenant)", dataRegion: "", apiHost: "", billingType: "" }
+        : null);
     }
+    if (!customerName) return null;
     return central.tenants.find((t) =>
       t.name.toLowerCase() === customerName.toLowerCase()
     ) ?? null;
-  }, [central.isConnected, central.tenants, customerName, central.status?.partner_type]);
+  }, [central.isConnected, central.tenants, customerName, central.status?.partner_type, central.status?.partner_id]);
 
   useEffect(() => {
     if (matchedTenant && central.firewalls.length === 0) {
@@ -302,7 +306,7 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
                             onClick={() => !isLinkedElsewhere && handleLink(config.configHash, fw, "manual")}
                             disabled={isLinkedElsewhere}
                             className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors ${
-                              isLinkedElsewhere ? "opacity-40 cursor-not-allowed" : "hover:bg-[#2006F7]/5"
+                              isLinkedElsewhere ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
                             }`}
                           >
                             <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"}`} />
