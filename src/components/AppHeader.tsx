@@ -12,6 +12,7 @@ interface AppHeaderProps {
   environment: string;
   selectedFrameworks: string[];
   reportCount: number;
+  notificationSlot?: React.ReactNode;
 }
 
 function CentralStatusDot({ orgId }: { orgId: string }) {
@@ -117,7 +118,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
   );
 }
 
-export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount }: AppHeaderProps) {
+export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount, notificationSlot }: AppHeaderProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { user, org, isGuest, signOut } = useAuth();
 
@@ -147,6 +148,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                 </span>
               )}
               {org && <CentralStatusDot orgId={org.id} />}
+              {notificationSlot}
               <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
                 <User className="h-3 w-3" />
                 <span className="max-w-[100px] truncate">{user?.email?.split("@")[0]}</span>

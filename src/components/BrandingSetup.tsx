@@ -135,6 +135,9 @@ export type BrandingData = {
   environment: string;
   country: string;
   selectedFrameworks: ComplianceFramework[];
+  preparedBy?: string;
+  footerText?: string;
+  accentColor?: string;
 };
 
 type Props = {
@@ -262,6 +265,33 @@ export function BrandingSetup({ branding, onChange }: Props) {
             accept="image/*"
             onChange={handleLogo}
             className="max-w-xs"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="preparedBy" className="flex items-center gap-2 text-xs">
+            <User className="h-3.5 w-3.5" /> Prepared By
+          </Label>
+          <Input
+            id="preparedBy"
+            placeholder="e.g. Joseph McDonald, Security Consultant"
+            value={branding.preparedBy ?? ""}
+            onChange={(e) => onChange({ ...branding, preparedBy: e.target.value })}
+            className="text-sm"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="footerText" className="flex items-center gap-2 text-xs">
+            <Building2 className="h-3.5 w-3.5" /> Report Footer Text
+          </Label>
+          <Input
+            id="footerText"
+            placeholder="e.g. Confidential — For internal use only"
+            value={branding.footerText ?? ""}
+            onChange={(e) => onChange({ ...branding, footerText: e.target.value })}
+            className="text-sm"
           />
         </div>
       </div>

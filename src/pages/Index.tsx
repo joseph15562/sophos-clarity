@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
-import { ArrowLeftRight, ChevronDown, RotateCcw, Save } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, Clock, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
@@ -13,12 +13,19 @@ import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-persistence";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { getCentralStatus, getCachedFirewalls, getAlerts } from "@/lib/sophos-central";
+import { getCentralStatus, getCachedFirewalls, getAlerts, getFirewallLicences } from "@/lib/sophos-central";
 import type { CentralEnrichment as CentralEnrichmentType } from "@/lib/stream-ai";
 import { AuthGate } from "@/components/AuthGate";
 import { OrgSetup } from "@/components/OrgSetup";
 import { saveReportCloud, saveReportLocal, type SavedReportEntry, type AnalysisSummary } from "@/lib/saved-reports";
+import { saveAssessmentCloud } from "@/lib/assessment-cloud";
+import { saveAssessment as saveAssessmentLocal } from "@/lib/assessment-history";
 import type { LoadSavedReportArgs } from "@/components/SavedReportsLibrary";
+import { logAudit } from "@/lib/audit";
+import { useNotifications } from "@/hooks/use-notifications";
+import { NotificationCentre } from "@/components/NotificationCentre";
+import { useKeyboardShortcuts, type ShortcutAction } from "@/hooks/use-keyboard-shortcuts";
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
@@ -47,6 +54,9 @@ const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").the
 const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
 const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
 const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
+const AuditLog = lazy(() => import("@/components/AuditLog").then((m) => ({ default: m.AuditLog })));
+const OnboardingChecklist = lazy(() => import("@/components/OnboardingChecklist").then((m) => ({ default: m.OnboardingChecklist })));
+import { DashboardLoadingSkeleton, SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -76,6 +86,7 @@ function CollapsibleSection({ title, subtitle, icon, iconBg, defaultOpen = false
 
 function InnerApp() {
   const { isGuest, org } = useAuth();
+  const { notifications, unreadCount, addNotification, markRead, markAllRead, dismiss: dismissNotif, clearAll: clearNotifs } = useNotifications();
   const [files, setFiles] = useState<ParsedFile[]>([]);
   const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] });
   const [diffSelection, setDiffSelection] = useState<DiffSelection>(null);
@@ -133,7 +144,11 @@ function InnerApp() {
       setActiveReportId("");
     }
     setReportsSaved(false);
-  }, [files, reports.length, setReports, setActiveReportId]);
+    if (org?.id) {
+      const newFiles = parsed.filter((p) => !files.find((f) => f.id === p.id));
+      if (newFiles.length > 0) logAudit(org.id, "config.uploaded", "config", "", { count: newFiles.length });
+    }
+  }, [files, reports.length, setReports, setActiveReportId, org?.id]);
 
   // Enrich files with Sophos Central live data when firewalls are linked
   const [centralEnriched, setCentralEnriched] = useState(false);
@@ -168,6 +183,19 @@ function InnerApp() {
           try { alertsByTenant[tid] = await getAlerts(orgId, tid); } catch { alertsByTenant[tid] = []; }
         }
 
+        // Fetch per-firewall licence data
+        let fwLicenceMap: Record<string, Array<{ product: string; endDate: string; type: string }>> = {};
+        try {
+          const fwLicences = await getFirewallLicences(orgId);
+          for (const fwl of fwLicences) {
+            fwLicenceMap[fwl.serialNumber] = fwl.licenses.map((l) => ({
+              product: l.product?.name || l.product?.code || l.type,
+              endDate: l.endDate ?? (l.perpetual ? "Perpetual" : ""),
+              type: l.type,
+            }));
+          }
+        } catch { /* licensing API may not be available */ }
+
         if (cancelled) return;
 
         const enrichments: Record<string, CentralEnrichmentType> = {};
@@ -185,6 +213,7 @@ function InnerApp() {
             serialNumber: fw.serialNumber,
             connected: (fw.status as { connected?: boolean } | null)?.connected ?? false,
             haCluster: cluster ? { mode: cluster.mode, status: cluster.status } : undefined,
+            licences: fwLicenceMap[fw.serialNumber] ?? undefined,
             alerts: fwAlerts.map((a) => ({
               severity: a.severity,
               description: a.description,
@@ -221,8 +250,11 @@ function InnerApp() {
       let result: unknown;
       if (!isGuest && org) {
         result = await saveReportCloud(org.id, branding.customerName, branding.environment, reportEntries, analysisResults);
+        // Also save an assessment snapshot so the Multi-Tenant Dashboard populates
+        try { await saveAssessmentCloud(analysisResults, branding.customerName, branding.environment, org.id); } catch { /* best-effort */ }
       } else {
         result = await saveReportLocal(branding.customerName, branding.environment, reportEntries, analysisResults);
+        try { await saveAssessmentLocal(analysisResults, branding.customerName, branding.environment); } catch { /* best-effort */ }
       }
       if (!result) {
         setSaveError("Save failed — have you run the 003_saved_reports.sql migration in Supabase?");
@@ -230,6 +262,10 @@ function InnerApp() {
         setReportsSaved(true);
         setSavedReportsTrigger((n) => n + 1);
         setTimeout(() => setReportsSaved(false), 3000);
+        if (org?.id) {
+          logAudit(org.id, includeReports ? "report.saved" : "assessment.saved", "report", branding.customerName, { reportCount: reportEntries.length });
+        }
+        addNotification("success", includeReports ? "Reports Saved" : "Assessment Saved", `${branding.customerName || "Assessment"} saved successfully with ${reportEntries.length} report${reportEntries.length !== 1 ? "s" : ""}.`);
       }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Save failed");
@@ -263,9 +299,28 @@ function InnerApp() {
   }, [setReports, setActiveReportId]);
 
   const [viewingReports, setViewingReports] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
+
+  const keyboardShortcuts = useMemo<ShortcutAction[]>(() => [
+    { key: "?", description: "Show keyboard shortcuts", handler: () => setShortcutsOpen((v) => !v) },
+    { key: "Escape", description: "Go back / close modal", handler: () => {
+      if (shortcutsOpen) { setShortcutsOpen(false); return; }
+      if (viewingReports) setViewingReports(false);
+      if (inDiffMode) setDiffSelection(null);
+    }},
+    { key: "s", ctrl: true, description: "Save reports", handler: () => { if (hasReports) handleSaveReports(true); else if (hasFiles && totalFindings > 0) handleSaveReports(false); }},
+    { key: "g", ctrl: true, description: "Generate all reports", handler: () => { if (hasFiles && !isLoading) { setViewingReports(true); generateAll(); } }},
+    ...Array.from({ length: 9 }, (_, i) => ({
+      key: String(i + 1),
+      description: `Switch to report tab ${i + 1}`,
+      handler: () => { if (viewingReports && reports[i]) setActiveReportId(reports[i].id); },
+    })),
+  ], [shortcutsOpen, viewingReports, inDiffMode, hasReports, hasFiles, totalFindings, isLoading, reports, handleSaveReports, generateAll, setActiveReportId]);
+
+  useKeyboardShortcuts(keyboardShortcuts);
 
   const fileLabel = (f: ParsedFile) => f.label || f.fileName.replace(/\.(html|htm)$/i, "");
 
@@ -278,6 +333,16 @@ function InnerApp() {
         environment={branding.environment}
         selectedFrameworks={branding.selectedFrameworks}
         reportCount={reports.length}
+        notificationSlot={
+          <NotificationCentre
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onMarkRead={markRead}
+            onMarkAllRead={markAllRead}
+            onDismiss={dismissNotif}
+            onClearAll={clearNotifs}
+          />
+        }
       />
 
       <main className={`mx-auto px-4 py-8 space-y-8 ${viewingReports ? "max-w-full w-full" : "max-w-5xl"}`}>
@@ -376,6 +441,19 @@ function InnerApp() {
               </section>
             )}
 
+            {/* Onboarding Checklist */}
+            {!hasFiles && (
+              <Suspense fallback={null}>
+                <OnboardingChecklist
+                  hasFiles={hasFiles}
+                  hasBranding={!!branding.companyName}
+                  hasCentral={centralEnriched}
+                  hasReports={hasReports}
+                  hasTeam={!isGuest && !!org}
+                />
+              </Suspense>
+            )}
+
             {/* Step 1 — Upload */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
@@ -429,10 +507,10 @@ function InnerApp() {
             {hasFiles && (
               <ReportCards
                 fileCount={files.length}
-                onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); }}
-                onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); }}
-                onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); }}
-                onGenerateAll={() => { setViewingReports(true); generateAll(); }}
+                onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); if (org?.id) logAudit(org.id, "report.generated", "report", "individual"); }}
+                onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
+                onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
+                onGenerateAll={() => { setViewingReports(true); generateAll(); if (org?.id) logAudit(org.id, "report.generated", "report", "all"); addNotification("info", "Generating Reports", `Generating all reports for ${branding.customerName || "this assessment"}…`); }}
               />
             )}
 
@@ -548,16 +626,16 @@ function InnerApp() {
               >
                 <div className="p-5 space-y-6">
                   {/* Risk Score — full width */}
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<ChartSkeleton height={220} />}>
                     <RiskScoreDashboard analysisResults={analysisResults} />
                   </Suspense>
 
                   {/* Config Health + Feature Coverage side by side */}
                   <div className="grid gap-6 lg:grid-cols-2">
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<StatGridSkeleton />}>
                       <RuleHealthOverview analysisResults={analysisResults} />
                     </Suspense>
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<StatGridSkeleton count={4} />}>
                       <SecurityFeatureCoverage analysisResults={analysisResults} />
                     </Suspense>
                   </div>
@@ -565,10 +643,10 @@ function InnerApp() {
                   {/* Severity Donut + Findings by Section */}
                   {totalFindings > 0 && (
                     <div className="grid gap-6 lg:grid-cols-2">
-                      <Suspense fallback={null}>
+                      <Suspense fallback={<ChartSkeleton />}>
                         <SeverityBreakdown analysisResults={analysisResults} />
                       </Suspense>
-                      <Suspense fallback={null}>
+                      <Suspense fallback={<ChartSkeleton />}>
                         <FindingsBySection analysisResults={analysisResults} />
                       </Suspense>
                     </div>
@@ -576,21 +654,21 @@ function InnerApp() {
 
                   {/* Zone Traffic Flow + Top Findings */}
                   <div className="grid gap-6 lg:grid-cols-2">
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<ChartSkeleton />}>
                       <ZoneTrafficFlow files={files} />
                     </Suspense>
                     {totalFindings > 0 && (
-                      <Suspense fallback={null}>
+                      <Suspense fallback={<CardSkeleton />}>
                         <TopFindings analysisResults={analysisResults} />
                       </Suspense>
                     )}
                   </div>
 
                   {/* Peer Benchmark + Best Practice */}
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<CardSkeleton />}>
                     <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
                   </Suspense>
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<CardSkeleton />}>
                     <SophosBestPractice analysisResults={analysisResults} />
                   </Suspense>
 
@@ -605,7 +683,7 @@ function InnerApp() {
                         </span>
                       )}
                     </div>
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<ChartSkeleton height={120} />}>
                       <ComplianceHeatmap
                         analysisResults={analysisResults}
                         selectedFrameworks={branding.selectedFrameworks}
@@ -621,7 +699,7 @@ function InnerApp() {
                         <h3 className="text-sm font-semibold text-foreground">Finding Priority Matrix</h3>
                         <span className="text-[10px] text-muted-foreground">Impact vs effort quadrant</span>
                       </div>
-                      <Suspense fallback={null}>
+                      <Suspense fallback={<ChartSkeleton />}>
                         <PriorityMatrix analysisResults={analysisResults} />
                       </Suspense>
                     </div>
@@ -629,13 +707,13 @@ function InnerApp() {
 
                   {/* What-If Score Simulator */}
                   {totalFindings > 0 && (
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<CardSkeleton />}>
                       <ScoreSimulator analysisResults={analysisResults} />
                     </Suspense>
                   )}
 
                   {/* Attack Surface Map */}
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<CardSkeleton />}>
                     <AttackSurfaceMap files={files} />
                   </Suspense>
                 </div>
@@ -650,9 +728,9 @@ function InnerApp() {
                 icon={<img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
                 iconBg="bg-[#10037C]"
               >
-                <Suspense fallback={null}>
-                  <RuleOptimiser files={files} />
-                </Suspense>
+              <Suspense fallback={<SectionSkeleton />}>
+                <RuleOptimiser files={files} />
+              </Suspense>
               </CollapsibleSection>
             )}
 
@@ -706,7 +784,7 @@ function InnerApp() {
               icon={<img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" />}
               iconBg="bg-[#10037C]/10 dark:bg-[#2006F7]/10"
             >
-              <Suspense fallback={null}>
+              <Suspense fallback={<SectionSkeleton />}>
                 <SavedReportsLibrary onLoadReports={handleLoadSavedReports} refreshTrigger={savedReportsTrigger} />
               </Suspense>
             </CollapsibleSection>
@@ -718,7 +796,7 @@ function InnerApp() {
               icon={<img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 brightness-0 invert" />}
               iconBg="bg-[#2006F7]"
             >
-              <Suspense fallback={null}>
+              <Suspense fallback={<SectionSkeleton />}>
                 <TenantDashboard />
               </Suspense>
               <Suspense fallback={null}>
@@ -747,6 +825,16 @@ function InnerApp() {
                     <div className="p-4">
                       <InviteStaff />
                     </div>
+                  </CollapsibleSection>
+                  <CollapsibleSection
+                    title="Activity Log"
+                    subtitle="Tamper-evident audit trail of all actions"
+                    icon={<Clock className="h-4 w-4 text-white" />}
+                    iconBg="bg-[#10037C]"
+                  >
+                    <Suspense fallback={null}>
+                      <AuditLog />
+                    </Suspense>
                   </CollapsibleSection>
                 </div>
               </Suspense>
@@ -917,6 +1005,20 @@ function InnerApp() {
           />
         </Suspense>
       )}
+
+      {/* Keyboard shortcut hint */}
+      <div className="fixed bottom-4 right-4 z-10 no-print">
+        <button
+          onClick={() => setShortcutsOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-[#2006F7]/30 transition-colors shadow-sm"
+          title="Keyboard shortcuts (?)"
+        >
+          <kbd className="inline-flex items-center justify-center w-4 h-4 rounded border border-border bg-muted text-[9px] font-mono font-bold">?</kbd>
+          Shortcuts
+        </button>
+      </div>
+
+      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

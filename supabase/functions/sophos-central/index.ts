@@ -385,7 +385,7 @@ serve(async (req) => {
       return json({ items });
     }
 
-    // ── Mode: licenses ── fetch licence info for a tenant
+    // ── Mode: licenses ── fetch licence info for a tenant (legacy)
     if (mode === "licenses") {
       const { tenantId } = body as { tenantId: string };
       if (!tenantId) return json({ error: "Missing tenantId" }, 400);
@@ -396,6 +396,26 @@ serve(async (req) => {
         { "X-Tenant-ID": tenantId },
       );
       return json(data);
+    }
+
+    // ── Mode: firewall-licenses ── per-firewall license data via Licensing API
+    // https://developer.sophos.com/docs/licensing-v1/1/routes/licenses/firewalls/get
+    if (mode === "firewall-licenses") {
+      const { tenantId } = body as { tenantId?: string };
+
+      const headers: Record<string, string> = {};
+      if (creds.partnerType === "partner") {
+        headers["X-Partner-ID"] = creds.partnerId;
+      } else if (tenantId) {
+        headers["X-Tenant-ID"] = tenantId;
+      }
+
+      const items = await fetchAllPages(
+        `${SOPHOS_GLOBAL_URL}/licenses/v1/licenses/firewalls`,
+        token,
+        headers,
+      );
+      return json({ items });
     }
 
     // ── Mode: mdr-threat-feed ── fetch MDR threat feed indicators

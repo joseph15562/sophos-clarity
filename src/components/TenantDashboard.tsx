@@ -112,8 +112,11 @@ export function TenantDashboard() {
         <Building2 className="h-8 w-8 mx-auto text-muted-foreground/40" />
         <p className="text-xs text-muted-foreground">
           {useCloud
-            ? `No assessments in ${org?.name ?? "your organisation"} yet. Save snapshots from the Assessment History panel.`
-            : "No customer assessments saved yet. Run assessments and save snapshots from the Assessment History panel to populate the multi-tenant view."}
+            ? `No customer assessments in ${org?.name ?? "your organisation"} yet.`
+            : "No customer assessments saved yet."}
+        </p>
+        <p className="text-[10px] text-muted-foreground max-w-md mx-auto">
+          Upload a firewall config and click <strong className="text-foreground">Save Reports</strong> or <strong className="text-foreground">Save Assessment (Pre-AI)</strong> — the assessment will appear here automatically so you can track scores across all your customers.
         </p>
         {!useCloud && (
           <p className="text-[9px] text-muted-foreground">

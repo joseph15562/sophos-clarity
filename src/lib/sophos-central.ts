@@ -118,7 +118,7 @@ export async function getAlerts(orgId: string, tenantId: string): Promise<Centra
   return res.items ?? [];
 }
 
-// ── Licences ──
+// ── Licences (legacy tenant-level) ──
 
 export interface CentralLicence {
   licenseIdentifier: string;
@@ -131,6 +131,39 @@ export interface CentralLicence {
 export async function getLicences(orgId: string, tenantId: string): Promise<CentralLicence[]> {
   const res = await callCentral<{ licenses: CentralLicence[] }>({ mode: "licenses", orgId, tenantId });
   return res.licenses ?? [];
+}
+
+// ── Firewall Licences (per-device via Licensing API) ──
+
+export interface FirewallSubscription {
+  id: string;
+  licenseIdentifier: string;
+  product: { code: string; name: string; genericCode?: string; features?: string[] };
+  startDate: string;
+  endDate?: string;
+  perpetual: boolean;
+  type: "trial" | "term" | "usage" | "ordered" | "enterprise" | "perpetual";
+  quantity: number;
+  unlimited?: boolean;
+  usage?: { current: { count: number; date?: string } };
+}
+
+export interface FirewallLicence {
+  serialNumber: string;
+  model: string;
+  modelType: "virtual" | "hardware";
+  lastSeenAt?: string;
+  owner: { id: string; type: "partner" | "organization" };
+  tenant?: { id: string };
+  partner?: { id: string };
+  organization?: { id: string };
+  billingTenant?: { id: string };
+  licenses: FirewallSubscription[];
+}
+
+export async function getFirewallLicences(orgId: string, tenantId?: string): Promise<FirewallLicence[]> {
+  const res = await callCentral<{ items: FirewallLicence[] }>({ mode: "firewall-licenses", orgId, tenantId });
+  return res.items ?? [];
 }
 
 // ── MDR Threat Feed ──
