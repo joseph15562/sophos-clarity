@@ -68,6 +68,8 @@ export interface AnalysisResult {
   inspectionPosture: InspectionPosture;
   /** Column headers found in the firewall rules table — useful for diagnosing detection gaps */
   ruleColumns?: string[];
+  /** Firewall hostname extracted from Admin Settings > Hostname Settings */
+  hostname?: string;
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {
@@ -307,6 +309,15 @@ function countInterfaceRows(sections: ExtractedSections): number {
   return 0;
 }
 
+/** Extract the firewall hostname from Admin Settings > Hostname Settings. */
+function extractHostname(sections: ExtractedSections): string | undefined {
+  const section = findSection(sections, /^AdminSettings$/i) ?? findSection(sections, /admin.?settings/i);
+  if (!section) return undefined;
+  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  const m = text.match(/Host\s*Name["\s:]+([^\s",}]+)/i);
+  return m?.[1] || undefined;
+}
+
 /**
  * Run deterministic analysis on a single firewall's extracted sections.
  */
@@ -353,7 +364,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: "The parser did not extract any firewall rules from this configuration export.",
       section: "Firewall Rules",
     });
-    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [] };
+    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [], hostname: extractHostname(sections) };
   }
 
   // --- Track disabled rules across all rules ---
@@ -656,7 +667,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     });
   }
 
-  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers };
+  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers, hostname: extractHostname(sections) };
 }
 
 // ---------------------------------------------------------------------------
@@ -1190,26 +1201,17 @@ function analyseHA(
 
   const deviceMode = text.match(/Device[^}]*?[":]?\s*(Active[_\s]?Passive|Active[_\s]?Active|Standalone)/i)?.[1];
   const nodeName = text.match(/NodeName[^}]*?[":]?\s*(\w+)/i)?.[1];
-  const clusterEnabled = !/disabled/i.test(text.match(/ClusterID[^}]*?(Enabled|Disabled)/i)?.[1] ?? "");
+  const clusterId = text.match(/ClusterID[^}]*?[":]?\s*(\d+)/i)?.[1];
 
   if (deviceMode) {
     const mode = deviceMode.replace(/_/g, "-");
+    const clusterInfo = clusterId != null ? ` Cluster ID: ${clusterId}.` : "";
     findings.push({
       id: `f${nextId()}`, severity: "info",
       title: `HA configured: ${mode}${nodeName ? ` (${nodeName})` : ""}`,
-      detail: `High Availability is configured in ${mode} mode.${nodeName ? ` This node is "${nodeName}".` : ""}${clusterEnabled ? " Cluster is active." : " Cluster ID appears disabled — verify the peer node is operational."}`,
+      detail: `High Availability is configured in ${mode} mode.${nodeName ? ` This node is "${nodeName}".` : ""}${clusterInfo}`,
       section: "High Availability",
     });
-
-    if (!clusterEnabled) {
-      findings.push({
-        id: `f${nextId()}`, severity: "medium",
-        title: "HA cluster ID is disabled",
-        detail: "The HA mode is configured but the cluster ID appears disabled. This means failover may not function correctly. Verify the HA peer is connected and the cluster is operational.",
-        section: "High Availability",
-        remediation: "Go to System services > High availability > Verify cluster status. Ensure the peer appliance is connected and HA heartbeat is active on the dedicated HA link.",
-      });
-    }
   }
 }
 

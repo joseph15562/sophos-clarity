@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import type { ReportEntry } from "@/components/DocumentPreview";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ExtractedSections } from "@/lib/extract-sections";
-import { streamConfigParse } from "@/lib/stream-ai";
+import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
 import { useToast } from "@/hooks/use-toast";
 
 export type ParsedFile = {
@@ -11,6 +11,7 @@ export type ParsedFile = {
   fileName: string;
   content: string;
   extractedData: ExtractedSections;
+  centralEnrichment?: CentralEnrichment;
 };
 
 export function useReportGeneration(files: ParsedFile[], branding: BrandingData) {
@@ -25,7 +26,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     async (
       reportId: string,
       sections: ExtractedSections,
-      opts?: { executive?: boolean; firewallLabels?: string[]; compliance?: boolean }
+      opts?: { executive?: boolean; firewallLabels?: string[]; compliance?: boolean; centralEnrichment?: CentralEnrichment }
     ) => {
       setLoadingReportIds((prev) => new Set(prev).add(reportId));
       setFailedReportIds((prev) => {
@@ -68,6 +69,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
             executive: opts?.executive,
             firewallLabels: opts?.firewallLabels,
             compliance: opts?.compliance,
+            centralEnrichment: opts?.centralEnrichment,
             onDelta: (text) =>
               setReports((prev) =>
                 prev.map((r) => (r.id === reportId ? { ...r, markdown: r.markdown + text } : r))
@@ -136,7 +138,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     for (const f of files) {
       const reportId = `report-${f.id}`;
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      await generateSingleReport(reportId, f.extractedData, { firewallLabels: [label] });
+      await generateSingleReport(reportId, f.extractedData, { firewallLabels: [label], centralEnrichment: f.centralEnrichment });
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
@@ -210,7 +212,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
   };
 
   const generateAll = async () => {
-    if (files.length < 2) return;
+    if (files.length === 0) return;
     setIsLoading(true);
     setFailedReportIds(new Set());
 
@@ -228,13 +230,37 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
-    const execId = "report-executive";
-    setReports((prev) => {
-      const without = prev.filter((r) => r.id !== execId);
-      return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
+    if (files.length >= 2) {
+      const execId = "report-executive";
+      setReports((prev) => {
+        const without = prev.filter((r) => r.id !== execId);
+        return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
+      });
+      setActiveReportId(execId);
+      await generateExecutive(true);
+    }
+
+    const complianceId = "report-compliance";
+    const labels = files.map((f) => f.label || f.fileName.replace(/\.(html|htm)$/i, ""));
+    const mergedSections: Record<string, ExtractedSections> = {};
+    files.forEach((f) => {
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      mergedSections[label] = f.extractedData;
     });
-    setActiveReportId(execId);
-    await generateExecutive(true);
+    setReports((prev) => {
+      const without = prev.filter((r) => r.id !== complianceId);
+      return [...without, { id: complianceId, label: "🛡️ Compliance Evidence Pack", markdown: "" }];
+    });
+    setActiveReportId(complianceId);
+    await generateSingleReport(
+      complianceId,
+      files.length === 1
+        ? files[0].extractedData
+        : (mergedSections as unknown as ExtractedSections),
+      { compliance: true, firewallLabels: labels }
+    );
+
+    setIsLoading(false);
   };
 
   const handleRetry = useCallback(

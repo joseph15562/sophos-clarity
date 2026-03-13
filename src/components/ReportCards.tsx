@@ -94,11 +94,12 @@ export function ReportCards({
         </div>
       </div>
 
-      {fileCount >= 2 && (
-        <Button size="lg" onClick={onGenerateAll} className="w-full gap-2 text-base bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white">
-          <img src="/icons/sophos-orchestration-white.svg" alt="" className="h-5 w-5" /> Generate All Reports + Executive Brief
-        </Button>
-      )}
+      <Button size="lg" onClick={onGenerateAll} className="w-full gap-2 text-base bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white">
+        <img src="/icons/sophos-orchestration-white.svg" alt="" className="h-5 w-5" />
+        {fileCount >= 2
+          ? "Generate All Reports + Executive Brief"
+          : "Generate All Reports + Compliance Pack"}
+      </Button>
     </section>
   );
 }

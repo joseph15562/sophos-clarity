@@ -52,6 +52,38 @@ export type Database = {
           { foreignKeyName: "saved_reports_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
         ]
       }
+      central_credentials: {
+        Row: { org_id: string; encrypted_client_id: string; encrypted_client_secret: string; partner_id: string; partner_type: string; api_hosts: Json; connected_at: string; last_synced_at: string | null }
+        Insert: { org_id: string; encrypted_client_id: string; encrypted_client_secret: string; partner_id?: string; partner_type?: string; api_hosts?: Json; connected_at?: string; last_synced_at?: string | null }
+        Update: { org_id?: string; encrypted_client_id?: string; encrypted_client_secret?: string; partner_id?: string; partner_type?: string; api_hosts?: Json; connected_at?: string; last_synced_at?: string | null }
+        Relationships: [
+          { foreignKeyName: "central_credentials_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      central_tenants: {
+        Row: { id: string; org_id: string; central_tenant_id: string; name: string; data_region: string; api_host: string; billing_type: string; synced_at: string }
+        Insert: { id?: string; org_id: string; central_tenant_id: string; name?: string; data_region?: string; api_host?: string; billing_type?: string; synced_at?: string }
+        Update: { id?: string; org_id?: string; central_tenant_id?: string; name?: string; data_region?: string; api_host?: string; billing_type?: string; synced_at?: string }
+        Relationships: [
+          { foreignKeyName: "central_tenants_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      central_firewalls: {
+        Row: { id: string; org_id: string; central_tenant_id: string; firewall_id: string; serial_number: string; hostname: string; name: string; firmware_version: string; model: string; status_json: Json; cluster_json: Json | null; group_json: Json | null; external_ips: Json; geo_location: Json | null; synced_at: string }
+        Insert: { id?: string; org_id: string; central_tenant_id: string; firewall_id: string; serial_number?: string; hostname?: string; name?: string; firmware_version?: string; model?: string; status_json?: Json; cluster_json?: Json | null; group_json?: Json | null; external_ips?: Json; geo_location?: Json | null; synced_at?: string }
+        Update: { id?: string; org_id?: string; central_tenant_id?: string; firewall_id?: string; serial_number?: string; hostname?: string; name?: string; firmware_version?: string; model?: string; status_json?: Json; cluster_json?: Json | null; group_json?: Json | null; external_ips?: Json; geo_location?: Json | null; synced_at?: string }
+        Relationships: [
+          { foreignKeyName: "central_firewalls_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      firewall_config_links: {
+        Row: { id: string; org_id: string; config_hostname: string; config_hash: string; central_firewall_id: string; central_tenant_id: string; linked_by: string | null; linked_at: string }
+        Insert: { id?: string; org_id: string; config_hostname?: string; config_hash?: string; central_firewall_id: string; central_tenant_id: string; linked_by?: string | null; linked_at?: string }
+        Update: { id?: string; org_id?: string; config_hostname?: string; config_hash?: string; central_firewall_id?: string; central_tenant_id?: string; linked_by?: string | null; linked_at?: string }
+        Relationships: [
+          { foreignKeyName: "firewall_config_links_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

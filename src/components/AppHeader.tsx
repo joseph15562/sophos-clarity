@@ -1,7 +1,9 @@
-import { Moon, Sun, LogOut, Building2, User } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { getCentralStatus, type CentralStatus } from "@/lib/sophos-central";
 
 interface AppHeaderProps {
   hasFiles: boolean;
@@ -10,6 +12,95 @@ interface AppHeaderProps {
   environment: string;
   selectedFrameworks: string[];
   reportCount: number;
+}
+
+function CentralStatusDot({ orgId }: { orgId: string }) {
+  const [status, setStatus] = useState<CentralStatus | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!orgId) return;
+    setRefreshing(true);
+    try {
+      const s = await getCentralStatus(orgId);
+      setStatus(s);
+    } catch {
+      setStatus({ connected: false });
+    }
+    setRefreshing(false);
+  }, [orgId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  if (!status) return null;
+
+  const isStale = status.connected && status.last_synced_at
+    ? (Date.now() - new Date(status.last_synced_at).getTime()) > 15 * 60 * 1000
+    : false;
+
+  const dotColor = status.connected
+    ? isStale ? "bg-[#F29400]" : "bg-[#00995a]"
+    : "bg-[#6A889B]";
+
+  const label = status.connected
+    ? isStale ? "Central (stale)" : "Central"
+    : "Central (not linked)";
+
+  const timeAgo = (iso: string | null | undefined) => {
+    if (!iso) return "never";
+    const diff = Date.now() - new Date(iso).getTime();
+    if (diff < 60_000) return "just now";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+    return `${Math.floor(diff / 86_400_000)}d ago`;
+  };
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        onClick={() => setShowPopover(!showPopover)}
+        className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+        title={label}
+      >
+        <span className={`inline-block w-2 h-2 rounded-full ${dotColor} ${status.connected && !isStale ? "animate-pulse" : ""}`} />
+        {status.connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+      </button>
+      {showPopover && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setShowPopover(false)} />
+          <div className="absolute right-0 top-full mt-1 z-30 w-56 rounded-lg border border-border bg-card shadow-lg p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} />
+              <span className="text-xs font-semibold text-foreground">
+                {status.connected ? "Sophos Central Connected" : "Not Connected"}
+              </span>
+            </div>
+            {status.connected && (
+              <>
+                <div className="text-[10px] text-muted-foreground space-y-0.5">
+                  <p>Type: <span className="text-foreground font-medium">{status.partner_type}</span></p>
+                  <p>Last synced: <span className="text-foreground font-medium">{timeAgo(status.last_synced_at)}</span></p>
+                  {isStale && <p className="text-[#F29400] font-medium">Data may be outdated — consider refreshing</p>}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); refresh(); }}
+                  disabled={refreshing}
+                  className="w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-[#2006F7] dark:text-[#00EDFF] hover:bg-muted/50 rounded px-2 py-1.5 transition-colors"
+                >
+                  <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />
+                  {refreshing ? "Refreshing..." : "Refresh Now"}
+                </button>
+              </>
+            )}
+            {!status.connected && (
+              <p className="text-[10px] text-muted-foreground">Link your Sophos Central account in the Multi-Tenant Dashboard settings.</p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount }: AppHeaderProps) {
@@ -41,6 +132,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                   <span className="font-medium text-white/80 max-w-[120px] truncate">{org.name}</span>
                 </span>
               )}
+              {org && <CentralStatusDot orgId={org.id} />}
               <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
                 <User className="h-3 w-3" />
                 <span className="max-w-[100px] truncate">{user?.email?.split("@")[0]}</span>

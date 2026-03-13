@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FirewallLinkPicker, type FirewallLink } from "@/components/FirewallLinkPicker";
 
 export type UploadedFile = {
   id: string;
@@ -12,11 +13,12 @@ export type UploadedFile = {
 type Props = {
   files: UploadedFile[];
   onFilesChange: (files: UploadedFile[]) => void;
+  onFirewallLinked?: (configId: string, link: FirewallLink | null) => void;
 };
 
 let fileIdCounter = 0;
 
-export function FileUpload({ files, onFilesChange }: Props) {
+export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
   const [dragActive, setDragActive] = useState(false);
 
   const handleFiles = useCallback(
@@ -71,6 +73,28 @@ export function FileUpload({ files, onFilesChange }: Props) {
     onFilesChange(files.filter((f) => f.id !== id));
   };
 
+  const fileHostnames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const f of files) {
+      const match = f.content.match(/Host\s*Name\s*<\/td>\s*<td[^>]*>([^<]+)/i);
+      map[f.id] = match?.[1]?.trim() ?? "";
+    }
+    return map;
+  }, [files]);
+
+  const fileHashes = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const f of files) {
+      let hash = 0;
+      const str = f.fileName + (f.content.length > 200 ? f.content.slice(0, 200) : f.content);
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+      }
+      map[f.id] = Math.abs(hash).toString(36);
+    }
+    return map;
+  }, [files]);
+
   return (
     <div className="space-y-3">
       {/* File list */}
@@ -93,8 +117,14 @@ export function FileUpload({ files, onFilesChange }: Props) {
               className="w-full bg-transparent border-b border-[#2006F7]/25 focus:border-[#2006F7] outline-none font-bold text-foreground text-sm pb-0.5"
             />
             <p className="text-[11px] text-muted-foreground">{f.fileName}</p>
+            <FirewallLinkPicker
+              configId={f.id}
+              configHostname={fileHostnames[f.id] ?? ""}
+              configHash={fileHashes[f.id] ?? ""}
+              onLinked={(link) => onFirewallLinked?.(f.id, link)}
+            />
           </div>
-          <Button variant="ghost" size="icon" onClick={() => removeFile(f.id)} className="shrink-0 opacity-50 hover:opacity-100">
+          <Button variant="ghost" size="icon" onClick={() => removeFile(f.id)} className="shrink-0 opacity-50 hover:opacity-100 self-start">
             <X className="h-4 w-4" />
           </Button>
         </div>

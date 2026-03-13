@@ -1,6 +1,17 @@
 import type { ExtractedSections } from "./extract-sections";
 import { buildAnonymisationMap, anonymiseData, anonymiseString, createStreamDeanonymiser } from "./anonymise";
 
+export type CentralEnrichment = {
+  firmware?: string;
+  model?: string;
+  serialNumber?: string;
+  connected?: boolean;
+  haCluster?: { mode?: string; status?: string; peers?: number };
+  licences?: Array<{ product: string; endDate: string; type: string }>;
+  alerts?: Array<{ severity: string; description: string; category: string; raisedAt: string }>;
+  mdrFeed?: Array<{ indicator: string; type: string }>;
+};
+
 type StreamOptions = {
   sections: ExtractedSections;
   environment?: string;
@@ -10,6 +21,7 @@ type StreamOptions = {
   executive?: boolean;
   firewallLabels?: string[];
   compliance?: boolean;
+  centralEnrichment?: CentralEnrichment;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
@@ -72,7 +84,7 @@ export async function streamChat({ chatContext, onDelta, onDone, onError, onStat
   await consumeSSEStream(resp.body, onDelta, onDone, onStatus);
 }
 
-export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, onDelta, onDone, onError, onStatus }: StreamOptions) {
+export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, centralEnrichment, onDelta, onDone, onError, onStatus }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   // Anonymise sensitive data before sending to cloud API
@@ -96,7 +108,7 @@ export async function streamConfigParse({ sections, environment, country, custom
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance }),
+      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance, centralEnrichment }),
     });
   } catch (e) {
     clearTimeout(timeoutId);

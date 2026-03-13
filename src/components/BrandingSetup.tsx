@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown } from "lucide-react";
+import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown, Wifi } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadSavedReportsCloud, loadSavedReportsLocal } from "@/lib/saved-reports";
+import { getCachedTenants, type CentralTenant } from "@/lib/sophos-central";
 
 export const ENVIRONMENT_TYPES = [
   "Education",
@@ -147,6 +148,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
   const [knownCustomers, setKnownCustomers] = useState<string[]>([]);
   const [customerReportCounts, setCustomerReportCounts] = useState<Record<string, number>>({});
+  const [centralTenants, setCentralTenants] = useState<CentralTenant[]>([]);
   const [addingNew, setAddingNew] = useState(false);
 
   // Auto-fill company name from org when logged in
@@ -157,7 +159,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGuest, org]);
 
-  // Load known customers from history + saved reports
+  // Load known customers from history + saved reports + Central tenants
   useEffect(() => {
     const load = async () => {
       try {
@@ -178,6 +180,13 @@ export function BrandingSetup({ branding, onChange }: Props) {
           if (n && n !== "Unnamed") counts[n] = (counts[n] || 0) + 1;
         }
         setCustomerReportCounts(counts);
+
+        if (useCloud && org) {
+          try {
+            const tenants = await getCachedTenants(org.id);
+            setCentralTenants(tenants);
+          } catch { /* Central not linked — ignore */ }
+        }
       } catch { /* ignore */ }
     };
     load();
@@ -262,7 +271,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
           <User className="h-4 w-4" /> Customer Name
         </Label>
 
-        {addingNew || knownCustomers.length === 0 ? (
+        {addingNew || (knownCustomers.length === 0 && centralTenants.length === 0) ? (
           <>
             <div className="flex gap-2 max-w-xs">
               <Input
@@ -272,7 +281,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
                 onChange={(e) => onChange({ ...branding, customerName: e.target.value })}
                 autoFocus={addingNew}
               />
-              {knownCustomers.length > 0 && (
+              {(knownCustomers.length > 0 || centralTenants.length > 0) && (
                 <button
                   type="button"
                   onClick={() => setAddingNew(false)}
@@ -283,7 +292,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
                 </button>
               )}
             </div>
-            {addingNew && knownCustomers.length > 0 && (
+            {addingNew && (knownCustomers.length > 0 || centralTenants.length > 0) && (
               <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                 <Plus className="h-2.5 w-2.5" /> Adding new customer.
                 <button
@@ -313,11 +322,26 @@ export function BrandingSetup({ branding, onChange }: Props) {
               style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}
             >
               <option value="" disabled>Select customer…</option>
-              {knownCustomers.map((name) => (
-                <option key={name} value={name}>
-                  {name}{customerReportCounts[name] > 0 ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})` : ""}
-                </option>
-              ))}
+              {centralTenants.length > 0 && (
+                <optgroup label="Sophos Central Tenants">
+                  {centralTenants
+                    .filter((t) => !knownCustomers.includes(t.name))
+                    .map((t) => (
+                      <option key={`central-${t.id}`} value={t.name}>
+                        {t.name} {t.dataRegion ? `(${t.dataRegion})` : ""}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+              {knownCustomers.length > 0 && (
+                <optgroup label={centralTenants.length > 0 ? "Previous Assessments" : "Customers"}>
+                  {knownCustomers.map((name) => (
+                    <option key={name} value={name}>
+                      {name}{customerReportCounts[name] > 0 ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})` : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
               <option value="__new__">＋ Add New Customer</option>
             </select>
           </div>

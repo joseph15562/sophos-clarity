@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, lazy, Suspense, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { ArrowLeftRight, ChevronDown, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +34,10 @@ const PriorityMatrix = lazy(() => import("@/components/PriorityMatrix").then((m)
 const TenantDashboard = lazy(() => import("@/components/TenantDashboard").then((m) => ({ default: m.TenantDashboard })));
 const InviteStaff = lazy(() => import("@/components/InviteStaff").then((m) => ({ default: m.InviteStaff })));
 const SavedReportsLibrary = lazy(() => import("@/components/SavedReportsLibrary").then((m) => ({ default: m.SavedReportsLibrary })));
+const CentralIntegration = lazy(() => import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })));
+const FirewallLinker = lazy(() => import("@/components/FirewallLinker").then((m) => ({ default: m.FirewallLinker })));
+const CentralEnrichment = lazy(() => import("@/components/CentralEnrichment").then((m) => ({ default: m.CentralEnrichment })));
+const LicenceExpiryWidget = lazy(() => import("@/components/LicenceExpiryWidget").then((m) => ({ default: m.LicenceExpiryWidget })));
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -81,6 +85,17 @@ function InnerApp() {
     analysisResults, totalFindings, totalRules, totalSections,
     totalPopulated, extractionPct, aggregatedPosture,
   } = useFirewallAnalysis(files);
+
+  const configMetas = useMemo(() =>
+    files.map((f) => {
+      const result = analysisResults[f.label || f.fileName.replace(/\.(html|htm)$/i, "")];
+      return {
+        label: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
+        hostname: result?.hostname,
+        configHash: f.id,
+      };
+    }),
+  [files, analysisResults]);
 
   useAutoSave(branding, reports, activeReportId);
 
@@ -300,6 +315,21 @@ function InnerApp() {
               </section>
             )}
 
+            {/* Sophos Central Firewall Linking */}
+            {hasFiles && !isGuest && configMetas.length > 0 && (
+              <Suspense fallback={null}>
+                <Card>
+                  <CardContent className="pt-5">
+                    <FirewallLinker
+                      configs={configMetas}
+                      customerName={branding.customerName}
+                      analysisResults={analysisResults}
+                    />
+                  </CardContent>
+                </Card>
+              </Suspense>
+            )}
+
             {/* Privacy banner */}
             {hasFiles && (
               <div className="rounded-xl border border-[#00995a]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00995a] dark:border-l-[#00F2B3] bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
@@ -391,6 +421,14 @@ function InnerApp() {
                     aggregatedPosture={aggregatedPosture}
                     selectedFrameworks={branding.selectedFrameworks}
                   />
+                  {!isGuest && configMetas.length > 0 && (
+                    <Suspense fallback={null}>
+                      <CentralEnrichment
+                        configMetas={configMetas}
+                        customerName={branding.customerName}
+                      />
+                    </Suspense>
+                  )}
                 </div>
               </CollapsibleSection>
             )}
@@ -545,7 +583,22 @@ function InnerApp() {
                 <TenantDashboard />
               </Suspense>
               <Suspense fallback={null}>
-                <div className="px-5 pb-5">
+                <div className="px-5">
+                  <LicenceExpiryWidget />
+                </div>
+              </Suspense>
+              <Suspense fallback={null}>
+                <div className="px-5 pb-5 space-y-4">
+                  <CollapsibleSection
+                    title="Sophos Central API"
+                    subtitle="Link your Sophos Central Partner or Tenant account for live firewall data"
+                    icon={<img src="/icons/sophos-icon-white.svg" alt="" className="h-4 w-4" />}
+                    iconBg="bg-[#005BC8]"
+                  >
+                    <div className="p-4">
+                      <CentralIntegration />
+                    </div>
+                  </CollapsibleSection>
                   <CollapsibleSection
                     title="Team Management"
                     subtitle="Invite staff to your organisation"
