@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Wifi, WifiOff, Shield, AlertTriangle, Clock, Server, RefreshCw, ChevronDown } from "lucide-react";
+import { Wifi, WifiOff, AlertTriangle, Clock, Server, RefreshCw, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getCentralStatus, getCachedFirewalls, getAlerts, getLicences,
-  type CentralStatus, type CentralAlert, type CentralLicence,
+  getCentralStatus, getCachedFirewalls, getAlerts,
+  type CentralStatus, type CentralAlert,
 } from "@/lib/sophos-central";
 
 interface CentralEnrichmentProps {
@@ -26,7 +26,6 @@ interface LinkedFirewallData {
   configLabel: string;
   firewall: FirewallInfo | null;
   alerts: CentralAlert[];
-  licences: CentralLicence[];
 }
 
 export function CentralEnrichment({ configMetas, customerName }: CentralEnrichmentProps) {
@@ -73,15 +72,7 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
       const tenantLinks = links.filter((l) => l.central_tenant_id === tenantId);
 
       let alerts: CentralAlert[] = [];
-      let allLicences: CentralLicence[] = [];
       try { alerts = await getAlerts(orgId, tenantId); } catch { /* ignore */ }
-      try { allLicences = await getLicences(orgId, tenantId); } catch { /* ignore */ }
-
-      // Only show licences explicitly related to firewalls
-      const licences = allLicences.filter((l) => {
-        const name = (l.product?.name || l.product?.code || l.type || "").toLowerCase();
-        return name.includes("firewall") || name.includes("xgs") || name.includes("sfos");
-      });
 
       for (const link of tenantLinks) {
         const config = configMetas.find((c) => c.configHash === link.config_hash);
@@ -100,7 +91,6 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
           configLabel: config?.label ?? link.config_hash,
           firewall: fw,
           alerts: alerts.filter((a) => a.managedAgent?.id === link.central_firewall_id),
-          licences,
         });
       }
     }
@@ -143,17 +133,6 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
     return `${Math.floor(diff / 3_600_000)}h ago`;
   };
 
-  const daysUntil = (iso: string) => {
-    const diff = new Date(iso).getTime() - Date.now();
-    return Math.ceil(diff / 86_400_000);
-  };
-
-  const nearestExpiry = enrichedData.flatMap((d) => d.licences).reduce((min, l) => {
-    if (!l.endDate) return min;
-    const days = daysUntil(l.endDate);
-    return min === null || days < min ? days : min;
-  }, null as number | null);
-
   return (
     <div className="rounded-lg border border-[#005BC8]/20 dark:border-[#00EDFF]/20 bg-[#005BC8]/[0.03] dark:bg-[#00EDFF]/[0.03] overflow-hidden">
       <button
@@ -173,11 +152,6 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
           {totalAlerts > 0 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#F29400]/10 text-[#F29400]">
               {totalAlerts} Alert{totalAlerts !== 1 ? "s" : ""}
-            </span>
-          )}
-          {nearestExpiry !== null && nearestExpiry <= 90 && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${nearestExpiry <= 30 ? "bg-[#EA0022]/10 text-[#EA0022]" : "bg-[#F29400]/10 text-[#F29400]"}`}>
-              Licence {nearestExpiry <= 0 ? "Expired" : `${nearestExpiry}d`}
             </span>
           )}
           <button
@@ -256,33 +230,6 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
                 </div>
               )}
 
-              {data.licences.length > 0 && (
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-                    <Shield className="h-3 w-3" /> Firewall Subscriptions
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {data.licences.map((l, idx) => {
-                      const days = l.endDate ? daysUntil(l.endDate) : null;
-                      return (
-                        <span key={`${l.licenseIdentifier}-${idx}`} className={`text-[10px] px-2 py-1 rounded border ${
-                          days !== null && days <= 0 ? "border-[#EA0022]/30 bg-[#EA0022]/5 text-[#EA0022]" :
-                          days !== null && days <= 30 ? "border-[#EA0022]/20 bg-[#EA0022]/5 text-[#EA0022]" :
-                          days !== null && days <= 90 ? "border-[#F29400]/20 bg-[#F29400]/5 text-[#F29400]" :
-                          "border-border bg-muted/30 text-foreground"
-                        }`}>
-                          <span className="font-medium">{l.product?.name || l.product?.code || l.type}</span>
-                          {days !== null && (
-                            <span className="ml-1 opacity-75">
-                              {days <= 0 ? "(expired)" : `(${days}d)`}
-                            </span>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           ))}
 
