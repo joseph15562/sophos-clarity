@@ -1,5 +1,9 @@
 import { useState, lazy, Suspense } from "react";
-import { ArrowRight, ArrowLeft, Building2, Wifi, Upload, Sparkles, Check, X, RotateCcw } from "lucide-react";
+import {
+  ArrowRight, ArrowLeft, Building2, Wifi, Upload, Sparkles, Check, X, RotateCcw,
+  FileText, LayoutDashboard, Settings, Eye, Save, Download, MousePointerClick,
+  ChevronDown, Shield, BarChart3, History,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +41,7 @@ interface Props {
   orgName?: string;
 }
 
-type StepId = "welcome" | "branding" | "central" | "done";
+type StepId = "welcome" | "branding" | "central" | "guide-upload" | "guide-reports" | "guide-management" | "done";
 
 interface Step {
   id: StepId;
@@ -49,8 +53,34 @@ const STEPS: Step[] = [
   { id: "welcome", title: "Welcome", icon: Sparkles },
   { id: "branding", title: "Branding", icon: Building2 },
   { id: "central", title: "Sophos Central", icon: Wifi },
+  { id: "guide-upload", title: "Uploading Configs", icon: Upload },
+  { id: "guide-reports", title: "Reports", icon: FileText },
+  { id: "guide-management", title: "Management", icon: LayoutDashboard },
   { id: "done", title: "Ready", icon: Check },
 ];
+
+function GuideStep({ number, title, description, icon, color }: {
+  number: number;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#2006F7] text-white text-[9px] font-bold">{number}</span>
+        <div className={`h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center ${color}`}>
+          {icon}
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-foreground">{title}</p>
+        <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
 
 function Skeleton() {
   return (
@@ -226,6 +256,167 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 <Suspense fallback={<Skeleton />}>
                   <CentralIntegration />
                 </Suspense>
+              </div>
+            )}
+
+            {step.id === "guide-upload" && (
+              <div className="space-y-5">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">How to Upload & Assess</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    FireComply analyses Sophos XGS HTML configuration exports. Here's the workflow:
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <GuideStep
+                    number={1}
+                    title="Export your firewall config"
+                    description="In Sophos Firewall, go to Backup & firmware > Import/Export and export as HTML."
+                    icon={<Download className="h-4 w-4" />}
+                    color="text-[#2006F7]"
+                  />
+                  <GuideStep
+                    number={2}
+                    title="Drag & drop the file"
+                    description="Drop one or more HTML files into the upload area on the main page. Multi-firewall assessments are supported."
+                    icon={<Upload className="h-4 w-4" />}
+                    color="text-[#005BC8]"
+                  />
+                  <GuideStep
+                    number={3}
+                    title="Instant analysis"
+                    description="FireComply automatically parses the config and shows findings, risk scores, compliance mapping, and best practice checks."
+                    icon={<Shield className="h-4 w-4" />}
+                    color="text-[#00995a]"
+                  />
+                  <GuideStep
+                    number={4}
+                    title="Link to Sophos Central"
+                    description='If connected, click "Link Firewall" to match each config to its Central firewall for live data enrichment.'
+                    icon={<Wifi className="h-4 w-4" />}
+                    color="text-[#00EDFF]"
+                  />
+                </div>
+
+                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Tip:</strong> Set the customer name and compliance frameworks in the <strong className="text-foreground">Assessment Context</strong> section before generating reports — this tailors the AI analysis.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {step.id === "guide-reports" && (
+              <div className="space-y-5">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Generating & Viewing Reports</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Once your config is uploaded and analysed, generate AI-powered reports for your customers.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <GuideStep
+                    number={1}
+                    title="Choose your report type"
+                    description="Pick from Individual Firewall, Executive Summary, or Compliance Report — or generate all three at once."
+                    icon={<FileText className="h-4 w-4" />}
+                    color="text-[#2006F7]"
+                  />
+                  <GuideStep
+                    number={2}
+                    title="AI generates your report"
+                    description="Reports are generated using AI enriched with your Central data, compliance frameworks, and best practice analysis."
+                    icon={<Sparkles className="h-4 w-4" />}
+                    color="text-[#6B5BFF]"
+                  />
+                  <GuideStep
+                    number={3}
+                    title="Review & export"
+                    description="View the report in the built-in viewer. Export to PDF, Word (.docx), or PowerPoint (.pptx) with your company branding."
+                    icon={<Eye className="h-4 w-4" />}
+                    color="text-[#005BC8]"
+                  />
+                  <GuideStep
+                    number={4}
+                    title="Save for later"
+                    description='Click "Save Reports" to store to the cloud (or locally as a guest). Saved reports appear in the Management panel.'
+                    icon={<Save className="h-4 w-4" />}
+                    color="text-[#00995a]"
+                  />
+                </div>
+
+                <div className="rounded-lg bg-muted/30 border border-border p-3 flex items-start gap-2">
+                  <BarChart3 className="h-3.5 w-3.5 text-[#2006F7] shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Keyboard shortcut:</strong> Press <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">Ctrl+S</kbd> to save and <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">Ctrl+G</kbd> to generate all reports.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {step.id === "guide-management" && (
+              <div className="space-y-5">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">The Management Panel</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Click your <strong className="text-foreground">organisation name</strong> in the top navbar to open the Management panel — your central hub for everything.
+                  </p>
+                </div>
+
+                {/* Visual representation of the navbar button */}
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="bg-[#001A47] px-4 py-2.5 flex items-center gap-3">
+                    <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5" />
+                    <span className="text-[11px] font-bold text-white flex-1">Sophos FireComply</span>
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/10 border border-white/20">
+                      <Building2 className="h-3 w-3 text-white/70" />
+                      <span className="text-[10px] font-medium text-white">{orgName || "Your Org"}</span>
+                      <ChevronDown className="h-2.5 w-2.5 text-white/70" />
+                    </div>
+                    <MousePointerClick className="h-4 w-4 text-[#00EDFF] animate-pulse" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <LayoutDashboard className="h-3.5 w-3.5 text-[#2006F7]" />
+                      <span className="text-[10px] font-semibold text-foreground">Dashboard</span>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground leading-relaxed">
+                      Multi-tenant overview of all customer assessments and licence expiry across your estate.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-[#2006F7]" />
+                      <span className="text-[10px] font-semibold text-foreground">Reports</span>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground leading-relaxed">
+                      Browse and reload all previously saved reports. Filter by customer, type, or date.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <History className="h-3.5 w-3.5 text-[#2006F7]" />
+                      <span className="text-[10px] font-semibold text-foreground">History</span>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground leading-relaxed">
+                      Track assessment scores over time per customer to demonstrate security improvements.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Settings className="h-3.5 w-3.5 text-[#2006F7]" />
+                      <span className="text-[10px] font-semibold text-foreground">Settings</span>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground leading-relaxed">
+                      Sophos Central API config, team management, activity audit log, and re-run this setup.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
