@@ -41,7 +41,7 @@ interface Props {
   orgName?: string;
 }
 
-type StepId = "welcome" | "branding" | "central" | "guide-upload" | "guide-reports" | "guide-management" | "done";
+type StepId = "welcome" | "branding" | "central" | "guide-upload" | "guide-pre-ai" | "guide-ai-reports" | "guide-management" | "done";
 
 interface Step {
   id: StepId;
@@ -54,7 +54,8 @@ const STEPS: Step[] = [
   { id: "branding", title: "Branding", icon: Building2 },
   { id: "central", title: "Sophos Central", icon: Wifi },
   { id: "guide-upload", title: "Uploading Configs", icon: Upload },
-  { id: "guide-reports", title: "Reports", icon: FileText },
+  { id: "guide-pre-ai", title: "Pre-AI Assessment", icon: Shield },
+  { id: "guide-ai-reports", title: "AI Reports", icon: Sparkles },
   { id: "guide-management", title: "Management", icon: LayoutDashboard },
   { id: "done", title: "Ready", icon: Check },
 ];
@@ -77,6 +78,18 @@ function GuideStep({ number, title, description, icon, color }: {
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-foreground">{title}</p>
         <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function FeatureCard({ icon, title, desc, color }: { icon: React.ReactNode; title: string; desc: string; color: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg bg-muted/20 p-2.5">
+      <div className={`shrink-0 mt-0.5 ${color}`}>{icon}</div>
+      <div>
+        <p className="text-[10px] font-semibold text-foreground">{title}</p>
+        <p className="text-[9px] text-muted-foreground leading-relaxed">{desc}</p>
       </div>
     </div>
   );
@@ -307,42 +320,132 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
               </div>
             )}
 
-            {step.id === "guide-reports" && (
+            {step.id === "guide-pre-ai" && (
               <div className="space-y-5">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Generating & Viewing Reports</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Pre-AI Assessment (Instant)</h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Once your config is uploaded and analysed, generate AI-powered reports for your customers.
+                    As soon as you upload a config, FireComply runs a <strong className="text-foreground">deterministic analysis</strong> — no AI needed. This is instant and always consistent.
                   </p>
+                </div>
+
+                {/* Visual flow diagram */}
+                <div className="rounded-lg border border-border bg-card overflow-hidden">
+                  <div className="bg-muted/30 px-3 py-2 border-b border-border">
+                    <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">What you get instantly</span>
+                  </div>
+                  <div className="p-3 grid grid-cols-2 gap-2">
+                    <FeatureCard icon={<Shield className="h-4 w-4" />} title="Risk Score & Grade" desc="A-F rating based on weighted security checks" color="text-[#00995a]" />
+                    <FeatureCard icon={<BarChart3 className="h-4 w-4" />} title="Findings & Severity" desc="Critical, high, medium, low categorised issues" color="text-[#EA0022]" />
+                    <FeatureCard icon={<Eye className="h-4 w-4" />} title="Inspection Posture" desc="IPS, web filter, app control, SSL/TLS coverage" color="text-[#2006F7]" />
+                    <FeatureCard icon={<FileText className="h-4 w-4" />} title="Compliance Mapping" desc="ISO 27001, NIST, PCI DSS, Cyber Essentials" color="text-[#6B5BFF]" />
+                  </div>
                 </div>
 
                 <div className="space-y-3">
                   <GuideStep
                     number={1}
-                    title="Choose your report type"
-                    description="Pick from Individual Firewall, Executive Summary, or Compliance Report — or generate all three at once."
-                    icon={<FileText className="h-4 w-4" />}
+                    title="Automatic on upload"
+                    description="The Pre-AI assessment runs as soon as you drop a config file — no buttons to click. Findings, risk score, and dashboards populate immediately."
+                    icon={<Upload className="h-4 w-4" />}
                     color="text-[#2006F7]"
                   />
                   <GuideStep
                     number={2}
-                    title="AI generates your report"
-                    description="Reports are generated using AI enriched with your Central data, compliance frameworks, and best practice analysis."
-                    icon={<Sparkles className="h-4 w-4" />}
-                    color="text-[#6B5BFF]"
+                    title="Best Practice scoring"
+                    description="The Sophos Best Practice Score checks 25+ items based on official Sophos documentation. Your licence tier is auto-detected from Central."
+                    icon={<Shield className="h-4 w-4" />}
+                    color="text-[#00995a]"
                   />
                   <GuideStep
                     number={3}
-                    title="Review & export"
-                    description="View the report in the built-in viewer. Export to PDF, Word (.docx), or PowerPoint (.pptx) with your company branding."
-                    icon={<Eye className="h-4 w-4" />}
+                    title='Save Pre-AI assessment'
+                    description={'Click "Save Assessment (Pre-AI)" to save the deterministic scores before generating AI reports. This populates the multi-tenant dashboard and assessment history.'}
+                    icon={<Save className="h-4 w-4" />}
+                    color="text-[#005BC8]"
+                  />
+                </div>
+
+                <div className="rounded-lg bg-[#00995a]/5 border border-[#00995a]/15 p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Why Pre-AI?</strong> The deterministic analysis is repeatable and consistent — same config always gives the same score. It's the baseline before AI adds narrative reporting.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {step.id === "guide-ai-reports" && (
+              <div className="space-y-5">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">AI-Powered Reports</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    After the Pre-AI assessment, generate <strong className="text-foreground">AI narrative reports</strong> for your customers — professional documents enriched with Central data.
+                  </p>
+                </div>
+
+                {/* Report type cards */}
+                <div className="rounded-lg border border-border bg-card overflow-hidden">
+                  <div className="bg-muted/30 px-3 py-2 border-b border-border">
+                    <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Report types</span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    <div className="px-3 py-2.5 flex items-center gap-3">
+                      <div className="h-7 w-7 rounded-lg bg-[#2006F7]/10 flex items-center justify-center shrink-0">
+                        <FileText className="h-3.5 w-3.5 text-[#2006F7]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold text-foreground">Individual Firewall</p>
+                        <p className="text-[9px] text-muted-foreground">Deep-dive analysis per firewall with finding-level detail</p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-2.5 flex items-center gap-3">
+                      <div className="h-7 w-7 rounded-lg bg-[#6B5BFF]/10 flex items-center justify-center shrink-0">
+                        <BarChart3 className="h-3.5 w-3.5 text-[#6B5BFF]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold text-foreground">Executive Summary</p>
+                        <p className="text-[9px] text-muted-foreground">High-level overview for management with key metrics and recommendations</p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-2.5 flex items-center gap-3">
+                      <div className="h-7 w-7 rounded-lg bg-[#005BC8]/10 flex items-center justify-center shrink-0">
+                        <Shield className="h-3.5 w-3.5 text-[#005BC8]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-semibold text-foreground">Compliance Report</p>
+                        <p className="text-[9px] text-muted-foreground">Maps findings against your selected compliance frameworks</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <GuideStep
+                    number={1}
+                    title="Click a report card or Generate All"
+                    description='Select which report to generate from the report cards section, or hit "Generate All Reports" to create everything in one go.'
+                    icon={<Sparkles className="h-4 w-4" />}
+                    color="text-[#2006F7]"
+                  />
+                  <GuideStep
+                    number={2}
+                    title="AI enriches with Central data"
+                    description="If your firewall is linked to Central, the AI receives live firmware, licence, alert, and HA data to make reports more accurate."
+                    icon={<Wifi className="h-4 w-4" />}
                     color="text-[#005BC8]"
                   />
                   <GuideStep
+                    number={3}
+                    title="Review in the built-in viewer"
+                    description="Reports open in a tabbed viewer with live markdown rendering. Switch between reports using tabs or number keys 1-9."
+                    icon={<Eye className="h-4 w-4" />}
+                    color="text-[#6B5BFF]"
+                  />
+                  <GuideStep
                     number={4}
-                    title="Save for later"
-                    description='Click "Save Reports" to store to the cloud (or locally as a guest). Saved reports appear in the Management panel.'
-                    icon={<Save className="h-4 w-4" />}
+                    title="Export & save"
+                    description="Export to branded PDF, Word (.docx), PowerPoint (.pptx), or download all as a ZIP. Save to the cloud for your team."
+                    icon={<Download className="h-4 w-4" />}
                     color="text-[#00995a]"
                   />
                 </div>
@@ -350,7 +453,10 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 <div className="rounded-lg bg-muted/30 border border-border p-3 flex items-start gap-2">
                   <BarChart3 className="h-3.5 w-3.5 text-[#2006F7] shrink-0 mt-0.5" />
                   <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Keyboard shortcut:</strong> Press <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">Ctrl+S</kbd> to save and <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">Ctrl+G</kbd> to generate all reports.
+                    <strong className="text-foreground">Keyboard shortcuts:</strong>{" "}
+                    <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">Ctrl+G</kbd> generate all,{" "}
+                    <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">Ctrl+S</kbd> save,{" "}
+                    <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">1-9</kbd> switch tabs
                   </p>
                 </div>
               </div>
