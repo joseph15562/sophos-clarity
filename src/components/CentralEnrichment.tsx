@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Wifi, WifiOff, AlertTriangle, Clock, Server, RefreshCw, ChevronDown } from "lucide-react";
+import { Wifi, WifiOff, AlertTriangle, Clock, Server, RefreshCw, ChevronDown, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getCentralStatus, getCachedFirewalls, getAlerts,
-  type CentralStatus, type CentralAlert,
+  getCentralStatus, getCachedFirewalls, getAlerts, getFirewallLicences,
+  type CentralStatus, type CentralAlert, type FirewallLicence,
 } from "@/lib/sophos-central";
 
 interface CentralEnrichmentProps {
@@ -22,10 +22,19 @@ interface FirewallInfo {
   cluster: { mode?: string; status?: string } | null;
 }
 
+interface LicenceSummary {
+  product: string;
+  type: string;
+  endDate: string;
+  perpetual: boolean;
+  daysRemaining: number;
+}
+
 interface LinkedFirewallData {
   configLabel: string;
   firewall: FirewallInfo | null;
   alerts: CentralAlert[];
+  licences: LicenceSummary[];
 }
 
 export function CentralEnrichment({ configMetas, customerName }: CentralEnrichmentProps) {
@@ -66,6 +75,24 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
     const cachedFws = await getCachedFirewalls(orgId);
 
     const tenantIds = [...new Set(links.map((l) => l.central_tenant_id))];
+
+    // Fetch per-firewall licence data
+    let licencesBySerial: Record<string, LicenceSummary[]> = {};
+    try {
+      const fwLicences = await getFirewallLicences(orgId);
+      for (const fwl of fwLicences) {
+        licencesBySerial[fwl.serialNumber] = fwl.licenses.map((l) => ({
+          product: l.product?.name || l.product?.code || l.type,
+          type: l.type,
+          endDate: l.endDate ?? "",
+          perpetual: l.perpetual,
+          daysRemaining: l.endDate
+            ? Math.ceil((new Date(l.endDate).getTime() - Date.now()) / 86_400_000)
+            : l.perpetual ? 9999 : 9999,
+        }));
+      }
+    } catch { /* licensing API may not be available */ }
+
     const results: LinkedFirewallData[] = [];
 
     for (const tenantId of tenantIds) {
@@ -91,6 +118,7 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
           configLabel: config?.label ?? link.config_hash,
           firewall: fw,
           alerts: alerts.filter((a) => a.managedAgent?.id === link.central_firewall_id),
+          licences: fw?.serialNumber ? (licencesBySerial[fw.serialNumber] ?? []) : [],
         });
       }
     }
@@ -203,6 +231,39 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
                     <span className="text-xs font-medium text-foreground">
                       {data.firewall.cluster ? `${data.firewall.cluster.mode} (${data.firewall.cluster.status})` : "Standalone"}
                     </span>
+                  </div>
+                </div>
+              )}
+
+              {data.licences.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+                    <Shield className="h-3 w-3 text-[#009CFB]" /> Licences ({data.licences.length})
+                  </span>
+                  <div className="grid gap-1.5">
+                    {data.licences.map((lic, i) => {
+                      const isExpired = !lic.perpetual && lic.daysRemaining <= 0;
+                      const isExpiring = !lic.perpetual && lic.daysRemaining > 0 && lic.daysRemaining <= 90;
+                      return (
+                        <div key={`${lic.product}-${i}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-border bg-muted/20">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-medium text-foreground block truncate">{lic.product}</span>
+                            <span className="text-[9px] text-muted-foreground">
+                              {lic.perpetual ? "Perpetual" : lic.type}
+                              {lic.endDate && !lic.perpetual && ` · Expires ${new Date(lic.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+                            </span>
+                          </div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                            lic.perpetual ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                            isExpired ? "bg-[#EA0022]/10 text-[#EA0022]" :
+                            isExpiring ? "bg-[#F29400]/10 text-[#F29400]" :
+                            "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                          }`}>
+                            {lic.perpetual ? "Active" : isExpired ? "EXPIRED" : `${lic.daysRemaining}d`}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
