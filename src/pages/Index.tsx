@@ -41,6 +41,13 @@ const CentralIntegration = lazy(() => import("@/components/CentralIntegration").
 const FirewallLinker = lazy(() => import("@/components/FirewallLinker").then((m) => ({ default: m.FirewallLinker })));
 const CentralEnrichment = lazy(() => import("@/components/CentralEnrichment").then((m) => ({ default: m.CentralEnrichment })));
 const LicenceExpiryWidget = lazy(() => import("@/components/LicenceExpiryWidget").then((m) => ({ default: m.LicenceExpiryWidget })));
+const SeverityBreakdown = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SeverityBreakdown })));
+const SecurityFeatureCoverage = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SecurityFeatureCoverage })));
+const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.ZoneTrafficFlow })));
+const CategoryScoreBars = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.CategoryScoreBars })));
+const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
+const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
+const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -516,9 +523,49 @@ function InnerApp() {
                 defaultOpen
               >
                 <div className="p-5 space-y-6">
-                  <Suspense fallback={null}>
-                    <RiskScoreDashboard analysisResults={analysisResults} />
-                  </Suspense>
+                  {/* Row 1: Risk Score + Category Bars side by side */}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <Suspense fallback={null}>
+                      <RiskScoreDashboard analysisResults={analysisResults} />
+                    </Suspense>
+                    <div className="space-y-6">
+                      <Suspense fallback={null}>
+                        <CategoryScoreBars analysisResults={analysisResults} />
+                      </Suspense>
+                      <Suspense fallback={null}>
+                        <RuleHealthOverview analysisResults={analysisResults} />
+                      </Suspense>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Severity Donut + Feature Coverage + Findings by Section */}
+                  {totalFindings > 0 && (
+                    <div className="grid gap-6 lg:grid-cols-3">
+                      <Suspense fallback={null}>
+                        <SeverityBreakdown analysisResults={analysisResults} />
+                      </Suspense>
+                      <Suspense fallback={null}>
+                        <SecurityFeatureCoverage analysisResults={analysisResults} />
+                      </Suspense>
+                      <Suspense fallback={null}>
+                        <FindingsBySection analysisResults={analysisResults} />
+                      </Suspense>
+                    </div>
+                  )}
+
+                  {/* Row 3: Zone Traffic Flow + Top Findings */}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <Suspense fallback={null}>
+                      <ZoneTrafficFlow files={files} />
+                    </Suspense>
+                    {totalFindings > 0 && (
+                      <Suspense fallback={null}>
+                        <TopFindings analysisResults={analysisResults} />
+                      </Suspense>
+                    )}
+                  </div>
+
+                  {/* Row 4: Peer Benchmark + Best Practice */}
                   <Suspense fallback={null}>
                     <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
                   </Suspense>
