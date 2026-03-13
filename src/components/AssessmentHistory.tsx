@@ -32,6 +32,37 @@ const GRADE_COLORS: Record<string, string> = {
   F: "text-[#EA0022]",
 };
 
+function ScoreTrendChart({ snapshots }: { snapshots: AssessmentSnapshot[] }) {
+  if (snapshots.length < 2) return null;
+  const sorted = [...snapshots].sort((a, b) => a.timestamp - b.timestamp).slice(-7);
+  const scores = sorted.map((s) => s.overallScore);
+  const months = sorted.map((s) => new Date(s.timestamp).toLocaleDateString("en-GB", { month: "short" }));
+  const maxV = 100;
+  const w = 320, h = 100, pad = 24;
+  const plotW = w - pad * 2, plotH = h - pad;
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Score Trend</p>
+      <svg width="100%" viewBox={`0 0 ${w} ${h + 14}`} className="text-muted-foreground">
+        {[25, 50, 75].map((v) => (
+          <line key={v} x1={pad} x2={w - pad} y1={h - pad - (v / maxV) * plotH} y2={h - pad - (v / maxV) * plotH} stroke="currentColor" strokeWidth="0.5" opacity="0.15" />
+        ))}
+        <polyline
+          fill="none" stroke="#2006F7" strokeWidth="2" strokeLinejoin="round"
+          points={scores.map((v, i) => `${pad + (i / (scores.length - 1)) * plotW},${h - pad - (v / maxV) * plotH}`).join(" ")}
+        />
+        {scores.map((v, i) => (
+          <g key={i}>
+            <circle cx={pad + (i / (scores.length - 1)) * plotW} cy={h - pad - (v / maxV) * plotH} r="3" fill="#2006F7" />
+            <text x={pad + (i / (scores.length - 1)) * plotW} y={h + 4} textAnchor="middle" fontSize="7" fill="currentColor">{months[i]}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 export function AssessmentHistory({ analysisResults, customerName, environment }: Props) {
   const { isGuest, org } = useAuth();
   const useCloud = !isGuest && !!org;
@@ -159,6 +190,8 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
           )}
         </div>
       </div>
+
+      <ScoreTrendChart snapshots={history} />
 
       {history.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-4">

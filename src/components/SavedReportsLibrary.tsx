@@ -130,32 +130,34 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-[1fr_80px_60px_120px_50px] gap-2 px-3 py-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-        <button className="flex items-center gap-1 text-left" onClick={() => toggleSort("customer")}>
-          Customer <ArrowUpDown className="h-2.5 w-2.5" />
-        </button>
-        <button className="flex items-center gap-1" onClick={() => toggleSort("type")}>
-          Type <ArrowUpDown className="h-2.5 w-2.5" />
-        </button>
-        <button className="flex items-center gap-1" onClick={() => toggleSort("score")}>
-          Score <ArrowUpDown className="h-2.5 w-2.5" />
-        </button>
-        <button className="flex items-center gap-1" onClick={() => toggleSort("date")}>
-          Date <ArrowUpDown className="h-2.5 w-2.5" />
-        </button>
-        <span />
+      <div className="rounded-t-lg border border-border overflow-hidden">
+        <div className="grid grid-cols-[1fr_80px_60px_120px_50px] gap-2 px-3 py-2 bg-muted/30 text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
+          <button className="flex items-center gap-1 text-left" onClick={() => toggleSort("customer")}>
+            Customer <ArrowUpDown className="h-2.5 w-2.5" />
+          </button>
+          <button className="flex items-center gap-1" onClick={() => toggleSort("type")}>
+            Type <ArrowUpDown className="h-2.5 w-2.5" />
+          </button>
+          <button className="flex items-center gap-1" onClick={() => toggleSort("score")}>
+            Score <ArrowUpDown className="h-2.5 w-2.5" />
+          </button>
+          <button className="flex items-center gap-1" onClick={() => toggleSort("date")}>
+            Date <ArrowUpDown className="h-2.5 w-2.5" />
+          </button>
+          <span />
+        </div>
       </div>
 
       {/* Rows */}
-      <div className="space-y-1.5">
+      <div className="rounded-b-lg border border-t-0 border-border overflow-hidden divide-y divide-border">
         {filtered.map((pkg) => {
           const isExpanded = expanded === pkg.id;
           const gradeClass = GRADE_COLORS[pkg.analysisSummary.overallGrade] ?? GRADE_COLORS.C;
           return (
-            <div key={pkg.id} className="rounded-lg border border-border bg-card overflow-hidden">
+            <div key={pkg.id} className="bg-card">
               <button
                 onClick={() => setExpanded(isExpanded ? null : pkg.id)}
-                className="w-full grid grid-cols-[1fr_80px_60px_120px_50px] gap-2 px-3 py-2.5 items-center text-left hover:bg-muted/30 transition-colors"
+                className="w-full grid grid-cols-[1fr_80px_60px_120px_50px] gap-2 px-3 py-2.5 items-center text-left hover:bg-muted/20 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />

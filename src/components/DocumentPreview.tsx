@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import DOMPurify from "dompurify";
 import { BrandingData } from "./BrandingSetup";
-import type { AnalysisResult } from "@/lib/analyse-config";
-import { Loader2, Download, FileText, RefreshCw, Archive } from "lucide-react";
+import type { AnalysisResult, Severity } from "@/lib/analyse-config";
+import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
+import { mapToFramework, type FrameworkMapping } from "@/lib/compliance-map";
+import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { marked } from "marked";
@@ -916,7 +918,277 @@ function ReportToc({ markdown }: { markdown: string }) {
   );
 }
 
-function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename, errorMessage, loadingStatus }: {
+const SEVERITY_COLORS: Record<Severity, { bg: string; text: string; border: string }> = {
+  critical: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400", border: "border-red-500/20" },
+  high: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400", border: "border-orange-500/20" },
+  medium: { bg: "bg-yellow-500/10", text: "text-yellow-600 dark:text-yellow-400", border: "border-yellow-500/20" },
+  low: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400", border: "border-green-500/20" },
+  info: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/20" },
+};
+
+function GradeRing({ grade, score }: { grade: string; score: number }) {
+  const r = 36, c = 2 * Math.PI * r;
+  const offset = c - (score / 100) * c;
+  const color = score >= 90 ? "#00995a" : score >= 75 ? "#2006F7" : score >= 60 ? "#F29400" : "#e53e3e";
+  return (
+    <div className="relative flex items-center justify-center shrink-0">
+      <svg width="88" height="88" viewBox="0 0 88 88">
+        <circle cx="44" cy="44" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-border" />
+        <circle cx="44" cy="44" r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={offset} transform="rotate(-90 44 44)" className="transition-all duration-700" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-xl font-black" style={{ color }}>{grade}</span>
+        <span className="text-[10px] text-muted-foreground font-medium">{score}%</span>
+      </div>
+    </div>
+  );
+}
+
+function ReportSummaryHeader({ reportId, analysisResults, branding }: {
+  reportId: string;
+  analysisResults?: Record<string, AnalysisResult>;
+  branding: BrandingData;
+}) {
+  if (!analysisResults || Object.keys(analysisResults).length === 0) return null;
+
+  const isExecutive = reportId === "report-executive";
+  const isCompliance = reportId === "report-compliance";
+  const isIndividual = !isExecutive && !isCompliance;
+
+  if (isIndividual) {
+    const reportLabel = reportId.replace(/^report-/, "");
+    const result = Object.entries(analysisResults).find(([key]) =>
+      key === reportLabel || reportId.endsWith(key.replace(/\s+/g, "-").toLowerCase())
+    )?.[1] ?? Object.values(analysisResults)[0];
+    if (!result) return null;
+
+    const riskScore = computeRiskScore(result);
+    const severityCounts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+    result.findings.forEach(f => { severityCounts[f.severity]++; });
+
+    return (
+      <div className="mb-6 rounded-xl border border-border bg-muted/20 p-5 no-print">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="h-4 w-4 text-[#2006F7] dark:text-[#009CFB]" />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Firewall Assessment Summary</p>
+        </div>
+        <div className="flex items-start gap-6 flex-wrap">
+          <GradeRing grade={riskScore.grade} score={riskScore.overall} />
+          <div className="flex-1 min-w-[200px] space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rules</p>
+                <p className="text-lg font-bold text-foreground">{result.stats.totalRules}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Findings</p>
+                <p className="text-lg font-bold text-foreground">{result.findings.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">WAN Rules</p>
+                <p className="text-lg font-bold text-foreground">{result.inspectionPosture.enabledWanRules}<span className="text-xs text-muted-foreground font-normal">/{result.inspectionPosture.totalWanRules}</span></p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["critical", "high", "medium", "low", "info"] as Severity[]).map(s => {
+                const count = severityCounts[s];
+                if (count === 0) return null;
+                const c = SEVERITY_COLORS[s];
+                return (
+                  <span key={s} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${c.bg} ${c.text} ${c.border}`}>
+                    {count} {s}
+                  </span>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {riskScore.categories.slice(0, 4).map(cat => (
+                <div key={cat.label} className="flex items-center gap-1.5">
+                  <div className="w-14 h-1.5 rounded-full bg-border overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{
+                      width: `${cat.pct}%`,
+                      backgroundColor: cat.pct >= 80 ? "#00995a" : cat.pct >= 50 ? "#F29400" : "#e53e3e"
+                    }} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{cat.label} <span className="font-semibold text-foreground">{cat.pct}%</span></span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isExecutive) {
+    const allResults = Object.values(analysisResults);
+    const totalRules = allResults.reduce((s, r) => s + r.stats.totalRules, 0);
+    const totalFindings = allResults.reduce((s, r) => s + r.findings.length, 0);
+    const scores = allResults.map(r => computeRiskScore(r));
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length) : 0;
+    const avgGrade: RiskScoreResult["grade"] = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+
+    const severityCounts: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+    allResults.forEach(r => r.findings.forEach(f => { severityCounts[f.severity]++; }));
+
+    const worstFw = scores.length > 0 ? scores.reduce((w, s, i) => s.overall < w.score ? { score: s.overall, idx: i } : w, { score: 101, idx: 0 }) : null;
+    const bestFw = scores.length > 0 ? scores.reduce((b, s, i) => s.overall > b.score ? { score: s.overall, idx: i } : b, { score: -1, idx: 0 }) : null;
+
+    return (
+      <div className="mb-6 rounded-xl border border-border bg-muted/20 p-5 no-print">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="h-4 w-4 text-[#5A00FF] dark:text-[#B529F7]" />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Executive Overview — {allResults.length} Firewall{allResults.length !== 1 ? "s" : ""}</p>
+        </div>
+        <div className="flex items-start gap-6 flex-wrap">
+          <GradeRing grade={avgGrade} score={avgScore} />
+          <div className="flex-1 min-w-[200px] space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Firewalls</p>
+                <p className="text-lg font-bold text-foreground">{allResults.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Rules</p>
+                <p className="text-lg font-bold text-foreground">{totalRules}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Findings</p>
+                <p className="text-lg font-bold text-foreground">{totalFindings}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Score</p>
+                <p className="text-lg font-bold text-foreground">{avgScore}%</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["critical", "high", "medium", "low", "info"] as Severity[]).map(s => {
+                const count = severityCounts[s];
+                if (count === 0) return null;
+                const c = SEVERITY_COLORS[s];
+                return (
+                  <span key={s} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${c.bg} ${c.text} ${c.border}`}>
+                    {count} {s}
+                  </span>
+                );
+              })}
+            </div>
+            {scores.length >= 2 && worstFw && bestFw && (
+              <div className="flex gap-4 text-[11px]">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <TrendingUp className="h-3 w-3 text-[#00995a]" />
+                  Best: <span className="font-semibold text-foreground">{Object.keys(analysisResults)[bestFw.idx]}</span> ({bestFw.score}%)
+                </span>
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <AlertTriangle className="h-3 w-3 text-[#F29400]" />
+                  Needs work: <span className="font-semibold text-foreground">{Object.keys(analysisResults)[worstFw.idx]}</span> ({worstFw.score}%)
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isCompliance) {
+    const allResults = Object.values(analysisResults);
+    const mergedResult: AnalysisResult = {
+      stats: {
+        totalRules: allResults.reduce((s, r) => s + r.stats.totalRules, 0),
+        totalSections: allResults.reduce((s, r) => s + r.stats.totalSections, 0),
+        totalHosts: allResults.reduce((s, r) => s + r.stats.totalHosts, 0),
+        totalNatRules: allResults.reduce((s, r) => s + r.stats.totalNatRules, 0),
+        interfaces: allResults.reduce((s, r) => s + r.stats.interfaces, 0),
+        populatedSections: allResults.reduce((s, r) => s + r.stats.populatedSections, 0),
+        emptySections: allResults.reduce((s, r) => s + r.stats.emptySections, 0),
+        sectionNames: [...new Set(allResults.flatMap(r => r.stats.sectionNames))],
+      },
+      findings: allResults.flatMap(r => r.findings),
+      inspectionPosture: allResults.length === 1 ? allResults[0].inspectionPosture : allResults[0]?.inspectionPosture ?? {
+        totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0, webFilterableRules: 0,
+        withWebFilter: 0, withoutWebFilter: 0, withAppControl: 0, withIps: 0,
+        withSslInspection: 0, sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [],
+        sslUncoveredZones: [], wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+      },
+    };
+
+    const frameworks = branding.selectedFrameworks.length > 0
+      ? branding.selectedFrameworks
+      : ["Cyber Essentials"];
+
+    const frameworkMappings: FrameworkMapping[] = frameworks.map(fw => mapToFramework(fw, mergedResult));
+
+    const totalPass = frameworkMappings.reduce((s, m) => s + m.summary.pass, 0);
+    const totalPartial = frameworkMappings.reduce((s, m) => s + m.summary.partial, 0);
+    const totalFail = frameworkMappings.reduce((s, m) => s + m.summary.fail, 0);
+    const totalControls = totalPass + totalPartial + totalFail;
+    const compliancePct = totalControls > 0 ? Math.round((totalPass / totalControls) * 100) : 0;
+
+    return (
+      <div className="mb-6 rounded-xl border border-border bg-muted/20 p-5 no-print">
+        <div className="flex items-center gap-2 mb-4">
+          <CheckCircle className="h-4 w-4 text-[#009CFB] dark:text-[#00EDFF]" />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Compliance Summary — {frameworks.length} Framework{frameworks.length !== 1 ? "s" : ""}</p>
+        </div>
+        <div className="flex items-start gap-6 flex-wrap">
+          <div className="relative flex items-center justify-center shrink-0">
+            <svg width="88" height="88" viewBox="0 0 88 88">
+              <circle cx="44" cy="44" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-border" />
+              <circle cx="44" cy="44" r="36" fill="none" stroke="#00995a" strokeWidth="5" strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 36} strokeDashoffset={2 * Math.PI * 36 - (compliancePct / 100) * 2 * Math.PI * 36}
+                transform="rotate(-90 44 44)" className="transition-all duration-700" />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xl font-black text-[#00995a]">{compliancePct}%</span>
+              <span className="text-[10px] text-muted-foreground font-medium">compliant</span>
+            </div>
+          </div>
+          <div className="flex-1 min-w-[200px] space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg border border-[#00995a]/20 bg-[#00995a]/5 px-3 py-2 text-center">
+                <p className="text-lg font-bold text-[#00995a]">{totalPass}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Pass</p>
+              </div>
+              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 text-center">
+                <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{totalPartial}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Partial</p>
+              </div>
+              <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-center">
+                <p className="text-lg font-bold text-red-600 dark:text-red-400">{totalFail}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Fail</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {frameworkMappings.map(fm => {
+                const fwTotal = fm.summary.pass + fm.summary.partial + fm.summary.fail;
+                const fwPct = fwTotal > 0 ? Math.round((fm.summary.pass / fwTotal) * 100) : 0;
+                return (
+                  <div key={fm.framework} className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground w-32 truncate shrink-0">{fm.framework}</span>
+                    <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
+                      <div className="h-full rounded-full flex">
+                        {fm.summary.pass > 0 && <div className="bg-[#00995a] h-full" style={{ width: `${(fm.summary.pass / (fwTotal || 1)) * 100}%` }} />}
+                        {fm.summary.partial > 0 && <div className="bg-yellow-500 h-full" style={{ width: `${(fm.summary.partial / (fwTotal || 1)) * 100}%` }} />}
+                        {fm.summary.fail > 0 && <div className="bg-red-500 h-full" style={{ width: `${(fm.summary.fail / (fwTotal || 1)) * 100}%` }} />}
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-semibold text-foreground w-8 text-right">{fwPct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename, errorMessage, loadingStatus, reportId, analysisResults }: {
   markdown: string;
   isLoading: boolean;
   isFailed: boolean;
@@ -925,6 +1197,8 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   pdfFilename: string;
   errorMessage?: string;
   loadingStatus?: string;
+  reportId?: string;
+  analysisResults?: Record<string, AnalysisResult>;
 }) {
   const docRef = useRef<HTMLDivElement>(null);
 
@@ -999,6 +1273,10 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
               <p className="text-sm text-muted-foreground">Firewall Configuration Assessment Report</p>
             </div>
           </div>
+        )}
+
+        {reportId && markdown && !isLoading && (
+          <ReportSummaryHeader reportId={reportId} analysisResults={analysisResults} branding={branding} />
         )}
 
         {isLoading && !markdown && (
@@ -1167,6 +1445,8 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
           pdfFilename={`${r.label.replace(/\s+/g, "-").toLowerCase()}-report.pdf`}
           errorMessage={r.errorMessage}
           loadingStatus={r.loadingStatus}
+          reportId={r.id}
+          analysisResults={analysisResults}
         />
         {r.markdown && !loadingReportIds.has(r.id) && (
           <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} />
@@ -1232,6 +1512,8 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
               pdfFilename={`${r.label.replace(/\s+/g, "-").toLowerCase()}-report.pdf`}
               errorMessage={r.errorMessage}
               loadingStatus={r.loadingStatus}
+              reportId={r.id}
+              analysisResults={analysisResults}
             />
             {r.markdown && !loadingReportIds.has(r.id) && (
               <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} />

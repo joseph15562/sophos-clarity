@@ -7,26 +7,34 @@ interface Props {
   selectedFrameworks: string[];
 }
 
-const STATUS_STYLES: Record<ControlStatus, { cell: string; label: string; dot: string }> = {
+const STATUS_STYLES: Record<ControlStatus, { cell: string; label: string; dot: string; icon: string; iconColor: string }> = {
   pass: {
     cell: "bg-[#00995a]/15 dark:bg-[#00F2B3]/15 hover:bg-[#00995a]/25 dark:hover:bg-[#00F2B3]/25",
     label: "Pass",
     dot: "bg-[#00995a] dark:bg-[#00F2B3]",
+    icon: "\u2713",
+    iconColor: "text-[#00995a] dark:text-[#00F2B3]",
   },
   partial: {
     cell: "bg-[#F29400]/15 hover:bg-[#F29400]/25",
     label: "Partial",
     dot: "bg-[#F29400]",
+    icon: "~",
+    iconColor: "text-[#F29400]",
   },
   fail: {
     cell: "bg-[#EA0022]/15 hover:bg-[#EA0022]/25",
     label: "Fail",
     dot: "bg-[#EA0022]",
+    icon: "\u2717",
+    iconColor: "text-[#EA0022]",
   },
   na: {
     cell: "bg-muted/40 hover:bg-muted/60",
     label: "N/A",
     dot: "bg-muted-foreground/30",
+    icon: "\u2014",
+    iconColor: "text-muted-foreground/40",
   },
 };
 
@@ -61,7 +69,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       <div className="flex items-center gap-4 text-[10px]">
         {(Object.entries(STATUS_STYLES) as [ControlStatus, typeof STATUS_STYLES.pass][]).map(([status, s]) => (
           <div key={status} className="flex items-center gap-1.5">
-            <span className={`h-2.5 w-2.5 rounded-sm ${s.dot}`} />
+            <span className={`inline-flex items-center justify-center h-4 w-4 rounded text-[9px] font-bold ${s.cell} ${s.iconColor}`}>{s.icon}</span>
             <span className="text-muted-foreground">{s.label}</span>
           </div>
         ))}
@@ -104,15 +112,17 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   return (
                     <td
                       key={cellKey}
-                      className={`p-1.5 text-center border-t border-border/50 rounded-sm cursor-pointer transition-colors ${s.cell}`}
+                      className={`p-1.5 text-center border-t border-border/50 rounded-sm transition-colors relative group ${s.cell}`}
                       onMouseEnter={() => setHoveredCell(cellKey)}
                       onMouseLeave={() => setHoveredCell(null)}
                     >
-                      <span className={`inline-block h-3 w-3 rounded-sm ${s.dot}`} title={`${controlName}: ${s.label}`} />
+                      <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[11px] font-bold ${s.iconColor}`}>
+                        {s.icon}
+                      </span>
                       {isHovered && ctrl && (
-                        <div className="absolute z-50 mt-1 p-2.5 rounded-lg border border-border bg-popover shadow-lg text-left min-w-[200px] max-w-[280px]">
+                        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-lg text-left min-w-[200px] max-w-[280px] pointer-events-none">
                           <p className="font-semibold text-foreground text-[11px]">{ctrl.controlName}</p>
-                          <p className="text-muted-foreground mt-0.5">{ctrl.evidence || "No evidence gathered"}</p>
+                          <p className="text-muted-foreground mt-0.5 text-[10px]">{ctrl.evidence || "No evidence gathered"}</p>
                           <p className="mt-1">
                             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
                               status === "pass" ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
@@ -120,7 +130,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                               status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022]" :
                               "bg-muted text-muted-foreground"
                             }`}>
-                              {s.label}
+                              {s.icon} {s.label}
                             </span>
                           </p>
                         </div>
@@ -190,20 +200,15 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                 {catControls.map((c) => {
                   const s = STATUS_STYLES[c.status];
                   return (
-                    <div key={c.controlId} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted/30">
-                      <span className={`mt-1 h-2.5 w-2.5 rounded-sm shrink-0 ${s.dot}`} />
+                    <div key={c.controlId} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/30">
+                      <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[11px] font-bold shrink-0 ${s.iconColor} ${s.cell}`}>
+                        {s.icon}
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-foreground">{c.controlName}</span>
-                          <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${
-                            c.status === "pass" ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
-                            c.status === "partial" ? "bg-[#F29400]/10 text-[#F29400]" :
-                            c.status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022]" :
-                            "bg-muted text-muted-foreground"
-                          }`}>{s.label}</span>
-                        </div>
+                        <span className="text-xs font-medium text-foreground">{c.controlName}</span>
                         <p className="text-[10px] text-muted-foreground mt-0.5">{c.evidence}</p>
                       </div>
+                      <span className={`text-[10px] font-bold shrink-0 ${s.iconColor}`}>{s.label.toUpperCase()}</span>
                     </div>
                   );
                 })}

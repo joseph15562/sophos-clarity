@@ -30,6 +30,29 @@ interface CustomerSummary {
   previousSnapshot: AssessmentSnapshot | null;
   assessmentCount: number;
   scoreTrend: number;
+  scoreHistory: number[];
+}
+
+function MiniSparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return null;
+  const w = 64, h = 24, pad = 2;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const points = values.map((v, i) => {
+    const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / range) * (h - pad * 2);
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg width={w} height={h} className="shrink-0">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      {values.map((v, i) => {
+        const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+        const y = h - pad - ((v - min) / range) * (h - pad * 2);
+        return i === values.length - 1 ? <circle key={i} cx={x} cy={y} r="2" fill={color} /> : null;
+      })}
+    </svg>
+  );
 }
 
 export function TenantDashboard() {
@@ -66,6 +89,7 @@ export function TenantDashboard() {
         previousSnapshot: prev,
         assessmentCount: sorted.length,
         scoreTrend: prev ? latest.overallScore - prev.overallScore : 0,
+        scoreHistory: sorted.slice().reverse().slice(-7).map((s) => s.overallScore),
       });
     }
     return summaries;
@@ -192,33 +216,26 @@ export function TenantDashboard() {
         {filtered.map((c) => {
           const totalFindings = c.latestSnapshot.firewalls.reduce((s, f) => s + f.totalFindings, 0);
           const isExpanded = expanded === c.latestSnapshot.id;
+          const sparkColor = c.latestSnapshot.overallScore >= 75 ? "#00995a" : c.latestSnapshot.overallScore >= 50 ? "#F29400" : "#EA0022";
           return (
             <div key={c.latestSnapshot.id} className="rounded-lg border border-border bg-card overflow-hidden">
-              <button onClick={() => setExpanded(isExpanded ? null : c.latestSnapshot.id)} className="w-full grid grid-cols-[1fr_80px_80px_90px] gap-2 px-3 py-2.5 items-center text-left hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-2 min-w-0">
-                  <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
-                    <p className="text-[9px] text-muted-foreground truncate">{c.environment} · {c.latestSnapshot.firewalls.length} fw · {c.assessmentCount} assessment{c.assessmentCount !== 1 ? "s" : ""}</p>
-                  </div>
+              <button onClick={() => setExpanded(isExpanded ? null : c.latestSnapshot.id)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors">
+                <div className="h-9 w-9 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold" style={{ color: sparkColor }}>{c.latestSnapshot.overallScore}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${gradeColor(c.latestSnapshot.overallGrade)}`}>
-                    {c.latestSnapshot.overallGrade}
-                  </span>
-                  <span className="text-xs font-medium text-foreground">{c.latestSnapshot.overallScore}</span>
-                  {c.scoreTrend !== 0 && (
-                    c.scoreTrend > 0
-                      ? <TrendingUp className="h-3 w-3 text-[#00995a] dark:text-[#00F2B3]" />
-                      : <TrendingDown className="h-3 w-3 text-[#EA0022]" />
-                  )}
-                  {c.scoreTrend === 0 && c.previousSnapshot && <Minus className="h-3 w-3 text-muted-foreground" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
+                  <p className="text-[9px] text-muted-foreground truncate">
+                    {c.latestSnapshot.firewalls.length} firewall{c.latestSnapshot.firewalls.length !== 1 ? "s" : ""} · Grade {c.latestSnapshot.overallGrade}
+                    {c.scoreTrend !== 0 && (
+                      <span className={c.scoreTrend > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
+                        {" "}({c.scoreTrend > 0 ? "+" : ""}{c.scoreTrend})
+                      </span>
+                    )}
+                  </p>
                 </div>
-                <div className="flex items-center gap-1">
-                  {totalFindings > 0 && <AlertTriangle className="h-3 w-3 text-[#F29400]" />}
-                  <span className="text-xs text-foreground">{totalFindings}</span>
-                </div>
-                <span className="text-[10px] text-muted-foreground">{formatDate(c.latestSnapshot.timestamp)}</span>
+                <MiniSparkline values={c.scoreHistory} color={sparkColor} />
+                <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
               </button>
 
               {isExpanded && (

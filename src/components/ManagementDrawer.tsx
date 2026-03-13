@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight } from "lucide-react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 
@@ -52,7 +52,7 @@ function Skeleton() {
   );
 }
 
-function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
+function SettingsSection({ title, icon, subtitle, children }: { title: string; icon?: ReactNode; subtitle?: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -60,8 +60,12 @@ function SettingsSection({ title, children }: { title: string; children: ReactNo
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
       >
-        <span className="text-xs font-semibold text-foreground flex-1">{title}</span>
-        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`} />
+        {icon && <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{icon}</div>}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground">{title}</p>
+          {subtitle && <p className="text-[9px] text-muted-foreground">{subtitle}</p>}
+        </div>
+        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0 ${open ? "rotate-90" : ""}`} />
       </button>
       {open && <div className="border-t border-border">{children}</div>}
     </div>
@@ -182,21 +186,21 @@ export function ManagementDrawer({
           {currentTab === "settings" && (
             <div className="p-4 space-y-3">
               {onRerunSetup && <RerunSetupButton onClick={onRerunSetup} />}
-              <SettingsSection title="Sophos Central API">
+              <SettingsSection title="Sophos Central API" icon={<Wifi className="h-3.5 w-3.5 text-[#005BC8]" />} subtitle="Manage your API connection">
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
                     <CentralIntegration />
                   </Suspense>
                 </div>
               </SettingsSection>
-              <SettingsSection title="Team Management">
+              <SettingsSection title="Team Management" icon={<Users className="h-3.5 w-3.5 text-[#2006F7]" />} subtitle="Invite and manage team members">
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
                     <InviteStaff />
                   </Suspense>
                 </div>
               </SettingsSection>
-              <SettingsSection title="Activity Log">
+              <SettingsSection title="Activity Log" icon={<Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />} subtitle="Review workspace activity">
                 <Suspense fallback={<Skeleton />}>
                   <AuditLog />
                 </Suspense>
