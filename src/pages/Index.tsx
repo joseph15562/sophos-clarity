@@ -116,6 +116,7 @@ function InnerApp() {
       setReports(session.reports);
       setActiveReportId(session.activeReportId);
       setRestoredSession(true);
+      setViewingReports(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -244,6 +245,7 @@ function InnerApp() {
       setReports(savedReports.map((r) => ({ id: r.id, label: r.label, markdown: r.markdown })));
       setActiveReportId(savedReports[0].id);
       setLoadedSavedSummary(null);
+      setViewingReports(true);
     } else {
       setLoadedSavedSummary({ customerName, summary: analysisSummary });
     }
@@ -259,6 +261,7 @@ function InnerApp() {
     clearSession();
   }, [setReports, setActiveReportId]);
 
+  const [viewingReports, setViewingReports] = useState(false);
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
@@ -276,9 +279,9 @@ function InnerApp() {
         reportCount={reports.length}
       />
 
-      <main className={`mx-auto px-4 py-8 space-y-8 ${hasReports ? "max-w-full w-full" : "max-w-5xl"}`}>
+      <main className={`mx-auto px-4 py-8 space-y-8 ${viewingReports ? "max-w-full w-full" : "max-w-5xl"}`}>
         {/* Restored session banner */}
-        {restoredSession && hasReports && !isLoading && (
+        {restoredSession && viewingReports && hasReports && !isLoading && (
           <div className="no-print rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-4 py-2.5 flex items-center gap-3 text-sm">
             <RotateCcw className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
             <span className="text-foreground">Previous session restored — {reports.length} report{reports.length !== 1 ? "s" : ""} recovered.</span>
@@ -350,7 +353,7 @@ function InnerApp() {
           </Suspense>
         )}
 
-        {!hasReports && !isLoading && !inDiffMode && (
+        {!viewingReports && !isLoading && !inDiffMode && (
           <>
             {/* Landing hero */}
             {!hasFiles && (
@@ -425,11 +428,32 @@ function InnerApp() {
             {hasFiles && (
               <ReportCards
                 fileCount={files.length}
-                onGenerateIndividual={() => generateIndividual()}
-                onGenerateExecutive={() => generateExecutive()}
-                onGenerateCompliance={generateCompliance}
-                onGenerateAll={generateAll}
+                onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); }}
+                onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); }}
+                onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); }}
+                onGenerateAll={() => { setViewingReports(true); generateAll(); }}
               />
+            )}
+
+            {/* View Reports banner — shown when reports exist but user is on dashboard */}
+            {hasReports && (
+              <div className="rounded-xl border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-5 py-4 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
+                  <img src="/icons/sophos-document.svg" alt="" className="h-5 w-5 sophos-icon" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {reports.length} Report{reports.length !== 1 ? "s" : ""} Ready
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Your generated reports are available to view, print, or save.
+                  </p>
+                </div>
+                <Button onClick={() => setViewingReports(true)} className="gap-2 bg-[#2006F7] hover:bg-[#10037C] text-white">
+                  <img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 brightness-0 invert" />
+                  View Reports
+                </Button>
+              </div>
             )}
 
             {/* Save Assessment (pre-AI) */}
@@ -784,80 +808,100 @@ function InnerApp() {
           </>
         )}
 
-        <Suspense fallback={null}>
-          <DocumentPreview
-            reports={reports}
-            activeReportId={activeReportId}
-            onActiveChange={setActiveReportId}
-            isLoading={isLoading}
-            loadingReportIds={loadingReportIds}
-            failedReportIds={failedReportIds}
-            onRetry={handleRetry}
-            branding={branding}
-            analysisResults={analysisResults}
-            topActions={
-              hasReports && !isLoading ? (
-                <div className="no-print space-y-3 mb-4">
-                  <div className="flex flex-wrap gap-3">
-                    {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
-                      <Button variant="secondary" onClick={() => generateExecutive()} className="gap-2">
-                        <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" /> Add Executive Brief
-                      </Button>
-                    )}
-                    {!reports.find((r) => r.id === "report-compliance") && (
-                      <Button variant="outline" onClick={generateCompliance} className="gap-2">
-                        <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Add Compliance Evidence Pack
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]">
-                    <span className="font-semibold text-foreground mr-1">{reports.length} report{reports.length !== 1 ? "s" : ""}</span>
-                    <span className="w-px h-3 bg-border" />
-                    <span className="text-muted-foreground">{files.length} firewall{files.length !== 1 ? "s" : ""}</span>
-                    <span className="w-px h-3 bg-border" />
-                    <span className="text-muted-foreground">{totalRules} rules</span>
-                    {totalFindings > 0 && (
-                      <>
-                        <span className="w-px h-3 bg-border" />
-                        {(() => {
-                          const counts: Record<string, number> = {};
-                          Object.values(analysisResults).forEach((r) =>
-                            r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
-                          );
-                          return Object.entries(counts).map(([sev, count]) => (
-                            <span key={sev} className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
-                              {count} {sev}
-                            </span>
-                          ));
-                        })()}
-                      </>
-                    )}
-                  </div>
+        {/* Report view */}
+        {(viewingReports || isLoading) && (
+          <>
+            {/* Top bar: Back to Dashboard + actions */}
+            {hasReports && !isLoading && (
+              <div className="no-print flex flex-wrap items-center gap-3 mb-2">
+                <Button variant="outline" onClick={() => setViewingReports(false)} className="gap-2">
+                  <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
+                  Back to Dashboard
+                </Button>
+                <div className="flex-1" />
+                <div className="flex flex-wrap gap-2">
+                  {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
+                    <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
+                      <img src="/icons/sophos-chart.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Executive Brief
+                    </Button>
+                  )}
+                  {!reports.find((r) => r.id === "report-compliance") && (
+                    <Button variant="outline" size="sm" onClick={generateCompliance} className="gap-1.5 text-xs">
+                      <img src="/icons/sophos-governance.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Compliance Pack
+                    </Button>
+                  )}
                 </div>
-              ) : null
-            }
-          />
-        </Suspense>
+              </div>
+            )}
 
-        {hasReports && !isLoading && (
-          <div className="no-print flex flex-wrap gap-3">
-            <Button variant="outline" onClick={handleStartOver}>
-              ← Start Over
-            </Button>
-            <button
-              onClick={() => handleSaveReports(true)}
-              disabled={savingReports}
-              className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
-                reportsSaved
-                  ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
-                  : "bg-[#2006F7] text-white hover:bg-[#10037C]"
-              }`}
-            >
-              <Save className="h-3.5 w-3.5" />
-              {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
-            </button>
-            {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
-          </div>
+            {/* Stats bar */}
+            {hasReports && !isLoading && (
+              <div className="no-print flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]">
+                <span className="font-semibold text-foreground mr-1">{reports.length} report{reports.length !== 1 ? "s" : ""}</span>
+                <span className="w-px h-3 bg-border" />
+                <span className="text-muted-foreground">{files.length} firewall{files.length !== 1 ? "s" : ""}</span>
+                <span className="w-px h-3 bg-border" />
+                <span className="text-muted-foreground">{totalRules} rules</span>
+                {totalFindings > 0 && (
+                  <>
+                    <span className="w-px h-3 bg-border" />
+                    {(() => {
+                      const counts: Record<string, number> = {};
+                      Object.values(analysisResults).forEach((r) =>
+                        r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
+                      );
+                      return Object.entries(counts).map(([sev, count]) => (
+                        <span key={sev} className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
+                          {count} {sev}
+                        </span>
+                      ));
+                    })()}
+                  </>
+                )}
+              </div>
+            )}
+
+            <Suspense fallback={null}>
+              <DocumentPreview
+                reports={reports}
+                activeReportId={activeReportId}
+                onActiveChange={setActiveReportId}
+                isLoading={isLoading}
+                loadingReportIds={loadingReportIds}
+                failedReportIds={failedReportIds}
+                onRetry={handleRetry}
+                branding={branding}
+                analysisResults={analysisResults}
+              />
+            </Suspense>
+
+            {/* Bottom actions */}
+            {hasReports && !isLoading && (
+              <div className="no-print flex flex-wrap items-center gap-3">
+                <Button variant="outline" onClick={() => setViewingReports(false)} className="gap-2">
+                  <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
+                  Back to Dashboard
+                </Button>
+                <button
+                  onClick={() => handleSaveReports(true)}
+                  disabled={savingReports}
+                  className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
+                    reportsSaved
+                      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                      : "bg-[#2006F7] text-white hover:bg-[#10037C]"
+                  }`}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
+                </button>
+                <div className="flex-1" />
+                <Button variant="ghost" size="sm" onClick={handleStartOver} className="text-muted-foreground hover:text-foreground text-xs">
+                  Start Over
+                </Button>
+                {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
+              </div>
+            )}
+          </>
         )}
       </main>
 
