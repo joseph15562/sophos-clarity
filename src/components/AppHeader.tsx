@@ -49,6 +49,22 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
 
   useEffect(() => { loadStatus(); }, [loadStatus]);
 
+  // Auto-refresh: fires when data is >15 min old, then schedules next check
+  useEffect(() => {
+    if (!status?.connected || !status.last_synced_at || refreshing) return;
+    const age = Date.now() - new Date(status.last_synced_at).getTime();
+    const STALE_MS = 15 * 60 * 1000;
+
+    if (age >= STALE_MS) {
+      refresh();
+      return;
+    }
+
+    const delay = STALE_MS - age + 500;
+    const timer = setTimeout(() => { refresh(); }, delay);
+    return () => clearTimeout(timer);
+  }, [status?.connected, status?.last_synced_at, refreshing, refresh]);
+
   if (!status) return null;
 
   const isStale = status.connected && status.last_synced_at
@@ -97,7 +113,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
                 <div className="text-[10px] text-muted-foreground space-y-0.5">
                   <p>Type: <span className="text-foreground font-medium">{status.partner_type}</span></p>
                   <p>Last synced: <span className="text-foreground font-medium">{timeAgo(status.last_synced_at)}</span></p>
-                  {isStale && <p className="text-[#F29400] font-medium">Data may be outdated — consider refreshing</p>}
+                  {isStale && <p className="text-[#F29400] font-medium">Auto-refreshing...</p>}
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); refresh(); }}
