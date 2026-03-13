@@ -100,8 +100,8 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
       </button>
       {showPopover && (
         <>
-          <div className="fixed inset-0 z-20" onClick={() => setShowPopover(false)} />
-          <div className="absolute right-0 top-full mt-1 z-30 w-56 rounded-lg border border-border bg-card shadow-lg p-3 space-y-2">
+          <div className="fixed inset-0 z-40" onClick={() => setShowPopover(false)} />
+          <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border border-border bg-card shadow-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} />
               <span className="text-xs font-semibold text-foreground">
@@ -143,7 +143,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
 
   return (
     <>
-      <header className="border-b border-[#10037C]/20 bg-[#001A47] sticky top-0 z-10 no-print">
+      <header className="border-b border-[#10037C]/20 bg-[#001A47] sticky top-0 z-40 no-print">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
           <div className="flex-1">

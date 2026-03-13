@@ -62,6 +62,11 @@ export interface Finding {
   remediation?: string;
 }
 
+export interface AtpStatus {
+  enabled: boolean;
+  policy: string;
+}
+
 export interface AnalysisResult {
   stats: ConfigStats;
   findings: Finding[];
@@ -70,6 +75,8 @@ export interface AnalysisResult {
   ruleColumns?: string[];
   /** Firewall hostname extracted from Admin Settings > Hostname Settings */
   hostname?: string;
+  /** Advanced Threat Protection (Sophos X-Ops) status from config */
+  atpStatus?: AtpStatus;
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {
@@ -99,6 +106,10 @@ function isWebService(row: Record<string, string>): boolean {
     row["Service"] ?? row["Services"] ?? row["Services/Ports"] ??
     row["service"] ?? row["Services Used"] ?? ""
   ).toLowerCase().trim();
+  if (!svc) return false;
+  // Exclude protocols that never carry web traffic
+  const nonWebOnly = /^(dns|ntp|smtp|smtps|snmp|syslog|ldap|ldaps|radius|ssh|telnet|icmp|ping|ftp|sip|imap|imaps|pop3|pop3s|bgp|ospf|rip|dhcp|tftp|kerberos|nfs|smb|cifs|ipsec|gre|l2tp|pptp|netbios)$/i;
+  if (nonWebOnly.test(svc)) return false;
   if (svc === "any") return true;
   if (svc.includes("http")) return true;
   if (svc.includes("web")) return true;
@@ -364,7 +375,7 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: "The parser did not extract any firewall rules from this configuration export.",
       section: "Firewall Rules",
     });
-    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [], hostname: extractHostname(sections) };
+    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [], hostname: extractHostname(sections), atpStatus: extractAtpStatus(sections) };
   }
 
   // --- Track disabled rules across all rules ---
@@ -667,7 +678,9 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     });
   }
 
-  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers, hostname: extractHostname(sections) };
+  const atpStatus = extractAtpStatus(sections);
+
+  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers, hostname: extractHostname(sections), atpStatus };
 }
 
 // ---------------------------------------------------------------------------
@@ -679,6 +692,29 @@ function findSection(sections: ExtractedSections, pattern: RegExp): SectionData 
     if (pattern.test(key)) return sections[key];
   }
   return null;
+}
+
+function extractAtpStatus(sections: ExtractedSections): AtpStatus | undefined {
+  const atp = findSection(sections, /advanced\s*threat\s*protection|^atp$/i);
+  if (!atp) return undefined;
+
+  let enabled = false;
+  let policy = "";
+
+  for (const t of atp.tables) {
+    for (const row of t.rows) {
+      const setting = (row["Setting"] ?? "").toLowerCase();
+      const value = (row["Value"] ?? "").trim();
+      if (setting.includes("threatprotectionstatus") || setting.includes("status")) {
+        enabled = /enabled|on|yes|true/i.test(value);
+      }
+      if (setting.includes("policy") || setting.includes("action")) {
+        policy = value;
+      }
+    }
+  }
+
+  return { enabled, policy };
 }
 
 /** Admin Access Exposure — flag management services accessible from untrusted zones */

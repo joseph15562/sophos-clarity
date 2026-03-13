@@ -362,6 +362,14 @@ function mergeRuleDetails(container: Element, mainTable: TableData): TableData {
   const enrichedRows: Record<string, string>[] = [];
   const enrichedHeaders = new Set(mainTable.headers);
 
+  function addField(row: Record<string, string>, rawKey: string, val: string) {
+    const key = rawKey.replace(/:$/, "").trim();
+    if (key && val && !row[key]) {
+      row[key] = val;
+      enrichedHeaders.add(key);
+    }
+  }
+
   for (let i = 0; i < mainTable.rows.length; i++) {
     const row = { ...mainTable.rows[i] };
 
@@ -372,20 +380,30 @@ function mergeRuleDetails(container: Element, mainTable: TableData): TableData {
       continue;
     }
 
-    // Extract all key-value pairs from sub-tables inside the detail block
+    // 1. Extract from sub-tables (older HTML format)
     const subTables = detailRow.querySelectorAll("table");
     subTables.forEach((table) => {
       table.querySelectorAll("tr").forEach((tr) => {
         const cells = tr.querySelectorAll("td");
         if (cells.length === 2) {
-          const key = (cells[0].textContent ?? "").replace(/\s+/g, " ").trim();
-          const val = (cells[1].textContent ?? "").replace(/\s+/g, " ").trim();
-          if (key && !row[key]) {
-            row[key] = val;
-            enrichedHeaders.add(key);
-          }
+          addField(row,
+            (cells[0].textContent ?? "").replace(/\s+/g, " ").trim(),
+            (cells[1].textContent ?? "").replace(/\s+/g, " ").trim(),
+          );
         }
       });
+    });
+
+    // 2. Extract from div-based flex key-value layouts (newer HTML format)
+    //    Pattern: <div style="display: flex; ..."><div>Label:</div><div>Value</div></div>
+    const flexPairs = detailRow.querySelectorAll('div[style*="display: flex"][style*="space-between"]');
+    flexPairs.forEach((pair) => {
+      const children = pair.children;
+      if (children.length === 2) {
+        const rawKey = (children[0].textContent ?? "").replace(/\s+/g, " ").trim();
+        const val = (children[1].textContent ?? "").replace(/\s+/g, " ").trim();
+        addField(row, rawKey, val);
+      }
     });
 
     enrichedRows.push(row);

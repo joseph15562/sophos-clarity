@@ -683,16 +683,9 @@ function InnerApp() {
 
                   {/* Finding Priority Matrix */}
                   {totalFindings > 0 && (
-                    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />
-                        <h3 className="text-sm font-semibold text-foreground">Finding Priority Matrix</h3>
-                        <span className="text-[10px] text-muted-foreground">Impact vs effort quadrant</span>
-                      </div>
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <PriorityMatrix analysisResults={analysisResults} />
-                      </Suspense>
-                    </div>
+                    <Suspense fallback={<ChartSkeleton />}>
+                      <PriorityMatrix analysisResults={analysisResults} />
+                    </Suspense>
                   )}
 
                   {/* What-If Score Simulator */}

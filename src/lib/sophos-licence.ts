@@ -267,16 +267,27 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
   {
     id: "bp-xops-feeds",
     category: "Active Threat Response",
-    title: "Sophos X-Ops threat feeds enabled (Log & Drop)",
-    recommendation: "Enable X-Ops threat feeds in Active threat response with 'Log and drop' to block known-bad IPs/domains/URLs automatically.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ConfigureFeeds/ActiveThreatResponseSophosXOpsThreatFeeds/",
+    title: "Sophos X-Ops (ATP) enabled with Log & Drop",
+    recommendation: "Enable Advanced Threat Protection (Sophos X-Ops) under Protect > Advanced threat > Advanced threat protection and set the policy to 'Log and Drop'.",
+    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ATRSophosXOps/",
     requiredModule: "networkProtection",
-    weight: 8,
+    weight: 9,
     evaluate: (r) => {
-      const hits = findingMatches(r.findings, /x.ops|threat feed/i);
-      if (hits.length > 0)
-        return { status: "fail", detail: "X-Ops threat feeds not detected — enable under Active threat response" };
-      return { status: "warn", detail: "Cannot verify from config export — ensure X-Ops feeds are enabled with 'Log and drop' in Active threat response" };
+      const atp = r.atpStatus;
+      if (atp) {
+        if (!atp.enabled)
+          return { status: "fail", detail: "ATP (Sophos X-Ops) is disabled — enable under Protect > Advanced threat > Advanced threat protection" };
+        const policy = atp.policy.toLowerCase();
+        if (policy.includes("log") && policy.includes("drop"))
+          return { status: "pass", detail: `ATP is enabled with policy "${atp.policy}"` };
+        if (policy)
+          return { status: "warn", detail: `ATP is enabled but policy is "${atp.policy}" — recommended setting is "Log and Drop"` };
+        return { status: "pass", detail: "ATP (Sophos X-Ops) is enabled" };
+      }
+      const disabled = findingMatches(r.findings, /x.ops.*disabled|atp.*disabled/i);
+      if (disabled.length > 0)
+        return { status: "fail", detail: "Sophos X-Ops (ATP) threat protection is disabled" };
+      return { status: "warn", detail: "ATP section not found in config export — verify under Protect > Advanced threat" };
     },
   },
   {
@@ -424,26 +435,6 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     weight: 8,
     evaluate: () => {
       return { status: "warn", detail: "DNS Protection config not in export — verify DNS servers point to Sophos DNS IPs in Network > DNS" };
-    },
-  },
-
-  /* ---------- Active Threat Response ---------- */
-  {
-    id: "bp-xops-atp",
-    category: "Active Threat Response",
-    title: "Sophos X-Ops (ATP) enabled with Log and Drop",
-    recommendation: "Enable Advanced Threat Protection (Sophos X-Ops threat feeds) and set the action to 'Log and Drop' to block C&C traffic.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ATRSophosXOps/",
-    requiredModule: "networkProtection",
-    weight: 9,
-    evaluate: (r) => {
-      const disabled = findingMatches(r.findings, /x-ops.*disabled|atp.*disabled/i);
-      const wrongPolicy = findingMatches(r.findings, /x-ops.*policy|atp.*policy/i);
-      if (disabled.length > 0)
-        return { status: "fail", detail: "Sophos X-Ops (ATP) threat protection is disabled" };
-      if (wrongPolicy.length > 0)
-        return { status: "warn", detail: wrongPolicy[0].detail };
-      return { status: "pass", detail: "Sophos X-Ops (ATP) is enabled with recommended action" };
     },
   },
 

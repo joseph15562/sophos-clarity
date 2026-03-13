@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { mapToAllFrameworks, CONTROL_CATEGORIES, type FrameworkMapping, type ControlStatus } from "@/lib/compliance-map";
 
@@ -40,6 +40,22 @@ const STATUS_STYLES: Record<ControlStatus, { cell: string; label: string; dot: s
 
 export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props) {
   const [selectedFw, setSelectedFw] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{ controlName: string; evidence: string; status: ControlStatus; x: number; y: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const showTooltip = useCallback((e: React.MouseEvent<HTMLTableCellElement>, ctrl: { controlName: string; evidence: string; status: ControlStatus }) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const cardRect = card.getBoundingClientRect();
+    const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({
+      controlName: ctrl.controlName,
+      evidence: ctrl.evidence,
+      status: ctrl.status,
+      x: cellRect.left + cellRect.width / 2 - cardRect.left,
+      y: cellRect.top - cardRect.top,
+    });
+  }, []);
 
   const firstResult = Object.values(analysisResults)[0];
   const mappings = useMemo<FrameworkMapping[]>(() => {
@@ -57,7 +73,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
   const detailMapping = selectedFw ? mappings.find((m) => m.framework === selectedFw) : null;
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <section ref={cardRef} className="rounded-xl border border-border bg-card p-5 space-y-4 relative">
       <div className="flex items-center gap-2">
         <img src="/icons/sophos-governance.svg" alt="" className="h-5 w-5 sophos-icon" />
         <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
@@ -75,8 +91,8 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       </div>
 
       {/* Heatmap grid */}
-      <div className="overflow-x-auto -mx-2 px-2">
-        <table className="w-full border-collapse text-[10px]">
+      <div className="overflow-x-auto -mx-2 px-2" onMouseLeave={() => setTooltip(null)}>
+        <table className="w-full min-w-max border-collapse text-[10px]">
           <thead>
             <tr>
               <th className="text-left p-1.5 text-muted-foreground font-semibold uppercase tracking-wider sticky left-0 bg-card z-10 min-w-[100px]">
@@ -110,27 +126,14 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   return (
                     <td
                       key={cellKey}
-                      className={`p-1.5 text-center border-t border-border/50 rounded-sm transition-colors relative group/cell ${s.cell}`}
+                      className={`p-1.5 text-center border-t border-border/50 rounded-sm transition-colors select-none ${s.cell}`}
+                      style={{ cursor: "default" }}
+                      onMouseEnter={ctrl ? (e) => showTooltip(e, { controlName: ctrl.controlName, evidence: ctrl.evidence, status }) : undefined}
+                      onMouseLeave={() => setTooltip(null)}
                     >
                       <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[11px] font-bold ${s.iconColor}`}>
                         {s.icon}
                       </span>
-                      {ctrl && (
-                        <div className="hidden group-hover/cell:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-lg text-left min-w-[200px] max-w-[280px] pointer-events-none">
-                          <p className="font-semibold text-foreground text-[11px]">{ctrl.controlName}</p>
-                          <p className="text-muted-foreground mt-0.5 text-[10px]">{ctrl.evidence || "No evidence gathered"}</p>
-                          <p className="mt-1">
-                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                              status === "pass" ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
-                              status === "partial" ? "bg-[#F29400]/10 text-[#F29400]" :
-                              status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022]" :
-                              "bg-muted text-muted-foreground"
-                            }`}>
-                              {s.icon} {s.label}
-                            </span>
-                          </p>
-                        </div>
-                      )}
                     </td>
                   );
                 })}
@@ -139,6 +142,30 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
           </tbody>
         </table>
       </div>
+
+      {/* Floating tooltip — positioned relative to card, above the overflow container */}
+      {tooltip && (
+        <div
+          className="absolute z-30 pointer-events-none transition-opacity duration-100"
+          style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}
+        >
+          <div className="mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-lg text-left min-w-[200px] max-w-[280px]">
+            <p className="font-semibold text-foreground text-[11px]">{tooltip.controlName}</p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">{tooltip.evidence || "No evidence gathered"}</p>
+            <p className="mt-1">
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                tooltip.status === "pass" ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                tooltip.status === "partial" ? "bg-[#F29400]/10 text-[#F29400]" :
+                tooltip.status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022]" :
+                "bg-muted text-muted-foreground"
+              }`}>
+                {STATUS_STYLES[tooltip.status].icon} {STATUS_STYLES[tooltip.status].label}
+              </span>
+            </p>
+          </div>
+          <div className="w-2 h-2 rotate-45 border-b border-r border-border bg-popover mx-auto -mt-3" />
+        </div>
+      )}
 
       {/* Framework summary bars */}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 pt-2 border-t border-border">

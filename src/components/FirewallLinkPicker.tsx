@@ -15,8 +15,15 @@ interface CachedFw {
   firmwareVersion: string;
   model: string;
   status: unknown;
+  cluster: unknown;
   group: unknown;
   syncedAt: string;
+}
+
+interface HaGroup {
+  primary: CachedFw;
+  peers: CachedFw[];
+  isHa: boolean;
 }
 
 export interface FirewallLink {
@@ -113,29 +120,63 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, onLin
     return [...seen.entries()].map(([id, name]) => ({ id, name }));
   }, [firewalls]);
 
+  const haGroups = useMemo(() => {
+    const clusterMap = new Map<string, CachedFw[]>();
+    const standalone: CachedFw[] = [];
+
+    for (const fw of firewalls) {
+      const c = fw.cluster as { id?: string } | null;
+      if (c?.id) {
+        if (!clusterMap.has(c.id)) clusterMap.set(c.id, []);
+        clusterMap.get(c.id)!.push(fw);
+      } else {
+        standalone.push(fw);
+      }
+    }
+
+    const result: HaGroup[] = [];
+    for (const [, peers] of clusterMap) {
+      const sorted = peers.sort((a, b) => a.serialNumber.localeCompare(b.serialNumber));
+      result.push({ primary: sorted[0], peers: sorted.slice(1), isHa: sorted.length > 1 });
+    }
+    for (const fw of standalone) {
+      result.push({ primary: fw, peers: [], isHa: false });
+    }
+    return result;
+  }, [firewalls]);
+
   const filtered = useMemo(() => {
-    let list = firewalls;
+    let list = haGroups;
     if (selectedGroupId) {
-      list = list.filter((f) => {
-        const g = f.group as { id?: string } | null;
+      list = list.filter((h) => {
+        const g = h.primary.group as { id?: string } | null;
         return g?.id === selectedGroupId;
       });
     }
     if (!search) return list;
     const q = search.toLowerCase();
-    return list.filter((f) =>
-      f.hostname.toLowerCase().includes(q)
-      || f.name.toLowerCase().includes(q)
-      || f.serialNumber.toLowerCase().includes(q)
-      || f.model.toLowerCase().includes(q)
-    );
-  }, [firewalls, search, selectedGroupId]);
+    return list.filter((h) => {
+      const allFws = [h.primary, ...h.peers];
+      return allFws.some((f) =>
+        f.hostname.toLowerCase().includes(q)
+        || f.name.toLowerCase().includes(q)
+        || f.serialNumber.toLowerCase().includes(q)
+        || f.model.toLowerCase().includes(q)
+      );
+    });
+  }, [haGroups, search, selectedGroupId]);
 
   const handleSerialMatch = useCallback(() => {
     if (!manualSerial.trim()) return;
-    const match = firewalls.find((f) => f.serialNumber.toLowerCase() === manualSerial.trim().toLowerCase());
-    if (match) setSelectedFwId(match.firewallId);
-  }, [manualSerial, firewalls]);
+    const q = manualSerial.trim().toLowerCase();
+    for (const h of haGroups) {
+      const allFws = [h.primary, ...h.peers];
+      if (allFws.some(f => f.serialNumber.toLowerCase() === q)) {
+        setSelectedFwId(h.primary.firewallId);
+        return;
+      }
+    }
+  }, [manualSerial, haGroups]);
 
   const handleLink = async () => {
     const fw = firewalls.find((f) => f.firewallId === selectedFwId);
@@ -257,31 +298,44 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, onLin
               </div>
 
               {/* Firewall list */}
-              <div className="max-h-36 overflow-y-auto rounded border border-border divide-y divide-border">
-                {filtered.map((fw) => (
-                  <button
-                    key={fw.firewallId}
-                    onClick={() => setSelectedFwId(fw.firewallId)}
-                    className={`w-full text-left flex items-center gap-2 px-2 py-1.5 text-[11px] hover:bg-muted/30 transition-colors ${
-                      selectedFwId === fw.firewallId ? "bg-[#2006F7]/5 dark:bg-[#2006F7]/10" : ""
-                    }`}
-                  >
-                    <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                      (fw.status as { connected?: boolean })?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"
-                    }`} />
-                    <Server className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-foreground truncate block">{fw.hostname || fw.name || fw.serialNumber}</span>
-                      <span className="text-[9px] text-muted-foreground">{fw.model} · {fw.firmwareVersion} · {fw.serialNumber}</span>
-                    </div>
-                    {selectedFwId === fw.firewallId && (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
-                    )}
-                    {configHostname && fw.hostname.toLowerCase().startsWith(configHostname.split(".")[0].toLowerCase()) && (
-                      <span className="text-[8px] px-1 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-semibold shrink-0">AUTO</span>
-                    )}
-                  </button>
-                ))}
+              <div className="max-h-44 overflow-y-auto rounded border border-border divide-y divide-border">
+                {filtered.map((haGroup) => {
+                  const allFws = [haGroup.primary, ...haGroup.peers];
+                  const isSelected = allFws.some((f) => f.firewallId === selectedFwId);
+                  const autoMatch = configHostname && haGroup.primary.hostname.toLowerCase().startsWith(configHostname.split(".")[0].toLowerCase());
+
+                  return (
+                    <button
+                      key={haGroup.primary.firewallId}
+                      onClick={() => setSelectedFwId(haGroup.primary.firewallId)}
+                      className={`w-full text-left flex items-center gap-2 px-2 py-1.5 text-[11px] hover:bg-muted/30 transition-colors ${
+                        isSelected ? "bg-[#2006F7]/5 dark:bg-[#2006F7]/10" : ""
+                      }`}
+                    >
+                      <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                        (haGroup.primary.status as { connected?: boolean })?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"
+                      }`} />
+                      <Server className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-foreground truncate">{haGroup.primary.hostname || haGroup.primary.name || haGroup.primary.serialNumber}</span>
+                          {haGroup.isHa && (
+                            <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B529F7] shrink-0">HA PAIR</span>
+                          )}
+                        </div>
+                        <span className="text-[9px] text-muted-foreground block">
+                          {haGroup.primary.model} · {haGroup.primary.firmwareVersion} · {allFws.map(f => f.serialNumber).join(" / ")}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
+                      )}
+                      {autoMatch && (
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-semibold shrink-0">AUTO</span>
+                      )}
+                    </button>
+                  );
+                })}
                 {filtered.length === 0 && (
                   <p className="text-center text-[10px] text-muted-foreground py-3">No firewalls found</p>
                 )}

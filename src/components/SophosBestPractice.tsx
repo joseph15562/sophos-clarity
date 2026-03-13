@@ -106,6 +106,7 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [manualOverrides, setManualOverrides] = useState<Set<string>>(loadOverrides);
   const [centralLinked, setCentralLinked] = useState(false);
+  const [activeTab, setActiveTab] = useState("overall");
 
   useEffect(() => {
     if (detectedTier) setTier(detectedTier);
@@ -160,6 +161,9 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
     });
   }, []);
 
+  const firewallLabels = useMemo(() => Object.keys(analysisResults), [analysisResults]);
+  const hasMultiple = firewallLabels.length > 1;
+
   const aggregateResult = useMemo(() => {
     const entries = Object.values(analysisResults);
     if (entries.length === 0) return null;
@@ -182,12 +186,38 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
     return computeSophosBPScore(aggregateResult, licence, manualOverrides, centralAutoChecks);
   }, [aggregateResult, licence, manualOverrides, centralAutoChecks]);
 
+  const perFirewallScores = useMemo(() => {
+    if (!hasMultiple) return {};
+    const result: Record<string, ReturnType<typeof computeSophosBPScore>> = {};
+    for (const [label, ar] of Object.entries(analysisResults)) {
+      result[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAutoChecks);
+    }
+    return result;
+  }, [hasMultiple, analysisResults, licence, manualOverrides, centralAutoChecks]);
+
+  const perFwCheckStatus = useMemo(() => {
+    if (!hasMultiple) return new Map<string, string[]>();
+    const map = new Map<string, string[]>();
+    for (const [label, score] of Object.entries(perFirewallScores)) {
+      for (const r of score.results) {
+        if (r.status === "fail" || r.status === "warn") {
+          if (!map.has(r.check.id)) map.set(r.check.id, []);
+          map.get(r.check.id)!.push(label);
+        }
+      }
+    }
+    return map;
+  }, [hasMultiple, perFirewallScores]);
+
   if (!bpScore) return null;
 
-  const manualCount = bpScore.results.filter((r) => r.manualOverride).length;
+  const currentScore = activeTab === "overall" ? bpScore : perFirewallScores[activeTab];
+  if (!currentScore) return null;
 
-  const grouped = new Map<string, typeof bpScore.results>();
-  for (const r of bpScore.results) {
+  const manualCount = currentScore.results.filter((r) => r.manualOverride).length;
+
+  const grouped = new Map<string, typeof currentScore.results>();
+  for (const r of currentScore.results) {
     const cat = r.check.category;
     if (!grouped.has(cat)) grouped.set(cat, []);
     grouped.get(cat)!.push(r);
@@ -282,9 +312,38 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
           <span className="text-[10px] text-muted-foreground ml-auto">based on Sophos documentation</span>
         </div>
 
+        {/* Tabs */}
+        {hasMultiple && (
+          <div className="flex items-center gap-0 border-b border-border mb-4 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab("overall")}
+              className={`px-3 py-2 text-[11px] font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "overall"
+                  ? "border-[#2006F7] text-[#2006F7] dark:text-[#00EDFF] dark:border-[#00EDFF]"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Overall
+            </button>
+            {firewallLabels.map((label) => (
+              <button
+                key={label}
+                onClick={() => setActiveTab(label)}
+                className={`px-3 py-2 text-[11px] font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === label
+                    ? "border-[#2006F7] text-[#2006F7] dark:text-[#00EDFF] dark:border-[#00EDFF]"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="flex flex-col items-center gap-1">
-            <GaugeRing score={bpScore.overall} grade={bpScore.grade} />
+            <GaugeRing score={currentScore.overall} grade={currentScore.grade} />
             {manualCount > 0 && (
               <span className="flex items-center gap-1 text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                 <UserCheck className="h-2.5 w-2.5" />
@@ -295,19 +354,19 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
 
           <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-400">{bpScore.passed}</p>
+              <p className="text-2xl font-bold text-emerald-400">{currentScore.passed}</p>
               <p className="text-[10px] text-muted-foreground">Passed</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-red-400">{bpScore.failed}</p>
+              <p className="text-2xl font-bold text-red-400">{currentScore.failed}</p>
               <p className="text-[10px] text-muted-foreground">Failed</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-amber-400">{bpScore.warnings}</p>
+              <p className="text-2xl font-bold text-amber-400">{currentScore.warnings}</p>
               <p className="text-[10px] text-muted-foreground">Verify</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-muted-foreground/50">{bpScore.notApplicable}</p>
+              <p className="text-2xl font-bold text-muted-foreground/50">{currentScore.notApplicable}</p>
               <p className="text-[10px] text-muted-foreground">N/A</p>
             </div>
           </div>
@@ -361,11 +420,16 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
                           <Icon className={`h-3 w-3 ${cfg.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-xs font-medium text-foreground">{result.check.title}</p>
                             {isOverridden && (
                               <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400">
                                 Manual
+                              </span>
+                            )}
+                            {activeTab === "overall" && hasMultiple && (result.status === "fail" || result.status === "warn") && perFwCheckStatus.has(result.check.id) && (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-muted text-muted-foreground">
+                                {perFwCheckStatus.get(result.check.id)!.join(", ")}
                               </span>
                             )}
                           </div>
