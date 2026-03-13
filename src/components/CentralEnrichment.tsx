@@ -76,22 +76,24 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
 
     const tenantIds = [...new Set(links.map((l) => l.central_tenant_id))];
 
-    // Fetch per-firewall licence data
+    // Fetch per-firewall licence data — try each tenant
     let licencesBySerial: Record<string, LicenceSummary[]> = {};
-    try {
-      const fwLicences = await getFirewallLicences(orgId);
-      for (const fwl of fwLicences) {
-        licencesBySerial[fwl.serialNumber] = fwl.licenses.map((l) => ({
-          product: l.product?.name || l.product?.code || l.type,
-          type: l.type,
-          endDate: l.endDate ?? "",
-          perpetual: l.perpetual,
-          daysRemaining: l.endDate
-            ? Math.ceil((new Date(l.endDate).getTime() - Date.now()) / 86_400_000)
-            : l.perpetual ? 9999 : 9999,
-        }));
-      }
-    } catch { /* licensing API may not be available */ }
+    for (const tenantId of tenantIds) {
+      try {
+        const fwLicences = await getFirewallLicences(orgId, tenantId);
+        for (const fwl of fwLicences) {
+          licencesBySerial[fwl.serialNumber] = fwl.licenses.map((l) => ({
+            product: l.product?.name || l.product?.code || l.type,
+            type: l.type,
+            endDate: l.endDate ?? "",
+            perpetual: l.perpetual,
+            daysRemaining: l.endDate
+              ? Math.ceil((new Date(l.endDate).getTime() - Date.now()) / 86_400_000)
+              : l.perpetual ? 9999 : 9999,
+          }));
+        }
+      } catch { /* licensing API may not be available for this tenant */ }
+    }
 
     const results: LinkedFirewallData[] = [];
 

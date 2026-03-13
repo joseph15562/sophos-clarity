@@ -406,7 +406,13 @@ serve(async (req) => {
       const headers: Record<string, string> = {};
       if (creds.partnerType === "partner") {
         headers["X-Partner-ID"] = creds.partnerId;
-      } else if (tenantId) {
+      } else if (creds.partnerType === "organization") {
+        headers["X-Organization-ID"] = creds.partnerId;
+      } else if (creds.partnerType === "tenant") {
+        headers["X-Tenant-ID"] = creds.partnerId;
+      }
+
+      if (tenantId && !headers["X-Tenant-ID"]) {
         headers["X-Tenant-ID"] = tenantId;
       }
 
