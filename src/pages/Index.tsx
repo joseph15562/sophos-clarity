@@ -258,6 +258,7 @@ function InnerApp() {
     setActiveReportId("");
     setFiles([]);
     setRestoredSession(false);
+    setViewingReports(false);
     clearSession();
   }, [setReports, setActiveReportId]);
 
