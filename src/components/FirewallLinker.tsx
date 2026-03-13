@@ -159,10 +159,30 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
     setSyncing(false);
   }, [matchedTenant, central]);
 
-  const filteredFirewalls = useMemo(() => {
-    if (filterGroup === "all") return central.firewalls;
-    if (filterGroup === "ungrouped") return central.firewalls.filter((fw) => !fw.group?.id);
-    return central.firewalls.filter((fw) => fw.group?.id === filterGroup);
+  // Group HA pairs by hostname so they appear as a single entry
+  interface FirewallEntry {
+    primary: CentralFirewall;
+    peers: CentralFirewall[];
+    isHA: boolean;
+  }
+
+  const filteredFirewalls = useMemo((): FirewallEntry[] => {
+    let fws = central.firewalls;
+    if (filterGroup === "ungrouped") fws = fws.filter((fw) => !fw.group?.id);
+    else if (filterGroup !== "all") fws = fws.filter((fw) => fw.group?.id === filterGroup);
+
+    const byHostname = new Map<string, CentralFirewall[]>();
+    for (const fw of fws) {
+      const key = (fw.hostname || fw.id).toLowerCase();
+      if (!byHostname.has(key)) byHostname.set(key, []);
+      byHostname.get(key)!.push(fw);
+    }
+
+    return Array.from(byHostname.values()).map((group) => {
+      const primary = group.find((f) => f.cluster?.status === "primary") ?? group[0];
+      const peers = group.filter((f) => f.id !== primary.id);
+      return { primary, peers, isHA: group.length > 1 || !!primary.cluster };
+    });
   }, [central.firewalls, filterGroup]);
 
   if (!central.isConnected || isGuest) return null;
@@ -297,9 +317,10 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
                   {/* Firewall dropdown */}
                   <div className="space-y-1">
                     <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Or select from Central</span>
-                    <div className="max-h-36 overflow-y-auto rounded border border-border divide-y divide-border bg-background">
-                      {filteredFirewalls.map((fw) => {
-                        const isLinkedElsewhere = Object.values(links).some((l) => l.firewallId === fw.id);
+                    <div className="max-h-44 overflow-y-auto rounded border border-border divide-y divide-border bg-background">
+                      {filteredFirewalls.map((entry) => {
+                        const fw = entry.primary;
+                        const isLinkedElsewhere = Object.values(links).some((l) => l.firewallId === fw.id || entry.peers.some((p) => p.id === l.firewallId));
                         return (
                           <button
                             key={fw.id}
@@ -313,6 +334,11 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
                             <span className="font-medium text-foreground truncate">{fw.hostname || fw.name}</span>
                             <span className="font-mono text-[10px] text-muted-foreground shrink-0">{fw.serialNumber}</span>
                             <span className="text-[10px] text-muted-foreground shrink-0">{fw.firmwareVersion}</span>
+                            {entry.isHA && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B98EFF] font-bold shrink-0">
+                                HA{entry.peers.length > 0 ? ` (${1 + entry.peers.length} nodes)` : ""}
+                              </span>
+                            )}
                             {fw.group?.name && (
                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] shrink-0">{fw.group.name}</span>
                             )}
