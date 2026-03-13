@@ -648,6 +648,7 @@ export function computeSophosBPScore(
   analysisResult: AnalysisResult,
   licence: LicenceSelection,
   manualOverrides?: Set<string>,
+  centralAutoChecks?: Set<string>,
 ): SophosBPScore {
   const activeModules = getActiveModules(licence);
 
@@ -658,6 +659,10 @@ export function computeSophosBPScore(
     }
     let { status, detail } = check.evaluate(analysisResult);
     if (status === ("unknown" as CheckStatus)) status = "warn";
+
+    if (centralAutoChecks?.has(check.id) && (status === "warn" || status === ("unknown" as CheckStatus))) {
+      return { check, status: "pass" as CheckStatus, detail: `Verified by Sophos Central API`, applicable: true };
+    }
 
     const overridden = manualOverrides?.has(check.id) && status === "warn";
     if (overridden) {

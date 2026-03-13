@@ -10,6 +10,9 @@ import {
   getActiveModules,
   computeSophosBPScore,
 } from "@/lib/sophos-licence";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
+import { getCentralStatus } from "@/lib/sophos-central";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -80,6 +83,9 @@ function saveOverrides(overrides: Set<string>) {
 }
 
 export function SophosBestPractice({ analysisResults }: Props) {
+  const { org, isGuest } = useAuth();
+  const orgId = org?.id ?? "";
+
   const [tier, setTier] = useState<LicenceTier>("xstream");
   const [individualModules, setIndividualModules] = useState<ModuleId[]>([
     "networkProtection",
@@ -87,8 +93,27 @@ export function SophosBestPractice({ analysisResults }: Props) {
   ]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [manualOverrides, setManualOverrides] = useState<Set<string>>(loadOverrides);
+  const [centralLinked, setCentralLinked] = useState(false);
 
   useEffect(() => { saveOverrides(manualOverrides); }, [manualOverrides]);
+
+  useEffect(() => {
+    if (!orgId || isGuest) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await getCentralStatus(orgId);
+        if (!status?.connected || cancelled) return;
+        const { data } = await supabase
+          .from("firewall_config_links")
+          .select("config_hash")
+          .eq("org_id", orgId)
+          .limit(1);
+        if (!cancelled && data && data.length > 0) setCentralLinked(true);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [orgId, isGuest]);
 
   const licence: LicenceSelection = useMemo(
     () => ({ tier, modules: individualModules }),
@@ -131,10 +156,15 @@ export function SophosBestPractice({ analysisResults }: Props) {
     return merged;
   }, [analysisResults]);
 
+  const centralAutoChecks = useMemo(() => {
+    if (!centralLinked) return undefined;
+    return new Set(["bp-central-mgmt"]);
+  }, [centralLinked]);
+
   const bpScore = useMemo(() => {
     if (!aggregateResult) return null;
-    return computeSophosBPScore(aggregateResult, licence, manualOverrides);
-  }, [aggregateResult, licence, manualOverrides]);
+    return computeSophosBPScore(aggregateResult, licence, manualOverrides, centralAutoChecks);
+  }, [aggregateResult, licence, manualOverrides, centralAutoChecks]);
 
   if (!bpScore) return null;
 
