@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link2, Unlink, Search, Server, RefreshCw, ChevronDown, CheckCircle2, AlertCircle, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral, type UseCentralState } from "@/hooks/use-central";
 import type { CentralFirewall, CentralFirewallGroup, CentralTenant } from "@/lib/sophos-central";
@@ -161,6 +162,8 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
   const allLinked = linkedCount === configs.length;
 
   return (
+    <Card>
+      <CardContent className="pt-5">
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -318,5 +321,7 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
         })}
       </div>
     </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -318,15 +318,11 @@ function InnerApp() {
             {/* Sophos Central Firewall Linking */}
             {hasFiles && !isGuest && configMetas.length > 0 && (
               <Suspense fallback={null}>
-                <Card>
-                  <CardContent className="pt-5">
-                    <FirewallLinker
-                      configs={configMetas}
-                      customerName={branding.customerName}
-                      analysisResults={analysisResults}
-                    />
-                  </CardContent>
-                </Card>
+                <FirewallLinker
+                  configs={configMetas}
+                  customerName={branding.customerName}
+                  analysisResults={analysisResults}
+                />
               </Suspense>
             )}
 
