@@ -72,6 +72,11 @@ export function useCentral(): UseCentralState {
     try {
       await connectCentral(orgId, clientId, clientSecret);
       await refreshStatus();
+      // Auto-sync tenants so FirewallLinker can discover firewalls immediately
+      try {
+        const items = await syncTenants(orgId);
+        setTenants(items);
+      } catch { /* tenant sync is best-effort */ }
       return { error: null };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Connection failed";

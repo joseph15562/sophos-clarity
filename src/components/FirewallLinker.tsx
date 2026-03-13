@@ -141,10 +141,17 @@ export function FirewallLinker({ configs, customerName, analysisResults }: Firew
   }, [serialInput, central.firewalls, handleLink]);
 
   const handleRefreshFirewalls = useCallback(async () => {
-    if (!matchedTenant) return;
     setSyncing(true);
-    await central.refreshFirewalls(matchedTenant.id);
-    await central.refreshGroups(matchedTenant.id);
+    let tenant = matchedTenant;
+    // For tenant accounts, sync tenants first if we don't have one yet
+    if (!tenant) {
+      await central.refreshTenants();
+      tenant = central.tenants[0] ?? null;
+    }
+    if (tenant) {
+      await central.refreshFirewalls(tenant.id);
+      await central.refreshGroups(tenant.id);
+    }
     setSyncing(false);
   }, [matchedTenant, central]);
 
