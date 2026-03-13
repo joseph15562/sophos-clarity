@@ -4,7 +4,7 @@ import { BrandingData } from "./BrandingSetup";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { Loader2, Download, FileText, RefreshCw, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { marked } from "marked";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
 import { saveAs } from "file-saver";
@@ -1199,19 +1199,28 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
         )}
       </div>
       <Tabs value={activeReportId} onValueChange={onActiveChange} className="no-print-tabs">
-        <TabsList className="no-print flex-wrap h-auto gap-1">
+        <div className="no-print flex items-center gap-0 border-b border-border mb-4">
           {reports.map((r) => {
             const done = r.markdown && !loadingReportIds.has(r.id) && !failedReportIds.has(r.id);
+            const isActive = r.id === activeReportId;
             return (
-              <TabsTrigger key={r.id} value={r.id} className="text-xs gap-1.5">
+              <button
+                key={r.id}
+                onClick={() => onActiveChange(r.id)}
+                className={`px-4 py-2.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  isActive
+                    ? "border-[#2006F7] text-[#2006F7] dark:text-[#00EDFF] dark:border-[#00EDFF]"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
                 {r.label}
                 {loadingReportIds.has(r.id) && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                 {failedReportIds.has(r.id) && <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-destructive/10 text-destructive text-[10px]">✕</span>}
                 {done && <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/15 dark:text-[#00F2B3] text-[10px]">✓</span>}
-              </TabsTrigger>
+              </button>
             );
           })}
-        </TabsList>
+        </div>
         {reports.map((r) => (
           <TabsContent key={r.id} value={r.id}>
             <ReportContent

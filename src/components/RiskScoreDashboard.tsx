@@ -1,13 +1,4 @@
 import { useMemo } from "react";
-import {
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 
@@ -54,6 +45,57 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
   );
 }
 
+function SvgRadar({ categories }: { categories: RiskScoreResult["categories"] }) {
+  const cx = 120, cy = 120, r = 90;
+  const n = categories.length;
+
+  const getPoint = (index: number, value: number) => {
+    const angle = (Math.PI * 2 * index) / n - Math.PI / 2;
+    return {
+      x: cx + r * (value / 100) * Math.cos(angle),
+      y: cy + r * (value / 100) * Math.sin(angle),
+    };
+  };
+
+  const gridLevels = [1, 0.75, 0.5, 0.25];
+  const dataPoints = categories.map((c, i) => getPoint(i, c.pct));
+  const polyPoints = dataPoints.map((p) => `${p.x},${p.y}`).join(" ");
+
+  return (
+    <svg width="240" height="240" viewBox="0 0 240 240" className="max-w-full">
+      {gridLevels.map((s) => (
+        <polygon
+          key={s}
+          points={categories.map((_, i) => {
+            const p = getPoint(i, s * 100);
+            return `${p.x},${p.y}`;
+          }).join(" ")}
+          fill="none" stroke="currentColor" strokeWidth="0.5" className="text-muted/30"
+        />
+      ))}
+      {categories.map((_, i) => {
+        const p = getPoint(i, 100);
+        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="currentColor" strokeWidth="0.3" className="text-muted/20" />;
+      })}
+      <polygon points={polyPoints} fill="#2006F7" fillOpacity="0.15" stroke="#2006F7" strokeWidth="2" strokeLinejoin="round" />
+      {dataPoints.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="3" fill="#2006F7" />
+      ))}
+      {categories.map((c, i) => {
+        const labelR = r + 18;
+        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+        const lx = cx + labelR * Math.cos(angle);
+        const ly = cy + labelR * Math.sin(angle);
+        return (
+          <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="8" fontWeight="500" fill="currentColor" className="text-muted-foreground">
+            {c.label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
 export function RiskScoreDashboard({ analysisResults }: Props) {
   const perFirewall = useMemo(() => {
     const entries: { label: string; result: RiskScoreResult }[] = [];
@@ -77,11 +119,7 @@ export function RiskScoreDashboard({ analysisResults }: Props) {
     return { overall, grade, categories };
   }, [perFirewall]);
 
-  const radarData = aggregated.categories.map((c) => ({
-    category: c.label,
-    score: c.pct,
-    fullMark: 100,
-  }));
+  const categories = aggregated.categories;
 
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-5">
@@ -94,45 +132,28 @@ export function RiskScoreDashboard({ analysisResults }: Props) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 items-center">
-        {/* Gauge + legend */}
+        {/* Gauge + category scores */}
         <div className="flex flex-col items-center gap-4">
           <GaugeRing score={aggregated.overall} grade={aggregated.grade} />
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-            {aggregated.categories.map((c) => {
+          <div className="w-full grid grid-cols-2 gap-2">
+            {categories.map((c) => {
               const color =
-                c.pct >= 80 ? "text-[#00995a] dark:text-[#00F2B3]" :
-                c.pct >= 50 ? "text-[#b8a200] dark:text-[#F8E300]" :
-                "text-[#EA0022]";
+                c.pct >= 80 ? "#00995a" :
+                c.pct >= 50 ? "#F8E300" :
+                "#EA0022";
               return (
-                <div key={c.label} className="flex items-center gap-2">
-                  <span className={`font-bold tabular-nums ${color}`}>{c.pct}%</span>
-                  <span className="text-muted-foreground">{c.label}</span>
+                <div key={c.label} className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-center">
+                  <span className="text-lg font-extrabold tabular-nums block" style={{ color }}>{c.pct}%</span>
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">{c.label}</span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Radar chart */}
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-              <PolarGrid stroke="hsl(var(--border))" />
-              <PolarAngleAxis dataKey="category" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-              <Radar
-                dataKey="score"
-                stroke="#2006F7"
-                fill="#2006F7"
-                fillOpacity={0.15}
-                strokeWidth={2}
-              />
-              <Tooltip
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
-                formatter={(value: number) => [`${value}%`, "Score"]}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
+        {/* SVG Radar chart */}
+        <div className="flex items-center justify-center">
+          <SvgRadar categories={categories} />
         </div>
       </div>
 

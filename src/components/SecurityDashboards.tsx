@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell,
-  PieChart, Pie,
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
 } from "recharts";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import type { ParsedFile } from "@/hooks/use-report-generation";
@@ -32,43 +31,31 @@ export function SeverityBreakdown({ analysisResults }: { analysisResults: Record
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Finding Severity</h3>
-      <div className="flex items-center gap-8">
-        <div className="w-36 h-36 shrink-0 relative">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%" cy="50%"
-                innerRadius={38} outerRadius={58}
-                paddingAngle={3}
-                dataKey="value"
-                strokeWidth={0}
-              >
-                {data.map((d) => <Cell key={d.name} fill={d.color} />)}
-              </Pie>
-              <Tooltip
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
-                formatter={(value: number, name: string) => [`${value}`, name]}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center">
-              <span className="text-2xl font-extrabold text-foreground">{total}</span>
-              <span className="block text-[9px] text-muted-foreground uppercase tracking-wider">findings</span>
-            </div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-foreground">Finding Severity</h3>
+        <span className="text-[10px] text-muted-foreground">{total} total findings</span>
+      </div>
+
+      {/* Stacked severity bar */}
+      <div className="flex h-4 rounded-full overflow-hidden mb-4">
+        {data.map((d) => (
+          <div
+            key={d.name}
+            className="transition-all duration-500"
+            style={{ width: `${(d.value / total) * 100}%`, backgroundColor: d.color }}
+            title={`${d.name}: ${d.value}`}
+          />
+        ))}
+      </div>
+
+      {/* Severity counts */}
+      <div className="grid grid-cols-5 gap-2">
+        {data.map((d) => (
+          <div key={d.name} className="text-center rounded-lg border border-border bg-muted/20 py-2.5 px-1">
+            <span className="text-xl font-extrabold tabular-nums block" style={{ color: d.color }}>{d.value}</span>
+            <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">{d.name}</span>
           </div>
-        </div>
-        <div className="flex-1 space-y-2.5">
-          {data.map((d) => (
-            <div key={d.name} className="flex items-center gap-2.5">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-              <span className="text-xs text-muted-foreground flex-1">{d.name}</span>
-              <span className="text-sm font-bold tabular-nums" style={{ color: d.color }}>{d.value}</span>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );
@@ -95,10 +82,10 @@ export function SecurityFeatureCoverage({ analysisResults }: { analysisResults: 
     return {
       total: totalWan,
       items: [
-        { label: "Web Filtering", count: agg.wf, color: "#2006F7", icon: "🌐" },
-        { label: "Intrusion Prevention", count: agg.ips, color: "#5A00FF", icon: "🛡" },
-        { label: "Application Control", count: agg.app, color: "#009CFB", icon: "📱" },
-        { label: "SSL/TLS Inspection", count: agg.ssl, color: "#00EDFF", icon: "🔒" },
+        { label: "Web Filtering", count: agg.wf, color: "#2006F7" },
+        { label: "Intrusion Prevention", count: agg.ips, color: "#5A00FF" },
+        { label: "Application Control", count: agg.app, color: "#009CFB" },
+        { label: "SSL/TLS Inspection", count: agg.ssl, color: "#00EDFF" },
       ],
     };
   }, [analysisResults]);
@@ -111,28 +98,25 @@ export function SecurityFeatureCoverage({ analysisResults }: { analysisResults: 
         <h3 className="text-sm font-semibold text-foreground">Feature Coverage</h3>
         <span className="text-[10px] text-muted-foreground">{features.total} WAN rules</span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {features.items.map((f) => {
           const pct = Math.round((f.count / features.total) * 100);
           const isZero = pct === 0;
           return (
             <div key={f.label} className="rounded-lg border border-border bg-muted/20 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm">{f.icon}</span>
-                <span className="text-[11px] font-medium text-foreground">{f.label}</span>
-              </div>
-              <div className="flex items-end gap-2">
-                <span className={`text-2xl font-extrabold tabular-nums ${isZero ? "text-[#EA0022]" : ""}`} style={isZero ? {} : { color: f.color }}>
-                  {pct}%
-                </span>
-                <span className="text-[10px] text-muted-foreground mb-1">{f.count}/{features.total}</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted/50 mt-2 overflow-hidden">
-                {isZero ? (
-                  <div className="h-full w-full rounded-full bg-[#EA0022]/20" />
-                ) : (
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: f.color }} />
-                )}
+              <p className="text-[10px] text-muted-foreground mb-1">{f.label}</p>
+              <p className={`text-xl font-extrabold tabular-nums ${isZero ? "text-[#EA0022]" : ""}`} style={isZero ? {} : { color: f.color }}>
+                {pct}%
+              </p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                  {isZero ? (
+                    <div className="h-full rounded-full bg-[#EA0022]/20" style={{ width: "100%" }} />
+                  ) : (
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: f.color }} />
+                  )}
+                </div>
+                <span className="text-[9px] text-muted-foreground tabular-nums shrink-0">{f.count}/{features.total}</span>
               </div>
             </div>
           );
@@ -350,11 +334,11 @@ export function RuleHealthOverview({ analysisResults }: { analysisResults: Recor
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <h3 className="text-sm font-semibold text-foreground mb-4">Configuration Health</h3>
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+      <div className="grid grid-cols-6 gap-1.5">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-lg border border-border bg-muted/20 px-3 py-3 text-center">
-            <span className="text-xl font-extrabold tabular-nums block" style={{ color: c.color }}>{c.value}</span>
-            <span className="text-[8px] uppercase tracking-wider text-muted-foreground font-semibold leading-tight">{c.label}</span>
+          <div key={c.label} className="rounded-lg border border-border bg-muted/20 px-2 py-2.5 text-center">
+            <span className="text-lg font-extrabold tabular-nums block" style={{ color: c.color }}>{c.value}</span>
+            <span className="text-[7px] uppercase tracking-wider text-muted-foreground font-semibold leading-tight">{c.label}</span>
           </div>
         ))}
       </div>
