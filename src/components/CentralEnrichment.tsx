@@ -73,9 +73,19 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
       const tenantLinks = links.filter((l) => l.central_tenant_id === tenantId);
 
       let alerts: CentralAlert[] = [];
-      let licences: CentralLicence[] = [];
+      let allLicences: CentralLicence[] = [];
       try { alerts = await getAlerts(orgId, tenantId); } catch { /* ignore */ }
-      try { licences = await getLicences(orgId, tenantId); } catch { /* ignore */ }
+      try { allLicences = await getLicences(orgId, tenantId); } catch { /* ignore */ }
+
+      // Filter to firewall-relevant licences only
+      const FIREWALL_LICENCE_KEYWORDS = /firewall|protection|xgs|sfos|xg\s|web\s*server|network\s*protection|enhanced\s*support|enhanced\s*plus/i;
+      const NON_FIREWALL_KEYWORDS = /switch|access\s*point|wireless|email|mobile|intercept|cloud\s*optix|phish|encryption|dmarc|xdr|zero\s*trust|managed\s*risk/i;
+      const licences = allLicences.filter((l) => {
+        const name = l.product?.name || l.product?.code || l.type || "";
+        if (FIREWALL_LICENCE_KEYWORDS.test(name)) return true;
+        if (NON_FIREWALL_KEYWORDS.test(name)) return false;
+        return true;
+      });
 
       for (const link of tenantLinks) {
         const config = configMetas.find((c) => c.configHash === link.config_hash);
