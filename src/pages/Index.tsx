@@ -522,19 +522,19 @@ function InnerApp() {
                 defaultOpen
               >
                 <div className="p-5 space-y-6">
-                  {/* Risk Score + Config Health side by side */}
+                  {/* Risk Score — full width */}
+                  <Suspense fallback={null}>
+                    <RiskScoreDashboard analysisResults={analysisResults} />
+                  </Suspense>
+
+                  {/* Config Health + Feature Coverage side by side */}
                   <div className="grid gap-6 lg:grid-cols-2">
                     <Suspense fallback={null}>
-                      <RiskScoreDashboard analysisResults={analysisResults} />
+                      <RuleHealthOverview analysisResults={analysisResults} />
                     </Suspense>
-                    <div className="space-y-6">
-                      <Suspense fallback={null}>
-                        <RuleHealthOverview analysisResults={analysisResults} />
-                      </Suspense>
-                      <Suspense fallback={null}>
-                        <SecurityFeatureCoverage analysisResults={analysisResults} />
-                      </Suspense>
-                    </div>
+                    <Suspense fallback={null}>
+                      <SecurityFeatureCoverage analysisResults={analysisResults} />
+                    </Suspense>
                   </div>
 
                   {/* Severity Donut + Findings by Section */}
