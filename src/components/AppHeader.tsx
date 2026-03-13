@@ -3,7 +3,7 @@ import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw } from "lu
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { getCentralStatus, type CentralStatus } from "@/lib/sophos-central";
+import { getCentralStatus, syncTenants, syncFirewalls, type CentralStatus } from "@/lib/sophos-central";
 
 interface AppHeaderProps {
   hasFiles: boolean;
@@ -19,10 +19,24 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
   const [refreshing, setRefreshing] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
 
+  const loadStatus = useCallback(async () => {
+    if (!orgId) return;
+    try {
+      const s = await getCentralStatus(orgId);
+      setStatus(s);
+    } catch {
+      setStatus({ connected: false });
+    }
+  }, [orgId]);
+
   const refresh = useCallback(async () => {
     if (!orgId) return;
     setRefreshing(true);
     try {
+      const tenants = await syncTenants(orgId);
+      for (const t of tenants) {
+        try { await syncFirewalls(orgId, t.id); } catch { /* best-effort */ }
+      }
       const s = await getCentralStatus(orgId);
       setStatus(s);
     } catch {
@@ -31,7 +45,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     setRefreshing(false);
   }, [orgId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { loadStatus(); }, [loadStatus]);
 
   if (!status) return null;
 
