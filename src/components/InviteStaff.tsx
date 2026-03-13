@@ -15,6 +15,7 @@ interface Member {
   role: string;
   joined_at: string;
   email?: string;
+  isYou?: boolean;
 }
 
 export function InviteStaff() {
@@ -28,12 +29,35 @@ export function InviteStaff() {
 
   const loadData = useCallback(async () => {
     if (!org) return;
-    const [inviteRes, memberRes] = await Promise.all([
+    const [inviteRes, memberRes, sessionRes] = await Promise.all([
       supabase.from("org_invites").select("id, email, created_at").eq("org_id", org.id).order("created_at", { ascending: false }),
       supabase.from("org_members").select("id, user_id, role, joined_at").eq("org_id", org.id).order("joined_at", { ascending: true }),
+      supabase.auth.getUser(),
     ]);
     if (inviteRes.data) setInvites(inviteRes.data);
-    if (memberRes.data) setMembers(memberRes.data);
+    if (memberRes.data) {
+      const currentUser = sessionRes.data?.user;
+      const enriched: Member[] = memberRes.data.map((m) => ({
+        ...m,
+        email: currentUser && m.user_id === currentUser.id
+          ? currentUser.email
+          : undefined,
+        isYou: currentUser ? m.user_id === currentUser.id : false,
+      }));
+
+      if (inviteRes.data) {
+        for (const m of enriched) {
+          if (!m.email) {
+            const matchingInvite = inviteRes.data.find((inv) =>
+              enriched.filter((em) => em.email === inv.email).length === 0
+            );
+            if (matchingInvite) m.email = matchingInvite.email;
+          }
+        }
+      }
+
+      setMembers(enriched);
+    }
   }, [org]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -130,9 +154,12 @@ export function InviteStaff() {
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30">
                 <Shield className={`h-3 w-3 shrink-0 ${m.role === "admin" ? "text-[#2006F7] dark:text-[#00EDFF]" : "text-muted-foreground"}`} />
-                <span className="text-xs text-foreground flex-1 truncate">{m.email ?? m.user_id.slice(0, 8)}</span>
+                <span className="text-xs text-foreground flex-1 truncate">
+                  {m.email ?? m.user_id}
+                  {m.isYou && <span className="text-[9px] text-muted-foreground ml-1">(you)</span>}
+                </span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{m.role}</span>
-                {m.role !== "admin" && (
+                {m.role !== "admin" && !m.isYou && (
                   <button onClick={() => removeMember(m.id)} className="text-muted-foreground hover:text-[#EA0022] transition-colors" title="Remove member">
                     <Trash2 className="h-3 w-3" />
                   </button>
