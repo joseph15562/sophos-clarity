@@ -59,6 +59,7 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
             </div>
             <button
               onClick={onClose}
+              aria-label="Close shortcuts"
               className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted/50 transition-colors"
             >
               <X className="h-4 w-4" />

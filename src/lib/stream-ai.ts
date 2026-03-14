@@ -186,7 +186,8 @@ async function consumeSSEStream(
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content as string | undefined;
         if (content) onDelta(content);
-      } catch {
+      } catch (err) {
+        console.warn("[parseStreamChunk]", err);
         buffer = line + "\n" + buffer;
         break;
       }
@@ -204,7 +205,9 @@ async function consumeSSEStream(
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content as string | undefined;
         if (content) onDelta(content);
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.warn("[parseStreamChunk] fallback", err);
+      }
     }
   }
 

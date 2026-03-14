@@ -317,8 +317,14 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   );
 }
 
+const CONFIDENCE_STYLE: Record<string, string> = {
+  high: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  low: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
+};
+
 function FindingCard({ finding, label, fileCount, selectedFrameworks }: {
-  finding: { id: string; severity: Severity; title: string; detail: string; section: string; remediation?: string };
+  finding: { id: string; severity: Severity; title: string; detail: string; section: string; remediation?: string; confidence?: string; evidence?: string };
   label: string; fileCount: number; selectedFrameworks: string[];
 }) {
   const [open, setOpen] = useState(false);
@@ -335,6 +341,11 @@ function FindingCard({ finding, label, fileCount, selectedFrameworks }: {
         <span className="text-lg shrink-0" title={finding.severity}>{severityIcon(finding.severity)}</span>
         <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
           <span className={`font-bold text-sm ${SEVERITY_COLOR[finding.severity]}`}>{finding.title}</span>
+          {finding.confidence && (
+            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${CONFIDENCE_STYLE[finding.confidence] ?? CONFIDENCE_STYLE.medium}`}>
+              {finding.confidence}
+            </span>
+          )}
           {fileCount > 1 && (
             <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
           )}
@@ -349,6 +360,9 @@ function FindingCard({ finding, label, fileCount, selectedFrameworks }: {
       {open && (
         <div className="px-4 pb-3.5 pl-[3.25rem] space-y-2">
           <p className="text-xs text-muted-foreground leading-relaxed">{finding.detail}</p>
+          {finding.evidence && (
+            <p className="text-[10px] text-muted-foreground/70 font-mono leading-relaxed">Evidence: {finding.evidence}</p>
+          )}
           {finding.remediation && (
             <div className="px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
               <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {finding.remediation}</p>

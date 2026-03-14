@@ -1,0 +1,148 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "FireComply REST API",
+    "description": "Third-party integration API for FireComply assessments and firewall data.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://{project}.supabase.co/functions/v1/api",
+      "variables": {
+        "project": { "default": "your-project-ref" }
+      }
+    }
+  ],
+  "security": [
+    { "ApiKeyAuth": [] }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication"
+      }
+    },
+    "schemas": {
+      "Assessment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "org_id": { "type": "string", "format": "uuid" },
+          "customer_name": { "type": "string" },
+          "environment": { "type": "string" },
+          "firewalls": { "type": "array" },
+          "overall_score": { "type": "number" },
+          "overall_grade": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AssessmentListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Assessment" }
+          },
+          "total": { "type": "integer" }
+        }
+      },
+      "Firewall": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "hostname": { "type": "string" },
+          "serial_number": { "type": "string" },
+          "model": { "type": "string" },
+          "firmware_version": { "type": "string" },
+          "status": { "type": "string", "enum": ["online", "offline", "unknown"] }
+        }
+      },
+      "FirewallListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Firewall" }
+          },
+          "total": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/assessments": {
+      "get": {
+        "summary": "List assessments",
+        "description": "Returns a paginated list of assessments for the authenticated organisation.",
+        "operationId": "listAssessments",
+        "responses": {
+          "200": {
+            "description": "List of assessments",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssessmentListResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          }
+        }
+      }
+    },
+    "/assessments/{id}": {
+      "get": {
+        "summary": "Get assessment by ID",
+        "description": "Returns a single assessment by its ID.",
+        "operationId": "getAssessment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assessment details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Assessment" }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "404": {
+            "description": "Assessment not found"
+          }
+        }
+      }
+    },
+    "/firewalls": {
+      "get": {
+        "summary": "List firewalls",
+        "description": "Returns a list of firewalls synced from Sophos Central for the authenticated organisation.",
+        "operationId": "listFirewalls",
+        "responses": {
+          "200": {
+            "description": "List of firewalls",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FirewallListResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          }
+        }
+      }
+    }
+  }
+}

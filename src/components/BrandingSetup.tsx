@@ -188,9 +188,13 @@ export function BrandingSetup({ branding, onChange }: Props) {
           try {
             const tenants = await getCachedTenants(org.id);
             setCentralTenants(tenants);
-          } catch { /* Central not linked — ignore */ }
+          } catch (err) {
+            console.warn("[BrandingSetup] getCachedTenants", err);
+          }
         }
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.warn("[BrandingSetup] load", err);
+      }
     };
     load();
   }, [isGuest, org]);

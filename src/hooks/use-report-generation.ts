@@ -4,6 +4,71 @@ import type { BrandingData } from "@/components/BrandingSetup";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
 import { useToast } from "@/hooks/use-toast";
+import { analyseConfig, type AnalysisResult, type Finding } from "@/lib/analyse-config";
+import { computeRiskScore } from "@/lib/risk-score";
+
+const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
+
+/** Build branded cover page markdown for reports */
+export function buildCoverPageMarkdown(branding: BrandingData): string {
+  const lines: string[] = [];
+  if (branding.logoUrl) {
+    lines.push(`![Company Logo](${branding.logoUrl})`);
+    lines.push("");
+  }
+  if (branding.customerName) {
+    lines.push(`# ${branding.customerName}`);
+    lines.push("");
+  }
+  lines.push(`**Date:** ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`);
+  lines.push("");
+  lines.push(`*${COVER_DISCLAIMER}*`);
+  return lines.join("\n");
+}
+
+/** Template-based executive one-pager markdown (no AI call) */
+export function buildExecutiveOnePagerMarkdown(
+  analysisResults: Record<string, AnalysisResult>,
+  branding: BrandingData,
+  customerName: string
+): string {
+  const allFindings: Finding[] = Object.values(analysisResults).flatMap((r) => r.findings);
+  const scores = Object.values(analysisResults).map((r) => computeRiskScore(r));
+  const avgScore = scores.length > 0
+    ? Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length)
+    : 0;
+  const grade = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+
+  const severityOrder: Finding["severity"][] = ["critical", "high", "medium", "low", "info"];
+  const sorted = [...allFindings].sort(
+    (a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)
+  );
+  const top5 = sorted.slice(0, 5);
+
+  const lines: string[] = [];
+  lines.push(`# Executive One-Pager${customerName ? ` — ${customerName}` : ""}`);
+  lines.push("");
+  lines.push(`**Overall Score:** ${avgScore}/100 | **Grade:** ${grade}`);
+  lines.push("");
+  lines.push("## Top 5 Risks");
+  lines.push("");
+  if (top5.length === 0) {
+    lines.push("No findings identified.");
+  } else {
+    top5.forEach((f, i) => {
+      lines.push(`${i + 1}. **${f.title}** — *${f.severity}*`);
+    });
+  }
+  lines.push("");
+  lines.push("## Recommended Next Steps");
+  lines.push("");
+  lines.push("1. Address critical and high severity findings first.");
+  lines.push("2. Review and remediate the top 5 risks listed above.");
+  lines.push("3. Schedule a follow-up assessment after remediation.");
+  lines.push("");
+  lines.push(`*${COVER_DISCLAIMER}*`);
+  return lines.join("\n");
+}
 
 export type ParsedFile = {
   id: string;
@@ -72,7 +137,13 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
             centralEnrichment: opts?.centralEnrichment,
             onDelta: (text) =>
               setReports((prev) =>
-                prev.map((r) => (r.id === reportId ? { ...r, markdown: r.markdown + text } : r))
+                prev.map((r) => {
+                  if (r.id !== reportId) return r;
+                  const cover = buildCoverPageMarkdown(branding);
+                  const isFirstChunk = r.markdown === "";
+                  const newContent = isFirstChunk ? cover + "\n\n---\n\n" + text : text;
+                  return { ...r, markdown: r.markdown + newContent };
+                })
               ),
             onDone: () => resolve(true),
             onError: (err) => {
@@ -181,6 +252,26 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     setIsLoading(false);
   };
 
+  const generateExecutiveOnePager = useCallback(() => {
+    if (files.length === 0) return;
+    const analysisResults: Record<string, AnalysisResult> = {};
+    files.forEach((f) => {
+      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      analysisResults[label] = analyseConfig(f.extractedData);
+    });
+    const customerName = branding.customerName || "Assessment";
+    const body = buildExecutiveOnePagerMarkdown(analysisResults, branding, customerName);
+    const cover = buildCoverPageMarkdown(branding);
+    const fullMarkdown = cover + "\n\n---\n\n" + body;
+
+    const execOnePagerId = "report-executive-one-pager";
+    setReports((prev) => {
+      const without = prev.filter((r) => r.id !== execOnePagerId);
+      return [...without, { id: execOnePagerId, label: "📄 Executive One-Pager", markdown: fullMarkdown }];
+    });
+    setActiveReportId(execOnePagerId);
+  }, [files, branding]);
+
   const generateCompliance = async () => {
     if (files.length === 0) return;
     setIsLoading(true);
@@ -196,7 +287,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     const complianceId = "report-compliance";
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== complianceId);
-      return [...without, { id: complianceId, label: "🛡️ Compliance Evidence Pack", markdown: "" }];
+      return [...without, { id: complianceId, label: "🛡️ Compliance Readiness Report", markdown: "" }];
     });
     setActiveReportId(complianceId);
 
@@ -249,7 +340,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     });
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== complianceId);
-      return [...without, { id: complianceId, label: "🛡️ Compliance Evidence Pack", markdown: "" }];
+      return [...without, { id: complianceId, label: "🛡️ Compliance Readiness Report", markdown: "" }];
     });
     setActiveReportId(complianceId);
     await generateSingleReport(
@@ -277,6 +368,8 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
           executive: true,
           firewallLabels: labels,
         });
+      } else if (reportId === "report-executive-one-pager") {
+        generateExecutiveOnePager();
       } else if (reportId === "report-compliance") {
         const mergedSections: Record<string, ExtractedSections> = {};
         const labels: string[] = [];
@@ -300,7 +393,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
         }
       }
     },
-    [files, generateSingleReport]
+    [files, generateSingleReport, generateExecutiveOnePager]
   );
 
   return {
@@ -313,6 +406,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     failedReportIds,
     generateIndividual,
     generateExecutive,
+    generateExecutiveOnePager,
     generateCompliance,
     generateAll,
     handleRetry,

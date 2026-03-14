@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCentral } from "@/hooks/use-central";
 import { useAuth } from "@/hooks/use-auth";
+import { logAudit } from "@/lib/audit";
 
 function SetupStep({ step, title, children, defaultOpen }: { step: number; title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
@@ -43,9 +44,12 @@ export function CentralIntegration() {
       setClientId("");
       setClientSecret("");
       setShowSecret(false);
+      if (org?.id) {
+        logAudit(org.id, "central.linked", "central", "", { partnerType: central.status?.partner_type }).catch(() => {});
+      }
     }
     setConnecting(false);
-  }, [clientId, clientSecret, central]);
+  }, [clientId, clientSecret, central, org]);
 
   const handleDisconnect = useCallback(async () => {
     if (!confirm("Disconnect from Sophos Central? This will remove stored credentials and cached data.")) return;
@@ -174,6 +178,7 @@ export function CentralIntegration() {
                 <button
                   type="button"
                   onClick={() => setShowSecret(!showSecret)}
+                  aria-label={showSecret ? "Hide client secret" : "Show client secret"}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showSecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}

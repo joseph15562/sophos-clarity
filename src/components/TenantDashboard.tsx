@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Building2, TrendingUp, TrendingDown, Minus, AlertTriangle, Shield, ChevronDown, Search, ArrowUpDown, Cloud, HardDrive } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, Minus, AlertTriangle, Shield, ChevronDown, ChevronRight, Search, ArrowUpDown, Cloud, HardDrive, Grid3X3 } from "lucide-react";
 import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { useAuth } from "@/hooks/use-auth";
@@ -33,9 +33,10 @@ interface CustomerSummary {
   scoreHistory: number[];
 }
 
+/** Mini sparkline (~60x20px) of score history. Uses assessments from Supabase (cloud) or IndexedDB (local). Shows nothing when &lt;2 data points. */
 function MiniSparkline({ values, color }: { values: number[]; color: string }) {
   if (values.length < 2) return null;
-  const w = 64, h = 24, pad = 2;
+  const w = 60, h = 20, pad = 2;
   const min = Math.min(...values), max = Math.max(...values);
   const range = max - min || 1;
   const points = values.map((v, i) => {
@@ -44,7 +45,7 @@ function MiniSparkline({ values, color }: { values: number[]; color: string }) {
     return `${x},${y}`;
   }).join(" ");
   return (
-    <svg width={w} height={h} className="shrink-0">
+    <svg width={w} height={h} role="img" aria-label="Trend sparkline" className="shrink-0">
       <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
       {values.map((v, i) => {
         const x = pad + (i / (values.length - 1)) * (w - pad * 2);
@@ -64,6 +65,7 @@ export function TenantDashboard() {
   const [sortField, setSortField] = useState<SortField>("score");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [fleetOverviewExpanded, setFleetOverviewExpanded] = useState(false);
 
   useEffect(() => {
     (useCloud ? loadHistoryCloud() : loadHistory()).then(setHistory);
@@ -123,6 +125,43 @@ export function TenantDashboard() {
     if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir(field === "score" ? "asc" : "desc"); }
   }, [sortField]);
+
+  /** All firewalls across customers for fleet heatmap (from latest snapshot per customer) */
+  const allFirewalls = useMemo(() => {
+    const out: { label: string; customer: string; environment: string; score: number; grade: string }[] = [];
+    for (const c of customers) {
+      for (const fw of c.latestSnapshot.firewalls) {
+        const grade = fw.riskScore.grade ?? scoreToGrade(fw.riskScore.overall);
+        out.push({
+          label: fw.label,
+          customer: c.name,
+          environment: c.environment,
+          score: fw.riskScore.overall,
+          grade,
+        });
+      }
+    }
+    return out;
+  }, [customers]);
+
+  /** Outlier detection: aggregate low category scores. "X of Y firewalls have [category] below 50%". Top 5 by count. */
+  const outlierCounts = useMemo(() => {
+    if (allFirewalls.length < 2) return [];
+    const byCategory = new Map<string, number>();
+    for (const c of customers) {
+      for (const fw of c.latestSnapshot.firewalls) {
+        for (const cat of fw.riskScore.categories) {
+          if (cat.pct < 50) {
+            byCategory.set(cat.label, (byCategory.get(cat.label) ?? 0) + 1);
+          }
+        }
+      }
+    }
+    return [...byCategory.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [customers, allFirewalls.length]);
 
   const avgScore = customers.length > 0
     ? Math.round(customers.reduce((s, c) => s + c.latestSnapshot.overallScore, 0) / customers.length)

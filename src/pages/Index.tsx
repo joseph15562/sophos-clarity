@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
-import { ArrowLeftRight, RotateCcw, Save, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal } from "lucide-react";
+import { ArrowLeftRight, RotateCcw, Save, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal, Download } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { FileUpload, UploadedFile } from "@/components/FileUpload";
 import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
 import { AppHeader } from "@/components/AppHeader";
 import { EstateOverview } from "@/components/EstateOverview";
+import { FindingsChanges } from "@/components/FindingsChanges";
+import { PriorityActions } from "@/components/PriorityActions";
 import { ReportCards } from "@/components/ReportCards";
 import { extractSections } from "@/lib/extract-sections";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
@@ -28,19 +30,25 @@ import { NotificationCentre } from "@/components/NotificationCentre";
 import { useKeyboardShortcuts, type ShortcutAction } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 import { ManagementDrawer } from "@/components/ManagementDrawer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
+import { toast } from "sonner";
+import { isLocalMode, setLocalMode } from "@/lib/local-mode";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
 const RiskScoreDashboard = lazy(() => import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })));
 const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })));
+const ChangeApproval = lazy(() => import("@/components/ChangeApproval").then((m) => ({ default: m.ChangeApproval })));
 const ComplianceHeatmap = lazy(() => import("@/components/ComplianceHeatmap").then((m) => ({ default: m.ComplianceHeatmap })));
+const InsuranceReadiness = lazy(() => import("@/components/InsuranceReadiness").then((m) => ({ default: m.InsuranceReadiness })));
 const AIChatPanel = lazy(() => import("@/components/AIChatPanel").then((m) => ({ default: m.AIChatPanel })));
 const ScoreSimulator = lazy(() => import("@/components/ScoreSimulator").then((m) => ({ default: m.ScoreSimulator })));
 const AttackSurfaceMap = lazy(() => import("@/components/AttackSurfaceMap").then((m) => ({ default: m.AttackSurfaceMap })));
 const ConsistencyChecker = lazy(() => import("@/components/ConsistencyChecker").then((m) => ({ default: m.ConsistencyChecker })));
 const PeerBenchmark = lazy(() => import("@/components/PeerBenchmark").then((m) => ({ default: m.PeerBenchmark })));
 const SophosBestPractice = lazy(() => import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })));
+const PolicyBaseline = lazy(() => import("@/components/PolicyBaseline").then((m) => ({ default: m.PolicyBaseline })));
 const RuleOptimiser = lazy(() => import("@/components/RuleOptimiser").then((m) => ({ default: m.RuleOptimiser })));
 const PriorityMatrix = lazy(() => import("@/components/PriorityMatrix").then((m) => ({ default: m.PriorityMatrix })));
 const FirewallLinker = lazy(() => import("@/components/FirewallLinker").then((m) => ({ default: m.FirewallLinker })));
@@ -52,7 +60,9 @@ const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m
 const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
 const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
 import { DashboardLoadingSkeleton, SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
-import type { RiskScoreResult } from "@/lib/risk-score";
+import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
+import { saveFindingSnapshot } from "@/lib/finding-snapshots";
+import { downloadRiskRegisterCSV } from "@/lib/risk-register";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -70,7 +80,7 @@ function InnerApp() {
   const {
     reports, setReports, activeReportId, setActiveReportId,
     isLoading, loadingReportIds, failedReportIds,
-    generateIndividual, generateExecutive, generateCompliance, generateAll, handleRetry,
+    generateIndividual, generateExecutive, generateExecutiveOnePager, generateCompliance, generateAll, handleRetry,
   } = useReportGeneration(files, branding);
 
   const {
@@ -89,7 +99,35 @@ function InnerApp() {
     }),
   [files, analysisResults]);
 
+  const securityStats = useMemo(() => {
+    if (Object.keys(analysisResults).length === 0) return null;
+    const scores = Object.values(analysisResults).map((r) => computeRiskScore(r));
+    const avgScore = Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length);
+    const grade: "A" | "B" | "C" | "D" | "F" =
+      avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+    const criticalHigh = Object.values(analysisResults).reduce(
+      (sum, r) => sum + r.findings.filter((f) => f.severity === "critical" || f.severity === "high").length,
+      0,
+    );
+    const ip = aggregatedPosture;
+    const wfPct = ip.webFilterableRules > 0 ? (ip.withWebFilter / ip.webFilterableRules) * 100 : 0;
+    const ipsPct = ip.enabledWanRules > 0 ? (ip.withIps / ip.enabledWanRules) * 100 : 0;
+    const appPct = ip.enabledWanRules > 0 ? (ip.withAppControl / ip.enabledWanRules) * 100 : 0;
+    const coverage = Math.round((wfPct + ipsPct + appPct) / 3);
+    return { score: avgScore, grade, criticalHigh, coverage, totalRules };
+  }, [analysisResults, aggregatedPosture, totalRules]);
+
   useAutoSave(branding, reports, activeReportId);
+
+  // Save finding snapshots when analysis completes (for regression detection)
+  useEffect(() => {
+    if (Object.keys(analysisResults).length === 0) return;
+    for (const [label, result] of Object.entries(analysisResults)) {
+      const hostname = result.hostname || label;
+      const score = computeRiskScore(result).overall;
+      saveFindingSnapshot(hostname, result.findings, score);
+    }
+  }, [analysisResults]);
 
   // Restore session on mount
   useEffect(() => {
@@ -129,7 +167,7 @@ function InnerApp() {
   useEffect(() => { setCentralEnriched(false); }, [fileIds]);
 
   useEffect(() => {
-    if (!org?.id || isGuest || files.length === 0 || centralEnriched) return;
+    if (!org?.id || isGuest || files.length === 0 || centralEnriched || localMode) return;
     let cancelled = false;
     const orgId = org.id;
 
@@ -152,7 +190,7 @@ function InnerApp() {
 
         const alertsByTenant: Record<string, Awaited<ReturnType<typeof getAlerts>>> = {};
         for (const tid of tenantIds) {
-          try { alertsByTenant[tid] = await getAlerts(orgId, tid); } catch { alertsByTenant[tid] = []; }
+          try { alertsByTenant[tid] = await getAlerts(orgId, tid); } catch (err) { console.warn("[enrichFromCentral] getAlerts", err); alertsByTenant[tid] = []; }
         }
 
         // Fetch per-firewall licence data
@@ -166,7 +204,9 @@ function InnerApp() {
               type: l.type,
             }));
           }
-        } catch { /* licensing API may not be available */ }
+        } catch (err) {
+          console.warn("[enrichFromCentral] licensing API may not be available", err);
+        }
 
         if (cancelled) return;
 
@@ -203,11 +243,13 @@ function InnerApp() {
           )
         );
         setCentralEnriched(true);
-      } catch { /* Central not available — no enrichment */ }
+      } catch (err) {
+        console.warn("[enrichFromCentral]", err);
+      }
     })();
 
     return () => { cancelled = true; };
-  }, [org?.id, isGuest, files.length, centralEnriched]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [org?.id, isGuest, files.length, centralEnriched, localMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [saveError, setSaveError] = useState("");
 
@@ -223,10 +265,15 @@ function InnerApp() {
       if (!isGuest && org) {
         result = await saveReportCloud(org.id, branding.customerName, branding.environment, reportEntries, analysisResults);
         // Also save an assessment snapshot so the Multi-Tenant Dashboard populates
-        try { await saveAssessmentCloud(analysisResults, branding.customerName, branding.environment, org.id); } catch { /* best-effort */ }
+        try { await saveAssessmentCloud(analysisResults, branding.customerName, branding.environment, org.id); } catch (err) {
+          console.warn("[handleSaveReports] saveAssessmentCloud", err);
+          toast.error("Couldn't save assessment to cloud — saved locally as backup");
+        }
       } else {
         result = await saveReportLocal(branding.customerName, branding.environment, reportEntries, analysisResults);
-        try { await saveAssessmentLocal(analysisResults, branding.customerName, branding.environment); } catch { /* best-effort */ }
+        try { await saveAssessmentLocal(analysisResults, branding.customerName, branding.environment); } catch (err) {
+          console.warn("[handleSaveReports] saveAssessmentLocal", err);
+        }
       }
       if (!result) {
         setSaveError("Save failed — have you run the 003_saved_reports.sql migration in Supabase?");
@@ -274,6 +321,12 @@ function InnerApp() {
   const [viewingReports, setViewingReports] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [localMode, setLocalModeState] = useState(() => isLocalMode());
+
+  const handleLocalModeChange = useCallback((enabled: boolean) => {
+    setLocalMode(enabled);
+    setLocalModeState(enabled);
+  }, []);
   const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
   const [analysisTab, setAnalysisTab] = useState("overview");
   const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
@@ -295,13 +348,13 @@ function InnerApp() {
       if (inDiffMode) setDiffSelection(null);
     }},
     { key: "s", ctrl: true, description: "Save reports", handler: () => { if (hasReports) handleSaveReports(true); else if (hasFiles && totalFindings > 0) handleSaveReports(false); }},
-    { key: "g", ctrl: true, description: "Generate all reports", handler: () => { if (hasFiles && !isLoading) { setViewingReports(true); generateAll(); } }},
+    { key: "g", ctrl: true, description: "Generate all reports", handler: () => { if (hasFiles && !isLoading && !localMode) { setViewingReports(true); generateAll(); } }},
     ...Array.from({ length: 9 }, (_, i) => ({
       key: String(i + 1),
       description: `Switch to report tab ${i + 1}`,
       handler: () => { if (viewingReports && reports[i]) setActiveReportId(reports[i].id); },
     })),
-  ], [shortcutsOpen, drawerOpen, viewingReports, inDiffMode, hasReports, hasFiles, totalFindings, isLoading, reports, handleSaveReports, generateAll, setActiveReportId]);
+  ], [shortcutsOpen, drawerOpen, viewingReports, inDiffMode, hasReports, hasFiles, totalFindings, isLoading, reports, handleSaveReports, generateAll, setActiveReportId, localMode]);
 
   useKeyboardShortcuts(keyboardShortcuts);
 
@@ -317,6 +370,7 @@ function InnerApp() {
         selectedFrameworks={branding.selectedFrameworks}
         reportCount={reports.length}
         onOrgClick={() => setDrawerOpen(true)}
+        localMode={localMode}
         notificationSlot={
           <NotificationCentre
             notifications={notifications}
@@ -398,6 +452,8 @@ function InnerApp() {
               afterLabel={fileLabel(files[diffSelection.afterIdx])}
               beforeSections={files[diffSelection.beforeIdx].extractedData}
               afterSections={files[diffSelection.afterIdx].extractedData}
+              beforeAnalysis={analysisResults[fileLabel(files[diffSelection.beforeIdx])]}
+              afterAnalysis={analysisResults[fileLabel(files[diffSelection.afterIdx])]}
               onClose={() => setDiffSelection(null)}
             />
           </Suspense>
@@ -414,12 +470,12 @@ function InnerApp() {
                 <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed">
                   Drop in your Sophos XGS configuration exports and get instant security findings, risk scoring,
                   and compliance mapping — no AI required. Generate branded reports, remediation playbooks,
-                  and evidence packs ready for customer handoff or audit.
+                  and readiness reports ready for customer handoff or audit.
                 </p>
                 <div className="flex flex-wrap justify-center gap-6 pt-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" /> Technical Reports</span>
                   <span className="flex items-center gap-1.5"><img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" /> Executive Briefs</span>
-                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Compliance Packs</span>
+                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Compliance Reports</span>
                   <span className="flex items-center gap-1.5"><img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" /> Data Anonymised</span>
                 </div>
               </section>
@@ -451,8 +507,8 @@ function InnerApp() {
               </section>
             )}
 
-            {/* Sophos Central Firewall Linking */}
-            {hasFiles && !isGuest && configMetas.length > 0 && (
+            {/* Sophos Central Firewall Linking — hidden in local mode */}
+            {hasFiles && !isGuest && !localMode && configMetas.length > 0 && (
               <Suspense fallback={null}>
                 <FirewallLinker
                   configs={configMetas}
@@ -475,12 +531,14 @@ function InnerApp() {
               </div>
             )}
 
-            {/* Generate Reports — always visible */}
+            {/* Generate Reports — AI reports disabled in local mode */}
             {hasFiles && (
               <ReportCards
                 fileCount={files.length}
+                localMode={localMode}
                 onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); if (org?.id) logAudit(org.id, "report.generated", "report", "individual"); }}
                 onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
+                onGenerateExecutiveOnePager={() => { setViewingReports(true); generateExecutiveOnePager(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive-one-pager"); }}
                 onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
                 onGenerateAll={() => { setViewingReports(true); generateAll(); if (org?.id) logAudit(org.id, "report.generated", "report", "all"); addNotification("info", "Generating Reports", `Generating all reports for ${branding.customerName || "this assessment"}…`); }}
               />
@@ -570,187 +628,313 @@ function InnerApp() {
                   </TabsList>
                 </div>
 
+                <div className="mt-3 px-1">
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    FireComply provides automated security analysis based on firewall configuration data. Results should be validated by a qualified security professional. Compliance mappings are indicative and do not constitute a formal audit.
+                  </p>
+                </div>
+
                 {/* Overview */}
                 <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <EstateOverview
-                    fileCount={files.length}
-                    analysisResults={analysisResults}
-                    totalFindings={totalFindings}
-                    totalRules={totalRules}
-                    totalSections={totalSections}
-                    totalPopulated={totalPopulated}
-                    extractionPct={extractionPct}
-                    aggregatedPosture={aggregatedPosture}
-                    selectedFrameworks={branding.selectedFrameworks}
-                  />
-                  {!isGuest && configMetas.length > 0 && (
-                    <Suspense fallback={null}>
-                      <CentralEnrichment
-                        configMetas={configMetas}
-                        customerName={branding.customerName}
-                      />
-                    </Suspense>
-                  )}
+                  <ErrorBoundary fallbackTitle="Overview failed to load">
+                    {totalFindings > 0 && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadRiskRegisterCSV(analysisResults, branding.customerName)}
+                          className="gap-1.5 text-xs"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Export Risk Register (CSV)
+                        </Button>
+                      </div>
+                    )}
+                    {totalFindings > 0 && (
+                      <PriorityActions analysisResults={analysisResults} />
+                    )}
+                    <FindingsChanges analysisResults={analysisResults} />
+                    <EstateOverview
+                      fileCount={files.length}
+                      analysisResults={analysisResults}
+                      totalFindings={totalFindings}
+                      totalRules={totalRules}
+                      totalSections={totalSections}
+                      totalPopulated={totalPopulated}
+                      extractionPct={extractionPct}
+                      aggregatedPosture={aggregatedPosture}
+                      selectedFrameworks={branding.selectedFrameworks}
+                    />
+                    {!isGuest && !localMode && configMetas.length > 0 && (
+                      <Suspense fallback={null}>
+                        <CentralEnrichment
+                          configMetas={configMetas}
+                          customerName={branding.customerName}
+                        />
+                      </Suspense>
+                    )}
+                  </ErrorBoundary>
                 </TabsContent>
 
                 {/* Security Analysis */}
                 <TabsContent value="security" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <Suspense fallback={<ChartSkeleton height={220} />}>
-                    <RiskScoreDashboard analysisResults={analysisResults} />
-                  </Suspense>
-
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <Suspense fallback={<StatGridSkeleton />}>
-                      <RuleHealthOverview analysisResults={analysisResults} />
+                  <ErrorBoundary fallbackTitle="Security analysis failed to load">
+                    {securityStats && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div
+                          className={`rounded-xl border bg-card p-4 ${
+                            securityStats.score >= 75
+                              ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                              : securityStats.score >= 50
+                                ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
+                                : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
+                          }`}
+                        >
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Score</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span
+                              className={`text-2xl font-extrabold tabular-nums ${
+                                securityStats.score >= 75
+                                  ? "text-[#00995a] dark:text-[#00F2B3]"
+                                  : securityStats.score >= 50
+                                    ? "text-[#F29400]"
+                                    : "text-[#EA0022]"
+                              }`}
+                            >
+                              {securityStats.score}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                securityStats.score >= 75
+                                  ? "bg-[#00995a]/10 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
+                                  : securityStats.score >= 50
+                                    ? "bg-[#F29400]/10 text-[#F29400]"
+                                    : "bg-[#EA0022]/10 text-[#EA0022]"
+                              }`}
+                            >
+                              {securityStats.grade}
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          className={`rounded-xl border border-border bg-card p-4 ${
+                            securityStats.criticalHigh === 0
+                              ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                              : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
+                          }`}
+                        >
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Critical Issues</div>
+                          <div
+                            className={`text-2xl font-extrabold tabular-nums mt-1 ${
+                              securityStats.criticalHigh === 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"
+                            }`}
+                          >
+                            {securityStats.criticalHigh}
+                          </div>
+                        </div>
+                        <div
+                          className={`rounded-xl border border-border bg-card p-4 ${
+                            securityStats.coverage >= 75
+                              ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                              : securityStats.coverage >= 40
+                                ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
+                                : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
+                          }`}
+                        >
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Coverage</div>
+                          <div
+                            className={`text-2xl font-extrabold tabular-nums mt-1 ${
+                              securityStats.coverage >= 75
+                                ? "text-[#00995a] dark:text-[#00F2B3]"
+                                : securityStats.coverage >= 40
+                                  ? "text-[#F29400]"
+                                  : "text-[#EA0022]"
+                            }`}
+                          >
+                            {securityStats.coverage}%
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-border bg-card p-4">
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rules Analysed</div>
+                          <div className="text-2xl font-extrabold tabular-nums mt-1 text-foreground">
+                            {securityStats.totalRules}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <Suspense fallback={<ChartSkeleton height={220} />}>
+                      <RiskScoreDashboard analysisResults={analysisResults} />
                     </Suspense>
-                    <Suspense fallback={<StatGridSkeleton count={4} />}>
-                      <SecurityFeatureCoverage analysisResults={analysisResults} />
-                    </Suspense>
-                  </div>
 
-                  {totalFindings > 0 && (
                     <div className="grid gap-6 lg:grid-cols-2">
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <SeverityBreakdown analysisResults={analysisResults} />
+                      <Suspense fallback={<StatGridSkeleton />}>
+                        <RuleHealthOverview analysisResults={analysisResults} />
                       </Suspense>
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <FindingsBySection analysisResults={analysisResults} />
+                      <Suspense fallback={<StatGridSkeleton count={4} />}>
+                        <SecurityFeatureCoverage analysisResults={analysisResults} />
                       </Suspense>
                     </div>
-                  )}
 
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <Suspense fallback={<ChartSkeleton />}>
-                      <ZoneTrafficFlow files={files} />
-                    </Suspense>
                     {totalFindings > 0 && (
-                      <Suspense fallback={<CardSkeleton />}>
-                        <TopFindings analysisResults={analysisResults} />
+                      <div className="grid gap-6 lg:grid-cols-2">
+                        <Suspense fallback={<ChartSkeleton />}>
+                          <SeverityBreakdown analysisResults={analysisResults} />
+                        </Suspense>
+                        <Suspense fallback={<ChartSkeleton />}>
+                          <FindingsBySection analysisResults={analysisResults} />
+                        </Suspense>
+                      </div>
+                    )}
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      <Suspense fallback={<ChartSkeleton />}>
+                        <ZoneTrafficFlow files={files} />
+                      </Suspense>
+                      {totalFindings > 0 && (
+                        <Suspense fallback={<CardSkeleton />}>
+                          <TopFindings analysisResults={analysisResults} />
+                        </Suspense>
+                      )}
+                    </div>
+
+                    {totalFindings > 0 && (
+                      <Suspense fallback={<ChartSkeleton />}>
+                        <PriorityMatrix analysisResults={analysisResults} />
                       </Suspense>
                     )}
-                  </div>
-
-                  {totalFindings > 0 && (
-                    <Suspense fallback={<ChartSkeleton />}>
-                      <PriorityMatrix analysisResults={analysisResults} />
-                    </Suspense>
-                  )}
-
+                  </ErrorBoundary>
                 </TabsContent>
 
                 {/* Compliance */}
                 <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <Suspense fallback={<CardSkeleton />}>
-                    <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
-                  </Suspense>
-                  <Suspense fallback={<CardSkeleton />}>
-                    <SophosBestPractice
-                      analysisResults={analysisResults}
-                      centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
-                    />
-                  </Suspense>
-
-                  <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
-                      <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
-                      {branding.selectedFrameworks.length > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
-                          {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </div>
-                    <Suspense fallback={<ChartSkeleton height={120} />}>
-                      <ComplianceHeatmap
+                  <ErrorBoundary fallbackTitle="Compliance view failed to load">
+                    <Suspense fallback={<CardSkeleton />}>
+                      <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
+                    </Suspense>
+                    <Suspense fallback={<CardSkeleton />}>
+                      <SophosBestPractice
                         analysisResults={analysisResults}
-                        selectedFrameworks={branding.selectedFrameworks}
+                        centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
                       />
                     </Suspense>
-                  </div>
+
+                    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
+                        <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
+                        {branding.selectedFrameworks.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
+                            {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                      <Suspense fallback={<ChartSkeleton height={120} />}>
+                        <ComplianceHeatmap
+                          analysisResults={analysisResults}
+                          selectedFrameworks={branding.selectedFrameworks}
+                        />
+                      </Suspense>
+                    </div>
+
+                    <Suspense fallback={<CardSkeleton />}>
+                      <InsuranceReadiness analysisResults={analysisResults} />
+                    </Suspense>
+                  </ErrorBoundary>
                 </TabsContent>
 
                 {/* Optimisation */}
                 <TabsContent value="optimisation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <Suspense fallback={<SectionSkeleton />}>
-                    <RuleOptimiser files={files} />
-                  </Suspense>
-                  {files.length >= 2 && (
-                    <Suspense fallback={null}>
-                      <ConsistencyChecker analysisResults={analysisResults} />
+                  <ErrorBoundary fallbackTitle="Optimisation view failed to load">
+                    <Suspense fallback={<SectionSkeleton />}>
+                      <RuleOptimiser files={files} />
                     </Suspense>
-                  )}
+                    {files.length >= 2 && (
+                      <Suspense fallback={null}>
+                        <ConsistencyChecker analysisResults={analysisResults} />
+                      </Suspense>
+                    )}
+                  </ErrorBoundary>
                 </TabsContent>
 
                 {/* Tools */}
                 <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <Suspense fallback={<ChartSkeleton height={220} />}>
-                    <RiskScoreDashboard analysisResults={analysisResults} projected={projectedScore} />
-                  </Suspense>
-
-                  {totalFindings > 0 && (
-                    <Suspense fallback={<CardSkeleton />}>
-                      <ScoreSimulator analysisResults={analysisResults} onProjectedChange={setProjectedScore} />
+                  <ErrorBoundary fallbackTitle="Tools failed to load">
+                    <Suspense fallback={<ChartSkeleton height={220} />}>
+                      <RiskScoreDashboard analysisResults={analysisResults} projected={projectedScore} />
                     </Suspense>
-                  )}
 
-                  <Suspense fallback={<CardSkeleton />}>
-                    <AttackSurfaceMap files={files} />
-                  </Suspense>
+                    {totalFindings > 0 && (
+                      <Suspense fallback={<CardSkeleton />}>
+                        <ScoreSimulator analysisResults={analysisResults} onProjectedChange={setProjectedScore} />
+                      </Suspense>
+                    )}
+
+                    <Suspense fallback={<CardSkeleton />}>
+                      <AttackSurfaceMap files={files} />
+                    </Suspense>
+                  </ErrorBoundary>
                 </TabsContent>
 
                 {/* Remediation */}
                 <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <Suspense fallback={null}>
-                    <RemediationPlaybooks analysisResults={analysisResults} />
-                  </Suspense>
+                  <ErrorBoundary fallbackTitle="Remediation view failed to load">
+                    <Suspense fallback={null}>
+                      <RemediationPlaybooks analysisResults={analysisResults} />
+                    </Suspense>
+                    <Suspense fallback={null}>
+                      <ChangeApproval />
+                    </Suspense>
+                  </ErrorBoundary>
                 </TabsContent>
 
                 {/* Compare */}
                 <TabsContent value="compare" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <div className="space-y-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
-                        <select
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-                          value={diffSelection?.beforeIdx ?? 0}
-                          onChange={(e) => setDiffSelection((prev) => ({
-                            beforeIdx: Number(e.target.value),
-                            afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
-                          }))}
-                        >
-                          {files.map((f, i) => (
-                            <option key={f.id} value={i}>{fileLabel(f)}</option>
-                          ))}
-                        </select>
+                  <ErrorBoundary fallbackTitle="Compare view failed to load">
+                    <div className="space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
+                          <select
+                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                            value={(diffSelection as DiffSelection | null)?.beforeIdx ?? 0}
+                            onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
+                              beforeIdx: Number(e.target.value),
+                              afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
+                            }))}
+                          >
+                            {files.map((f, i) => (
+                              <option key={f.id} value={i}>{fileLabel(f)}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
+                          <select
+                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                            value={(diffSelection as DiffSelection | null)?.afterIdx ?? Math.min(1, files.length - 1)}
+                            onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
+                              beforeIdx: prev?.beforeIdx ?? 0,
+                              afterIdx: Number(e.target.value),
+                            }))}
+                          >
+                            {files.map((f, i) => (
+                              <option key={f.id} value={i}>{fileLabel(f)}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
-                        <select
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-                          value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
-                          onChange={(e) => setDiffSelection((prev) => ({
-                            beforeIdx: prev?.beforeIdx ?? 0,
-                            afterIdx: Number(e.target.value),
-                          }))}
-                        >
-                          {files.map((f, i) => (
-                            <option key={f.id} value={i}>{fileLabel(f)}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <Button
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setDiffSelection({
+                          beforeIdx: (diffSelection as DiffSelection | null)?.beforeIdx ?? 0,
+                          afterIdx: (diffSelection as DiffSelection | null)?.afterIdx ?? Math.min(1, files.length - 1),
+                        })}
+                      >
+                        <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setDiffSelection({
-                        beforeIdx: diffSelection?.beforeIdx ?? 0,
-                        afterIdx: diffSelection?.afterIdx ?? Math.min(1, files.length - 1),
-                      })}
-                    >
-                      <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
-                    </Button>
-                  </div>
+                  </ErrorBoundary>
                 </TabsContent>
               </Tabs>
             )}
@@ -768,6 +952,7 @@ function InnerApp() {
                   Back to Dashboard
                 </Button>
                 <div className="flex-1" />
+                {!localMode && (
                 <div className="flex flex-wrap gap-2">
                   {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
                     <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
@@ -776,10 +961,11 @@ function InnerApp() {
                   )}
                   {!reports.find((r) => r.id === "report-compliance") && (
                     <Button variant="outline" size="sm" onClick={generateCompliance} className="gap-1.5 text-xs">
-                      <img src="/icons/sophos-governance.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Compliance Pack
+                      <img src="/icons/sophos-governance.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Compliance Report
                     </Button>
                   )}
                 </div>
+                )}
               </div>
             )}
 
@@ -854,16 +1040,18 @@ function InnerApp() {
         )}
       </main>
 
-      {/* AI Chat — floating panel, available whenever files are loaded */}
-      {hasFiles && (
-        <Suspense fallback={null}>
-          <AIChatPanel
-            analysisResults={analysisResults}
-            reports={reports}
-            customerName={branding.customerName}
-            environment={branding.environment}
-          />
-        </Suspense>
+      {/* AI Chat — floating panel, hidden in local mode */}
+      {hasFiles && !localMode && (
+        <ErrorBoundary fallbackTitle="AI Chat failed to load">
+          <Suspense fallback={null}>
+            <AIChatPanel
+              analysisResults={analysisResults}
+              reports={reports}
+              customerName={branding.customerName}
+              environment={branding.environment}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {/* First-Time Setup Wizard */}
@@ -876,19 +1064,23 @@ function InnerApp() {
       />
 
       {/* Management Drawer */}
-      <ManagementDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        isGuest={isGuest}
-        orgName={org?.name}
-        analysisResults={analysisResults}
-        customerName={branding.customerName}
-        environment={branding.environment}
-        onLoadReports={handleLoadSavedReports}
-        savedReportsTrigger={savedReportsTrigger}
-        hasFiles={hasFiles}
-        onRerunSetup={() => { resetSetupFlag(); setDrawerOpen(false); setWizardOpen(true); }}
-      />
+      <ErrorBoundary fallbackTitle="Management panel failed to load">
+        <ManagementDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          isGuest={isGuest}
+          orgName={org?.name}
+          analysisResults={analysisResults}
+          customerName={branding.customerName}
+          environment={branding.environment}
+          onLoadReports={handleLoadSavedReports}
+          savedReportsTrigger={savedReportsTrigger}
+          hasFiles={hasFiles}
+          onRerunSetup={() => { resetSetupFlag(); setDrawerOpen(false); setWizardOpen(true); }}
+          localMode={localMode}
+          onLocalModeChange={handleLocalModeChange}
+        />
+      </ErrorBoundary>
 
       {/* Keyboard shortcut hint */}
       <div className="fixed bottom-4 right-4 z-10 no-print">

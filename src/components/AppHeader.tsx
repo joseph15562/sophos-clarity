@@ -14,6 +14,7 @@ interface AppHeaderProps {
   reportCount: number;
   notificationSlot?: React.ReactNode;
   onOrgClick?: () => void;
+  localMode?: boolean;
 }
 
 function CentralStatusDot({ orgId }: { orgId: string }) {
@@ -26,7 +27,8 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     try {
       const s = await getCentralStatus(orgId);
       setStatus(s);
-    } catch {
+    } catch (err) {
+      console.warn("[loadStatus]", err);
       setStatus({ connected: false });
     }
   }, [orgId]);
@@ -37,11 +39,12 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     try {
       const tenants = await syncTenants(orgId);
       for (const t of tenants) {
-        try { await syncFirewalls(orgId, t.id); } catch { /* best-effort */ }
+        try { await syncFirewalls(orgId, t.id); } catch (err) { console.warn("[refresh] syncFirewalls best-effort", err); }
       }
       const s = await getCentralStatus(orgId);
       setStatus(s);
-    } catch {
+    } catch (err) {
+      console.warn("[refresh]", err);
       setStatus({ connected: false });
     }
     setRefreshing(false);
@@ -135,7 +138,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
   );
 }
 
-export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount, notificationSlot, onOrgClick }: AppHeaderProps) {
+export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount, notificationSlot, onOrgClick, localMode }: AppHeaderProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { user, org, isGuest, signOut } = useAuth();
 
@@ -169,7 +172,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                   <ChevronDown className="h-2.5 w-2.5" />
                 </button>
               )}
-              {org && <CentralStatusDot orgId={org.id} />}
+              {org && !localMode && <CentralStatusDot orgId={org.id} />}
               {notificationSlot}
               <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
                 <User className="h-3 w-3" />

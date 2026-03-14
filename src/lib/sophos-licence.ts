@@ -101,7 +101,7 @@ export function getActiveModules(sel: LicenceSelection): ModuleId[] {
 /*  Best-practice check definitions                                   */
 /* ------------------------------------------------------------------ */
 
-export type CheckStatus = "pass" | "fail" | "warn" | "na";
+export type CheckStatus = "pass" | "fail" | "warn" | "na" | "unknown";
 
 export interface BestPracticeCheck {
   id: string;

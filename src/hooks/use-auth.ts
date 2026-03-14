@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, createContext, useContext } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { logAudit } from "@/lib/audit";
 
 export interface OrgInfo {
   id: string;
@@ -53,9 +54,11 @@ export function useAuthProvider(): AuthState {
     if (membership) {
       setOrg(membership.org);
       setRole(membership.role);
+      return membership;
     } else {
       setOrg(null);
       setRole(null);
+      return null;
     }
   }, []);
 
@@ -70,11 +73,15 @@ export function useAuthProvider(): AuthState {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        loadOrg(s.user.id);
+        loadOrg(s.user.id).then((membership) => {
+          if (event === "SIGNED_IN" && membership) {
+            logAudit(membership.org.id, "auth.login", "", "", { email: s?.user?.email ?? undefined }).catch(() => {});
+          }
+        });
       } else {
         setOrg(null);
         setRole(null);
@@ -95,10 +102,15 @@ export function useAuthProvider(): AuthState {
   }, []);
 
   const signOut = useCallback(async () => {
+    const currentOrgId = org?.id ?? "";
+    const currentEmail = user?.email ?? undefined;
     await supabase.auth.signOut();
     setOrg(null);
     setRole(null);
-  }, []);
+    if (currentOrgId) {
+      logAudit(currentOrgId, "auth.logout", "", "", { email: currentEmail }).catch(() => {});
+    }
+  }, [org, user]);
 
   const createOrg = useCallback(async (name: string) => {
     if (!user) return { error: "Not authenticated" };

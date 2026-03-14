@@ -2,23 +2,73 @@ import { supabase } from "@/integrations/supabase/client";
 
 const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sophos-central`;
 
-async function callCentral<T = unknown>(body: Record<string, unknown>): Promise<T> {
+const CALL_TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 2;
+const RETRY_BASE_MS = 1_000;
+
+async function callCentral<T = unknown>(body: Record<string, unknown>, retries = MAX_RETRIES): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Not authenticated");
 
-  const res = await fetch(FUNCTION_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    },
-    body: JSON.stringify(body),
-  });
+  let lastError: Error | null = null;
 
-  const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error ?? `Request failed (${res.status})`);
-  return data as T;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      const delay = RETRY_BASE_MS * Math.pow(2, attempt - 1);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(FUNCTION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timer);
+
+      let data: Record<string, unknown>;
+      try {
+        data = await res.json();
+      } catch (err) {
+        console.warn("[callCentral] invalid JSON", err);
+        throw new Error(`Invalid JSON response (${res.status})`);
+      }
+
+      if (!res.ok || data.error) {
+        const msg = (data.error as string) ?? `Request failed (${res.status})`;
+        if (res.status >= 500 && attempt < retries) {
+          lastError = new Error(msg);
+          continue;
+        }
+        throw new Error(msg);
+      }
+
+      return data as T;
+    } catch (err) {
+      clearTimeout(timer);
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (lastError.name === "AbortError") {
+        lastError = new Error("Request timed out");
+      }
+
+      if (attempt < retries && !lastError.message.includes("Not authenticated")) {
+        continue;
+      }
+      throw lastError;
+    }
+  }
+
+  throw lastError ?? new Error("Request failed");
 }
 
 // ── Connection management ──

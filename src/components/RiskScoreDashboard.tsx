@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { HelpCircle, X } from "lucide-react";
 import {
   RadarChart,
   Radar,
@@ -42,7 +43,7 @@ function GaugeRing({ score, grade, projectedScore, projectedGrade }: {
 
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
-      <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 120 120">
+      <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 120 120" role="img" aria-label={`Risk score gauge: ${score} out of 100`}>
         <circle cx="60" cy="60" r={r} fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
         {hasProjection && (
           <circle
@@ -87,6 +88,43 @@ function GaugeRing({ score, grade, projectedScore, projectedGrade }: {
   );
 }
 
+const METHODOLOGY_ITEMS = [
+  { category: "Web Filtering", weight: "12.5%", description: "Percentage of enabled WAN rules with HTTP/HTTPS/ANY service that have a Web Filter policy applied." },
+  { category: "Intrusion Prevention", weight: "12.5%", description: "Percentage of enabled WAN rules with IPS enabled. Higher coverage = higher score." },
+  { category: "Application Control", weight: "12.5%", description: "Percentage of enabled WAN rules with Application Control active." },
+  { category: "Authentication", weight: "12.5%", description: "MFA/OTP configuration status across admin, VPN, and user portals. Deductions per area where MFA is disabled." },
+  { category: "Logging", weight: "12.5%", description: "Proportion of rules with traffic logging enabled. Disabled logging creates audit blind spots." },
+  { category: "Rule Hygiene", weight: "12.5%", description: "Composite score: penalises broad source/dest rules, ANY service rules, duplicate/overlapping rules, disabled WAN rules, and absent SSL/TLS decryption." },
+  { category: "Admin Access", weight: "12.5%", description: "Evaluates exposure of management services (HTTPS admin, SSH, SNMP) to untrusted zones like WAN." },
+  { category: "Anti-Malware", weight: "12.5%", description: "Virus scanning and sandboxing configuration across protocols (HTTP, HTTPS, FTP, SMTP, etc.)." },
+];
+
+function ScoringMethodology({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-semibold text-foreground">How Scoring Works</h4>
+        <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+      </div>
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        The security risk score is an equal-weighted average of 8 category scores (each 0–100). The overall score determines the grade: A (90+), B (75+), C (60+), D (40+), F (&lt;40).
+      </p>
+      <div className="space-y-1.5">
+        {METHODOLOGY_ITEMS.map((m) => (
+          <div key={m.category} className="flex gap-3 text-[10px]">
+            <span className="font-semibold text-foreground shrink-0 w-28">{m.category}</span>
+            <span className="text-muted-foreground">{m.description}</span>
+          </div>
+        ))}
+      </div>
+      <div className="pt-2 border-t border-border text-[10px] text-muted-foreground space-y-1">
+        <p><span className="font-semibold text-foreground">Compliance Mapping:</span> Each control is checked against framework requirements using the same category data. Controls can be Pass, Partial, Fail, or N/A. The compliance score per framework is the percentage of scorable controls that pass.</p>
+        <p><span className="font-semibold text-foreground">Best Practice:</span> Sophos-specific checks (admin hardening, backup, notifications, pattern updates, NTP, authentication, ATP, HA) are scored separately from the risk score.</p>
+      </div>
+    </div>
+  );
+}
+
 export function RiskScoreDashboard({ analysisResults, projected }: Props) {
   const perFirewall = useMemo(() => {
     const entries: { label: string; result: RiskScoreResult }[] = [];
@@ -120,15 +158,25 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
     };
   });
 
+  const [showHelp, setShowHelp] = useState(false);
+
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-5">
-      <div className="flex items-center gap-2">
-        <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
-        <h3 className="text-sm font-semibold text-foreground">Security Risk Score</h3>
-        <span className="text-[10px] text-muted-foreground">
-          {perFirewall.length > 1 ? `aggregated across ${perFirewall.length} firewalls` : "single firewall"}
-        </span>
+      <div>
+        <div className="flex items-center gap-2">
+          <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
+          <h3 className="text-sm font-semibold text-foreground">Security Risk Score</h3>
+          <span className="text-[10px] text-muted-foreground">
+            {perFirewall.length > 1 ? `aggregated across ${perFirewall.length} firewalls` : "single firewall"}
+          </span>
+          <button onClick={() => setShowHelp(true)} className="ml-auto text-muted-foreground hover:text-foreground transition-colors" aria-label="How scoring works" title="How scoring works">
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1 pl-7">Firewall configuration posture only. Does not represent overall organisational security risk.</p>
       </div>
+
+      {showHelp && <ScoringMethodology onClose={() => setShowHelp(false)} />}
 
       <div className="grid gap-6 md:grid-cols-2 items-center">
         {/* Gauge + legend */}

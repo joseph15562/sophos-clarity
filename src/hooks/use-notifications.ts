@@ -22,7 +22,8 @@ function loadFromStorage(): AppNotification[] {
     const parsed = JSON.parse(raw) as AppNotification[];
     // Exclude action callbacks (they can't be serialized)
     return parsed.map((n) => ({ ...n, action: undefined }));
-  } catch {
+  } catch (err) {
+    console.warn("[loadFromStorage]", err);
     return [];
   }
 }
@@ -31,7 +32,9 @@ function saveToStorage(notifications: AppNotification[]): void {
   try {
     const serializable = notifications.map(({ action, ...rest }) => rest);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable.slice(0, MAX_NOTIFICATIONS)));
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.warn("[saveToStorage]", err);
+  }
 }
 
 export function useNotifications() {

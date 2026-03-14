@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
-import { Plus, Minus, RefreshCw, Check, ChevronDown, ChevronRight, ArrowLeftRight } from "lucide-react";
+import { Plus, Minus, RefreshCw, Check, ChevronDown, ChevronRight, ArrowLeftRight, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { diffConfigs, type ConfigDiffResult, type SectionDiff, type RowDiff, type ChangeType } from "@/lib/diff-config";
+import { computeRiskScore } from "@/lib/risk-score";
+import type { AnalysisResult, Finding, Severity } from "@/lib/analyse-config";
 
 interface ConfigDiffProps {
   beforeLabel: string;
@@ -10,7 +12,18 @@ interface ConfigDiffProps {
   beforeSections: ExtractedSections;
   afterSections: ExtractedSections;
   onClose: () => void;
+  /** Optional analysis results for risk scores and findings delta */
+  beforeAnalysis?: AnalysisResult;
+  afterAnalysis?: AnalysisResult;
 }
+
+const SEV_BADGE: Record<Severity, string> = {
+  critical: "bg-[#EA0022]/10 text-[#EA0022]",
+  high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
+  medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
+  low: "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]",
+  info: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]",
+};
 
 const STATUS_STYLES: Record<ChangeType, { bg: string; text: string; icon: React.ReactNode }> = {
   added: {
@@ -119,6 +132,66 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function FindingsDeltaSection({ newFindings, fixedFindings }: { newFindings: Finding[]; fixedFindings: Finding[] }) {
+  const [expandedNew, setExpandedNew] = useState(false);
+  const [expandedFixed, setExpandedFixed] = useState(false);
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">Findings Delta</h3>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {/* New findings */}
+        <div className="rounded-xl border border-[#EA0022]/30 dark:border-[#EA0022]/40 bg-[#EA0022]/5 overflow-hidden">
+          <button
+            onClick={() => setExpandedNew(!expandedNew)}
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
+          >
+            <span className="text-sm font-medium text-foreground">New findings</span>
+            <span className="text-xs font-semibold text-[#EA0022]">{newFindings.length}</span>
+            {expandedNew ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          </button>
+          {expandedNew && newFindings.length > 0 && (
+            <ul className="px-4 pb-4 space-y-1.5 max-h-48 overflow-y-auto">
+              {newFindings.map((f, i) => (
+                <li key={`new-${i}`} className="flex items-start gap-2 text-xs">
+                  <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${SEV_BADGE[f.severity]}`}>
+                    {f.severity}
+                  </span>
+                  <span className="text-foreground">{f.title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Fixed findings */}
+        <div className="rounded-xl border border-[#00995a]/30 dark:border-[#00F2B3]/40 bg-[#00995a]/5 dark:bg-[#00F2B3]/5 overflow-hidden">
+          <button
+            onClick={() => setExpandedFixed(!expandedFixed)}
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
+          >
+            <span className="text-sm font-medium text-foreground">Fixed findings</span>
+            <span className="text-xs font-semibold text-[#00995a] dark:text-[#00F2B3]">{fixedFindings.length}</span>
+            {expandedFixed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          </button>
+          {expandedFixed && fixedFindings.length > 0 && (
+            <ul className="px-4 pb-4 space-y-1.5 max-h-48 overflow-y-auto">
+              {fixedFindings.map((f, i) => (
+                <li key={`fixed-${i}`} className="flex items-start gap-2 text-xs">
+                  <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${SEV_BADGE[f.severity]}`}>
+                    {f.severity}
+                  </span>
+                  <span className="text-foreground">{f.title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

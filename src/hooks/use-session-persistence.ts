@@ -17,8 +17,9 @@ export function saveSession(
   reports: ReportEntry[],
   activeReportId: string,
 ) {
+  const { logoUrl: _logo, ...brandingWithoutLogo } = branding;
   const data: PersistedSession = {
-    branding: { ...branding, logoUrl: null as any },
+    branding: brandingWithoutLogo,
     reports: reports.map((r) => ({
       id: r.id,
       label: r.label,
@@ -29,8 +30,8 @@ export function saveSession(
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // localStorage full or unavailable — silently ignore
+  } catch (err) {
+    console.warn("[saveSession]", err);
   }
 }
 
@@ -57,7 +58,8 @@ export function loadSession(): {
       reports: data.reports,
       activeReportId: data.activeReportId || data.reports[0]?.id || "",
     };
-  } catch {
+  } catch (err) {
+    console.warn("[loadSession]", err);
     return null;
   }
 }

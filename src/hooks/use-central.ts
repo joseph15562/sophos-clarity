@@ -8,6 +8,7 @@ import {
   type CentralStatus, type CentralTenant, type CentralFirewall,
   type CentralFirewallGroup, type CentralAlert, type CentralLicence,
 } from "@/lib/sophos-central";
+import { logAudit } from "@/lib/audit";
 
 export interface UseCentralState {
   status: CentralStatus | null;
@@ -56,7 +57,8 @@ export function useCentral(): UseCentralState {
     try {
       const s = await getCentralStatus(orgId);
       setStatus(s);
-    } catch {
+    } catch (err) {
+      console.warn("[refreshStatus]", err);
       setStatus({ connected: false });
     }
   }, [orgId]);
@@ -76,7 +78,9 @@ export function useCentral(): UseCentralState {
       try {
         const items = await syncTenants(orgId);
         setTenants(items);
-      } catch { /* tenant sync is best-effort */ }
+      } catch (err) {
+        console.warn("[connect] tenant sync best-effort", err);
+      }
       return { error: null };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Connection failed";
@@ -112,6 +116,7 @@ export function useCentral(): UseCentralState {
     try {
       const items = await syncTenants(orgId);
       setTenants(items);
+      logAudit(orgId, "central.synced", "central", "tenants", { count: items.length }).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to sync tenants");
     }
@@ -125,6 +130,7 @@ export function useCentral(): UseCentralState {
     try {
       const items = await syncFirewalls(orgId, tenantId);
       setFirewalls(items);
+      logAudit(orgId, "central.synced", "central", "firewalls", { tenantId, count: items.length }).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to sync firewalls");
     }
@@ -136,7 +142,8 @@ export function useCentral(): UseCentralState {
     try {
       const items = await getFirewallGroups(orgId, tenantId);
       setGroups(items);
-    } catch {
+    } catch (err) {
+      console.warn("[refreshGroups]", err);
       setGroups([]);
     }
   }, [orgId]);
@@ -146,7 +153,8 @@ export function useCentral(): UseCentralState {
     try {
       const items = await getAlerts(orgId, tenantId);
       setAlerts(items);
-    } catch {
+    } catch (err) {
+      console.warn("[refreshAlerts]", err);
       setAlerts([]);
     }
   }, [orgId]);
@@ -156,7 +164,8 @@ export function useCentral(): UseCentralState {
     try {
       const items = await getLicences(orgId, tenantId);
       setLicences(items);
-    } catch {
+    } catch (err) {
+      console.warn("[refreshLicences]", err);
       setLicences([]);
     }
   }, [orgId]);
@@ -166,7 +175,8 @@ export function useCentral(): UseCentralState {
     try {
       const items = await getMdrThreatFeed(orgId, tenantId);
       setMdrFeed(items);
-    } catch {
+    } catch (err) {
+      console.warn("[refreshMdrFeed]", err);
       setMdrFeed([]);
     }
   }, [orgId]);
@@ -176,8 +186,8 @@ export function useCentral(): UseCentralState {
     try {
       const items = await getCachedTenants(orgId);
       setTenants(items);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.warn("[loadCachedTenants]", err);
     }
   }, [orgId]);
 
@@ -197,8 +207,8 @@ export function useCentral(): UseCentralState {
         group: r.group as CentralFirewall["group"],
         externalIpv4Addresses: (r.externalIps as string[]) ?? [],
       })));
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.warn("[loadCachedFirewalls]", err);
     }
   }, [orgId]);
 

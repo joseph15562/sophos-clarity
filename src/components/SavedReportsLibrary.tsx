@@ -9,6 +9,7 @@ import {
   type SavedReportPackage,
   type SavedReportEntry,
 } from "@/lib/saved-reports";
+import { logAudit } from "@/lib/audit";
 
 export interface LoadSavedReportArgs {
   reports: SavedReportEntry[];
@@ -53,17 +54,22 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
     try {
       const items = useCloud ? await loadSavedReportsCloud() : await loadSavedReportsLocal();
       setPackages(items);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.warn("[refresh] SavedReportsLibrary", err);
+    }
     setLoading(false);
   }, [useCloud]);
 
   useEffect(() => { refresh(); }, [refresh, refreshTrigger]);
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (useCloud) await deleteSavedReportCloud(id);
-    else await deleteSavedReportLocal(id);
-    setPackages((prev) => prev.filter((p) => p.id !== id));
-  }, [useCloud]);
+  const handleDelete = useCallback(async (pkg: SavedReportPackage) => {
+    if (useCloud) await deleteSavedReportCloud(pkg.id);
+    else await deleteSavedReportLocal(pkg.id);
+    setPackages((prev) => prev.filter((p) => p.id !== pkg.id));
+    if (org?.id) {
+      logAudit(org.id, "report.deleted", "report", pkg.id, { customerName: pkg.customerName }).catch(() => {});
+    }
+  }, [useCloud, org]);
 
   const toggleSort = useCallback((field: SortField) => {
     if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
@@ -176,7 +182,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
                 <span className="text-[10px] text-muted-foreground">{formatDate(pkg.createdAt)}</span>
                 <div className="flex items-center gap-1 justify-end">
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(pkg.id); }}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(pkg); }}
                     className="p-1 rounded text-muted-foreground hover:text-[#EA0022] transition-colors"
                     title="Delete"
                   >

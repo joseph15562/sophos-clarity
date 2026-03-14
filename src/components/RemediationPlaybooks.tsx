@@ -1,10 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronRight, Clock, CheckCircle2, Wrench } from "lucide-react";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { generatePlaybook, type Playbook } from "@/lib/remediation-playbooks";
+import { computeRiskScore } from "@/lib/risk-score";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
+}
+
+const STORAGE_PREFIX = "firecomply_remediation_";
+
+function simpleHash(str: string): string {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h = ((h << 5) - h + c) | 0;
+  }
+  return Math.abs(h).toString(36);
+}
+
+function getCustomerHash(analysisResults: Record<string, AnalysisResult>): string {
+  const ids: string[] = [];
+  for (const result of Object.values(analysisResults)) {
+    for (const f of result.findings) ids.push(f.id);
+  }
+  ids.sort();
+  return simpleHash(ids.join(","));
 }
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
@@ -21,6 +42,38 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [completed, setCompleted] = useState<Set<string>>(new Set());
 
+  const customerHash = useMemo(() => getCustomerHash(analysisResults), [analysisResults]);
+  const storageKey = `${STORAGE_PREFIX}${customerHash}`;
+
+  const skipNextSaveRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        if (Array.isArray(arr)) {
+          skipNextSaveRef.current = true;
+          setCompleted(new Set(arr));
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...completed]));
+    } catch {
+      // ignore quota errors
+    }
+  }, [storageKey, completed]);
+
   const playbooks: (Playbook & { fwLabel: string })[] = [];
   for (const [label, result] of Object.entries(analysisResults)) {
     for (const finding of result.findings) {
@@ -34,6 +87,18 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   if (playbooks.length === 0) return null;
 
   const totalMinutes = playbooks.filter((p) => !completed.has(p.findingId)).reduce((s, p) => s + p.estimatedMinutes, 0);
+
+  function getProjectedScore(pb: Playbook & { fwLabel: string }): { current: number; projected: number } | null {
+    const result = analysisResults[pb.fwLabel];
+    if (!result) return null;
+    const current = computeRiskScore(result).overall;
+    const modified: AnalysisResult = {
+      ...result,
+      findings: result.findings.filter((f) => f.id !== pb.findingId),
+    };
+    const projected = computeRiskScore(modified).overall;
+    return { current, projected };
+  }
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -96,6 +161,18 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {(() => {
+                    const proj = getProjectedScore(pb);
+                    if (proj && proj.projected > proj.current) {
+                      const diff = proj.projected - proj.current;
+                      return (
+                        <span className="text-[10px] font-medium text-[#00995a] dark:text-[#00F2B3]">
+                          Score: {proj.current} → {proj.projected} (+{diff})
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                     <Clock className="h-3 w-3" /> {pb.estimatedMinutes}m
                   </span>

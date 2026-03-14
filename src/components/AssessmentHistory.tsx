@@ -17,6 +17,7 @@ import {
 } from "@/lib/assessment-cloud";
 import { useAuth } from "@/hooks/use-auth";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import { toast } from "sonner";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -44,7 +45,7 @@ function ScoreTrendChart({ snapshots }: { snapshots: AssessmentSnapshot[] }) {
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-3">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Score Trend</p>
-      <svg width="100%" viewBox={`0 0 ${w} ${h + 14}`} className="text-muted-foreground">
+      <svg width="100%" viewBox={`0 0 ${w} ${h + 14}`} role="img" aria-label="Assessment score trend chart" className="text-muted-foreground">
         {[25, 50, 75].map((v) => (
           <line key={v} x1={pad} x2={w - pad} y1={h - pad - (v / maxV) * plotH} y2={h - pad - (v / maxV) * plotH} stroke="currentColor" strokeWidth="0.5" opacity="0.15" />
         ))}
@@ -79,7 +80,9 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
     try {
       const items = useCloud ? await loadHistoryCloud() : await loadHistory();
       setHistory(items);
-    } catch { /* storage not available */ }
+    } catch (err) {
+      console.warn("[refresh] AssessmentHistory", err);
+    }
   }, [useCloud]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -96,7 +99,10 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
       await refresh();
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2000);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.warn("[handleSave] AssessmentHistory", err);
+      if (useCloud) toast.error("Couldn't save assessment to cloud — try again or save locally");
+    }
     setSaving(false);
   };
 

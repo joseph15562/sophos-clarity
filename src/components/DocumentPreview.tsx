@@ -4,12 +4,20 @@ import { BrandingData } from "./BrandingSetup";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { mapToFramework, type FrameworkMapping } from "@/lib/compliance-map";
-import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp } from "lucide-react";
+import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Share2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { marked } from "marked";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
 import { saveAs } from "file-saver";
+import { generateShareToken, saveSharedReport } from "@/lib/share-report";
 import JSZip from "jszip";
 import PptxGenJS from "pptxgenjs";
 
@@ -32,7 +40,7 @@ type Props = {
   failedReportIds: Set<string>;
   onRetry: (reportId: string) => void;
   branding: BrandingData;
-  /** Rendered at the top when reports exist (e.g. Add Compliance Evidence Pack) */
+  /** Rendered at the top when reports exist (e.g. Add Compliance Report) */
   topActions?: ReactNode;
   /** Per-firewall analysis results for evidence verification sidebar */
   analysisResults?: Record<string, AnalysisResult>;
@@ -1188,6 +1196,52 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
   return null;
 }
 
+function ShareReportDialog({
+  open,
+  onOpenChange,
+  shareUrl,
+  expiresAt,
+  onCopy,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  shareUrl: string;
+  expiresAt: string;
+  onCopy: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+            Share Report
+          </DialogTitle>
+          <DialogDescription>
+            Anyone with this link can view the report. It expires on{" "}
+            {new Date(expiresAt).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+            .
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-3">
+          <input
+            readOnly
+            value={shareUrl}
+            className="flex-1 min-w-0 bg-transparent text-sm text-foreground outline-none"
+          />
+          <Button size="sm" variant="secondary" onClick={onCopy} className="gap-1.5 shrink-0">
+            <Copy className="h-3.5 w-3.5" /> Copy
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename, errorMessage, loadingStatus, reportId, analysisResults }: {
   markdown: string;
   isLoading: boolean;
@@ -1201,6 +1255,9 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   analysisResults?: Record<string, AnalysisResult>;
 }) {
   const docRef = useRef<HTMLDivElement>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareExpiresAt, setShareExpiresAt] = useState("");
 
   const html = useMemo(() => {
     if (!markdown) return "";
@@ -1231,6 +1288,30 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     saveAs(blob, wordFilename);
   };
 
+  const handleShare = () => {
+    const token = generateShareToken();
+    const report = saveSharedReport(token, markdown, branding.customerName || "Customer", 7);
+    const url = `${window.location.origin}/shared/${token}`;
+    setShareUrl(url);
+    setShareExpiresAt(report.expiresAt);
+    setShareOpen(true);
+  };
+
+  const handleCopyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      // Could add toast here if desired
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement("input");
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2 no-print">
@@ -1250,6 +1331,14 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
           </>
         )}
       </div>
+
+      <ShareReportDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareUrl={shareUrl}
+        expiresAt={shareExpiresAt}
+        onCopy={handleCopyShareUrl}
+      />
 
       {/* Enterprise document studio shell */}
       <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">

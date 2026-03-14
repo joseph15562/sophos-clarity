@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export type AuditAction =
   | "report.generated"
@@ -38,10 +39,10 @@ export async function logAudit(
       action,
       resource_type: resourceType,
       resource_id: resourceId,
-      metadata,
+      metadata: metadata as Json,
     });
-  } catch {
-    // Audit logging is best-effort — never block the main flow
+  } catch (err) {
+    console.warn("[logAudit]", err);
   }
 }
 

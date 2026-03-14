@@ -104,9 +104,10 @@ Rules
 - Reference specific firewalls by their label names
 - Do NOT reproduce every individual rule — summarise and highlight exceptions
 - Use Markdown tables for structured data
-- Level of detail must support compliance and audit`;
+- Level of detail must support compliance and audit
+- End every report with a "Limitations" section that states: this assessment covers firewall configuration only. It does not assess endpoint security, email security, identity management, cloud infrastructure, or physical security controls. Results are point-in-time and should be validated by a qualified security professional.`;
 
-const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity auditor producing an audit-ready Compliance Evidence Pack from firewall configuration data. This document must be formatted for direct inclusion as an appendix in compliance audits.
+const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity analyst producing a Compliance Readiness Report from firewall configuration data. This document provides an indicative assessment of firewall configuration controls against compliance frameworks. It should be used as supporting material alongside a full compliance audit — not as a substitute for one.
 
 When multiple firewalls are assessed, **security features (e.g. MFA, OTP, 2FA) must be enabled across all firewalls and in all relevant areas**. If any single firewall lacks a required security feature in any area, the report must show **⚠️ Partial** for that control and clearly state **which firewall** is lacking it and **what** is missing (e.g. "Firewall A — MFA not enabled for SSL-VPN"; "Firewall B — OTP disabled for Web Admin").
 
@@ -115,7 +116,7 @@ Output Format
 Write a structured Markdown document with these sections:
 
 1. Document Header
-- **Title**: "Compliance Evidence Pack — Firewall Configuration Audit"
+- **Title**: "Compliance Readiness Report — Firewall Configuration Assessment"
 - **Date**: Current assessment date
 - **Scope**: Firewalls assessed, environment type
 
@@ -278,9 +279,9 @@ serve(async (req) => {
       systemPrompt = basePrompt + complianceContext;
 
       if (compliance && firewallLabels && firewallLabels.length > 1) {
-        userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a comprehensive Compliance Evidence Pack covering all firewalls:\n\n${payload}`;
+        userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a comprehensive Compliance Readiness Report covering all firewalls:\n\n${payload}`;
       } else if (compliance) {
-        userMessage = `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Evidence Pack:\n\n${payload}`;
+        userMessage = `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Readiness Report:\n\n${payload}`;
       } else if (executive && firewallLabels) {
         userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
       } else {
@@ -329,7 +330,8 @@ serve(async (req) => {
         const errJson = JSON.parse(text);
         const detail = errJson.error?.message ?? errJson.message ?? errJson.error;
         if (typeof detail === "string") message = detail;
-      } catch {
+      } catch (parseErr) {
+        console.warn("[parse-config] Gemini error JSON parse", parseErr);
         if (text.length > 0 && text.length < 200) message = text;
       }
 

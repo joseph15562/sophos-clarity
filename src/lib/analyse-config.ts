@@ -53,6 +53,8 @@ export interface InspectionPosture {
   dpiEngineEnabled: boolean;
 }
 
+export type Confidence = "high" | "medium" | "low";
+
 export interface Finding {
   id: string;
   severity: Severity;
@@ -60,6 +62,8 @@ export interface Finding {
   detail: string;
   section: string;
   remediation?: string;
+  confidence?: Confidence;
+  evidence?: string;
 }
 
 export interface AtpStatus {
@@ -374,6 +378,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: "No firewall rules found",
       detail: "The parser did not extract any firewall rules from this configuration export.",
       section: "Firewall Rules",
+      confidence: "medium",
+      evidence: "No table matching 'firewall rules' section found in parsed HTML",
     });
     return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [], hostname: extractHostname(sections), atpStatus: extractAtpStatus(sections) };
   }
@@ -434,6 +440,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Disabled WAN-facing rules: ${disabledWanRules.map((r) => r.name).slice(0, 6).join(", ")}${disabledWanRules.length > 6 ? ` (+${disabledWanRules.length - 6} more)` : ""}. These rules provide no protection — verify if they should be re-enabled or removed.`,
       section: "Firewall Rules",
       remediation: "Go to Rules and policies > Firewall rules. Review disabled WAN rules — if no longer needed, delete them. If they should be active, re-enable them and configure web filtering, IPS, and app control.",
+      confidence: "high",
+      evidence: `Rules with Status=Off/Disabled and Destination Zone=WAN: ${disabledWanRules.map((r) => r.name).slice(0, 4).join(", ")}`,
     });
   }
 
@@ -447,6 +455,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
         title: `${totalDisabledRules} total rule${totalDisabledRules > 1 ? "s" : ""} disabled across all zones`,
         detail: `${totalDisabledRules} firewall rules are in disabled state (${disabledWanRules.length} WAN, ${nonWanDisabled} other). Disabled rules add no security value and may indicate abandoned policy or incomplete changes.`,
         section: "Firewall Rules",
+        confidence: "high",
+        evidence: `${totalDisabledRules} rules with Status=Off/Disabled in firewall rules table`,
       });
     }
   }
@@ -466,6 +476,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Active rules with Destination Zone WAN and Service HTTP/HTTPS/ANY have no Web Filter applied: ${wanNoFilter.slice(0, 8).join(", ")}${wanNoFilter.length > 8 ? ` (+${wanNoFilter.length - 8} more)` : ""}. This is a KCSIE/DfE compliance gap.`,
       section: "Firewall Rules",
       remediation: "Go to Rules and policies > Firewall rules. Edit each affected rule → expand Web filtering → set a Web policy. Manage policies under Web > Policies. Ensure the policy blocks inappropriate content for your environment.",
+      confidence: "high",
+      evidence: `Rules ${wanNoFilter.slice(0, 3).join(", ")} have Web Filter=none/empty with Service=HTTP/HTTPS/ANY`,
     });
   }
 
@@ -482,6 +494,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Logging is turned off on: ${loggingOff.slice(0, 8).join(", ")}${loggingOff.length > 8 ? ` (+${loggingOff.length - 8} more)` : ""}. Disabled logging creates gaps in audit trails and monitoring.`,
       section: "Firewall Rules",
       remediation: "Go to Rules and policies > Firewall rules. Edit each affected rule → tick 'Log firewall traffic' (near the top, below the Action setting). To send logs externally, configure System services > Log settings.",
+      confidence: "high",
+      evidence: `Rules ${loggingOff.slice(0, 3).join(", ")} have Log=disabled/off`,
     });
   }
 
@@ -498,6 +512,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Rules permitting all services: ${anySvc.slice(0, 8).join(", ")}${anySvc.length > 8 ? ` (+${anySvc.length - 8} more)` : ""}. Broad service rules increase attack surface — restrict to required protocols where possible.`,
       section: "Firewall Rules",
       remediation: "Review traffic logs via the Log viewer (upper-right corner) to identify which protocols are in use. Create specific service objects under Hosts and services > Services. Edit each rule to replace 'Any' with specific services.",
+      confidence: "high",
+      evidence: `Rules ${anySvc.slice(0, 3).join(", ")} have Service=ANY`,
     });
   }
 
@@ -514,6 +530,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Rules with both Source and Destination set to "Any" or blank: ${broadRules.slice(0, 6).join(", ")}${broadRules.length > 6 ? ` (+${broadRules.length - 6} more)` : ""}. Consider restricting to specific networks.`,
       section: "Firewall Rules",
       remediation: "Create specific IP host or IP host group objects under Hosts and services. Edit each broad rule under Rules and policies > Firewall rules to replace 'Any' source/destination with named network objects.",
+      confidence: "high",
+      evidence: `Rules ${broadRules.slice(0, 3).join(", ")} have Source=Any and Destination=Any`,
     });
   }
 
@@ -538,6 +556,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
         detail: `Multi-factor authentication is not enabled for: ${otpDisabled.join(", ")}. All admin and VPN access should require MFA.`,
         section: "Authentication & OTP",
         remediation: "Go to Authentication > Multi-factor authentication. Set One-time password to 'All users'. Select all services: Web admin console, User portal, VPN portal, SSL VPN, IPsec. Enable 'Generate OTP token with next sign-in'.",
+        confidence: "high",
+        evidence: `OTP/Auth section: ${otpDisabled.slice(0, 3).join(", ")} set to disabled/off`,
       });
     }
   }
@@ -563,6 +583,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Rules with identical source zone, source network, destination zone, destination network, and service: ${examples}${duplicateGroups.length > 3 ? ` (+${duplicateGroups.length - 3} more groups)` : ""}. Overlapping rules may cause shadowing or redundant processing.`,
       section: "Firewall Rules",
       remediation: "Go to Rules and policies > Firewall rules. Review overlapping rule groups and consolidate or delete duplicates. Sophos Firewall evaluates rules top-down — shadowed rules never fire. Use rule groups to organise.",
+      confidence: "high",
+      evidence: `Identical rule signatures: ${duplicateGroups.slice(0, 2).map((g) => g.join("/")).join("; ")}`,
     });
   }
 
@@ -580,6 +602,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Intrusion Prevention is not applied on active rules: ${wanNoIps.slice(0, 6).join(", ")}${wanNoIps.length > 6 ? ` (+${wanNoIps.length - 6} more)` : ""}. WAN-facing traffic should have IPS enabled to detect exploit attempts.`,
       section: "Intrusion Prevention",
       remediation: "Go to Intrusion prevention > IPS policies and ensure IPS protection is turned on. Create or select a policy. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Detect and prevent exploits (IPS)'.",
+      confidence: "high",
+      evidence: `Rules ${wanNoIps.slice(0, 3).join(", ")} have IPS=none/empty`,
     });
   }
 
@@ -597,6 +621,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Application Control is not enabled on active rules: ${wanNoApp.slice(0, 6).join(", ")}${wanNoApp.length > 6 ? ` (+${wanNoApp.length - 6} more)` : ""}. Application-layer visibility is limited without this feature.`,
       section: "Application Control",
       remediation: "Create an application filter policy under Applications > Application filter. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Identify and control applications (App control)'.",
+      confidence: "high",
+      evidence: `Rules ${wanNoApp.slice(0, 3).join(", ")} have Application Control=none/empty`,
     });
   }
 
@@ -609,6 +635,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: "No SSL/TLS inspection rules were found. On Sophos XGS, SSL/TLS inspection is the DPI engine — without it, the firewall cannot decrypt and inspect HTTPS traffic for threats, significantly reducing the effectiveness of web filtering, IPS, and application control on encrypted traffic.",
       section: "SSL/TLS Inspection",
       remediation: "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints. Add exclusion rules ('Don't decrypt') above for incompatible services.",
+      confidence: "medium",
+      evidence: "No SSL/TLS inspection rules section found in parsed config",
     });
   } else if (withSslInspection > 0 && sslDecryptRules === 0 && wanRules.length > 0) {
     findings.push({
@@ -618,6 +646,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `All ${withSslInspection} SSL/TLS inspection rules are exclusions ("Do not decrypt"). Without at least one Decrypt rule, no encrypted traffic is being inspected — web filtering, IPS, and application control cannot operate on HTTPS traffic.`,
       section: "SSL/TLS Inspection",
       remediation: "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic below the exclusion rules. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints.",
+      confidence: "medium",
+      evidence: `All ${withSslInspection} SSL/TLS rules have Action=Do-not-decrypt (no Decrypt rules)`,
     });
   }
 
@@ -631,6 +661,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       detail: `Firewall rules send traffic from ${zoneList} to WAN, but no SSL/TLS Decrypt rule covers ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}. Encrypted traffic from ${zoneList} bypasses DPI — web filtering, IPS, and app control cannot inspect it.`,
       section: "SSL/TLS Inspection",
       remediation: `Go to Rules and policies > SSL/TLS inspection rules. Add or update a Decrypt rule to include ${zoneList} as source zone${sslUncoveredZones.length > 1 ? "s" : ""}. Ensure the signing CA certificate is deployed to all endpoints in ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}.`,
+      confidence: "high",
+      evidence: `WAN rules from zones ${zoneList} have no matching SSL/TLS Decrypt rule`,
     });
   }
 
@@ -675,6 +707,8 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       title: `${emptySections.length} section${emptySections.length > 1 ? "s" : ""} extracted with no data`,
       detail: `These sections were found but contained no parseable data: ${emptySections.join(", ")}. This may indicate an unsupported export format or empty configuration areas.`,
       section: "Extraction",
+      confidence: "medium",
+      evidence: `Sections ${emptySections.slice(0, 5).join(", ")} have no tables/details/text`,
     });
   }
 
@@ -757,6 +791,8 @@ function analyseLocalServiceAcl(
         detail: `Management service${adminWan.length > 1 ? "s" : ""} (${adminWan.map((e) => e.service).join(", ")}) ${adminWan.length > 1 ? "are" : "is"} enabled on the WAN zone. This exposes the firewall admin interface to the internet, allowing brute-force and exploitation attempts.`,
         section: "Local Service ACL",
         remediation: "Go to Administration > Device access. Disable HTTPS/Admin access for the WAN zone. If remote admin access is required, use an IPsec or SSL VPN tunnel instead, or restrict to specific IP addresses using the ACL exception list.",
+        confidence: "high",
+        evidence: `HTTPS/Admin enabled on WAN zone in Local Service ACL: ${adminWan.map((e) => e.service).join(", ")}`,
       });
     }
     if (sshWan.length > 0) {
@@ -766,6 +802,8 @@ function analyseLocalServiceAcl(
         detail: `SSH is enabled on the WAN zone. This allows remote command-line access from the internet — a high-value target for attackers using credential stuffing and exploit attacks.`,
         section: "Local Service ACL",
         remediation: "Go to Administration > Device access. Disable SSH for the WAN zone. Use VPN for remote CLI access. If SSH must remain, restrict to specific IP addresses and ensure MFA is enabled.",
+        confidence: "high",
+        evidence: "SSH enabled on WAN zone in Local Service ACL",
       });
     }
     if (snmpExposed.length > 0) {
@@ -775,6 +813,8 @@ function analyseLocalServiceAcl(
         detail: `SNMP is enabled on ${snmpExposed.map((e) => e.zones).join(", ")}. SNMP (especially v1/v2c) leaks device information and can be used for reconnaissance. If v3 is not enforced, community strings are sent in cleartext.`,
         section: "Local Service ACL",
         remediation: "Go to Administration > Device access. Disable SNMP on untrusted zones. If monitoring is needed, use SNMPv3 with authentication and encryption, and restrict to management VLANs only.",
+        confidence: "high",
+        evidence: `SNMP enabled on ${snmpExposed.map((e) => e.zones).join(", ")} in Local Service ACL`,
       });
     }
 
@@ -788,6 +828,8 @@ function analyseLocalServiceAcl(
         detail: `Services exposed: ${otherExposed.map((e) => `${e.service} (${e.zones})`).join(", ")}. Minimise the attack surface by restricting management access to trusted zones only.`,
         section: "Local Service ACL",
         remediation: "Go to Administration > Device access. Review each service and disable access from untrusted zones (WAN, DMZ, Guest). Only LAN and dedicated management zones should have admin access.",
+        confidence: "high",
+        evidence: `Local Service ACL: ${otherExposed.slice(0, 3).map((e) => `${e.service}(${e.zones})`).join(", ")}`,
       });
     }
   }
@@ -834,6 +876,8 @@ function analyseNatRules(
       detail: `DNAT rules forward inbound traffic to internal servers: ${dnatRules.slice(0, 6).join(", ")}${dnatRules.length > 6 ? ` (+${dnatRules.length - 6} more)` : ""}. Each forwarded port is an entry point — ensure IPS, web filtering, and logging are enabled on the corresponding firewall rules.`,
       section: "NAT Rules",
       remediation: "Review each DNAT rule under Rules and policies > NAT rules. Ensure the matching firewall rule has IPS enabled to detect exploits against the exposed service. Consider restricting source IPs where possible (geo-IP or known partner ranges).",
+      confidence: "high",
+      evidence: `NAT rules: ${dnatRules.slice(0, 4).join(", ")} have Type=DNAT/port forward`,
     });
   }
   if (broadNat.length > 0) {
@@ -843,6 +887,8 @@ function analyseNatRules(
       detail: `NAT rules with overly broad scope: ${broadNat.slice(0, 6).join(", ")}${broadNat.length > 6 ? ` (+${broadNat.length - 6} more)` : ""}. Broad NAT rules can unintentionally expose services or masquerade traffic.`,
       section: "NAT Rules",
       remediation: "Go to Rules and policies > NAT rules. Restrict original source and destination to specific network objects rather than 'Any'. This reduces the blast radius if the rule is misconfigured.",
+      confidence: "high",
+      evidence: `NAT rules ${broadNat.slice(0, 3).join(", ")} have Original Source=Any, Dest=Any`,
     });
   }
 }
@@ -877,6 +923,8 @@ function analyseWebFilterPolicies(
       detail: `High-risk web categories are not blocked: ${riskyAllowed.slice(0, 6).join(", ")}${riskyAllowed.length > 6 ? ` (+${riskyAllowed.length - 6} more)` : ""}. Proxy/VPN categories can bypass security controls; malware categories should always be blocked.`,
       section: "Web Filter Policies",
       remediation: "Go to Web > Policies. Edit the active policy and set high-risk categories (Proxy/VPN, Anonymizers, P2P, Malware, Phishing) to 'Block'. Consider 'Warn' for grey-area categories like social media.",
+      confidence: "high",
+      evidence: `Web filter policy: ${riskyAllowed.slice(0, 4).join(", ")} set to Allow`,
     });
   }
 }
@@ -903,6 +951,8 @@ function analyseIpsPolicies(
           detail: `An IPS policy is configured with a default action of Allow/Permit. This means unclassified traffic bypasses IPS inspection. Consider setting the default action to Drop for WAN-facing rules.`,
           section: "IPS Policies",
           remediation: "Go to Intrusion prevention > IPS policies. Edit the policy and set the default action to 'Drop' for maximum protection. Review IPS alerts and add exceptions only for verified false positives.",
+          confidence: "high",
+          evidence: `IPS policy "${row["Name"] ?? row["Policy Name"] ?? "Unknown"}" has Action=Allow`,
         });
       }
     }
@@ -915,6 +965,8 @@ function analyseIpsPolicies(
       detail: "No IPS policies were found in the export. Without IPS policies, intrusion prevention cannot be applied to firewall rules even if the IPS feature is licensed.",
       section: "IPS Policies",
       remediation: "Go to Intrusion prevention > IPS policies. Create a policy using the default template (e.g. 'lantowan_general'). Then apply it to WAN-facing firewall rules.",
+      confidence: "medium",
+      evidence: "No IPS policies section found or section has 0 policy rows",
     });
   }
 }
@@ -957,6 +1009,8 @@ function analyseVirusScanning(
       detail: `Anti-malware scanning is not active for: ${disabledProtocols.join(", ")}. Malware can enter the network through unscanned traffic. HTTP scanning is especially critical as it catches drive-by downloads.`,
       section: "Virus Scanning",
       remediation: "Go to Protection > Web protection (for HTTP/HTTPS) or Email protection (for SMTP/POP3/IMAP). Enable malware scanning for each protocol. Ensure the Sophos anti-malware engine is selected and up to date.",
+      confidence: "high",
+      evidence: `Virus scanning section: ${disabledProtocols.slice(0, 4).join(", ")} = disabled`,
     });
   }
 
@@ -967,6 +1021,8 @@ function analyseVirusScanning(
       detail: "The Sophos Sandstorm (sandboxing) feature is available but not enabled. Without sandboxing, zero-day malware that evades signature-based detection will not be caught. This requires a valid Sophos Central / Sandstorm licence.",
       section: "Virus Scanning",
       remediation: "Go to Protection > Web protection > Enable Sophos Sandstorm analysis. This sends suspicious files to the cloud sandbox for detonation analysis. Requires an active Sandstorm licence.",
+      confidence: "medium",
+      evidence: "Virus scanning section: Sandbox setting present but not enabled",
     });
   }
 }
@@ -1006,6 +1062,8 @@ function analyseAdminSettings(
       detail: "Password complexity requirements are not enforced. Weak passwords increase brute-force risk.",
       section: "Admin Settings",
       remediation: "Go to Administration > Admin and user settings > Enable Password complexity check with minimum length 10+, alphabetic, numeric, and special characters.",
+      confidence: "high",
+      evidence: "Admin Settings: PasswordComplexityCheck not set to Enable",
     });
   }
 
@@ -1018,6 +1076,8 @@ function analyseAdminSettings(
       detail: "Login lockout after failed attempts is not enabled. Attackers can attempt unlimited password guesses.",
       section: "Admin Settings",
       remediation: "Go to Administration > Admin and user settings > Enable 'Block login' with a maximum of 5 unsuccessful attempts and a lockout duration.",
+      confidence: "high",
+      evidence: "Admin Settings: BlockLogin set to Disable",
     });
   }
 
@@ -1031,6 +1091,8 @@ function analyseAdminSettings(
       detail: "A login disclaimer provides a legal warning banner before authentication. Required by many compliance frameworks (CIS, ISO 27001).",
       section: "Admin Settings",
       remediation: "Go to Administration > Admin settings > Enable Login disclaimer and configure an appropriate legal notice.",
+      confidence: "high",
+      evidence: "Admin Settings: LoginDisclaimer set to Disable",
     });
   }
 }
@@ -1052,6 +1114,8 @@ function analyseBackupRestore(
       detail: "No scheduled backup configuration detected. Without regular backups, configuration recovery after failure is at risk.",
       section: "Backup & Restore",
       remediation: "Go to System services > Backup & firmware > Schedule automated backups (daily or weekly). Send to email or Sophos Central.",
+      confidence: "medium",
+      evidence: "Backup section: BackupFrequency not found or set to Never",
     });
   }
 }
@@ -1072,6 +1136,8 @@ function analyseNotificationSettings(
       detail: "No notification email server is configured. Security events and system alerts will not be sent to administrators.",
       section: "Notification Settings",
       remediation: "Go to Administration > Notification settings > Configure an SMTP server and recipient email for security alerts.",
+      confidence: "medium",
+      evidence: "Notification section: No NotificationServer/MailServer enabled or SMTP configured",
     });
   }
 }
@@ -1092,6 +1158,8 @@ function analysePatternDownload(
       detail: "Automatic pattern/signature downloads are disabled. IPS, AV, and application control signatures will become stale, reducing protection against new threats.",
       section: "Pattern Downloads",
       remediation: "Go to Administration > Updates > Enable automatic pattern updates. Set interval to at least every 2 hours.",
+      confidence: "high",
+      evidence: "PatternDownload section: AutoUpdate set to Disable",
     });
   }
 }
@@ -1113,6 +1181,8 @@ function analyseTimeSettings(
       detail: "No NTP time synchronisation is configured. Accurate time is essential for log correlation, certificate validation, and forensic analysis.",
       section: "Time Settings",
       remediation: "Go to Administration > Time > Enable NTP and select a predefined or custom NTP server.",
+      confidence: "high",
+      evidence: "Time section: PredefinedNTPServer/NTP set to Disable",
     });
   }
 }
@@ -1141,6 +1211,8 @@ function analyseAuthServers(
       detail: `The following auth servers use plain/unencrypted LDAP: ${unencrypted.join(", ")}. Credentials sent in cleartext can be intercepted.`,
       section: "Authentication Servers",
       remediation: "Go to Authentication > Servers > Change Connection Security to SSL (LDAPS port 636) or STARTTLS for each server.",
+      confidence: "high",
+      evidence: `Auth servers ${unencrypted.slice(0, 3).join(", ")} have ConnectionSecurity=simple/plain/none`,
     });
   }
 }
@@ -1161,6 +1233,8 @@ function analyseHotfix(
       detail: "Automatic hotfix installation is not enabled. Security patches between firmware updates address critical vulnerabilities and must be applied promptly.",
       section: "Hotfix Settings",
       remediation: "Go to Administration > Updates > Enable 'Allow automatic installation of hotfixes'. Sophos pushes critical security patches through this mechanism.",
+      confidence: "medium",
+      evidence: "Hotfix section: AllowAutoInstallOfHotFixes not enabled",
     });
   }
 }
@@ -1181,6 +1255,8 @@ function analyseSyncAppControl(
       detail: "Synchronized Application Control is not enabled. This feature uses Security Heartbeat data from endpoints to identify and classify unknown application traffic.",
       section: "Application Classification",
       remediation: "Go to Applications > Synchronized Application Control > Enable the feature. Requires Security Heartbeat and Sophos Endpoint.",
+      confidence: "medium",
+      evidence: "ApplicationClassification section: ACTION not set to Enable",
     });
   }
 }
@@ -1202,6 +1278,8 @@ function analyseATP(
       detail: "Advanced Threat Protection (Sophos X-Ops) is not enabled. ATP uses Sophos threat intelligence to detect and block communication with known command-and-control servers and malicious IPs.",
       section: "Active Threat Response",
       remediation: "Go to Active threat response > Sophos X-Ops threat feeds > Enable threat protection and set the action to 'Log and drop'.",
+      confidence: "high",
+      evidence: "ATP section: ThreatProtectionStatus set to Disable",
     });
   }
 
@@ -1214,6 +1292,8 @@ function analyseATP(
       detail: `The ATP/X-Ops policy is set to "${policy}". Sophos recommends "Log and Drop" to both block malicious traffic and create log entries for investigation.`,
       section: "Active Threat Response",
       remediation: "Go to Active threat response > Sophos X-Ops threat feeds > Set the Action to 'Log and drop'.",
+      confidence: "high",
+      evidence: `ATP section: Policy="${policy}" (recommended: Log and Drop)`,
     });
   }
 }
@@ -1229,6 +1309,8 @@ function analyseHA(
       detail: "No HA configuration section was found. This firewall appears to be running as a standalone device without active-passive or active-active failover.",
       section: "High Availability",
       remediation: "Consider deploying a secondary Sophos firewall in HA mode (active-passive or active-active) for hardware redundancy and business continuity.",
+      confidence: "medium",
+      evidence: "No HAConfigure/High Availability section found in config",
     });
     return;
   }
@@ -1247,6 +1329,8 @@ function analyseHA(
       title: `HA configured: ${mode}${nodeName ? ` (${nodeName})` : ""}`,
       detail: `High Availability is configured in ${mode} mode.${nodeName ? ` This node is "${nodeName}".` : ""}${clusterInfo}`,
       section: "High Availability",
+      confidence: "high",
+      evidence: `HA section: Device mode=${mode}${nodeName ? `, NodeName=${nodeName}` : ""}`,
     });
   }
 }

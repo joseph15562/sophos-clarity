@@ -437,7 +437,8 @@ serve(async (req) => {
           { "X-Tenant-ID": tenantId },
         );
         return json(data);
-      } catch {
+      } catch (err) {
+        console.warn("[sophos-central] MDR threat feed", err);
         return json({ items: [], note: "MDR threat feed not available for this tenant" });
       }
     }

@@ -25,7 +25,8 @@ function loadCompleted(): Set<string> {
     if (!raw) return new Set();
     const parsed = JSON.parse(raw);
     return new Set(parsed.completed ?? []);
-  } catch {
+  } catch (err) {
+    console.warn("[loadCompleted]", err);
     return new Set();
   }
 }
@@ -33,7 +34,9 @@ function loadCompleted(): Set<string> {
 function saveCompleted(completed: Set<string>, dismissed: boolean): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ completed: [...completed], dismissed }));
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.warn("[saveCompleted]", err);
+  }
 }
 
 function isDismissed(): boolean {
@@ -41,7 +44,8 @@ function isDismissed(): boolean {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
     return JSON.parse(raw).dismissed === true;
-  } catch {
+  } catch (err) {
+    console.warn("[isDismissed]", err);
     return false;
   }
 }

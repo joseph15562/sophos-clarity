@@ -92,7 +92,9 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
               : l.perpetual ? 9999 : 9999,
           }));
         }
-      } catch { /* licensing API may not be available for this tenant */ }
+      } catch (err) {
+        console.warn("[loadEnrichment] licensing API may not be available for tenant", err);
+      }
     }
 
     const results: LinkedFirewallData[] = [];
@@ -101,7 +103,7 @@ export function CentralEnrichment({ configMetas, customerName }: CentralEnrichme
       const tenantLinks = links.filter((l) => l.central_tenant_id === tenantId);
 
       let alerts: CentralAlert[] = [];
-      try { alerts = await getAlerts(orgId, tenantId); } catch { /* ignore */ }
+      try { alerts = await getAlerts(orgId, tenantId); } catch (err) { console.warn("[loadEnrichment] getAlerts", err); }
 
       for (const link of tenantLinks) {
         const config = configMetas.find((c) => c.configHash === link.config_hash);

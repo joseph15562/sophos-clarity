@@ -84,6 +84,14 @@ export type Database = {
           { foreignKeyName: "firewall_config_links_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
         ]
       }
+      audit_log: {
+        Row: { id: string; org_id: string; user_id: string | null; action: string; resource_type: string; resource_id: string; metadata: Json; created_at: string }
+        Insert: { id?: string; org_id: string; user_id?: string | null; action: string; resource_type?: string; resource_id?: string; metadata?: Json; created_at?: string }
+        Update: { id?: string; org_id?: string; user_id?: string | null; action?: string; resource_type?: string; resource_id?: string; metadata?: Json; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "audit_log_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

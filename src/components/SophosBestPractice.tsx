@@ -39,6 +39,7 @@ const STATUS_CONFIG: Record<CheckStatus, { icon: typeof CheckCircle2; color: str
   fail: { icon: XCircle, color: "text-red-400", bg: "bg-red-500/10", label: "Fail" },
   warn: { icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-500/10", label: "Verify" },
   na: { icon: MinusCircle, color: "text-muted-foreground/50", bg: "bg-muted/30", label: "N/A" },
+  unknown: { icon: AlertTriangle, color: "text-muted-foreground", bg: "bg-muted/20", label: "Unknown" },
 };
 
 const GRADE_COLORS: Record<string, string> = {
@@ -56,7 +57,7 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
   const color = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
 
   return (
-    <svg width="120" height="120" viewBox="0 0 120 120">
+    <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label={`Best practice score: ${score}, grade ${grade}`}>
       <circle cx="60" cy="60" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
       <circle
         cx="60" cy="60" r={r} fill="none" stroke={color} strokeWidth="6"
@@ -75,7 +76,9 @@ function loadOverrides(): Set<string> {
   try {
     const raw = localStorage.getItem(OVERRIDES_KEY);
     if (raw) return new Set(JSON.parse(raw) as string[]);
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.warn("[loadOverrides]", err);
+  }
   return new Set();
 }
 
@@ -127,7 +130,9 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
           .eq("org_id", orgId)
           .limit(1);
         if (!cancelled && data && data.length > 0) setCentralLinked(true);
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.warn("[SophosBestPractice] getCentralStatus", err);
+      }
     })();
     return () => { cancelled = true; };
   }, [orgId, isGuest]);

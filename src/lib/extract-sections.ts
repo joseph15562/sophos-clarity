@@ -482,71 +482,103 @@ function extractSectionContent(doc: Document, htmlId: string): SectionData | nul
  * Parse the full Sophos Config Viewer HTML in the browser and extract
  * all section data into a compact JSON structure.
  */
+const SOPHOS_MARKERS = [
+  "data-section-key",
+  "section-content-firewall-rules",
+  "sophos-table",
+  "Sophos Firewall",
+];
+
+function isSophosConfigHtml(html: string): boolean {
+  return SOPHOS_MARKERS.some((marker) => html.includes(marker));
+}
+
 export function extractSections(html: string): ExtractedSections {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
+  if (!html || typeof html !== "string" || html.length < 50) {
+    console.warn("[extractSections] Input too short or invalid, returning empty");
+    return {};
+  }
 
-  const sections: ExtractedSections = {};
+  if (!isSophosConfigHtml(html)) {
+    console.warn("[extractSections] Input does not appear to be a Sophos config export");
+    return {};
+  }
 
-  // Use the sidebar checkboxes to discover available sections
-  const checkboxes = doc.querySelectorAll("input[data-section-key]");
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
 
-  checkboxes.forEach((cb) => {
-    const sectionKey = cb.getAttribute("data-section-key");
-    if (!sectionKey) return;
+    const sections: ExtractedSections = {};
 
-    // Get display name from parent element's data-section-name or label
-    const parent = cb.closest("[data-section-name]");
-    const displayName = parent?.getAttribute("data-section-name") ?? sectionKey;
+    const checkboxes = doc.querySelectorAll("input[data-section-key]");
 
-    const mappedId = SECTION_ID_MAP[sectionKey];
-    let data: SectionData | null = null;
+    checkboxes.forEach((cb) => {
+      const sectionKey = cb.getAttribute("data-section-key");
+      if (!sectionKey) return;
 
-    if (mappedId) {
-      data = extractSectionContent(doc, mappedId);
+      const parent = cb.closest("[data-section-name]");
+      const displayName = parent?.getAttribute("data-section-name") ?? sectionKey;
+
+      const mappedId = SECTION_ID_MAP[sectionKey];
+      let data: SectionData | null = null;
+
+      try {
+        if (mappedId) {
+          data = extractSectionContent(doc, mappedId);
+        }
+        if (!data) {
+          data = extractSectionContent(doc, sectionKey);
+        }
+        if (!data) {
+          data = extractSectionContent(doc, `additional-${sectionKey}`);
+        }
+      } catch (err) {
+        console.warn(`[extractSections] Failed to extract section "${sectionKey}":`, err);
+      }
+
+      if (data) {
+        const readableName = displayName === sectionKey
+          ? sectionKey.replace(/([A-Z])/g, " $1").trim()
+          : displayName;
+        sections[readableName] = data;
+      }
+    });
+
+    for (const [key, htmlId] of Object.entries(SECTION_ID_MAP)) {
+      const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const alreadyFound = Object.keys(sections).some(
+        (name) => normalise(name) === normalise(key)
+      );
+      if (alreadyFound) continue;
+
+      try {
+        const data = extractSectionContent(doc, htmlId);
+        if (data) {
+          const name = key.replace(/([A-Z])/g, " $1").trim();
+          sections[name] = data;
+        }
+      } catch (err) {
+        console.warn(`[extractSections] Failed fallback extraction for "${key}":`, err);
+      }
     }
-    if (!data) {
-      data = extractSectionContent(doc, sectionKey);
-    }
-    if (!data) {
-      data = extractSectionContent(doc, `additional-${sectionKey}`);
-    }
 
-    if (data) {
-      const readableName = displayName === sectionKey
-        ? sectionKey.replace(/([A-Z])/g, " $1").trim()
-        : displayName;
-      sections[readableName] = data;
-    }
-  });
-
-  // Also try direct ID lookup for any sections we might have missed
-  for (const [key, htmlId] of Object.entries(SECTION_ID_MAP)) {
-    // Check if we already got this from sidebar
-    const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const alreadyFound = Object.keys(sections).some(
-      (name) => normalise(name) === normalise(key)
+    const hasOtp = Object.keys(sections).some((name) =>
+      /otpsettings|otp settings/i.test(name.replace(/\s+/g, ""))
     );
-    if (alreadyFound) continue;
-
-    const data = extractSectionContent(doc, htmlId);
-    if (data) {
-      // Use the key as name, add spaces before capitals
-      const name = key.replace(/([A-Z])/g, " $1").trim();
-      sections[name] = data;
+    if (!hasOtp) {
+      try {
+        const otpData = extractSectionContent(doc, "additional-OTPSettings");
+        if (otpData) {
+          sections["Authentication & OTP Settings"] = otpData;
+        }
+      } catch (err) {
+        console.warn("[extractSections] OTP extraction failed:", err);
+      }
     }
-  }
 
-  // Ensure OTP section is present when HTML has it (section-content-additional-OTPSettings)
-  const hasOtp = Object.keys(sections).some((name) =>
-    /otpsettings|otp settings/i.test(name.replace(/\s+/g, ""))
-  );
-  if (!hasOtp) {
-    const otpData = extractSectionContent(doc, "additional-OTPSettings");
-    if (otpData) {
-      sections["Authentication & OTP Settings"] = otpData;
-    }
+    return sections;
+  } catch (err) {
+    console.error("[extractSections] Fatal parsing error:", err);
+    return {};
   }
-
-  return sections;
 }

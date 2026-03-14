@@ -148,7 +148,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
 
       {/* SVG Chart */}
       <div className="relative w-full max-w-lg mx-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ aspectRatio: "1/1", maxHeight: 400 }} onMouseLeave={() => setHoveredDot(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Finding priority matrix chart" className="w-full" style={{ aspectRatio: "1/1", maxHeight: 400 }} onMouseLeave={() => setHoveredDot(null)}>
           {/* Quadrant backgrounds — highlight active */}
           <rect x={PAD} y={PAD} width={(W - 2 * PAD) / 2} height={(H - 2 * PAD) / 2} fill="currentColor" className="text-[#F29400]/[0.04]" opacity={!activeQuadrant || activeQuadrant === "strategic" ? 1 : 0.3} />
           <rect x={PAD + (W - 2 * PAD) / 2} y={PAD} width={(W - 2 * PAD) / 2} height={(H - 2 * PAD) / 2} fill="currentColor" className="text-muted/30" opacity={!activeQuadrant || activeQuadrant === "thankless" ? 1 : 0.3} />

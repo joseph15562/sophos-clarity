@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { UserPlus, Trash2, AlertCircle, CheckCircle2, Shield, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { logAudit } from "@/lib/audit";
 
 interface Invite {
   id: string;
@@ -87,6 +88,9 @@ export function InviteStaff() {
       setEmail("");
       loadData();
       setTimeout(() => setSuccess(null), 4000);
+      if (org?.id) {
+        logAudit(org.id, "team.invited", "org_invite", "", { email: email.trim().toLowerCase() }).catch(() => {});
+      }
     }
   }, [email, org, loadData]);
 
@@ -95,10 +99,13 @@ export function InviteStaff() {
     loadData();
   }, [loadData]);
 
-  const removeMember = useCallback(async (id: string) => {
-    await supabase.from("org_members").delete().eq("id", id);
+  const removeMember = useCallback(async (id: string, memberEmail?: string) => {
+    const { error } = await supabase.from("org_members").delete().eq("id", id);
+    if (!error && org?.id) {
+      logAudit(org.id, "team.removed", "org_member", id, { email: memberEmail }).catch(() => {});
+    }
     loadData();
-  }, [loadData]);
+  }, [loadData, org]);
 
   if (role !== "admin") {
     return (
@@ -160,7 +167,7 @@ export function InviteStaff() {
                 </span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{m.role}</span>
                 {m.role !== "admin" && !m.isYou && (
-                  <button onClick={() => removeMember(m.id)} className="text-muted-foreground hover:text-[#EA0022] transition-colors" title="Remove member">
+                  <button onClick={() => removeMember(m.id, m.email)} className="text-muted-foreground hover:text-[#EA0022] transition-colors" title="Remove member">
                     <Trash2 className="h-3 w-3" />
                   </button>
                 )}

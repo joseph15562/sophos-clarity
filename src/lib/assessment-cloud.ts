@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import type { AnalysisResult } from "./analyse-config";
 import { computeRiskScore } from "./risk-score";
 import type { AssessmentSnapshot } from "./assessment-history";
@@ -31,7 +32,7 @@ export async function saveAssessmentCloud(
       created_by: user.user.id,
       customer_name: customerName || "Unnamed",
       environment: environment || "Unknown",
-      firewalls: firewalls as unknown as Record<string, unknown>,
+      firewalls: firewalls as unknown as Json,
       overall_score: overallScore,
       overall_grade: overallGrade,
     })

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import type { AnalysisResult } from "./analyse-config";
 import { computeRiskScore } from "./risk-score";
 
@@ -74,8 +75,8 @@ export async function saveReportCloud(
       customer_name: customerName || "Unnamed",
       environment: environment || "",
       report_type: reportType,
-      reports: reports as unknown as Record<string, unknown>,
-      analysis_summary: analysisSummary as unknown as Record<string, unknown>,
+      reports: reports as unknown as Json,
+      analysis_summary: analysisSummary as unknown as Json,
     })
     .select("id, created_at")
     .single();

@@ -16,16 +16,42 @@ const RISK_COLORS: Record<string, { bg: string; border: string; text: string; fi
 export function AttackSurfaceMap({ files }: Props) {
   const [open, setOpen] = useState(false);
 
-  const allServices = useMemo(() => {
-    const result: Array<ExposedService & { firewall: string }> = [];
+  const { allServices, newExposureCount } = useMemo(() => {
+    const result: Array<ExposedService & { firewall: string; isNew?: boolean }> = [];
+    const servicesByFile: ExposedService[][] = [];
+
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
       const services = extractAttackSurface(f.extractedData);
+      servicesByFile.push(services);
       for (const s of services) {
         result.push({ ...s, firewall: label });
       }
     }
-    return result.sort((a, b) => riskOrder(a.risk) - riskOrder(b.risk));
+
+    let newExposureCount = 0;
+    if (files.length >= 2) {
+      const newestServices = servicesByFile[servicesByFile.length - 1];
+      const olderKeys = new Set<string>();
+      for (let i = 0; i < servicesByFile.length - 1; i++) {
+        for (const s of servicesByFile[i]) {
+          olderKeys.add(exposureKey(s));
+        }
+      }
+      const newestLabel = files[files.length - 1].label || files[files.length - 1].fileName.replace(/\.(html|htm)$/i, "");
+      for (const s of newestServices) {
+        if (!olderKeys.has(exposureKey(s))) {
+          newExposureCount++;
+          const idx = result.findIndex((r) => r.firewall === newestLabel && exposureKey(r) === exposureKey(s));
+          if (idx >= 0) result[idx].isNew = true;
+        }
+      }
+    }
+
+    return {
+      allServices: result.sort((a, b) => riskOrder(a.risk) - riskOrder(b.risk)),
+      newExposureCount,
+    };
   }, [files]);
 
   if (allServices.length === 0) return null;
@@ -59,6 +85,11 @@ export function AttackSurfaceMap({ files }: Props) {
 
       {open && (
         <div className="px-5 pb-5 border-t border-border">
+          {newExposureCount > 0 && (
+            <div className="mt-4 mb-2 px-3 py-2 rounded-lg bg-[#EA0022]/10 border border-[#EA0022]/30 text-[#EA0022] text-sm font-medium">
+              {newExposureCount} new exposure{newExposureCount !== 1 ? "s" : ""} detected since previous config
+            </div>
+          )}
           {/* Visual map */}
           <div className="py-4">
             <div className="flex items-center gap-4 flex-wrap justify-center">
@@ -131,10 +162,18 @@ export function AttackSurfaceMap({ files }: Props) {
               <tbody>
                 {allServices.map((s, i) => {
                   const c = RISK_COLORS[s.risk];
+                  const svc = s as ExposedService & { firewall: string; isNew?: boolean };
                   return (
                     <tr key={i} className="border-b border-border/50 hover:bg-muted/20">
                       <td className="py-1.5 px-2"><span className={`font-bold uppercase ${c.text}`}>{s.risk}</span></td>
-                      <td className="py-1.5 px-2 font-medium text-foreground">{s.ruleName}</td>
+                      <td className="py-1.5 px-2 font-medium text-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          {s.ruleName}
+                          {svc.isNew && (
+                            <span className="text-[8px] font-bold bg-[#EA0022] text-white px-1.5 py-0.5 rounded">NEW</span>
+                          )}
+                        </span>
+                      </td>
                       <td className="py-1.5 px-2 text-muted-foreground">{s.service}</td>
                       <td className="py-1.5 px-2 text-muted-foreground">{s.destination}</td>
                       <td className="py-1.5 px-2">{s.hasIps ? "✓" : <span className="text-[#EA0022]">✗</span>}</td>

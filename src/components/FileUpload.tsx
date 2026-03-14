@@ -124,7 +124,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               onLinked={(link) => onFirewallLinked?.(f.id, link)}
             />
           </div>
-          <Button variant="ghost" size="icon" onClick={() => removeFile(f.id)} className="shrink-0 opacity-50 hover:opacity-100 self-start">
+          <Button variant="ghost" size="icon" aria-label="Remove file" onClick={() => removeFile(f.id)} className="shrink-0 opacity-50 hover:opacity-100 self-start">
             <X className="h-4 w-4" />
           </Button>
         </div>
