@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Building2, TrendingUp, TrendingDown, Minus, AlertTriangle, Shield, ChevronDown, ChevronRight, Search, ArrowUpDown, Cloud, HardDrive, Grid3X3 } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, Minus, AlertTriangle, Shield, ChevronDown, ChevronRight, Search, ArrowUpDown, Cloud, HardDrive, Grid3X3, Plug } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,6 +22,16 @@ function gradeColor(grade: string): string {
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 interface CustomerSummary {
@@ -66,9 +77,25 @@ export function TenantDashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [fleetOverviewExpanded, setFleetOverviewExpanded] = useState(false);
+  const [agentCustomers, setAgentCustomers] = useState<Map<string, { lastSeen: string | null; status: string }>>(new Map());
 
   useEffect(() => {
     (useCloud ? loadHistoryCloud() : loadHistory()).then(setHistory);
+  }, [useCloud]);
+
+  useEffect(() => {
+    if (!useCloud) return;
+    supabase
+      .from("agents")
+      .select("customer_name, last_seen_at, status")
+      .then(({ data }) => {
+        if (!data) return;
+        const map = new Map<string, { lastSeen: string | null; status: string }>();
+        for (const a of data) {
+          map.set(a.customer_name, { lastSeen: a.last_seen_at, status: a.status });
+        }
+        setAgentCustomers(map);
+      });
   }, [useCloud]);
 
   const customers = useMemo(() => {
@@ -263,13 +290,23 @@ export function TenantDashboard() {
                   <span className="text-sm font-bold" style={{ color: sparkColor }}>{c.latestSnapshot.overallScore}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
+                    {agentCustomers.has(c.name) && (
+                      <span className="flex items-center gap-0.5 text-[8px] px-1 py-0.5 rounded bg-[#6B5BFF]/10 text-[#6B5BFF] shrink-0" title={`Agent: ${agentCustomers.get(c.name)?.status}`}>
+                        <Plug className="h-2 w-2" /> Agent
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[9px] text-muted-foreground truncate">
                     {c.latestSnapshot.firewalls.length} firewall{c.latestSnapshot.firewalls.length !== 1 ? "s" : ""} · Grade {c.latestSnapshot.overallGrade}
                     {c.scoreTrend !== 0 && (
                       <span className={c.scoreTrend > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
                         {" "}({c.scoreTrend > 0 ? "+" : ""}{c.scoreTrend})
                       </span>
+                    )}
+                    {agentCustomers.has(c.name) && agentCustomers.get(c.name)?.lastSeen && (
+                      <span className="text-[#6B5BFF]"> · Agent synced {timeAgo(new Date(agentCustomers.get(c.name)!.lastSeen!).getTime())}</span>
                     )}
                   </p>
                 </div>

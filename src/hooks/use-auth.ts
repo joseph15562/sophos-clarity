@@ -16,11 +16,13 @@ export interface AuthState {
   isGuest: boolean;
   isLoading: boolean;
   needsOrg: boolean;
+  needsMfa: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   createOrg: (name: string) => Promise<{ error: string | null }>;
   refreshOrg: () => Promise<void>;
+  clearMfaRequired: () => void;
 }
 
 async function fetchOrgMembership(userId: string): Promise<{ org: OrgInfo; role: "admin" | "member" } | null> {
@@ -48,6 +50,7 @@ export function useAuthProvider(): AuthState {
   const [org, setOrg] = useState<OrgInfo | null>(null);
   const [role, setRole] = useState<"admin" | "member" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [needsMfa, setNeedsMfa] = useState(false);
 
   const loadOrg = useCallback(async (uid: string) => {
     const membership = await fetchOrgMembership(uid);
@@ -63,14 +66,26 @@ export function useAuthProvider(): AuthState {
   }, []);
 
   useEffect(() => {
+    let loadingTimeout: ReturnType<typeof setTimeout> | undefined;
+
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        loadOrg(s.user.id).finally(() => setIsLoading(false));
+        loadOrg(s.user.id).finally(() => {
+          clearTimeout(loadingTimeout);
+          setIsLoading(false);
+        });
+        loadingTimeout = setTimeout(() => {
+          console.warn("[useAuth] loadOrg timed out after 10s — forcing isLoading=false");
+          setIsLoading(false);
+        }, 10_000);
       } else {
         setIsLoading(false);
       }
+    }).catch((err) => {
+      console.warn("[useAuth] getSession failed", err);
+      setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
@@ -81,6 +96,8 @@ export function useAuthProvider(): AuthState {
           if (event === "SIGNED_IN" && membership) {
             logAudit(membership.org.id, "auth.login", "", "", { email: s?.user?.email ?? undefined }).catch(() => {});
           }
+        }).catch((err) => {
+          console.warn("[useAuth] loadOrg in onAuthStateChange failed", err);
         });
       } else {
         setOrg(null);
@@ -88,12 +105,27 @@ export function useAuthProvider(): AuthState {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, [loadOrg]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+
+    // Check if MFA is required
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal && aal.currentLevel === "aal1" && aal.nextLevel === "aal2") {
+      setNeedsMfa(true);
+    }
+
+    return { error: null };
+  }, []);
+
+  const clearMfaRequired = useCallback(() => {
+    setNeedsMfa(false);
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
@@ -133,9 +165,9 @@ export function useAuthProvider(): AuthState {
   const needsOrg = !!user && !org && !isLoading;
 
   return useMemo(() => ({
-    user, session, org, role, isGuest, isLoading, needsOrg,
-    signIn, signUp, signOut, createOrg, refreshOrg,
-  }), [user, session, org, role, isGuest, isLoading, needsOrg, signIn, signUp, signOut, createOrg, refreshOrg]);
+    user, session, org, role, isGuest, isLoading, needsOrg, needsMfa,
+    signIn, signUp, signOut, createOrg, refreshOrg, clearMfaRequired,
+  }), [user, session, org, role, isGuest, isLoading, needsOrg, needsMfa, signIn, signUp, signOut, createOrg, refreshOrg, clearMfaRequired]);
 }
 
 const AuthContext = createContext<AuthState | null>(null);

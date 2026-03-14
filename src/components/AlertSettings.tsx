@@ -15,6 +15,8 @@ const EVENT_LABELS: Record<AlertEventType, string> = {
   score_drop: "Risk score drop",
   new_critical_finding: "New critical finding",
   central_disconnected: "Central disconnected",
+  agent_drift_detected: "Agent drift detected",
+  agent_offline: "Agent offline",
 };
 
 function generateId(): string {

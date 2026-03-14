@@ -15,10 +15,171 @@ export type Database = {
   public: {
     Tables: {
       organisations: {
-        Row: { id: string; name: string; created_at: string }
-        Insert: { id?: string; name: string; created_at?: string }
-        Update: { id?: string; name?: string; created_at?: string }
+        Row: { id: string; name: string; submission_retention_days: number; mfa_required: boolean; created_at: string }
+        Insert: { id?: string; name: string; submission_retention_days?: number; mfa_required?: boolean; created_at?: string }
+        Update: { id?: string; name?: string; submission_retention_days?: number; mfa_required?: boolean; created_at?: string }
         Relationships: []
+      }
+      passkey_credentials: {
+        Row: {
+          id: string
+          user_id: string
+          credential_id: string
+          public_key: string
+          counter: number
+          device_type: string
+          transports: string[]
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          credential_id: string
+          public_key: string
+          counter?: number
+          device_type?: string
+          transports?: string[]
+          name?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          credential_id?: string
+          public_key?: string
+          counter?: number
+          device_type?: string
+          transports?: string[]
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      agents: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          api_key_hash: string
+          api_key_prefix: string
+          tenant_id: string | null
+          tenant_name: string | null
+          firewall_host: string
+          firewall_port: number
+          customer_name: string
+          environment: string
+          schedule_cron: string
+          firmware_version: string | null
+          firmware_version_override: string | null
+          serial_number: string | null
+          hardware_model: string | null
+          last_seen_at: string | null
+          last_score: number | null
+          last_grade: string | null
+          status: string
+          error_message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          api_key_hash: string
+          api_key_prefix: string
+          tenant_id?: string | null
+          tenant_name?: string | null
+          firewall_host: string
+          firewall_port?: number
+          customer_name?: string
+          environment?: string
+          schedule_cron?: string
+          firmware_version?: string | null
+          firmware_version_override?: string | null
+          serial_number?: string | null
+          hardware_model?: string | null
+          last_seen_at?: string | null
+          last_score?: number | null
+          last_grade?: string | null
+          status?: string
+          error_message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          name?: string
+          api_key_hash?: string
+          api_key_prefix?: string
+          tenant_id?: string | null
+          tenant_name?: string | null
+          firewall_host?: string
+          firewall_port?: number
+          customer_name?: string
+          environment?: string
+          schedule_cron?: string
+          firmware_version?: string | null
+          firmware_version_override?: string | null
+          serial_number?: string | null
+          hardware_model?: string | null
+          last_seen_at?: string | null
+          last_score?: number | null
+          last_grade?: string | null
+          status?: string
+          error_message?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "agents_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      agent_submissions: {
+        Row: {
+          id: string
+          agent_id: string
+          org_id: string
+          customer_name: string
+          overall_score: number
+          overall_grade: string
+          firewalls: Json
+          findings_summary: Json
+          finding_titles: string[]
+          threat_status: Json | null
+          drift: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          org_id: string
+          customer_name?: string
+          overall_score?: number
+          overall_grade?: string
+          firewalls?: Json
+          findings_summary?: Json
+          finding_titles?: string[]
+          threat_status?: Json | null
+          drift?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          org_id?: string
+          customer_name?: string
+          overall_score?: number
+          overall_grade?: string
+          firewalls?: Json
+          findings_summary?: Json
+          finding_titles?: string[]
+          threat_status?: Json | null
+          drift?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "agent_submissions_agent_id_fkey"; columns: ["agent_id"]; referencedRelation: "agents"; referencedColumns: ["id"] },
+          { foreignKeyName: "agent_submissions_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
       }
       org_members: {
         Row: { id: string; org_id: string; user_id: string; role: string; joined_at: string }
@@ -99,6 +260,7 @@ export type Database = {
     Functions: {
       user_org_id: { Args: Record<string, never>; Returns: string }
       create_organisation: { Args: { org_name: string }; Returns: Json }
+      cleanup_expired_submissions: { Args: Record<string, never>; Returns: number }
     }
     Enums: {
       [_ in never]: never

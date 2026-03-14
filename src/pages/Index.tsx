@@ -76,6 +76,16 @@ function InnerApp() {
   const [savingReports, setSavingReports] = useState(false);
   const [reportsSaved, setReportsSaved] = useState(false);
   const [savedReportsTrigger, setSavedReportsTrigger] = useState(0);
+  const [viewingReports, setViewingReports] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [localMode, setLocalModeState] = useState(() => isLocalMode());
+  const [saveError, setSaveError] = useState("");
+  const [loadedSavedSummary, setLoadedSavedSummary] = useState<{ customerName: string; summary: AnalysisSummary } | null>(null);
+  const [centralEnriched, setCentralEnriched] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
+  const [analysisTab, setAnalysisTab] = useState("overview");
+  const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -161,7 +171,6 @@ function InnerApp() {
   }, [files, reports.length, setReports, setActiveReportId, org?.id]);
 
   // Enrich files with Sophos Central live data when firewalls are linked
-  const [centralEnriched, setCentralEnriched] = useState(false);
   const fileIds = useMemo(() => files.map((f) => f.id).join(","), [files]);
 
   useEffect(() => { setCentralEnriched(false); }, [fileIds]);
@@ -251,8 +260,6 @@ function InnerApp() {
     return () => { cancelled = true; };
   }, [org?.id, isGuest, files.length, centralEnriched, localMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [saveError, setSaveError] = useState("");
-
   const handleSaveReports = useCallback(async (includeReports: boolean) => {
     if (Object.keys(analysisResults).length === 0) return;
     setSavingReports(true);
@@ -292,8 +299,6 @@ function InnerApp() {
     setSavingReports(false);
   }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment]);
 
-  const [loadedSavedSummary, setLoadedSavedSummary] = useState<{ customerName: string; summary: AnalysisSummary } | null>(null);
-
   const handleLoadSavedReports = useCallback((args: LoadSavedReportArgs) => {
     const { reports: savedReports, customerName, environment, analysisSummary } = args;
     if (savedReports.length > 0) {
@@ -318,18 +323,10 @@ function InnerApp() {
     clearSession();
   }, [setReports, setActiveReportId]);
 
-  const [viewingReports, setViewingReports] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [localMode, setLocalModeState] = useState(() => isLocalMode());
-
   const handleLocalModeChange = useCallback((enabled: boolean) => {
     setLocalMode(enabled);
     setLocalModeState(enabled);
   }, []);
-  const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
-  const [analysisTab, setAnalysisTab] = useState("overview");
-  const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
@@ -1106,8 +1103,10 @@ const Index = () => {
   if (auth.isLoading) {
     return (
       <AuthProvider value={auth}>
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <span className="animate-spin h-6 w-6 border-2 border-[#2006F7]/30 border-t-[#2006F7] rounded-full" />
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+          <img src="/sophos-icon-white.svg" alt="Sophos" className="h-10 w-10 opacity-60" />
+          <span className="animate-spin h-8 w-8 border-[3px] border-white/20 border-t-[#2006F7] rounded-full" />
+          <p className="text-sm text-muted-foreground animate-pulse">Loading…</p>
         </div>
       </AuthProvider>
     );
@@ -1153,7 +1152,9 @@ const Index = () => {
 
   return (
     <AuthProvider value={auth}>
-      <InnerApp />
+      <ErrorBoundary fallbackTitle="Application failed to load">
+        <InnerApp />
+      </ErrorBoundary>
     </AuthProvider>
   );
 };

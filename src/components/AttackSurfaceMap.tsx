@@ -13,6 +13,10 @@ const RISK_COLORS: Record<string, { bg: string; border: string; text: string; fi
   low: { bg: "bg-[#00995a]/10", border: "border-[#00995a]/30", text: "text-[#00995a] dark:text-[#00F2B3]", fill: "#00995a" },
 };
 
+function exposureKey(s: ExposedService): string {
+  return `${s.destination}|${s.service}|${s.port}`;
+}
+
 export function AttackSurfaceMap({ files }: Props) {
   const [open, setOpen] = useState(false);
 

@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, BookOpen, ExternalLink, Plane } from "lucide-react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, BookOpen, ExternalLink, Plane, Plug, Fingerprint } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,9 @@ const CentralIntegration = lazy(() => import("@/components/CentralIntegration").
 const InviteStaff = lazy(() => import("@/components/InviteStaff").then((m) => ({ default: m.InviteStaff })));
 const AuditLog = lazy(() => import("@/components/AuditLog").then((m) => ({ default: m.AuditLog })));
 const AlertSettings = lazy(() => import("@/components/AlertSettings").then((m) => ({ default: m.AlertSettings })));
+const AgentManager = lazy(() => import("@/components/AgentManager").then((m) => ({ default: m.AgentManager })));
+const MfaEnrollment = lazy(() => import("@/components/MfaEnrollment").then((m) => ({ default: m.MfaEnrollment })));
+const PasskeyManager = lazy(() => import("@/components/PasskeyManager").then((m) => ({ default: m.PasskeyManager })));
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -332,10 +335,29 @@ export function ManagementDrawer({
                 </div>
               </SettingsSection>
               )}
+              {!localMode && (
+              <SettingsSection title="FireComply Connector Agents" icon={<Plug className="h-3.5 w-3.5 text-[#6B5BFF]" />} subtitle="Automated firewall monitoring agents">
+                <div className="p-4">
+                  <Suspense fallback={<Skeleton />}>
+                    <AgentManager />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              )}
               <SettingsSection title="Team Management" icon={<Users className="h-3.5 w-3.5 text-[#2006F7]" />} subtitle="Invite and manage team members">
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
                     <InviteStaff />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              <SettingsSection title="Security" icon={<Fingerprint className="h-3.5 w-3.5 text-[#00995a]" />} subtitle="MFA and passkey settings">
+                <div className="p-4 space-y-6">
+                  <Suspense fallback={<Skeleton />}>
+                    <MfaEnrollment />
+                  </Suspense>
+                  <Suspense fallback={<Skeleton />}>
+                    <PasskeyManager />
                   </Suspense>
                 </div>
               </SettingsSection>

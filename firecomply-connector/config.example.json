@@ -1,0 +1,19 @@
+{
+  "firecomplyApiUrl": "https://xxxx.supabase.co/functions/v1",
+  "agentApiKey": "ck_xxxxxxxxxxxxxxxxxxxxxxxx",
+  "firewalls": [
+    {
+      "label": "HQ Primary",
+      "host": "192.168.1.1",
+      "port": 4444,
+      "username": "api-reader",
+      "password": "securepassword",
+      "skipSslVerify": true,
+      "versionOverride": null
+    }
+  ],
+  "schedule": "0 2 * * *",
+  "proxy": null,
+  "logFile": "./firecomply-connector.log",
+  "logLevel": "info"
+}

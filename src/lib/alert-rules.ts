@@ -10,7 +10,9 @@ export type AlertEventType =
   | "licence_expiry_warning"
   | "score_drop"
   | "new_critical_finding"
-  | "central_disconnected";
+  | "central_disconnected"
+  | "agent_drift_detected"
+  | "agent_offline";
 
 export interface AlertRule {
   id: string;
@@ -52,10 +54,10 @@ export function loadAlertRules(): AlertRule[] {
 }
 
 export interface AlertCheckContext {
-  /** Licence expiry: any licence expiring within 30 days */
   licenceExpiringSoon?: boolean;
-  /** Central connection status */
   centralConnected?: boolean;
+  agentDriftDetected?: boolean;
+  agentOffline?: boolean;
 }
 
 /**
@@ -96,6 +98,14 @@ export function checkAlertConditions(
 
   if (context?.centralConnected === false) {
     triggered.push("central_disconnected");
+  }
+
+  if (context?.agentDriftDetected === true) {
+    triggered.push("agent_drift_detected");
+  }
+
+  if (context?.agentOffline === true) {
+    triggered.push("agent_offline");
   }
 
   return triggered;
