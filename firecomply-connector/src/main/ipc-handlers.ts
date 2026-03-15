@@ -1,5 +1,6 @@
 import { app, ipcMain } from "electron";
 import { login, getDeviceInfo } from "../firewall/auth";
+import { testSnmpConnection } from "../firewall/snmp";
 import { detectCapabilities } from "../firewall/version";
 import { loadConfig, saveConfig, validateConfig, type AppConfig } from "../config";
 import { getLogBuffer, onLog } from "../logger";
@@ -69,6 +70,14 @@ export function registerIpcHandlers(
           hasThirdPartyFeeds: caps.hasThirdPartyFeeds,
         },
       };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle("snmp:test", async (_event, host: string, community: string) => {
+    try {
+      return await testSnmpConnection(host, community);
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }

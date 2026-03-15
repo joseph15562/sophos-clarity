@@ -28,6 +28,8 @@ export function SettingsPage() {
   const [firewalls, setFirewalls] = useState<FirewallEntry[]>([]);
   const [editingFw, setEditingFw] = useState<number | null>(null);
   const [testing, setTesting] = useState<number | null>(null);
+  const [testingSnmp, setTestingSnmp] = useState<number | null>(null);
+  const [snmpResult, setSnmpResult] = useState<{ idx: number; ok: boolean; detail: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState("1.0.0");
@@ -87,6 +89,36 @@ export function SettingsPage() {
       toast.error("Connection failed");
     }
     setTesting(null);
+  };
+
+  const testSnmp = async (idx: number) => {
+    const fw = firewalls[idx];
+    if (!fw.host || !fw.snmpCommunity) {
+      toast.error("Enter a host and SNMP community string first");
+      return;
+    }
+    setTestingSnmp(idx);
+    setSnmpResult(null);
+    try {
+      const result = await window.electronAPI?.testSnmp(fw.host, fw.snmpCommunity);
+      if (result?.ok) {
+        const parts = [];
+        if (result.serialNumber) parts.push(`SN: ${result.serialNumber}`);
+        if (result.model) parts.push(`Model: ${result.model}`);
+        if (result.hostname) parts.push(`Host: ${result.hostname}`);
+        if (result.firmwareVersion) parts.push(`FW: ${result.firmwareVersion}`);
+        toast.success(`SNMP OK — ${parts.join(" · ") || "Connected"}`);
+        setSnmpResult({ idx, ok: true, detail: parts.join("\n") || "Connected but no Sophos OIDs returned" });
+      } else {
+        toast.error(result?.error ?? "SNMP test failed");
+        setSnmpResult({ idx, ok: false, detail: result?.error ?? "Unknown error" });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "SNMP test failed";
+      toast.error(msg);
+      setSnmpResult({ idx, ok: false, detail: msg });
+    }
+    setTestingSnmp(null);
   };
 
   const saveAll = async () => {
@@ -182,7 +214,14 @@ export function SettingsPage() {
                       disabled={!fw.host || !fw.username || testing === idx}
                       className="text-xs px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 disabled:opacity-50"
                     >
-                      {testing === idx ? "Testing…" : "Test Connection"}
+                      {testing === idx ? "Testing…" : "Test API"}
+                    </button>
+                    <button
+                      onClick={() => testSnmp(idx)}
+                      disabled={!fw.host || !fw.snmpCommunity || testingSnmp === idx}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 disabled:opacity-50"
+                    >
+                      {testingSnmp === idx ? "Testing…" : "Test SNMP"}
                     </button>
                     <button
                       onClick={() => removeFirewall(idx)}
@@ -191,6 +230,13 @@ export function SettingsPage() {
                       Remove
                     </button>
                   </div>
+
+                  {snmpResult && snmpResult.idx === idx && (
+                    <div className={`rounded-lg px-3 py-2 text-xs ${snmpResult.ok ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-400"}`}>
+                      <p className="font-medium">{snmpResult.ok ? "✓ SNMP Connected" : "✗ SNMP Failed"}</p>
+                      <p className="whitespace-pre-wrap mt-1 text-[10px] opacity-80">{snmpResult.detail}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
