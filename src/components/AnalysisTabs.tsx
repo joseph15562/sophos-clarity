@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useEffect } from "react";
+import { lazy, Suspense, useRef, useEffect, useState } from "react";
 import { ArrowLeftRight, Download, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,9 @@ import { EstateOverview } from "@/components/EstateOverview";
 import { FindingsChanges } from "@/components/FindingsChanges";
 import { PriorityActions } from "@/components/PriorityActions";
 import { SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
+import { WidgetCustomiser } from "@/components/WidgetCustomiser";
 import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
+import { loadWidgetPreferences, isWidgetVisible, type WidgetPreferences } from "@/lib/widget-preferences";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { InspectionPosture } from "@/lib/analyse-config";
 import type { BrandingData } from "@/components/BrandingSetup";
@@ -75,7 +77,6 @@ const RemediationProgress = lazy(() => import("@/components/RemediationProgress"
 const ThreatFeedTimeline = lazy(() => import("@/components/ThreatFeedTimeline").then((m) => ({ default: m.ThreatFeedTimeline })));
 const MdrStatus = lazy(() => import("@/components/MdrStatus").then((m) => ({ default: m.MdrStatus })));
 const FirmwareTracker = lazy(() => import("@/components/FirmwareTracker").then((m) => ({ default: m.FirmwareTracker })));
-const CustomFrameworkBuilder = lazy(() => import("@/components/CustomFrameworkBuilder").then((m) => ({ default: m.CustomFrameworkBuilder })));
 const EvidenceCollection = lazy(() => import("@/components/EvidenceCollection").then((m) => ({ default: m.EvidenceCollection })));
 const ComplianceCalendar = lazy(() => import("@/components/ComplianceCalendar").then((m) => ({ default: m.ComplianceCalendar })));
 const AttestationWorkflow = lazy(() => import("@/components/AttestationWorkflow").then((m) => ({ default: m.AttestationWorkflow })));
@@ -143,6 +144,8 @@ export function AnalysisTabs({
   onExplainFinding,
 }: AnalysisTabsProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
+  const w = (id: string) => isWidgetVisible(widgetPrefs, id);
 
   useEffect(() => {
     const t = setTimeout(() => panelRef.current?.focus(), 0);
@@ -194,31 +197,40 @@ export function AnalysisTabs({
         </div>
       </div>
 
-      <div className="mt-3 px-1">
+      <div className="mt-3 px-1 flex items-start justify-between gap-4">
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           FireComply provides automated security analysis based on firewall configuration data. Results should be validated by a qualified security professional. Compliance mappings are indicative and do not constitute a formal audit.
         </p>
+        <WidgetCustomiser tab={activeTab} prefs={widgetPrefs} onChange={setWidgetPrefs} />
       </div>
 
       <div ref={panelRef} tabIndex={-1} aria-live="polite" className="outline-none">
       {/* Overview */}
       <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Overview failed to load">
-          <Suspense fallback={null}>
-            <ScoreDeltaBanner analysisResults={analysisResult} />
-          </Suspense>
+          {w("score-delta-banner") && (
+            <Suspense fallback={null}>
+              <ScoreDeltaBanner analysisResults={analysisResult} />
+            </Suspense>
+          )}
 
-          <Suspense fallback={<ChartSkeleton height={200} />}>
-            <ScoreDialGauge analysisResults={analysisResult} />
-          </Suspense>
+          {w("score-dial-gauge") && (
+            <Suspense fallback={<ChartSkeleton height={200} />}>
+              <ScoreDialGauge analysisResults={analysisResult} />
+            </Suspense>
+          )}
 
-          <Suspense fallback={<StatGridSkeleton count={6} />}>
-            <RiskSummaryCards analysisResults={analysisResult} />
-          </Suspense>
+          {w("risk-summary-cards") && (
+            <Suspense fallback={<StatGridSkeleton count={6} />}>
+              <RiskSummaryCards analysisResults={analysisResult} />
+            </Suspense>
+          )}
 
-          <Suspense fallback={null}>
-            <QuickActions onNavigate={setActiveTab} />
-          </Suspense>
+          {w("quick-actions") && (
+            <Suspense fallback={null}>
+              <QuickActions onNavigate={setActiveTab} />
+            </Suspense>
+          )}
 
           {totalFindings > 0 && (
             <div className="flex flex-wrap items-center gap-2">
@@ -247,29 +259,41 @@ export function AnalysisTabs({
           )}
           <FindingsChanges analysisResults={analysisResult} />
 
-          {totalFindings > 0 && (
+          {totalFindings > 0 && (w("findings-by-age") || w("sla-compliance-gauge")) && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <Suspense fallback={<ChartSkeleton />}>
-                <FindingsByAge analysisResults={analysisResult} />
-              </Suspense>
-              <Suspense fallback={<ChartSkeleton />}>
-                <SlaComplianceGauge analysisResults={analysisResult} />
-              </Suspense>
+              {w("findings-by-age") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <FindingsByAge analysisResults={analysisResult} />
+                </Suspense>
+              )}
+              {w("sla-compliance-gauge") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <SlaComplianceGauge analysisResults={analysisResult} />
+                </Suspense>
+              )}
             </div>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<ChartSkeleton />}>
-              <RemediationVelocity analysisResults={analysisResult} />
-            </Suspense>
-            <Suspense fallback={<CardSkeleton />}>
-              <AlertFeedWidget analysisResults={analysisResult} />
-            </Suspense>
-          </div>
+          {(w("remediation-velocity") || w("alert-feed")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("remediation-velocity") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <RemediationVelocity analysisResults={analysisResult} />
+                </Suspense>
+              )}
+              {w("alert-feed") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <AlertFeedWidget analysisResults={analysisResult} />
+                </Suspense>
+              )}
+            </div>
+          )}
 
-          <Suspense fallback={null}>
-            <AssessmentCountdown />
-          </Suspense>
+          {w("assessment-countdown") && (
+            <Suspense fallback={null}>
+              <AssessmentCountdown />
+            </Suspense>
+          )}
 
           <EstateOverview
             fileCount={files.length}
@@ -292,14 +316,20 @@ export function AnalysisTabs({
             </Suspense>
           )}
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<CardSkeleton />}>
-              <MdrStatus analysisResults={analysisResult} files={files} />
-            </Suspense>
-            <Suspense fallback={<CardSkeleton />}>
-              <FirmwareTracker files={files} />
-            </Suspense>
-          </div>
+          {(w("mdr-status") || w("firmware-tracker")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("mdr-status") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <MdrStatus analysisResults={analysisResult} files={files} />
+                </Suspense>
+              )}
+              {w("firmware-tracker") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <FirmwareTracker files={files} />
+                </Suspense>
+              )}
+            </div>
+          )}
         </ErrorBoundary>
       </TabsContent>
 
@@ -430,61 +460,95 @@ export function AnalysisTabs({
             </Suspense>
           )}
 
-          <Suspense fallback={<CardSkeleton />}>
-            <CategoryScoreBars analysisResults={analysisResult} />
-          </Suspense>
-
-          <Suspense fallback={<CardSkeleton />}>
-            <CoverageMatrix analysisResults={analysisResult} />
-          </Suspense>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<ChartSkeleton />}>
-              <CategoryTrends analysisResults={analysisResult} />
-            </Suspense>
-            <Suspense fallback={<ChartSkeleton />}>
-              <RiskDistributionWidget analysisResults={analysisResult} />
-            </Suspense>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<ChartSkeleton />}>
-              <EncryptionOverview analysisResults={analysisResult} files={files} />
-            </Suspense>
+          {w("category-score-bars") && (
             <Suspense fallback={<CardSkeleton />}>
-              <AdminExposureMap analysisResults={analysisResult} files={files} />
+              <CategoryScoreBars analysisResults={analysisResult} />
             </Suspense>
-          </div>
+          )}
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          {w("coverage-matrix") && (
             <Suspense fallback={<CardSkeleton />}>
-              <VpnSecuritySummary files={files} />
+              <CoverageMatrix analysisResults={analysisResult} />
             </Suspense>
+          )}
+
+          {(w("category-trends") || w("risk-distribution")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("category-trends") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <CategoryTrends analysisResults={analysisResult} />
+                </Suspense>
+              )}
+              {w("risk-distribution") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <RiskDistributionWidget analysisResults={analysisResult} />
+                </Suspense>
+              )}
+            </div>
+          )}
+
+          {(w("encryption-overview") || w("admin-exposure-map")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("encryption-overview") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <EncryptionOverview analysisResults={analysisResult} files={files} />
+                </Suspense>
+              )}
+              {w("admin-exposure-map") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <AdminExposureMap analysisResults={analysisResult} files={files} />
+                </Suspense>
+              )}
+            </div>
+          )}
+
+          {(w("vpn-security-summary") || w("network-zone-map")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("vpn-security-summary") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <VpnSecuritySummary files={files} />
+                </Suspense>
+              )}
+              {w("network-zone-map") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <NetworkZoneMap files={files} />
+                </Suspense>
+              )}
+            </div>
+          )}
+
+          {(w("protocol-distribution") || w("service-usage")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("protocol-distribution") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <ProtocolDistribution files={files} />
+                </Suspense>
+              )}
+              {w("service-usage") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <ServiceUsageWidget files={files} />
+                </Suspense>
+              )}
+            </div>
+          )}
+
+          {w("rule-action-dist") && (
             <Suspense fallback={<ChartSkeleton />}>
-              <NetworkZoneMap files={files} />
+              <RuleActionDistribution files={files} />
             </Suspense>
-          </div>
+          )}
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          {w("finding-heatmap-time") && (
             <Suspense fallback={<ChartSkeleton />}>
-              <ProtocolDistribution files={files} />
+              <FindingHeatmapTime analysisResults={analysisResult} />
             </Suspense>
-            <Suspense fallback={<ChartSkeleton />}>
-              <ServiceUsageWidget files={files} />
+          )}
+
+          {w("threat-feed-timeline") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <ThreatFeedTimeline files={files} />
             </Suspense>
-          </div>
-
-          <Suspense fallback={<ChartSkeleton />}>
-            <RuleActionDistribution files={files} />
-          </Suspense>
-
-          <Suspense fallback={<ChartSkeleton />}>
-            <FindingHeatmapTime analysisResults={analysisResult} />
-          </Suspense>
-
-          <Suspense fallback={<CardSkeleton />}>
-            <ThreatFeedTimeline files={files} />
-          </Suspense>
+          )}
         </ErrorBoundary>
       </TabsContent>
 
@@ -524,46 +588,62 @@ export function AnalysisTabs({
             <InsuranceReadiness analysisResults={analysisResult} />
           </Suspense>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<ChartSkeleton />}>
-              <CompliancePostureRing analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-            </Suspense>
-            <Suspense fallback={<ChartSkeleton />}>
-              <FrameworkCoverageBars analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-            </Suspense>
-          </div>
+          {(w("compliance-posture-ring") || w("framework-coverage-bars")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("compliance-posture-ring") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <CompliancePostureRing analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+                </Suspense>
+              )}
+              {w("framework-coverage-bars") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <FrameworkCoverageBars analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+                </Suspense>
+              )}
+            </div>
+          )}
 
-          <Suspense fallback={<CardSkeleton />}>
-            <ComplianceGapAnalysis analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-          </Suspense>
-
-          <Suspense fallback={<CardSkeleton />}>
-            <ControlFindingMap analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-          </Suspense>
-
-          <Suspense fallback={<CardSkeleton />}>
-            <CustomFrameworkBuilder />
-          </Suspense>
-
-          <Suspense fallback={<CardSkeleton />}>
-            <EvidenceCollection
-              analysisResults={analysisResult}
-              selectedFrameworks={branding.selectedFrameworks}
-            />
-          </Suspense>
-
-          <div className="grid gap-6 lg:grid-cols-2">
+          {w("compliance-gap-analysis") && (
             <Suspense fallback={<CardSkeleton />}>
-              <ComplianceCalendar files={files} />
+              <ComplianceGapAnalysis analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
             </Suspense>
-            <Suspense fallback={<CardSkeleton />}>
-              <AttestationWorkflow frameworks={branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined} />
-            </Suspense>
-          </div>
+          )}
 
-          <Suspense fallback={<CardSkeleton />}>
-            <RegulatoryTracker />
-          </Suspense>
+          {w("control-finding-map") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <ControlFindingMap analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+            </Suspense>
+          )}
+
+          {w("evidence-collection") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <EvidenceCollection
+                analysisResults={analysisResult}
+                selectedFrameworks={branding.selectedFrameworks}
+              />
+            </Suspense>
+          )}
+
+          {(w("compliance-calendar") || w("attestation-workflow")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("compliance-calendar") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <ComplianceCalendar files={files} />
+                </Suspense>
+              )}
+              {w("attestation-workflow") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <AttestationWorkflow frameworks={branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined} />
+                </Suspense>
+              )}
+            </div>
+          )}
+
+          {w("regulatory-tracker") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <RegulatoryTracker />
+            </Suspense>
+          )}
         </ErrorBoundary>
       </TabsContent>
 
@@ -573,25 +653,39 @@ export function AnalysisTabs({
           <Suspense fallback={<SectionSkeleton />}>
             <RuleOptimiser files={files} />
           </Suspense>
-          <div className="grid gap-6 lg:grid-cols-2">
+          {(w("policy-complexity") || w("config-size-metrics")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("policy-complexity") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <PolicyComplexity analysisResults={analysisResult} files={files} />
+                </Suspense>
+              )}
+              {w("config-size-metrics") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
+                </Suspense>
+              )}
+            </div>
+          )}
+          {(w("unused-objects") || w("rule-consolidation")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("unused-objects") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <UnusedObjects files={files} />
+                </Suspense>
+              )}
+              {w("rule-consolidation") && (
+                <Suspense fallback={<CardSkeleton />}>
+                  <RuleConsolidation files={files} />
+                </Suspense>
+              )}
+            </div>
+          )}
+          {w("rule-overlap-vis") && (
             <Suspense fallback={<CardSkeleton />}>
-              <PolicyComplexity analysisResults={analysisResult} files={files} />
+              <RuleOverlapVis files={files} />
             </Suspense>
-            <Suspense fallback={<CardSkeleton />}>
-              <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
-            </Suspense>
-          </div>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<CardSkeleton />}>
-              <UnusedObjects files={files} />
-            </Suspense>
-            <Suspense fallback={<CardSkeleton />}>
-              <RuleConsolidation files={files} />
-            </Suspense>
-          </div>
-          <Suspense fallback={<CardSkeleton />}>
-            <RuleOverlapVis files={files} />
-          </Suspense>
+          )}
           {files.length >= 2 && (
             <Suspense fallback={null}>
               <ConsistencyChecker analysisResults={analysisResult} />
@@ -617,57 +711,73 @@ export function AnalysisTabs({
             <AttackSurfaceMap files={files} />
           </Suspense>
 
-          {totalFindings > 0 && (
+          {totalFindings > 0 && w("what-if-comparison") && (
             <Suspense fallback={<CardSkeleton />}>
               <WhatIfComparison analysisResults={analysisResult} />
             </Suspense>
           )}
 
-          {totalFindings > 0 && (
+          {totalFindings > 0 && w("cost-of-risk-estimator") && (
             <Suspense fallback={<CardSkeleton />}>
               <CostOfRiskEstimator analysisResults={analysisResult} />
             </Suspense>
           )}
 
-          {totalFindings > 0 && (
+          {totalFindings > 0 && w("security-roi-calculator") && (
             <Suspense fallback={<ChartSkeleton />}>
               <SecurityRoiCalculator analysisResults={analysisResult} />
             </Suspense>
           )}
 
-          <Suspense fallback={<CardSkeleton />}>
-            <ExportCentre analysisResults={analysisResult} branding={{ customerName: branding.customerName, selectedFrameworks: branding.selectedFrameworks }} />
-          </Suspense>
+          {w("export-centre") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <ExportCentre analysisResults={analysisResult} branding={{ customerName: branding.customerName, selectedFrameworks: branding.selectedFrameworks }} />
+            </Suspense>
+          )}
 
-          <Suspense fallback={<CardSkeleton />}>
-            <GeographicFleetMap files={files} />
-          </Suspense>
+          {w("geographic-fleet-map") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <GeographicFleetMap files={files} />
+            </Suspense>
+          )}
 
-          <Suspense fallback={<CardSkeleton />}>
-            <BaselineManager analysisResults={analysisResult} />
-          </Suspense>
+          {w("baseline-manager") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <BaselineManager analysisResults={analysisResult} />
+            </Suspense>
+          )}
         </ErrorBoundary>
       </TabsContent>
 
       {/* Remediation */}
       <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Remediation view failed to load">
-          <Suspense fallback={<CardSkeleton />}>
-            <RemediationProgress analysisResults={analysisResult} />
-          </Suspense>
-
-          <Suspense fallback={<ChartSkeleton />}>
-            <RemediationRoadmap analysisResults={analysisResult} />
-          </Suspense>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<ChartSkeleton />}>
-              <FixEffortBreakdown analysisResults={analysisResult} />
+          {w("remediation-progress") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <RemediationProgress analysisResults={analysisResult} />
             </Suspense>
+          )}
+
+          {w("remediation-roadmap") && (
             <Suspense fallback={<ChartSkeleton />}>
-              <ImpactEffortBubble analysisResults={analysisResult} />
+              <RemediationRoadmap analysisResults={analysisResult} />
             </Suspense>
-          </div>
+          )}
+
+          {(w("fix-effort-breakdown") || w("impact-effort-bubble")) && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {w("fix-effort-breakdown") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <FixEffortBreakdown analysisResults={analysisResult} />
+                </Suspense>
+              )}
+              {w("impact-effort-bubble") && (
+                <Suspense fallback={<ChartSkeleton />}>
+                  <ImpactEffortBubble analysisResults={analysisResult} />
+                </Suspense>
+              )}
+            </div>
+          )}
 
           <Suspense fallback={null}>
             <RemediationPlaybooks analysisResults={analysisResult} />

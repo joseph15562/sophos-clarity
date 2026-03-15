@@ -148,6 +148,19 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
 
   const customerHash = useMemo(() => getCustomerHash(analysisResults), [analysisResults]);
 
+  const playbooks = useMemo(() => {
+    const list: (Playbook & { fwLabel: string; findingSection: string; findingTitle: string; hostname: string })[] = [];
+    for (const [label, result] of Object.entries(analysisResults)) {
+      const hostname = result.hostname ?? label;
+      for (const finding of result.findings) {
+        const pb = generatePlaybook(finding);
+        if (pb) list.push({ ...pb, fwLabel: label, findingSection: finding.section, findingTitle: finding.title, hostname });
+      }
+    }
+    list.sort((a, b) => SEVERITY_ORDER[a.severity as Severity] - SEVERITY_ORDER[b.severity as Severity]);
+    return list;
+  }, [analysisResults]);
+
   useEffect(() => {
     const el = selectAllRef.current;
     if (el) el.indeterminate = checkedIds.size > 0 && checkedIds.size < playbooks.length;
@@ -226,19 +239,6 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
         .in("playbook_id", removed);
     }
   }, [customerHash]);
-
-  const playbooks = useMemo(() => {
-    const list: (Playbook & { fwLabel: string; findingSection: string; findingTitle: string; hostname: string })[] = [];
-    for (const [label, result] of Object.entries(analysisResults)) {
-      const hostname = result.hostname ?? label;
-      for (const finding of result.findings) {
-        const pb = generatePlaybook(finding);
-        if (pb) list.push({ ...pb, fwLabel: label, findingSection: finding.section, findingTitle: finding.title, hostname });
-      }
-    }
-    list.sort((a, b) => SEVERITY_ORDER[a.severity as Severity] - SEVERITY_ORDER[b.severity as Severity]);
-    return list;
-  }, [analysisResults]);
 
   // Load first-detected timestamps for SLA tracking
   useEffect(() => {

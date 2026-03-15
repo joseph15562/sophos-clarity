@@ -95,10 +95,7 @@ export function ProtocolDistribution({ files }: Props) {
 
     const total = treemapData.reduce((sum, d) => sum + d.value, 0);
 
-    // Recharts Treemap expects root with children
-    const data = { name: "root", children: treemapData };
-
-    return { data, total };
+    return { data: treemapData, total };
   }, [files]);
 
   if (data.length === 0) {

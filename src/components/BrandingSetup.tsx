@@ -144,7 +144,7 @@ export type BrandingData = {
 
 type Props = {
   branding: BrandingData;
-  onChange: (b: BrandingData) => void;
+  onChange: React.Dispatch<React.SetStateAction<BrandingData>>;
 };
 
 export function BrandingSetup({ branding, onChange }: Props) {
@@ -158,11 +158,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
   // Auto-fill company name from org when logged in
   useEffect(() => {
-    if (!isGuest && org && branding.companyName !== org.name) {
-      onChange({ ...branding, companyName: org.name });
+    if (!isGuest && org) {
+      onChange((prev) => prev.companyName === org.name ? prev : { ...prev, companyName: org.name });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGuest, org]);
+  }, [isGuest, org, onChange]);
 
   // Load known customers from history + saved reports + Central tenants
   useEffect(() => {
@@ -210,10 +209,9 @@ export function BrandingSetup({ branding, onChange }: Props) {
     if (userTouchedFrameworks.current) return;
     if (branding.environment || branding.country) {
       const defaults = getDefaultFrameworks(branding.environment, branding.country);
-      onChange({ ...branding, selectedFrameworks: defaults });
+      onChange((prev) => ({ ...prev, selectedFrameworks: defaults }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branding.environment, branding.country]);
+  }, [branding.environment, branding.country, onChange]);
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

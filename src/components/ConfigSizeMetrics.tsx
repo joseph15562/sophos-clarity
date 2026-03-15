@@ -81,10 +81,7 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
       rows: totalRows,
       objects: totalObjects,
       complexity,
-      treemapData: {
-        name: "root",
-        children: sectionRows.sort((a, b) => b.value - a.value),
-      },
+      treemapData: sectionRows.sort((a, b) => b.value - a.value),
     };
   }, [analysisResults, files]);
 
@@ -111,7 +108,7 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
         </div>
       </div>
 
-      {treemapData.children.length > 0 && (
+      {treemapData.length > 0 && (
         <div style={{ height: 200 }}>
           <ResponsiveContainer width="100%" height="100%">
             <Treemap

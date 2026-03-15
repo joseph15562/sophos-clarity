@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint, Code, Eye } from "lucide-react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ const AgentManager = lazy(() => import("@/components/AgentManager").then((m) => 
 const MfaEnrollment = lazy(() => import("@/components/MfaEnrollment").then((m) => ({ default: m.MfaEnrollment })));
 const PasskeyManager = lazy(() => import("@/components/PasskeyManager").then((m) => ({ default: m.PasskeyManager })));
 const ScoreTrendChart = lazy(() => import("@/components/ScoreTrendChart").then((m) => ({ default: m.ScoreTrendChart })));
+const CustomFrameworkBuilder = lazy(() => import("@/components/CustomFrameworkBuilder").then((m) => ({ default: m.CustomFrameworkBuilder })));
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -493,6 +494,13 @@ export function ManagementDrawer({
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
                     <AlertSettings />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              <SettingsSection title="Custom Compliance Frameworks" icon={<ClipboardCheck className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Create and manage custom compliance frameworks">
+                <div className="p-4">
+                  <Suspense fallback={<Skeleton />}>
+                    <CustomFrameworkBuilder />
                   </Suspense>
                 </div>
               </SettingsSection>
