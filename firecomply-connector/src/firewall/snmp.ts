@@ -67,6 +67,22 @@ export async function testSnmpConnection(
 ): Promise<SnmpTestResult> {
   return new Promise((resolve) => {
     let session: snmp.Session;
+    let closed = false;
+    let resolved = false;
+
+    function safeClose() {
+      if (closed) return;
+      closed = true;
+      try { session.close(); } catch { /* already closed */ }
+    }
+
+    function safeResolve(result: SnmpTestResult) {
+      if (resolved) return;
+      resolved = true;
+      safeClose();
+      resolve(result);
+    }
+
     try {
       session = snmp.createSession(host, community, {
         timeout,
@@ -79,33 +95,30 @@ export async function testSnmpConnection(
     }
 
     session.on("error", (err: Error) => {
-      session.close();
-      resolve({ ok: false, error: `SNMP session error: ${err.message}` });
+      safeResolve({ ok: false, error: `SNMP session error: ${err.message}` });
     });
 
     const oids = [OID_SFOS_APP_KEY, OID_SFOS_DEVICE_TYPE, OID_SFOS_DEVICE_NAME, OID_SFOS_FW_VERSION];
 
     const timer = setTimeout(() => {
-      session.close();
-      resolve({ ok: false, error: "SNMP request timed out — check firewall allows SNMP from this IP on UDP 161" });
+      safeResolve({ ok: false, error: "SNMP request timed out — check firewall allows SNMP from this IP on UDP 161" });
     }, timeout + 2000);
 
     session.get(oids, (error, varbinds) => {
       clearTimeout(timer);
-      session.close();
 
       if (error) {
         const msg = error instanceof Error ? error.message : String(error);
         if (msg.includes("Timeout") || msg.includes("timed out")) {
-          resolve({ ok: false, error: "SNMP request timed out — check: (1) SNMP is enabled on the firewall, (2) this machine's IP is in the SNMP allowed hosts, (3) UDP port 161 is not blocked" });
+          safeResolve({ ok: false, error: "SNMP request timed out — check: (1) SNMP is enabled on the firewall, (2) this machine's IP is in the SNMP allowed hosts, (3) UDP port 161 is not blocked" });
         } else {
-          resolve({ ok: false, error: `SNMP error: ${msg}` });
+          safeResolve({ ok: false, error: `SNMP error: ${msg}` });
         }
         return;
       }
 
       if (!varbinds || varbinds.length === 0) {
-        resolve({ ok: false, error: "SNMP returned no data — community string may be wrong" });
+        safeResolve({ ok: false, error: "SNMP returned no data — community string may be wrong" });
         return;
       }
 
@@ -141,7 +154,7 @@ export async function testSnmpConnection(
         }
       }
 
-      resolve(result);
+      safeResolve(result);
     });
   });
 }
