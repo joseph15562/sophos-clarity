@@ -25,7 +25,7 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   textNodeName: "#text",
-  isArray: (_name, _jpath, isLeaf) => !isLeaf,
+  isArray: (name, jpath) => jpath === `Response.${name}`,
 });
 
 const FIREWALL_RULE_FIELDS: [string, string][] = [
@@ -53,22 +53,29 @@ function extractNested(obj: Record<string, unknown>, path: string): string {
   return asString(current);
 }
 
+function policyField(e: any, field: string): string {
+  return extractNested(e, `NetworkPolicy.${field}`) ||
+         extractNested(e, `UserPolicy.${field}`) || "";
+}
+
 function parseFirewallRules(entities: unknown[]): TableData {
   const headers = [
-    "Rule Name", "Status", "Action", "Source Zone", "Destination Zone",
-    "Service", "Web Filter", "IPS Policy", "Log", "Description",
+    "Rule Name", "Status", "Policy Type", "Action", "Source Zone", "Destination Zone",
+    "Service", "Web Filter", "IPS Policy", "Application Control", "Log", "Description",
   ];
 
   const rows: Record<string, string>[] = entities.map((e: any) => ({
     "Rule Name": asString(e.Name),
     "Status": asString(e.Status),
-    "Action": extractNested(e, "NetworkPolicy.Action"),
-    "Source Zone": extractNested(e, "NetworkPolicy.SourceZones.Zone"),
-    "Destination Zone": extractNested(e, "NetworkPolicy.DestinationZones.Zone"),
-    "Service": extractNested(e, "NetworkPolicy.Services.Service"),
-    "Web Filter": extractNested(e, "SecurityPolicy.WebFilter"),
-    "IPS Policy": extractNested(e, "SecurityPolicy.IPSPolicy"),
-    "Log": extractNested(e, "NetworkPolicy.LogTraffic"),
+    "Policy Type": asString(e.PolicyType ?? ""),
+    "Action": policyField(e, "Action"),
+    "Source Zone": policyField(e, "SourceZones.Zone"),
+    "Destination Zone": policyField(e, "DestinationZones.Zone"),
+    "Service": policyField(e, "Services.Service") || extractNested(e, "NetworkPolicy.Services.Service"),
+    "Web Filter": policyField(e, "WebFilter") || extractNested(e, "SecurityPolicy.WebFilter"),
+    "IPS Policy": policyField(e, "IntrusionPrevention") || extractNested(e, "SecurityPolicy.IPSPolicy"),
+    "Application Control": policyField(e, "ApplicationControl") || "",
+    "Log": policyField(e, "LogTraffic"),
     "Description": asString(e.Description ?? ""),
   }));
 

@@ -115,21 +115,28 @@ function flattenObject(obj: unknown, prefix = ""): Record<string, string> {
   return result;
 }
 
+function policyField(e: Record<string, unknown>, field: string): string {
+  return extractNested(e, `NetworkPolicy.${field}`) ||
+         extractNested(e, `UserPolicy.${field}`) || "";
+}
+
 function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData {
   const headers = [
-    "Rule Name", "Status", "Action", "Source Zone", "Destination Zone",
-    "Service", "Web Filter", "IPS Policy", "Log", "Description",
+    "Rule Name", "Status", "Policy Type", "Action", "Source Zone", "Destination Zone",
+    "Service", "Web Filter", "IPS Policy", "Application Control", "Log", "Description",
   ];
   const rows = entities.map((e) => ({
     "Rule Name": asString(e.Name),
     "Status": asString(e.Status),
-    "Action": extractNested(e, "NetworkPolicy.Action"),
-    "Source Zone": extractNested(e, "NetworkPolicy.SourceZones.Zone"),
-    "Destination Zone": extractNested(e, "NetworkPolicy.DestinationZones.Zone"),
-    "Service": extractNested(e, "NetworkPolicy.Services.Service"),
-    "Web Filter": extractNested(e, "SecurityPolicy.WebFilter"),
-    "IPS Policy": extractNested(e, "SecurityPolicy.IPSPolicy"),
-    "Log": extractNested(e, "NetworkPolicy.LogTraffic"),
+    "Policy Type": asString(e.PolicyType ?? ""),
+    "Action": policyField(e, "Action"),
+    "Source Zone": policyField(e, "SourceZones.Zone"),
+    "Destination Zone": policyField(e, "DestinationZones.Zone"),
+    "Service": policyField(e, "Services.Service") || extractNested(e, "NetworkPolicy.Services.Service"),
+    "Web Filter": policyField(e, "WebFilter") || extractNested(e, "SecurityPolicy.WebFilter"),
+    "IPS Policy": policyField(e, "IntrusionPrevention") || extractNested(e, "SecurityPolicy.IPSPolicy"),
+    "Application Control": policyField(e, "ApplicationControl") || "",
+    "Log": policyField(e, "LogTraffic"),
     "Description": asString(e.Description ?? ""),
   }));
   return { headers, rows };
