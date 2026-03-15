@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plug, Plus, Trash2, RefreshCw, Copy, Check, ChevronDown,
-  ChevronRight, Download, Server, Key,
+  ChevronRight, Download, Server, Key, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -360,6 +360,33 @@ export function AgentManager() {
     }
   };
 
+  const handleRunNow = async (agentId: string) => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) { toast.error("Not authenticated"); return; }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}/run-now`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        throw new Error(err.error ?? `HTTP ${res.status}`);
+      }
+
+      toast.success("Scan requested — agent will run within 5 minutes");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Request failed");
+    }
+  };
+
   const handleRetentionChange = async (days: number) => {
     if (!org) return;
     setRetention(days);
@@ -490,6 +517,15 @@ export function AgentManager() {
                     {/* Actions */}
                     {canManageAgents && (
                       <div className="flex gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-[10px] h-7"
+                          onClick={() => handleRunNow(agent.id)}
+                        >
+                          <Play className="h-3 w-3" />
+                          Request Scan
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

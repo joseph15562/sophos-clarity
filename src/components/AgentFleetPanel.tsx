@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronDown, ChevronRight, Server,
   AlertTriangle, TrendingUp, TrendingDown,
-  ArrowRight, Clock, Activity, Loader2,
+  ArrowRight, Clock, Activity, Loader2, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import { toast } from "sonner";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -74,15 +75,17 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
 }
 
 function AgentSummaryCard({
-  agent: _agent,
+  agent,
   submission,
   loadingSubmission,
   onLoadFull,
+  onRequestScan,
 }: {
   agent: Agent;
   submission: Submission | null;
   loadingSubmission: boolean;
   onLoadFull: () => void;
+  onRequestScan: () => void;
 }) {
   if (loadingSubmission) {
     return (
@@ -94,8 +97,15 @@ function AgentSummaryCard({
 
   if (!submission) {
     return (
-      <div className="py-4 text-center text-xs text-muted-foreground">
-        No submissions yet. The agent will submit data after its first scheduled run.
+      <div className="py-4 text-center space-y-2">
+        <p className="text-xs text-muted-foreground">
+          No submissions yet. The agent will submit data after its first scheduled run.
+        </p>
+        {agent.status === "online" && (
+          <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={onRequestScan}>
+            <Play className="h-3 w-3" /> Request Scan Now
+          </Button>
+        )}
       </div>
     );
   }
@@ -190,17 +200,22 @@ function AgentSummaryCard({
         <span className="text-[9px] text-muted-foreground flex items-center gap-1">
           <Clock className="h-2.5 w-2.5" /> {new Date(submission.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 text-[10px] h-7"
-          onClick={onLoadFull}
-          disabled={!submission.full_analysis}
-          title={!submission.full_analysis ? "Full analysis not yet available — the agent will include it on the next submission" : "Load into the full analysis view"}
-        >
-          <ArrowRight className="h-3 w-3" />
-          {submission.full_analysis ? "Load Full Assessment" : "Full view pending…"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={onRequestScan}>
+            <Play className="h-3 w-3" /> Request Scan
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-[10px] h-7"
+            onClick={onLoadFull}
+            disabled={!submission.full_analysis}
+            title={!submission.full_analysis ? "Full analysis not yet available — the agent will include it on the next submission" : "Load into the full analysis view"}
+          >
+            <ArrowRight className="h-3 w-3" />
+            {submission.full_analysis ? "Load Full Assessment" : "Full view pending…"}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -267,6 +282,33 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
     } else {
       setExpandedAgent(agentId);
       loadSubmission(agentId);
+    }
+  };
+
+  const handleRequestScan = async (agentId: string) => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) { toast.error("Not authenticated"); return; }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}/run-now`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Request failed" }));
+        throw new Error(err.error ?? `HTTP ${res.status}`);
+      }
+
+      toast.success("Scan requested — agent will run within 5 minutes");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Request failed");
     }
   };
 
@@ -386,6 +428,7 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
                               submission={submissions[agent.id] ?? null}
                               loadingSubmission={!!loadingSub[agent.id]}
                               onLoadFull={() => handleLoadFull(agent)}
+                              onRequestScan={() => handleRequestScan(agent.id)}
                             />
                           </div>
                         )}

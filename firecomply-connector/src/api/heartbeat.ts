@@ -11,6 +11,7 @@ export interface HeartbeatResponse {
   customer_name: string;
   environment: string;
   firmware_version_override: string | null;
+  pending_command?: string | null;
 }
 
 export async function sendHeartbeat(

@@ -181,8 +181,16 @@ export class Scheduler {
 
   private async heartbeat(): Promise<void> {
     try {
-      await sendHeartbeat(this.client, { agent_version: AGENT_VERSION });
+      const res = await sendHeartbeat(this.client, { agent_version: AGENT_VERSION });
       log.debug("Heartbeat sent");
+
+      if (res.pending_command === "run-now") {
+        log.info("Received run-now command from dashboard — triggering scan");
+        this.emit("command:run-now", null);
+        this.runAll().catch((err) => {
+          log.error(`Remote run-now failed: ${err instanceof Error ? err.message : err}`);
+        });
+      }
     } catch (err) {
       log.warn(`Heartbeat failed: ${err instanceof Error ? err.message : err}`);
     }

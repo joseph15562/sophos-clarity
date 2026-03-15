@@ -185,6 +185,35 @@ async function handleDelete(req: Request, agentId: string) {
   return json({ ok: true });
 }
 
+// ── Trigger run-now (web app auth via Supabase JWT) ──
+
+async function handleRunNow(req: Request, agentId: string) {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return json({ error: "Unauthorized" }, 401);
+
+  const uc = userClient(authHeader);
+  const { data: { user } } = await uc.auth.getUser();
+  if (!user) return json({ error: "Invalid session" }, 401);
+
+  const membership = await getOrgMembership(user.id);
+  if (!membership || !["admin", "engineer"].includes(membership.role))
+    return json({ error: "Insufficient permissions" }, 403);
+
+  const db = adminClient();
+  const { data: agent } = await db
+    .from("agents")
+    .select("id, org_id")
+    .eq("id", agentId)
+    .single();
+
+  if (!agent || agent.org_id !== membership.org_id)
+    return json({ error: "Agent not found" }, 404);
+
+  await db.from("agents").update({ pending_command: "run-now" }).eq("id", agentId);
+
+  return json({ ok: true, message: "Scan queued — agent will run on next heartbeat (within 5 minutes)" });
+}
+
 // ── Agent config (agent API key auth) ──
 
 function handleConfig(agent: Record<string, unknown>) {
@@ -257,11 +286,17 @@ async function handleHeartbeat(
 
   await db.from("agents").update(update).eq("id", agent.id);
 
+  const pendingCommand = agent.pending_command as string | null;
+  if (pendingCommand) {
+    await db.from("agents").update({ pending_command: null }).eq("id", agent.id);
+  }
+
   return json({
     schedule_cron: agent.schedule_cron,
     customer_name: agent.customer_name,
     environment: agent.environment,
     firmware_version_override: agent.firmware_version_override,
+    pending_command: pendingCommand,
   });
 }
 
@@ -377,6 +412,9 @@ serve(async (req: Request) => {
     }
     if (req.method === "DELETE" && route) {
       return handleDelete(req, route);
+    }
+    if (req.method === "POST" && segments.length === 3 && segments[2] === "run-now") {
+      return handleRunNow(req, route);
     }
 
     // Agent API-key authenticated routes
