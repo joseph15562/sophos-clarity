@@ -110,6 +110,7 @@ function RegisterDialog({
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({
             name: name.trim(),
@@ -337,7 +338,10 @@ export function AgentManager() {
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}`,
       {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
       }
     );
     toast.success("Agent deleted");
