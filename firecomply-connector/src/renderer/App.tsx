@@ -1,10 +1,17 @@
 import { useState, useEffect } from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { SetupWizard } from "./pages/SetupWizard";
 import { Dashboard } from "./pages/Dashboard";
 import { LogViewer } from "./pages/LogViewer";
 import { SettingsPage } from "./pages/Settings";
+
+function SetupRoute({ onComplete }: { onComplete: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <SetupWizard onComplete={() => { onComplete(); navigate("/dashboard", { replace: true }); }} />
+  );
+}
 
 export function App() {
   const [hasConfig, setHasConfig] = useState<boolean | null>(null);
@@ -29,7 +36,7 @@ export function App() {
     <HashRouter>
       <Toaster position="top-right" richColors />
       <Routes>
-        <Route path="/setup" element={<SetupWizard onComplete={() => setHasConfig(true)} />} />
+        <Route path="/setup" element={<SetupRoute onComplete={() => setHasConfig(true)} />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/logs" element={<LogViewer />} />
         <Route path="/settings" element={<SettingsPage />} />
