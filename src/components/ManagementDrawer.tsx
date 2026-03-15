@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck } from "lucide-react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck, Globe } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,7 @@ const MfaEnrollment = lazy(() => import("@/components/MfaEnrollment").then((m) =
 const PasskeyManager = lazy(() => import("@/components/PasskeyManager").then((m) => ({ default: m.PasskeyManager })));
 const ScoreTrendChart = lazy(() => import("@/components/ScoreTrendChart").then((m) => ({ default: m.ScoreTrendChart })));
 const CustomFrameworkBuilder = lazy(() => import("@/components/CustomFrameworkBuilder").then((m) => ({ default: m.CustomFrameworkBuilder })));
+const PortalConfigurator = lazy(() => import("@/components/PortalConfigurator").then((m) => ({ default: m.PortalConfigurator })));
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -471,6 +472,15 @@ export function ManagementDrawer({
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
                     <InviteStaff />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              )}
+              {canManageTeam && (
+              <SettingsSection title="Client Portal" icon={<Globe className="h-3.5 w-3.5 text-[#009CFB]" />} subtitle="Branding, sections & customer access">
+                <div className="p-4">
+                  <Suspense fallback={<Skeleton />}>
+                    <PortalConfigurator />
                   </Suspense>
                 </div>
               </SettingsSection>

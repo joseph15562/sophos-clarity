@@ -204,19 +204,15 @@ export function AnalysisTabs({
       {/* Overview */}
       <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Overview failed to load">
-          {w("score-overview") && (
-            <>
-              <Suspense fallback={null}>
-                <ScoreDeltaBanner analysisResults={analysisResult} />
-              </Suspense>
-              <Suspense fallback={<ChartSkeleton height={200} />}>
-                <ScoreDialGauge analysisResults={analysisResult} />
-              </Suspense>
-              <Suspense fallback={<StatGridSkeleton count={6} />}>
-                <RiskSummaryCards analysisResults={analysisResult} />
-              </Suspense>
-            </>
-          )}
+          <Suspense fallback={null}>
+            <ScoreDeltaBanner analysisResults={analysisResult} />
+          </Suspense>
+          <Suspense fallback={<ChartSkeleton height={200} />}>
+            <ScoreDialGauge analysisResults={analysisResult} />
+          </Suspense>
+          <Suspense fallback={<StatGridSkeleton count={6} />}>
+            <RiskSummaryCards analysisResults={analysisResult} />
+          </Suspense>
 
           {w("quick-actions") && (
             <Suspense fallback={null}>
@@ -628,12 +624,16 @@ export function AnalysisTabs({
           </Suspense>
           {w("config-complexity") && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <Suspense fallback={<CardSkeleton />}>
-                <PolicyComplexity analysisResults={analysisResult} files={files} />
-              </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
-                <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
-              </Suspense>
+              <ErrorBoundary fallbackTitle="Policy Complexity failed">
+                <Suspense fallback={<CardSkeleton />}>
+                  <PolicyComplexity analysisResults={analysisResult} files={files} />
+                </Suspense>
+              </ErrorBoundary>
+              <ErrorBoundary fallbackTitle="Config Composition failed">
+                <Suspense fallback={<CardSkeleton />}>
+                  <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           )}
           {w("unused-objects") && (

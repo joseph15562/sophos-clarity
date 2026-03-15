@@ -2104,12 +2104,13 @@ function analyseCertificates(
   if (!section) return;
 
   const now = new Date();
-  const ms30 = 30 * 24 * 60 * 60 * 1000;
-  const ms90 = 90 * 24 * 60 * 60 * 1000;
+  const seenCerts = new Set<string>();
 
   for (const t of section.tables) {
     for (const row of t.rows) {
-      const certName = row["Name"] ?? row["Certificate Name"] ?? row["Subject"] ?? row["Alias"] ?? "Unknown";
+      const certName = row["Name"] ?? row["Certificate Name"] ?? row["Subject"] ?? row["Alias"] ?? "";
+      if (!certName || seenCerts.has(certName)) continue;
+      seenCerts.add(certName);
       const keySizeRaw = row["Key Size"] ?? row["Key Length"] ?? row["Bits"] ?? row["Key"] ?? "";
       const keySize = parseInt(keySizeRaw.replace(/\D/g, ""), 10);
       const sigAlg = (row["Signature Algorithm"] ?? row["Hash"] ?? row["Signature"] ?? "").toLowerCase();
@@ -2190,9 +2191,13 @@ function analyseHotspots(
   const section = findSection(sections, /hotspot|captive.*portal|guest.*access/i);
   if (!section) return;
 
+  const seen = new Set<string>();
+
   for (const t of section.tables) {
     for (const row of t.rows) {
-      const name = row["Name"] ?? row["Hotspot"] ?? row["Profile"] ?? row["SSID"] ?? "Unknown";
+      const name = row["Name"] ?? row["Hotspot"] ?? row["Profile"] ?? row["SSID"] ?? "";
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
 
       const captivePortal = (
         row["Captive Portal"] ?? row["CaptivePortal"] ?? row["Portal"] ?? row["Enable Captive Portal"] ?? ""
@@ -2336,10 +2341,13 @@ function analyseInterfaceSecurity(
   if (!section) return;
 
   const vlanFilterReported = new Set<string>();
+  const seen = new Set<string>();
 
   for (const t of section.tables) {
     for (const row of t.rows) {
-      const name = row["Name"] ?? row["Interface"] ?? row["Port"] ?? row["VLAN"] ?? "Unknown";
+      const name = row["Name"] ?? row["Interface"] ?? row["Port"] ?? row["VLAN"] ?? "";
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
       const zone = (row["Zone"] ?? row["Security Zone"] ?? row["SecurityZone"] ?? "").trim();
       const zoneEmpty = !zone || zone === "-" || zone === "none" || zone.toLowerCase() === "unassigned";
 

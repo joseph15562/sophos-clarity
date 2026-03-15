@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
 import type { AnalysisResult } from "@/lib/analyse-config";
 
 type ExtractedSection = {
@@ -37,11 +36,12 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
 
     for (const file of files) {
       const extracted = file.extractedData;
-      if (!extracted) continue;
+      if (!extracted || typeof extracted !== "object") continue;
       for (const [sectionKey, section] of Object.entries(extracted)) {
+        if (!section || typeof section !== "object") continue;
         let rowsInSection = 0;
-        for (const table of section.tables ?? []) {
-          const count = table.rows?.length ?? 0;
+        for (const table of (section as any).tables ?? []) {
+          const count = table?.rows?.length ?? 0;
           rowsInSection += count;
           totalRows += count;
         }
@@ -60,17 +60,18 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
     const complexity =
       results.length > 0 && ar
         ? (() => {
-            const ip = ar.inspectionPosture;
-            const s = ar.stats;
+            const ip = ar.inspectionPosture ?? { totalWanRules: 0, totalDisabledRules: 0 };
+            const st = ar.stats ?? { totalRules: 0 };
+            const findings = ar.findings ?? [];
             let raw = 0;
-            if (s.totalRules > 100) raw += 30;
-            else if (s.totalRules > 50) raw += 20;
+            if (st.totalRules > 100) raw += 30;
+            else if (st.totalRules > 50) raw += 20;
             const wanTotal = ip.totalWanRules || 1;
             if (ip.totalDisabledRules / wanTotal > 0.2) raw += 15;
-            const anyCount = ar.findings.filter((f) => /ANY|any service/i.test(f.title)).length;
+            const anyCount = findings.filter((f) => /ANY|any service/i.test(f.title)).length;
             raw += Math.min(anyCount * 10, 20);
-            if (ar.findings.some((f) => /overlapping/i.test(f.title))) raw += 10;
-            if (ar.findings.some((f) => /broad source/i.test(f.title))) raw += 10;
+            if (findings.some((f) => /overlapping/i.test(f.title))) raw += 10;
+            if (findings.some((f) => /broad source/i.test(f.title))) raw += 10;
             return Math.min(100, Math.round(raw * 1.2));
           })()
         : 0;
@@ -109,63 +110,25 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
       </div>
 
       {treemapData.length > 0 && (
-        <div style={{ height: 200 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <Treemap
-              data={treemapData}
-              dataKey="value"
-              stroke="hsl(var(--border))"
-              content={({ x, y, width, height, name, value, color }) => {
-                if (name === "root" || width < 40 || height < 24) return null;
-                return (
-                  <g>
-                    <rect
-                      x={x}
-                      y={y}
-                      width={width}
-                      height={height}
-                      fill={color}
-                      fillOpacity={0.7}
-                      stroke="hsl(var(--border))"
-                      strokeWidth={1}
-                    />
-                    <text
-                      x={x + width / 2}
-                      y={y + height / 2 - 5}
-                      textAnchor="middle"
-                      fill="hsl(var(--card))"
-                      fontSize={9}
-                      fontWeight={600}
-                    >
-                      {name.length > 20 ? name.slice(0, 18) + "…" : name}
-                    </text>
-                    <text
-                      x={x + width / 2}
-                      y={y + height / 2 + 6}
-                      textAnchor="middle"
-                      fill="hsl(var(--card))"
-                      fontSize={8}
-                      fillOpacity={0.9}
-                    >
-                      {value} rows
-                    </text>
-                  </g>
-                );
-              }}
-            >
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return (
-                    <div className="rounded-md border border-border bg-card px-2 py-1.5 text-xs shadow-md">
-                      <span className="font-medium">{d.name}</span>: {d.value} rows
-                    </div>
-                  );
-                }}
-              />
-            </Treemap>
-          </ResponsiveContainer>
+        <div className="space-y-1.5">
+          {treemapData.slice(0, 8).map((d) => {
+            const maxVal = treemapData[0]?.value ?? 1;
+            const pct = Math.max(4, (d.value / maxVal) * 100);
+            return (
+              <div key={d.name} className="flex items-center gap-2 text-[10px]">
+                <span className="text-muted-foreground w-28 truncate shrink-0 text-right" title={d.name}>
+                  {d.name.length > 18 ? d.name.slice(0, 16) + "…" : d.name}
+                </span>
+                <div className="flex-1 h-4 bg-muted/30 rounded overflow-hidden">
+                  <div
+                    className="h-full rounded transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: d.color, opacity: 0.8 }}
+                  />
+                </div>
+                <span className="text-foreground font-medium tabular-nums w-8 text-right">{d.value}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

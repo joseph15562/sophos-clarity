@@ -88,7 +88,7 @@ export function RuleOptimiser({ files }: Props) {
     const out: Record<string, OptimiserResult> = {};
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      out[label] = analyseRuleOptimisation(f.extractedData);
+      out[label] = analyseRuleOptimisation(f.extractedData ?? {});
     }
     return out;
   }, [files]);

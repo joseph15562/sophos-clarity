@@ -115,15 +115,18 @@ function canMerge(a: RuleRecord, b: RuleRecord): string | null {
 }
 
 export function analyseRuleOptimisation(sections: ExtractedSections): OptimiserResult {
+  if (!sections || typeof sections !== "object") {
+    return { totalRules: 0, enabledRules: 0, duplicates: [], shadowed: [], mergeable: [], issues: [] };
+  }
   let rulesTable: TableData | null = null;
   for (const key of Object.keys(sections)) {
     if (/firewall\s*rules?/i.test(key)) {
-      const tables = sections[key].tables;
+      const tables = sections[key]?.tables ?? [];
       if (tables.length > 0) { rulesTable = tables[0]; break; }
     }
   }
 
-  if (!rulesTable || rulesTable.rows.length === 0) {
+  if (!rulesTable || !rulesTable.rows || rulesTable.rows.length === 0) {
     return { totalRules: 0, enabledRules: 0, duplicates: [], shadowed: [], mergeable: [], issues: [] };
   }
 

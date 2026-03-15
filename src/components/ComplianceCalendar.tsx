@@ -196,7 +196,7 @@ export function ComplianceCalendar({ files = [] }: Props) {
       {selectedDate && (
         <div className="mt-4 pt-4 border-t border-border">
           <h4 className="text-xs font-semibold text-foreground mb-2">
-            {new Date(selectedDate).toLocaleDateString(undefined, { weekday: "long", dateStyle: "medium" })}
+            {new Date(selectedDate + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric" })}
           </h4>
           {selectedEvents.length === 0 ? (
             <p className="text-xs text-muted-foreground">No events on this day</p>

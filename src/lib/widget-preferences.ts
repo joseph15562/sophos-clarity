@@ -9,7 +9,6 @@ export interface WidgetDef {
 
 export const WIDGET_REGISTRY: WidgetDef[] = [
   // ── Overview ──
-  { id: "score-overview",       label: "Score Overview (Gauge, Delta & Summary)", tab: "overview", isDefault: false },
   { id: "quick-actions",        label: "Quick Actions",           tab: "overview",      isDefault: false },
   { id: "findings-by-age",      label: "Findings by Age",         tab: "overview",      isDefault: false },
   { id: "sla-compliance-gauge", label: "SLA Compliance Gauge",    tab: "overview",      isDefault: false },

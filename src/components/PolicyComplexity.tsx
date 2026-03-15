@@ -45,9 +45,9 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
     }
 
     const ar = results[0];
-    const stats = ar.stats;
-    const ip = ar.inspectionPosture;
-    const findings = ar.findings;
+    const stats = ar?.stats ?? { totalRules: 0 };
+    const ip = ar?.inspectionPosture ?? { totalWanRules: 0, totalDisabledRules: 0 };
+    const findings = ar?.findings ?? [];
 
     let raw = 0;
     const recs: string[] = [];
