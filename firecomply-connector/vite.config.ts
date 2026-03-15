@@ -4,11 +4,20 @@ import path from "path";
 
 export default defineConfig({
   root: "src/renderer",
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: "strip-crossorigin",
+      transformIndexHtml(html) {
+        return html.replace(/\s+crossorigin/g, "");
+      },
+    },
+  ],
   base: "./",
   build: {
     outDir: "../../dist/renderer",
     emptyOutDir: true,
+    modulePreload: { polyfill: false },
   },
   resolve: {
     alias: {
