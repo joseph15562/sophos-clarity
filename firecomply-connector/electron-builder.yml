@@ -1,5 +1,6 @@
 appId: com.firecomply.connector
 productName: FireComply Connector
+publish: null
 directories:
   output: release
   buildResources: assets

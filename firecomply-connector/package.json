@@ -2,6 +2,12 @@
   "name": "firecomply-connector",
   "version": "1.0.0",
   "description": "FireComply Connector — Automated Sophos Firewall monitoring agent",
+  "author": "FireComply",
+  "homepage": "https://github.com/joseph15562/sophos-clarity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joseph15562/sophos-clarity.git"
+  },
   "private": true,
   "main": "dist/main/main/index.js",
   "scripts": {
