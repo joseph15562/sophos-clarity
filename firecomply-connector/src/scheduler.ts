@@ -106,6 +106,9 @@ export class Scheduler {
 
     log.info("Scheduled run complete");
     this.emit("run:complete", null);
+
+    // Send heartbeat immediately after scan so serial/model reach the server
+    this.heartbeat().catch(() => {});
   }
 
   async runFirewall(fw: FirewallConfig): Promise<void> {
