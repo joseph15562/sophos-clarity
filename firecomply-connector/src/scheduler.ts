@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { login } from "./firewall/auth";
+import { login, getDeviceInfo } from "./firewall/auth";
 import { detectCapabilities } from "./firewall/version";
 import { exportAllEntities } from "./firewall/export-config";
 import { parseEntityResults } from "./firewall/parse-entities";
@@ -47,6 +47,7 @@ export class Scheduler {
   private dataDir: string;
   private eventHandler?: SchedulerEventHandler;
   private _heartbeatInfo: HeartbeatInfo = { lastSentAt: null, lastOk: false };
+  private lastDeviceInfo: { serialNumber?: string; hardwareModel?: string; firmwareVersion?: string } = {};
 
   constructor(config: AppConfig, dataDir: string, eventHandler?: SchedulerEventHandler) {
     this.config = config;
@@ -127,6 +128,19 @@ export class Scheduler {
       const capabilities = detectCapabilities(apiVersion, undefined);
       log.info(`Firmware: ${capabilities.firmwareVersion} (API ${apiVersion})`, label);
 
+      const deviceInfo = await getDeviceInfo({
+        host: fw.host, port: fw.port, username: fw.username,
+        password: fw.password, skipSslVerify: fw.skipSslVerify,
+      });
+      if (deviceInfo.serialNumber) log.info(`Serial: ${deviceInfo.serialNumber}`, label);
+      if (deviceInfo.hardwareModel) log.info(`Model: ${deviceInfo.hardwareModel}`, label);
+
+      this.lastDeviceInfo = {
+        serialNumber: deviceInfo.serialNumber ?? undefined,
+        hardwareModel: deviceInfo.hardwareModel ?? undefined,
+        firmwareVersion: capabilities.firmwareVersion,
+      };
+
       // Export config entities
       const entities = await exportAllEntities(
         { host: fw.host, port: fw.port, username: fw.username, password: fw.password, skipSslVerify: fw.skipSslVerify },
@@ -194,7 +208,12 @@ export class Scheduler {
 
   private async heartbeat(): Promise<void> {
     try {
-      const res = await sendHeartbeat(this.client, { agent_version: AGENT_VERSION });
+      const res = await sendHeartbeat(this.client, {
+        agent_version: AGENT_VERSION,
+        firmware_version: this.lastDeviceInfo.firmwareVersion,
+        serial_number: this.lastDeviceInfo.serialNumber,
+        hardware_model: this.lastDeviceInfo.hardwareModel,
+      });
       this._heartbeatInfo = {
         lastSentAt: new Date().toISOString(),
         lastOk: true,

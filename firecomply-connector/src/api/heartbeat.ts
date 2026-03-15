@@ -4,6 +4,8 @@ export interface HeartbeatPayload {
   firmware_version?: string;
   agent_version: string;
   error_message?: string;
+  serial_number?: string;
+  hardware_model?: string;
 }
 
 export interface HeartbeatResponse {

@@ -283,6 +283,8 @@ async function handleHeartbeat(
     error_message: body.error_message ?? null,
   };
   if (body.firmware_version) update.firmware_version = body.firmware_version;
+  if (body.serial_number) update.serial_number = body.serial_number;
+  if (body.hardware_model) update.hardware_model = body.hardware_model;
 
   await db.from("agents").update(update).eq("id", agent.id);
 

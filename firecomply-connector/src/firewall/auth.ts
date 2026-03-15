@@ -107,6 +107,28 @@ export async function apiRequest(
   });
 }
 
+export interface DeviceInfo {
+  serialNumber: string | null;
+  hardwareModel: string | null;
+  registrationStatus: string | null;
+}
+
+export async function getDeviceInfo(creds: FirewallCredentials): Promise<DeviceInfo> {
+  try {
+    const xml = await apiRequest(creds, "<Get><RegistrationDetails/></Get>");
+
+    const serial = xml.match(/<SerialNumber>([^<]+)<\/SerialNumber>/)?.[1] ?? null;
+    const model = xml.match(/<Model>([^<]+)<\/Model>/)?.[1]
+                ?? xml.match(/<ApplianceModel>([^<]+)<\/ApplianceModel>/)?.[1]
+                ?? null;
+    const regStatus = xml.match(/<RegistrationStatus>([^<]+)<\/RegistrationStatus>/)?.[1] ?? null;
+
+    return { serialNumber: serial, hardwareModel: model, registrationStatus: regStatus };
+  } catch {
+    return { serialNumber: null, hardwareModel: null, registrationStatus: null };
+  }
+}
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
