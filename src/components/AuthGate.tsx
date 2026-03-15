@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
-import { LogIn, UserPlus, ArrowRight, AlertCircle } from "lucide-react";
+import { LogIn, UserPlus, ArrowRight, AlertCircle, Fingerprint } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -15,6 +17,94 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+
+  const handlePasskeyLogin = useCallback(async () => {
+    if (!email.trim()) {
+      setError("Enter your email first, then click Sign in with Passkey");
+      return;
+    }
+    setError(null);
+    setPasskeyLoading(true);
+
+    try {
+      const fnHeaders = {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      };
+
+      const optionsRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/login-options`,
+        {
+          method: "POST",
+          headers: fnHeaders,
+          body: JSON.stringify({ email: email.trim() }),
+        }
+      );
+
+      if (!optionsRes.ok) {
+        const body = await optionsRes.text().catch(() => "");
+        throw new Error(body ? JSON.parse(body).error : "Failed to get login options");
+      }
+
+      const options = await optionsRes.json();
+
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          ...options,
+          challenge: Uint8Array.from(atob(options.challenge), (c) => c.charCodeAt(0)),
+          allowCredentials: (options.allowCredentials ?? []).map((c: any) => ({
+            ...c,
+            id: Uint8Array.from(atob(c.id), (ch) => ch.charCodeAt(0)),
+          })),
+        },
+      });
+
+      if (!assertion) throw new Error("Authentication cancelled");
+
+      const pkc = assertion as PublicKeyCredential;
+      const response = pkc.response as AuthenticatorAssertionResponse;
+
+      const verifyRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/login-verify`,
+        {
+          method: "POST",
+          headers: fnHeaders,
+          body: JSON.stringify({
+            email: email.trim(),
+            credential: {
+              id: pkc.id,
+              rawId: btoa(String.fromCharCode(...new Uint8Array(pkc.rawId))),
+              type: pkc.type,
+              response: {
+                authenticatorData: btoa(String.fromCharCode(...new Uint8Array(response.authenticatorData))),
+                clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(response.clientDataJSON))),
+                signature: btoa(String.fromCharCode(...new Uint8Array(response.signature))),
+              },
+            },
+          }),
+        }
+      );
+
+      if (!verifyRes.ok) throw new Error("Passkey verification failed");
+
+      const verifyData = await verifyRes.json();
+      if (verifyData.session?.access_token && verifyData.session?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: verifyData.session.access_token,
+          refresh_token: verifyData.session.refresh_token,
+        });
+      } else {
+        setError("Passkey verified but session could not be created. Please sign in with your password.");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== "NotAllowedError") {
+        setError(err.message);
+      }
+    }
+    setPasskeyLoading(false);
+  }, [email]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +238,24 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
             </>
           )}
         </button>
+
+        {mode === "signin" && (
+          <button
+            type="button"
+            onClick={handlePasskeyLogin}
+            disabled={passkeyLoading}
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-border hover:bg-muted/50 text-foreground px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {passkeyLoading ? (
+              <span className="animate-spin h-4 w-4 border-2 border-foreground/30 border-t-foreground rounded-full" />
+            ) : (
+              <>
+                <Fingerprint className="h-4 w-4" />
+                Sign in with Passkey
+              </>
+            )}
+          </button>
+        )}
 
         <div className="relative py-2">
           <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>

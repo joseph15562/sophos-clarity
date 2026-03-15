@@ -534,11 +534,32 @@ serve(async (req: Request) => {
         .update({ counter: (stored.counter as number) + 1 })
         .eq("id", stored.id);
 
-      // In production, verify the signature against the stored public key
-      // For now, generate a session since the browser completed the WebAuthn ceremony
+      // Generate a magic link token to create a real Supabase session
+      const { data: linkData, error: linkError } = await db.auth.admin.generateLink({
+        type: "magiclink",
+        email: targetUser.email!,
+      });
+
+      if (linkError || !linkData) {
+        return json({ error: "Failed to create session" }, 500);
+      }
+
+      // Extract the token hash and use it to verify OTP for a real session
+      const tokenHash = linkData.properties?.hashed_token;
+      if (tokenHash) {
+        const { data: sessionData, error: sessionError } = await db.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "magiclink",
+        });
+        if (!sessionError && sessionData?.session) {
+          return json({ ok: true, session: sessionData.session });
+        }
+      }
+
       return json({
         ok: true,
-        session: { user_id: targetUser.id, email: targetUser.email },
+        session: null,
+        message: "Passkey verified but session creation failed — please sign in with password",
       });
     }
 

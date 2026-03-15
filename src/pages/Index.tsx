@@ -34,6 +34,7 @@ import { ManagementDrawer } from "@/components/ManagementDrawer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
 import { AgentFleetPanel } from "@/components/AgentFleetPanel";
+import { MfaVerification } from "@/components/MfaVerification";
 import { toast } from "sonner";
 import { isLocalMode, setLocalMode } from "@/lib/local-mode";
 
@@ -1225,6 +1226,28 @@ const Index = () => {
             </div>
           </header>
           <OrgSetup userEmail={auth.user?.email ?? ""} onCreateOrg={auth.createOrg} onSignOut={auth.signOut} />
+        </div>
+      </AuthProvider>
+    );
+  }
+
+  if (auth.needsMfa) {
+    return (
+      <AuthProvider value={auth}>
+        <div className="min-h-screen bg-background">
+          <header className="border-b border-[#10037C]/20 bg-[#001A47]">
+            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+              <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
+              <div className="flex-1">
+                <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">Sophos FireComply</h1>
+                <p className="text-[11px] text-[#6A889B]">Firewall Configuration Assessment & Compliance Reporting</p>
+              </div>
+            </div>
+          </header>
+          <MfaVerification
+            onVerified={() => auth.clearMfaRequired()}
+            onCancel={() => auth.signOut()}
+          />
         </div>
       </AuthProvider>
     );
