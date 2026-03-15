@@ -8,6 +8,7 @@ import { UploadSection } from "@/components/UploadSection";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { AuthFlow } from "@/components/AuthFlow";
 import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
+import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import type { AnalysisResult } from "@/lib/analyse-config";
@@ -84,9 +85,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const totalRules = analysisOverride
     ? Object.values(analysisOverride).reduce((s, r) => s + r.stats.totalRules, 0)
     : rawTotalRules;
-  const totalSections = analysisOverride ? 0 : rawTotalSections;
-  const totalPopulated = analysisOverride ? 0 : rawTotalPopulated;
-  const extractionPct = analysisOverride ? 100 : rawExtractionPct;
+  const totalSections = analysisOverride
+    ? Object.values(analysisOverride).reduce((s, r) => s + r.stats.totalSections, 0)
+    : rawTotalSections;
+  const totalPopulated = analysisOverride
+    ? Object.values(analysisOverride).reduce((s, r) => s + r.stats.populatedSections, 0)
+    : rawTotalPopulated;
+  const extractionPct = totalSections > 0
+    ? Math.round((totalPopulated / totalSections) * 100)
+    : rawExtractionPct;
   const aggregatedPosture = rawAggregatedPosture;
 
   const configMetas = useMemo(() =>
@@ -231,9 +238,13 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, [files, reports.length, setReports, setActiveReportId, org?.id]);
 
-  const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string) => {
-    setFiles([{ id: label, fileName: label, label, content: "", extractedData: {} as ExtractedSections }]);
-    setAnalysisOverride({ [label]: analysis });
+  const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>) => {
+    const extractedData = rawConfig
+      ? rawConfigToSections(rawConfig)
+      : {} as ExtractedSections;
+    const hasRealSections = Object.keys(extractedData).length > 0;
+    setFiles([{ id: label, fileName: label, label, content: "", extractedData }]);
+    setAnalysisOverride(hasRealSections ? null : { [label]: analysis });
     setBranding((prev) => ({ ...prev, customerName }));
     setReports([]);
     setActiveReportId("");

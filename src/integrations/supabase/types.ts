@@ -147,6 +147,7 @@ export type Database = {
           threat_status: Json | null
           drift: Json | null
           full_analysis: Json | null
+          raw_config: Json | null
           created_at: string
         }
         Insert: {
@@ -162,6 +163,7 @@ export type Database = {
           threat_status?: Json | null
           drift?: Json | null
           full_analysis?: Json | null
+          raw_config?: Json | null
           created_at?: string
         }
         Update: {

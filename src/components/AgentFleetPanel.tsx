@@ -15,7 +15,7 @@ type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
 
 interface AgentFleetPanelProps {
-  onLoadAssessment?: (label: string, analysis: AnalysisResult, customerName: string) => void;
+  onLoadAssessment?: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>) => void;
 }
 
 function StatusDot({ status, lastSeenAt }: { status: string; lastSeenAt: string | null }) {
@@ -317,10 +317,12 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
     if (!sub || !onLoadAssessment) return;
     const fullAnalysis = sub.full_analysis as unknown as AnalysisResult | null;
     if (!fullAnalysis) return;
+    const rawConfig = sub.raw_config as unknown as Record<string, unknown> | null;
     onLoadAssessment(
       agent.name || agent.firewall_host,
       fullAnalysis,
       sub.customer_name,
+      rawConfig ?? undefined,
     );
   };
 

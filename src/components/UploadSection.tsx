@@ -40,7 +40,7 @@ export interface UploadSectionProps {
   onGenerateCompliance: () => void;
   onGenerateAll: () => void;
   setViewingReports: (v: boolean) => void;
-  onLoadAgentAssessment: (label: string, analysis: AnalysisResult, customerName: string) => void;
+  onLoadAgentAssessment: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>) => void;
   setCentralEnriched: (v: boolean | ((prev: boolean) => boolean)) => void;
   saveError: string;
   savingReports: boolean;
