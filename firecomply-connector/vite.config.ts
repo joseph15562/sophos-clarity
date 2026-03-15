@@ -11,7 +11,8 @@ export default defineConfig({
       transformIndexHtml(html) {
         return html
           .replace(/\s+crossorigin/g, "")
-          .replace(/ type="module"/g, "");
+          .replace(/ type="module"/g, "")
+          .replace(/<script src=/g, "<script defer src=");
       },
     },
   ],
