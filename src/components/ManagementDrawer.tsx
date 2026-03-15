@@ -208,7 +208,7 @@ export function ManagementDrawer({
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-card shrink-0">
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-display font-bold text-foreground truncate">
-              {orgName || "Management"}
+              {isGuest ? "Settings" : (orgName || "Management")}
             </h2>
             <p className="text-[10px] text-muted-foreground">
               {isGuest ? "Reports & assessment history" : "Dashboard, reports & settings"}

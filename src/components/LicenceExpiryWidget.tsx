@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Shield, AlertTriangle, Download, ChevronDown, RefreshCw, Server, Clock } from "lucide-react";
+import { Shield, AlertTriangle, Download, ChevronDown, RefreshCw, Server, Clock, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";
@@ -14,6 +14,16 @@ interface FlattenedLicence {
   daysRemaining: number;
 }
 
+interface LicenceGroup {
+  key: string;
+  serials: string[];
+  primarySerial: string;
+  isHaPair: boolean;
+  model: string;
+  modelType: "virtual" | "hardware";
+  items: FlattenedLicence[];
+}
+
 type FilterMode = "all" | "expiring" | "expired";
 
 export function LicenceExpiryWidget() {
@@ -26,6 +36,7 @@ export function LicenceExpiryWidget() {
   const [error, setError] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [expanded, setExpanded] = useState(true);
+  const [expandedSerials, setExpandedSerials] = useState<Set<string>>(new Set());
 
   const fetchLicences = useCallback(async () => {
     if (!orgId || !central.isConnected) return;
@@ -48,8 +59,9 @@ export function LicenceExpiryWidget() {
     if (central.isConnected && !hasFetched && !loading) {
       setHasFetched(true);
       fetchLicences();
+      central.loadCachedFirewalls();
     }
-  }, [central.isConnected, hasFetched, loading, fetchLicences]);
+  }, [central.isConnected, hasFetched, loading, fetchLicences, central.loadCachedFirewalls]);
 
   useEffect(() => {
     if (central.isConnected && hasFetched && !fetchedWithTenants && central.tenants.length > 0 && firewallLicences.length === 0 && !loading) {
@@ -57,6 +69,68 @@ export function LicenceExpiryWidget() {
       fetchLicences();
     }
   }, [central.isConnected, hasFetched, fetchedWithTenants, central.tenants.length, firewallLicences.length, loading, fetchLicences]);
+
+  const haPartnerMap = useMemo(() => {
+    const serialToGroup = new Map<string, string>();
+
+    // Method 1: Central firewalls cluster data (most reliable when available)
+    const clusterSerials = new Map<string, string[]>();
+    for (const fw of central.firewalls) {
+      if (fw.cluster?.id) {
+        const isAP = /active.passive/i.test(fw.cluster.mode ?? "") ||
+                     /a.p/i.test(fw.cluster.mode ?? "") ||
+                     fw.cluster.status === "primary" ||
+                     fw.cluster.status === "auxiliary";
+        if (isAP) {
+          const list = clusterSerials.get(fw.cluster.id) ?? [];
+          list.push(fw.serialNumber);
+          clusterSerials.set(fw.cluster.id, list);
+        }
+      }
+    }
+    for (const [clusterId, serials] of clusterSerials) {
+      if (serials.length >= 2) {
+        for (const s of serials) serialToGroup.set(s, `ha:${clusterId}`);
+      }
+    }
+
+    // Method 2: Licence data heuristic — same model firewalls sharing product codes
+    // In HA A-P the auxiliary receives copies of the primary's subscriptions,
+    // so both devices will have overlapping product codes even if the
+    // licenseIdentifier values differ.
+    if (serialToGroup.size === 0 && firewallLicences.length >= 2) {
+      const fwByModel = new Map<string, FirewallLicence[]>();
+      for (const fw of firewallLicences) {
+        const list = fwByModel.get(fw.model) ?? [];
+        list.push(fw);
+        fwByModel.set(fw.model, list);
+      }
+      for (const [, fws] of fwByModel) {
+        if (fws.length < 2) continue;
+        const matched = new Set<string>();
+        for (let i = 0; i < fws.length; i++) {
+          if (matched.has(fws[i].serialNumber)) continue;
+          const aCodes = new Set(fws[i].licenses.map((l) => l.product?.code ?? l.product?.genericCode ?? ""));
+          for (let j = i + 1; j < fws.length; j++) {
+            if (matched.has(fws[j].serialNumber)) continue;
+            const overlap = fws[j].licenses.filter((l) =>
+              aCodes.has(l.product?.code ?? l.product?.genericCode ?? "")
+            ).length;
+            const smaller = Math.min(fws[i].licenses.length, fws[j].licenses.length);
+            if (overlap >= 2 && overlap >= smaller * 0.5) {
+              const groupId = `ha-lic:${fws[i].serialNumber}`;
+              serialToGroup.set(fws[i].serialNumber, groupId);
+              serialToGroup.set(fws[j].serialNumber, groupId);
+              matched.add(fws[i].serialNumber);
+              matched.add(fws[j].serialNumber);
+            }
+          }
+        }
+      }
+    }
+
+    return serialToGroup;
+  }, [central.firewalls, firewallLicences]);
 
   const flattened = useMemo<FlattenedLicence[]>(() => {
     const items: FlattenedLicence[] = [];
@@ -85,10 +159,88 @@ export function LicenceExpiryWidget() {
     return items.sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [flattened, filterMode]);
 
-  const expired = flattened.filter((l) => l.daysRemaining <= 0).length;
-  const expiringSoon = flattened.filter((l) => l.daysRemaining > 0 && l.daysRemaining <= 30).length;
-  const expiringMedium = flattened.filter((l) => l.daysRemaining > 30 && l.daysRemaining <= 90).length;
-  const healthy = flattened.filter((l) => l.daysRemaining > 90).length;
+  const groupKey = useCallback((serial: string) => {
+    return haPartnerMap.get(serial) ?? serial;
+  }, [haPartnerMap]);
+
+  const buildGroups = useCallback((items: FlattenedLicence[]): LicenceGroup[] => {
+    const map = new Map<string, LicenceGroup>();
+    for (const item of items) {
+      const key = groupKey(item.serialNumber);
+      const existing = map.get(key);
+      if (existing) {
+        existing.items.push(item);
+        if (!existing.serials.includes(item.serialNumber)) {
+          existing.serials.push(item.serialNumber);
+        }
+      } else {
+        map.set(key, {
+          key,
+          serials: [item.serialNumber],
+          primarySerial: item.serialNumber,
+          isHaPair: key.startsWith("ha:") || key.startsWith("ha-lic:"),
+          model: item.model,
+          modelType: item.modelType,
+          items: [item],
+        });
+      }
+    }
+    for (const group of map.values()) {
+      if (!group.isHaPair || group.serials.length < 2) continue;
+      const statsBySerial = new Map<string, { worst: number; activeCount: number }>();
+      for (const serial of group.serials) {
+        const serialItems = group.items.filter((i) => i.serialNumber === serial);
+        const worst = serialItems.length > 0 ? Math.min(...serialItems.map((i) => i.daysRemaining)) : -Infinity;
+        const activeCount = serialItems.filter((i) => i.daysRemaining > 0).length;
+        statsBySerial.set(serial, { worst, activeCount });
+      }
+      let primary = group.serials[0];
+      let bestStats = statsBySerial.get(primary)!;
+      for (const [serial, stats] of statsBySerial) {
+        if (stats.activeCount > bestStats.activeCount ||
+            (stats.activeCount === bestStats.activeCount && stats.worst > bestStats.worst)) {
+          primary = serial;
+          bestStats = stats;
+        }
+      }
+      group.primarySerial = primary;
+      group.items = group.items.filter((i) => i.serialNumber === primary);
+    }
+    return Array.from(map.values());
+  }, [groupKey]);
+
+  const grouped = useMemo(() => {
+    const groups = buildGroups(filtered);
+    return groups.sort((a, b) => {
+      const worstA = Math.min(...a.items.map((l) => l.daysRemaining));
+      const worstB = Math.min(...b.items.map((l) => l.daysRemaining));
+      return worstA - worstB;
+    });
+  }, [filtered, buildGroups]);
+
+  const toggleGroup = (key: string) => {
+    setExpandedSerials((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const firewallTotals = useMemo(() => {
+    const groups = buildGroups(flattened);
+    let expired = 0, expiringSoon = 0, expiringMedium = 0, healthy = 0;
+    for (const group of groups) {
+      const worst = Math.min(...group.items.map((l) => l.daysRemaining));
+      if (worst <= 0) expired++;
+      else if (worst <= 30) expiringSoon++;
+      else if (worst <= 90) expiringMedium++;
+      else healthy++;
+    }
+    return { total: groups.length, expired, expiringSoon, expiringMedium, healthy };
+  }, [flattened, buildGroups]);
+
+  const { total: fwTotal, expired, expiringSoon, expiringMedium, healthy } = firewallTotals;
 
   const handleExportCsv = useCallback(() => {
     const rows = [["Serial Number", "Model", "Type", "Product", "Licence Type", "Start Date", "End Date", "Perpetual", "Days Remaining"]];
@@ -128,9 +280,9 @@ export function LicenceExpiryWidget() {
         </div>
         <span className="text-xs font-semibold text-foreground flex-1">Firewall Licence Monitor</span>
         <div className="flex items-center gap-1.5 shrink-0">
-          {firewallLicences.length > 0 && (
+          {fwTotal > 0 && (
             <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-muted text-muted-foreground">
-              {firewallLicences.length} firewall{firewallLicences.length !== 1 ? "s" : ""}
+              {fwTotal} firewall{fwTotal !== 1 ? "s" : ""}
             </span>
           )}
           {expired > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#EA0022]/10 text-[#EA0022]">{expired} expired</span>}
@@ -143,11 +295,11 @@ export function LicenceExpiryWidget() {
 
       {expanded && (
         <div className="border-t border-border px-4 py-3 space-y-3">
-          {/* Summary cards */}
+          {/* Summary cards — counts by firewall (serial), not individual licences */}
           <div className="grid grid-cols-4 gap-2">
             <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "all" ? "bg-muted/80 ring-1 ring-border" : "bg-muted/40 hover:bg-muted/60"}`} onClick={() => setFilterMode("all")}>
-              <p className="text-sm font-bold text-foreground">{flattened.length}</p>
-              <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Total</p>
+              <p className="text-sm font-bold text-foreground">{fwTotal}</p>
+              <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Firewalls</p>
             </div>
             <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "expired" ? "bg-[#EA0022]/10 ring-1 ring-[#EA0022]/30" : "bg-[#EA0022]/5 hover:bg-[#EA0022]/10"}`} onClick={() => setFilterMode("expired")}>
               <p className={`text-sm font-bold ${expired > 0 ? "text-[#EA0022]" : "text-foreground"}`}>{expired}</p>
@@ -177,53 +329,96 @@ export function LicenceExpiryWidget() {
             </div>
           ) : filtered.length > 0 || flattened.length > 0 ? (
             <>
-              <div className="rounded-lg border border-border overflow-hidden">
-                <div className="grid grid-cols-[100px_1fr_90px_80px_70px] gap-2 px-3 py-1.5 bg-muted/50 text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
-                  <span>Serial</span>
-                  <span>Product</span>
-                  <span>Type</span>
-                  <span>Expiry</span>
-                  <span className="text-right">Status</span>
-                </div>
-                <div className="max-h-56 overflow-y-auto divide-y divide-border">
-                  {filtered.map((item, idx) => (
-                    <div key={`${item.serialNumber}-${item.subscription.id}-${idx}`} className="grid grid-cols-[100px_1fr_90px_80px_70px] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors">
-                      <div className="flex items-center gap-1.5">
-                        <Server className={`h-3 w-3 shrink-0 ${item.modelType === "virtual" ? "text-[#009CFB]" : "text-muted-foreground"}`} />
-                        <span className="text-[10px] font-mono text-foreground truncate" title={item.serialNumber}>
-                          {item.serialNumber.slice(-8)}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[10px] font-medium text-foreground truncate block">
-                          {item.subscription.product?.name || item.subscription.product?.code || "Unknown"}
-                        </span>
-                        <span className="text-[9px] text-muted-foreground">{item.model}</span>
-                      </div>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium truncate ${
-                        item.subscription.type === "trial" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" :
-                        item.subscription.type === "perpetual" ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
-                        "bg-muted text-muted-foreground"
-                      }`}>
-                        {item.subscription.perpetual ? "Perpetual" : item.subscription.type}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {item.subscription.perpetual ? "Never" :
-                         item.subscription.endDate ? new Date(item.subscription.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" }) : "—"}
-                      </span>
-                      <span className={`text-[10px] font-bold text-right ${
-                        item.subscription.perpetual ? "text-[#00995a] dark:text-[#00F2B3]" :
-                        item.daysRemaining <= 0 ? "text-[#EA0022]" :
-                        item.daysRemaining <= 30 ? "text-[#EA0022]" :
-                        item.daysRemaining <= 90 ? "text-[#F29400]" :
-                        "text-[#00995a] dark:text-[#00F2B3]"
-                      }`}>
-                        {item.subscription.perpetual ? "OK" :
-                         item.daysRemaining <= 0 ? "EXPIRED" : `${item.daysRemaining}d`}
-                      </span>
+              <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                {grouped.map((group) => {
+                  const isOpen = expandedSerials.has(group.key);
+                  const worstDays = Math.min(...group.items.map((l) => l.daysRemaining));
+                  const hasExpired = group.items.some((l) => l.daysRemaining <= 0);
+                  const hasExpiring = group.items.some((l) => l.daysRemaining > 0 && l.daysRemaining <= 90);
+                  const statusColor = hasExpired ? "text-[#EA0022]" : hasExpiring ? "text-[#F29400]" : "text-[#00995a] dark:text-[#00F2B3]";
+                  const statusLabel = hasExpired ? "EXPIRED" : worstDays <= 90 ? `${worstDays}d` : "OK";
+                  const ringColor = hasExpired ? "border-[#EA0022]/30" : hasExpiring ? "border-[#F29400]/30" : "border-border";
+                  const dedupedItems = group.items;
+
+                  return (
+                    <div key={group.key} className={`rounded-lg border ${ringColor} bg-card overflow-hidden`}>
+                      <button
+                        onClick={() => toggleGroup(group.key)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/30 transition-colors"
+                      >
+                        <Server className={`h-3.5 w-3.5 shrink-0 ${group.modelType === "virtual" ? "text-[#009CFB]" : "text-muted-foreground"}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold text-foreground">{group.model}</span>
+                            {group.isHaPair ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-muted-foreground" title={group.serials.join(" / ")}>
+                                <Link2 className="h-2.5 w-2.5 text-[#009CFB]" />
+                                {group.serials.map((s) => s.slice(-8)).join(" / ")}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-mono text-muted-foreground" title={group.serials[0]}>
+                                {group.serials[0].slice(-8)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] text-muted-foreground">
+                              {dedupedItems.length} licence{dedupedItems.length !== 1 ? "s" : ""}
+                            </span>
+                            {group.isHaPair && (
+                              <span className="text-[8px] px-1 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-semibold">
+                                HA A-P
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-bold ${statusColor}`}>{statusLabel}</span>
+                        <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {isOpen && (
+                        <div className="border-t border-border">
+                          <div className="grid grid-cols-[1fr_80px_80px_60px] gap-2 px-3 py-1 bg-muted/50 text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
+                            <span>Product</span>
+                            <span>Type</span>
+                            <span>Expiry</span>
+                            <span className="text-right">Status</span>
+                          </div>
+                          <div className="divide-y divide-border">
+                            {dedupedItems.map((item, idx) => (
+                              <div key={`${item.subscription.id}-${idx}`} className="grid grid-cols-[1fr_80px_80px_60px] gap-2 px-3 py-1.5 items-center hover:bg-muted/20 transition-colors">
+                                <span className="text-[10px] font-medium text-foreground truncate">
+                                  {item.subscription.product?.name || item.subscription.product?.code || "Unknown"}
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium truncate text-center ${
+                                  item.subscription.type === "trial" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" :
+                                  item.subscription.perpetual ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                                  "bg-muted text-muted-foreground"
+                                }`}>
+                                  {item.subscription.perpetual ? "Perpetual" : item.subscription.type}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {item.subscription.perpetual ? "Never" :
+                                   item.subscription.endDate ? new Date(item.subscription.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" }) : "—"}
+                                </span>
+                                <span className={`text-[10px] font-bold text-right ${
+                                  item.subscription.perpetual ? "text-[#00995a] dark:text-[#00F2B3]" :
+                                  item.daysRemaining <= 0 ? "text-[#EA0022]" :
+                                  item.daysRemaining <= 30 ? "text-[#EA0022]" :
+                                  item.daysRemaining <= 90 ? "text-[#F29400]" :
+                                  "text-[#00995a] dark:text-[#00F2B3]"
+                                }`}>
+                                  {item.subscription.perpetual ? "OK" :
+                                   item.daysRemaining <= 0 ? "EXPIRED" : `${item.daysRemaining}d`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
 
               {/* Last seen info */}

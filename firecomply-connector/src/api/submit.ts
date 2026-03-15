@@ -22,6 +22,7 @@ export interface SubmissionPayload {
   }>;
   finding_titles: string[];
   threat_status: ThreatStatus | null;
+  full_analysis: AnalysisResult | null;
 }
 
 export interface SubmitResponse {
@@ -71,5 +72,6 @@ export function buildPayload(
     })),
     finding_titles: analysis.findings.map((f) => f.title),
     threat_status: threatStatus,
+    full_analysis: analysis,
   };
 }

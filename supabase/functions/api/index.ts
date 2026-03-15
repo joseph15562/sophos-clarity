@@ -294,6 +294,7 @@ async function handleSubmit(
     finding_titles: findingTitles,
     threat_status: body.threat_status ?? null,
     drift,
+    full_analysis: body.full_analysis ?? null,
   });
 
   if (subError) return json({ error: subError.message }, 500);

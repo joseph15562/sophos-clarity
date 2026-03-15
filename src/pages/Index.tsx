@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
-import { ArrowLeftRight, RotateCcw, Save, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal, Download } from "lucide-react";
+import { ArrowLeftRight, RotateCcw, Save, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal, Download, LogIn } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,9 +10,10 @@ import { EstateOverview } from "@/components/EstateOverview";
 import { FindingsChanges } from "@/components/FindingsChanges";
 import { PriorityActions } from "@/components/PriorityActions";
 import { ReportCards } from "@/components/ReportCards";
-import { extractSections } from "@/lib/extract-sections";
+import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
+import type { AnalysisResult } from "@/lib/analyse-config";
 import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-persistence";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,7 @@ import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 import { ManagementDrawer } from "@/components/ManagementDrawer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
+import { AgentFleetPanel } from "@/components/AgentFleetPanel";
 import { toast } from "sonner";
 import { isLocalMode, setLocalMode } from "@/lib/local-mode";
 
@@ -66,7 +68,7 @@ import { downloadRiskRegisterCSV } from "@/lib/risk-register";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
-function InnerApp() {
+function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const { isGuest, org } = useAuth();
   const { notifications, unreadCount, addNotification, markRead, markAllRead, dismiss: dismissNotif, clearAll: clearNotifs } = useNotifications();
   const [files, setFiles] = useState<ParsedFile[]>([]);
@@ -86,6 +88,7 @@ function InnerApp() {
   const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
   const [analysisTab, setAnalysisTab] = useState("overview");
   const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
+  const [analysisOverride, setAnalysisOverride] = useState<Record<string, AnalysisResult> | null>(null);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -94,9 +97,21 @@ function InnerApp() {
   } = useReportGeneration(files, branding);
 
   const {
-    analysisResults, totalFindings, totalRules, totalSections,
-    totalPopulated, extractionPct, aggregatedPosture,
+    analysisResults: rawAnalysisResults, totalFindings: rawTotalFindings, totalRules: rawTotalRules, totalSections: rawTotalSections,
+    totalPopulated: rawTotalPopulated, extractionPct: rawExtractionPct, aggregatedPosture: rawAggregatedPosture,
   } = useFirewallAnalysis(files);
+
+  const analysisResults = analysisOverride ?? rawAnalysisResults;
+  const totalFindings = analysisOverride
+    ? Object.values(analysisOverride).reduce((s, r) => s + r.findings.length, 0)
+    : rawTotalFindings;
+  const totalRules = analysisOverride
+    ? Object.values(analysisOverride).reduce((s, r) => s + r.stats.totalRules, 0)
+    : rawTotalRules;
+  const totalSections = analysisOverride ? 0 : rawTotalSections;
+  const totalPopulated = analysisOverride ? 0 : rawTotalPopulated;
+  const extractionPct = analysisOverride ? 100 : rawExtractionPct;
+  const aggregatedPosture = rawAggregatedPosture;
 
   const configMetas = useMemo(() =>
     files.map((f) => {
@@ -169,6 +184,27 @@ function InnerApp() {
       if (newFiles.length > 0) logAudit(org.id, "config.uploaded", "config", "", { count: newFiles.length });
     }
   }, [files, reports.length, setReports, setActiveReportId, org?.id]);
+
+  const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string) => {
+    setFiles([{ id: label, fileName: label, label, content: "", extractedData: {} as ExtractedSections }]);
+    setAnalysisOverride({ [label]: analysis });
+    setBranding((prev) => ({ ...prev, customerName }));
+    setReports([]);
+    setActiveReportId("");
+    setReportsSaved(false);
+    setLoadedSavedSummary(null);
+  }, [setReports, setActiveReportId]);
+
+  // Clear analysis override when user uploads new files normally
+  useEffect(() => {
+    if (analysisOverride && Object.keys(rawAnalysisResults).length > 0) {
+      const overrideKeys = Object.keys(analysisOverride);
+      const rawKeys = Object.keys(rawAnalysisResults);
+      if (rawKeys.some((k) => !overrideKeys.includes(k))) {
+        setAnalysisOverride(null);
+      }
+    }
+  }, [rawAnalysisResults, analysisOverride]);
 
   // Enrich files with Sophos Central live data when firewalls are linked
   const fileIds = useMemo(() => files.map((f) => f.id).join(","), [files]);
@@ -479,7 +515,50 @@ function InnerApp() {
             )}
 
 
-            {/* Step 1 — Upload */}
+            {/* Guest sign-in prompt */}
+            {!hasFiles && isGuest && onShowAuth && (
+              <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] px-5 py-4 flex items-center gap-4">
+                <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
+                  <LogIn className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Sign in to unlock the full experience</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Connect your Sophos Central account, use automated agents, save reports, and manage your firewall estate — all included.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-xs border-[#2006F7]/30 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
+                  onClick={onShowAuth}
+                >
+                  <LogIn className="h-3 w-3" /> Sign In / Register
+                </Button>
+              </div>
+            )}
+
+            {/* Step 1 — Choose a connected firewall */}
+            {!hasFiles && !isGuest && org && (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">1</span>
+                  <h2 className="text-lg font-display font-bold text-foreground">Choose a Firewall</h2>
+                </div>
+                <AgentFleetPanel onLoadAssessment={handleLoadAgentAssessment} />
+              </section>
+            )}
+
+            {/* "Or" divider between fleet panel and upload */}
+            {!hasFiles && !isGuest && org && (
+              <div className="flex items-center gap-4 py-1">
+                <div className="flex-1 border-t border-border" />
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Or</span>
+                <div className="flex-1 border-t border-border" />
+              </div>
+            )}
+
+            {/* Upload Firewall Exports */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">1</span>
@@ -1058,6 +1137,7 @@ function InnerApp() {
         branding={branding}
         onBrandingChange={setBranding}
         orgName={org?.name}
+        isGuest={isGuest}
       />
 
       {/* Management Drawer */}
@@ -1153,7 +1233,7 @@ const Index = () => {
   return (
     <AuthProvider value={auth}>
       <ErrorBoundary fallbackTitle="Application failed to load">
-        <InnerApp />
+        <InnerApp onShowAuth={auth.isGuest ? () => setGuestMode(false) : undefined} />
       </ErrorBoundary>
     </AuthProvider>
   );

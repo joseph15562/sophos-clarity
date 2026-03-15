@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -195,10 +195,10 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
             <button
               onClick={onOrgClick}
               className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-2 py-1 rounded hover:bg-[#10037C]/40"
-              title="Open management panel"
+              title="Open settings"
             >
-              <Building2 className="h-3 w-3" />
-              <span className="font-medium">Management</span>
+              <SlidersHorizontal className="h-3 w-3" />
+              <span className="font-medium">Settings</span>
               <ChevronDown className="h-2.5 w-2.5" />
             </button>
           )}

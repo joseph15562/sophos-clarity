@@ -146,6 +146,7 @@ export type Database = {
           finding_titles: string[]
           threat_status: Json | null
           drift: Json | null
+          full_analysis: Json | null
           created_at: string
         }
         Insert: {
@@ -160,6 +161,7 @@ export type Database = {
           finding_titles?: string[]
           threat_status?: Json | null
           drift?: Json | null
+          full_analysis?: Json | null
           created_at?: string
         }
         Update: {
@@ -174,6 +176,7 @@ export type Database = {
           finding_titles?: string[]
           threat_status?: Json | null
           drift?: Json | null
+          full_analysis?: Json | null
           created_at?: string
         }
         Relationships: [
