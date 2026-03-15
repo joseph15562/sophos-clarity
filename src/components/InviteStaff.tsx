@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, Trash2, AlertCircle, CheckCircle2, Shield, Users } from "lucide-react";
+import { UserPlus, Trash2, AlertCircle, CheckCircle2, Shield, Users, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { logAudit } from "@/lib/audit";
+import { toast } from "sonner";
 
 interface Invite {
   id: string;
@@ -107,6 +108,46 @@ export function InviteStaff() {
     loadData();
   }, [loadData, org]);
 
+  const [resettingMfa, setResettingMfa] = useState<string | null>(null);
+
+  const resetMfa = useCallback(async (targetUserId: string, memberEmail?: string) => {
+    if (!confirm(`Reset MFA for ${memberEmail ?? "this user"}? They will need to re-enroll their authenticator on next login.`)) return;
+
+    setResettingMfa(targetUserId);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) throw new Error("Not authenticated");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/admin/reset-mfa`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ targetUserId }),
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to reset MFA");
+      }
+
+      const data = await res.json();
+      if (data.factorsRemoved > 0) {
+        toast.success(`MFA reset for ${memberEmail ?? "user"} — ${data.factorsRemoved} factor(s) removed`);
+      } else {
+        toast.info(`${memberEmail ?? "User"} has no MFA factors enrolled`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reset MFA");
+    }
+    setResettingMfa(null);
+  }, []);
+
   if (role !== "admin") {
     return (
       <div className="text-center text-xs text-muted-foreground py-4">
@@ -166,6 +207,16 @@ export function InviteStaff() {
                   {m.isYou && <span className="text-[9px] text-muted-foreground ml-1">(you)</span>}
                 </span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{m.role}</span>
+                {!m.isYou && (
+                  <button
+                    onClick={() => resetMfa(m.user_id, m.email)}
+                    disabled={resettingMfa === m.user_id}
+                    className="text-muted-foreground hover:text-[#F29400] transition-colors disabled:opacity-50"
+                    title="Reset MFA"
+                  >
+                    <KeyRound className="h-3 w-3" />
+                  </button>
+                )}
                 {m.role !== "admin" && !m.isYou && (
                   <button onClick={() => removeMember(m.id, m.email)} className="text-muted-foreground hover:text-[#EA0022] transition-colors" title="Remove member">
                     <Trash2 className="h-3 w-3" />

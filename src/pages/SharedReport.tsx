@@ -1,12 +1,19 @@
 import { useParams } from "react-router-dom";
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
-import { loadSharedReport } from "@/lib/share-report";
+import { loadSharedReport, type SharedReport as SharedReportType } from "@/lib/share-report";
 
 const SharedReport = () => {
   const { token } = useParams<{ token: string }>();
-  const report = useMemo(() => (token ? loadSharedReport(token) : null), [token]);
+  const [report, setReport] = useState<SharedReportType | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!token) { setReport(null); return; }
+    let cancelled = false;
+    loadSharedReport(token).then((r) => { if (!cancelled) setReport(r); });
+    return () => { cancelled = true; };
+  }, [token]);
 
   if (!token) {
     return (
@@ -18,6 +25,14 @@ const SharedReport = () => {
             Return to Sophos FireComply
           </a>
         </div>
+      </div>
+    );
+  }
+
+  if (report === undefined) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <p className="text-muted-foreground text-sm">Loading report…</p>
       </div>
     );
   }
@@ -38,10 +53,10 @@ const SharedReport = () => {
     );
   }
 
-  const html = useMemo(() => {
+  const html = (() => {
     const rawHtml = marked.parse(report.markdown, { async: false }) as string;
     return DOMPurify.sanitize(rawHtml);
-  }, [report.markdown]);
+  })();
 
   return (
     <div className="min-h-screen bg-background">

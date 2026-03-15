@@ -256,6 +256,38 @@ export type Database = {
           { foreignKeyName: "audit_log_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
         ]
       }
+      finding_snapshots: {
+        Row: { id: string; org_id: string; hostname: string; titles: string[]; score: number; created_at: string }
+        Insert: { id?: string; org_id: string; hostname: string; titles?: string[]; score?: number; created_at?: string }
+        Update: { id?: string; org_id?: string; hostname?: string; titles?: string[]; score?: number; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "finding_snapshots_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      remediation_status: {
+        Row: { id: string; org_id: string; playbook_id: string; customer_hash: string; completed_by: string | null; completed_at: string }
+        Insert: { id?: string; org_id: string; playbook_id: string; customer_hash: string; completed_by?: string | null; completed_at?: string }
+        Update: { id?: string; org_id?: string; playbook_id?: string; customer_hash?: string; completed_by?: string | null; completed_at?: string }
+        Relationships: [
+          { foreignKeyName: "remediation_status_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      shared_reports: {
+        Row: { id: string; org_id: string; share_token: string; markdown: string; customer_name: string; created_by: string | null; expires_at: string; created_at: string }
+        Insert: { id?: string; org_id: string; share_token: string; markdown: string; customer_name?: string; created_by?: string | null; expires_at: string; created_at?: string }
+        Update: { id?: string; org_id?: string; share_token?: string; markdown?: string; customer_name?: string; created_by?: string | null; expires_at?: string; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "shared_reports_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
+      alert_rules: {
+        Row: { id: string; org_id: string; event_type: string; channel: string; config: Json; enabled: boolean; created_at: string }
+        Insert: { id?: string; org_id: string; event_type: string; channel: string; config?: Json; enabled?: boolean; created_at?: string }
+        Update: { id?: string; org_id?: string; event_type?: string; channel?: string; config?: Json; enabled?: boolean; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "alert_rules_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import {
@@ -19,9 +19,9 @@ interface AggregatedDiff {
   hasPrevious: boolean;
 }
 
-function aggregateDiffs(
+async function aggregateDiffs(
   analysisResults: Record<string, AnalysisResult>
-): AggregatedDiff {
+): Promise<AggregatedDiff> {
   const newFindings: string[] = [];
   const fixedFindings: string[] = [];
   const regressed: string[] = [];
@@ -29,9 +29,9 @@ function aggregateDiffs(
 
   for (const [label, result] of Object.entries(analysisResults)) {
     const hostname = result.hostname || label;
-    const previous = loadPreviousSnapshot(hostname);
+    const previous = await loadPreviousSnapshot(hostname);
     if (previous) hasPrevious = true;
-    const beforePrevious = loadSnapshotBeforePrevious(hostname);
+    const beforePrevious = await loadSnapshotBeforePrevious(hostname);
     const diff = diffFindings(previous, result.findings, beforePrevious);
 
     newFindings.push(...diff.newFindings);
@@ -85,12 +85,17 @@ function ExpandableList({
 }
 
 export function FindingsChanges({ analysisResults }: Props) {
-  const diff = useMemo(
-    () => aggregateDiffs(analysisResults),
-    [analysisResults]
-  );
+  const [diff, setDiff] = useState<AggregatedDiff | null>(null);
 
-  if (!diff.hasPrevious || !diff.hasChanges) return null;
+  useEffect(() => {
+    let cancelled = false;
+    aggregateDiffs(analysisResults).then((d) => {
+      if (!cancelled) setDiff(d);
+    });
+    return () => { cancelled = true; };
+  }, [analysisResults]);
+
+  if (!diff || !diff.hasPrevious || !diff.hasChanges) return null;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">

@@ -1,10 +1,11 @@
 /**
  * Alert rules for email/webhook notifications.
- * Client-side scaffold — rules stored in localStorage until Supabase tables exist.
+ * Uses Supabase when authenticated, falls back to localStorage for guests.
  */
 
 import type { AnalysisResult } from "./analyse-config";
 import { computeRiskScore } from "./risk-score";
+import { supabase } from "@/integrations/supabase/client";
 
 export type AlertEventType =
   | "licence_expiry_warning"
@@ -24,7 +25,61 @@ export interface AlertRule {
 
 const STORAGE_KEY = "firecomply_alert_rules";
 
-export function saveAlertRules(rules: AlertRule[]): void {
+async function getOrgId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+  return data?.org_id ?? null;
+}
+
+function toAlertRule(row: { id: string; event_type: string; channel: string; config: unknown; enabled: boolean }): AlertRule {
+  const cfg = (row.config && typeof row.config === "object" ? row.config : {}) as AlertRule["config"];
+  return {
+    id: row.id,
+    eventType: row.event_type as AlertEventType,
+    channel: row.channel as "email" | "webhook",
+    config: cfg,
+    enabled: row.enabled,
+  };
+}
+
+export async function saveAlertRules(rules: AlertRule[]): Promise<void> {
+  const orgId = await getOrgId();
+  if (orgId) {
+    const { data: existing } = await supabase
+      .from("alert_rules")
+      .select("id")
+      .eq("org_id", orgId);
+    const existingIds = new Set((existing ?? []).map((r) => r.id));
+    const ruleIds = new Set(rules.map((r) => r.id));
+
+    const toDelete = [...existingIds].filter((id) => !ruleIds.has(id));
+    if (toDelete.length > 0) {
+      await supabase.from("alert_rules").delete().eq("org_id", orgId).in("id", toDelete);
+    }
+
+    const toUpsert = rules.map((r) => ({
+      id: r.id,
+      org_id: orgId,
+      event_type: r.eventType,
+      channel: r.channel,
+      config: r.config as Record<string, unknown>,
+      enabled: r.enabled,
+    }));
+    if (toUpsert.length > 0) {
+      const { error } = await supabase.from("alert_rules").upsert(toUpsert);
+      if (error) console.warn("[alert-rules] Supabase upsert failed", error.message);
+      else return;
+    }
+    return;
+  }
+
+  // localStorage fallback
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rules));
   } catch (e) {
@@ -32,7 +87,19 @@ export function saveAlertRules(rules: AlertRule[]): void {
   }
 }
 
-export function loadAlertRules(): AlertRule[] {
+export async function loadAlertRules(): Promise<AlertRule[]> {
+  const orgId = await getOrgId();
+  if (orgId) {
+    const { data } = await supabase
+      .from("alert_rules")
+      .select("id, event_type, channel, config, enabled")
+      .eq("org_id", orgId);
+    if (data && data.length > 0) {
+      return data.map(toAlertRule);
+    }
+  }
+
+  // localStorage fallback
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
@@ -60,12 +127,6 @@ export interface AlertCheckContext {
   agentOffline?: boolean;
 }
 
-/**
- * Check which alert conditions are triggered (logic only, no actual sending).
- * @param analysisResults - Current analysis results
- * @param previousScore - Previous overall risk score (for score_drop)
- * @param context - Optional context for licence_expiry_warning and central_disconnected
- */
 export function checkAlertConditions(
   analysisResults: Record<string, AnalysisResult>,
   previousScore?: number,

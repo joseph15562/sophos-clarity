@@ -1288,9 +1288,9 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     saveAs(blob, wordFilename);
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const token = generateShareToken();
-    const report = saveSharedReport(token, markdown, branding.customerName || "Customer", 7);
+    const report = await saveSharedReport(token, markdown, branding.customerName || "Customer", 7);
     const url = `${window.location.origin}/shared/${token}`;
     setShareUrl(url);
     setShareExpiresAt(report.expiresAt);

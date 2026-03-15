@@ -1,7 +1,9 @@
 /**
  * Finding snapshots for history and regression detection.
- * Uses localStorage since we can't create Supabase tables without migrations.
+ * Uses Supabase when authenticated, falls back to localStorage for guests.
  */
+
+import { supabase } from "@/integrations/supabase/client";
 
 export interface FindingSnapshot {
   hostname: string;
@@ -13,76 +15,102 @@ export interface FindingSnapshot {
 const STORAGE_KEY_PREFIX = "firecomply-finding-snapshots:";
 const MAX_SNAPSHOTS_PER_HOST = 20;
 
-function getStorageKey(hostname: string): string {
-  return `${STORAGE_KEY_PREFIX}${hostname}`;
+async function getOrgId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+  return data?.org_id ?? null;
 }
 
-/**
- * Saves a finding snapshot to localStorage, keyed by hostname.
- * Keeps up to MAX_SNAPSHOTS_PER_HOST snapshots (newest first).
- */
-export function saveFindingSnapshot(
+export async function saveFindingSnapshot(
   hostname: string,
   findings: { title: string }[],
   score: number
-): void {
-  const snapshot: FindingSnapshot = {
-    hostname,
-    titles: findings.map((f) => f.title),
-    score,
-    timestamp: new Date().toISOString(),
-  };
+): Promise<void> {
+  const titles = findings.map((f) => f.title);
+  const orgId = await getOrgId();
 
-  const key = getStorageKey(hostname);
-  let history: FindingSnapshot[] = [];
+  if (orgId) {
+    const { error } = await supabase.from("finding_snapshots").insert({
+      org_id: orgId,
+      hostname,
+      titles,
+      score,
+    });
+    if (error) console.warn("[finding-snapshots] Supabase insert failed, falling back to localStorage", error.message);
+    else return;
+  }
+
+  // localStorage fallback for guests
+  const snapshot: FindingSnapshot = { hostname, titles, score, timestamp: new Date().toISOString() };
+  const key = `${STORAGE_KEY_PREFIX}${hostname}`;
   try {
+    let history: FindingSnapshot[] = [];
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw) as FindingSnapshot[];
       if (Array.isArray(parsed)) history = parsed;
     }
-  } catch {
-    // ignore parse errors
-  }
-
-  history = [snapshot, ...history].slice(0, MAX_SNAPSHOTS_PER_HOST);
-  try {
+    history = [snapshot, ...history].slice(0, MAX_SNAPSHOTS_PER_HOST);
     localStorage.setItem(key, JSON.stringify(history));
   } catch (e) {
     console.warn("[finding-snapshots] localStorage set failed", e);
   }
 }
 
-/**
- * Loads the most recent snapshot for a hostname.
- */
-export function loadPreviousSnapshot(hostname: string): FindingSnapshot | null {
-  const key = getStorageKey(hostname);
+export async function loadPreviousSnapshot(hostname: string): Promise<FindingSnapshot | null> {
+  const orgId = await getOrgId();
+
+  if (orgId) {
+    const { data } = await supabase
+      .from("finding_snapshots")
+      .select("hostname, titles, score, created_at")
+      .eq("org_id", orgId)
+      .eq("hostname", hostname)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (data && data.length > 0) {
+      return { hostname: data[0].hostname, titles: data[0].titles, score: data[0].score, timestamp: data[0].created_at };
+    }
+  }
+
+  // localStorage fallback
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${hostname}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as FindingSnapshot[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return null;
-    return parsed[0];
-  } catch {
-    return null;
-  }
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : null;
+  } catch { return null; }
 }
 
-/**
- * Loads the snapshot before the previous one (for regression detection).
- */
-export function loadSnapshotBeforePrevious(hostname: string): FindingSnapshot | null {
-  const key = getStorageKey(hostname);
+export async function loadSnapshotBeforePrevious(hostname: string): Promise<FindingSnapshot | null> {
+  const orgId = await getOrgId();
+
+  if (orgId) {
+    const { data } = await supabase
+      .from("finding_snapshots")
+      .select("hostname, titles, score, created_at")
+      .eq("org_id", orgId)
+      .eq("hostname", hostname)
+      .order("created_at", { ascending: false })
+      .limit(2);
+    if (data && data.length >= 2) {
+      return { hostname: data[1].hostname, titles: data[1].titles, score: data[1].score, timestamp: data[1].created_at };
+    }
+  }
+
+  // localStorage fallback
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${hostname}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as FindingSnapshot[];
-    if (!Array.isArray(parsed) || parsed.length < 2) return null;
-    return parsed[1];
-  } catch {
-    return null;
-  }
+    return Array.isArray(parsed) && parsed.length >= 2 ? parsed[1] : null;
+  } catch { return null; }
 }
 
 export interface FindingDiff {
@@ -91,12 +119,6 @@ export interface FindingDiff {
   regressed: string[];
 }
 
-/**
- * Diffs previous snapshot against current findings.
- * - newFindings: in current, not in previous
- * - fixedFindings: in previous, not in current
- * - regressed: in current, not in previous, but existed in a snapshot before previous (was fixed, now back)
- */
 export function diffFindings(
   previous: FindingSnapshot | null,
   current: { title: string }[],

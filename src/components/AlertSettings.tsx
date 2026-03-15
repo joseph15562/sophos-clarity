@@ -27,7 +27,7 @@ export function AlertSettings() {
   const [rules, setRules] = useState<AlertRule[]>([]);
 
   useEffect(() => {
-    setRules(loadAlertRules());
+    loadAlertRules().then(setRules);
   }, []);
 
   const persist = useCallback((next: AlertRule[]) => {
@@ -214,7 +214,7 @@ export function AlertSettings() {
       )}
 
       <p className="text-[9px] text-muted-foreground">
-        Alerts are stored locally. Supabase-backed alert delivery will be added in a future release.
+        Alert rules are synced to your organisation. Email &amp; webhook delivery will be added in a future release.
       </p>
     </div>
   );

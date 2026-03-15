@@ -566,6 +566,115 @@ serve(async (req: Request) => {
     return json({ error: "Not found" }, 404);
   }
 
+  // ── Admin routes ──
+  if (segments[0] === "admin") {
+    const route = segments[1];
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+
+    const uc = userClient(authHeader);
+    const { data: { user } } = await uc.auth.getUser();
+    if (!user) return json({ error: "Unauthorized" }, 401);
+
+    const membership = await getOrgMembership(user.id);
+    if (!membership || membership.role !== "admin") {
+      return json({ error: "Admin access required" }, 403);
+    }
+
+    if (req.method === "POST" && route === "reset-mfa") {
+      const body = await req.json();
+      const { targetUserId } = body;
+      if (!targetUserId) return json({ error: "targetUserId required" }, 400);
+
+      const db = adminClient();
+
+      // Verify target user belongs to the same org
+      const targetMembership = await getOrgMembership(targetUserId);
+      if (!targetMembership || targetMembership.org_id !== membership.org_id) {
+        return json({ error: "User not found in your organisation" }, 404);
+      }
+
+      // List and delete all MFA factors for the target user
+      const { data: factors, error: factorsErr } = await db.auth.admin.mfa.listFactors({
+        userId: targetUserId,
+      });
+
+      if (factorsErr) return json({ error: factorsErr.message }, 500);
+
+      const totp = factors?.factors?.filter((f: any) => f.factor_type === "totp") ?? [];
+      for (const factor of totp) {
+        await db.auth.admin.mfa.deleteFactor({ id: factor.id, userId: targetUserId });
+      }
+
+      // Audit log
+      await db.from("audit_log").insert({
+        org_id: membership.org_id,
+        user_id: user.id,
+        action: "admin.mfa_reset",
+        entity_type: "user",
+        entity_id: targetUserId,
+        metadata: { resetBy: user.email, factorsRemoved: totp.length },
+      });
+
+      return json({ ok: true, factorsRemoved: totp.length });
+    }
+
+    return json({ error: "Not found" }, 404);
+  }
+
+  // ── Auth recovery routes ──
+  if (segments[0] === "auth" && segments[1] === "mfa-recovery") {
+    if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+    const body = await req.json();
+    const { email } = body;
+    if (!email) return json({ error: "email required" }, 400);
+
+    const db = adminClient();
+
+    // Find the user
+    const { data: users } = await db.auth.admin.listUsers();
+    const targetUser = users?.users?.find((u: any) => u.email === email);
+    if (!targetUser) return json({ error: "User not found" }, 404);
+
+    // Check they actually have TOTP factors
+    const { data: factors } = await db.auth.admin.mfa.listFactors({
+      userId: targetUser.id,
+    });
+    const totp = factors?.factors?.filter((f: any) => f.factor_type === "totp") ?? [];
+    if (totp.length === 0) {
+      return json({ error: "No MFA factors enrolled for this account" }, 400);
+    }
+
+    // Delete all TOTP factors so the user can sign in normally
+    for (const factor of totp) {
+      await db.auth.admin.mfa.deleteFactor({ id: factor.id, userId: targetUser.id });
+    }
+
+    // Generate a magic link session so the user can sign in immediately
+    const { data: linkData, error: linkError } = await db.auth.admin.generateLink({
+      type: "magiclink",
+      email: targetUser.email!,
+    });
+
+    if (linkError || !linkData) {
+      return json({ ok: true, session: null, message: "MFA reset but session creation failed — sign in with your password" });
+    }
+
+    const tokenHash = linkData.properties?.hashed_token;
+    if (tokenHash) {
+      const { data: sessionData, error: sessionError } = await db.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "magiclink",
+      });
+      if (!sessionError && sessionData?.session) {
+        return json({ ok: true, session: sessionData.session, factorsRemoved: totp.length });
+      }
+    }
+
+    return json({ ok: true, session: null, factorsRemoved: totp.length, message: "MFA factors removed — sign in with your password" });
+  }
+
   // ── Legacy placeholder routes (backward compat) ──
   if (
     req.method === "GET" &&

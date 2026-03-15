@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { ChevronDown, ChevronRight, Clock, CheckCircle2, Wrench } from "lucide-react";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { generatePlaybook, type Playbook } from "@/lib/remediation-playbooks";
 import { computeRiskScore } from "@/lib/risk-score";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -28,6 +29,18 @@ function getCustomerHash(analysisResults: Record<string, AnalysisResult>): strin
   return simpleHash(ids.join(","));
 }
 
+async function getOrgId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle();
+  return data?.org_id ?? null;
+}
+
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
 const SEV_BADGE: Record<Severity, string> = {
@@ -41,38 +54,79 @@ const SEV_BADGE: Record<Severity, string> = {
 export function RemediationPlaybooks({ analysisResults }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const orgIdRef = useRef<string | null>(null);
 
   const customerHash = useMemo(() => getCustomerHash(analysisResults), [analysisResults]);
-  const storageKey = `${STORAGE_PREFIX}${customerHash}`;
 
   const skipNextSaveRef = useRef(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const arr = JSON.parse(raw) as string[];
-        if (Array.isArray(arr)) {
+    let cancelled = false;
+    (async () => {
+      const orgId = await getOrgId();
+      orgIdRef.current = orgId;
+
+      if (orgId) {
+        const { data } = await supabase
+          .from("remediation_status")
+          .select("playbook_id")
+          .eq("org_id", orgId)
+          .eq("customer_hash", customerHash);
+        if (!cancelled && data && data.length > 0) {
           skipNextSaveRef.current = true;
-          setCompleted(new Set(arr));
+          setCompleted(new Set(data.map((r) => r.playbook_id)));
+          return;
         }
       }
-    } catch {
-      // ignore parse errors
-    }
-  }, [storageKey]);
 
-  useEffect(() => {
-    if (skipNextSaveRef.current) {
-      skipNextSaveRef.current = false;
+      // localStorage fallback
+      if (!cancelled) {
+        try {
+          const raw = localStorage.getItem(`${STORAGE_PREFIX}${customerHash}`);
+          if (raw) {
+            const arr = JSON.parse(raw) as string[];
+            if (Array.isArray(arr)) {
+              skipNextSaveRef.current = true;
+              setCompleted(new Set(arr));
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [customerHash]);
+
+  const persistCompleted = useCallback(async (next: Set<string>, prev: Set<string>) => {
+    const orgId = orgIdRef.current;
+    if (!orgId) {
+      try { localStorage.setItem(`${STORAGE_PREFIX}${customerHash}`, JSON.stringify([...next])); } catch { /* ignore */ }
       return;
     }
-    try {
-      localStorage.setItem(storageKey, JSON.stringify([...completed]));
-    } catch {
-      // ignore quota errors
+
+    const added = [...next].filter((id) => !prev.has(id));
+    const removed = [...prev].filter((id) => !next.has(id));
+
+    if (added.length > 0) {
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("remediation_status").upsert(
+        added.map((playbook_id) => ({
+          org_id: orgId,
+          playbook_id,
+          customer_hash: customerHash,
+          completed_by: user?.id ?? null,
+        })),
+        { onConflict: "org_id,customer_hash,playbook_id" }
+      );
     }
-  }, [storageKey, completed]);
+    if (removed.length > 0) {
+      await supabase
+        .from("remediation_status")
+        .delete()
+        .eq("org_id", orgId)
+        .eq("customer_hash", customerHash)
+        .in("playbook_id", removed);
+    }
+  }, [customerHash]);
 
   const playbooks: (Playbook & { fwLabel: string })[] = [];
   for (const [label, result] of Object.entries(analysisResults)) {
@@ -112,6 +166,11 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
     setCompleted((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
+      if (!skipNextSaveRef.current) {
+        persistCompleted(next, prev);
+      } else {
+        skipNextSaveRef.current = false;
+      }
       return next;
     });
   };
