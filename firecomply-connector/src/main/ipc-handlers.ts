@@ -76,13 +76,13 @@ export function registerIpcHandlers(
 
   ipcMain.handle("service:status", () => {
     const service = getService();
-    if (!service) return { running: false, paused: false, statuses: [], queueSize: 0 };
-    const config = loadConfig(configPath);
+    if (!service) return { running: false, paused: false, statuses: [], queueSize: 0, heartbeat: null };
     return {
       running: true,
       paused: service.isPaused(),
       statuses: service.getStatuses(),
       queueSize: queueSize(configPath.replace("config.json", "")),
+      heartbeat: service.getHeartbeatInfo(),
     };
   });
 

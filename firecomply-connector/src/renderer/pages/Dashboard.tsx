@@ -13,30 +13,42 @@ interface FirewallStatus {
   firmwareVersion?: string;
 }
 
+interface HeartbeatInfo {
+  lastSentAt: string | null;
+  lastOk: boolean;
+  lastError?: string;
+  commandReceived?: string;
+  commandReceivedAt?: string;
+}
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const secs = Math.floor(diff / 1000);
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  return `${hrs}h ago`;
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [statuses, setStatuses] = useState<FirewallStatus[]>([]);
   const [paused, setPaused] = useState(false);
   const [queueSize, setQueueSize] = useState(0);
+  const [heartbeat, setHeartbeat] = useState<HeartbeatInfo | null>(null);
 
   useEffect(() => {
-    const poll = setInterval(async () => {
-      const result = await window.electronAPI?.getStatus();
-      if (result) {
-        setStatuses(result.statuses ?? []);
-        setPaused(result.paused ?? false);
-        setQueueSize(result.queueSize ?? 0);
-      }
-    }, 3000);
+    const update = (result: any) => {
+      if (!result) return;
+      setStatuses(result.statuses ?? []);
+      setPaused(result.paused ?? false);
+      setQueueSize(result.queueSize ?? 0);
+      setHeartbeat(result.heartbeat ?? null);
+    };
 
-    window.electronAPI?.getStatus().then((result: any) => {
-      if (result) {
-        setStatuses(result.statuses ?? []);
-        setPaused(result.paused ?? false);
-        setQueueSize(result.queueSize ?? 0);
-      }
-    });
-
+    window.electronAPI?.getStatus().then(update);
+    const poll = setInterval(() => window.electronAPI?.getStatus().then(update), 3000);
     return () => clearInterval(poll);
   }, []);
 
@@ -68,6 +80,31 @@ export function Dashboard() {
             Settings
           </button>
         </div>
+      </div>
+
+      {/* Heartbeat / connection status */}
+      <div className="rounded-lg border border-border bg-card px-4 py-2.5 flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className={`inline-block h-2 w-2 rounded-full ${
+            heartbeat?.lastOk ? "bg-green-500" : heartbeat?.lastSentAt ? "bg-red-500" : "bg-gray-400"
+          }`} />
+          <span className="text-[11px] font-medium text-foreground">
+            {heartbeat?.lastOk ? "Connected" : heartbeat?.lastSentAt ? "Disconnected" : "Connecting…"}
+          </span>
+        </div>
+        {heartbeat?.lastSentAt && (
+          <span className="text-[10px] text-muted-foreground">
+            Last heartbeat: {timeAgo(heartbeat.lastSentAt)}
+          </span>
+        )}
+        {heartbeat?.lastError && (
+          <span className="text-[10px] text-red-500 truncate flex-1">{heartbeat.lastError}</span>
+        )}
+        {heartbeat?.commandReceived && heartbeat.commandReceivedAt && (
+          <span className="text-[10px] px-2 py-0.5 rounded bg-[#6B5BFF]/10 text-[#6B5BFF] font-medium ml-auto">
+            Remote scan triggered {timeAgo(heartbeat.commandReceivedAt)}
+          </span>
+        )}
       </div>
 
       {/* Queue indicator */}

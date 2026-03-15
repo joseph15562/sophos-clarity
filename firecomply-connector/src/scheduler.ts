@@ -27,6 +27,14 @@ export interface FirewallStatus {
   firmwareVersion?: string;
 }
 
+export interface HeartbeatInfo {
+  lastSentAt: string | null;
+  lastOk: boolean;
+  lastError?: string;
+  commandReceived?: string;
+  commandReceivedAt?: string;
+}
+
 export type SchedulerEventHandler = (event: string, data: unknown) => void;
 
 export class Scheduler {
@@ -38,6 +46,7 @@ export class Scheduler {
   private firewallStatuses: Map<string, FirewallStatus> = new Map();
   private dataDir: string;
   private eventHandler?: SchedulerEventHandler;
+  private _heartbeatInfo: HeartbeatInfo = { lastSentAt: null, lastOk: false };
 
   constructor(config: AppConfig, dataDir: string, eventHandler?: SchedulerEventHandler) {
     this.config = config;
@@ -80,6 +89,10 @@ export class Scheduler {
 
   getStatuses(): FirewallStatus[] {
     return Array.from(this.firewallStatuses.values());
+  }
+
+  getHeartbeatInfo(): HeartbeatInfo {
+    return { ...this._heartbeatInfo };
   }
 
   async runAll(): Promise<void> {
@@ -182,17 +195,34 @@ export class Scheduler {
   private async heartbeat(): Promise<void> {
     try {
       const res = await sendHeartbeat(this.client, { agent_version: AGENT_VERSION });
+      this._heartbeatInfo = {
+        lastSentAt: new Date().toISOString(),
+        lastOk: true,
+        lastError: undefined,
+        commandReceived: this._heartbeatInfo.commandReceived,
+        commandReceivedAt: this._heartbeatInfo.commandReceivedAt,
+      };
       log.debug("Heartbeat sent");
 
       if (res.pending_command === "run-now") {
         log.info("Received run-now command from dashboard — triggering scan");
+        this._heartbeatInfo.commandReceived = "run-now";
+        this._heartbeatInfo.commandReceivedAt = new Date().toISOString();
         this.emit("command:run-now", null);
         this.runAll().catch((err) => {
           log.error(`Remote run-now failed: ${err instanceof Error ? err.message : err}`);
         });
       }
     } catch (err) {
-      log.warn(`Heartbeat failed: ${err instanceof Error ? err.message : err}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      this._heartbeatInfo = {
+        lastSentAt: new Date().toISOString(),
+        lastOk: false,
+        lastError: msg,
+        commandReceived: this._heartbeatInfo.commandReceived,
+        commandReceivedAt: this._heartbeatInfo.commandReceivedAt,
+      };
+      log.warn(`Heartbeat failed: ${msg}`);
     }
   }
 

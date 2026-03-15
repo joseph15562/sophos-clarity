@@ -1,4 +1,4 @@
-import { Scheduler, type FirewallStatus } from "../scheduler";
+import { Scheduler, type FirewallStatus, type HeartbeatInfo } from "../scheduler";
 import type { AppConfig } from "../config";
 import { log } from "../logger";
 
@@ -40,5 +40,9 @@ export class BackgroundService {
 
   getStatuses(): FirewallStatus[] {
     return this.scheduler.getStatuses();
+  }
+
+  getHeartbeatInfo(): HeartbeatInfo {
+    return this.scheduler.getHeartbeatInfo();
   }
 }
