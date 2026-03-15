@@ -7,9 +7,11 @@ export default defineConfig({
   plugins: [
     react(),
     {
-      name: "strip-crossorigin",
+      name: "electron-html-fix",
       transformIndexHtml(html) {
-        return html.replace(/\s+crossorigin/g, "");
+        return html
+          .replace(/\s+crossorigin/g, "")
+          .replace(/ type="module"/g, "");
       },
     },
   ],
@@ -18,6 +20,12 @@ export default defineConfig({
     outDir: "../../dist/renderer",
     emptyOutDir: true,
     modulePreload: { polyfill: false },
+    rollupOptions: {
+      output: {
+        format: "iife",
+        inlineDynamicImports: true,
+      },
+    },
   },
   resolve: {
     alias: {

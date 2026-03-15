@@ -16,7 +16,7 @@ export function SettingsPage() {
   const [schedule, setSchedule] = useState("0 2 * * *");
 
   useEffect(() => {
-    window.electronAPI?.loadConfig().then((cfg: any) => {
+    window.electronAPI?.getConfig().then((cfg: any) => {
       if (cfg) {
         setConfig(cfg);
         setSchedule(cfg.schedule ?? "0 2 * * *");

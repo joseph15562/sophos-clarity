@@ -19,7 +19,7 @@ export function VerifyIdentity({ onVerified }: Props) {
     setError(null);
 
     try {
-      const config = await window.electronAPI.loadConfig();
+      const config = await window.electronAPI.getConfig();
       if (!config?.firecomplyApiUrl || !config?.agentApiKey) {
         throw new Error("Agent not configured");
       }

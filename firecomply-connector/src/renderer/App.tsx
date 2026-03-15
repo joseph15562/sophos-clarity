@@ -10,7 +10,9 @@ export function App() {
   const [hasConfig, setHasConfig] = useState<boolean | null>(null);
 
   useEffect(() => {
-    window.electronAPI?.loadConfig().then((cfg: unknown) => {
+    const api = window.electronAPI;
+    if (!api) { setHasConfig(false); return; }
+    api.getConfig().then((cfg: unknown) => {
       setHasConfig(!!cfg);
     }).catch(() => setHasConfig(false));
   }, []);

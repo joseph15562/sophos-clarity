@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
 import { login } from "../firewall/auth";
 import { detectCapabilities } from "../firewall/version";
 import { loadConfig, saveConfig, validateConfig, type AppConfig } from "../config";
@@ -10,6 +10,20 @@ export function registerIpcHandlers(
   configPath: string,
   getService: () => BackgroundService | null
 ): void {
+  ipcMain.handle("api:test-key", async (_event, url: string, key: string) => {
+    try {
+      const res = await fetch(`${url}/api/agent/heartbeat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-API-Key": key },
+        body: JSON.stringify({ status: "test" }),
+      });
+      return { ok: res.ok, error: res.ok ? undefined : `HTTP ${res.status}` };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle("app:version", () => app.getVersion());
   ipcMain.handle("config:load", () => {
     return loadConfig(configPath);
   });
