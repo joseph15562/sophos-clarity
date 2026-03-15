@@ -418,9 +418,12 @@ serve(async (req: Request) => {
         .select("credential_id")
         .eq("user_id", user.id);
 
+      const origin = req.headers.get("origin") ?? "";
+      const rpId = origin ? new URL(origin).hostname : new URL(SUPABASE_URL).hostname;
+
       const options = {
         challenge: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
-        rp: { name: "FireComply", id: new URL(SUPABASE_URL).hostname },
+        rp: { name: "Sophos FireComply", id: rpId },
         user: {
           id: btoa(user.id),
           name: user.email ?? user.id,
@@ -488,10 +491,13 @@ serve(async (req: Request) => {
         .select("credential_id, transports")
         .eq("user_id", targetUser.id);
 
+      const loginOrigin = req.headers.get("origin") ?? "";
+      const loginRpId = loginOrigin ? new URL(loginOrigin).hostname : new URL(SUPABASE_URL).hostname;
+
       const options = {
         challenge: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
         timeout: 60000,
-        rpId: new URL(SUPABASE_URL).hostname,
+        rpId: loginRpId,
         allowCredentials: (creds ?? []).map((c: any) => ({
           id: c.credential_id,
           type: "public-key",

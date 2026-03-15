@@ -34,19 +34,22 @@ export function PasskeyManager() {
       const session = (await supabase.auth.getSession()).data.session;
       if (!session) throw new Error("Not authenticated");
 
+      const fnHeaders = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      };
+
       // Get registration options from server
       const optionsRes = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/register-options`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
+        { method: "POST", headers: fnHeaders }
       );
 
-      if (!optionsRes.ok) throw new Error("Failed to get registration options");
+      if (!optionsRes.ok) {
+        const errBody = await optionsRes.text().catch(() => "");
+        throw new Error(`Registration options failed (${optionsRes.status}): ${errBody || optionsRes.statusText}`);
+      }
       const options = await optionsRes.json();
 
       // Use WebAuthn API
@@ -75,10 +78,7 @@ export function PasskeyManager() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/register-verify`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
+          headers: fnHeaders,
           body: JSON.stringify({
             credential: {
               id: attestationResponse.id,
@@ -94,7 +94,10 @@ export function PasskeyManager() {
         }
       );
 
-      if (!verifyRes.ok) throw new Error("Verification failed");
+      if (!verifyRes.ok) {
+        const verifyErr = await verifyRes.text().catch(() => "");
+        throw new Error(`Verification failed (${verifyRes.status}): ${verifyErr || verifyRes.statusText}`);
+      }
 
       toast.success("Passkey registered");
       setNewName("");
