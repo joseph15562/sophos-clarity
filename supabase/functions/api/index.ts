@@ -1,6 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+
+const HASH_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+async function hmacHash(data: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(HASH_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hmacVerify(data: string, hash: string): Promise<boolean> {
+  const computed = await hmacHash(data);
+  return computed === hash;
+}
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -64,7 +77,7 @@ async function authenticateAgent(apiKey: string) {
   if (error || !agents?.length) return null;
 
   for (const agent of agents) {
-    const match = await bcrypt.compare(apiKey, agent.api_key_hash);
+    const match = await hmacVerify(apiKey, agent.api_key_hash);
     if (match) return agent;
   }
   return null;
@@ -94,8 +107,8 @@ async function handleRegister(req: Request) {
   if (!user) return json({ error: "Invalid session" }, 401);
 
   const membership = await getOrgMembership(user.id);
-  if (!membership || membership.role !== "admin")
-    return json({ error: "Admin access required" }, 403);
+  if (!membership || !["admin", "engineer"].includes(membership.role))
+    return json({ error: "Admin or engineer access required" }, 403);
 
   const body = await req.json();
   const { name, firewall_host } = body;
@@ -103,7 +116,7 @@ async function handleRegister(req: Request) {
     return json({ error: "name and firewall_host are required" }, 400);
 
   const apiKey = generateApiKey();
-  const hash = await bcrypt.hash(apiKey);
+  const hash = await hmacHash(apiKey);
   const prefix = apiKey.slice(0, 8);
 
   const db = adminClient();
@@ -153,8 +166,8 @@ async function handleDelete(req: Request, agentId: string) {
   if (!user) return json({ error: "Invalid session" }, 401);
 
   const membership = await getOrgMembership(user.id);
-  if (!membership || membership.role !== "admin")
-    return json({ error: "Admin access required" }, 403);
+  if (!membership || !["admin", "engineer"].includes(membership.role))
+    return json({ error: "Admin or engineer access required" }, 403);
 
   const db = adminClient();
   const { data: agent } = await db
@@ -347,6 +360,7 @@ serve(async (req: Request) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  try {
   const url = new URL(req.url);
   const path = url.pathname;
   const match = path.match(/\/api\/?(.*)$/);
@@ -905,4 +919,7 @@ serve(async (req: Request) => {
   }
 
   return json({ error: "Not found" }, 404);
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500);
+  }
 });

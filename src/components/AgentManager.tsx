@@ -134,7 +134,6 @@ function RegisterDialog({
       const data = await res.json();
       setGeneratedKey(data.api_key);
       toast.success("Agent registered");
-      onRegistered();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -151,6 +150,7 @@ function RegisterDialog({
   };
 
   const handleClose = () => {
+    const wasRegistered = !!generatedKey;
     setName("");
     setFirewallHost("");
     setFirewallPort("4444");
@@ -163,6 +163,7 @@ function RegisterDialog({
     setGeneratedKey(null);
     setCopied(false);
     onClose();
+    if (wasRegistered) onRegistered();
   };
 
   if (!open) return null;
@@ -331,21 +332,32 @@ export function AgentManager() {
 
   const handleDelete = async (agentId: string) => {
     if (!confirm("Delete this agent and all its submissions?")) return;
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session) return;
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) { toast.error("Not authenticated"); return; }
 
-    await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Delete failed" }));
+        throw new Error(err.error ?? `HTTP ${res.status}`);
       }
-    );
-    toast.success("Agent deleted");
-    loadAgents();
+
+      toast.success("Agent deleted");
+      setExpanded(null);
+      loadAgents();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    }
   };
 
   const handleRetentionChange = async (days: number) => {
@@ -358,7 +370,7 @@ export function AgentManager() {
     toast.success(`Retention set to ${days} days`);
   };
 
-  if (loading) {
+  if (loading && !showRegister) {
     return (
       <div className="space-y-3 p-4 animate-pulse">
         <div className="h-4 bg-muted/40 rounded w-3/4" />
@@ -369,6 +381,7 @@ export function AgentManager() {
 
   return (
     <div className="space-y-4">
+      <RegisterDialog open={showRegister} onClose={() => setShowRegister(false)} onRegistered={loadAgents} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -549,7 +562,6 @@ export function AgentManager() {
         </p>
       </div>
 
-      <RegisterDialog open={showRegister} onClose={() => setShowRegister(false)} onRegistered={loadAgents} />
     </div>
   );
 }
