@@ -286,6 +286,32 @@ async function handleHeartbeat(
   if (body.serial_number) update.serial_number = body.serial_number;
   if (body.hardware_model) update.hardware_model = body.hardware_model;
 
+  // Auto-match to Central firewall by serial number
+  if (body.serial_number && !agent.central_firewall_id) {
+    const { data: centralFw } = await db
+      .from("central_firewalls")
+      .select("firewall_id, central_tenant_id, name, model")
+      .eq("org_id", agent.org_id as string)
+      .eq("serial_number", body.serial_number)
+      .maybeSingle();
+
+    if (centralFw) {
+      update.central_firewall_id = centralFw.firewall_id;
+      update.tenant_id = centralFw.central_tenant_id;
+
+      // Look up tenant name
+      const { data: tenant } = await db
+        .from("central_tenants")
+        .select("name")
+        .eq("org_id", agent.org_id as string)
+        .eq("central_tenant_id", centralFw.central_tenant_id)
+        .maybeSingle();
+
+      if (tenant) update.tenant_name = tenant.name;
+      if (centralFw.model && !body.hardware_model) update.hardware_model = centralFw.model;
+    }
+  }
+
   await db.from("agents").update(update).eq("id", agent.id);
 
   const pendingCommand = agent.pending_command as string | null;
