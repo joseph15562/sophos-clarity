@@ -38,6 +38,10 @@ const CentralEnrichment = lazy(() => import("@/components/CentralEnrichment").th
 const ScoreDialGauge = lazy(() => import("@/components/ScoreDialGauge").then((m) => ({ default: m.ScoreDialGauge })));
 const ScoreDeltaBanner = lazy(() => import("@/components/ScoreDeltaBanner").then((m) => ({ default: m.ScoreDeltaBanner })));
 const RiskSummaryCards = lazy(() => import("@/components/RiskSummaryCards").then((m) => ({ default: m.RiskSummaryCards })));
+const ProtocolServiceWidget = lazy(() => import("@/components/ProtocolServiceWidget").then((m) => ({ default: m.ProtocolServiceWidget })));
+const ComplianceGapWidget = lazy(() => import("@/components/ComplianceGapWidget").then((m) => ({ default: m.ComplianceGapWidget })));
+const RiskRoiWidget = lazy(() => import("@/components/RiskRoiWidget").then((m) => ({ default: m.RiskRoiWidget })));
+const RuleAnalysisWidget = lazy(() => import("@/components/RuleAnalysisWidget").then((m) => ({ default: m.RuleAnalysisWidget })));
 const QuickActions = lazy(() => import("@/components/QuickActions").then((m) => ({ default: m.QuickActions })));
 const FindingsByAge = lazy(() => import("@/components/FindingsByAge").then((m) => ({ default: m.FindingsByAge })));
 const RemediationVelocity = lazy(() => import("@/components/RemediationVelocity").then((m) => ({ default: m.RemediationVelocity })));
@@ -45,11 +49,9 @@ const SlaComplianceGauge = lazy(() => import("@/components/SlaComplianceGauge").
 const AlertFeedWidget = lazy(() => import("@/components/AlertFeed").then((m) => ({ default: m.AlertFeed })));
 const AssessmentCountdown = lazy(() => import("@/components/AssessmentCountdown").then((m) => ({ default: m.AssessmentCountdown })));
 const CategoryScoreBars = lazy(() => import("@/components/CategoryScoreBars").then((m) => ({ default: m.CategoryScoreBars })));
-const ServiceUsageWidget = lazy(() => import("@/components/ServiceUsage").then((m) => ({ default: m.ServiceUsage })));
 const RuleActionDistribution = lazy(() => import("@/components/RuleActionDistribution").then((m) => ({ default: m.RuleActionDistribution })));
 const CoverageMatrix = lazy(() => import("@/components/CoverageMatrix").then((m) => ({ default: m.CoverageMatrix })));
 const RiskDistributionWidget = lazy(() => import("@/components/RiskDistribution").then((m) => ({ default: m.RiskDistribution })));
-const ProtocolDistribution = lazy(() => import("@/components/ProtocolDistribution").then((m) => ({ default: m.ProtocolDistribution })));
 const CategoryTrends = lazy(() => import("@/components/CategoryTrends").then((m) => ({ default: m.CategoryTrends })));
 const FindingHeatmapTime = lazy(() => import("@/components/FindingHeatmapTime").then((m) => ({ default: m.FindingHeatmapTime })));
 const EncryptionOverview = lazy(() => import("@/components/EncryptionOverview").then((m) => ({ default: m.EncryptionOverview })));
@@ -58,18 +60,12 @@ const VpnSecuritySummary = lazy(() => import("@/components/VpnSecuritySummary").
 const NetworkZoneMap = lazy(() => import("@/components/NetworkZoneMap").then((m) => ({ default: m.NetworkZoneMap })));
 const PolicyComplexity = lazy(() => import("@/components/PolicyComplexity").then((m) => ({ default: m.PolicyComplexity })));
 const UnusedObjects = lazy(() => import("@/components/UnusedObjects").then((m) => ({ default: m.UnusedObjects })));
-const RuleConsolidation = lazy(() => import("@/components/RuleConsolidation").then((m) => ({ default: m.RuleConsolidation })));
 const ConfigSizeMetrics = lazy(() => import("@/components/ConfigSizeMetrics").then((m) => ({ default: m.ConfigSizeMetrics })));
-const RuleOverlapVis = lazy(() => import("@/components/RuleOverlapVis").then((m) => ({ default: m.RuleOverlapVis })));
 const CompliancePostureRing = lazy(() => import("@/components/CompliancePostureRing").then((m) => ({ default: m.CompliancePostureRing })));
 const FrameworkCoverageBars = lazy(() => import("@/components/FrameworkCoverageBars").then((m) => ({ default: m.FrameworkCoverageBars })));
-const ComplianceGapAnalysis = lazy(() => import("@/components/ComplianceGapAnalysis").then((m) => ({ default: m.ComplianceGapAnalysis })));
-const ControlFindingMap = lazy(() => import("@/components/ControlFindingMap").then((m) => ({ default: m.ControlFindingMap })));
-const CostOfRiskEstimator = lazy(() => import("@/components/CostOfRiskEstimator").then((m) => ({ default: m.CostOfRiskEstimator })));
 const GeographicFleetMap = lazy(() => import("@/components/GeographicFleetMap").then((m) => ({ default: m.GeographicFleetMap })));
 const ExportCentre = lazy(() => import("@/components/ExportCentre").then((m) => ({ default: m.ExportCentre })));
 const WhatIfComparison = lazy(() => import("@/components/WhatIfComparison").then((m) => ({ default: m.WhatIfComparison })));
-const SecurityRoiCalculator = lazy(() => import("@/components/SecurityRoiCalculator").then((m) => ({ default: m.SecurityRoiCalculator })));
 const RemediationRoadmap = lazy(() => import("@/components/RemediationRoadmap").then((m) => ({ default: m.RemediationRoadmap })));
 const FixEffortBreakdown = lazy(() => import("@/components/FixEffortBreakdown").then((m) => ({ default: m.FixEffortBreakdown })));
 const ImpactEffortBubble = lazy(() => import("@/components/ImpactEffortBubble").then((m) => ({ default: m.ImpactEffortBubble })));
@@ -208,22 +204,18 @@ export function AnalysisTabs({
       {/* Overview */}
       <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Overview failed to load">
-          {w("score-delta-banner") && (
-            <Suspense fallback={null}>
-              <ScoreDeltaBanner analysisResults={analysisResult} />
-            </Suspense>
-          )}
-
-          {w("score-dial-gauge") && (
-            <Suspense fallback={<ChartSkeleton height={200} />}>
-              <ScoreDialGauge analysisResults={analysisResult} />
-            </Suspense>
-          )}
-
-          {w("risk-summary-cards") && (
-            <Suspense fallback={<StatGridSkeleton count={6} />}>
-              <RiskSummaryCards analysisResults={analysisResult} />
-            </Suspense>
+          {w("score-overview") && (
+            <>
+              <Suspense fallback={null}>
+                <ScoreDeltaBanner analysisResults={analysisResult} />
+              </Suspense>
+              <Suspense fallback={<ChartSkeleton height={200} />}>
+                <ScoreDialGauge analysisResults={analysisResult} />
+              </Suspense>
+              <Suspense fallback={<StatGridSkeleton count={6} />}>
+                <RiskSummaryCards analysisResults={analysisResult} />
+              </Suspense>
+            </>
           )}
 
           {w("quick-actions") && (
@@ -517,19 +509,10 @@ export function AnalysisTabs({
             </div>
           )}
 
-          {(w("protocol-distribution") || w("service-usage")) && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              {w("protocol-distribution") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <ProtocolDistribution files={files} />
-                </Suspense>
-              )}
-              {w("service-usage") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <ServiceUsageWidget files={files} />
-                </Suspense>
-              )}
-            </div>
+          {w("protocol-service-usage") && (
+            <Suspense fallback={<ChartSkeleton />}>
+              <ProtocolServiceWidget files={files} />
+            </Suspense>
           )}
 
           {w("rule-action-dist") && (
@@ -588,30 +571,20 @@ export function AnalysisTabs({
             <InsuranceReadiness analysisResults={analysisResult} />
           </Suspense>
 
-          {(w("compliance-posture-ring") || w("framework-coverage-bars")) && (
+          {w("compliance-summary") && (
             <div className="grid gap-6 lg:grid-cols-2">
-              {w("compliance-posture-ring") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <CompliancePostureRing analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-                </Suspense>
-              )}
-              {w("framework-coverage-bars") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <FrameworkCoverageBars analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-                </Suspense>
-              )}
+              <Suspense fallback={<ChartSkeleton />}>
+                <CompliancePostureRing analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+              </Suspense>
+              <Suspense fallback={<ChartSkeleton />}>
+                <FrameworkCoverageBars analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+              </Suspense>
             </div>
           )}
 
-          {w("compliance-gap-analysis") && (
+          {w("compliance-gaps") && (
             <Suspense fallback={<CardSkeleton />}>
-              <ComplianceGapAnalysis analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-            </Suspense>
-          )}
-
-          {w("control-finding-map") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <ControlFindingMap analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+              <ComplianceGapWidget analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
             </Suspense>
           )}
 
@@ -653,37 +626,24 @@ export function AnalysisTabs({
           <Suspense fallback={<SectionSkeleton />}>
             <RuleOptimiser files={files} />
           </Suspense>
-          {(w("policy-complexity") || w("config-size-metrics")) && (
+          {w("config-complexity") && (
             <div className="grid gap-6 lg:grid-cols-2">
-              {w("policy-complexity") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <PolicyComplexity analysisResults={analysisResult} files={files} />
-                </Suspense>
-              )}
-              {w("config-size-metrics") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
-                </Suspense>
-              )}
+              <Suspense fallback={<CardSkeleton />}>
+                <PolicyComplexity analysisResults={analysisResult} files={files} />
+              </Suspense>
+              <Suspense fallback={<CardSkeleton />}>
+                <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
+              </Suspense>
             </div>
           )}
-          {(w("unused-objects") || w("rule-consolidation")) && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              {w("unused-objects") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <UnusedObjects files={files} />
-                </Suspense>
-              )}
-              {w("rule-consolidation") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <RuleConsolidation files={files} />
-                </Suspense>
-              )}
-            </div>
-          )}
-          {w("rule-overlap-vis") && (
+          {w("unused-objects") && (
             <Suspense fallback={<CardSkeleton />}>
-              <RuleOverlapVis files={files} />
+              <UnusedObjects files={files} />
+            </Suspense>
+          )}
+          {w("rule-analysis") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <RuleAnalysisWidget files={files} />
             </Suspense>
           )}
           {files.length >= 2 && (
@@ -717,15 +677,9 @@ export function AnalysisTabs({
             </Suspense>
           )}
 
-          {totalFindings > 0 && w("cost-of-risk-estimator") && (
+          {totalFindings > 0 && w("risk-roi") && (
             <Suspense fallback={<CardSkeleton />}>
-              <CostOfRiskEstimator analysisResults={analysisResult} />
-            </Suspense>
-          )}
-
-          {totalFindings > 0 && w("security-roi-calculator") && (
-            <Suspense fallback={<ChartSkeleton />}>
-              <SecurityRoiCalculator analysisResults={analysisResult} />
+              <RiskRoiWidget analysisResults={analysisResult} />
             </Suspense>
           )}
 

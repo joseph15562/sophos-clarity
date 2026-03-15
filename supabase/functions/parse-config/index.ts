@@ -4,6 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
+  "http://localhost:8080",
+  "https://sophos-clarity.vercel.app",
   Deno.env.get("ALLOWED_ORIGIN") ?? "",
 ].filter(Boolean);
 

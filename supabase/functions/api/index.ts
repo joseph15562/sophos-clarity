@@ -5,6 +5,8 @@ import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
+  "http://localhost:8080",
+  "https://sophos-clarity.vercel.app",
   Deno.env.get("ALLOWED_ORIGIN") ?? "",
 ].filter(Boolean);
 

@@ -9,9 +9,7 @@ export interface WidgetDef {
 
 export const WIDGET_REGISTRY: WidgetDef[] = [
   // ── Overview ──
-  { id: "score-delta-banner",   label: "Score Delta Banner",      tab: "overview",      isDefault: false },
-  { id: "score-dial-gauge",     label: "Score Dial Gauge",        tab: "overview",      isDefault: false },
-  { id: "risk-summary-cards",   label: "Risk Summary Cards",      tab: "overview",      isDefault: false },
+  { id: "score-overview",       label: "Score Overview (Gauge, Delta & Summary)", tab: "overview", isDefault: false },
   { id: "quick-actions",        label: "Quick Actions",           tab: "overview",      isDefault: false },
   { id: "findings-by-age",      label: "Findings by Age",         tab: "overview",      isDefault: false },
   { id: "sla-compliance-gauge", label: "SLA Compliance Gauge",    tab: "overview",      isDefault: false },
@@ -30,33 +28,27 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   { id: "admin-exposure-map",   label: "Admin Exposure Map",      tab: "security",      isDefault: false },
   { id: "vpn-security-summary", label: "VPN Security Summary",    tab: "security",      isDefault: false },
   { id: "network-zone-map",     label: "Network Zone Security",   tab: "security",      isDefault: false },
-  { id: "protocol-distribution",label: "Protocol Distribution",   tab: "security",      isDefault: false },
-  { id: "service-usage",        label: "Service Usage",           tab: "security",      isDefault: false },
+  { id: "protocol-service-usage",label: "Protocol & Service Usage", tab: "security",     isDefault: false },
   { id: "rule-action-dist",     label: "Rule Action Distribution",tab: "security",      isDefault: false },
   { id: "finding-heatmap-time", label: "Finding Heatmap",         tab: "security",      isDefault: false },
   { id: "threat-feed-timeline", label: "Threat Feed Timeline",    tab: "security",      isDefault: false },
 
   // ── Compliance ──
-  { id: "compliance-posture-ring",  label: "Compliance Posture Ring",  tab: "compliance", isDefault: false },
-  { id: "framework-coverage-bars",  label: "Framework Coverage Bars",  tab: "compliance", isDefault: false },
-  { id: "compliance-gap-analysis",  label: "Compliance Gap Analysis",  tab: "compliance", isDefault: false },
-  { id: "control-finding-map",      label: "Control-to-Finding Map",   tab: "compliance", isDefault: false },
+  { id: "compliance-summary",       label: "Compliance Summary (Posture & Coverage)", tab: "compliance", isDefault: false },
+  { id: "compliance-gaps",           label: "Compliance Gaps & Control Map",           tab: "compliance", isDefault: false },
   { id: "evidence-collection",      label: "Evidence Collection",      tab: "compliance", isDefault: false },
   { id: "compliance-calendar",      label: "Compliance Calendar",      tab: "compliance", isDefault: false },
   { id: "attestation-workflow",     label: "Attestation Workflow",     tab: "compliance", isDefault: false },
   { id: "regulatory-tracker",       label: "Regulatory Tracker",       tab: "compliance", isDefault: false },
 
   // ── Optimisation ──
-  { id: "policy-complexity",    label: "Policy Complexity",       tab: "optimisation",  isDefault: false },
-  { id: "config-size-metrics",  label: "Config Composition",      tab: "optimisation",  isDefault: false },
+  { id: "config-complexity",    label: "Config & Policy Complexity", tab: "optimisation", isDefault: false },
   { id: "unused-objects",       label: "Unused Objects",          tab: "optimisation",  isDefault: false },
-  { id: "rule-consolidation",   label: "Rule Consolidation",      tab: "optimisation",  isDefault: false },
-  { id: "rule-overlap-vis",     label: "Rule Overlap Matrix",     tab: "optimisation",  isDefault: false },
+  { id: "rule-analysis",        label: "Rule Consolidation & Overlap", tab: "optimisation", isDefault: false },
 
   // ── Tools ──
   { id: "what-if-comparison",     label: "What-If Comparison",       tab: "tools",     isDefault: false },
-  { id: "cost-of-risk-estimator", label: "Cost of Risk Estimator",   tab: "tools",     isDefault: false },
-  { id: "security-roi-calculator",label: "Security ROI Calculator",  tab: "tools",     isDefault: false },
+  { id: "risk-roi",               label: "Risk & ROI Analysis",      tab: "tools",     isDefault: false },
   { id: "export-centre",          label: "Export Centre",             tab: "tools",     isDefault: false },
   { id: "geographic-fleet-map",   label: "Geographic Fleet Map",     tab: "tools",     isDefault: false },
   { id: "baseline-manager",       label: "Baseline Manager",         tab: "tools",     isDefault: false },
