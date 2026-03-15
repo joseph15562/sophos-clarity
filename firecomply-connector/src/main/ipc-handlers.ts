@@ -37,7 +37,7 @@ export function registerIpcHandlers(
     return { ok: true };
   });
 
-  ipcMain.handle("firewall:test", async (_event, fw: { host: string; port: number; username: string; password: string; skipSslVerify: boolean }) => {
+  ipcMain.handle("firewall:test", async (_event, fw: { host: string; port: number; username: string; password: string; skipSslVerify: boolean; snmpCommunity?: string }) => {
     try {
       const result = await login({
         host: fw.host,
@@ -53,7 +53,7 @@ export function registerIpcHandlers(
 
       const caps = detectCapabilities(result.apiVersion);
       const creds = { host: fw.host, port: fw.port, username: fw.username, password: fw.password, skipSslVerify: fw.skipSslVerify ?? true };
-      const deviceInfo = await getDeviceInfo(creds);
+      const deviceInfo = await getDeviceInfo(creds, fw.snmpCommunity);
 
       return {
         ok: true,

@@ -131,9 +131,9 @@ export class Scheduler {
       const deviceInfo = await getDeviceInfo({
         host: fw.host, port: fw.port, username: fw.username,
         password: fw.password, skipSslVerify: fw.skipSslVerify,
-      });
+      }, fw.snmpCommunity);
       if (deviceInfo.serialNumber) log.info(`Serial: ${deviceInfo.serialNumber}`, label);
-      else log.warn("Could not retrieve serial number — check API profile permissions", label);
+      else log.warn("Could not retrieve serial number — check API profile permissions or add SNMP community", label);
       if (deviceInfo.hardwareModel) log.info(`Model: ${deviceInfo.hardwareModel}`, label);
 
       this.lastDeviceInfo = {

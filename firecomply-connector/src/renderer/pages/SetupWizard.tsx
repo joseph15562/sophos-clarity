@@ -12,6 +12,7 @@ interface FirewallEntry {
   username: string;
   password: string;
   skipSslVerify: boolean;
+  snmpCommunity: string;
   testResult?: { ok: boolean; firmwareVersion?: string; serialNumber?: string; hardwareModel?: string; error?: string };
 }
 
@@ -32,7 +33,7 @@ export function SetupWizard({ onComplete }: Props) {
   const [verified, setVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [firewalls, setFirewalls] = useState<FirewallEntry[]>([
-    { label: "", host: "", port: "4444", username: "", password: "", skipSslVerify: true },
+    { label: "", host: "", port: "4444", username: "", password: "", skipSslVerify: true, snmpCommunity: "" },
   ]);
   const [schedule, setSchedule] = useState("0 2 * * *");
   const [saving, setSaving] = useState(false);
@@ -60,6 +61,7 @@ export function SetupWizard({ onComplete }: Props) {
         host: fw.host, port: parseInt(fw.port) || 4444,
         username: fw.username, password: fw.password,
         skipSslVerify: fw.skipSslVerify,
+        snmpCommunity: fw.snmpCommunity || undefined,
       });
       updateFirewall(idx, { testResult: result });
       if (result.ok) toast.success(`Connected — ${result.firmwareVersion}`);
@@ -74,7 +76,7 @@ export function SetupWizard({ onComplete }: Props) {
   };
 
   const addFirewall = () => {
-    setFirewalls((prev) => [...prev, { label: "", host: "", port: "4444", username: "", password: "", skipSslVerify: true }]);
+    setFirewalls((prev) => [...prev, { label: "", host: "", port: "4444", username: "", password: "", skipSslVerify: true, snmpCommunity: "" }]);
   };
 
   const removeFirewall = (idx: number) => {
@@ -96,6 +98,7 @@ export function SetupWizard({ onComplete }: Props) {
           password: fw.password,
           skipSslVerify: fw.skipSslVerify,
           versionOverride: null,
+          snmpCommunity: fw.snmpCommunity || undefined,
         })),
         schedule,
         proxy: null,
@@ -189,6 +192,7 @@ export function SetupWizard({ onComplete }: Props) {
                   <input value={fw.username} onChange={(e) => updateFirewall(idx, { username: e.target.value })} placeholder="API Username" className="rounded border border-border bg-background px-2 py-1.5 text-xs" />
                   <input type="password" value={fw.password} onChange={(e) => updateFirewall(idx, { password: e.target.value })} placeholder="API Password" className="rounded border border-border bg-background px-2 py-1.5 text-xs" />
                 </div>
+                <input value={fw.snmpCommunity} onChange={(e) => updateFirewall(idx, { snmpCommunity: e.target.value })} placeholder="SNMP Community (optional — used to fetch serial number)" className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs" />
                 <div className="flex items-center justify-between">
                   <button onClick={() => testFirewall(idx)} disabled={!fw.host || !fw.username} className="text-xs px-3 py-1 rounded bg-muted hover:bg-muted/80 disabled:opacity-50">
                     Test Connection

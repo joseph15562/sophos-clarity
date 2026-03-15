@@ -47,6 +47,7 @@ export interface FirewallConfig {
   password: string;
   skipSslVerify: boolean;
   versionOverride: string | null;
+  snmpCommunity?: string;
 }
 
 export interface AppConfig {

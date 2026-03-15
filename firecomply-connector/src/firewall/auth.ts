@@ -113,12 +113,12 @@ export interface DeviceInfo {
   registrationStatus: string | null;
 }
 
-export async function getDeviceInfo(creds: FirewallCredentials): Promise<DeviceInfo> {
+export async function getDeviceInfo(creds: FirewallCredentials, snmpCommunity?: string): Promise<DeviceInfo> {
   let serial: string | null = null;
   let model: string | null = null;
   let regStatus: string | null = null;
 
-  // Try LicenseDetails first — most reliable source for serial on SFOS
+  // Try LicenseDetails first — most reliable XML API source for serial on SFOS
   try {
     const licXml = await apiRequest(creds, "<Get><LicenseDetails/></Get>");
     serial = licXml.match(/<ApplianceKey>([^<]+)<\/ApplianceKey>/)?.[1]
@@ -142,7 +142,17 @@ export async function getDeviceInfo(creds: FirewallCredentials): Promise<DeviceI
              ?? null;
       }
       regStatus = regXml.match(/<RegistrationStatus>([^<]+)<\/RegistrationStatus>/)?.[1] ?? null;
-    } catch { /* both queries failed */ }
+    } catch { /* XML API queries failed */ }
+  }
+
+  // Final fallback: SNMP
+  if (!serial && snmpCommunity) {
+    try {
+      const { getSerialViaSNMP } = await import("./snmp");
+      const snmpInfo = await getSerialViaSNMP(creds.host, snmpCommunity);
+      if (snmpInfo.serialNumber) serial = snmpInfo.serialNumber;
+      if (snmpInfo.model && !model) model = snmpInfo.model;
+    } catch { /* SNMP not available or failed */ }
   }
 
   return { serialNumber: serial, hardwareModel: model, registrationStatus: regStatus };
