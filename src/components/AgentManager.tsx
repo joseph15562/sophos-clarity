@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plug, Plus, Trash2, RefreshCw, Copy, Check, ChevronDown,
-  ChevronRight, Download, Server, Key, Play,
+  ChevronRight, Download, Server, Key, Play, Link2, Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -430,7 +430,7 @@ export function AgentManager() {
         )}
       </div>
 
-      {/* Agent list */}
+      {/* Agent list grouped by tenant */}
       {agents.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 py-6 text-center text-muted-foreground">
           <Plug className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -444,104 +444,168 @@ export function AgentManager() {
         </div>
       ) : (
         <div className="space-y-2">
-          {agents.map((agent) => {
-            const isExp = expanded === agent.id;
-            const subs = submissions[agent.id] ?? [];
-            return (
-              <div key={agent.id} className="rounded-lg border border-border bg-card overflow-hidden">
-                <button
-                  onClick={() => handleExpand(agent.id)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
-                >
-                  <StatusDot status={agent.status} lastSeenAt={agent.last_seen_at} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-foreground truncate">{agent.name}</p>
-                    <p className="text-[9px] text-muted-foreground truncate">
-                      {agent.customer_name} · {agent.firewall_host}:{agent.firewall_port}
-                    </p>
-                  </div>
-                  <FirmwareBadge version={agent.firmware_version} />
-                  {agent.last_score != null && (
-                    <span className="text-[10px] font-bold text-foreground">
-                      {agent.last_score}<span className="text-muted-foreground font-normal">/{agent.last_grade}</span>
-                    </span>
-                  )}
-                  <span className="text-[9px] text-muted-foreground whitespace-nowrap">
-                    {timeAgo(agent.last_seen_at)}
-                  </span>
-                  <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExp ? "rotate-180" : ""}`} />
-                </button>
-
-                {isExp && (
-                  <div className="border-t border-border px-3 pb-3 pt-2 space-y-3">
-                    {/* Agent details */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
-                      <div><span className="text-muted-foreground">Status:</span> <span className="font-medium text-foreground capitalize">{agent.status}</span></div>
-                      <div><span className="text-muted-foreground">Environment:</span> <span className="font-medium text-foreground">{agent.environment}</span></div>
-                      <div><span className="text-muted-foreground">Schedule:</span> <span className="font-medium text-foreground">{SCHEDULE_OPTIONS.find(o => o.value === agent.schedule_cron)?.label ?? agent.schedule_cron}</span></div>
-                      <div><span className="text-muted-foreground">API Key:</span> <span className="font-mono text-foreground">{agent.api_key_prefix}…</span></div>
-                      {agent.serial_number && <div><span className="text-muted-foreground">Serial:</span> <span className="font-medium text-foreground">{agent.serial_number}</span></div>}
-                      {agent.hardware_model && <div><span className="text-muted-foreground">Model:</span> <span className="font-medium text-foreground">{agent.hardware_model}</span></div>}
-                      {agent.tenant_name && <div className="col-span-2"><span className="text-muted-foreground">Tenant:</span> <span className="font-medium text-foreground">{agent.tenant_name}</span></div>}
-                      {agent.error_message && <div className="col-span-2"><span className="text-[#EA0022]">Error:</span> <span className="text-[#EA0022]">{agent.error_message}</span></div>}
-                    </div>
-
-                    {/* Recent submissions */}
-                    {subs.length > 0 && (
-                      <div>
-                        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Recent Submissions</p>
-                        <div className="space-y-1">
-                          {subs.map((sub) => (
-                            <div key={sub.id} className="flex items-center gap-2 px-2 py-1 rounded bg-muted/30 text-[10px]">
-                              <span className="font-bold text-foreground">{sub.overall_score}/{sub.overall_grade}</span>
-                              <span className="text-muted-foreground flex-1 truncate">
-                                {(sub.finding_titles as string[]).length} findings
-                              </span>
-                              {sub.drift && (
-                                <span className="text-[9px]">
-                                  {(sub.drift as { new?: string[]; fixed?: string[] }).new?.length ? (
-                                    <span className="text-[#EA0022]">+{(sub.drift as { new: string[] }).new.length}</span>
-                                  ) : null}
-                                  {(sub.drift as { fixed?: string[] }).fixed?.length ? (
-                                    <span className="text-[#00995a] ml-1">-{(sub.drift as { fixed: string[] }).fixed.length}</span>
-                                  ) : null}
-                                </span>
-                              )}
-                              <span className="text-muted-foreground whitespace-nowrap">{timeAgo(sub.created_at)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    {canManageAgents && (
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 text-[10px] h-7"
-                          onClick={() => handleRunNow(agent.id)}
-                        >
-                          <Play className="h-3 w-3" />
-                          Request Scan
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 text-[10px] h-7 text-[#EA0022] hover:text-[#EA0022] hover:bg-[#EA0022]/5"
-                          onClick={() => handleDelete(agent.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          Delete
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+          {(() => {
+            const grouped = new Map<string, Agent[]>();
+            for (const a of agents) {
+              const key = a.tenant_name || "Unassigned";
+              const list = grouped.get(key) ?? [];
+              list.push(a);
+              grouped.set(key, list);
+            }
+            const sorted = Array.from(grouped.entries()).sort(([a], [b]) =>
+              a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b)
             );
-          })}
+
+            return sorted.map(([tenantName, tenantAgents]) => {
+              const onlineCount = tenantAgents.filter(
+                (a) => a.status === "online" && a.last_seen_at && Date.now() - new Date(a.last_seen_at).getTime() < 30 * 60 * 1000
+              ).length;
+              const isLinked = tenantName !== "Unassigned";
+
+              return (
+                <div key={tenantName} className="rounded-lg border border-border bg-card overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/20 border-b border-border">
+                    <Server className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="text-[10px] font-semibold text-foreground flex-1">{tenantName}</span>
+                    {isLinked ? (
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-medium flex items-center gap-1">
+                        <Link2 className="h-2.5 w-2.5" /> Central Linked
+                      </span>
+                    ) : (
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium flex items-center gap-1">
+                        <Unlink className="h-2.5 w-2.5" /> Not Linked
+                      </span>
+                    )}
+                    <span className="text-[9px] text-muted-foreground">
+                      {tenantAgents.length} agent{tenantAgents.length !== 1 ? "s" : ""}
+                    </span>
+                    {onlineCount > 0 && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-medium">
+                        {onlineCount} online
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="divide-y divide-border/50">
+                    {tenantAgents.map((agent) => {
+                      const isExp = expanded === agent.id;
+                      const subs = submissions[agent.id] ?? [];
+                      return (
+                        <div key={agent.id}>
+                          <button
+                            onClick={() => handleExpand(agent.id)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
+                          >
+                            <StatusDot status={agent.status} lastSeenAt={agent.last_seen_at} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] font-medium text-foreground truncate">{agent.name}</p>
+                              <p className="text-[9px] text-muted-foreground truncate">
+                                {agent.customer_name} · {agent.firewall_host}:{agent.firewall_port}
+                              </p>
+                            </div>
+                            {agent.serial_number && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono shrink-0">
+                                {agent.serial_number}
+                              </span>
+                            )}
+                            {agent.hardware_model && (
+                              <span className="text-[9px] text-muted-foreground shrink-0">{agent.hardware_model}</span>
+                            )}
+                            <FirmwareBadge version={agent.firmware_version} />
+                            {agent.last_score != null && (
+                              <span className="text-[10px] font-bold text-foreground">
+                                {agent.last_score}<span className="text-muted-foreground font-normal">/{agent.last_grade}</span>
+                              </span>
+                            )}
+                            <span className="text-[9px] text-muted-foreground whitespace-nowrap">
+                              {timeAgo(agent.last_seen_at)}
+                            </span>
+                            <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExp ? "rotate-180" : ""}`} />
+                          </button>
+
+                          {isExp && (
+                            <div className="border-t border-border px-3 pb-3 pt-2 space-y-3 bg-muted/5">
+                              {/* Agent details */}
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
+                                <div><span className="text-muted-foreground">Status:</span> <span className="font-medium text-foreground capitalize">{agent.status}</span></div>
+                                <div><span className="text-muted-foreground">Environment:</span> <span className="font-medium text-foreground">{agent.environment || "Unknown"}</span></div>
+                                <div><span className="text-muted-foreground">Schedule:</span> <span className="font-medium text-foreground">{SCHEDULE_OPTIONS.find(o => o.value === agent.schedule_cron)?.label ?? agent.schedule_cron}</span></div>
+                                <div><span className="text-muted-foreground">API Key:</span> <span className="font-mono text-foreground">{agent.api_key_prefix}…</span></div>
+                                <div><span className="text-muted-foreground">Serial:</span> <span className="font-mono text-foreground">{agent.serial_number || "—"}</span></div>
+                                <div><span className="text-muted-foreground">Model:</span> <span className="font-medium text-foreground">{agent.hardware_model || "—"}</span></div>
+                                <div><span className="text-muted-foreground">Tenant:</span> <span className="font-medium text-foreground">{agent.tenant_name || "Unassigned"}</span></div>
+                                <div>
+                                  <span className="text-muted-foreground">Central:</span>{" "}
+                                  {(agent as any).central_firewall_id ? (
+                                    <span className="font-medium text-[#00995a] dark:text-[#00F2B3]">Linked</span>
+                                  ) : (
+                                    <span className="font-medium text-muted-foreground">Not linked</span>
+                                  )}
+                                </div>
+                                {agent.error_message && <div className="col-span-2"><span className="text-[#EA0022]">Error:</span> <span className="text-[#EA0022]">{agent.error_message}</span></div>}
+                              </div>
+
+                              {/* Recent submissions */}
+                              {subs.length > 0 && (
+                                <div>
+                                  <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Recent Submissions</p>
+                                  <div className="space-y-1">
+                                    {subs.map((sub) => (
+                                      <div key={sub.id} className="flex items-center gap-2 px-2 py-1 rounded bg-muted/30 text-[10px]">
+                                        <span className="font-bold text-foreground">{sub.overall_score}/{sub.overall_grade}</span>
+                                        <span className="text-muted-foreground flex-1 truncate">
+                                          {(sub.finding_titles as string[]).length} findings
+                                        </span>
+                                        {sub.drift && (
+                                          <span className="text-[9px]">
+                                            {(sub.drift as { new?: string[]; fixed?: string[] }).new?.length ? (
+                                              <span className="text-[#EA0022]">+{(sub.drift as { new: string[] }).new.length}</span>
+                                            ) : null}
+                                            {(sub.drift as { fixed?: string[] }).fixed?.length ? (
+                                              <span className="text-[#00995a] ml-1">-{(sub.drift as { fixed: string[] }).fixed.length}</span>
+                                            ) : null}
+                                          </span>
+                                        )}
+                                        <span className="text-muted-foreground whitespace-nowrap">{timeAgo(sub.created_at)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Actions */}
+                              {canManageAgents && (
+                                <div className="flex gap-2 pt-1">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 text-[10px] h-7"
+                                    onClick={() => handleRunNow(agent.id)}
+                                  >
+                                    <Play className="h-3 w-3" />
+                                    Request Scan
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 text-[10px] h-7 text-[#EA0022] hover:text-[#EA0022] hover:bg-[#EA0022]/5"
+                                    onClick={() => handleDelete(agent.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    Delete
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
       )}
 
