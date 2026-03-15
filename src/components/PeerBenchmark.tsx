@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
-import { getBenchmark, getBenchmarkLabel, type BenchmarkData } from "@/lib/benchmarks";
+import { getBenchmark, getBenchmarkLabel } from "@/lib/benchmarks";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;

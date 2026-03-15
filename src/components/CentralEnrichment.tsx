@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getCentralStatus, getCachedFirewalls, getAlerts, getFirewallLicences,
-  type CentralStatus, type CentralAlert, type FirewallLicence,
+  type CentralStatus, type CentralAlert,
 } from "@/lib/sophos-central";
 
 interface CentralEnrichmentProps {
@@ -37,7 +37,7 @@ interface LinkedFirewallData {
   licences: LicenceSummary[];
 }
 
-export function CentralEnrichment({ configMetas, customerName }: CentralEnrichmentProps) {
+export function CentralEnrichment({ configMetas, customerName: _customerName }: CentralEnrichmentProps) {
   const { org, isGuest } = useAuth();
   const orgId = org?.id ?? "";
 

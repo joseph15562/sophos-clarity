@@ -3,7 +3,7 @@ import {
   ArrowRight, ArrowLeft, Building2, Wifi, Upload, Sparkles, Check, X, RotateCcw,
   FileText, LayoutDashboard, Settings, Eye, Download, MousePointerClick,
   ChevronDown, Shield, BarChart3, History, Users, Activity, ExternalLink,
-  Plug, Server, Key, Clock, RefreshCw,
+  Plug, Key, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

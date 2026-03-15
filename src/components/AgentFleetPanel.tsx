@@ -74,7 +74,7 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
 }
 
 function AgentSummaryCard({
-  agent,
+  agent: _agent,
   submission,
   loadingSubmission,
   onLoadFull,

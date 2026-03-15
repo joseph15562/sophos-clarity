@@ -10,6 +10,11 @@ interface Props {
   reports: { id: string; label: string; markdown: string }[];
   customerName?: string;
   environment?: string;
+  analysisTab?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialMessage?: string;
+  onInitialMessageSent?: () => void;
 }
 
 interface ChatMessage {
@@ -61,8 +66,21 @@ function formatLastActive(ts: number): string {
 const EXECUTIVE_SUMMARY_PROMPT =
   "Generate a 3-paragraph executive summary of the firewall security assessment in plain English. Cover the overall security posture, the most important risks, and recommended next steps.";
 
-function getSuggestedQuestions(analysisResults: Record<string, AnalysisResult>): string[] {
-  const questions: string[] = [];
+const TAB_SUGGESTIONS: Record<string, string[]> = {
+  overview: ["What's my overall security posture?", "What are the top priorities?"],
+  security: ["Which rules need IPS enabled?", "How do I improve web filtering coverage?"],
+  compliance: ["Which compliance frameworks have the most gaps?", "How do I improve my PCI DSS score?"],
+  optimisation: ["What rules can be consolidated?", "How do I reduce my attack surface?"],
+  remediation: ["What should I fix first?", "How long will remediation take?"],
+};
+
+function getSuggestedQuestions(
+  analysisResults: Record<string, AnalysisResult>,
+  analysisTab?: string
+): string[] {
+  const tabQuestions = analysisTab ? TAB_SUGGESTIONS[analysisTab] : [];
+  const questions: string[] = [...(tabQuestions ?? [])];
+
   let hasCritical = false;
   let webFilteringLow = false;
   let mfaDisabled = false;
@@ -75,22 +93,41 @@ function getSuggestedQuestions(analysisResults: Record<string, AnalysisResult>):
     if (result.inspectionPosture?.withoutWebFilter > 0) webFilteringLow = true;
   }
 
-  if (hasCritical) questions.push("What are the most critical security issues?");
-  if (webFilteringLow) questions.push("How do I enable web filtering on my Sophos XGS?");
-  if (mfaDisabled) questions.push("How do I configure MFA/OTP on Sophos Firewall?");
-  questions.push("Give me a plain-English summary of this assessment");
+  if (hasCritical && !questions.some((q) => q.toLowerCase().includes("critical"))) questions.push("What are the most critical security issues?");
+  if (webFilteringLow && !questions.some((q) => q.toLowerCase().includes("web filter"))) questions.push("How do I enable web filtering on my Sophos XGS?");
+  if (mfaDisabled && !questions.some((q) => q.toLowerCase().includes("mfa"))) questions.push("How do I configure MFA/OTP on Sophos Firewall?");
+  if (!questions.some((q) => q.toLowerCase().includes("summary"))) questions.push("Give me a plain-English summary of this assessment");
 
   return questions.slice(0, 4);
 }
 
-export function AIChatPanel({ analysisResults, reports, customerName, environment }: Props) {
+export function AIChatPanel({
+  analysisResults,
+  reports,
+  customerName,
+  environment,
+  analysisTab,
+  open: controlledOpen,
+  onOpenChange,
+  initialMessage,
+  onInitialMessageSent,
+}: Props) {
   const customerHash = useMemo(
     () => getCustomerHash(customerName, environment, analysisResults),
     [customerName, environment, analysisResults]
   );
   const storageKey = useMemo(() => getStorageKey(customerHash), [customerHash]);
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+  const setIsOpen = useCallback(
+    (value: boolean) => {
+      if (isControlled) onOpenChange?.(value);
+      else setInternalOpen(value);
+    },
+    [isControlled, onOpenChange]
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastActive, setLastActive] = useState<number | null>(null);
   const [input, setInput] = useState("");
@@ -98,7 +135,10 @@ export function AIChatPanel({ analysisResults, reports, customerName, environmen
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const suggestedQuestions = useMemo(() => getSuggestedQuestions(analysisResults), [analysisResults]);
+  const suggestedQuestions = useMemo(
+    () => getSuggestedQuestions(analysisResults, analysisTab),
+    [analysisResults, analysisTab]
+  );
 
   const didLoadFromStorage = useRef(false);
 
@@ -149,6 +189,8 @@ export function AIChatPanel({ analysisResults, reports, customerName, environmen
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  const lastSentInitial = useRef<string | null>(null);
 
   const clearConversation = useCallback(() => {
     setMessages([]);
@@ -249,6 +291,15 @@ ${reportSummary}`;
     }
   }, [isStreaming, messages, buildContext]);
 
+  // When opened with initialMessage, send it and notify parent
+  useEffect(() => {
+    if (!isOpen || !initialMessage?.trim() || isStreaming) return;
+    if (lastSentInitial.current === initialMessage) return;
+    lastSentInitial.current = initialMessage;
+    sendMessage(initialMessage.trim());
+    onInitialMessageSent?.();
+  }, [isOpen, initialMessage, isStreaming, sendMessage, onInitialMessageSent]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -268,7 +319,7 @@ ${reportSummary}`;
         <button
           onClick={() => setIsOpen(true)}
           className="no-print fixed bottom-20 right-6 z-50 h-12 w-12 rounded-full bg-[#2006F7] text-white shadow-lg hover:bg-[#10037C] transition-colors flex items-center justify-center group"
-          title="Ask AI about your assessment"
+          aria-label="Open AI chat assistant"
         >
           <MessageCircle className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-[#00F2B3] ring-2 ring-background" />
@@ -289,7 +340,7 @@ ${reportSummary}`;
                 onClick={() => sendMessage(EXECUTIVE_SUMMARY_PROMPT)}
                 disabled={isStreaming}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/10 transition-colors text-xs disabled:opacity-50"
-                title="Generate executive summary"
+                aria-label="Generate executive summary"
               >
                 <FileText className="h-3.5 w-3.5" />
                 <span>Generate Summary</span>
@@ -298,7 +349,7 @@ ${reportSummary}`;
                 <button
                   onClick={clearConversation}
                   className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-                  title="Clear conversation"
+                  aria-label="Clear conversation"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -378,6 +429,7 @@ ${reportSummary}`;
               <button
                 onClick={() => sendMessage(input)}
                 disabled={isStreaming || !input.trim()}
+                aria-label="Send message"
                 className="h-9 w-9 rounded-lg bg-[#2006F7] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[#10037C] transition-colors shrink-0"
               >
                 {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

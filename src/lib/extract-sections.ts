@@ -107,7 +107,6 @@ function extractTable(tableEl: Element): TableData {
 /** Merge tables that have the same headers (or compatible) into one table with all rows. Ensures no firewall rules are lost when HTML has multiple tables. */
 function mergeTablesWithSameHeaders(tables: TableData[]): TableData[] {
   if (tables.length <= 1) return tables;
-  const merged: TableData[] = [];
   const byHeaderKey = new Map<string, TableData>();
 
   function headerKey(headers: string[]): string {

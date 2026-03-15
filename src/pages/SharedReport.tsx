@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { loadSharedReport, type SharedReport as SharedReportType } from "@/lib/share-report";

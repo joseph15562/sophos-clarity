@@ -1048,12 +1048,9 @@ function analyseIpsPolicies(
   if (!ipsSection) return;
 
   let totalPolicies = 0;
-  let hasRules = false;
   for (const t of ipsSection.tables) {
     totalPolicies += t.rows.length;
     for (const row of t.rows) {
-      const ruleCount = row["Rules"] ?? row["Rule Count"] ?? row["Signatures"] ?? "";
-      if (ruleCount && parseInt(ruleCount) > 0) hasRules = true;
       const action = (row["Action"] ?? row["Default Action"] ?? "").toLowerCase();
       if (action.includes("allow") || action.includes("permit")) {
         findings.push({
@@ -1142,20 +1139,7 @@ function analyseVirusScanning(
 /*  Device Hardening – Sophos Health Check detectable items            */
 /* ------------------------------------------------------------------ */
 
-function getSettingValue(sections: ExtractedSections, sectionPattern: RegExp, key: RegExp): string | null {
-  const section = findSection(sections, sectionPattern);
-  if (!section) return null;
-  for (const t of section.tables) {
-    for (const row of t.rows) {
-      for (const [k, v] of Object.entries(row)) {
-        if (key.test(k)) return v;
-      }
-    }
-  }
-  const text = section.text ?? "";
-  const m = text.match(new RegExp(key.source + "\\s*[=:]?\\s*(\\S+)", "i"));
-  return m ? m[1] : null;
-}
+// getSettingValue reserved for future Device Hardening checks
 
 function analyseAdminSettings(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,

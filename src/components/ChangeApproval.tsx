@@ -26,7 +26,7 @@ export function ChangeApproval() {
   const handleNew = () => {
     const name = prompt("Customer name for this plan:");
     if (!name) return;
-    const plan = createPlan(name, []);
+    createPlan(name, []);
     setPlans(loadPlans());
   };
 

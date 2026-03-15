@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, UserCheck, Undo2, Lock } from "lucide-react";
+import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, UserCheck, Undo2, Lock, HelpCircle } from "lucide-react";
+import { ScoringMethodology } from "./ScoringMethodology";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import {
   type LicenceTier,
@@ -110,6 +111,7 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
   const [manualOverrides, setManualOverrides] = useState<Set<string>>(loadOverrides);
   const [centralLinked, setCentralLinked] = useState(false);
   const [activeTab, setActiveTab] = useState("overall");
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     if (detectedTier) setTier(detectedTier);
@@ -314,8 +316,13 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
         <div className="flex items-center gap-2 mb-4">
           <Shield className="h-4 w-4 text-[#2006F7]" />
           <h3 className="text-sm font-display font-bold text-foreground">Sophos Best Practice Score</h3>
+          <button onClick={() => setShowHelp(!showHelp)} aria-label="How scoring works" className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
           <span className="text-[10px] text-muted-foreground ml-auto">based on Sophos documentation</span>
         </div>
+
+        {showHelp && <ScoringMethodology onClose={() => setShowHelp(false)} />}
 
         {/* Tabs */}
         {hasMultiple && (

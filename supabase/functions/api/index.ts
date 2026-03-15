@@ -675,31 +675,143 @@ serve(async (req: Request) => {
     return json({ ok: true, session: null, factorsRemoved: totp.length, message: "MFA factors removed — sign in with your password" });
   }
 
-  // ── Legacy placeholder routes (backward compat) ──
-  if (
-    req.method === "GET" &&
-    segments[0] === "assessments" &&
-    segments.length === 1
-  ) {
-    const db = adminClient();
+  // ── Assessments routes (JWT auth) ──
+  if (req.method === "GET" && segments[0] === "assessments") {
     const authHeader = req.headers.get("authorization");
     if (!authHeader) return json({ error: "Unauthorized" }, 401);
     const uc = userClient(authHeader);
-    const {
-      data: { user },
-    } = await uc.auth.getUser();
+    const { data: { user } } = await uc.auth.getUser();
     if (!user) return json({ error: "Unauthorized" }, 401);
     const membership = await getOrgMembership(user.id);
-    if (!membership) return json({ data: [], total: 0 });
+    if (!membership) return json({ error: "Forbidden" }, 403);
 
-    const { data, count } = await db
-      .from("assessments")
-      .select("id, org_id, customer_name, environment, overall_score, overall_grade, created_at", { count: "exact" })
-      .eq("org_id", membership.org_id)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    const db = adminClient();
 
-    return json({ data: data ?? [], total: count ?? 0 });
+    // GET /api/assessments — list
+    if (segments.length === 1) {
+      const { data, count } = await db
+        .from("assessments")
+        .select("id, org_id, customer_name, environment, overall_score, overall_grade, created_at", { count: "exact" })
+        .eq("org_id", membership.org_id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      return json({ data: data ?? [], total: count ?? 0 });
+    }
+
+    // GET /api/assessments/:id — single assessment with scores, findings, full details
+    if (segments.length === 2) {
+      const id = segments[1];
+      const { data: assessment, error: assErr } = await db
+        .from("assessments")
+        .select("*")
+        .eq("id", id)
+        .eq("org_id", membership.org_id)
+        .single();
+
+      if (assErr || !assessment) return json({ error: "Assessment not found" }, 404);
+
+      // Try to find matching agent_submission for findings/full_analysis (created within 5s)
+      const createdAt = assessment.created_at as string;
+      const windowStart = new Date(new Date(createdAt).getTime() - 5000).toISOString();
+      const windowEnd = new Date(new Date(createdAt).getTime() + 5000).toISOString();
+
+      const { data: submissions } = await db
+        .from("agent_submissions")
+        .select("id, findings_summary, full_analysis, overall_score, overall_grade, created_at")
+        .eq("org_id", membership.org_id)
+        .gte("created_at", windowStart)
+        .lte("created_at", windowEnd)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      const submission = submissions?.[0];
+      const payload = {
+        ...assessment,
+        findings: submission?.findings_summary ?? [],
+        full_analysis: submission?.full_analysis ?? null,
+      };
+
+      return json(payload);
+    }
+  }
+
+  // ── Firewalls route (JWT auth) ──
+  if (req.method === "GET" && segments[0] === "firewalls" && segments.length === 1) {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+    const uc = userClient(authHeader);
+    const { data: { user } } = await uc.auth.getUser();
+    if (!user) return json({ error: "Unauthorized" }, 401);
+    const membership = await getOrgMembership(user.id);
+    if (!membership) return json({ error: "Forbidden" }, 403);
+
+    const db = adminClient();
+
+    try {
+      const { data: firewalls, error: fwErr } = await db
+        .from("central_firewalls")
+        .select("id, firewall_id, serial_number, hostname, name, firmware_version, model, central_tenant_id")
+        .eq("org_id", membership.org_id);
+
+      if (fwErr) return json({ error: fwErr.message }, 500);
+
+      const { data: submissions } = await db
+        .from("agent_submissions")
+        .select("id, firewalls, overall_score, overall_grade, created_at")
+        .eq("org_id", membership.org_id)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const byFirewallId: Record<string, { score: number; grade: string; submitted_at: string }> = {};
+      for (const sub of submissions ?? []) {
+        const fwList = (sub.firewalls as Array<{ id?: string; hostname?: string }>) ?? [];
+        for (const fw of fwList) {
+          const fid = fw.id ?? fw.hostname;
+          if (!fid || byFirewallId[fid]) continue;
+          byFirewallId[fid] = {
+            score: sub.overall_score ?? 0,
+            grade: sub.overall_grade ?? "F",
+            submitted_at: sub.created_at as string,
+          };
+        }
+      }
+
+      const byHostname: Record<string, { score: number; grade: string; submitted_at: string }> = {};
+      for (const sub of submissions ?? []) {
+        const fwList = (sub.firewalls as Array<{ id?: string; hostname?: string }>) ?? [];
+        for (const fw of fwList) {
+          const h = fw.hostname;
+          if (!h || byHostname[h]) continue;
+          byHostname[h] = {
+            score: sub.overall_score ?? 0,
+            grade: sub.overall_grade ?? "F",
+            submitted_at: sub.created_at as string,
+          };
+        }
+      }
+
+      const result = (firewalls ?? []).map((fw) => {
+        const scoreInfo = byFirewallId[fw.firewall_id] ?? byHostname[fw.hostname] ?? null;
+        return {
+          id: fw.id,
+          firewall_id: fw.firewall_id,
+          serial_number: fw.serial_number,
+          hostname: fw.hostname,
+          name: fw.name,
+          firmware_version: fw.firmware_version,
+          model: fw.model,
+          central_tenant_id: fw.central_tenant_id,
+          current_score: scoreInfo?.score ?? null,
+          current_grade: scoreInfo?.grade ?? null,
+          last_assessed_at: scoreInfo?.submitted_at ?? null,
+        };
+      });
+
+      return json({ data: result });
+    } catch (err) {
+      return json({ error: err instanceof Error ? err.message : "Internal error" }, 500);
+    }
   }
 
   return json({ error: "Not found" }, 404);

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Link2, Unlink, Search, Server, RefreshCw, ChevronDown, CheckCircle2, AlertCircle, Wifi } from "lucide-react";
+import { Link2, Unlink, Search, Server, RefreshCw, ChevronDown, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { useCentral, type UseCentralState } from "@/hooks/use-central";
-import type { CentralFirewall, CentralFirewallGroup, CentralTenant } from "@/lib/sophos-central";
+import { useCentral } from "@/hooks/use-central";
+import type { CentralFirewall } from "@/lib/sophos-central";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,7 +23,7 @@ interface LinkState {
   method: "auto" | "serial" | "manual";
 }
 
-export function FirewallLinker({ configs, customerName, analysisResults, onLink }: FirewallLinkerProps) {
+export function FirewallLinker({ configs, customerName, analysisResults: _analysisResults, onLink }: FirewallLinkerProps) {
   const { org, isGuest } = useAuth();
   const central = useCentral();
 

@@ -168,6 +168,19 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
           </div>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1 pl-7">Indicative mapping based on firewall configuration controls. A full compliance audit requires additional evidence beyond firewall configuration.</p>
+        {mappings.length > 0 && (
+          <div className="mt-2 pl-7 space-y-0.5">
+            {mappings.map((m) => {
+              const scorable = m.summary.pass + m.summary.partial + m.summary.fail;
+              const total = scorable + m.summary.na;
+              return (
+                <p key={m.framework} className="text-[9px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{m.framework}</span>: Covers {scorable} of {total} mapped controls. A full {m.framework} audit requires evidence beyond firewall configuration.
+                </p>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Legend */}

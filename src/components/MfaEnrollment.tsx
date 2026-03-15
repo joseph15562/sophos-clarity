@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, QrCode, Check, Trash2, Key } from "lucide-react";
+import { Shield, Check, Trash2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";

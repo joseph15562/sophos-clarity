@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { LogIn, UserPlus, ArrowRight, AlertCircle, Fingerprint } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;

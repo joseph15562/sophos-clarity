@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, BookOpen, ExternalLink, Plane, Plug, Fingerprint } from "lucide-react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +81,7 @@ function SettingsSection({ title, icon, subtitle, children }: { title: string; i
   );
 }
 
-function DataGovernanceSection({ orgId }: { orgId?: string }) {
+function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
   const { org } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");

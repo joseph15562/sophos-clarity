@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Shield, AlertTriangle, Download, ChevronDown, RefreshCw, Server, Clock, Link2 } from "lucide-react";
+import { Shield, Download, ChevronDown, RefreshCw, Server, Clock, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";

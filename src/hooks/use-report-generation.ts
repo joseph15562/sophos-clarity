@@ -29,7 +29,7 @@ export function buildCoverPageMarkdown(branding: BrandingData): string {
 /** Template-based executive one-pager markdown (no AI call) */
 export function buildExecutiveOnePagerMarkdown(
   analysisResults: Record<string, AnalysisResult>,
-  branding: BrandingData,
+  _branding: BrandingData,
   customerName: string
 ): string {
   const allFindings: Finding[] = Object.values(analysisResults).flatMap((r) => r.findings);

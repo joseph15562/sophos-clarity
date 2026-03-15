@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Building2, TrendingUp, TrendingDown, Minus, AlertTriangle, Shield, ChevronDown, ChevronRight, Search, ArrowUpDown, Cloud, HardDrive, Grid3X3, Plug } from "lucide-react";
+import { Building2, Shield, ChevronDown, Search, ArrowUpDown, Cloud, HardDrive, Plug } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
@@ -32,6 +32,10 @@ function timeAgo(ts: number): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function scoreToGrade(score: number): string {
+  return score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F";
 }
 
 interface CustomerSummary {
@@ -76,7 +80,7 @@ export function TenantDashboard() {
   const [sortField, setSortField] = useState<SortField>("score");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [fleetOverviewExpanded, setFleetOverviewExpanded] = useState(false);
+  const [_fleetOverviewExpanded, _setFleetOverviewExpanded] = useState(false);
   const [agentCustomers, setAgentCustomers] = useState<Map<string, { lastSeen: string | null; status: string }>>(new Map());
 
   useEffect(() => {
@@ -247,6 +251,42 @@ export function TenantDashboard() {
         </div>
       </div>
 
+      {/* Fleet heatmap grid */}
+      {allFirewalls.length > 1 && (
+        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
+          <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Fleet Health Map</p>
+          <div className="flex flex-wrap gap-1.5">
+            {allFirewalls.map((fw) => {
+              const g = fw.grade;
+              const color = g === "A" || g === "B" ? "bg-[#00995a]/70 dark:bg-[#00F2B3]/60" :
+                g === "C" ? "bg-[#F8E300]/50" :
+                g === "D" ? "bg-[#F29400]/60" : "bg-[#EA0022]/60";
+              return (
+                <div
+                  key={`${fw.customer}-${fw.label}`}
+                  title={`${fw.customer} — ${fw.label}: ${fw.score} (${g})`}
+                  className={`h-5 w-5 rounded-sm ${color} cursor-default flex items-center justify-center`}
+                >
+                  <span className="text-[7px] font-bold text-white drop-shadow-sm">{fw.score}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Outlier detection */}
+      {outlierCounts.length > 0 && (
+        <div className="rounded-lg border border-[#F29400]/20 bg-[#F29400]/[0.04] p-3 space-y-1.5">
+          <p className="text-[10px] font-semibold text-[#c47800] dark:text-[#F29400] uppercase tracking-wider">Common Weaknesses Across Fleet</p>
+          {outlierCounts.map((o) => (
+            <p key={o.label} className="text-[10px] text-muted-foreground">
+              <span className="font-medium text-foreground">{o.count} of {allFirewalls.length}</span> firewalls have <span className="font-medium text-foreground">{o.label}</span> below 50%
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* Search + sort */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -280,7 +320,6 @@ export function TenantDashboard() {
       {/* Customer rows */}
       <div className="space-y-1.5">
         {filtered.map((c) => {
-          const totalFindings = c.latestSnapshot.firewalls.reduce((s, f) => s + f.totalFindings, 0);
           const isExpanded = expanded === c.latestSnapshot.id;
           const sparkColor = c.latestSnapshot.overallScore >= 75 ? "#00995a" : c.latestSnapshot.overallScore >= 50 ? "#F29400" : "#EA0022";
           return (

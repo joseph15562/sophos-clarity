@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Check, CheckCheck, X, Trash2, AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
+import { Bell, CheckCheck, X, Trash2, AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
 import type { AppNotification, NotificationType } from "@/hooks/use-notifications";
 
 interface Props {

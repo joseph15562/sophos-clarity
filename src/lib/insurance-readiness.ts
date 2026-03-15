@@ -101,7 +101,6 @@ function assessQuestion(
 
     case 3: {
       // Intrusion prevention enabled
-      const withIps = allPostures.filter((p) => p.enabledWanRules > 0 && p.withIps > 0);
       const totalWan = allPostures.reduce((s, p) => s + p.enabledWanRules, 0);
       const ipsFindings = allFindings.filter(
         (f) =>

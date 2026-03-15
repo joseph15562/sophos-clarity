@@ -59,7 +59,6 @@ function diffTable(before: TableData, after: TableData): TableDiff {
   }
 
   const rows: RowDiff[] = [];
-  const allKeys = new Set([...beforeMap.keys(), ...afterMap.keys()]);
 
   const orderedKeys = [
     ...before.rows.map((r) => rowKey(r, before.headers)),

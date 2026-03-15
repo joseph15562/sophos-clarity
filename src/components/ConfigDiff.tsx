@@ -50,7 +50,7 @@ const STATUS_STYLES: Record<ChangeType, { bg: string; text: string; icon: React.
 
 type FilterMode = "all" | "changes";
 
-export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSections, onClose }: ConfigDiffProps) {
+export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSections, onClose, beforeAnalysis, afterAnalysis }: ConfigDiffProps) {
   const diff = useMemo(() => diffConfigs(beforeSections, afterSections), [beforeSections, afterSections]);
   const [filter, setFilter] = useState<FilterMode>("changes");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
@@ -69,6 +69,19 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
       return next;
     });
   };
+
+  const beforeScore = beforeAnalysis ? computeRiskScore(beforeAnalysis) : null;
+  const afterScore = afterAnalysis ? computeRiskScore(afterAnalysis) : null;
+
+  const { newFindings, fixedFindings } = useMemo(() => {
+    if (!beforeAnalysis || !afterAnalysis) return { newFindings: [] as Finding[], fixedFindings: [] as Finding[] };
+    const beforeIds = new Set(beforeAnalysis.findings.map((f) => f.id));
+    const afterIds = new Set(afterAnalysis.findings.map((f) => f.id));
+    return {
+      newFindings: afterAnalysis.findings.filter((f) => !beforeIds.has(f.id)),
+      fixedFindings: beforeAnalysis.findings.filter((f) => !afterIds.has(f.id)),
+    };
+  }, [beforeAnalysis, afterAnalysis]);
 
   return (
     <div className="space-y-6">
@@ -89,6 +102,48 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
         </div>
         <Button variant="outline" size="sm" onClick={onClose}>← Back</Button>
       </div>
+
+      {/* Side-by-side risk scores */}
+      {beforeScore && afterScore && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-xl border border-border bg-card p-4 text-center">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Before</p>
+            <p className={`text-3xl font-extrabold ${beforeScore.overall >= 70 ? "text-[#00995a] dark:text-[#00F2B3]" : beforeScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
+              {beforeScore.overall}
+            </p>
+            <p className="text-xs font-bold text-muted-foreground mt-0.5">{beforeScore.grade}</p>
+            <p className="text-[10px] text-muted-foreground">{beforeAnalysis!.findings.length} findings</p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4 text-center">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">After</p>
+            <p className={`text-3xl font-extrabold ${afterScore.overall >= 70 ? "text-[#00995a] dark:text-[#00F2B3]" : afterScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
+              {afterScore.overall}
+            </p>
+            <p className="text-xs font-bold text-muted-foreground mt-0.5">{afterScore.grade}</p>
+            <p className="text-[10px] text-muted-foreground">{afterAnalysis!.findings.length} findings</p>
+          </div>
+          {afterScore.overall !== beforeScore.overall && (
+            <div className="col-span-2 flex items-center justify-center gap-2 text-xs">
+              {afterScore.overall > beforeScore.overall ? (
+                <>
+                  <ArrowUp className="h-4 w-4 text-[#00995a] dark:text-[#00F2B3]" />
+                  <span className="font-semibold text-[#00995a] dark:text-[#00F2B3]">+{afterScore.overall - beforeScore.overall} points improvement</span>
+                </>
+              ) : (
+                <>
+                  <ArrowDown className="h-4 w-4 text-[#EA0022]" />
+                  <span className="font-semibold text-[#EA0022]">{afterScore.overall - beforeScore.overall} points regression</span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Findings delta */}
+      {(newFindings.length > 0 || fixedFindings.length > 0) && (
+        <FindingsDeltaSection newFindings={newFindings} fixedFindings={fixedFindings} />
+      )}
 
       {/* Summary strip */}
       <DiffSummary diff={diff} />

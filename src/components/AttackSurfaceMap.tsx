@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ExtractedSections } from "@/lib/extract-sections";
-import { extractAttackSurface, type ExposedService } from "@/lib/attack-surface";
+import { extractAttackSurface, extractExternalIps, type ExposedService } from "@/lib/attack-surface";
+import { GeoAttackMap } from "@/components/GeoAttackMap";
 
 interface Props {
   files: Array<{ label: string; fileName: string; extractedData: ExtractedSections }>;
@@ -20,7 +21,7 @@ function exposureKey(s: ExposedService): string {
 export function AttackSurfaceMap({ files }: Props) {
   const [open, setOpen] = useState(false);
 
-  const { allServices, newExposureCount } = useMemo(() => {
+  const { allServices, newExposureCount, externalIps } = useMemo(() => {
     const result: Array<ExposedService & { firewall: string; isNew?: boolean }> = [];
     const servicesByFile: ExposedService[][] = [];
 
@@ -52,9 +53,14 @@ export function AttackSurfaceMap({ files }: Props) {
       }
     }
 
+    const externalIps = Array.from(
+      new Set(files.flatMap((f) => extractExternalIps(f.extractedData)))
+    );
+
     return {
       allServices: result.sort((a, b) => riskOrder(a.risk) - riskOrder(b.risk)),
       newExposureCount,
+      externalIps,
     };
   }, [files]);
 
@@ -148,6 +154,20 @@ export function AttackSurfaceMap({ files }: Props) {
               </div>
             </div>
           </div>
+
+          {/* Geo-IP & CVE section */}
+          {externalIps.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-border">
+              <h4 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-2">
+                <span className="text-[#2006F7] dark:text-[#00EDFF]">🌍</span>
+                Geo-IP & CVE Correlation
+              </h4>
+              <GeoAttackMap
+                externalIps={externalIps}
+                exposedServices={allServices.map((s) => ({ service: s.service, port: s.port }))}
+              />
+            </div>
+          )}
 
           {/* Table detail */}
           <div className="overflow-x-auto">

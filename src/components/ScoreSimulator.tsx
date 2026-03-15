@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import type { AnalysisResult, InspectionPosture, Finding } from "@/lib/analyse-config";
+import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 
 interface Props {

@@ -30,7 +30,6 @@ export function extractAttackSurface(sections: ExtractedSections): ExposedServic
 
     for (const t of sections[key].tables) {
       for (const row of t.rows) {
-        const allValues = Object.entries(row);
         const name = row["Rule Name"] ?? row["Name"] ?? row["#"] ?? "";
 
         if (!isDnatRule(row, name)) continue;
@@ -258,4 +257,55 @@ function evaluateRisk(service: string, dest: string): ExposedService["risk"] {
   if (/http|80\b|443|8080|8443/.test(s)) return "medium";
   if (s === "any") return "high";
   return "low";
+}
+
+const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+function isPublicIp(ip: string): boolean {
+  if (!IPV4_REGEX.test(ip)) return false;
+  const parts = ip.split(".").map(Number);
+  if (parts[0] === 10) return false;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return false;
+  if (parts[0] === 192 && parts[1] === 168) return false;
+  if (parts[0] === 127) return false;
+  return true;
+}
+
+const IP_IN_TEXT_REGEX = /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b/g;
+
+/**
+ * Extract external (public) IP addresses from config sections.
+ * Used for Geo-IP and CVE correlation on the attack surface map.
+ * Sources: NAT Original Destination, network/interface config.
+ */
+export function extractExternalIps(sections: ExtractedSections): string[] {
+  const seen = new Set<string>();
+
+  const addIfPublic = (val: string) => {
+    const trimmed = val.trim();
+    if (trimmed && isPublicIp(trimmed)) seen.add(trimmed);
+  };
+
+  for (const key of Object.keys(sections)) {
+    if (!/nat\s*rule|network|interface|port|zone/i.test(key)) continue;
+
+    for (const t of sections[key].tables ?? []) {
+      for (const row of t.rows ?? []) {
+        const origDest = row["Original Destination"] ?? row["Original destination"] ?? row["Destination"] ?? row["IP Address"] ?? row["Address"] ?? "";
+        addIfPublic(origDest);
+      }
+    }
+
+    for (const d of sections[key].details ?? []) {
+      const fields = d.fields ?? {};
+      const origDest = fields["Original Destination"] ?? fields["Original destination"] ?? fields["IP Address"] ?? fields["Address"] ?? fields["Gateway"] ?? "";
+      addIfPublic(origDest);
+    }
+
+    const text = sections[key].text ?? "";
+    const matches = text.match(IP_IN_TEXT_REGEX) ?? [];
+    matches.forEach(addIfPublic);
+  }
+
+  return Array.from(seen);
 }

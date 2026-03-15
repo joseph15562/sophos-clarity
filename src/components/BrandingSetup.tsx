@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown, Wifi } from "lucide-react";
+import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,

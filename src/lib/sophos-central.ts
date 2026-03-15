@@ -45,7 +45,7 @@ async function callCentral<T = unknown>(body: Record<string, unknown>, retries =
 
       if (!res.ok || data.error) {
         const msg = (data.error as string) ?? `Request failed (${res.status})`;
-        if (res.status >= 500 && attempt < retries) {
+        if ((res.status === 429 || res.status >= 500) && attempt < retries) {
           lastError = new Error(msg);
           continue;
         }

@@ -4,6 +4,7 @@
  */
 
 import type { AnalysisResult } from "./analyse-config";
+import type { Json } from "@/integrations/supabase/types";
 import { computeRiskScore } from "./risk-score";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -68,7 +69,7 @@ export async function saveAlertRules(rules: AlertRule[]): Promise<void> {
       org_id: orgId,
       event_type: r.eventType,
       channel: r.channel,
-      config: r.config as Record<string, unknown>,
+      config: r.config as unknown as Json,
       enabled: r.enabled,
     }));
     if (toUpsert.length > 0) {

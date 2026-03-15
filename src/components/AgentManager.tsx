@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plug, Plus, Trash2, RefreshCw, Copy, Check, ChevronDown,
-  ChevronRight, Wifi, WifiOff, AlertTriangle, Clock, Shield,
-  Download, Server, Key, Settings2,
+  ChevronRight, Download, Server, Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

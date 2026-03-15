@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useCallback } from "react";
-import { CheckCircle2, Download, Shield, Globe, Lock, Network, AlertTriangle, Settings, Bug, Eye, Activity, Server, Clock, Key, Database, Wifi, FileWarning, ChevronDown, ChevronRight } from "lucide-react";
+import { CheckCircle2, Download, Shield, Globe, Lock, Network, AlertTriangle, Settings, Bug, Eye, Activity, Server, Clock, Key, Database, Wifi, FileWarning, ChevronDown, ChevronRight, Lightbulb } from "lucide-react";
+import { StatCard } from "@/components/ui/StatCard";
 import type { AnalysisResult, Severity, Finding, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
 import { findingToFrameworks } from "@/lib/compliance-map";
@@ -15,6 +16,7 @@ interface EstateOverviewProps {
   extractionPct: number;
   aggregatedPosture: InspectionPosture;
   selectedFrameworks?: string[];
+  onExplainFinding?: (title: string) => void;
 }
 
 const SEVERITY_COLOR: Record<Severity, string> = {
@@ -43,6 +45,7 @@ export function EstateOverview({
   extractionPct,
   aggregatedPosture,
   selectedFrameworks = [],
+  onExplainFinding,
 }: EstateOverviewProps) {
   const findingsRef = useRef<HTMLDivElement>(null);
 
@@ -114,7 +117,7 @@ export function EstateOverview({
       {/* Deterministic findings panel */}
       {totalFindings > 0 && (
         <div ref={findingsRef} className="scroll-mt-20 rounded-xl transition-all duration-500">
-          <FindingsPanel analysisResults={analysisResults} fileCount={fileCount} selectedFrameworks={selectedFrameworks} />
+          <FindingsPanel analysisResults={analysisResults} fileCount={fileCount} selectedFrameworks={selectedFrameworks} onExplainFinding={onExplainFinding} />
         </div>
       )}
 
@@ -192,27 +195,6 @@ function ParserDiagnostics({ analysisResults }: { analysisResults: Record<string
   );
 }
 
-function StatCard({ icon, value, label, border, bg, iconBg, valueColor, onClick }: {
-  icon: string; value: number; label: string;
-  border: string; bg: string; iconBg: string; valueColor: string;
-  onClick?: () => void;
-}) {
-  const Wrapper = onClick ? "button" : "div";
-  return (
-    <Wrapper
-      className={`rounded-xl border ${border} ${bg} p-5 flex items-center gap-4 text-left ${onClick ? "cursor-pointer hover:brightness-110 hover:shadow-md transition-all" : ""}`}
-      onClick={onClick}
-    >
-      <div className={`h-12 w-12 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
-        <img src={icon} alt="" className="h-7 w-7 sophos-icon" />
-      </div>
-      <div>
-        <p className={`text-3xl font-extrabold ${valueColor} leading-none`}>{value}</p>
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mt-1">{label}</p>
-      </div>
-    </Wrapper>
-  );
-}
 
 function ExtractionCoverage({ extractionPct, totalPopulated, totalSections, totalRules, totalNatRules, totalInterfaces }: {
   extractionPct: number; totalPopulated: number; totalSections: number;
@@ -323,9 +305,10 @@ const CONFIDENCE_STYLE: Record<string, string> = {
   low: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
 };
 
-function FindingCard({ finding, label, fileCount, selectedFrameworks }: {
+function FindingCard({ finding, label, fileCount, selectedFrameworks, onExplainFinding }: {
   finding: { id: string; severity: Severity; title: string; detail: string; section: string; remediation?: string; confidence?: string; evidence?: string };
   label: string; fileCount: number; selectedFrameworks: string[];
+  onExplainFinding?: (title: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const frameworks = selectedFrameworks.length > 0
@@ -334,29 +317,41 @@ function FindingCard({ finding, label, fileCount, selectedFrameworks }: {
 
   return (
     <div className={`rounded-lg border border-border border-l-4 ${SEVERITY_BORDER[finding.severity]} bg-card shadow-sm overflow-hidden`}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
-      >
-        <span className="text-lg shrink-0" title={finding.severity}>{severityIcon(finding.severity)}</span>
-        <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
-          <span className={`font-bold text-sm ${SEVERITY_COLOR[finding.severity]}`}>{finding.title}</span>
-          {finding.confidence && (
-            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${CONFIDENCE_STYLE[finding.confidence] ?? CONFIDENCE_STYLE.medium}`}>
-              {finding.confidence}
-            </span>
-          )}
-          {fileCount > 1 && (
-            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
-          )}
-          {frameworks.map((fw) => (
-            <span key={fw} className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/20 dark:text-[#ff6b6b]">
-              {fw}
-            </span>
-          ))}
-        </div>
-        <span className="text-muted-foreground text-xs shrink-0">{open ? "▼" : "▶"}</span>
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors min-w-0"
+        >
+          <span className="text-lg shrink-0" title={finding.severity}>{severityIcon(finding.severity)}</span>
+          <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
+            <span className={`font-bold text-sm ${SEVERITY_COLOR[finding.severity]}`}>{finding.title}</span>
+            {finding.confidence && (
+              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${CONFIDENCE_STYLE[finding.confidence] ?? CONFIDENCE_STYLE.medium}`}>
+                {finding.confidence}
+              </span>
+            )}
+            {fileCount > 1 && (
+              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
+            )}
+            {frameworks.map((fw) => (
+              <span key={fw} className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/20 dark:text-[#ff6b6b]">
+                {fw}
+              </span>
+            ))}
+          </div>
+          <span className="text-muted-foreground text-xs shrink-0">{open ? "▼" : "▶"}</span>
+        </button>
+        {onExplainFinding && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onExplainFinding(finding.title); }}
+            className="p-2 shrink-0 text-muted-foreground hover:text-[#2006F7] dark:hover:text-[#00EDFF] hover:bg-muted/50 rounded transition-colors"
+            title="Explain this finding"
+            aria-label="Explain this finding"
+          >
+            <Lightbulb className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
       {open && (
         <div className="px-4 pb-3.5 pl-[3.25rem] space-y-2">
           <p className="text-xs text-muted-foreground leading-relaxed">{finding.detail}</p>
@@ -415,8 +410,9 @@ interface SectionGroupData {
   highestSeverity: number;
 }
 
-function FindingsPanel({ analysisResults, fileCount, selectedFrameworks }: {
+function FindingsPanel({ analysisResults, fileCount, selectedFrameworks, onExplainFinding }: {
   analysisResults: Record<string, AnalysisResult>; fileCount: number; selectedFrameworks: string[];
+  onExplainFinding?: (title: string) => void;
 }) {
   const [openSections, setOpenSections] = useState<Set<string>>(new Set());
 
@@ -525,6 +521,7 @@ function FindingsPanel({ analysisResults, fileCount, selectedFrameworks }: {
                       label={f.firewall}
                       fileCount={fileCount}
                       selectedFrameworks={selectedFrameworks}
+                      onExplainFinding={onExplainFinding}
                     />
                   ))}
                 </div>

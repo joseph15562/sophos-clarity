@@ -181,7 +181,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
           })}
 
           {/* Active data points */}
-          {visiblePlotted.map((p, i) => {
+          {visiblePlotted.map((p, _i) => {
             const origIdx = plotted.indexOf(p);
             const jitterX = (((origIdx * 7) % 11) - 5) * 0.8;
             const jitterY = (((origIdx * 13) % 11) - 5) * 0.6;

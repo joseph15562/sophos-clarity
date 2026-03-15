@@ -51,7 +51,6 @@ const AttackSurfaceMap = lazy(() => import("@/components/AttackSurfaceMap").then
 const ConsistencyChecker = lazy(() => import("@/components/ConsistencyChecker").then((m) => ({ default: m.ConsistencyChecker })));
 const PeerBenchmark = lazy(() => import("@/components/PeerBenchmark").then((m) => ({ default: m.PeerBenchmark })));
 const SophosBestPractice = lazy(() => import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })));
-const PolicyBaseline = lazy(() => import("@/components/PolicyBaseline").then((m) => ({ default: m.PolicyBaseline })));
 const RuleOptimiser = lazy(() => import("@/components/RuleOptimiser").then((m) => ({ default: m.RuleOptimiser })));
 const PriorityMatrix = lazy(() => import("@/components/PriorityMatrix").then((m) => ({ default: m.PriorityMatrix })));
 const FirewallLinker = lazy(() => import("@/components/FirewallLinker").then((m) => ({ default: m.FirewallLinker })));
@@ -62,10 +61,10 @@ const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").the
 const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
 const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
 const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
-import { DashboardLoadingSkeleton, SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
+import { SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { saveFindingSnapshot } from "@/lib/finding-snapshots";
-import { downloadRiskRegisterCSV } from "@/lib/risk-register";
+import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -90,6 +89,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [analysisTab, setAnalysisTab] = useState("overview");
   const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
   const [analysisOverride, setAnalysisOverride] = useState<Record<string, AnalysisResult> | null>(null);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -171,7 +172,14 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     const parsed: ParsedFile[] = uploaded.map((f) => {
       const existing = files.find((pf) => pf.id === f.id);
       if (existing) return { ...existing, label: f.label };
-      const extractedData = extractSections(f.content);
+      let extractedData: ExtractedSections;
+      try {
+        extractedData = extractSections(f.content);
+      } catch (err) {
+        console.warn(`[parser] Failed to parse ${f.fileName}`, err);
+        toast.error(`Could not parse ${f.fileName} — it may not be a Sophos Config Viewer export`);
+        extractedData = {} as ExtractedSections;
+      }
       return { ...f, extractedData };
     });
     setFiles(parsed);
@@ -725,6 +733,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                           <Download className="h-3.5 w-3.5" />
                           Export Risk Register (CSV)
                         </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadRiskRegisterExcel(analysisResults, branding.customerName)}
+                          className="gap-1.5 text-xs"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Export Excel
+                        </Button>
                       </div>
                     )}
                     {totalFindings > 0 && (
@@ -741,6 +758,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                       extractionPct={extractionPct}
                       aggregatedPosture={aggregatedPosture}
                       selectedFrameworks={branding.selectedFrameworks}
+                      onExplainFinding={(title) => {
+                        setAiChatOpen(true);
+                        setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);
+                      }}
                     />
                     {!isGuest && !localMode && configMetas.length > 0 && (
                       <Suspense fallback={null}>
@@ -1126,6 +1147,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               reports={reports}
               customerName={branding.customerName}
               environment={branding.environment}
+              analysisTab={analysisTab}
+              open={aiChatOpen}
+              onOpenChange={setAiChatOpen}
+              initialMessage={aiChatInitialMessage}
+              onInitialMessageSent={() => setAiChatInitialMessage(undefined)}
             />
           </Suspense>
         </ErrorBoundary>

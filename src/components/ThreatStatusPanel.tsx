@@ -1,4 +1,4 @@
-import { Shield, Activity, Wifi, WifiOff, AlertTriangle, Radio, Satellite, Rss } from "lucide-react";
+import { Shield, Activity, Radio, Satellite, Rss } from "lucide-react";
 
 export interface ThreatStatusData {
   firmwareVersion: string;
