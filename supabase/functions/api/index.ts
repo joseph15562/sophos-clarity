@@ -375,8 +375,8 @@ serve(async (req: Request) => {
     if (req.method === "POST" && route === "register") {
       return handleRegister(req);
     }
-    if (req.method === "DELETE" && segments.length === 3) {
-      return handleDelete(req, segments[2]);
+    if (req.method === "DELETE" && route) {
+      return handleDelete(req, route);
     }
 
     // Agent API-key authenticated routes
