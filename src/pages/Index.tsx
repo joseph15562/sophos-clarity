@@ -906,16 +906,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                 {/* Compliance */}
                 <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
                   <ErrorBoundary fallbackTitle="Compliance view failed to load">
-                    <Suspense fallback={<CardSkeleton />}>
-                      <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
-                    </Suspense>
-                    <Suspense fallback={<CardSkeleton />}>
-                      <SophosBestPractice
-                        analysisResults={analysisResults}
-                        centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
-                      />
-                    </Suspense>
-
                     <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                       <div className="flex items-center gap-2">
                         <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
@@ -933,6 +923,17 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                         />
                       </Suspense>
                     </div>
+
+                    <Suspense fallback={<CardSkeleton />}>
+                      <SophosBestPractice
+                        analysisResults={analysisResults}
+                        centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
+                      />
+                    </Suspense>
+
+                    <Suspense fallback={<CardSkeleton />}>
+                      <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
+                    </Suspense>
 
                     <Suspense fallback={<CardSkeleton />}>
                       <InsuranceReadiness analysisResults={analysisResults} />

@@ -93,6 +93,10 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
     if (!id) return;
     setDeleting(true);
     try {
+      await supabase.from("finding_snapshots").delete().eq("org_id", id);
+      await supabase.from("remediation_status").delete().eq("org_id", id);
+      await supabase.from("shared_reports").delete().eq("org_id", id);
+      await supabase.from("alert_rules").delete().eq("org_id", id);
       await supabase.from("audit_log").delete().eq("org_id", id);
       await supabase.from("saved_reports").delete().eq("org_id", id);
       await supabase.from("assessments").delete().eq("org_id", id);
@@ -112,7 +116,11 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
     <div className="p-4 space-y-4 text-xs text-muted-foreground leading-relaxed">
       <div className="space-y-2">
         <p className="font-semibold text-foreground text-[11px]">Data Residency</p>
-        <p>All cloud data is stored in your Supabase project. Firewall configuration files are processed client-side in your browser and are never uploaded or stored on any server.</p>
+        <p>Cloud data is stored in the Sophos FireComply platform database hosted on Supabase. Firewall configuration files are processed client-side in your browser and are never uploaded or stored on any server. Raw configuration data does not leave your machine.</p>
+      </div>
+      <div className="space-y-2">
+        <p className="font-semibold text-foreground text-[11px]">What We Store in the Cloud</p>
+        <p>Assessments, saved reports, finding snapshots, remediation progress, alert rules, shared report links, audit logs, Sophos Central credentials (encrypted), and cached firewall metadata. All data is scoped to your organisation with row-level security.</p>
       </div>
       <div className="space-y-2">
         <p className="font-semibold text-foreground text-[11px]">AI Report Generation</p>
@@ -120,17 +128,34 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
       </div>
       <div className="space-y-2">
         <p className="font-semibold text-foreground text-[11px]">Deterministic Analysis</p>
-        <p>Security findings, risk scoring, and compliance mappings are computed entirely in your browser. No external calls are made for analysis — only AI-generated reports require an external service.</p>
+        <p>Security findings, risk scoring, and compliance mappings are computed entirely in your browser. No raw config data leaves your machine for analysis.</p>
+      </div>
+      <div className="space-y-2">
+        <p className="font-semibold text-foreground text-[11px]">External Services</p>
+        <p>The following optional features make external API calls from your browser:</p>
+        <ul className="list-disc pl-4 space-y-1">
+          <li><span className="font-medium text-foreground">AI Reports</span> — anonymised config sent to Google Gemini via Supabase Edge Function</li>
+          <li><span className="font-medium text-foreground">Geo-IP Lookup</span> — public IPs sent to ip-api.com to resolve geographic location (no authentication data)</li>
+          <li><span className="font-medium text-foreground">CVE Correlation</span> — service names queried against the NIST NVD API for known vulnerabilities (no firewall data sent)</li>
+        </ul>
       </div>
       <div className="space-y-2">
         <p className="font-semibold text-foreground text-[11px]">Sophos Central API</p>
-        <p>API credentials are encrypted with AES-256-GCM and stored in your Supabase database. API calls are proxied through a Supabase Edge Function — credentials are never exposed to the browser after initial setup.</p>
+        <p>API credentials are encrypted with AES-256-GCM before storage. The encryption key is held separately in the server environment and is not accessible from the database. API calls to Sophos Central are proxied through a server-side function — credentials are never exposed to the browser after initial setup.</p>
+      </div>
+      <div className="space-y-2">
+        <p className="font-semibold text-foreground text-[11px]">Connector Agent</p>
+        <p>The FireComply Connector agent runs on your network and communicates with your Sophos firewalls via their local XML API. Assessment results are submitted to the FireComply platform via an authenticated server-side function. The agent stores its API key locally and never exposes firewall credentials externally.</p>
+      </div>
+      <div className="space-y-2">
+        <p className="font-semibold text-foreground text-[11px]">Shared Reports</p>
+        <p>When you share a report, a time-limited public link is created (default 7 days). The report content is stored on the platform and accessible without authentication via the share token. No firewall configuration data is included — only the generated report text.</p>
       </div>
 
       {org?.id && (
         <div className="pt-3 border-t border-border space-y-2">
           <p className="font-semibold text-foreground text-[11px]">Delete All Data</p>
-          <p>Permanently remove all cloud-stored data for this workspace: assessments, saved reports, audit logs, Central credentials, and cached firewall data.</p>
+          <p>Permanently remove all cloud-stored data for this workspace: assessments, saved reports, finding snapshots, remediation status, alert rules, shared reports, audit logs, Central credentials, and cached firewall data.</p>
           {deleted ? (
             <p className="text-[#00995a] font-semibold">All data deleted successfully.</p>
           ) : showConfirm ? (
