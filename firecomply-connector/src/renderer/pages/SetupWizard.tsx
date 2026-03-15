@@ -23,10 +23,12 @@ const SCHEDULES = [
   { value: "0 2 * * 1", label: "Weekly (Monday 02:00)" },
 ];
 
+const DEFAULT_API_URL = "https://rpnvyrxorfaqabkdhctl.supabase.co/functions/v1";
+
 export function SetupWizard({ onComplete }: Props) {
   const [step, setStep] = useState<Step>("api-key");
   const [apiKey, setApiKey] = useState("");
-  const [apiUrl, setApiUrl] = useState("");
+  const [apiUrl] = useState(DEFAULT_API_URL);
   const [verified, setVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [firewalls, setFirewalls] = useState<FirewallEntry[]>([
@@ -126,17 +128,16 @@ export function SetupWizard({ onComplete }: Props) {
         {step === "api-key" && (
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-semibold text-foreground">Step 1 — Connect to FireComply</h2>
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">FireComply API URL</label>
-              <input value={apiUrl} onChange={(e) => { setApiUrl(e.target.value); setVerified(false); }} placeholder="https://xxxx.supabase.co/functions/v1" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Paste the API key from your FireComply dashboard (Settings → Connector Agents → Register Agent).
+            </p>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">API Key</label>
-              <input value={apiKey} onChange={(e) => { setApiKey(e.target.value); setVerified(false); }} placeholder="ck_xxxxxxxxxxxxxxxx" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono" />
+              <input value={apiKey} onChange={(e) => { setApiKey(e.target.value); setVerified(false); }} placeholder="ck_xxxxxxxxxxxxxxxx" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono" autoFocus />
             </div>
-            {verified && <p className="text-sm text-green-500 font-medium">✓ Verified</p>}
+            {verified && <p className="text-sm text-green-500 font-medium">✓ Connected to FireComply</p>}
             <div className="flex gap-2">
-              <button onClick={verifyKey} disabled={!apiKey || !apiUrl || verifying} className="px-4 py-2 rounded-lg bg-[#6B5BFF] text-white text-sm font-medium disabled:opacity-50">
+              <button onClick={verifyKey} disabled={!apiKey || verifying} className="px-4 py-2 rounded-lg bg-[#6B5BFF] text-white text-sm font-medium disabled:opacity-50">
                 {verifying ? "Verifying…" : "Verify"}
               </button>
               <button onClick={() => setStep("firewalls")} disabled={!verified} className="px-4 py-2 rounded-lg border border-border text-sm font-medium disabled:opacity-50">
