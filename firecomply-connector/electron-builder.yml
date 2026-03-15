@@ -20,11 +20,11 @@ nsis:
   artifactName: "FireComply-Connector-Setup.${ext}"
 mac:
   target:
-    - target: dmg
-      arch: [x64, arm64]
+    - target: zip
+      arch: [universal]
   icon: assets/icon.png
   category: public.app-category.utilities
-  artifactName: "FireComply-Connector.${ext}"
+  artifactName: "FireComply-Connector-mac.${ext}"
 linux:
   target:
     - target: AppImage

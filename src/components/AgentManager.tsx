@@ -528,9 +528,9 @@ export function AgentManager() {
               <Server className="h-3 w-3" /> Windows .exe
             </Button>
           </a>
-          <a href="https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector.dmg" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector-mac.zip" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1">
-              <Server className="h-3 w-3" /> macOS .dmg
+              <Server className="h-3 w-3" /> macOS .zip
             </Button>
           </a>
           <a href="https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector.AppImage" target="_blank" rel="noopener noreferrer">

@@ -17,7 +17,7 @@ jobs:
             artifact_pattern: "firecomply-connector/release/*.exe"
           - os: macos-latest
             dist_script: dist:mac
-            artifact_pattern: "firecomply-connector/release/*.dmg"
+            artifact_pattern: "firecomply-connector/release/*.zip"
           - os: ubuntu-latest
             dist_script: dist:linux
             artifact_pattern: "firecomply-connector/release/*.AppImage"
