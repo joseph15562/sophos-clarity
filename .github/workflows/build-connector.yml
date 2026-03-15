@@ -1,0 +1,91 @@
+name: Build FireComply Connector
+
+on:
+  push:
+    tags:
+      - "connector-v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            dist_script: dist:win
+            artifact_pattern: "firecomply-connector/release/*.exe"
+          - os: macos-latest
+            dist_script: dist:mac
+            artifact_pattern: "firecomply-connector/release/*.dmg"
+          - os: ubuntu-latest
+            dist_script: dist:linux
+            artifact_pattern: "firecomply-connector/release/*.AppImage"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: firecomply-connector/package-lock.json
+
+      - name: Install dependencies
+        working-directory: firecomply-connector
+        run: npm ci
+
+      - name: Build and package
+        working-directory: firecomply-connector
+        run: npm run ${{ matrix.dist_script }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: connector-${{ matrix.os }}
+          path: ${{ matrix.artifact_pattern }}
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/connector-v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find artifacts -type f | head -20
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "FireComply Connector ${{ github.ref_name }}"
+          body: |
+            ## FireComply Connector ${{ github.ref_name }}
+
+            Download the installer for your operating system:
+            - **Windows**: `.exe` installer
+            - **macOS**: `.dmg` disk image
+            - **Linux**: `.AppImage` portable binary
+
+            ### Setup
+            1. Register an agent in the FireComply web app (Settings > FireComply Connector Agents)
+            2. Copy your API key
+            3. Run the installer and follow the setup wizard
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

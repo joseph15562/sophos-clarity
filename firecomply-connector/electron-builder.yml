@@ -16,12 +16,14 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  artifactName: "FireComply-Connector-Setup.${ext}"
 mac:
   target:
     - target: dmg
       arch: [x64, arm64]
   icon: assets/icon.png
   category: public.app-category.utilities
+  artifactName: "FireComply-Connector.${ext}"
 linux:
   target:
     - target: AppImage
@@ -30,3 +32,4 @@ linux:
       arch: [x64]
   icon: assets/icon.png
   category: Utility
+  artifactName: "FireComply-Connector.${ext}"

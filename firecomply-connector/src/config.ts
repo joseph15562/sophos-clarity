@@ -78,7 +78,7 @@ export function loadConfig(configPath: string): AppConfig | null {
     // Decrypt sensitive fields (backward compatible: plain text if no enc: prefix)
     config.agentApiKey = decryptField(config.agentApiKey);
     if (config.firewalls) {
-      config.firewalls = config.firewalls.map((fw) => ({
+      config.firewalls = config.firewalls.map((fw: FirewallConfig & Record<string, unknown>) => ({
         ...fw,
         port: fw.port ?? 4444,
         password: decryptField(fw.password),

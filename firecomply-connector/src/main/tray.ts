@@ -8,7 +8,7 @@ export function setupTray(
   onRunNow: () => void,
   onTogglePause: () => void
 ): void {
-  const iconPath = path.join(__dirname, "../../assets/tray-icon.png");
+  const iconPath = path.join(__dirname, "../../../assets/tray-icon.png");
   let icon: Electron.NativeImage;
 
   try {

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "FireComply Connector — Automated Sophos Firewall monitoring agent",
   "private": true,
-  "main": "dist/main/index.js",
+  "main": "dist/main/main/index.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"tsc -p tsconfig.main.json --watch\" \"electron .\"",
     "build:renderer": "vite build",

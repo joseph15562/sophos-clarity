@@ -10,8 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+release
 *.local
 coverage
+
+# Connector compiled output
+firecomply-connector/src/**/*.js
 
 # Playwright
 e2e-results/
