@@ -1,3 +1,10 @@
+/**
+ * Remediation plans (change approval workflow).
+ * TODO: Cloud persistence — when authenticated, persist to Supabase. Requires a
+ * `change_approval` (or similar) table migration. For now, localStorage only.
+ * Pattern: try Supabase first when authenticated, fall back to localStorage for guests.
+ */
+
 export interface RemediationPlan {
   id: string;
   customerName: string;

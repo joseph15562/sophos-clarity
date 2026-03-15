@@ -138,6 +138,8 @@ export type BrandingData = {
   preparedBy?: string;
   footerText?: string;
   accentColor?: string;
+  /** When true, adds "Confidential" watermark to PDF export */
+  confidential?: boolean;
 };
 
 type Props = {

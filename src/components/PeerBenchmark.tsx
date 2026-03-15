@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
-import { getBenchmark, getBenchmarkLabel } from "@/lib/benchmarks";
+import { getBenchmark, getBenchmarkData, getBenchmarkLabel, BENCHMARK_ENVIRONMENTS } from "@/lib/benchmarks";
+import { loadScoreHistory } from "@/lib/score-history";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -9,8 +11,34 @@ interface Props {
 }
 
 export function PeerBenchmark({ analysisResults, environment }: Props) {
-  const benchmark = useMemo(() => getBenchmark(environment), [environment]);
-  const sectorLabel = useMemo(() => getBenchmarkLabel(environment), [environment]);
+  const { org } = useAuth();
+  const initialSector = useMemo(() => {
+    const env = environment.trim();
+    if (!env) return "All Sectors";
+    const match = BENCHMARK_ENVIRONMENTS.find((k) => env.toLowerCase().includes(k.toLowerCase()));
+    return match ?? "All Sectors";
+  }, [environment]);
+  const [sector, setSector] = useState(initialSector);
+  const [benchmark, setBenchmark] = useState(() => getBenchmark(initialSector));
+  const [scoreHistory, setScoreHistory] = useState<{ prev: number; current: number } | null>(null);
+
+  const sectorLabel = sector && sector !== "All Sectors" ? getBenchmarkLabel(sector) : "All Sectors";
+
+  useEffect(() => {
+    if (!sector) return;
+    getBenchmarkData(sector).then(setBenchmark);
+  }, [sector]);
+
+  useEffect(() => {
+    if (!org?.id) return;
+    let cancelled = false;
+    loadScoreHistory(org.id, undefined, 5).then((entries) => {
+      if (cancelled || entries.length < 1) return;
+      const prev = entries[entries.length - 1].overall_score;
+      setScoreHistory({ prev, current: 0 });
+    });
+    return () => { cancelled = true; };
+  }, [org?.id]);
 
   const score = useMemo<RiskScoreResult>(() => {
     const entries = Object.values(analysisResults);
@@ -31,15 +59,46 @@ export function PeerBenchmark({ analysisResults, environment }: Props) {
 
   const delta = score.overall - benchmark.overall;
 
+  const estimatedPercentile = Math.min(99, Math.max(1, Math.round(50 + (score.overall - benchmark.overall) * 1.5)));
+  const topX = 100 - estimatedPercentile;
+
+  const vsPrevious = scoreHistory != null
+    ? score.overall - scoreHistory.prev
+    : null;
+
   return (
     <section className="rounded-xl border border-border bg-card p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="h-6 w-6 rounded-md bg-[#2006F7]/10 flex items-center justify-center">
-          <span className="text-sm">📊</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded-md bg-[#2006F7]/10 flex items-center justify-center">
+            <span className="text-sm">📊</span>
+          </div>
+          <h3 className="text-sm font-semibold text-foreground">Peer Benchmark</h3>
+          <span className="text-[10px] text-muted-foreground">vs {sectorLabel} average (n={benchmark.sampleSize})</span>
         </div>
-        <h3 className="text-sm font-semibold text-foreground">Peer Benchmark</h3>
-        <span className="text-[10px] text-muted-foreground">vs {sectorLabel} average (n={benchmark.sampleSize})</span>
+        <select
+          value={sector}
+          onChange={(e) => setSector(e.target.value)}
+          className="rounded-md border border-border bg-background px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+        >
+          <option value="All Sectors">All Sectors</option>
+          {BENCHMARK_ENVIRONMENTS.map((env) => (
+            <option key={env} value={env}>{env}</option>
+          ))}
+        </select>
       </div>
+
+      {topX > 0 && topX < 100 && (
+        <p className="text-[10px] font-medium text-foreground">
+          Top {topX}% of {sectorLabel}
+        </p>
+      )}
+
+      {vsPrevious !== null && vsPrevious !== 0 && (
+        <p className={`text-[10px] ${vsPrevious > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+          {vsPrevious > 0 ? "+" : ""}{vsPrevious} vs previous assessment
+        </p>
+      )}
 
       {/* Overall comparison */}
       <div className="grid grid-cols-3 gap-4 text-center">
@@ -99,7 +158,7 @@ export function PeerBenchmark({ analysisResults, environment }: Props) {
       </div>
 
       <p className="text-[9px] text-muted-foreground text-center">
-        Benchmark based on aggregated {sectorLabel.toLowerCase()} sector assessments. Vertical lines show sector average. Data is indicative and will improve over time.
+        Benchmarks are based on industry estimates and will be replaced with live aggregated data as usage grows. Vertical lines show sector average.
       </p>
     </section>
   );

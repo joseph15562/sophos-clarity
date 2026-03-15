@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { AnalysisResult, Finding, Severity } from "@/lib/analyse-config";
+import { loadAcceptedFindings, isAccepted, type AcceptedFinding } from "@/lib/accepted-findings";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -27,15 +28,33 @@ function truncate(text: string, maxLen: number): string {
 }
 
 export function PriorityActions({ analysisResults }: Props) {
+  const [acceptedList, setAcceptedList] = useState<AcceptedFinding[]>([]);
+
+  useEffect(() => {
+    loadAcceptedFindings().then(setAcceptedList);
+    const refresh = () => loadAcceptedFindings().then(setAcceptedList);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sophos-accepted-findings") refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("accepted-findings-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("accepted-findings-changed", refresh);
+    };
+  }, []);
+
   const top3 = useMemo(() => {
     const all: (Finding & { firewall: string })[] = [];
     for (const [label, ar] of Object.entries(analysisResults)) {
-      for (const f of ar.findings) all.push({ ...f, firewall: label });
+      for (const f of ar.findings) {
+        if (isAccepted(acceptedList, f.title)) continue;
+        all.push({ ...f, firewall: label });
+      }
     }
     const highOrCritical = all.filter((f) => f.severity === "critical" || f.severity === "high");
     if (highOrCritical.length === 0) return [];
 
-    // Sort: highest severity first, then shortest remediation (quick wins)
     const sorted = [...highOrCritical].sort((a, b) => {
       const sevDiff = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
       if (sevDiff !== 0) return sevDiff;
@@ -44,7 +63,7 @@ export function PriorityActions({ analysisResults }: Props) {
       return aLen - bLen;
     });
     return sorted.slice(0, 3);
-  }, [analysisResults]);
+  }, [analysisResults, acceptedList]);
 
   if (top3.length === 0) return null;
 

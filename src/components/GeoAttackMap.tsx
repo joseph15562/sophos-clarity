@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { lookupGeoIp, lookupCves, type GeoLocation, type CveEntry } from "@/lib/geo-cve";
 
 /** Simplified world outline path (equirectangular, Natural Earth–style). Minimal ~2KB path. */
-const WORLD_PATH =
-  "M-180,90L-180,-90L180,-90L180,90L-180,90ZM-170,-50L-50,-55L30,-55L100,-45L170,-60L180,-75L180,-90L100,-90L-30,-90L-120,-75L-170,-50ZM-170,20L-120,30L-60,25L0,35L50,30L120,45L170,35L180,20L180,-20L150,-35L80,-45L20,-40L-50,-45L-120,-35L-170,-25L-180,-10L-180,20L-170,20ZM-30,90L50,90L120,75L180,60L180,30L150,15L80,5L0,10L-80,0L-150,10L-180,25L-180,60L-120,75L-50,90L-30,90ZM-170,60L-100,75L-30,70L50,80L120,70L170,80L180,90L120,90L50,90L-50,90L-120,85L-170,60ZM30,-90L120,-90L180,-75L180,-55L150,-45L100,-50L50,-55L0,-60L-50,-55L-100,-50L-150,-45L-180,-55L-180,-90L-120,-90L-30,-90L30,-90Z";
+const OCEAN_PATH = "M-180,90L-180,-90L180,-90L180,90L-180,90Z";
+const LAND_PATH =
+  "M-170,-50L-50,-55L30,-55L100,-45L170,-60L180,-75L180,-90L100,-90L-30,-90L-120,-75L-170,-50ZM-170,20L-120,30L-60,25L0,35L50,30L120,45L170,35L180,20L180,-20L150,-35L80,-45L20,-40L-50,-45L-120,-35L-170,-25L-180,-10L-180,20L-170,20ZM-30,90L50,90L120,75L180,60L180,30L150,15L80,5L0,10L-80,0L-150,10L-180,25L-180,60L-120,75L-50,90L-30,90ZM-170,60L-100,75L-30,70L50,80L120,70L170,80L180,90L120,90L50,90L-50,90L-120,85L-170,60ZM30,-90L120,-90L180,-75L180,-55L150,-45L100,-50L50,-55L0,-60L-50,-55L-100,-50L-150,-45L-180,-55L-180,-90L-120,-90L-30,-90L30,-90Z";
 
 interface IpWithGeo {
   ip: string;
@@ -98,17 +99,18 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
   };
 
   return (
-    <div className="flex gap-4 rounded-lg border border-border bg-card p-4">
+    <div className="flex flex-col sm:flex-row gap-4 rounded-lg border border-border bg-card p-4">
       <div className="flex-1 min-w-0">
-        <div className="rounded-lg overflow-hidden border border-border bg-muted/20" style={{ aspectRatio: "2/1" }}>
+        <div className="rounded-lg overflow-hidden border border-border bg-background dark:bg-muted/30" style={{ aspectRatio: "2/1" }}>
           <svg
             viewBox="-180 -90 360 180"
             className="w-full h-full"
             preserveAspectRatio="xMidYMid meet"
           >
+            <path d={OCEAN_PATH} fill="hsl(var(--background))" />
             <path
-              d={WORLD_PATH}
-              fill="hsl(var(--card))"
+              d={LAND_PATH}
+              fill="hsl(var(--muted))"
               stroke="hsl(var(--border))"
               strokeWidth="0.5"
             />
@@ -134,7 +136,7 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
           <span className="inline-block w-2 h-2 rounded-full bg-[#EA0022] ml-3 mr-1 align-middle" /> Has CVEs
         </p>
       </div>
-      <div className="w-64 shrink-0 border-l border-border pl-4 space-y-3 max-h-64 overflow-y-auto">
+      <div className="w-full sm:w-64 shrink-0 sm:border-l border-border sm:pl-4 pt-4 sm:pt-0 space-y-3 max-h-64 overflow-y-auto">
         <p className="text-xs font-semibold text-foreground">External IPs</p>
         {loading && data.length === 0 && (
           <p className="text-[10px] text-muted-foreground">Loading geo data…</p>

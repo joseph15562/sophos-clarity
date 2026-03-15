@@ -173,7 +173,7 @@ function RegisterDialog({
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-foreground">Register Agent</h3>
-            <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-lg">&times;</button>
+            <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-lg" aria-label="Close">&times;</button>
           </div>
 
           {generatedKey ? (
@@ -275,8 +275,7 @@ function RegisterDialog({
 }
 
 export function AgentManager() {
-  const { org, role } = useAuth();
-  const isAdmin = role === "admin";
+  const { org, canManageAgents, canManageTeam } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
@@ -374,7 +373,7 @@ export function AgentManager() {
             {agents.length} agent{agents.length !== 1 ? "s" : ""} registered
           </p>
         </div>
-        {isAdmin && (
+        {canManageAgents && (
           <Button
             variant="outline"
             size="sm"
@@ -393,7 +392,7 @@ export function AgentManager() {
           <Plug className="h-8 w-8 mx-auto mb-2 opacity-40" />
           <p className="text-[11px]">No agents registered</p>
           <p className="text-[9px] mt-1">Register an agent to start automated firewall monitoring</p>
-          {isAdmin && (
+          {canManageAgents && (
             <Button variant="outline" size="sm" onClick={() => setShowRegister(true)} className="mt-3 gap-1.5 text-[10px] h-7">
               <Plus className="h-3 w-3" /> Register Agent
             </Button>
@@ -472,7 +471,7 @@ export function AgentManager() {
                     )}
 
                     {/* Actions */}
-                    {isAdmin && (
+                    {canManageAgents && (
                       <div className="flex gap-2 pt-1">
                         <Button
                           variant="outline"
@@ -494,7 +493,7 @@ export function AgentManager() {
       )}
 
       {/* Data retention */}
-      {isAdmin && agents.length > 0 && (
+      {canManageTeam && agents.length > 0 && (
         <div className="rounded-lg border border-border bg-card p-3">
           <div className="flex items-center justify-between">
             <div>

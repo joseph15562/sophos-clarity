@@ -214,6 +214,11 @@ function ruleSignature(row: Record<string, string>): string {
   return `${srcZ}|${src}|${dstZ}|${dst}|${svc}`;
 }
 
+function isSubsetOrEqual(specific: string, broad: string): boolean {
+  if (broad.toLowerCase() === "any") return true;
+  return specific.toLowerCase() === broad.toLowerCase();
+}
+
 function findFirewallRulesTable(sections: ExtractedSections): TableData | null {
   for (const key of Object.keys(sections)) {
     if (/firewall\s*rules?/i.test(key)) {
@@ -350,10 +355,15 @@ function extractHostname(sections: ExtractedSections): string | undefined {
   return m?.[1] || undefined;
 }
 
+export interface AnalyseOptions {
+  /** True when the firewall is linked to Sophos Central (logs forwarded automatically). */
+  centralLinked?: boolean;
+}
+
 /**
  * Run deterministic analysis on a single firewall's extracted sections.
  */
-export function analyseConfig(sections: ExtractedSections): AnalysisResult {
+export function analyseConfig(sections: ExtractedSections, options?: AnalyseOptions): AnalysisResult {
   const findings: Finding[] = [];
   let fid = 0;
 
@@ -709,6 +719,32 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
   analyseSyncAppControl(sections, findings, () => ++fid);
   analyseATP(sections, findings, () => ++fid);
   analyseHA(sections, findings, () => ++fid);
+
+  // --- Extended security analysis (VPN, DoS, SNMP, Wireless, Syslog, DNS, etc.) ---
+  analyseVpnSecurity(sections, findings, () => ++fid);
+  analyseDoSProtection(sections, findings, () => ++fid);
+  analyseSyslogServers(sections, findings, () => ++fid, options);
+  analyseWirelessSecurity(sections, findings, () => ++fid);
+  analyseSnmpCommunity(sections, findings, () => ++fid);
+  analyseDnsSecurity(sections, findings, () => ++fid);
+  analyseRedSecurity(sections, findings, () => ++fid);
+  analyseAdminProfiles(sections, findings, () => ++fid);
+
+  // --- L2/L6/L7/L8: Certificates, Hotspots, App Filter, Interface Security ---
+  analyseCertificates(sections, findings, () => ++fid);
+  analyseHotspots(sections, findings, () => ++fid);
+  analyseAppFilterPolicies(sections, findings, () => ++fid);
+  analyseInterfaceSecurity(sections, findings, () => ++fid);
+
+  // --- D1–D4: Rule hygiene, schedules, user/group, WAF ---
+  analyseRuleOrdering(sections, findings, () => ++fid);
+  analyseUserGroupRules(sections, findings, () => ++fid);
+  analyseWafPolicies(sections, findings, () => ++fid);
+
+  // --- D5–D7: ZTNA, firmware EOL, licence usage ---
+  analyseZtna(sections, findings, () => ++fid);
+  analyseFirmwareVersion(sections, findings, () => ++fid);
+  analyseLicenceUsage(sections, findings, () => ++fid, options);
 
   // --- Empty sections warning ---
   const emptySections: string[] = [];
@@ -1430,18 +1466,1109 @@ function analyseHA(
   }
 }
 
+/* ------------------------------------------------------------------ */
+/*  Extended Security Analysis — VPN, DoS, SNMP, Wireless, etc.       */
+/* ------------------------------------------------------------------ */
+
+/** VPN Security — check IPSec profiles for weak encryption and SSL VPN config */
+function analyseVpnSecurity(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const WEAK_CIPHERS = /des(?!3)|3des|blowfish|cast|rc4|null/i;
+  const WEAK_DH = /^(1|2|5|dh1|dh2|dh5|group1|group2|group5)$/i;
+  const WEAK_AUTH = /md5|sha1(?![\d])/i;
+
+  // Build set of profile names actually referenced by IPSec connections
+  const ipsecSection = findSection(sections, /vpn\s*ipsec\s*connection/i);
+  const usedProfiles = new Set<string>();
+  if (ipsecSection) {
+    for (const t of ipsecSection.tables) {
+      for (const row of t.rows) {
+        const policy = (row["Policy"] ?? row["Profile"] ?? row["IPsec Profile"] ?? "").trim();
+        if (policy) usedProfiles.add(policy.toLowerCase());
+      }
+    }
+  }
+
+  // VPN Profiles — only flag if the profile is actively used by a connection
+  const profileSection = findSection(sections, /vpn\s*profile/i);
+  if (profileSection) {
+    const weakProfiles: string[] = [];
+    const noPfs: string[] = [];
+    for (const t of profileSection.tables) {
+      for (const row of t.rows) {
+        const name = row["Name"] ?? row["Profile Name"] ?? "Unknown";
+        if (!usedProfiles.has(name.toLowerCase())) continue;
+
+        const p1Enc = row["Phase 1 Encryption"] ?? row["IKE Encryption"] ?? "";
+        const p2Enc = row["Phase 2 Encryption"] ?? row["ESP Encryption"] ?? "";
+        const p1Auth = row["Phase 1 Auth"] ?? row["IKE Auth"] ?? "";
+        const p2Auth = row["Phase 2 Auth"] ?? row["ESP Auth"] ?? "";
+        const dh = row["Phase 1 DH Groups"] ?? row["DH Group"] ?? "";
+        const pfs = row["Phase 2 PFS"] ?? row["PFS"] ?? "";
+
+        if (WEAK_CIPHERS.test(p1Enc) || WEAK_CIPHERS.test(p2Enc) ||
+            WEAK_AUTH.test(p1Auth) || WEAK_AUTH.test(p2Auth) ||
+            WEAK_DH.test(dh.trim())) {
+          weakProfiles.push(name);
+        }
+        const pfsVal = pfs.toLowerCase().trim();
+        if (pfsVal === "off" || pfsVal === "disabled" || pfsVal === "no" || pfsVal === "none") {
+          noPfs.push(name);
+        }
+      }
+    }
+    if (weakProfiles.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "high",
+        title: `${weakProfiles.length} active VPN profile${weakProfiles.length > 1 ? "s" : ""} using weak encryption`,
+        detail: `VPN profiles in use by IPSec connections with outdated cryptography (DES, 3DES, MD5, SHA-1, or weak DH groups): ${weakProfiles.slice(0, 6).join(", ")}${weakProfiles.length > 6 ? ` (+${weakProfiles.length - 6} more)` : ""}. These algorithms are vulnerable to known attacks.`,
+        section: "VPN Security",
+        remediation: "Go to Configure > VPN > IPsec profiles. Update Phase 1 and Phase 2 to use AES-256 or AES-128 with SHA-256+ auth and DH Group 14 or higher. Remove DES, 3DES, MD5, and SHA-1.",
+        confidence: "high",
+        evidence: `Active profiles: ${weakProfiles.slice(0, 3).join(", ")} use weak ciphers/auth/DH groups`,
+      });
+    }
+    if (noPfs.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "medium",
+        title: `${noPfs.length} active VPN profile${noPfs.length > 1 ? "s" : ""} without Perfect Forward Secrecy`,
+        detail: `VPN profiles in use by IPSec connections without PFS enabled: ${noPfs.slice(0, 6).join(", ")}${noPfs.length > 6 ? ` (+${noPfs.length - 6} more)` : ""}. Without PFS, compromising a single key may allow decryption of all past traffic.`,
+        section: "VPN Security",
+        remediation: "Go to Configure > VPN > IPsec profiles. Edit Phase 2 settings and enable PFS (DH Group 14+).",
+        confidence: "high",
+        evidence: `Active profiles: ${noPfs.slice(0, 3).join(", ")} have PFS=Off/Disabled`,
+      });
+    }
+  }
+
+  // IPSec Connections — check for PSK auth (prefer certificates)
+  // ipsecSection already resolved above
+  if (ipsecSection) {
+    const pskConns: string[] = [];
+    for (const t of ipsecSection.tables) {
+      for (const row of t.rows) {
+        const name = row["Name"] ?? "Unknown";
+        const authType = (row["Authentication Type"] ?? row["Auth Type"] ?? "").toLowerCase();
+        if (authType.includes("preshared") || authType.includes("psk") || authType.includes("pre-shared")) {
+          pskConns.push(name);
+        }
+      }
+    }
+    if (pskConns.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "medium",
+        title: `${pskConns.length} IPSec connection${pskConns.length > 1 ? "s" : ""} using pre-shared key authentication`,
+        detail: `IPSec tunnels using PSK instead of digital certificates: ${pskConns.slice(0, 6).join(", ")}${pskConns.length > 6 ? ` (+${pskConns.length - 6} more)` : ""}. Certificate-based authentication is stronger and avoids PSK reuse risks.`,
+        section: "VPN Security",
+        remediation: "Consider migrating IPSec connections from PSK to digital certificate (X.509) or RSA key authentication for improved security.",
+        confidence: "medium",
+        evidence: `Connections: ${pskConns.slice(0, 3).join(", ")} use Authentication Type=PresharedKey`,
+      });
+    }
+  }
+
+  // SSL VPN Policies
+  const sslVpnSection = findSection(sections, /ssl\s*vpn\s*polic/i);
+  if (sslVpnSection) {
+    let totalPolicies = 0;
+    for (const t of sslVpnSection.tables) {
+      totalPolicies += t.rows.length;
+    }
+    if (totalPolicies > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "info",
+        title: `${totalPolicies} SSL VPN polic${totalPolicies > 1 ? "ies" : "y"} configured`,
+        detail: `${totalPolicies} SSL VPN remote access ${totalPolicies > 1 ? "policies are" : "policy is"} configured. Ensure MFA is enforced for all SSL VPN users and that permitted resources follow least-privilege.`,
+        section: "VPN Security",
+        confidence: "high",
+        evidence: `SSL VPN Policies section contains ${totalPolicies} entries`,
+      });
+    }
+  }
+}
+
+/** DoS & Spoof Protection — flag if protection is not enabled */
+function analyseDoSProtection(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /dos|spoof/i);
+  if (!section) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "No DoS & Spoof Protection configuration found",
+      detail: "No DoS or spoof protection section was detected in the configuration export. Without DoS protection, the firewall is vulnerable to SYN flood, UDP flood, and ICMP flood attacks.",
+      section: "DoS & Spoof Protection",
+      remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection, UDP flood protection, ICMP flood protection, and IP spoof prevention.",
+      confidence: "medium",
+      evidence: "No DoS/Spoof section found in config export",
+    });
+    return;
+  }
+
+  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+
+  const spoofDisabled = /spoof.*?prevent.*?(disable|off)/i.test(text) || /ip\s*spoof.*?(disable|off)/i.test(text);
+  const synFloodDisabled = /syn.*?flood.*?(disable|off)/i.test(text);
+
+  if (spoofDisabled) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: "IP spoof prevention disabled",
+      detail: "IP spoof prevention is disabled. Attackers can forge source IP addresses to bypass ACLs and launch amplification attacks.",
+      section: "DoS & Spoof Protection",
+      remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable IP spoof prevention for all interfaces.",
+      confidence: "high",
+      evidence: "DoS section: IP spoof prevention set to disabled/off",
+    });
+  }
+  if (synFloodDisabled) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: "SYN flood protection disabled",
+      detail: "SYN flood protection is not active. SYN flood attacks can exhaust server connection tables, causing denial of service.",
+      section: "DoS & Spoof Protection",
+      remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection with appropriate thresholds.",
+      confidence: "high",
+      evidence: "DoS section: SYN flood protection set to disabled/off",
+    });
+  }
+}
+
+/** Check if the firewall is registered to Sophos Central (logs forwarded automatically). */
+function isCentralManaged(sections: ExtractedSections): boolean {
+  // Admin profiles contain "Central Management: Read-Write" when Central-registered
+  const adminProfiles = findSection(sections, /admin.*profile|administration\s*profile/i);
+  if (adminProfiles) {
+    const text = adminProfiles.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (adminProfiles.text ?? "");
+    if (/central\s*management.*read.?write/i.test(text)) return true;
+  }
+  // Firewall rules created by Central prove connectivity
+  const fwRules = findSection(sections, /firewall\s*rules?/i);
+  if (fwRules) {
+    for (const t of fwRules.tables) {
+      for (const row of t.rows) {
+        const name = (row["Rule Name"] ?? row["Name"] ?? "").toLowerCase();
+        if (name.includes("central created")) return true;
+      }
+    }
+  }
+  // System services may reference Central
+  const sysSvc = findSection(sections, /system\s*service/i);
+  if (sysSvc) {
+    const text = sysSvc.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (sysSvc.text ?? "");
+    if (/central.*management.*running/i.test(text) || /central.*management.*start/i.test(text)) return true;
+  }
+  return false;
+}
+
+/** External logging — flag if neither syslog nor Sophos Central log forwarding is configured */
+function analyseSyslogServers(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number, options?: AnalyseOptions,
+) {
+  // Sophos Central counts as external logging
+  if (options?.centralLinked) return;
+  if (isCentralManaged(sections)) return;
+
+  const section = findSection(sections, /syslog\s*server/i);
+  if (!section) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "No external log forwarding configured",
+      detail: "No syslog server or Sophos Central management was detected. Without external log forwarding, firewall logs are only stored locally and could be lost during a hardware failure or attack.",
+      section: "Logging & Monitoring",
+      remediation: "Register the firewall with Sophos Central for automatic log forwarding, or go to System services > Log settings > Syslog servers and add a remote syslog server (SIEM or log collector).",
+      confidence: "medium",
+      evidence: "No Syslog Servers section found and firewall is not Central-managed",
+    });
+    return;
+  }
+
+  let hasSyslog = false;
+  for (const t of section.tables) {
+    if (t.rows.length > 0) hasSyslog = true;
+    for (const row of t.rows) {
+      const status = (row["Status"] ?? row["Enabled"] ?? "").toLowerCase();
+      if (status.includes("enable") || status.includes("on") || status.includes("✓")) {
+        hasSyslog = true;
+      }
+    }
+  }
+
+  if (!hasSyslog) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "No external log forwarding configured",
+      detail: "The syslog server section exists but contains no active entries, and the firewall does not appear to be registered with Sophos Central. Firewall logs are only stored locally.",
+      section: "Logging & Monitoring",
+      remediation: "Register the firewall with Sophos Central for automatic log forwarding, or go to System services > Log settings > Syslog servers and add a remote syslog server.",
+      confidence: "medium",
+      evidence: "Syslog Servers section has no entries and no Central management detected",
+    });
+  }
+}
+
+/** Wireless Network Security — only flag if APs are actively registered to the firewall.
+ *  AP6 series is Central-managed only, APX is approaching EOL — so many firewalls
+ *  won't have firewall-managed wireless at all and that's perfectly fine. */
+function analyseWirelessSecurity(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  // Check if any wireless access points are actually registered/online
+  const apSection = findSection(sections, /wireless\s*access\s*point/i);
+  let activeAps = 0;
+  if (apSection) {
+    for (const t of apSection.tables) {
+      for (const row of t.rows) {
+        const status = (row["Status"] ?? row["State"] ?? "").toLowerCase();
+        if (!status.includes("offline") && !status.includes("disconnect")) activeAps++;
+      }
+      if (t.rows.length > 0 && !t.headers.some((h) => /status|state/i.test(h))) {
+        activeAps += t.rows.length;
+      }
+    }
+  }
+
+  // No APs registered → wireless is not in use via this firewall, skip entirely
+  if (activeAps === 0) return;
+
+  const section = findSection(sections, /wireless\s*network(?!.*status)/i);
+  if (!section) return;
+
+  const openSsids: string[] = [];
+  const weakSsids: string[] = [];
+
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const name = row["Name"] ?? row["SSID"] ?? "Unknown";
+      const status = (row["Status"] ?? "").toLowerCase();
+      if (status.includes("disable") || status.includes("off")) continue;
+
+      const secMode = (row["Security Mode"] ?? row["Encryption"] ?? row["Authentication"] ?? "").toLowerCase();
+      const encryption = (row["Encryption"] ?? "").toLowerCase();
+
+      if (secMode.includes("noencryption") || secMode === "none" || secMode === "open" ||
+          (secMode === "" && encryption === "-")) {
+        openSsids.push(name);
+      } else if (secMode.includes("wep") || secMode.includes("wpa1") ||
+                 (secMode.includes("wpa") && !secMode.includes("wpa2") && !secMode.includes("wpa3"))) {
+        weakSsids.push(name);
+      }
+    }
+  }
+
+  if (openSsids.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "critical",
+      title: `${openSsids.length} wireless network${openSsids.length > 1 ? "s" : ""} with no encryption`,
+      detail: `Open/unencrypted wireless networks: ${openSsids.join(", ")}. All traffic on these networks can be intercepted. Even guest networks should use WPA2/WPA3 with a captive portal.`,
+      section: "Wireless Security",
+      remediation: "Go to Protect > Wireless > Wireless networks. Set Security Mode to WPA2/WPA3 Personal or Enterprise for every SSID. Use a captive portal for guest access instead of open encryption.",
+      confidence: "high",
+      evidence: `SSIDs ${openSsids.join(", ")} have Security Mode=NoEncryption/Open`,
+    });
+  }
+  if (weakSsids.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: `${weakSsids.length} wireless network${weakSsids.length > 1 ? "s" : ""} using weak encryption`,
+      detail: `Wireless networks using deprecated encryption (WEP or WPA1): ${weakSsids.join(", ")}. WEP can be cracked in minutes; WPA1 has known vulnerabilities.`,
+      section: "Wireless Security",
+      remediation: "Go to Protect > Wireless > Wireless networks. Upgrade Security Mode to WPA2 Personal/Enterprise at minimum, preferably WPA3.",
+      confidence: "high",
+      evidence: `SSIDs ${weakSsids.join(", ")} use WEP/WPA1`,
+    });
+  }
+}
+
+/** SNMP Community — flag weak/default community strings */
+function analyseSnmpCommunity(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /snmp\s*community/i);
+  if (!section) return;
+
+  const DEFAULT_STRINGS = /^(public|private|community|snmp|default|test|monitor|read|write)$/i;
+  const weakCommunities: string[] = [];
+
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const name = row["Name"] ?? row["Community Name"] ?? row["Community"] ?? "";
+      if (DEFAULT_STRINGS.test(name.trim())) {
+        weakCommunities.push(name.trim());
+      }
+    }
+  }
+
+  if (weakCommunities.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: `${weakCommunities.length} SNMP communit${weakCommunities.length > 1 ? "ies" : "y"} using default/weak strings`,
+      detail: `SNMP community strings with well-known defaults: ${weakCommunities.join(", ")}. Default SNMP strings are trivially guessable and expose device configuration and network topology.`,
+      section: "SNMP Security",
+      remediation: "Go to Administration > SNMP. Change community strings to complex, unique values. Consider migrating to SNMPv3 which uses authentication and encryption instead of cleartext community strings.",
+      confidence: "high",
+      evidence: `SNMP communities: ${weakCommunities.join(", ")} are well-known defaults`,
+    });
+  }
+}
+
+/** DNS Security — check for DNS configuration issues */
+function analyseDnsSecurity(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /^dns$/i) ?? findSection(sections, /^dns\s*(?!request)/i);
+  if (!section) return;
+
+  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+
+  // Check for DNS proxy/rebinding protection
+  const rebinding = text.match(/DNSRebindingProtection[^}]*?(Enable|Disable)/i)?.[1] ??
+    text.match(/Rebinding[^}]*?(Enable|Disable)/i)?.[1];
+  if (rebinding && !/enable/i.test(rebinding)) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "DNS rebinding protection disabled",
+      detail: "DNS rebinding protection is not enabled. This attack allows malicious websites to make requests to internal network resources through the victim's browser.",
+      section: "DNS Security",
+      remediation: "Go to Network > DNS. Enable DNS rebinding protection to prevent internal resource access via DNS rebinding attacks.",
+      confidence: "medium",
+      evidence: "DNS section: DNSRebindingProtection set to Disable",
+    });
+  }
+
+  // Check DNS request routes for external DNS use
+  const dnsRoutes = findSection(sections, /dns\s*request\s*route/i);
+  if (dnsRoutes) {
+    for (const t of dnsRoutes.tables) {
+      for (const row of t.rows) {
+        const target = (row["Target"] ?? row["DNS Server"] ?? row["Server"] ?? "").trim();
+        if (/8\.8\.8\.8|8\.8\.4\.4|1\.1\.1\.1|1\.0\.0\.1|9\.9\.9\.9|208\.67/i.test(target)) {
+          findings.push({
+            id: `f${nextId()}`, severity: "info",
+            title: "DNS queries routed to public resolvers",
+            detail: `DNS requests are being forwarded to public resolvers (${target}). While functional, consider using DNS-over-TLS or DNS-over-HTTPS for encrypted DNS resolution, or a Sophos-managed DNS service.`,
+            section: "DNS Security",
+            confidence: "low",
+            evidence: `DNS Request Route target includes public resolver: ${target}`,
+          });
+          break;
+        }
+      }
+    }
+  }
+}
+
+/** RED Security — check for unencrypted RED tunnels */
+function analyseRedSecurity(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const redConfig = findSection(sections, /^red\s*config/i) ?? findSection(sections, /^red$/i);
+  if (!redConfig) return;
+
+  const text = redConfig.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (redConfig.text ?? "");
+
+  const unlockCode = text.match(/UnlockCode[^}]*?[":]?\s*([^",}]+)/i)?.[1]?.trim();
+  if (unlockCode && /default|123456|000000/i.test(unlockCode)) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: "RED device using default unlock code",
+      detail: "A RED device appears to be using a default or weak unlock code. This could allow unauthorised devices to connect to the tunnel.",
+      section: "RED Security",
+      remediation: "Go to Configure > Site-to-site VPN > RED. Change the unlock code to a strong, unique value for each RED device.",
+      confidence: "medium",
+      evidence: `RED config: UnlockCode appears to be a default value`,
+    });
+  }
+}
+
+/** Admin Authentication & Profiles — check for overly permissive admin roles */
+function analyseAdminProfiles(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const profileSection = findSection(sections, /admin.*profile|administration\s*profile/i);
+  if (!profileSection) return;
+
+  let fullAccessCount = 0;
+  for (const t of profileSection.tables) {
+    for (const row of t.rows) {
+      const allValues = Object.values(row).map((v) => v.toLowerCase());
+      const readWriteCount = allValues.filter((v) => v === "readwrite" || v === "read-write" || v === "full").length;
+      if (readWriteCount > 10) fullAccessCount++;
+    }
+  }
+
+  if (fullAccessCount > 1) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: `${fullAccessCount} admin profiles with full access permissions`,
+      detail: `${fullAccessCount} administration profiles grant full read-write access to all firewall features. Follow least-privilege principles — create role-specific profiles (e.g. read-only, network-admin, security-admin).`,
+      section: "Admin Security",
+      remediation: "Go to Administration > Device access > Administration profiles. Create role-specific profiles with minimum required permissions rather than granting full access to multiple profiles.",
+      confidence: "medium",
+      evidence: `${fullAccessCount} admin profiles have ReadWrite on 10+ feature areas`,
+    });
+  }
+}
+
+/** D1: Rule ordering — deny rules shadowed by earlier allow rules */
+function analyseRuleOrdering(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const rulesTable = findFirewallRulesTable(sections);
+  if (!rulesTable || rulesTable.rows.length === 0) return;
+
+  const getAction = (row: Record<string, string>): string => {
+    const a = (
+      row["Action"] ?? row["Rule Action"] ?? row["Policy"] ?? ""
+    ).toLowerCase().trim();
+    return a;
+  };
+  const isDeny = (a: string) => a.includes("deny") || a.includes("drop");
+  const isAllow = (a: string) => a.includes("accept") || a.includes("allow") || a === "";
+
+  const getField = (row: Record<string, string>, keys: string[]) => {
+    for (const k of keys) {
+      const v = row[k];
+      if (v !== undefined && v !== "") return v.trim();
+    }
+    return "";
+  };
+  const srcZone = (r: Record<string, string>) =>
+    getField(r, ["Source Zone", "Source Zones", "Src Zone", "Src Zones", "Source"]);
+  const dstZone = (r: Record<string, string>) =>
+    getField(r, ["Destination Zone", "Destination Zones", "Dest Zone", "DestZone", "Destination"]);
+  const srcNet = (r: Record<string, string>) =>
+    getField(r, ["Source Networks", "Source", "Src Networks", "Source Network"]);
+  const dstNet = (r: Record<string, string>) =>
+    getField(r, ["Destination Networks", "Destination", "Dest Networks", "Dest Network"]);
+  const svc = (r: Record<string, string>) =>
+    getField(r, ["Service", "Services", "Services/Ports", "Services Used"]);
+
+  const allowMatchesDeny = (allowRow: Record<string, string>, denyRow: Record<string, string>): boolean => {
+    return (
+      isSubsetOrEqual(srcZone(denyRow) || "any", srcZone(allowRow) || "any") &&
+      isSubsetOrEqual(dstZone(denyRow) || "any", dstZone(allowRow) || "any") &&
+      isSubsetOrEqual(srcNet(denyRow) || "any", srcNet(allowRow) || "any") &&
+      isSubsetOrEqual(dstNet(denyRow) || "any", dstNet(allowRow) || "any") &&
+      isSubsetOrEqual(svc(denyRow) || "any", svc(allowRow) || "any")
+    );
+  };
+
+  for (let i = 0; i < rulesTable.rows.length; i++) {
+    const denyRow = rulesTable.rows[i];
+    const action = getAction(denyRow);
+    if (!isDeny(action)) continue;
+
+    const denyName = ruleName(denyRow);
+    for (let j = 0; j < i; j++) {
+      const allowRow = rulesTable.rows[j];
+      const allowAction = getAction(allowRow);
+      if (!isAllow(allowAction)) continue;
+      if (isRuleDisabled(allowRow)) continue;
+
+      if (allowMatchesDeny(allowRow, denyRow)) {
+        const allowName = ruleName(allowRow);
+        findings.push({
+          id: `f${nextId()}`,
+          severity: "medium",
+          title: "Deny rule may be shadowed by earlier allow rule",
+          detail: `Rule '${denyName}' at position ${i + 1} appears to be shadowed by '${allowName}' at position ${j + 1} which matches the same or broader traffic`,
+          section: "Rule Hygiene",
+          remediation: `Review the ordering of rules '${allowName}' and '${denyName}'. Move the deny rule above the allow rule, or narrow the allow rule's scope to prevent unintended traffic.`,
+          confidence: "high",
+          evidence: `Deny rule "${denyName}" matched by earlier allow rule "${allowName}"`,
+        });
+        break;
+      }
+    }
+  }
+}
+
+/** D3: User/group-based rule checks */
+function analyseUserGroupRules(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const rulesTable = findFirewallRulesTable(sections);
+  if (!rulesTable || rulesTable.rows.length === 0) return;
+
+  const identityCol = rulesTable.headers.find((h) =>
+    /source\s*identity|match\s*known\s*users|user\s*or\s*group|user|identity|source\s*user/i.test(h)
+  );
+  if (!identityCol) return;
+
+  const getIdentity = (row: Record<string, string>): string =>
+    (row[identityCol] ?? "").trim();
+
+  for (const row of rulesTable.rows) {
+    if (isRuleDisabled(row)) continue;
+
+    const identity = getIdentity(row);
+    const name = ruleName(row);
+
+    if (isWanDest(row) && hasIps(row) && (identity === "" || /any/i.test(identity))) {
+      findings.push({
+        id: `f${nextId()}`,
+        severity: "info",
+        title: "WAN rule with security features matches any user identity",
+        detail: `Rule '${name}' applies IPS to WAN traffic but matches 'Any' user identity — consider user-aware policies for better visibility.`,
+        section: "Authentication",
+        confidence: "low",
+        evidence: `Rule "${name}" has Source Identity=Any with IPS enabled`,
+      });
+    }
+
+    if (identity && !/any/i.test(identity)) {
+      findings.push({
+        id: `f${nextId()}`,
+        severity: "low",
+        title: "User-based rule may not cover unauthenticated traffic",
+        detail: `Rule '${name}' requires user authentication but there is no fallback rule for unauthenticated users`,
+        section: "Authentication",
+        remediation: "Add a fallback rule below user-based rules to handle unauthenticated traffic, or configure captive portal authentication for the source zone.",
+        confidence: "medium",
+        evidence: `Rule "${name}" has user/group matching: ${identity}`,
+      });
+    }
+  }
+}
+
+/** D4: WAF (Web Application Firewall) checks */
+function analyseWafPolicies(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const wafSection = findSection(sections, /waf|web.*application.*firewall|server.*access.*control/i);
+  const natSection = findSection(sections, /nat\s*rule/i);
+
+  const getDnatRules = (): string[] => {
+    if (!natSection) return [];
+    const dnat: string[] = [];
+    for (const t of natSection.tables) {
+      for (const row of t.rows) {
+        const type = (
+          row["Type"] ?? row["NAT Type"] ?? row["Rule Type"] ?? row["Action"] ?? ""
+        ).toLowerCase().trim();
+        const transTo = (
+          row["Translated To"] ?? row["Translated Destination"] ?? row["Translation"] ?? ""
+        ).toLowerCase().trim();
+        if (type.includes("dnat") || type.includes("destination") || type.includes("port forward") || transTo) {
+          dnat.push(row["Rule Name"] ?? row["Name"] ?? "Unnamed");
+        }
+      }
+    }
+    return dnat;
+  };
+
+  const dnatRules = getDnatRules();
+
+  if (wafSection) {
+    for (const t of wafSection.tables) {
+      for (const row of t.rows) {
+        const mode = (
+          row["Mode"] ?? row["Action"] ?? row["Default Action"] ?? row["Policy Mode"] ?? ""
+        ).toLowerCase().trim();
+        if (/monitor|log\s*only|detect/i.test(mode) && !/block|drop|prevent/i.test(mode)) {
+          const policyName = row["Name"] ?? row["Policy Name"] ?? row["Rule"] ?? "Unknown";
+          findings.push({
+            id: `f${nextId()}`,
+            severity: "medium",
+            title: "WAF policy in monitor-only mode",
+            detail: `WAF policy '${policyName}' is configured in monitor-only mode — attacks are detected but not blocked.`,
+            section: "Traffic Inspection",
+            remediation: "Go to Web Application Firewall settings. Change the policy mode from Monitor to Block to actively protect web applications.",
+            confidence: "high",
+            evidence: `WAF policy "${policyName}" has Mode=${mode}`,
+          });
+        }
+      }
+    }
+  } else if (dnatRules.length > 0) {
+    findings.push({
+      id: `f${nextId()}`,
+      severity: "high",
+      title: "Published web servers without WAF protection",
+      detail: "DNAT/port-forward rules expose web services to the internet but no Web Application Firewall policies are configured to protect them",
+      section: "Traffic Inspection",
+      remediation: "Configure Web Application Firewall (WAF) policies to inspect and protect published web services. Go to Web Application Firewall and create policies for each DNAT-exposed web application.",
+      confidence: "high",
+      evidence: `${dnatRules.length} DNAT rules found but no WAF section in config`,
+    });
+  }
+}
+
+/** L2: Certificate Management — weak keys, SHA-1, expiry, self-signed */
+function analyseCertificates(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /certificate|ca\b|ssl.*cert/i);
+  if (!section) return;
+
+  const now = new Date();
+  const ms30 = 30 * 24 * 60 * 60 * 1000;
+  const ms90 = 90 * 24 * 60 * 60 * 1000;
+
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const certName = row["Name"] ?? row["Certificate Name"] ?? row["Subject"] ?? row["Alias"] ?? "Unknown";
+      const keySizeRaw = row["Key Size"] ?? row["Key Length"] ?? row["Bits"] ?? row["Key"] ?? "";
+      const keySize = parseInt(keySizeRaw.replace(/\D/g, ""), 10);
+      const sigAlg = (row["Signature Algorithm"] ?? row["Hash"] ?? row["Signature"] ?? "").toLowerCase();
+      const validTo = row["Valid To"] ?? row["Expiry Date"] ?? row["Not After"] ?? row["Expires"] ?? "";
+      const issuer = (row["Issuer"] ?? row["Type"] ?? "").toLowerCase();
+
+      if (keySize > 0 && keySize < 2048) {
+        findings.push({
+          id: `f${nextId()}`, severity: "high",
+          title: `Certificate with weak key size (${keySize}-bit): ${certName}`,
+          detail: `Certificate "${certName}" uses a ${keySize}-bit key. Keys below 2048 bits are cryptographically weak and vulnerable to brute-force attacks.`,
+          section: "Certificate Management",
+          remediation: "Replace the certificate with one using at least a 2048-bit RSA or 256-bit ECDSA key. Go to Certificates and generate or import a new certificate.",
+          confidence: "high",
+          evidence: `Certificate "${certName}" has Key Size=${keySizeRaw}`,
+        });
+      }
+
+      if (sigAlg && /sha-?1|sha1/i.test(sigAlg)) {
+        findings.push({
+          id: `f${nextId()}`, severity: "high",
+          title: `Certificate using SHA-1: ${certName}`,
+          detail: `Certificate "${certName}" uses SHA-1 for signing. SHA-1 is deprecated and considered cryptographically broken. Modern browsers may reject such certificates.`,
+          section: "Certificate Management",
+          remediation: "Replace the certificate with one signed using SHA-256 or stronger. Go to Certificates and request or import a new certificate with a modern signature algorithm.",
+          confidence: "high",
+          evidence: `Certificate "${certName}" has Signature Algorithm/Hash=${sigAlg}`,
+        });
+      }
+
+      if (validTo) {
+        const expiryDate = new Date(validTo);
+        if (!isNaN(expiryDate.getTime())) {
+          const daysLeft = (expiryDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000);
+          if (daysLeft >= 0 && daysLeft <= 30) {
+            findings.push({
+              id: `f${nextId()}`, severity: "high",
+              title: `Certificate expiring within 30 days: ${certName}`,
+              detail: `Certificate "${certName}" expires on ${validTo}. Expired certificates cause service outages and security warnings.`,
+              section: "Certificate Management",
+              remediation: "Renew the certificate before it expires. Go to Certificates and either request a new certificate from your CA or import a renewed certificate.",
+              confidence: "high",
+              evidence: `Certificate "${certName}" Valid To=${validTo}`,
+            });
+          } else if (daysLeft > 30 && daysLeft <= 90) {
+            findings.push({
+              id: `f${nextId()}`, severity: "medium",
+              title: `Certificate expiring within 90 days: ${certName}`,
+              detail: `Certificate "${certName}" expires on ${validTo}. Plan renewal to avoid last-minute outages.`,
+              section: "Certificate Management",
+              remediation: "Schedule certificate renewal. Go to Certificates and request or import a renewed certificate before the expiry date.",
+              confidence: "high",
+              evidence: `Certificate "${certName}" Valid To=${validTo}`,
+            });
+          }
+        }
+      }
+
+      if (issuer && (/self.?signed|selfsigned|untrusted|internal/i.test(issuer) || issuer === "self-signed")) {
+        findings.push({
+          id: `f${nextId()}`, severity: "medium",
+          title: `Self-signed certificate in use: ${certName}`,
+          detail: `Certificate "${certName}" is self-signed or from an untrusted CA. Self-signed certificates are not validated by a trusted authority and may cause browser warnings or interoperability issues.`,
+          section: "Certificate Management",
+          remediation: "For production use, replace with a certificate from a trusted public CA or your organisation's internal CA. For internal-only services, ensure the CA is trusted on all client devices.",
+          confidence: "high",
+          evidence: `Certificate "${certName}" Issuer/Type=${issuer}`,
+        });
+      }
+    }
+  }
+}
+
+/** L6: Hotspot & Captive Portal — captive portal, terms, HTTPS, auth */
+function analyseHotspots(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /hotspot|captive.*portal|guest.*access/i);
+  if (!section) return;
+
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const name = row["Name"] ?? row["Hotspot"] ?? row["Profile"] ?? row["SSID"] ?? "Unknown";
+
+      const captivePortal = (
+        row["Captive Portal"] ?? row["CaptivePortal"] ?? row["Portal"] ?? row["Enable Captive Portal"] ?? ""
+      ).toLowerCase().trim();
+      const captiveOff = !captivePortal || captivePortal === "disabled" || captivePortal === "off" || captivePortal === "no" || captivePortal === "-";
+
+      const termsAccept = (
+        row["Terms Acceptance"] ?? row["TermsAcceptance"] ?? row["Accept Terms"] ?? row["Terms Required"] ?? ""
+      ).toLowerCase().trim();
+      const termsOff = !termsAccept || termsAccept === "disabled" || termsAccept === "off" || termsAccept === "no" || termsAccept === "-";
+
+      const httpsRedirect = (
+        row["HTTPS Redirect"] ?? row["HTTPSRedirect"] ?? row["Use HTTPS"] ?? row["SSL"] ?? ""
+      ).toLowerCase().trim();
+      const noHttps = !httpsRedirect || httpsRedirect === "disabled" || httpsRedirect === "off" || httpsRedirect === "no" || httpsRedirect === "-";
+
+      const auth = (
+        row["Authentication"] ?? row["Auth"] ?? row["Auth Required"] ?? row["Login Required"] ?? ""
+      ).toLowerCase().trim();
+      const noAuth = !auth || auth === "none" || auth === "disabled" || auth === "off" || auth === "open" || auth === "-";
+
+      if (captiveOff) {
+        findings.push({
+          id: `f${nextId()}`, severity: "high",
+          title: `Hotspot without captive portal: ${name}`,
+          detail: `Hotspot "${name}" does not have a captive portal enabled. Guest users may access the network without accepting terms or being identified.`,
+          section: "Hotspot & Captive Portal",
+          remediation: "Go to Hotspot or Guest access settings. Enable the captive portal for this hotspot. Configure a login page and terms of use.",
+          confidence: "medium",
+          evidence: `Hotspot "${name}" has Captive Portal=disabled/off`,
+        });
+      }
+
+      if (termsOff && !captiveOff) {
+        findings.push({
+          id: `f${nextId()}`, severity: "medium",
+          title: `Hotspot without terms acceptance: ${name}`,
+          detail: `Hotspot "${name}" does not require users to accept terms of use. This may create legal and accountability gaps for guest access.`,
+          section: "Hotspot & Captive Portal",
+          remediation: "Go to Hotspot settings. Enable terms acceptance and configure the terms of use text. Require users to accept before granting access.",
+          confidence: "medium",
+          evidence: `Hotspot "${name}" has Terms Acceptance=disabled/off`,
+        });
+      }
+
+      if (noHttps) {
+        findings.push({
+          id: `f${nextId()}`, severity: "medium",
+          title: `Captive portal not using HTTPS: ${name}`,
+          detail: `Captive portal for "${name}" does not enforce HTTPS. Login credentials and session data may be transmitted in cleartext.`,
+          section: "Hotspot & Captive Portal",
+          remediation: "Go to Hotspot settings. Enable HTTPS redirect for the captive portal. Ensure the portal presents a valid certificate.",
+          confidence: "medium",
+          evidence: `Hotspot "${name}" has HTTPS Redirect=disabled/off`,
+        });
+      }
+
+      if (noAuth) {
+        findings.push({
+          id: `f${nextId()}`, severity: "high",
+          title: `Open hotspot with no authentication: ${name}`,
+          detail: `Hotspot "${name}" has no authentication required. Anyone can connect without identification, increasing abuse and legal risk.`,
+          section: "Hotspot & Captive Portal",
+          remediation: "Go to Hotspot settings. Enable authentication (e.g. voucher, social login, or RADIUS). Require users to identify before granting access.",
+          confidence: "medium",
+          evidence: `Hotspot "${name}" has Authentication=none/open`,
+        });
+      }
+    }
+  }
+}
+
+/** L7: Application Filter — risky categories allowed, missing policies */
+function analyseAppFilterPolicies(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /app.*filter|application.*filter|application.*control.*polic/i);
+  if (!section) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "No application filter policies configured",
+      detail: "No application filter policy section was found. Without application filtering, the firewall cannot control or block high-risk applications such as file sharing, remote access tools, or anonymizers.",
+      section: "Application Filter",
+      remediation: "Go to Applications > Application filter. Create an application filter policy and apply it to firewall rules. Block high-risk categories (file sharing, remote access, crypto mining, anonymizers).",
+      confidence: "medium",
+      evidence: "No app filter / application filter policy section found in config",
+    });
+    return;
+  }
+
+  const RISKY_CATEGORIES = /file\s*sharing|bittorrent|edonkey|remote\s*access|teamviewer|anydesk|crypto\s*min|mining|anonymizer|tor|vpn\s*proxy|proxy/i;
+  const riskyAllowed: Array<{ category: string; apps: string }> = [];
+  let hasAnyPolicy = false;
+
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      hasAnyPolicy = true;
+      const category = (row["Category"] ?? row["Application Category"] ?? "").toLowerCase();
+      const app = (row["Application"] ?? row["Apps"] ?? row["Name"] ?? "").toLowerCase();
+      const action = (row["Action"] ?? row["Policy"] ?? row["Default Action"] ?? "").toLowerCase().trim();
+
+      const isAllow = action === "allow" || action === "permit" || action === "enabled";
+      const combined = `${category} ${app}`;
+
+      if (isAllow && RISKY_CATEGORIES.test(combined)) {
+        const catMatch = combined.match(RISKY_CATEGORIES)?.[0] ?? "high-risk category";
+        riskyAllowed.push({ category: catMatch, apps: (row["Application"] ?? row["Apps"] ?? app) || "various" });
+      }
+    }
+  }
+
+  if (hasAnyPolicy && riskyAllowed.length > 0) {
+    const unique = [...new Map(riskyAllowed.map((r) => [r.category + ":" + r.apps, r])).values()];
+    const appsList = unique.map((u) => u.apps).join(", ");
+    const categories = [...new Set(unique.map((u) => u.category))].join(", ");
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: `Application filter allows ${categories}: ${appsList}`,
+      detail: `Application filter policy permits high-risk categories: ${unique.map((u) => `${u.category} (${u.apps})`).join("; ")}. These applications can bypass security controls or introduce malware.`,
+      section: "Application Filter",
+      remediation: "Go to Applications > Application filter. Edit the policy and set high-risk categories (file sharing, remote access, crypto mining, anonymizers) to Block or Warn.",
+      confidence: "medium",
+      evidence: `App filter allows: ${unique.slice(0, 3).map((u) => u.apps).join(", ")}`,
+    });
+  }
+}
+
+/** L8: Interface & VLAN Security — zone assignment, inter-VLAN filtering, native VLAN */
+function analyseInterfaceSecurity(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const exclude = /intrusion|virus|web.*filter/i;
+  let section: SectionData | null = null;
+  for (const key of Object.keys(sections)) {
+    if (exclude.test(key)) continue;
+    if (/interface|port|vlan|network.*interface/i.test(key)) {
+      section = sections[key];
+      break;
+    }
+  }
+  if (!section) return;
+
+  const vlanFilterReported = new Set<string>();
+
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const name = row["Name"] ?? row["Interface"] ?? row["Port"] ?? row["VLAN"] ?? "Unknown";
+      const zone = (row["Zone"] ?? row["Security Zone"] ?? row["SecurityZone"] ?? "").trim();
+      const zoneEmpty = !zone || zone === "-" || zone === "none" || zone.toLowerCase() === "unassigned";
+
+      const interfaceRef = row["Interface"] ?? row["Physical Interface"] ?? row["Port"] ?? "";
+      const interVlanFilter = (row["Inter-VLAN Filtering"] ?? row["InterVLAN Filtering"] ?? row["VLAN Filtering"] ?? "").toLowerCase();
+      const noInterVlanFilter = interVlanFilter === "" || interVlanFilter === "disabled" || interVlanFilter === "off" || interVlanFilter === "-";
+
+      const trunk = (row["Type"] ?? row["Mode"] ?? "").toLowerCase();
+      const isTrunk = trunk.includes("trunk");
+      const nativeVlan = (row["Native VLAN"] ?? row["NativeVlan"] ?? row["Default VLAN"] ?? "").trim();
+      const trunkNoNative = isTrunk && (!nativeVlan || nativeVlan === "-");
+
+      if (zoneEmpty) {
+        findings.push({
+          id: `f${nextId()}`, severity: "high",
+          title: `Interface without zone assignment: ${name}`,
+          detail: `Interface/VLAN "${name}" has no security zone assigned. Unzoned interfaces may bypass firewall policy and create unexpected traffic paths.`,
+          section: "Interface & VLAN Security",
+          remediation: "Go to Network > Interfaces (or Ports and VLANs). Assign a security zone to each interface. Use LAN for trusted, WAN for untrusted, and DMZ for semi-trusted segments.",
+          confidence: "medium",
+          evidence: `Interface "${name}" has Zone/Security Zone empty or unassigned`,
+        });
+      }
+
+      const ifaceKey = interfaceRef || name;
+      if (ifaceKey && noInterVlanFilter && /vlan/i.test(row["VLAN"] ?? name) && !vlanFilterReported.has(ifaceKey)) {
+        vlanFilterReported.add(ifaceKey);
+        findings.push({
+          id: `f${nextId()}`, severity: "medium",
+          title: `VLANs without inter-VLAN filtering on ${ifaceKey}`,
+          detail: `VLAN(s) on interface "${ifaceKey}" do not have inter-VLAN filtering enabled. Traffic between VLANs on the same interface may bypass intended segmentation.`,
+          section: "Interface & VLAN Security",
+          remediation: "Go to Network > Interfaces. Enable inter-VLAN filtering for VLAN interfaces. Ensure firewall rules control traffic between VLANs.",
+          confidence: "medium",
+          evidence: `Interface "${ifaceKey}" has Inter-VLAN Filtering=disabled/empty`,
+        });
+      }
+
+      if (trunkNoNative) {
+        findings.push({
+          id: `f${nextId()}`, severity: "low",
+          title: `Trunk port without native VLAN configuration: ${name}`,
+          detail: `Trunk port "${name}" has no explicit native VLAN configured. Untagged traffic may be assigned to an unexpected VLAN.`,
+          section: "Interface & VLAN Security",
+          remediation: "Go to Network > Interfaces. Set an explicit native VLAN for trunk ports to ensure untagged traffic is handled predictably.",
+          confidence: "medium",
+          evidence: `Trunk port "${name}" has Native VLAN empty`,
+        });
+      }
+    }
+  }
+}
+
+/** D5: ZTNA/Zero Trust checks — only flag when ZTNA is partially configured */
+function analyseZtna(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const ztnaSection = findSection(sections, /ztna|zero.*trust|zero-trust/i);
+  if (!ztnaSection) return;
+
+  let hasGateway = false;
+  let hasRulesOrPolicies = false;
+
+  for (const t of ztnaSection.tables) {
+    for (const row of t.rows) {
+      const rowStr = JSON.stringify(row).toLowerCase();
+      if (/gateway|connector|access.?gateway/i.test(rowStr)) hasGateway = true;
+      if (/policy|rule|access.?control|application/i.test(rowStr)) hasRulesOrPolicies = true;
+    }
+  }
+  const text = (ztnaSection.text ?? "").toLowerCase();
+  if (/gateway|connector|access.?gateway/i.test(text)) hasGateway = true;
+  if (/policy|rule|access.?control|application/i.test(text)) hasRulesOrPolicies = true;
+
+  if (hasGateway && !hasRulesOrPolicies) {
+    findings.push({
+      id: `f${nextId()}`,
+      severity: "medium",
+      title: "ZTNA gateway configured but no access policies defined",
+      detail: "A ZTNA/Zero Trust gateway is configured but no access policies or rules were found. The gateway provides no protection without policies defining which applications and resources users can access.",
+      section: "Access Control",
+      remediation: "Go to Zero Trust Network Access settings. Define access policies that specify which applications and resources each user group can access. Apply policies to the ZTNA connector.",
+      confidence: "medium",
+      evidence: "ZTNA section has gateway/connector configuration but no policy/rule entries",
+    });
+  }
+}
+
+/** D6: Firmware version risk assessment — flag EOL firmware */
+function analyseFirmwareVersion(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /device.*info|system.*info|firmware|about/i);
+  if (!section) return;
+
+  const FIRMWARE_EOL: Record<string, string> = {
+    "17": "2021-04-01",
+    "18": "2023-03-31",
+    "19": "2024-09-30",
+  };
+
+  let version: string | null = null;
+  const versionPattern = /SFOS\s*(\d+)|v(\d+)|version\s*(\d+)|firmware\s*(\d+)/i;
+
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const rowStr = JSON.stringify(row);
+      const m = rowStr.match(versionPattern);
+      if (m) {
+        version = (m[1] ?? m[2] ?? m[3] ?? m[4]) ?? null;
+        break;
+      }
+    }
+    if (version) break;
+  }
+  if (!version && section.text) {
+    const m = section.text.match(versionPattern);
+    if (m) version = (m[1] ?? m[2] ?? m[3] ?? m[4]) ?? null;
+  }
+  if (!version) return;
+
+  const eolDate = FIRMWARE_EOL[version];
+  if (!eolDate) return;
+
+  const eol = new Date(eolDate);
+  if (new Date() <= eol) return;
+
+  findings.push({
+    id: `f${nextId()}`,
+    severity: "critical",
+    title: "Firewall running end-of-life firmware",
+    detail: `Firmware version ${version} reached end of life on ${eolDate}. No further security patches are available.`,
+    section: "Device Hardening",
+    remediation: "Upgrade the firewall to a supported firmware version. Go to System > Firmware and check for available updates. Plan maintenance during a change window.",
+    confidence: "high",
+    evidence: `Firmware version ${version} detected; EOL date ${eolDate} has passed`,
+  });
+}
+
+/** D7: Licence vs feature usage validation — only when Central-linked and licence data available */
+function analyseLicenceUsage(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number, options?: AnalyseOptions,
+) {
+  if (!options?.centralLinked) return;
+
+  const licenceSection = findSection(sections, /licen[cs]e|subscription|module/i);
+  if (!licenceSection) return;
+
+  const licenceText = JSON.stringify(licenceSection).toLowerCase();
+
+  if (/web\s*protection|web\s*server\s*protection/i.test(licenceText)) {
+    const wfSection = findSection(sections, /web\s*filter\s*polic/i);
+    const wafSection = findSection(sections, /waf|web.*application.*firewall|server.*access.*control/i);
+    const hasWebFilter = wfSection && wfSection.tables.some((t) => t.rows.length > 0);
+    const hasWaf = wafSection && wafSection.tables.some((t) => t.rows.length > 0);
+    if (!hasWebFilter && !hasWaf) {
+      findings.push({
+        id: `f${nextId()}`,
+        severity: "low",
+        title: "Licensed feature not in use: Web Protection",
+        detail: "Web Protection or Web Server Protection is licensed but no web filter policies or WAF rules were found in the configuration.",
+        section: "Licensing",
+        confidence: "medium",
+        evidence: "Licence section indicates Web Protection; no web filter or WAF policies configured",
+      });
+    }
+  }
+
+  if (/email\s*protection/i.test(licenceText)) {
+    const relaySection = findSection(sections, /relay\s*setting|smarthost/i);
+    const dkimSection = findSection(sections, /dkim/i);
+    const hasRelay = relaySection && (relaySection.tables.some((t) => t.rows.length > 0) || relaySection.text);
+    const hasDkim = dkimSection && (dkimSection.tables.some((t) => t.rows.length > 0) || dkimSection.text);
+    if (!hasRelay && !hasDkim) {
+      findings.push({
+        id: `f${nextId()}`,
+        severity: "low",
+        title: "Licensed feature not in use: Email Protection",
+        detail: "Email Protection is licensed but no email relay, SMTP rules, or DKIM policies were found in the configuration.",
+        section: "Licensing",
+        confidence: "medium",
+        evidence: "Licence section indicates Email Protection; no email/SMTP or DKIM configuration found",
+      });
+    }
+  }
+
+  if (/sandstorm|zero.?day\s*protection/i.test(licenceText)) {
+    const vsSection = findSection(sections, /virus|malware|anti.?virus|scanning/i);
+    let sandboxEnabled = false;
+    if (vsSection) {
+      for (const t of vsSection.tables) {
+        for (const row of t.rows) {
+          const setting = (row["Setting"] ?? row["Protocol"] ?? Object.keys(row)[0] ?? "").toLowerCase();
+          const value = (row["Value"] ?? row["Status"] ?? row[setting] ?? "").toLowerCase().trim();
+          if (/sandbox|sandstorm|zero.?day/i.test(setting)) {
+            if (value === "enabled" || value === "on" || value === "yes" || value.includes("✓")) {
+              sandboxEnabled = true;
+            }
+          }
+        }
+      }
+    }
+    if (!sandboxEnabled) {
+      findings.push({
+        id: `f${nextId()}`,
+        severity: "low",
+        title: "Licensed feature not in use: Sandstorm / Zero-Day Protection",
+        detail: "Sandstorm or Zero-Day Protection is licensed but sandbox scanning appears to be disabled in the virus scanning configuration.",
+        section: "Licensing",
+        confidence: "medium",
+        evidence: "Licence section indicates Sandstorm/Zero-Day; sandbox not enabled in virus scanning",
+      });
+    }
+  }
+}
+
 /**
  * Aggregate analysis across multiple firewalls.
  */
 export function analyseMultiConfig(
   configs: Record<string, ExtractedSections>,
+  optionsMap?: Record<string, AnalyseOptions>,
 ): { perFirewall: Record<string, AnalysisResult>; totalFindings: number; totalRules: number } {
   const perFirewall: Record<string, AnalysisResult> = {};
   let totalFindings = 0;
   let totalRules = 0;
 
   for (const [label, sections] of Object.entries(configs)) {
-    const result = analyseConfig(sections);
+    const result = analyseConfig(sections, optionsMap?.[label]);
     perFirewall[label] = result;
     totalFindings += result.findings.length;
     totalRules += result.stats.totalRules;

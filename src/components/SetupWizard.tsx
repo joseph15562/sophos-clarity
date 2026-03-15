@@ -111,7 +111,7 @@ function FeatureOverlay({ title, subtitle, onClose, children }: {
   return (
     <div className="absolute inset-0 z-10 bg-background/95 backdrop-blur-sm flex flex-col animate-in fade-in duration-150">
       <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card shrink-0">
-        <button onClick={onClose} className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground">
+        <button onClick={onClose} className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground" aria-label="Go back">
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="flex-1 min-w-0">

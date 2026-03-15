@@ -171,6 +171,28 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
       : `${avFindings.length} malware scanning gap${avFindings.length > 1 ? "s" : ""} detected`,
   });
 
+  // 9. Network Security — VPN, DoS, wireless, SNMP, syslog
+  const netFindings = findings.filter((f) =>
+    /vpn.*weak|perfect forward|pre-shared key|dos|spoof|syn flood|wireless.*encryption|snmp communit|syslog|external.*log/i.test(f.title)
+  );
+  let netScore = 100;
+  for (const f of netFindings) {
+    if (f.severity === "critical") netScore -= 30;
+    else if (f.severity === "high") netScore -= 20;
+    else if (f.severity === "medium") netScore -= 10;
+    else if (f.severity === "low") netScore -= 5;
+  }
+  netScore = clamp(netScore);
+  categories.push({
+    label: "Network Security",
+    score: netScore,
+    maxScore: 100,
+    pct: netScore,
+    details: netFindings.length === 0
+      ? "VPN, DoS protection, wireless, and SNMP properly configured"
+      : `${netFindings.length} network security issue${netFindings.length > 1 ? "s" : ""} detected`,
+  });
+
   const overall = Math.round(categories.reduce((sum, c) => sum + c.pct, 0) / categories.length);
   const grade: RiskScoreResult["grade"] =
     overall >= 90 ? "A" : overall >= 75 ? "B" : overall >= 60 ? "C" : overall >= 40 ? "D" : "F";

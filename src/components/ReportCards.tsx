@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 interface ReportCardsProps {
   fileCount: number;
   localMode?: boolean;
+  isViewerOnly?: boolean;
   onGenerateIndividual: () => void;
   onGenerateExecutive: () => void;
   onGenerateExecutiveOnePager: () => void;
@@ -14,12 +15,14 @@ interface ReportCardsProps {
 export function ReportCards({
   fileCount,
   localMode = false,
+  isViewerOnly = false,
   onGenerateIndividual,
   onGenerateExecutive,
   onGenerateExecutiveOnePager,
   onGenerateCompliance,
   onGenerateAll,
 }: ReportCardsProps) {
+  const canGenerate = !localMode && !isViewerOnly;
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-2">
@@ -39,9 +42,9 @@ export function ReportCards({
         {/* Technical Report — AI, disabled in local mode */}
         <div
           className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
-            localMode ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#2006F7]/30 dark:hover:border-[#2006F7]/40 cursor-pointer group"
+            !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#2006F7]/30 dark:hover:border-[#2006F7]/40 cursor-pointer group"
           }`}
-          onClick={localMode ? undefined : onGenerateIndividual}
+          onClick={canGenerate ? onGenerateIndividual : undefined}
         >
           <div className="h-1 bg-gradient-to-r from-[#2006F7] to-[#5A00FF]" />
           <div className="p-5 space-y-3">
@@ -54,9 +57,9 @@ export function ReportCards({
             <p className="text-xs text-muted-foreground leading-relaxed">
               Comprehensive per-firewall assessment covering rules, NAT, interfaces, hosts, policies, and security posture. Includes prioritised findings, NCSC-aligned recommendations, and remediation guidance.
             </p>
-            <Button size="sm" className="w-full gap-2 bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-sm" disabled={localMode}>
+            <Button size="sm" className="w-full gap-2 bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-sm" disabled={!canGenerate}>
               <img src="/icons/sophos-ai-white.svg" alt="" className="h-4 w-4" />
-              {localMode ? "AI unavailable" : (fileCount === 1 ? "Generate Report" : `Generate ${fileCount} Reports`)}
+              {!canGenerate ? (isViewerOnly ? "View only" : "AI unavailable") : (fileCount === 1 ? "Generate Report" : `Generate ${fileCount} Reports`)}
             </Button>
           </div>
         </div>
@@ -64,9 +67,9 @@ export function ReportCards({
         {/* Executive Brief — AI, disabled in local mode */}
         <div
           className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
-            localMode ? "opacity-50 pointer-events-none" : fileCount >= 2 ? "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group" : "opacity-45 pointer-events-none"
+            !canGenerate ? "opacity-50 pointer-events-none" : fileCount >= 2 ? "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group" : "opacity-45 pointer-events-none"
           }`}
-          onClick={localMode ? undefined : (fileCount >= 2 ? onGenerateExecutive : undefined)}
+          onClick={canGenerate && fileCount >= 2 ? onGenerateExecutive : undefined}
         >
           <div className="h-1 bg-gradient-to-r from-[#5A00FF] to-[#B529F7]" />
           <div className="p-5 space-y-3">
@@ -81,16 +84,18 @@ export function ReportCards({
                 ? "Consolidated estate summary comparing all firewalls. Risk matrix, cross-estate findings, strategic recommendations — designed for management and stakeholder reporting."
                 : "Upload 2+ firewall exports to unlock the consolidated executive brief across your estate."}
             </p>
-            <Button size="sm" variant="secondary" className="w-full gap-2" disabled={fileCount < 2 || localMode}>
-              <BookOpen className="h-3.5 w-3.5" /> {localMode ? "AI unavailable" : "Generate Executive Brief"}
+            <Button size="sm" variant="secondary" className="w-full gap-2" disabled={fileCount < 2 || !canGenerate}>
+              <BookOpen className="h-3.5 w-3.5" /> {!canGenerate ? (isViewerOnly ? "View only" : "AI unavailable") : "Generate Executive Brief"}
             </Button>
           </div>
         </div>
 
         {/* Executive One-Pager */}
         <div
-          className="rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-[#B529F7]/30 dark:hover:border-[#B529F7]/40 transition-all duration-200 cursor-pointer group overflow-hidden"
-          onClick={onGenerateExecutiveOnePager}
+          className={`rounded-xl border border-border bg-card shadow-sm transition-all duration-200 overflow-hidden ${
+            canGenerate ? "hover:shadow-md hover:border-[#B529F7]/30 dark:hover:border-[#B529F7]/40 cursor-pointer group" : "opacity-50 pointer-events-none"
+          }`}
+          onClick={canGenerate ? onGenerateExecutiveOnePager : undefined}
         >
           <div className="h-1 bg-gradient-to-r from-[#B529F7] to-[#E040FB]" />
           <div className="p-5 space-y-3">
@@ -103,8 +108,8 @@ export function ReportCards({
             <p className="text-xs text-muted-foreground leading-relaxed">
               Instant one-page summary with overall score, grade, top 5 risks, and 3 recommended next steps. No AI required — generated locally from your analysis.
             </p>
-            <Button size="sm" variant="outline" className="w-full gap-2">
-              <FileText className="h-3.5 w-3.5" /> Generate One-Pager
+            <Button size="sm" variant="outline" className="w-full gap-2" disabled={!canGenerate}>
+              <FileText className="h-3.5 w-3.5" /> {canGenerate ? "Generate One-Pager" : "View only"}
             </Button>
           </div>
         </div>
@@ -112,9 +117,9 @@ export function ReportCards({
         {/* Compliance Readiness Report — AI, disabled in local mode */}
         <div
           className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
-            localMode ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#009CFB]/30 dark:hover:border-[#009CFB]/40 cursor-pointer group"
+            !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#009CFB]/30 dark:hover:border-[#009CFB]/40 cursor-pointer group"
           }`}
-          onClick={localMode ? undefined : onGenerateCompliance}
+          onClick={canGenerate ? onGenerateCompliance : undefined}
         >
           <div className="h-1 bg-gradient-to-r from-[#009CFB] to-[#00EDFF]" />
           <div className="p-5 space-y-3">
@@ -127,14 +132,14 @@ export function ReportCards({
             <p className="text-xs text-muted-foreground leading-relaxed">
               Compliance readiness assessment mapping firewall controls to your selected frameworks. Includes control status, gap analysis, and remediation priorities. Results are indicative and should be validated by a qualified auditor.
             </p>
-            <Button size="sm" variant="outline" className="w-full gap-2" disabled={localMode}>
-              <ClipboardCheck className="h-3.5 w-3.5" /> {localMode ? "AI unavailable" : "Generate Compliance Report"}
+            <Button size="sm" variant="outline" className="w-full gap-2" disabled={!canGenerate}>
+              <ClipboardCheck className="h-3.5 w-3.5" /> {!canGenerate ? (isViewerOnly ? "View only" : "AI unavailable") : "Generate Compliance Report"}
             </Button>
           </div>
         </div>
       </div>
 
-      {!localMode && (
+      {canGenerate && (
       <Button size="lg" onClick={onGenerateAll} className="w-full gap-2 text-base bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white">
         <img src="/icons/sophos-orchestration-white.svg" alt="" className="h-5 w-5" />
         {fileCount >= 2

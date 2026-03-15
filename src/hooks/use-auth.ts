@@ -8,15 +8,25 @@ export interface OrgInfo {
   name: string;
 }
 
+export type OrgRole = "admin" | "member" | "engineer" | "viewer";
+
 export interface AuthState {
   user: User | null;
   session: Session | null;
   org: OrgInfo | null;
-  role: "admin" | "member" | null;
+  role: OrgRole | null;
   isGuest: boolean;
   isLoading: boolean;
   needsOrg: boolean;
   needsMfa: boolean;
+  /** Admin only — manage team, Central, settings */
+  canManageTeam: boolean;
+  /** Admin or engineer — manage agents */
+  canManageAgents: boolean;
+  /** Admin, engineer, or member — run assessments, generate reports */
+  canRunAssessments: boolean;
+  /** Viewer role — read-only access to reports */
+  isViewerOnly: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -25,7 +35,7 @@ export interface AuthState {
   clearMfaRequired: () => void;
 }
 
-async function fetchOrgMembership(userId: string): Promise<{ org: OrgInfo; role: "admin" | "member" } | null> {
+async function fetchOrgMembership(userId: string): Promise<{ org: OrgInfo; role: OrgRole } | null> {
   const { data, error } = await supabase
     .from("org_members")
     .select("org_id, role, organisations(id, name)")
@@ -40,7 +50,7 @@ async function fetchOrgMembership(userId: string): Promise<{ org: OrgInfo; role:
 
   return {
     org: { id: orgData.id, name: orgData.name },
-    role: data.role as "admin" | "member",
+    role: data.role as OrgRole,
   };
 }
 
@@ -48,7 +58,7 @@ export function useAuthProvider(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [org, setOrg] = useState<OrgInfo | null>(null);
-  const [role, setRole] = useState<"admin" | "member" | null>(null);
+  const [role, setRole] = useState<OrgRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [needsMfa, setNeedsMfa] = useState(false);
 
@@ -163,11 +173,16 @@ export function useAuthProvider(): AuthState {
 
   const isGuest = !user;
   const needsOrg = !!user && !org && !isLoading;
+  const canManageTeam = role === "admin";
+  const canManageAgents = role === "admin" || role === "engineer";
+  const canRunAssessments = role === "admin" || role === "engineer" || role === "member";
+  const isViewerOnly = role === "viewer";
 
   return useMemo(() => ({
     user, session, org, role, isGuest, isLoading, needsOrg, needsMfa,
+    canManageTeam, canManageAgents, canRunAssessments, isViewerOnly,
     signIn, signUp, signOut, createOrg, refreshOrg, clearMfaRequired,
-  }), [user, session, org, role, isGuest, isLoading, needsOrg, needsMfa, signIn, signUp, signOut, createOrg, refreshOrg, clearMfaRequired]);
+  }), [user, session, org, role, isGuest, isLoading, needsOrg, needsMfa, canManageTeam, canManageAgents, canRunAssessments, isViewerOnly, signIn, signUp, signOut, createOrg, refreshOrg, clearMfaRequired]);
 }
 
 const AuthContext = createContext<AuthState | null>(null);

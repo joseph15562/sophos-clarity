@@ -74,7 +74,7 @@ const SharedReport = () => {
           </span>
         </div>
       </header>
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main id="main-content" className="max-w-4xl mx-auto px-6 py-8">
         <div
           className="prose prose-slate dark:prose-invert max-w-none"
           dangerouslySetInnerHTML={{ __html: html }}

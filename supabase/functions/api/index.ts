@@ -2,12 +2,24 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-api-key",
-};
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  Deno.env.get("ALLOWED_ORIGIN") ?? "",
+].filter(Boolean);
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+let corsHeaders: Record<string, string> = {};
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -328,6 +340,7 @@ async function handleSubmit(
 // ── Main router ──
 
 serve(async (req: Request) => {
+  corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -611,8 +624,8 @@ serve(async (req: Request) => {
         org_id: membership.org_id,
         user_id: user.id,
         action: "admin.mfa_reset",
-        entity_type: "user",
-        entity_id: targetUserId,
+        resource_type: "user",
+        resource_id: targetUserId,
         metadata: { resetBy: user.email, factorsRemoved: totp.length },
       });
 
@@ -622,20 +635,41 @@ serve(async (req: Request) => {
     return json({ error: "Not found" }, 404);
   }
 
-  // ── Auth recovery routes ──
+  // ── Auth recovery routes (admin approval required) ──
   if (segments[0] === "auth" && segments[1] === "mfa-recovery") {
     if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) return json({ error: "Unauthorized — admin session required" }, 401);
+
+    const uc = userClient(authHeader);
+    const { data: { user: caller } } = await uc.auth.getUser();
+    if (!caller) return json({ error: "Invalid session" }, 401);
+
     const body = await req.json();
-    const { email } = body;
-    if (!email) return json({ error: "email required" }, 400);
+    const { targetEmail } = body;
+    if (!targetEmail) return json({ error: "targetEmail required" }, 400);
 
     const db = adminClient();
 
-    // Find the user
+    // Find the target user
     const { data: users } = await db.auth.admin.listUsers();
-    const targetUser = users?.users?.find((u: any) => u.email === email);
+    const targetUser = users?.users?.find((u: any) => u.email === targetEmail);
     if (!targetUser) return json({ error: "User not found" }, 404);
+
+    const callerMembership = await getOrgMembership(caller.id);
+    const targetMembership = await getOrgMembership(targetUser.id);
+
+    if (!targetMembership) return json({ error: "User not found" }, 404);
+
+    // Case 1: Self-recovery — caller is the target user (must have valid session, which we verified above)
+    const isSelfRecovery = caller.id === targetUser.id;
+    // Case 2: Admin recovery — caller is admin in same org as target
+    const isAdminRecovery = callerMembership && callerMembership.role === "admin" && callerMembership.org_id === targetMembership.org_id;
+
+    if (!isSelfRecovery && !isAdminRecovery) {
+      return json({ error: "Forbidden — only org admins can reset MFA for other users" }, 403);
+    }
 
     // Check they actually have TOTP factors
     const { data: factors } = await db.auth.admin.mfa.listFactors({
@@ -651,7 +685,19 @@ serve(async (req: Request) => {
       await db.auth.admin.mfa.deleteFactor({ id: factor.id, userId: targetUser.id });
     }
 
-    // Generate a magic link session so the user can sign in immediately
+    // Audit log when admin resets another user's MFA
+    if (isAdminRecovery && !isSelfRecovery) {
+      await db.from("audit_log").insert({
+        org_id: callerMembership!.org_id,
+        user_id: caller.id,
+        action: "admin.mfa_reset",
+        resource_type: "user",
+        resource_id: targetUser.id,
+        metadata: { resetFor: targetEmail, factorsRemoved: totp.length },
+      });
+    }
+
+    // Generate a magic link session so the user can sign in immediately (only for self-recovery or when admin resets)
     const { data: linkData, error: linkError } = await db.auth.admin.generateLink({
       type: "magiclink",
       email: targetUser.email!,
@@ -687,16 +733,30 @@ serve(async (req: Request) => {
 
     const db = adminClient();
 
-    // GET /api/assessments — list
+    // GET /api/assessments — list (cursor-based pagination)
     if (segments.length === 1) {
+      const page = parseInt(url.searchParams.get("page") ?? "1");
+      const pageSize = Math.min(parseInt(url.searchParams.get("pageSize") ?? "50"), 100);
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       const { data, count } = await db
         .from("assessments")
         .select("id, org_id, customer_name, environment, overall_score, overall_grade, created_at", { count: "exact" })
         .eq("org_id", membership.org_id)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(from, to);
 
-      return json({ data: data ?? [], total: count ?? 0 });
+      const total = count ?? 0;
+      const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
+
+      return json({
+        data: data ?? [],
+        total,
+        page,
+        pageSize,
+        totalPages,
+      });
     }
 
     // GET /api/assessments/:id — single assessment with scores, findings, full details
@@ -736,6 +796,33 @@ serve(async (req: Request) => {
     }
   }
 
+  // ── Shared report (public, no auth) ──
+  if (req.method === "GET" && segments[0] === "shared" && segments.length === 2) {
+    const token = segments[1];
+    const db = adminClient();
+    const { data, error } = await db
+      .from("shared_reports")
+      .select("share_token, markdown, customer_name, expires_at, created_at")
+      .eq("share_token", token)
+      .maybeSingle();
+
+    if (error) return json({ error: error.message }, 500);
+    if (!data) return json({ error: "Report not found" }, 404);
+
+    const expiresAt = new Date(data.expires_at);
+    if (expiresAt <= new Date()) {
+      return json({ error: "Report has expired" }, 410);
+    }
+
+    return json({
+      share_token: data.share_token,
+      markdown: data.markdown,
+      customer_name: data.customer_name,
+      expires_at: data.expires_at,
+      created_at: data.created_at,
+    });
+  }
+
   // ── Firewalls route (JWT auth) ──
   if (req.method === "GET" && segments[0] === "firewalls" && segments.length === 1) {
     const authHeader = req.headers.get("authorization");
@@ -756,12 +843,13 @@ serve(async (req: Request) => {
 
       if (fwErr) return json({ error: fwErr.message }, 500);
 
+      // Bounded by org scope; 500 covers most estates
       const { data: submissions } = await db
         .from("agent_submissions")
         .select("id, firewalls, overall_score, overall_grade, created_at")
         .eq("org_id", membership.org_id)
         .order("created_at", { ascending: false })
-        .limit(200);
+        .limit(500);
 
       const byFirewallId: Record<string, { score: number; grade: string; submitted_at: string }> = {};
       for (const sub of submissions ?? []) {

@@ -157,28 +157,71 @@ const SHARED_CONTROLS: Record<string, ControlDef> = {
       return { status: critical ? "fail" : "partial", evidence: f[0].detail, findings: f.map((x) => x.id) };
     },
   },
+  vpnSecurity: {
+    id: "VPN", name: "VPN Encryption & Authentication", category: "Access Control",
+    check: (r) => {
+      const f = hasFindings(r, /vpn.*weak encryption|without.*perfect forward|pre-shared key/i);
+      if (f.length === 0) return { status: "pass", evidence: "VPN profiles use strong encryption and authentication", findings: [] };
+      const critical = f.some((x) => x.severity === "high");
+      return { status: critical ? "fail" : "partial", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
+  dosProtection: {
+    id: "DOS", name: "DoS & Spoof Protection", category: "Traffic Inspection",
+    check: (r) => {
+      const f = hasFindings(r, /dos|spoof|syn flood/i);
+      if (f.length === 0) return { status: "pass", evidence: "DoS and spoof protection enabled", findings: [] };
+      const critical = f.some((x) => x.severity === "high" || x.severity === "critical");
+      return { status: critical ? "fail" : "partial", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
+  externalLogging: {
+    id: "SYSLOG", name: "External Log Forwarding", category: "Monitoring & Logging",
+    check: (r) => {
+      const f = hasFindings(r, /external.*log.*forwarding/i);
+      if (f.length === 0) return { status: "pass", evidence: "External log forwarding configured (Sophos Central or syslog)", findings: [] };
+      return { status: "fail", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
+  wirelessSecurity: {
+    id: "WIFI", name: "Wireless Network Security", category: "Access Control",
+    check: (r) => {
+      const f = hasFindings(r, /wireless.*no encryption|wireless.*weak encryption|open.*wireless/i);
+      if (f.length === 0) return { status: "pass", evidence: "All wireless networks use strong encryption", findings: [] };
+      const critical = f.some((x) => x.severity === "critical");
+      return { status: critical ? "fail" : "partial", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
+  snmpSecurity: {
+    id: "SNMP", name: "SNMP Configuration Security", category: "Access Control",
+    check: (r) => {
+      const f = hasFindings(r, /snmp communit.*default|snmp communit.*weak/i);
+      if (f.length === 0) return { status: "pass", evidence: "SNMP uses non-default community strings", findings: [] };
+      return { status: "fail", evidence: f[0].detail, findings: f.map((x) => x.id) };
+    },
+  },
 };
 
 const FRAMEWORK_CONTROLS: Record<string, string[]> = {
-  "NCSC Guidelines": ["dpiEngine", "webFilter", "ips", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "antiMalware"],
-  "Cyber Essentials / CE+": ["dpiEngine", "webFilter", "mfa", "segmentation", "logging", "adminAccess", "antiMalware"],
-  "GDPR": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess"],
-  "DfE / KCSIE": ["dpiEngine", "webFilter", "logging", "sslInspection", "antiMalware"],
-  "ISO 27001": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
-  "PCI DSS": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
-  "NIST 800-53": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
-  "HIPAA": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware"],
-  "NIS2": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware"],
-  "SOX": ["logging", "mfa", "segmentation", "adminAccess"],
-  "FCA": ["logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess"],
-  "PRA": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess"],
-  "FedRAMP": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware"],
-  "CMMC": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "adminAccess", "antiMalware"],
-  "HITECH": ["logging", "mfa", "segmentation", "antiMalware"],
-  "IEC 62443": ["dpiEngine", "ips", "segmentation", "logging", "mfa", "adminAccess"],
-  "NIST 800-82": ["dpiEngine", "ips", "segmentation", "logging", "adminAccess"],
-  "NERC CIP": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "adminAccess"],
-  "MOD Cyber / ITAR": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware"],
+  "NCSC Guidelines": ["dpiEngine", "webFilter", "ips", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging", "wirelessSecurity"],
+  "Cyber Essentials / CE+": ["dpiEngine", "webFilter", "mfa", "segmentation", "logging", "adminAccess", "antiMalware", "vpnSecurity", "wirelessSecurity"],
+  "GDPR": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess", "externalLogging"],
+  "DfE / KCSIE": ["dpiEngine", "webFilter", "logging", "sslInspection", "antiMalware", "wirelessSecurity"],
+  "ISO 27001": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging", "wirelessSecurity", "snmpSecurity"],
+  "PCI DSS": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware", "vpnSecurity", "externalLogging", "wirelessSecurity", "snmpSecurity"],
+  "NIST 800-53": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging", "snmpSecurity"],
+  "HIPAA": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware", "externalLogging", "wirelessSecurity"],
+  "NIS2": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging"],
+  "SOX": ["logging", "mfa", "segmentation", "adminAccess", "externalLogging"],
+  "FCA": ["logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "externalLogging"],
+  "PRA": ["logging", "mfa", "segmentation", "sslInspection", "adminAccess", "externalLogging"],
+  "FedRAMP": ["dpiEngine", "webFilter", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "ruleHygiene", "adminAccess", "natSecurity", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging", "snmpSecurity"],
+  "CMMC": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "adminAccess", "antiMalware", "vpnSecurity", "externalLogging"],
+  "HITECH": ["logging", "mfa", "segmentation", "antiMalware", "externalLogging"],
+  "IEC 62443": ["dpiEngine", "ips", "segmentation", "logging", "mfa", "adminAccess", "vpnSecurity", "dosProtection"],
+  "NIST 800-82": ["dpiEngine", "ips", "segmentation", "logging", "adminAccess", "dosProtection"],
+  "NERC CIP": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "adminAccess", "vpnSecurity", "externalLogging"],
+  "MOD Cyber / ITAR": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging"],
 };
 
 export function mapToFramework(
@@ -244,6 +287,11 @@ const FINDING_TO_CONTROL: [RegExp, string][] = [
   [/virus scanning|sandboxing|zero-day/i, "antiMalware"],
   [/web filter policy allows|high-risk categor/i, "webFilter"],
   [/ips policy/i, "ips"],
+  [/vpn.*weak encryption|without.*perfect forward|pre-shared key/i, "vpnSecurity"],
+  [/dos|spoof|syn flood/i, "dosProtection"],
+  [/external.*log.*forwarding/i, "externalLogging"],
+  [/wireless.*no encryption|wireless.*weak encryption/i, "wirelessSecurity"],
+  [/snmp communit.*default|snmp communit.*weak/i, "snmpSecurity"],
 ];
 
 export function findingToFrameworks(findingTitle: string, selectedFrameworks: string[]): string[] {

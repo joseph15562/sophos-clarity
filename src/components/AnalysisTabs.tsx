@@ -1,0 +1,733 @@
+import { lazy, Suspense, useRef, useEffect } from "react";
+import { ArrowLeftRight, Download, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { EstateOverview } from "@/components/EstateOverview";
+import { FindingsChanges } from "@/components/FindingsChanges";
+import { PriorityActions } from "@/components/PriorityActions";
+import { SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
+import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
+import type { AnalysisResult } from "@/lib/analyse-config";
+import type { InspectionPosture } from "@/lib/analyse-config";
+import type { BrandingData } from "@/components/BrandingSetup";
+import type { ParsedFile } from "@/hooks/use-report-generation";
+import type { RiskScoreResult } from "@/lib/risk-score";
+
+const RiskScoreDashboard = lazy(() => import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })));
+const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })));
+const ChangeApproval = lazy(() => import("@/components/ChangeApproval").then((m) => ({ default: m.ChangeApproval })));
+const ComplianceHeatmap = lazy(() => import("@/components/ComplianceHeatmap").then((m) => ({ default: m.ComplianceHeatmap })));
+const InsuranceReadiness = lazy(() => import("@/components/InsuranceReadiness").then((m) => ({ default: m.InsuranceReadiness })));
+const RuleOptimiser = lazy(() => import("@/components/RuleOptimiser").then((m) => ({ default: m.RuleOptimiser })));
+const ConsistencyChecker = lazy(() => import("@/components/ConsistencyChecker").then((m) => ({ default: m.ConsistencyChecker })));
+const ScoreSimulator = lazy(() => import("@/components/ScoreSimulator").then((m) => ({ default: m.ScoreSimulator })));
+const AttackSurfaceMap = lazy(() => import("@/components/AttackSurfaceMap").then((m) => ({ default: m.AttackSurfaceMap })));
+const SophosBestPractice = lazy(() => import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })));
+const PeerBenchmark = lazy(() => import("@/components/PeerBenchmark").then((m) => ({ default: m.PeerBenchmark })));
+const SeverityBreakdown = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SeverityBreakdown })));
+const SecurityFeatureCoverage = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SecurityFeatureCoverage })));
+const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.ZoneTrafficFlow })));
+const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
+const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
+const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
+const PriorityMatrix = lazy(() => import("@/components/PriorityMatrix").then((m) => ({ default: m.PriorityMatrix })));
+const CentralEnrichment = lazy(() => import("@/components/CentralEnrichment").then((m) => ({ default: m.CentralEnrichment })));
+const ScoreDialGauge = lazy(() => import("@/components/ScoreDialGauge").then((m) => ({ default: m.ScoreDialGauge })));
+const ScoreDeltaBanner = lazy(() => import("@/components/ScoreDeltaBanner").then((m) => ({ default: m.ScoreDeltaBanner })));
+const RiskSummaryCards = lazy(() => import("@/components/RiskSummaryCards").then((m) => ({ default: m.RiskSummaryCards })));
+const QuickActions = lazy(() => import("@/components/QuickActions").then((m) => ({ default: m.QuickActions })));
+const FindingsByAge = lazy(() => import("@/components/FindingsByAge").then((m) => ({ default: m.FindingsByAge })));
+const RemediationVelocity = lazy(() => import("@/components/RemediationVelocity").then((m) => ({ default: m.RemediationVelocity })));
+const SlaComplianceGauge = lazy(() => import("@/components/SlaComplianceGauge").then((m) => ({ default: m.SlaComplianceGauge })));
+const AlertFeedWidget = lazy(() => import("@/components/AlertFeed").then((m) => ({ default: m.AlertFeed })));
+const AssessmentCountdown = lazy(() => import("@/components/AssessmentCountdown").then((m) => ({ default: m.AssessmentCountdown })));
+const CategoryScoreBars = lazy(() => import("@/components/CategoryScoreBars").then((m) => ({ default: m.CategoryScoreBars })));
+const ServiceUsageWidget = lazy(() => import("@/components/ServiceUsage").then((m) => ({ default: m.ServiceUsage })));
+const RuleActionDistribution = lazy(() => import("@/components/RuleActionDistribution").then((m) => ({ default: m.RuleActionDistribution })));
+const CoverageMatrix = lazy(() => import("@/components/CoverageMatrix").then((m) => ({ default: m.CoverageMatrix })));
+const RiskDistributionWidget = lazy(() => import("@/components/RiskDistribution").then((m) => ({ default: m.RiskDistribution })));
+const ProtocolDistribution = lazy(() => import("@/components/ProtocolDistribution").then((m) => ({ default: m.ProtocolDistribution })));
+const CategoryTrends = lazy(() => import("@/components/CategoryTrends").then((m) => ({ default: m.CategoryTrends })));
+const FindingHeatmapTime = lazy(() => import("@/components/FindingHeatmapTime").then((m) => ({ default: m.FindingHeatmapTime })));
+const EncryptionOverview = lazy(() => import("@/components/EncryptionOverview").then((m) => ({ default: m.EncryptionOverview })));
+const AdminExposureMap = lazy(() => import("@/components/AdminExposureMap").then((m) => ({ default: m.AdminExposureMap })));
+const VpnSecuritySummary = lazy(() => import("@/components/VpnSecuritySummary").then((m) => ({ default: m.VpnSecuritySummary })));
+const NetworkZoneMap = lazy(() => import("@/components/NetworkZoneMap").then((m) => ({ default: m.NetworkZoneMap })));
+const PolicyComplexity = lazy(() => import("@/components/PolicyComplexity").then((m) => ({ default: m.PolicyComplexity })));
+const UnusedObjects = lazy(() => import("@/components/UnusedObjects").then((m) => ({ default: m.UnusedObjects })));
+const RuleConsolidation = lazy(() => import("@/components/RuleConsolidation").then((m) => ({ default: m.RuleConsolidation })));
+const ConfigSizeMetrics = lazy(() => import("@/components/ConfigSizeMetrics").then((m) => ({ default: m.ConfigSizeMetrics })));
+const RuleOverlapVis = lazy(() => import("@/components/RuleOverlapVis").then((m) => ({ default: m.RuleOverlapVis })));
+const CompliancePostureRing = lazy(() => import("@/components/CompliancePostureRing").then((m) => ({ default: m.CompliancePostureRing })));
+const FrameworkCoverageBars = lazy(() => import("@/components/FrameworkCoverageBars").then((m) => ({ default: m.FrameworkCoverageBars })));
+const ComplianceGapAnalysis = lazy(() => import("@/components/ComplianceGapAnalysis").then((m) => ({ default: m.ComplianceGapAnalysis })));
+const ControlFindingMap = lazy(() => import("@/components/ControlFindingMap").then((m) => ({ default: m.ControlFindingMap })));
+const CostOfRiskEstimator = lazy(() => import("@/components/CostOfRiskEstimator").then((m) => ({ default: m.CostOfRiskEstimator })));
+const GeographicFleetMap = lazy(() => import("@/components/GeographicFleetMap").then((m) => ({ default: m.GeographicFleetMap })));
+const ExportCentre = lazy(() => import("@/components/ExportCentre").then((m) => ({ default: m.ExportCentre })));
+const WhatIfComparison = lazy(() => import("@/components/WhatIfComparison").then((m) => ({ default: m.WhatIfComparison })));
+const SecurityRoiCalculator = lazy(() => import("@/components/SecurityRoiCalculator").then((m) => ({ default: m.SecurityRoiCalculator })));
+const RemediationRoadmap = lazy(() => import("@/components/RemediationRoadmap").then((m) => ({ default: m.RemediationRoadmap })));
+const FixEffortBreakdown = lazy(() => import("@/components/FixEffortBreakdown").then((m) => ({ default: m.FixEffortBreakdown })));
+const ImpactEffortBubble = lazy(() => import("@/components/ImpactEffortBubble").then((m) => ({ default: m.ImpactEffortBubble })));
+const RemediationProgress = lazy(() => import("@/components/RemediationProgress").then((m) => ({ default: m.RemediationProgress })));
+const ThreatFeedTimeline = lazy(() => import("@/components/ThreatFeedTimeline").then((m) => ({ default: m.ThreatFeedTimeline })));
+const MdrStatus = lazy(() => import("@/components/MdrStatus").then((m) => ({ default: m.MdrStatus })));
+const FirmwareTracker = lazy(() => import("@/components/FirmwareTracker").then((m) => ({ default: m.FirmwareTracker })));
+const CustomFrameworkBuilder = lazy(() => import("@/components/CustomFrameworkBuilder").then((m) => ({ default: m.CustomFrameworkBuilder })));
+const EvidenceCollection = lazy(() => import("@/components/EvidenceCollection").then((m) => ({ default: m.EvidenceCollection })));
+const ComplianceCalendar = lazy(() => import("@/components/ComplianceCalendar").then((m) => ({ default: m.ComplianceCalendar })));
+const AttestationWorkflow = lazy(() => import("@/components/AttestationWorkflow").then((m) => ({ default: m.AttestationWorkflow })));
+const RegulatoryTracker = lazy(() => import("@/components/RegulatoryTracker").then((m) => ({ default: m.RegulatoryTracker })));
+const FleetComparison = lazy(() => import("@/components/FleetComparison").then((m) => ({ default: m.FleetComparison })));
+const BaselineManager = lazy(() => import("@/components/BaselineManager").then((m) => ({ default: m.BaselineManager })));
+
+type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
+
+export interface SecurityStats {
+  score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  criticalHigh: number;
+  coverage: number;
+  totalRules: number;
+}
+
+export interface AnalysisTabsProps {
+  analysisResult: Record<string, AnalysisResult>;
+  files: ParsedFile[];
+  branding: BrandingData;
+  activeTab: string;
+  setActiveTab: (v: string) => void;
+  totalFindings: number;
+  totalRules: number;
+  totalSections: number;
+  totalPopulated: number;
+  extractionPct: number;
+  aggregatedPosture: InspectionPosture;
+  securityStats: SecurityStats | null;
+  configMetas: Array<{ label: string; hostname?: string; configHash: string }>;
+  diffSelection: DiffSelection;
+  setDiffSelection: React.Dispatch<React.SetStateAction<DiffSelection>>;
+  projectedScore: RiskScoreResult | null;
+  setProjectedScore: React.Dispatch<React.SetStateAction<RiskScoreResult | null>>;
+  isGuest: boolean;
+  localMode: boolean;
+  onExplainFinding: (title: string) => void;
+}
+
+function fileLabel(f: ParsedFile) {
+  return f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+}
+
+export function AnalysisTabs({
+  analysisResult,
+  files,
+  branding,
+  activeTab,
+  setActiveTab,
+  totalFindings,
+  totalRules,
+  totalSections,
+  totalPopulated,
+  extractionPct,
+  aggregatedPosture,
+  securityStats,
+  configMetas,
+  diffSelection,
+  setDiffSelection,
+  projectedScore,
+  setProjectedScore,
+  isGuest,
+  localMode,
+  onExplainFinding,
+}: AnalysisTabsProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => panelRef.current?.focus(), 0);
+    return () => clearTimeout(t);
+  }, [activeTab]);
+
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm">
+        <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2">Detailed Security Analysis</h2>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="flex-nowrap whitespace-nowrap w-max inline-flex">
+          <TabsTrigger value="overview" className="gap-2">
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Overview
+            {totalFindings > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#EA0022]/10 text-[#EA0022] tabular-nums">{totalFindings}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-2">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Security Analysis
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="gap-2">
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            Compliance
+          </TabsTrigger>
+          <TabsTrigger value="optimisation" className="gap-2">
+            <Zap className="h-3.5 w-3.5" />
+            Optimisation
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="gap-2">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Tools
+          </TabsTrigger>
+          {totalFindings > 0 && (
+            <TabsTrigger value="remediation" className="gap-2">
+              <Wrench className="h-3.5 w-3.5" />
+              Remediation
+            </TabsTrigger>
+          )}
+          {files.length >= 2 && (
+            <TabsTrigger value="compare" className="gap-2">
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              Compare
+            </TabsTrigger>
+          )}
+          </TabsList>
+        </div>
+      </div>
+
+      <div className="mt-3 px-1">
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          FireComply provides automated security analysis based on firewall configuration data. Results should be validated by a qualified security professional. Compliance mappings are indicative and do not constitute a formal audit.
+        </p>
+      </div>
+
+      <div ref={panelRef} tabIndex={-1} aria-live="polite" className="outline-none">
+      {/* Overview */}
+      <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+        <ErrorBoundary fallbackTitle="Overview failed to load">
+          <Suspense fallback={null}>
+            <ScoreDeltaBanner analysisResults={analysisResult} />
+          </Suspense>
+
+          <Suspense fallback={<ChartSkeleton height={200} />}>
+            <ScoreDialGauge analysisResults={analysisResult} />
+          </Suspense>
+
+          <Suspense fallback={<StatGridSkeleton count={6} />}>
+            <RiskSummaryCards analysisResults={analysisResult} />
+          </Suspense>
+
+          <Suspense fallback={null}>
+            <QuickActions onNavigate={setActiveTab} />
+          </Suspense>
+
+          {totalFindings > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadRiskRegisterCSV(analysisResult, branding.customerName)}
+                className="gap-1.5 text-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Risk Register (CSV)
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadRiskRegisterExcel(analysisResult, branding.customerName)}
+                className="gap-1.5 text-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Excel
+              </Button>
+            </div>
+          )}
+          {totalFindings > 0 && (
+            <PriorityActions analysisResults={analysisResult} />
+          )}
+          <FindingsChanges analysisResults={analysisResult} />
+
+          {totalFindings > 0 && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Suspense fallback={<ChartSkeleton />}>
+                <FindingsByAge analysisResults={analysisResult} />
+              </Suspense>
+              <Suspense fallback={<ChartSkeleton />}>
+                <SlaComplianceGauge analysisResults={analysisResult} />
+              </Suspense>
+            </div>
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<ChartSkeleton />}>
+              <RemediationVelocity analysisResults={analysisResult} />
+            </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <AlertFeedWidget analysisResults={analysisResult} />
+            </Suspense>
+          </div>
+
+          <Suspense fallback={null}>
+            <AssessmentCountdown />
+          </Suspense>
+
+          <EstateOverview
+            fileCount={files.length}
+            analysisResults={analysisResult}
+            totalFindings={totalFindings}
+            totalRules={totalRules}
+            totalSections={totalSections}
+            totalPopulated={totalPopulated}
+            extractionPct={extractionPct}
+            aggregatedPosture={aggregatedPosture}
+            selectedFrameworks={branding.selectedFrameworks}
+            onExplainFinding={onExplainFinding}
+          />
+          {!isGuest && !localMode && configMetas.length > 0 && (
+            <Suspense fallback={null}>
+              <CentralEnrichment
+                configMetas={configMetas}
+                customerName={branding.customerName}
+              />
+            </Suspense>
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<CardSkeleton />}>
+              <MdrStatus analysisResults={analysisResult} files={files} />
+            </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <FirmwareTracker files={files} />
+            </Suspense>
+          </div>
+        </ErrorBoundary>
+      </TabsContent>
+
+      {/* Security Analysis */}
+      <TabsContent value="security" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+        <ErrorBoundary fallbackTitle="Security analysis failed to load">
+          {securityStats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div
+                className={`rounded-xl border bg-card p-4 ${
+                  securityStats.score >= 75
+                    ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                    : securityStats.score >= 50
+                      ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
+                      : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
+                }`}
+              >
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Score</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span
+                    className={`text-2xl font-extrabold tabular-nums ${
+                      securityStats.score >= 75
+                        ? "text-[#00995a] dark:text-[#00F2B3]"
+                        : securityStats.score >= 50
+                          ? "text-[#F29400]"
+                          : "text-[#EA0022]"
+                    }`}
+                  >
+                    {securityStats.score}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      securityStats.score >= 75
+                        ? "bg-[#00995a]/10 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
+                        : securityStats.score >= 50
+                          ? "bg-[#F29400]/10 text-[#F29400]"
+                          : "bg-[#EA0022]/10 text-[#EA0022]"
+                    }`}
+                  >
+                    {securityStats.grade}
+                  </span>
+                </div>
+              </div>
+              <div
+                className={`rounded-xl border border-border bg-card p-4 ${
+                  securityStats.criticalHigh === 0
+                    ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                    : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
+                }`}
+              >
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Critical Issues</div>
+                <div
+                  className={`text-2xl font-extrabold tabular-nums mt-1 ${
+                    securityStats.criticalHigh === 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"
+                  }`}
+                >
+                  {securityStats.criticalHigh}
+                </div>
+              </div>
+              <div
+                className={`rounded-xl border border-border bg-card p-4 ${
+                  securityStats.coverage >= 75
+                    ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                    : securityStats.coverage >= 40
+                      ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
+                      : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
+                }`}
+              >
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Coverage</div>
+                <div
+                  className={`text-2xl font-extrabold tabular-nums mt-1 ${
+                    securityStats.coverage >= 75
+                      ? "text-[#00995a] dark:text-[#00F2B3]"
+                      : securityStats.coverage >= 40
+                        ? "text-[#F29400]"
+                        : "text-[#EA0022]"
+                  }`}
+                >
+                  {securityStats.coverage}%
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rules Analysed</div>
+                <div className="text-2xl font-extrabold tabular-nums mt-1 text-foreground">
+                  {securityStats.totalRules}
+                </div>
+              </div>
+            </div>
+          )}
+          <Suspense fallback={<ChartSkeleton height={220} />}>
+            <RiskScoreDashboard analysisResults={analysisResult} />
+          </Suspense>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<StatGridSkeleton />}>
+              <RuleHealthOverview analysisResults={analysisResult} />
+            </Suspense>
+            <Suspense fallback={<StatGridSkeleton count={4} />}>
+              <SecurityFeatureCoverage analysisResults={analysisResult} />
+            </Suspense>
+          </div>
+
+          {totalFindings > 0 && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Suspense fallback={<ChartSkeleton />}>
+                <SeverityBreakdown analysisResults={analysisResult} />
+              </Suspense>
+              <Suspense fallback={<ChartSkeleton />}>
+                <FindingsBySection analysisResults={analysisResult} />
+              </Suspense>
+            </div>
+          )}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<ChartSkeleton />}>
+              <ZoneTrafficFlow files={files} />
+            </Suspense>
+            {totalFindings > 0 && (
+              <Suspense fallback={<CardSkeleton />}>
+                <TopFindings analysisResults={analysisResult} />
+              </Suspense>
+            )}
+          </div>
+
+          {totalFindings > 0 && (
+            <Suspense fallback={<ChartSkeleton />}>
+              <PriorityMatrix analysisResults={analysisResult} />
+            </Suspense>
+          )}
+
+          <Suspense fallback={<CardSkeleton />}>
+            <CategoryScoreBars analysisResults={analysisResult} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <CoverageMatrix analysisResults={analysisResult} />
+          </Suspense>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<ChartSkeleton />}>
+              <CategoryTrends analysisResults={analysisResult} />
+            </Suspense>
+            <Suspense fallback={<ChartSkeleton />}>
+              <RiskDistributionWidget analysisResults={analysisResult} />
+            </Suspense>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<ChartSkeleton />}>
+              <EncryptionOverview analysisResults={analysisResult} files={files} />
+            </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <AdminExposureMap analysisResults={analysisResult} files={files} />
+            </Suspense>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<CardSkeleton />}>
+              <VpnSecuritySummary files={files} />
+            </Suspense>
+            <Suspense fallback={<ChartSkeleton />}>
+              <NetworkZoneMap files={files} />
+            </Suspense>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<ChartSkeleton />}>
+              <ProtocolDistribution files={files} />
+            </Suspense>
+            <Suspense fallback={<ChartSkeleton />}>
+              <ServiceUsageWidget files={files} />
+            </Suspense>
+          </div>
+
+          <Suspense fallback={<ChartSkeleton />}>
+            <RuleActionDistribution files={files} />
+          </Suspense>
+
+          <Suspense fallback={<ChartSkeleton />}>
+            <FindingHeatmapTime analysisResults={analysisResult} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <ThreatFeedTimeline files={files} />
+          </Suspense>
+        </ErrorBoundary>
+      </TabsContent>
+
+      {/* Compliance */}
+      <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+        <ErrorBoundary fallbackTitle="Compliance view failed to load">
+          <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
+              <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
+              {branding.selectedFrameworks.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
+                  {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            <Suspense fallback={<ChartSkeleton height={120} />}>
+              <ComplianceHeatmap
+                analysisResults={analysisResult}
+                selectedFrameworks={branding.selectedFrameworks}
+              />
+            </Suspense>
+          </div>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <SophosBestPractice
+              analysisResults={analysisResult}
+              centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
+            />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <PeerBenchmark analysisResults={analysisResult} environment={branding.environment} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <InsuranceReadiness analysisResults={analysisResult} />
+          </Suspense>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<ChartSkeleton />}>
+              <CompliancePostureRing analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+            </Suspense>
+            <Suspense fallback={<ChartSkeleton />}>
+              <FrameworkCoverageBars analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+            </Suspense>
+          </div>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <ComplianceGapAnalysis analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <ControlFindingMap analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <CustomFrameworkBuilder />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <EvidenceCollection
+              analysisResults={analysisResult}
+              selectedFrameworks={branding.selectedFrameworks}
+            />
+          </Suspense>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<CardSkeleton />}>
+              <ComplianceCalendar files={files} />
+            </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <AttestationWorkflow frameworks={branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined} />
+            </Suspense>
+          </div>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <RegulatoryTracker />
+          </Suspense>
+        </ErrorBoundary>
+      </TabsContent>
+
+      {/* Optimisation */}
+      <TabsContent value="optimisation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+        <ErrorBoundary fallbackTitle="Optimisation view failed to load">
+          <Suspense fallback={<SectionSkeleton />}>
+            <RuleOptimiser files={files} />
+          </Suspense>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<CardSkeleton />}>
+              <PolicyComplexity analysisResults={analysisResult} files={files} />
+            </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
+            </Suspense>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<CardSkeleton />}>
+              <UnusedObjects files={files} />
+            </Suspense>
+            <Suspense fallback={<CardSkeleton />}>
+              <RuleConsolidation files={files} />
+            </Suspense>
+          </div>
+          <Suspense fallback={<CardSkeleton />}>
+            <RuleOverlapVis files={files} />
+          </Suspense>
+          {files.length >= 2 && (
+            <Suspense fallback={null}>
+              <ConsistencyChecker analysisResults={analysisResult} />
+            </Suspense>
+          )}
+        </ErrorBoundary>
+      </TabsContent>
+
+      {/* Tools */}
+      <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+        <ErrorBoundary fallbackTitle="Tools failed to load">
+          <Suspense fallback={<ChartSkeleton height={220} />}>
+            <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
+          </Suspense>
+
+          {totalFindings > 0 && (
+            <Suspense fallback={<CardSkeleton />}>
+              <ScoreSimulator analysisResults={analysisResult} onProjectedChange={setProjectedScore} />
+            </Suspense>
+          )}
+
+          <Suspense fallback={<CardSkeleton />}>
+            <AttackSurfaceMap files={files} />
+          </Suspense>
+
+          {totalFindings > 0 && (
+            <Suspense fallback={<CardSkeleton />}>
+              <WhatIfComparison analysisResults={analysisResult} />
+            </Suspense>
+          )}
+
+          {totalFindings > 0 && (
+            <Suspense fallback={<CardSkeleton />}>
+              <CostOfRiskEstimator analysisResults={analysisResult} />
+            </Suspense>
+          )}
+
+          {totalFindings > 0 && (
+            <Suspense fallback={<ChartSkeleton />}>
+              <SecurityRoiCalculator analysisResults={analysisResult} />
+            </Suspense>
+          )}
+
+          <Suspense fallback={<CardSkeleton />}>
+            <ExportCentre analysisResults={analysisResult} branding={{ customerName: branding.customerName, selectedFrameworks: branding.selectedFrameworks }} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <GeographicFleetMap files={files} />
+          </Suspense>
+
+          <Suspense fallback={<CardSkeleton />}>
+            <BaselineManager analysisResults={analysisResult} />
+          </Suspense>
+        </ErrorBoundary>
+      </TabsContent>
+
+      {/* Remediation */}
+      <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+        <ErrorBoundary fallbackTitle="Remediation view failed to load">
+          <Suspense fallback={<CardSkeleton />}>
+            <RemediationProgress analysisResults={analysisResult} />
+          </Suspense>
+
+          <Suspense fallback={<ChartSkeleton />}>
+            <RemediationRoadmap analysisResults={analysisResult} />
+          </Suspense>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Suspense fallback={<ChartSkeleton />}>
+              <FixEffortBreakdown analysisResults={analysisResult} />
+            </Suspense>
+            <Suspense fallback={<ChartSkeleton />}>
+              <ImpactEffortBubble analysisResults={analysisResult} />
+            </Suspense>
+          </div>
+
+          <Suspense fallback={null}>
+            <RemediationPlaybooks analysisResults={analysisResult} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <ChangeApproval />
+          </Suspense>
+        </ErrorBoundary>
+      </TabsContent>
+
+      {/* Compare */}
+      <TabsContent value="compare" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+        <ErrorBoundary fallbackTitle="Compare view failed to load">
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
+                <select
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                  value={diffSelection?.beforeIdx ?? 0}
+                  onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
+                    beforeIdx: Number(e.target.value),
+                    afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
+                  }))}
+                >
+                  {files.map((f, i) => (
+                    <option key={f.id} value={i}>{fileLabel(f)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
+                <select
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                  value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
+                  onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
+                    beforeIdx: prev?.beforeIdx ?? 0,
+                    afterIdx: Number(e.target.value),
+                  }))}
+                >
+                  {files.map((f, i) => (
+                    <option key={f.id} value={i}>{fileLabel(f)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() => setDiffSelection({
+                beforeIdx: diffSelection?.beforeIdx ?? 0,
+                afterIdx: diffSelection?.afterIdx ?? Math.min(1, files.length - 1),
+              })}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
+            </Button>
+          </div>
+        </ErrorBoundary>
+      </TabsContent>
+      </div>
+    </Tabs>
+  );
+}

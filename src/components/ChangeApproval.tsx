@@ -2,6 +2,14 @@ import { useState, useEffect } from "react";
 import { ClipboardCheck, Send, Check, X } from "lucide-react";
 import { loadPlans, savePlans, createPlan, type RemediationPlan } from "@/lib/change-approval";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 const STATUS_STYLE: Record<RemediationPlan["status"], { label: string; bg: string; text: string }> = {
   draft: { label: "Draft", bg: "bg-muted", text: "text-muted-foreground" },
@@ -12,6 +20,8 @@ const STATUS_STYLE: Record<RemediationPlan["status"], { label: string; bg: strin
 
 export function ChangeApproval() {
   const [plans, setPlans] = useState<RemediationPlan[]>([]);
+  const [showNameDialog, setShowNameDialog] = useState(false);
+  const [pendingPlanName, setPendingPlanName] = useState("");
 
   useEffect(() => {
     setPlans(loadPlans());
@@ -24,10 +34,17 @@ export function ChangeApproval() {
   };
 
   const handleNew = () => {
-    const name = prompt("Customer name for this plan:");
+    setPendingPlanName("");
+    setShowNameDialog(true);
+  };
+
+  const handleConfirmNewPlan = () => {
+    const name = pendingPlanName.trim();
     if (!name) return;
     createPlan(name, []);
     setPlans(loadPlans());
+    setShowNameDialog(false);
+    setPendingPlanName("");
   };
 
   const removePlan = (id: string) => {
@@ -54,6 +71,36 @@ export function ChangeApproval() {
           No remediation plans yet. Create one from completed playbooks to start the approval workflow.
         </p>
       )}
+
+      <Dialog open={showNameDialog} onOpenChange={setShowNameDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Remediation Plan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="plan-name" className="text-sm font-medium text-foreground">
+                Customer name for this plan
+              </label>
+              <Input
+                id="plan-name"
+                value={pendingPlanName}
+                onChange={(e) => setPendingPlanName(e.target.value)}
+                placeholder="e.g. Acme Corp"
+                onKeyDown={(e) => e.key === "Enter" && handleConfirmNewPlan()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNameDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmNewPlan} disabled={!pendingPlanName.trim()}>
+              Create Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-2">
         {plans.map((plan) => {

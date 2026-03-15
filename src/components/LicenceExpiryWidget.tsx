@@ -229,18 +229,21 @@ export function LicenceExpiryWidget() {
 
   const firewallTotals = useMemo(() => {
     const groups = buildGroups(flattened);
-    let expired = 0, expiringSoon = 0, expiringMedium = 0, healthy = 0;
+    let expired = 0, expiringCritical = 0, expiringSoon = 0, expiringMedium = 0, healthy = 0;
     for (const group of groups) {
       const worst = Math.min(...group.items.map((l) => l.daysRemaining));
       if (worst <= 0) expired++;
+      else if (worst <= 7) expiringCritical++;
       else if (worst <= 30) expiringSoon++;
       else if (worst <= 90) expiringMedium++;
       else healthy++;
     }
-    return { total: groups.length, expired, expiringSoon, expiringMedium, healthy };
+    return { total: groups.length, expired, expiringCritical, expiringSoon, expiringMedium, healthy };
   }, [flattened, buildGroups]);
 
-  const { total: fwTotal, expired, expiringSoon, expiringMedium, healthy } = firewallTotals;
+  const { total: fwTotal, expired, expiringCritical, expiringSoon, expiringMedium, healthy } = firewallTotals;
+  const showBanner = expired > 0 || expiringCritical > 0 || expiringSoon > 0;
+  const bannerSeverity = expired > 0 || expiringCritical > 0 ? "red" : "amber";
 
   const handleExportCsv = useCallback(() => {
     const rows = [["Serial Number", "Model", "Type", "Product", "Licence Type", "Start Date", "End Date", "Perpetual", "Days Remaining"]];
@@ -271,6 +274,29 @@ export function LicenceExpiryWidget() {
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
+      {showBanner && (
+        <div
+          className={`flex items-center justify-between gap-3 px-4 py-2.5 ${
+            bannerSeverity === "red"
+              ? "bg-[#EA0022]/10 border-b border-[#EA0022]/20"
+              : "bg-[#F29400]/10 border-b border-[#F29400]/20"
+          }`}
+        >
+          <span className={`text-xs font-semibold ${bannerSeverity === "red" ? "text-[#EA0022]" : "text-[#F29400]"}`}>
+            {expired > 0 || expiringCritical > 0
+              ? "Licence(s) expired or expiring within 7 days"
+              : "Licence(s) expiring within 30 days"}
+          </span>
+          <a
+            href="https://central.sophos.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-[#2006F7] hover:underline shrink-0"
+          >
+            Renew via Sophos Central →
+          </a>
+        </div>
+      )}
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
@@ -286,7 +312,8 @@ export function LicenceExpiryWidget() {
             </span>
           )}
           {expired > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#EA0022]/10 text-[#EA0022]">{expired} expired</span>}
-          {expiringSoon > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#EA0022]/10 text-[#EA0022]">{expiringSoon} &lt;30d</span>}
+          {expiringCritical > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#EA0022]/10 text-[#EA0022]">{expiringCritical} &lt;7d</span>}
+          {expiringSoon > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#F29400]/10 text-[#F29400]">{expiringSoon} &lt;30d</span>}
           {expiringMedium > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#F29400]/10 text-[#F29400]">{expiringMedium} &lt;90d</span>}
           {healthy > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]">{healthy} ok</span>}
         </div>
@@ -306,7 +333,7 @@ export function LicenceExpiryWidget() {
               <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Expired</p>
             </div>
             <div className={`rounded-lg px-2.5 py-2 text-center cursor-pointer transition-colors ${filterMode === "expiring" ? "bg-[#F29400]/10 ring-1 ring-[#F29400]/30" : "bg-[#F29400]/5 hover:bg-[#F29400]/10"}`} onClick={() => setFilterMode("expiring")}>
-              <p className={`text-sm font-bold ${(expiringSoon + expiringMedium) > 0 ? "text-[#F29400]" : "text-foreground"}`}>{expiringSoon + expiringMedium}</p>
+              <p className={`text-sm font-bold ${(expiringCritical + expiringSoon + expiringMedium) > 0 ? "text-[#F29400]" : "text-foreground"}`}>{expiringCritical + expiringSoon + expiringMedium}</p>
               <p className="text-[8px] text-muted-foreground uppercase tracking-wider">&lt;90 Days</p>
             </div>
             <div className="rounded-lg px-2.5 py-2 text-center bg-[#00995a]/5">

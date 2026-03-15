@@ -74,23 +74,25 @@ export async function saveSharedReport(
 }
 
 export async function loadSharedReport(token: string): Promise<SharedReport | null> {
-  // Try Supabase first (works for any user, the Edge Function handles public access)
-  const { data } = await supabase
-    .from("shared_reports")
-    .select("share_token, markdown, customer_name, expires_at, created_at")
-    .eq("share_token", token)
-    .maybeSingle();
-
-  if (data) {
-    const expiresAt = new Date(data.expires_at);
-    if (expiresAt <= new Date()) return null;
-    return {
-      token: data.share_token,
-      markdown: data.markdown,
-      customerName: data.customer_name,
-      expiresAt: data.expires_at,
-      createdAt: data.created_at,
-    };
+  // Try Edge Function first (public access, no auth required for recipients)
+  try {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/shared/${token}`;
+    const res = await fetch(url, {
+      headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        token: data.share_token,
+        markdown: data.markdown,
+        customerName: data.customer_name,
+        expiresAt: data.expires_at,
+        createdAt: data.created_at,
+      };
+    }
+    // 404 or 410 — fall through to localStorage
+  } catch {
+    // Network error — fall through to localStorage
   }
 
   // localStorage fallback

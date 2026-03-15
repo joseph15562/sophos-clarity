@@ -1,10 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  Deno.env.get("ALLOWED_ORIGIN") ?? "",
+].filter(Boolean);
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+let corsHeaders: Record<string, string> = {};
 
 /** Remove empty strings, empty arrays, and empty objects to cut payload size and token use. */
 function pruneEmpty(value: unknown): unknown {
@@ -78,7 +92,13 @@ Rules
 - **SSL/TLS Global Settings (DPI engine)**: Do not recommend "Enforce TLS 1.2+" or "comply with NCSC Guidelines" for minimum TLS version in this context. This is the inspection engine's decryption policy, not a service-facing TLS stack; NCSC guidance on TLS 1.2+ does not apply here. Do not mark "Insecure TLS Versions" or similar as a finding solely because the minimum decrypt version is below 1.2.
 - Start with the Executive Summary, then proceed section by section
 
-**Authentication & OTP Settings**: If the payload contains a section named "Authentication & OTP Settings", "OTP Settings", or "OTPSettings" with tables or data, you MUST document it. Create an "## Authentication & OTP Settings" section with a Markdown table (columns **Setting** and **Value**) for every row present (e.g. otp, allUsers, tokenAutoCreation, otpUserPortal, otpVPNPortal, otpSSLVPN, otpWebAdmin, otpIPsec — values are typically "Enabled" or "Disabled"). Add a brief summary and recommendations for MFA where disabled. Do NOT say "No configuration found in export" for this section when that data exists in the payload.`;
+**Authentication & OTP Settings**: If the payload contains a section named "Authentication & OTP Settings", "OTP Settings", or "OTPSettings" with tables or data, you MUST document it. Create an "## Authentication & OTP Settings" section with a Markdown table (columns **Setting** and **Value**) for every row present (e.g. otp, allUsers, tokenAutoCreation, otpUserPortal, otpVPNPortal, otpSSLVPN, otpWebAdmin, otpIPsec — values are typically "Enabled" or "Disabled"). Add a brief summary and recommendations for MFA where disabled. Do NOT say "No configuration found in export" for this section when that data exists in the payload.
+
+**VPN Profiles**: Only flag VPN profile weaknesses (weak encryption, weak DH groups, missing PFS) when the profile is **actively referenced** by a VPN IPSec Connection. Unused VPN profiles should be considered compliant — do not raise findings for profiles that are defined but not in use by any connection.
+
+**Wireless Security**: Only flag wireless security issues (weak encryption, open SSIDs, etc.) when the configuration shows **active wireless access points** (registered/online APs in the Wireless Access Point section). If no wireless APs are configured or all are offline/decommissioned, wireless security is compliant — do not raise findings. Note: Sophos AP6 models are now Central-managed only; older APX models are approaching end-of-life; desktop firewall models with built-in WiFi should still be assessed.
+
+**External Log Forwarding**: Sophos Central counts as external log forwarding. If the firewall is registered with Sophos Central (indicators: "Central Management: Read-Write" in admin profiles, firewall rules named "Central Created", or Central management service running), treat external logging as compliant — do not flag missing syslog servers. Only flag "No external log forwarding" when the firewall has neither syslog servers configured NOR Sophos Central management detected.`;
 
 const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing a consolidated executive summary report for an MSP covering MULTIPLE firewall configurations. Include best-practice recommendations and a compliance-suitable level of detail.
 
@@ -105,6 +125,9 @@ Rules
 - Do NOT reproduce every individual rule — summarise and highlight exceptions
 - Use Markdown tables for structured data
 - Level of detail must support compliance and audit
+- **VPN Profiles**: Only flag VPN profile weaknesses (weak encryption, weak DH groups, missing PFS) when the profile is **actively referenced** by a VPN IPSec Connection. Unused VPN profiles are compliant.
+- **Wireless Security**: Only flag wireless security issues when **active wireless access points** are configured. If no APs are present, wireless security is compliant.
+- **External Log Forwarding**: Sophos Central counts as external log forwarding. If the firewall shows Central management (e.g. "Central Management: Read-Write" in admin profiles, "Central Created" firewall rules), treat external logging as compliant — do not flag missing syslog.
 - End every report with a "Limitations" section that states: this assessment covers firewall configuration only. It does not assess endpoint security, email security, identity management, cloud infrastructure, or physical security controls. Results are point-in-time and should be validated by a qualified security professional.`;
 
 const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity analyst producing a Compliance Readiness Report from firewall configuration data. This document provides an indicative assessment of firewall configuration controls against compliance frameworks. It should be used as supporting material alongside a full compliance audit — not as a substitute for one.
@@ -169,7 +192,10 @@ Rules
 - Be specific about which rules/settings satisfy which controls
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
-- Every claim must be traceable to config data`;
+- Every claim must be traceable to config data
+- **VPN Profiles**: Only flag VPN profile weaknesses (weak encryption, weak DH groups, missing PFS) when the profile is **actively referenced** by a VPN IPSec Connection. Unused/orphaned VPN profiles should not fail compliance controls.
+- **Wireless Security**: Only flag wireless security issues when **active wireless access points** are configured on the firewall. If no APs are registered or active, mark wireless controls as N/A or compliant, not as a gap.
+- **External Log Forwarding**: Sophos Central counts as external log forwarding. If the firewall is registered with Sophos Central (indicators: "Central Management: Read-Write" in admin profiles, "Central Created" firewall rules, Central management service running), the external logging control is **✅ Met** — do not flag missing syslog servers as a compliance gap.`;
 
 const CHAT_SYSTEM_PROMPT = `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
 
@@ -180,11 +206,45 @@ Your role:
 - Use markdown formatting (bold, lists, code) for clarity
 - Keep responses focused — aim for 200-400 words unless the user asks for detail
 - If asked about compliance, reference the relevant framework controls
-- Never invent configuration data — only reference what's provided in the context`;
+- Never invent configuration data — only reference what's provided in the context
+
+Important assessment rules:
+- VPN profiles are only non-compliant if actively used by an IPSec connection. Unused profiles are compliant.
+- Wireless security issues only apply if active wireless APs are configured. No APs = compliant.
+- Sophos Central counts as external log forwarding. Central-managed firewalls satisfy the syslog/external logging requirement.`;
 
 serve(async (req) => {
+  corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   try {

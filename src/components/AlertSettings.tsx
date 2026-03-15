@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Bell, Plus, Trash2, Mail, Webhook } from "lucide-react";
+import { Bell, Plus, Trash2, Mail, Webhook, Send } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -9,6 +10,15 @@ import {
   type AlertRule,
   type AlertEventType,
 } from "@/lib/alert-rules";
+
+const TEST_WEBHOOK_PAYLOAD = {
+  event: "test",
+  source: "Sophos FireComply",
+  timestamp: "2024-01-01T00:00:00Z",
+  data: {
+    message: "This is a test webhook from Sophos FireComply",
+  },
+};
 
 const EVENT_LABELS: Record<AlertEventType, string> = {
   licence_expiry_warning: "Licence expiring soon",
@@ -23,12 +33,17 @@ function generateId(): string {
   return `rule_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+type TabId = "all" | "webhook";
+
 export function AlertSettings() {
   const [rules, setRules] = useState<AlertRule[]>([]);
+  const [activeTab, setActiveTab] = useState<TabId>("all");
 
   useEffect(() => {
     loadAlertRules().then(setRules);
   }, []);
+
+  const webhookRules = rules.filter((r) => r.channel === "webhook");
 
   const persist = useCallback((next: AlertRule[]) => {
     setRules(next);
@@ -73,6 +88,27 @@ export function AlertSettings() {
     [rules, persist]
   );
 
+  const testWebhook = useCallback(async (url: string) => {
+    if (!url?.trim()) {
+      toast.error("Enter a webhook URL first");
+      return;
+    }
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(TEST_WEBHOOK_PAYLOAD),
+      });
+      if (res.ok) {
+        toast.success("Webhook test successful — endpoint responded");
+      } else {
+        toast.error(`Webhook returned ${res.status} — check your endpoint`);
+      }
+    } catch (err) {
+      toast.error("Webhook test failed — check URL and network");
+    }
+  }, []);
+
   return (
     <div className="space-y-4 text-xs">
       <div className="flex items-center justify-between">
@@ -93,6 +129,41 @@ export function AlertSettings() {
         </Button>
       </div>
 
+      <div className="flex gap-1 border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveTab("all")}
+          className={`px-2.5 py-1.5 text-[10px] font-medium border-b-2 transition-colors ${
+            activeTab === "all"
+              ? "border-[#2006F7] text-[#2006F7] dark:text-[#6B5BFF]"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          All rules
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("webhook")}
+          className={`px-2.5 py-1.5 text-[10px] font-medium border-b-2 transition-colors flex items-center gap-1 ${
+            activeTab === "webhook"
+              ? "border-[#2006F7] text-[#2006F7] dark:text-[#6B5BFF]"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Webhook className="h-3 w-3" />
+          Webhook / SIEM
+        </button>
+      </div>
+
+      {activeTab === "webhook" && (
+        <div className="rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.02] dark:bg-[#2006F7]/[0.04] p-3">
+          <p className="text-[10px] font-medium text-foreground mb-1">Webhook / SIEM integration</p>
+          <p className="text-[9px] text-muted-foreground">
+            Configure webhook URLs to receive finding events in your SIEM. Webhook delivery runs when findings change (via the connector agent). Use the Test Webhook button to validate connectivity.
+          </p>
+        </div>
+      )}
+
       {rules.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/20 py-6 text-center text-muted-foreground">
           <Bell className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -108,9 +179,24 @@ export function AlertSettings() {
             Add rule
           </Button>
         </div>
+      ) : activeTab === "webhook" && webhookRules.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 py-6 text-center text-muted-foreground">
+          <Webhook className="h-8 w-8 mx-auto mb-2 opacity-40" />
+          <p className="text-[11px]">No webhook rules</p>
+          <p className="text-[9px] mt-1">Add a rule and select Webhook to configure SIEM integration</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={addRule}
+            className="mt-3 gap-1.5 text-[10px] h-7"
+          >
+            <Plus className="h-3 w-3" />
+            Add rule
+          </Button>
+        </div>
       ) : (
         <div className="space-y-3">
-          {rules.map((rule) => (
+          {(activeTab === "webhook" ? webhookRules : rules).map((rule) => (
             <div
               key={rule.id}
               className="rounded-lg border border-border bg-card p-3 space-y-3"
@@ -198,15 +284,26 @@ export function AlertSettings() {
                   className="h-8 text-[11px]"
                 />
               ) : (
-                <Input
-                  type="url"
-                  placeholder="https://..."
-                  value={rule.config.webhookUrl ?? ""}
-                  onChange={(e) =>
-                    updateConfig(rule.id, "webhookUrl", e.target.value)
-                  }
-                  className="h-8 text-[11px]"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="url"
+                    placeholder="https://..."
+                    value={rule.config.webhookUrl ?? ""}
+                    onChange={(e) =>
+                      updateConfig(rule.id, "webhookUrl", e.target.value)
+                    }
+                    className="h-8 text-[11px] flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 text-[10px] shrink-0"
+                    onClick={() => testWebhook(rule.config.webhookUrl ?? "")}
+                  >
+                    <Send className="h-3 w-3" />
+                    Test Webhook
+                  </Button>
+                </div>
               )}
             </div>
           ))}
@@ -214,7 +311,7 @@ export function AlertSettings() {
       )}
 
       <p className="text-[9px] text-muted-foreground">
-        Alert rules are synced to your organisation. Email &amp; webhook delivery will be added in a future release.
+        Alert rules are synced to your organisation. Webhook delivery runs when findings change (via the connector agent). The Test Webhook button validates connectivity only.
       </p>
     </div>
   );

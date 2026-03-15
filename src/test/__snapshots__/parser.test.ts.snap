@@ -62,6 +62,26 @@ exports[`analyseConfig > snapshot of findings 1`] = `
     "severity": "info",
     "title": "No High Availability (HA) configuration detected",
   },
+  {
+    "section": "DoS & Spoof Protection",
+    "severity": "medium",
+    "title": "No DoS & Spoof Protection configuration found",
+  },
+  {
+    "section": "Logging & Monitoring",
+    "severity": "medium",
+    "title": "No external log forwarding configured",
+  },
+  {
+    "section": "Application Filter",
+    "severity": "medium",
+    "title": "No application filter policies configured",
+  },
+  {
+    "section": "Traffic Inspection",
+    "severity": "high",
+    "title": "Published web servers without WAF protection",
+  },
 ]
 `;
 

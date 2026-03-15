@@ -2,14 +2,22 @@ import { useMemo } from "react";
 import { analyseConfig, type AnalysisResult, type InspectionPosture } from "@/lib/analyse-config";
 import type { ExtractedSections } from "@/lib/extract-sections";
 
-type ParsedFile = { id: string; label: string; fileName: string; extractedData: ExtractedSections };
+type ParsedFile = {
+  id: string;
+  label: string;
+  fileName: string;
+  extractedData: ExtractedSections;
+  centralEnrichment?: { licences?: unknown } | null;
+};
 
 export function useFirewallAnalysis(files: ParsedFile[]) {
   const analysisResults = useMemo<Record<string, AnalysisResult>>(() => {
     const results: Record<string, AnalysisResult> = {};
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      results[label] = analyseConfig(f.extractedData);
+      results[label] = analyseConfig(f.extractedData, {
+        centralLinked: !!f.centralEnrichment,
+      });
     }
     return results;
   }, [files]);

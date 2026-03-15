@@ -289,7 +289,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             <p className="text-xs font-semibold text-foreground">
               {selectedCell.control.controlName} — {selectedCell.framework}
             </p>
-            <button onClick={() => setSelectedCell(null)} className="text-muted-foreground hover:text-foreground text-xs">✕</button>
+            <button onClick={() => setSelectedCell(null)} className="text-muted-foreground hover:text-foreground text-xs" aria-label="Close details">✕</button>
           </div>
           <p className="text-[10px] text-muted-foreground">{selectedCell.findings.length} related finding{selectedCell.findings.length !== 1 ? "s" : ""}</p>
           {selectedCell.findings.map((f) => (

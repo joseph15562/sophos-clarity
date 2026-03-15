@@ -97,6 +97,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
         onClick={() => setShowPopover(!showPopover)}
         className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
         title={label}
+        aria-label={label}
       >
         <span className={`inline-block w-2 h-2 rounded-full ${dotColor} ${status.connected && !isStale ? "animate-pulse" : ""}`} />
         {status.connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
@@ -149,11 +150,11 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
       <header className="border-b border-[#10037C]/20 bg-[#001A47] sticky top-0 z-40 no-print">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">
               Sophos FireComply
             </h1>
-            <p className="text-[11px] text-[#6A889B]">
+            <p className="text-[11px] text-[#6A889B] hidden sm:block">
               Firewall Configuration Assessment & Compliance Reporting
             </p>
           </div>
@@ -166,17 +167,18 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                   onClick={onOrgClick}
                   className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
                   title="Open management panel"
+                  aria-label="Open management panel"
                 >
-                  <Building2 className="h-3 w-3" />
-                  <span className="font-medium text-white/80 max-w-[120px] truncate">{org.name}</span>
-                  <ChevronDown className="h-2.5 w-2.5" />
+                  <Building2 className="h-3 w-3 shrink-0" />
+                  <span className="font-medium text-white/80 max-w-[120px] truncate hidden sm:inline">{org.name}</span>
+                  <ChevronDown className="h-2.5 w-2.5 shrink-0" />
                 </button>
               )}
               {org && !localMode && <CentralStatusDot orgId={org.id} />}
               {notificationSlot}
               <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
-                <User className="h-3 w-3" />
-                <span className="max-w-[100px] truncate">{user?.email?.split("@")[0]}</span>
+                <User className="h-3 w-3 shrink-0" />
+                <span className="max-w-[100px] truncate hidden sm:inline">{user?.email?.split("@")[0]}</span>
               </span>
               <Button
                 variant="ghost"
@@ -196,10 +198,11 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               onClick={onOrgClick}
               className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-2 py-1 rounded hover:bg-[#10037C]/40"
               title="Open settings"
+              aria-label="Open settings"
             >
-              <SlidersHorizontal className="h-3 w-3" />
-              <span className="font-medium">Settings</span>
-              <ChevronDown className="h-2.5 w-2.5" />
+              <SlidersHorizontal className="h-3 w-3 shrink-0" />
+              <span className="font-medium hidden sm:inline">Settings</span>
+              <ChevronDown className="h-2.5 w-2.5 shrink-0" />
             </button>
           )}
 
@@ -216,7 +219,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
       </header>
 
       {showContext && (
-        <div className="border-b border-border bg-muted/50 no-print">
+        <div className="border-b border-border bg-muted/50 no-print hidden sm:block">
           <div className="max-w-5xl mx-auto px-4 py-1.5 flex items-center gap-4 text-[11px] text-muted-foreground overflow-x-auto">
             {customerName && (
               <span className="flex items-center gap-1.5 shrink-0">

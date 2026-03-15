@@ -1,11 +1,20 @@
-import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import {
   loadPreviousSnapshot,
   loadSnapshotBeforePrevious,
   diffFindings,
 } from "@/lib/finding-snapshots";
+
+const SEV_ORDER = ["critical", "high", "medium", "low", "info"] as const;
+const SEV_COLORS: Record<string, string> = {
+  critical: "#EA0022",
+  high: "#F29400",
+  medium: "#F8E300",
+  low: "#00995a",
+  info: "#009CFB",
+};
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -49,10 +58,12 @@ function ExpandableList({
   title,
   items,
   colorClass,
+  titleToSeverity,
 }: {
   title: string;
   items: string[];
   colorClass: string;
+  titleToSeverity?: Map<string, string>;
 }) {
   const [open, setOpen] = useState(false);
   if (items.length === 0) return null;
@@ -73,19 +84,47 @@ function ExpandableList({
       </button>
       {open && (
         <ul className="border-t border-border bg-muted/30 px-3 py-2 space-y-1 max-h-48 overflow-y-auto">
-          {items.map((t, i) => (
-            <li key={`${t}-${i}`} className="text-xs text-foreground">
-              {t}
-            </li>
-          ))}
+          {items.map((t, i) => {
+            const sev = titleToSeverity?.get(t);
+            return (
+              <li key={`${t}-${i}`} className="flex items-center gap-2 text-xs text-foreground">
+                {sev && (
+                  <span
+                    className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
+                    style={{ backgroundColor: `${SEV_COLORS[sev] ?? "#999"}30`, color: SEV_COLORS[sev] ?? "#666" }}
+                  >
+                    {sev}
+                  </span>
+                )}
+                <span className="flex-1 min-w-0">{t}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
   );
 }
 
+function buildTitleToSeverity(analysisResults: Record<string, AnalysisResult>): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const ar of Object.values(analysisResults)) {
+    for (const f of ar.findings) {
+      const existing = map.get(f.title);
+      const idxNew = SEV_ORDER.indexOf(f.severity as (typeof SEV_ORDER)[number]);
+      const idxExisting = existing ? SEV_ORDER.indexOf(existing as (typeof SEV_ORDER)[number]) : 999;
+      if (!existing || (idxNew >= 0 && idxNew < idxExisting)) {
+        map.set(f.title, f.severity);
+      }
+    }
+  }
+  return map;
+}
+
 export function FindingsChanges({ analysisResults }: Props) {
   const [diff, setDiff] = useState<AggregatedDiff | null>(null);
+
+  const titleToSeverity = useMemo(() => buildTitleToSeverity(analysisResults), [analysisResults]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,13 +134,45 @@ export function FindingsChanges({ analysisResults }: Props) {
     return () => { cancelled = true; };
   }, [analysisResults]);
 
+  const handleExportCsv = useCallback(() => {
+    if (!diff) return;
+    const rows: string[][] = [["Change Type", "Finding Title", "Severity"]];
+    for (const t of diff.newFindings) {
+      rows.push(["New", t, titleToSeverity.get(t) ?? ""]);
+    }
+    for (const t of diff.fixedFindings) {
+      rows.push(["Fixed", t, titleToSeverity.get(t) ?? ""]);
+    }
+    for (const t of diff.regressed) {
+      rows.push(["Regressed", t, titleToSeverity.get(t) ?? ""]);
+    }
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `findings-changes-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [diff, titleToSeverity]);
+
   if (!diff || !diff.hasPrevious || !diff.hasChanges) return null;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-3">
-        Changes since last assessment
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h3 className="text-sm font-semibold text-foreground">
+          Changes since last assessment
+        </h3>
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2 py-1 text-[10px] text-foreground hover:bg-muted transition-colors"
+        >
+          <Download className="h-3 w-3" />
+          Export Changes (CSV)
+        </button>
+      </div>
       <div className="flex flex-wrap gap-2 mb-4">
         <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#EA0022]/10 text-[#EA0022]">
           {diff.newFindings.length} new
@@ -118,16 +189,19 @@ export function FindingsChanges({ analysisResults }: Props) {
           title="New findings"
           items={diff.newFindings}
           colorClass="bg-[#EA0022]/10 text-[#EA0022]"
+          titleToSeverity={titleToSeverity}
         />
         <ExpandableList
           title="Fixed findings"
           items={diff.fixedFindings}
           colorClass="bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+          titleToSeverity={titleToSeverity}
         />
         <ExpandableList
           title="Regressed (previously fixed, now back)"
           items={diff.regressed}
           colorClass="bg-[#F29400]/10 text-[#F29400]"
+          titleToSeverity={titleToSeverity}
         />
       </div>
     </div>

@@ -44,7 +44,10 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Deploy Edge Functions
-        run: supabase functions deploy parse-config --no-verify-jwt
+        run: |
+          supabase functions deploy parse-config --no-verify-jwt
+          supabase functions deploy api --no-verify-jwt
+          supabase functions deploy sophos-central --no-verify-jwt
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 

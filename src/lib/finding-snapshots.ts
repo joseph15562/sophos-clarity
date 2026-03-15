@@ -150,3 +150,56 @@ export function diffFindings(
 
   return { newFindings, fixedFindings, regressed };
 }
+
+/** Get the earliest snapshot timestamp where a finding title first appeared (for SLA tracking). */
+export async function getFirstDetectedAt(
+  orgId: string | null,
+  hostname: string,
+  findingTitle: string
+): Promise<string | null> {
+  if (!orgId) return null;
+
+  const { data } = await supabase
+    .from("finding_snapshots")
+    .select("created_at")
+    .eq("org_id", orgId)
+    .eq("hostname", hostname)
+    .contains("titles", [findingTitle])
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  return data?.[0]?.created_at ?? null;
+}
+
+/** Batch-load earliest detection timestamps for multiple (hostname, findingTitle) pairs. */
+export async function getFirstDetectedAtBatch(
+  orgId: string | null,
+  pairs: { hostname: string; findingTitle: string }[]
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (!orgId || pairs.length === 0) return result;
+
+  const hostnames = [...new Set(pairs.map((p) => p.hostname))];
+  const { data } = await supabase
+    .from("finding_snapshots")
+    .select("hostname, titles, created_at")
+    .eq("org_id", orgId)
+    .in("hostname", hostnames)
+    .order("created_at", { ascending: true });
+
+  if (!data) return result;
+
+  const seen = new Set<string>();
+  for (const row of data) {
+    for (const title of row.titles) {
+      const key = `${row.hostname}:${title}`;
+      if (seen.has(key)) continue;
+      const pair = pairs.find((p) => p.hostname === row.hostname && p.findingTitle === title);
+      if (pair) {
+        seen.add(key);
+        result.set(key, row.created_at);
+      }
+    }
+  }
+  return result;
+}

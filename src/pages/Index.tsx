@@ -1,26 +1,21 @@
 import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
-import { ArrowLeftRight, RotateCcw, Save, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal, Download, LogIn } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ArrowLeftRight, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { FileUpload, UploadedFile } from "@/components/FileUpload";
-import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
+import { UploadedFile } from "@/components/FileUpload";
+import { BrandingData } from "@/components/BrandingSetup";
 import { AppHeader } from "@/components/AppHeader";
-import { EstateOverview } from "@/components/EstateOverview";
-import { FindingsChanges } from "@/components/FindingsChanges";
-import { PriorityActions } from "@/components/PriorityActions";
-import { ReportCards } from "@/components/ReportCards";
+import { UploadSection } from "@/components/UploadSection";
+import { AnalysisTabs } from "@/components/AnalysisTabs";
+import { AuthFlow } from "@/components/AuthFlow";
 import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-persistence";
-import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useAuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { getCentralStatus, getCachedFirewalls, getAlerts, getFirewallLicences } from "@/lib/sophos-central";
 import type { CentralEnrichment as CentralEnrichmentType } from "@/lib/stream-ai";
-import { AuthGate } from "@/components/AuthGate";
-import { OrgSetup } from "@/components/OrgSetup";
 import { saveReportCloud, saveReportLocal, type SavedReportEntry, type AnalysisSummary } from "@/lib/saved-reports";
 import { saveAssessmentCloud } from "@/lib/assessment-cloud";
 import { saveAssessment as saveAssessmentLocal } from "@/lib/assessment-history";
@@ -33,43 +28,21 @@ import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 import { ManagementDrawer } from "@/components/ManagementDrawer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
-import { AgentFleetPanel } from "@/components/AgentFleetPanel";
-import { MfaVerification } from "@/components/MfaVerification";
 import { toast } from "sonner";
 import { isLocalMode, setLocalMode } from "@/lib/local-mode";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
-const RiskScoreDashboard = lazy(() => import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })));
-const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })));
-const ChangeApproval = lazy(() => import("@/components/ChangeApproval").then((m) => ({ default: m.ChangeApproval })));
-const ComplianceHeatmap = lazy(() => import("@/components/ComplianceHeatmap").then((m) => ({ default: m.ComplianceHeatmap })));
-const InsuranceReadiness = lazy(() => import("@/components/InsuranceReadiness").then((m) => ({ default: m.InsuranceReadiness })));
 const AIChatPanel = lazy(() => import("@/components/AIChatPanel").then((m) => ({ default: m.AIChatPanel })));
-const ScoreSimulator = lazy(() => import("@/components/ScoreSimulator").then((m) => ({ default: m.ScoreSimulator })));
-const AttackSurfaceMap = lazy(() => import("@/components/AttackSurfaceMap").then((m) => ({ default: m.AttackSurfaceMap })));
-const ConsistencyChecker = lazy(() => import("@/components/ConsistencyChecker").then((m) => ({ default: m.ConsistencyChecker })));
-const PeerBenchmark = lazy(() => import("@/components/PeerBenchmark").then((m) => ({ default: m.PeerBenchmark })));
-const SophosBestPractice = lazy(() => import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })));
-const RuleOptimiser = lazy(() => import("@/components/RuleOptimiser").then((m) => ({ default: m.RuleOptimiser })));
-const PriorityMatrix = lazy(() => import("@/components/PriorityMatrix").then((m) => ({ default: m.PriorityMatrix })));
-const FirewallLinker = lazy(() => import("@/components/FirewallLinker").then((m) => ({ default: m.FirewallLinker })));
-const CentralEnrichment = lazy(() => import("@/components/CentralEnrichment").then((m) => ({ default: m.CentralEnrichment })));
-const SeverityBreakdown = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SeverityBreakdown })));
-const SecurityFeatureCoverage = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.SecurityFeatureCoverage })));
-const ZoneTrafficFlow = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.ZoneTrafficFlow })));
-const TopFindings = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.TopFindings })));
-const RuleHealthOverview = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.RuleHealthOverview })));
-const FindingsBySection = lazy(() => import("@/components/SecurityDashboards").then((m) => ({ default: m.FindingsBySection })));
-import { SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { saveFindingSnapshot } from "@/lib/finding-snapshots";
-import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
+import { saveScoreSnapshot } from "@/lib/score-history";
+import { saveConfigSnapshot, hashConfig } from "@/lib/config-snapshots";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
 function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
-  const { isGuest, org } = useAuth();
+  const { isGuest, org, isViewerOnly } = useAuth();
   const { notifications, unreadCount, addNotification, markRead, markAllRead, dismiss: dismissNotif, clearAll: clearNotifs } = useNotifications();
   const [files, setFiles] = useState<ParsedFile[]>([]);
   const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] });
@@ -91,6 +64,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [analysisOverride, setAnalysisOverride] = useState<Record<string, AnalysisResult> | null>(null);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
+  const [parsingProgress, setParsingProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -156,6 +130,46 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, [analysisResults]);
 
+  // Save score history when analysis completes (authenticated only, for trend dashboard)
+  useEffect(() => {
+    if (Object.keys(analysisResults).length === 0 || isGuest || !org?.id) return;
+    for (const [label, result] of Object.entries(analysisResults)) {
+      const hostname = result.hostname || label;
+      const risk = computeRiskScore(result);
+      saveScoreSnapshot(
+        org.id,
+        hostname,
+        branding.customerName || "",
+        risk.overall,
+        risk.grade,
+        risk.categories.map((c) => ({ label: c.label, score: c.pct })),
+        result.findings.length,
+      );
+    }
+  }, [analysisResults, isGuest, org?.id, branding.customerName]);
+
+  // Save config snapshots for version control (localStorage)
+  useEffect(() => {
+    if (Object.keys(analysisResults).length === 0) return;
+    for (const [label, result] of Object.entries(analysisResults)) {
+      const hostname = result.hostname || label;
+      const file = files.find((f) => (f.label || f.fileName.replace(/\.(html|htm)$/i, "")) === label);
+      const sections = file?.extractedData ?? {};
+      const sectionKeys = Object.keys(sections);
+      saveConfigSnapshot({
+        hostname,
+        customer_name: branding.customerName || "",
+        section_keys: sectionKeys,
+        section_count: result.stats.totalSections,
+        rule_count: result.stats.totalRules,
+        findings_count: result.findings.length,
+        overall_score: computeRiskScore(result).overall,
+        snapshot_hash: hashConfig(sections as Record<string, unknown>),
+        sections: sections as Record<string, unknown>,
+      });
+    }
+  }, [analysisResults, files, branding.customerName]);
+
   // Restore session on mount
   useEffect(() => {
     const session = loadSession();
@@ -168,29 +182,52 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleFilesChange = useCallback((uploaded: UploadedFile[]) => {
-    const parsed: ParsedFile[] = uploaded.map((f) => {
+  const handleFilesChange = useCallback(async (uploaded: UploadedFile[]) => {
+    const existingParsed: ParsedFile[] = [];
+    const toProcess: UploadedFile[] = [];
+    for (const f of uploaded) {
       const existing = files.find((pf) => pf.id === f.id);
-      if (existing) return { ...existing, label: f.label };
+      if (existing) existingParsed.push({ ...existing, label: f.label });
+      else toProcess.push(f);
+    }
+
+    if (toProcess.length === 0) {
+      setFiles(existingParsed);
+      if (reports.length > 0) {
+        setReports([]);
+        setActiveReportId("");
+      }
+      setReportsSaved(false);
+      return;
+    }
+
+    setParsingProgress({ current: 0, total: toProcess.length, phase: "parsing" });
+    const parsed: ParsedFile[] = [];
+    for (let i = 0; i < toProcess.length; i++) {
+      setParsingProgress({ current: i + 1, total: toProcess.length, phase: "parsing" });
+      await new Promise((r) => setTimeout(r, 0));
       let extractedData: ExtractedSections;
       try {
-        extractedData = extractSections(f.content);
+        extractedData = extractSections(toProcess[i].content);
       } catch (err) {
-        console.warn(`[parser] Failed to parse ${f.fileName}`, err);
-        toast.error(`Could not parse ${f.fileName} — it may not be a Sophos Config Viewer export`);
+        console.warn(`[parser] Failed to parse ${toProcess[i].fileName}`, err);
+        toast.error(`Could not parse ${toProcess[i].fileName} — it may not be a Sophos Config Viewer export`);
         extractedData = {} as ExtractedSections;
       }
-      return { ...f, extractedData };
-    });
-    setFiles(parsed);
+      parsed.push({ ...toProcess[i], extractedData });
+    }
+    setParsingProgress({ current: toProcess.length, total: toProcess.length, phase: "analysing" });
+    await new Promise((r) => setTimeout(r, 0));
+    const allParsed = [...existingParsed, ...parsed];
+    setFiles(allParsed);
+    setParsingProgress(null);
     if (reports.length > 0) {
       setReports([]);
       setActiveReportId("");
     }
     setReportsSaved(false);
     if (org?.id) {
-      const newFiles = parsed.filter((p) => !files.find((f) => f.id === p.id));
-      if (newFiles.length > 0) logAudit(org.id, "config.uploaded", "config", "", { count: newFiles.length });
+      logAudit(org.id, "config.uploaded", "config", "", { count: toProcess.length });
     }
   }, [files, reports.length, setReports, setActiveReportId, org?.id]);
 
@@ -425,7 +462,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         }
       />
 
-      <main className={`mx-auto px-4 py-8 space-y-8 ${viewingReports ? "max-w-full w-full" : "max-w-5xl"}`}>
+      <main id="main-content" className={`mx-auto px-4 py-8 space-y-8 ${viewingReports ? "max-w-full w-full" : "max-w-5xl"}`}>
         {/* Restored session banner */}
         {restoredSession && viewingReports && hasReports && !isLoading && (
           <div className="no-print rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-4 py-2.5 flex items-center gap-3 text-sm">
@@ -503,539 +540,62 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
         {!viewingReports && !isLoading && !inDiffMode && (
           <>
-            {/* Landing hero */}
-            {!hasFiles && (
-              <section className="text-center py-6 space-y-4">
-                <h2 className="text-2xl font-display font-bold text-foreground tracking-tight">
-                  Turn Sophos Firewall Exports into Audit-Ready Documentation
-                </h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto text-sm leading-relaxed">
-                  Drop in your Sophos XGS configuration exports and get instant security findings, risk scoring,
-                  and compliance mapping — no AI required. Generate branded reports, remediation playbooks,
-                  and readiness reports ready for customer handoff or audit.
-                </p>
-                <div className="flex flex-wrap justify-center gap-6 pt-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" /> Technical Reports</span>
-                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" /> Executive Briefs</span>
-                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Compliance Reports</span>
-                  <span className="flex items-center gap-1.5"><img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" /> Data Anonymised</span>
-                </div>
-              </section>
-            )}
-
-
-            {/* Guest sign-in prompt */}
-            {!hasFiles && isGuest && onShowAuth && (
-              <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] px-5 py-4 flex items-center gap-4">
-                <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-                  <LogIn className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">Sign in to unlock the full experience</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Connect your Sophos Central account, use automated agents, save reports, and manage your firewall estate — all included.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 gap-1.5 text-xs border-[#2006F7]/30 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
-                  onClick={onShowAuth}
-                >
-                  <LogIn className="h-3 w-3" /> Sign In / Register
-                </Button>
-              </div>
-            )}
-
-            {/* Step 1 — Choose a connected firewall */}
-            {!hasFiles && !isGuest && org && (
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">1</span>
-                  <h2 className="text-lg font-display font-bold text-foreground">Choose a Firewall</h2>
-                </div>
-                <AgentFleetPanel onLoadAssessment={handleLoadAgentAssessment} />
-              </section>
-            )}
-
-            {/* "Or" divider between fleet panel and upload */}
-            {!hasFiles && !isGuest && org && (
-              <div className="flex items-center gap-4 py-1">
-                <div className="flex-1 border-t border-border" />
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Or</span>
-                <div className="flex-1 border-t border-border" />
-              </div>
-            )}
-
-            {/* Upload Firewall Exports */}
-            <section className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">1</span>
-                <h2 className="text-lg font-display font-bold text-foreground">Upload Firewall Exports</h2>
-              </div>
-              <FileUpload files={files} onFilesChange={handleFilesChange} />
-            </section>
-
-            {/* Step 2 — Assessment Context (before findings so compliance tags are dynamic) */}
+            <UploadSection
+              files={files}
+              onFilesChange={handleFilesChange}
+              parsingProgress={parsingProgress}
+              branding={branding}
+              setBranding={setBranding}
+              analysisResult={analysisResults}
+              configMetas={configMetas}
+              hasFiles={hasFiles}
+              hasReports={hasReports}
+              reports={reports}
+              isGuest={isGuest}
+              onShowAuth={onShowAuth}
+              org={org}
+              localMode={localMode}
+              onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); if (org?.id) logAudit(org.id, "report.generated", "report", "individual"); }}
+              onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
+              onGenerateExecutiveOnePager={() => { setViewingReports(true); generateExecutiveOnePager(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive-one-pager"); }}
+              onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
+              onGenerateAll={() => { setViewingReports(true); generateAll(); if (org?.id) logAudit(org.id, "report.generated", "report", "all"); addNotification("info", "Generating Reports", `Generating all reports for ${branding.customerName || "this assessment"}…`); }}
+              setViewingReports={setViewingReports}
+              onLoadAgentAssessment={handleLoadAgentAssessment}
+              setCentralEnriched={setCentralEnriched}
+              saveError={saveError}
+              savingReports={savingReports}
+              reportsSaved={reportsSaved}
+              onSaveReports={handleSaveReports}
+              totalFindings={totalFindings}
+              isViewerOnly={isViewerOnly}
+            />
             {hasFiles && (
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">2</span>
-                  <h2 className="text-lg font-display font-bold text-foreground">Assessment Context</h2>
-                  <span className="text-xs text-muted-foreground">(optional — select frameworks to tag findings)</span>
-                </div>
-                <Card>
-                  <CardContent className="pt-6">
-                    <BrandingSetup branding={branding} onChange={setBranding} />
-                  </CardContent>
-                </Card>
-              </section>
-            )}
-
-            {/* Sophos Central Firewall Linking — hidden in local mode */}
-            {hasFiles && !isGuest && !localMode && configMetas.length > 0 && (
-              <Suspense fallback={null}>
-                <FirewallLinker
-                  configs={configMetas}
-                  customerName={branding.customerName}
-                  analysisResults={analysisResults}
-                  onLink={() => setCentralEnriched(false)}
-                />
-              </Suspense>
-            )}
-
-            {/* Privacy banner */}
-            {hasFiles && (
-              <div className="rounded-xl border border-[#00995a]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00995a] dark:border-l-[#00F2B3] bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
-                <div className="h-10 w-10 rounded-lg bg-[#00995a]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
-                </div>
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <span className="font-bold text-[#00774a] dark:text-[#00F2B3]">Data Privacy Protected</span> — All IP addresses, customer names, and firewall identifiers are automatically anonymised before being sent to the AI. Your sensitive network data never leaves the browser; only sanitised structural data is transmitted for analysis. Real values are restored locally in the final report.
-                </div>
-              </div>
-            )}
-
-            {/* Generate Reports — AI reports disabled in local mode */}
-            {hasFiles && (
-              <ReportCards
-                fileCount={files.length}
+              <AnalysisTabs
+                analysisResult={analysisResults}
+                files={files}
+                branding={branding}
+                activeTab={analysisTab}
+                setActiveTab={setAnalysisTab}
+                totalFindings={totalFindings}
+                totalRules={totalRules}
+                totalSections={totalSections}
+                totalPopulated={totalPopulated}
+                extractionPct={extractionPct}
+                aggregatedPosture={aggregatedPosture}
+                securityStats={securityStats}
+                configMetas={configMetas}
+                diffSelection={diffSelection}
+                setDiffSelection={setDiffSelection}
+                projectedScore={projectedScore}
+                setProjectedScore={setProjectedScore}
+                isGuest={isGuest}
                 localMode={localMode}
-                onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); if (org?.id) logAudit(org.id, "report.generated", "report", "individual"); }}
-                onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
-                onGenerateExecutiveOnePager={() => { setViewingReports(true); generateExecutiveOnePager(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive-one-pager"); }}
-                onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
-                onGenerateAll={() => { setViewingReports(true); generateAll(); if (org?.id) logAudit(org.id, "report.generated", "report", "all"); addNotification("info", "Generating Reports", `Generating all reports for ${branding.customerName || "this assessment"}…`); }}
+                onExplainFinding={(title) => {
+                  setAiChatOpen(true);
+                  setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);
+                }}
               />
-            )}
-
-            {/* View Reports banner — shown when reports exist but user is on dashboard */}
-            {hasReports && (
-              <div className="rounded-xl border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-5 py-4 flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-                  <img src="/icons/sophos-document.svg" alt="" className="h-5 w-5 sophos-icon" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    {reports.length} Report{reports.length !== 1 ? "s" : ""} Ready
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Your generated reports are available to view, print, or save.
-                  </p>
-                </div>
-                <Button onClick={() => setViewingReports(true)} className="gap-2 bg-[#2006F7] hover:bg-[#10037C] text-white">
-                  <img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 brightness-0 invert" />
-                  View Reports
-                </Button>
-              </div>
-            )}
-
-            {/* Save Assessment (pre-AI) */}
-            {hasFiles && totalFindings > 0 && !hasReports && (
-              <div className="flex items-center justify-end gap-3">
-                {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
-                <button
-                  onClick={() => handleSaveReports(false)}
-                  disabled={savingReports}
-                  className={`no-print flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
-                    reportsSaved
-                      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
-                      : "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
-                  }`}
-                >
-                  <Save className="h-3.5 w-3.5" />
-                  {reportsSaved ? "Saved!" : savingReports ? "Saving…" : "Save Assessment (Pre-AI)"}
-                </button>
-              </div>
-            )}
-
-            {/* Tabbed Analysis */}
-            {hasFiles && (
-              <Tabs value={analysisTab} onValueChange={setAnalysisTab}>
-                <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm">
-                  <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2">Detailed Security Analysis</h2>
-                  <TabsList className="flex-wrap">
-                    <TabsTrigger value="overview" className="gap-2">
-                      <LayoutDashboard className="h-3.5 w-3.5" />
-                      Overview
-                      {totalFindings > 0 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#EA0022]/10 text-[#EA0022] tabular-nums">{totalFindings}</span>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger value="security" className="gap-2">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Security Analysis
-                    </TabsTrigger>
-                    <TabsTrigger value="compliance" className="gap-2">
-                      <ClipboardCheck className="h-3.5 w-3.5" />
-                      Compliance
-                    </TabsTrigger>
-                    <TabsTrigger value="optimisation" className="gap-2">
-                      <Zap className="h-3.5 w-3.5" />
-                      Optimisation
-                    </TabsTrigger>
-                    <TabsTrigger value="tools" className="gap-2">
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      Tools
-                    </TabsTrigger>
-                    {totalFindings > 0 && (
-                      <TabsTrigger value="remediation" className="gap-2">
-                        <Wrench className="h-3.5 w-3.5" />
-                        Remediation
-                      </TabsTrigger>
-                    )}
-                    {files.length >= 2 && (
-                      <TabsTrigger value="compare" className="gap-2">
-                        <ArrowLeftRight className="h-3.5 w-3.5" />
-                        Compare
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
-                </div>
-
-                <div className="mt-3 px-1">
-                  <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    FireComply provides automated security analysis based on firewall configuration data. Results should be validated by a qualified security professional. Compliance mappings are indicative and do not constitute a formal audit.
-                  </p>
-                </div>
-
-                {/* Overview */}
-                <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <ErrorBoundary fallbackTitle="Overview failed to load">
-                    {totalFindings > 0 && (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => downloadRiskRegisterCSV(analysisResults, branding.customerName)}
-                          className="gap-1.5 text-xs"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          Export Risk Register (CSV)
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => downloadRiskRegisterExcel(analysisResults, branding.customerName)}
-                          className="gap-1.5 text-xs"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          Export Excel
-                        </Button>
-                      </div>
-                    )}
-                    {totalFindings > 0 && (
-                      <PriorityActions analysisResults={analysisResults} />
-                    )}
-                    <FindingsChanges analysisResults={analysisResults} />
-                    <EstateOverview
-                      fileCount={files.length}
-                      analysisResults={analysisResults}
-                      totalFindings={totalFindings}
-                      totalRules={totalRules}
-                      totalSections={totalSections}
-                      totalPopulated={totalPopulated}
-                      extractionPct={extractionPct}
-                      aggregatedPosture={aggregatedPosture}
-                      selectedFrameworks={branding.selectedFrameworks}
-                      onExplainFinding={(title) => {
-                        setAiChatOpen(true);
-                        setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);
-                      }}
-                    />
-                    {!isGuest && !localMode && configMetas.length > 0 && (
-                      <Suspense fallback={null}>
-                        <CentralEnrichment
-                          configMetas={configMetas}
-                          customerName={branding.customerName}
-                        />
-                      </Suspense>
-                    )}
-                  </ErrorBoundary>
-                </TabsContent>
-
-                {/* Security Analysis */}
-                <TabsContent value="security" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <ErrorBoundary fallbackTitle="Security analysis failed to load">
-                    {securityStats && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div
-                          className={`rounded-xl border bg-card p-4 ${
-                            securityStats.score >= 75
-                              ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
-                              : securityStats.score >= 50
-                                ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
-                                : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
-                          }`}
-                        >
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Score</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span
-                              className={`text-2xl font-extrabold tabular-nums ${
-                                securityStats.score >= 75
-                                  ? "text-[#00995a] dark:text-[#00F2B3]"
-                                  : securityStats.score >= 50
-                                    ? "text-[#F29400]"
-                                    : "text-[#EA0022]"
-                              }`}
-                            >
-                              {securityStats.score}
-                            </span>
-                            <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                securityStats.score >= 75
-                                  ? "bg-[#00995a]/10 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
-                                  : securityStats.score >= 50
-                                    ? "bg-[#F29400]/10 text-[#F29400]"
-                                    : "bg-[#EA0022]/10 text-[#EA0022]"
-                              }`}
-                            >
-                              {securityStats.grade}
-                            </span>
-                          </div>
-                        </div>
-                        <div
-                          className={`rounded-xl border border-border bg-card p-4 ${
-                            securityStats.criticalHigh === 0
-                              ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
-                              : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
-                          }`}
-                        >
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Critical Issues</div>
-                          <div
-                            className={`text-2xl font-extrabold tabular-nums mt-1 ${
-                              securityStats.criticalHigh === 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"
-                            }`}
-                          >
-                            {securityStats.criticalHigh}
-                          </div>
-                        </div>
-                        <div
-                          className={`rounded-xl border border-border bg-card p-4 ${
-                            securityStats.coverage >= 75
-                              ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
-                              : securityStats.coverage >= 40
-                                ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
-                                : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
-                          }`}
-                        >
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Coverage</div>
-                          <div
-                            className={`text-2xl font-extrabold tabular-nums mt-1 ${
-                              securityStats.coverage >= 75
-                                ? "text-[#00995a] dark:text-[#00F2B3]"
-                                : securityStats.coverage >= 40
-                                  ? "text-[#F29400]"
-                                  : "text-[#EA0022]"
-                            }`}
-                          >
-                            {securityStats.coverage}%
-                          </div>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-4">
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rules Analysed</div>
-                          <div className="text-2xl font-extrabold tabular-nums mt-1 text-foreground">
-                            {securityStats.totalRules}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <Suspense fallback={<ChartSkeleton height={220} />}>
-                      <RiskScoreDashboard analysisResults={analysisResults} />
-                    </Suspense>
-
-                    <div className="grid gap-6 lg:grid-cols-2">
-                      <Suspense fallback={<StatGridSkeleton />}>
-                        <RuleHealthOverview analysisResults={analysisResults} />
-                      </Suspense>
-                      <Suspense fallback={<StatGridSkeleton count={4} />}>
-                        <SecurityFeatureCoverage analysisResults={analysisResults} />
-                      </Suspense>
-                    </div>
-
-                    {totalFindings > 0 && (
-                      <div className="grid gap-6 lg:grid-cols-2">
-                        <Suspense fallback={<ChartSkeleton />}>
-                          <SeverityBreakdown analysisResults={analysisResults} />
-                        </Suspense>
-                        <Suspense fallback={<ChartSkeleton />}>
-                          <FindingsBySection analysisResults={analysisResults} />
-                        </Suspense>
-                      </div>
-                    )}
-
-                    <div className="grid gap-6 lg:grid-cols-2">
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <ZoneTrafficFlow files={files} />
-                      </Suspense>
-                      {totalFindings > 0 && (
-                        <Suspense fallback={<CardSkeleton />}>
-                          <TopFindings analysisResults={analysisResults} />
-                        </Suspense>
-                      )}
-                    </div>
-
-                    {totalFindings > 0 && (
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <PriorityMatrix analysisResults={analysisResults} />
-                      </Suspense>
-                    )}
-                  </ErrorBoundary>
-                </TabsContent>
-
-                {/* Compliance */}
-                <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <ErrorBoundary fallbackTitle="Compliance view failed to load">
-                    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
-                        <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
-                        {branding.selectedFrameworks.length > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
-                            {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </div>
-                      <Suspense fallback={<ChartSkeleton height={120} />}>
-                        <ComplianceHeatmap
-                          analysisResults={analysisResults}
-                          selectedFrameworks={branding.selectedFrameworks}
-                        />
-                      </Suspense>
-                    </div>
-
-                    <Suspense fallback={<CardSkeleton />}>
-                      <SophosBestPractice
-                        analysisResults={analysisResults}
-                        centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
-                      />
-                    </Suspense>
-
-                    <Suspense fallback={<CardSkeleton />}>
-                      <PeerBenchmark analysisResults={analysisResults} environment={branding.environment} />
-                    </Suspense>
-
-                    <Suspense fallback={<CardSkeleton />}>
-                      <InsuranceReadiness analysisResults={analysisResults} />
-                    </Suspense>
-                  </ErrorBoundary>
-                </TabsContent>
-
-                {/* Optimisation */}
-                <TabsContent value="optimisation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <ErrorBoundary fallbackTitle="Optimisation view failed to load">
-                    <Suspense fallback={<SectionSkeleton />}>
-                      <RuleOptimiser files={files} />
-                    </Suspense>
-                    {files.length >= 2 && (
-                      <Suspense fallback={null}>
-                        <ConsistencyChecker analysisResults={analysisResults} />
-                      </Suspense>
-                    )}
-                  </ErrorBoundary>
-                </TabsContent>
-
-                {/* Tools */}
-                <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <ErrorBoundary fallbackTitle="Tools failed to load">
-                    <Suspense fallback={<ChartSkeleton height={220} />}>
-                      <RiskScoreDashboard analysisResults={analysisResults} projected={projectedScore} />
-                    </Suspense>
-
-                    {totalFindings > 0 && (
-                      <Suspense fallback={<CardSkeleton />}>
-                        <ScoreSimulator analysisResults={analysisResults} onProjectedChange={setProjectedScore} />
-                      </Suspense>
-                    )}
-
-                    <Suspense fallback={<CardSkeleton />}>
-                      <AttackSurfaceMap files={files} />
-                    </Suspense>
-                  </ErrorBoundary>
-                </TabsContent>
-
-                {/* Remediation */}
-                <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <ErrorBoundary fallbackTitle="Remediation view failed to load">
-                    <Suspense fallback={null}>
-                      <RemediationPlaybooks analysisResults={analysisResults} />
-                    </Suspense>
-                    <Suspense fallback={null}>
-                      <ChangeApproval />
-                    </Suspense>
-                  </ErrorBoundary>
-                </TabsContent>
-
-                {/* Compare */}
-                <TabsContent value="compare" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
-                  <ErrorBoundary fallbackTitle="Compare view failed to load">
-                    <div className="space-y-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
-                          <select
-                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-                            value={(diffSelection as DiffSelection | null)?.beforeIdx ?? 0}
-                            onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
-                              beforeIdx: Number(e.target.value),
-                              afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
-                            }))}
-                          >
-                            {files.map((f, i) => (
-                              <option key={f.id} value={i}>{fileLabel(f)}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
-                          <select
-                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-                            value={(diffSelection as DiffSelection | null)?.afterIdx ?? Math.min(1, files.length - 1)}
-                            onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
-                              beforeIdx: prev?.beforeIdx ?? 0,
-                              afterIdx: Number(e.target.value),
-                            }))}
-                          >
-                            {files.map((f, i) => (
-                              <option key={f.id} value={i}>{fileLabel(f)}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setDiffSelection({
-                          beforeIdx: (diffSelection as DiffSelection | null)?.beforeIdx ?? 0,
-                          afterIdx: (diffSelection as DiffSelection | null)?.afterIdx ?? Math.min(1, files.length - 1),
-                        })}
-                      >
-                        <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
-                      </Button>
-                    </div>
-                  </ErrorBoundary>
-                </TabsContent>
-              </Tabs>
             )}
           </>
         )}
@@ -1051,7 +611,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   Back to Dashboard
                 </Button>
                 <div className="flex-1" />
-                {!localMode && (
+                {!localMode && !isViewerOnly && (
                 <div className="flex flex-wrap gap-2">
                   {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
                     <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
@@ -1116,6 +676,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
                   Back to Dashboard
                 </Button>
+                {!isViewerOnly && (
                 <button
                   onClick={() => handleSaveReports(true)}
                   disabled={savingReports}
@@ -1128,6 +689,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   <Save className="h-3.5 w-3.5" />
                   {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
                 </button>
+                )}
                 <div className="flex-1" />
                 <Button variant="ghost" size="sm" onClick={handleStartOver} className="text-muted-foreground hover:text-foreground text-xs">
                   Start Over
@@ -1193,6 +755,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           onClick={() => setShortcutsOpen(true)}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-[#2006F7]/30 transition-colors shadow-sm"
           title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts"
         >
           <kbd className="inline-flex items-center justify-center w-4 h-4 rounded border border-border bg-muted text-[9px] font-mono font-bold">?</kbd>
           Shortcuts
@@ -1206,86 +769,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
 const Index = () => {
   const auth = useAuthProvider();
-  const [guestMode, setGuestMode] = useState(false);
-
-  if (auth.isLoading) {
-    return (
-      <AuthProvider value={auth}>
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-          <img src="/sophos-icon-white.svg" alt="Sophos" className="h-10 w-10 opacity-60" />
-          <span className="animate-spin h-8 w-8 border-[3px] border-white/20 border-t-[#2006F7] rounded-full" />
-          <p className="text-sm text-muted-foreground animate-pulse">Loading…</p>
-        </div>
-      </AuthProvider>
-    );
-  }
-
-  if (auth.isGuest && !guestMode) {
-    return (
-      <AuthProvider value={auth}>
-        <div className="min-h-screen bg-background">
-          <header className="border-b border-[#10037C]/20 bg-[#001A47]">
-            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-              <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
-              <div className="flex-1">
-                <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">Sophos FireComply</h1>
-                <p className="text-[11px] text-[#6A889B]">Firewall Configuration Assessment & Compliance Reporting</p>
-              </div>
-            </div>
-          </header>
-          <AuthGate onSignIn={auth.signIn} onSignUp={auth.signUp} onSkip={() => setGuestMode(true)} />
-        </div>
-      </AuthProvider>
-    );
-  }
-
-  if (auth.needsOrg) {
-    return (
-      <AuthProvider value={auth}>
-        <div className="min-h-screen bg-background">
-          <header className="border-b border-[#10037C]/20 bg-[#001A47]">
-            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-              <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
-              <div className="flex-1">
-                <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">Sophos FireComply</h1>
-                <p className="text-[11px] text-[#6A889B]">Firewall Configuration Assessment & Compliance Reporting</p>
-              </div>
-            </div>
-          </header>
-          <OrgSetup userEmail={auth.user?.email ?? ""} onCreateOrg={auth.createOrg} onSignOut={auth.signOut} />
-        </div>
-      </AuthProvider>
-    );
-  }
-
-  if (auth.needsMfa) {
-    return (
-      <AuthProvider value={auth}>
-        <div className="min-h-screen bg-background">
-          <header className="border-b border-[#10037C]/20 bg-[#001A47]">
-            <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-              <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
-              <div className="flex-1">
-                <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">Sophos FireComply</h1>
-                <p className="text-[11px] text-[#6A889B]">Firewall Configuration Assessment & Compliance Reporting</p>
-              </div>
-            </div>
-          </header>
-          <MfaVerification
-            onVerified={() => auth.clearMfaRequired()}
-            onCancel={() => auth.signOut()}
-          />
-        </div>
-      </AuthProvider>
-    );
-  }
-
   return (
-    <AuthProvider value={auth}>
-      <ErrorBoundary fallbackTitle="Application failed to load">
-        <InnerApp onShowAuth={auth.isGuest ? () => setGuestMode(false) : undefined} />
-      </ErrorBoundary>
-    </AuthProvider>
+    <AuthFlow auth={auth}>
+      <InnerApp />
+    </AuthFlow>
   );
 };
 

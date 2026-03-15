@@ -257,7 +257,9 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     const analysisResults: Record<string, AnalysisResult> = {};
     files.forEach((f) => {
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      analysisResults[label] = analyseConfig(f.extractedData);
+      analysisResults[label] = analyseConfig(f.extractedData, {
+        centralLinked: !!f.centralEnrichment,
+      });
     });
     const customerName = branding.customerName || "Assessment";
     const body = buildExecutiveOnePagerMarkdown(analysisResults, branding, customerName);

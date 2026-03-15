@@ -1,6 +1,9 @@
 /**
  * Assessment schedules for tracking when customers are due for reassessment.
  * Client-side scaffold — stored in localStorage until backend infrastructure exists.
+ * TODO: Cloud persistence — when authenticated, persist to Supabase. Requires a
+ * migration for an `assessment_schedules` table. For now, localStorage only.
+ * Pattern: try Supabase first when authenticated, fall back to localStorage for guests.
  */
 
 export interface AssessmentSchedule {

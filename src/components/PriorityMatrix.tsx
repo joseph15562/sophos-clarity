@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Target } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
+import { loadAcceptedFindings, isAccepted, type AcceptedFinding } from "@/lib/accepted-findings";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -56,19 +57,35 @@ export function PriorityMatrix({ analysisResults }: Props) {
   const [selected, setSelected] = useState<PlottedFinding | null>(null);
   const [activeQuadrant, setActiveQuadrant] = useState<Quadrant | null>(null);
   const [hoveredDot, setHoveredDot] = useState<{ p: PlottedFinding; x: number; y: number } | null>(null);
+  const [acceptedList, setAcceptedList] = useState<AcceptedFinding[]>([]);
+
+  useEffect(() => {
+    loadAcceptedFindings().then(setAcceptedList);
+    const refresh = () => loadAcceptedFindings().then(setAcceptedList);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sophos-accepted-findings") refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("accepted-findings-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("accepted-findings-changed", refresh);
+    };
+  }, []);
 
   const plotted = useMemo(() => {
     const items: PlottedFinding[] = [];
     for (const [label, result] of Object.entries(analysisResults)) {
       for (const f of result.findings) {
         if (f.severity === "info") continue;
+        if (isAccepted(acceptedList, f.title)) continue;
         const impact = SEVERITY_IMPACT[f.severity] ?? 2;
         const effort = estimateEffort(f);
         items.push({ finding: f, firewallLabel: label, impact, effort, quadrant: getQuadrant(impact, effort) });
       }
     }
     return items;
-  }, [analysisResults]);
+  }, [analysisResults, acceptedList]);
 
   const quadrantCounts = useMemo(() => {
     const counts: Record<Quadrant, number> = { "quick-win": 0, strategic: 0, "low-priority": 0, thankless: 0 };

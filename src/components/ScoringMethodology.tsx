@@ -1,14 +1,15 @@
 import { X } from "lucide-react";
 
 const METHODOLOGY_ITEMS = [
-  { category: "Web Filtering", weight: "12.5%", description: "Percentage of enabled WAN rules with HTTP/HTTPS/ANY service that have a Web Filter policy applied." },
-  { category: "Intrusion Prevention", weight: "12.5%", description: "Percentage of enabled WAN rules with IPS enabled. Higher coverage = higher score." },
-  { category: "Application Control", weight: "12.5%", description: "Percentage of enabled WAN rules with Application Control active." },
-  { category: "Authentication", weight: "12.5%", description: "MFA/OTP configuration status across admin, VPN, and user portals. Deductions per area where MFA is disabled." },
-  { category: "Logging", weight: "12.5%", description: "Proportion of rules with traffic logging enabled. Disabled logging creates audit blind spots." },
-  { category: "Rule Hygiene", weight: "12.5%", description: "Composite score: penalises broad source/dest rules, ANY service rules, duplicate/overlapping rules, disabled WAN rules, and absent SSL/TLS decryption." },
-  { category: "Admin Access", weight: "12.5%", description: "Evaluates exposure of management services (HTTPS admin, SSH, SNMP) to untrusted zones like WAN." },
-  { category: "Anti-Malware", weight: "12.5%", description: "Virus scanning and sandboxing configuration across protocols (HTTP, HTTPS, FTP, SMTP, etc.)." },
+  { category: "Web Filtering", description: "Percentage of enabled WAN rules with HTTP/HTTPS/ANY service that have a Web Filter policy applied." },
+  { category: "Intrusion Prevention", description: "Percentage of enabled WAN rules with IPS enabled. Higher coverage = higher score." },
+  { category: "Application Control", description: "Percentage of enabled WAN rules with Application Control active." },
+  { category: "Authentication", description: "MFA/OTP configuration status across admin, VPN, and user portals. Deductions per area where MFA is disabled." },
+  { category: "Logging", description: "Proportion of rules with traffic logging enabled. Disabled logging creates audit blind spots." },
+  { category: "Rule Hygiene", description: "Composite score: penalises broad source/dest rules, ANY service rules, duplicate/overlapping rules, disabled WAN rules, and absent SSL/TLS decryption." },
+  { category: "Admin Access", description: "Evaluates exposure of management services (HTTPS admin, SSH, SNMP) to untrusted zones like WAN." },
+  { category: "Anti-Malware", description: "Virus scanning and sandboxing configuration across protocols (HTTP, HTTPS, FTP, SMTP, etc.)." },
+  { category: "Network Security", description: "VPN encryption strength, DoS/spoof protection, wireless network security, SNMP configuration, and external logging (syslog)." },
 ];
 
 export function ScoringMethodology({ onClose }: { onClose: () => void }) {
@@ -19,7 +20,7 @@ export function ScoringMethodology({ onClose }: { onClose: () => void }) {
         <button onClick={onClose} aria-label="Close scoring methodology" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
       </div>
       <p className="text-[10px] text-muted-foreground leading-relaxed">
-        The security risk score is an equal-weighted average of 8 category scores (each 0–100). The overall score determines the grade: A (90+), B (75+), C (60+), D (40+), F (&lt;40).
+        The security risk score is an equal-weighted average of 9 category scores (each 0–100). The overall score determines the grade: A (90+), B (75+), C (60+), D (40+), F (&lt;40).
       </p>
       <div className="space-y-1.5">
         {METHODOLOGY_ITEMS.map((m) => (

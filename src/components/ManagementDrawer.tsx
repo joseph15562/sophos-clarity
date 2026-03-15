@@ -1,15 +1,26 @@
-import { useState, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint } from "lucide-react";
+import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint, Code, Eye } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ApiDocumentation } from "@/components/ApiDocumentation";
+import { ClientPortalView, type Assessment } from "@/components/ClientPortalView";
+import { loadHistory } from "@/lib/assessment-history";
+import { loadHistoryCloud } from "@/lib/assessment-cloud";
+import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
 
 const TenantDashboard = lazy(() => import("@/components/TenantDashboard").then((m) => ({ default: m.TenantDashboard })));
 const LicenceExpiryWidget = lazy(() => import("@/components/LicenceExpiryWidget").then((m) => ({ default: m.LicenceExpiryWidget })));
 const AssessmentScheduler = lazy(() => import("@/components/AssessmentScheduler").then((m) => ({ default: m.AssessmentScheduler })));
 const SavedReportsLibrary = lazy(() => import("@/components/SavedReportsLibrary").then((m) => ({ default: m.SavedReportsLibrary })));
 const AssessmentHistory = lazy(() => import("@/components/AssessmentHistory").then((m) => ({ default: m.AssessmentHistory })));
+const ConfigHistory = lazy(() => import("@/components/ConfigHistory").then((m) => ({ default: m.ConfigHistory })));
 const CentralIntegration = lazy(() => import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })));
 const InviteStaff = lazy(() => import("@/components/InviteStaff").then((m) => ({ default: m.InviteStaff })));
 const AuditLog = lazy(() => import("@/components/AuditLog").then((m) => ({ default: m.AuditLog })));
@@ -17,6 +28,7 @@ const AlertSettings = lazy(() => import("@/components/AlertSettings").then((m) =
 const AgentManager = lazy(() => import("@/components/AgentManager").then((m) => ({ default: m.AgentManager })));
 const MfaEnrollment = lazy(() => import("@/components/MfaEnrollment").then((m) => ({ default: m.MfaEnrollment })));
 const PasskeyManager = lazy(() => import("@/components/PasskeyManager").then((m) => ({ default: m.PasskeyManager })));
+const ScoreTrendChart = lazy(() => import("@/components/ScoreTrendChart").then((m) => ({ default: m.ScoreTrendChart })));
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -49,6 +61,8 @@ interface Props {
   onRerunSetup?: () => void;
   localMode: boolean;
   onLocalModeChange: (enabled: boolean) => void;
+  /** Optional: called when client clicks "Download Latest Report" in Client View preview */
+  onDownloadReport?: () => void;
 }
 
 function Skeleton() {
@@ -211,7 +225,53 @@ export function ManagementDrawer({
   onRerunSetup,
   localMode,
   onLocalModeChange,
+  onDownloadReport,
 }: Props) {
+  const { org, isViewerOnly, canManageTeam } = useAuth();
+  const [clientViewOpen, setClientViewOpen] = useState(false);
+  const [clientViewAssessments, setClientViewAssessments] = useState<Assessment[]>([]);
+  const [clientViewScoreHistory, setClientViewScoreHistory] = useState<ScoreHistoryEntry[]>([]);
+
+  useEffect(() => {
+    if (!clientViewOpen) return;
+    let cancelled = false;
+    (async () => {
+      const useCloud = !isGuest && !!org;
+      const snapshots = useCloud ? await loadHistoryCloud() : await loadHistory();
+      if (cancelled) return;
+      const assessments: Assessment[] = snapshots
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .map((s) => ({
+          id: s.id,
+          date: new Date(s.timestamp).toISOString(),
+          score: s.overallScore,
+          grade: s.overallGrade,
+          label: s.environment,
+        }));
+      if (Object.keys(analysisResults).length > 0) {
+        const { computeRiskScore } = await import("@/lib/risk-score");
+        const scores = Object.values(analysisResults).map((r) => computeRiskScore(r).overall);
+        const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        const grade = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+        assessments.unshift({
+          id: "current",
+          date: new Date().toISOString(),
+          score: avgScore,
+          grade,
+          label: "Current",
+        });
+      }
+      setClientViewAssessments(assessments);
+
+      if (org?.id) {
+        const history = await loadScoreHistory(org.id, undefined, 30);
+        if (!cancelled) setClientViewScoreHistory(history);
+      } else {
+        setClientViewScoreHistory([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientViewOpen, isGuest, org, analysisResults]);
   const visibleTabs = TABS.filter((t) => t.guestVisible || !isGuest);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? visibleTabs[0]?.id ?? "reports");
 
@@ -239,13 +299,39 @@ export function ManagementDrawer({
               {isGuest ? "Reports & assessment history" : "Dashboard, reports & settings"}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close panel"
-            className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            {canManageTeam && (
+              <Dialog open={clientViewOpen} onOpenChange={setClientViewOpen}>
+                <DialogTrigger asChild>
+                  <button
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    title="Preview client portal view"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Client View
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+                  <div className="min-h-[400px]">
+                    <ClientPortalView
+                      customerName={customerName || "Customer"}
+                      assessments={clientViewAssessments}
+                      scoreHistory={clientViewScoreHistory}
+                      onDownloadReport={onDownloadReport}
+                      orgId={org?.id}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Close panel"
+              className="p-1.5 rounded-lg hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -273,6 +359,13 @@ export function ManagementDrawer({
               <Suspense fallback={<Skeleton />}>
                 <TenantDashboard />
               </Suspense>
+              {!isGuest && org?.id && (
+                <Suspense fallback={<Skeleton />}>
+                  <div className="px-4 pb-2">
+                    <ScoreTrendChart orgId={org.id} />
+                  </div>
+                </Suspense>
+              )}
               <Suspense fallback={<Skeleton />}>
                 <div className="px-4 pb-4 space-y-4">
                   <LicenceExpiryWidget />
@@ -291,7 +384,7 @@ export function ManagementDrawer({
           )}
 
           {currentTab === "history" && (
-            <div className="p-4">
+            <div className="p-4 space-y-6">
               {hasFiles ? (
                 <Suspense fallback={<Skeleton />}>
                   <AssessmentHistory
@@ -308,6 +401,9 @@ export function ManagementDrawer({
                   </p>
                 </div>
               )}
+              <Suspense fallback={<Skeleton />}>
+                <ConfigHistory refreshTrigger={savedReportsTrigger} />
+              </Suspense>
             </div>
           )}
 
@@ -360,7 +456,7 @@ export function ManagementDrawer({
                 </div>
               </SettingsSection>
               )}
-              {!localMode && (
+              {!localMode && !isViewerOnly && (
               <SettingsSection title="FireComply Connector Agents" icon={<Plug className="h-3.5 w-3.5 text-[#6B5BFF]" />} subtitle="Automated firewall monitoring agents">
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
@@ -369,6 +465,7 @@ export function ManagementDrawer({
                 </div>
               </SettingsSection>
               )}
+              {canManageTeam && (
               <SettingsSection title="Team Management" icon={<Users className="h-3.5 w-3.5 text-[#2006F7]" />} subtitle="Invite and manage team members">
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
@@ -376,6 +473,7 @@ export function ManagementDrawer({
                   </Suspense>
                 </div>
               </SettingsSection>
+              )}
               <SettingsSection title="Security" icon={<Fingerprint className="h-3.5 w-3.5 text-[#00995a]" />} subtitle="MFA and passkey settings">
                 <div className="p-4 space-y-6">
                   <Suspense fallback={<Skeleton />}>
@@ -396,6 +494,21 @@ export function ManagementDrawer({
                   <Suspense fallback={<Skeleton />}>
                     <AlertSettings />
                   </Suspense>
+                </div>
+              </SettingsSection>
+              <SettingsSection title="API Documentation" icon={<Code className="h-3.5 w-3.5 text-[#6B5BFF]" />} subtitle="REST API reference">
+                <div className="p-4">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className="flex items-center gap-2 text-[11px] font-medium text-[#2006F7] dark:text-[#00EDFF] hover:underline">
+                        <Code className="h-3.5 w-3.5" />
+                        View API Reference
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                      <ApiDocumentation />
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </SettingsSection>
               <SettingsSection title="How We Handle Your Data" icon={<Shield className="h-3.5 w-3.5 text-[#00995a]" />} subtitle="Data privacy and governance">

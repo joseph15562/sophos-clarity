@@ -56,7 +56,7 @@ describe("computeRiskScore", () => {
       const score = computeRiskScore(result);
       expect(score.grade).toBe("A");
       expect(score.overall).toBeGreaterThanOrEqual(90);
-      expect(score.categories).toHaveLength(8);
+      expect(score.categories).toHaveLength(9);
     });
 
     it("has all category scores at 100 for perfect posture", () => {
@@ -86,7 +86,7 @@ describe("computeRiskScore", () => {
       const score = computeRiskScore(result);
       expect(score.overall).toBeDefined();
       expect(score.grade).toBeDefined();
-      expect(score.categories).toHaveLength(8);
+      expect(score.categories).toHaveLength(9);
     });
 
     it("returns 100 for Web Filtering and IPS when no WAN rules (pctScore 0/0 = 100)", () => {

@@ -4,12 +4,17 @@
  * These will improve over time as more assessments are collected.
  */
 
+export interface CategoryScores {
+  [category: string]: number;
+}
+
 export interface BenchmarkData {
   overall: number;
   categories: Record<string, number>;
   sampleSize: number;
 }
 
+// Static fallback benchmarks — will be replaced by live aggregated data when available
 const BENCHMARKS: Record<string, BenchmarkData> = {
   "Education": {
     overall: 58,
@@ -101,6 +106,35 @@ export function getBenchmark(environment: string): BenchmarkData {
     if (normalised.toLowerCase().includes(key.toLowerCase())) return data;
   }
   return DEFAULT_BENCHMARK;
+}
+
+/**
+ * Attempts to load real benchmark data from Supabase.
+ * Returns null when no live data is available yet.
+ */
+export async function fetchLiveBenchmarks(environment: string): Promise<BenchmarkData | null> {
+  // TODO: Load from Supabase benchmarks table when available
+  return null;
+}
+
+/**
+ * Main entry point: tries live benchmarks first, then falls back to static data.
+ */
+export async function getBenchmarkData(environment: string): Promise<BenchmarkData> {
+  const live = await fetchLiveBenchmarks(environment);
+  if (live) return live;
+  return getBenchmark(environment);
+}
+
+/**
+ * Submits anonymised scores to the benchmarks table for aggregation.
+ * No-op stub — will push to Supabase when the benchmarks table is ready.
+ */
+export async function submitAnonymousScore(
+  _environment: string,
+  _scores: CategoryScores,
+): Promise<void> {
+  // Will push anonymised scores to benchmarks table in the future
 }
 
 export function getBenchmarkLabel(environment: string): string {

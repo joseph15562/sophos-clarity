@@ -261,7 +261,7 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
       </div>
 
       {/* Flow table */}
-      <div className="max-h-72 overflow-y-auto rounded-lg border border-border">
+      <div className="max-h-72 overflow-y-auto overflow-x-auto rounded-lg border border-border">
         {filteredFlows.length === 0 && problemsOnly ? (
           <div className="flex items-center justify-center py-12 px-4">
             <span className="inline-flex items-center gap-2 text-[11px] font-medium text-[#00995a] dark:text-[#00F2B3] border border-[#00995a]/20 bg-[#00995a]/5 rounded-lg px-4 py-2">

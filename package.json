@@ -11,6 +11,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:install": "npx playwright install",
     "update-browserslist": "npm update caniuse-lite browserslist"
   },
   "dependencies": {
@@ -52,6 +55,7 @@
     "dompurify": "^3.3.1",
     "embla-carousel-react": "^8.6.0",
     "file-saver": "^2.0.5",
+    "html-to-image": "^1.11.13",
     "input-otp": "^1.4.2",
     "jszip": "^3.10.1",
     "lucide-react": "^0.462.0",
@@ -73,6 +77,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",
