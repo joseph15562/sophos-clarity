@@ -12,7 +12,7 @@ interface FirewallEntry {
   username: string;
   password: string;
   skipSslVerify: boolean;
-  testResult?: { ok: boolean; firmwareVersion?: string; error?: string };
+  testResult?: { ok: boolean; firmwareVersion?: string; serialNumber?: string; hardwareModel?: string; error?: string };
 }
 
 const SCHEDULES = [
@@ -150,6 +150,28 @@ export function SetupWizard({ onComplete }: Props) {
         {step === "firewalls" && (
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-semibold text-foreground">Step 2 — Add Firewalls</h2>
+
+            <details className="border border-border rounded-lg bg-muted/30 text-xs">
+              <summary className="px-3 py-2 cursor-pointer text-[#6B5BFF] font-medium select-none hover:underline">
+                How to set up API access on your firewall
+              </summary>
+              <div className="px-3 pb-3 pt-1 space-y-2 text-muted-foreground leading-relaxed">
+                <p className="font-semibold text-foreground">1. Create a read-only admin profile</p>
+                <p>Administration → Device access → Admin and user settings → Administration profiles → <strong>Add</strong>. Name it <code className="bg-muted px-1 rounded">API read only</code> and set every category to <strong>Read-only</strong>.</p>
+
+                <p className="font-semibold text-foreground">2. Create the service account</p>
+                <p>Authentication → Users → <strong>Add</strong>. Set username to <code className="bg-muted px-1 rounded">firecomply-api</code>, user type <strong>Administrator</strong>, profile <strong>API read only</strong>. Use a strong password. <strong>Do not enable OTP/MFA</strong> — the XML API does not support interactive MFA tokens.</p>
+
+                <p className="font-semibold text-foreground">3. Enable the API</p>
+                <p>Backup &amp; firmware → API → toggle <strong>On</strong>.</p>
+
+                <p className="font-semibold text-foreground">4. Restrict API access by IP</p>
+                <p>On the same page, under <strong>Allowed IP addresses</strong>, add the IP of this machine only.</p>
+
+                <p className="text-[10px] text-muted-foreground/70 pt-1">A non-MFA service account is compliant when restricted to read-only access, IP-locked, and using a strong password. See docs/firewall-api-setup.md for the full guide and compliance notes.</p>
+              </div>
+            </details>
+
             {firewalls.map((fw, idx) => (
               <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between">
@@ -172,7 +194,10 @@ export function SetupWizard({ onComplete }: Props) {
                     Test Connection
                   </button>
                   {fw.testResult?.ok && (
-                    <span className="text-xs text-green-500">✓ {fw.testResult.firmwareVersion}</span>
+                    <span className="text-xs text-green-500">
+                      ✓ {fw.testResult.firmwareVersion}
+                      {fw.testResult.serialNumber && <span className="text-muted-foreground ml-2">SN: {fw.testResult.serialNumber}</span>}
+                    </span>
                   )}
                   {fw.testResult && !fw.testResult.ok && (
                     <span className="text-xs text-red-500">✗ {fw.testResult.error}</span>
@@ -212,7 +237,7 @@ export function SetupWizard({ onComplete }: Props) {
             <div className="text-xs space-y-1 text-muted-foreground">
               <p><strong className="text-foreground">Firewalls:</strong> {firewalls.length}</p>
               {firewalls.map((fw, i) => (
-                <p key={i} className="pl-3">• {fw.label || fw.host}:{fw.port} {fw.testResult?.ok ? `(${fw.testResult.firmwareVersion})` : ""}</p>
+                <p key={i} className="pl-3">• {fw.label || fw.host}:{fw.port} {fw.testResult?.ok ? `(${fw.testResult.firmwareVersion}${fw.testResult.serialNumber ? ` · SN: ${fw.testResult.serialNumber}` : ""})` : ""}</p>
               ))}
               <p><strong className="text-foreground">Schedule:</strong> {SCHEDULES.find((s) => s.value === schedule)?.label}</p>
             </div>

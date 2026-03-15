@@ -37,10 +37,12 @@ export function Dashboard() {
   const [paused, setPaused] = useState(false);
   const [queueSize, setQueueSize] = useState(0);
   const [heartbeat, setHeartbeat] = useState<HeartbeatInfo | null>(null);
+  const [running, setRunning] = useState(false);
 
   useEffect(() => {
     const update = (result: any) => {
       if (!result) return;
+      setRunning(result.running ?? false);
       setStatuses(result.statuses ?? []);
       setPaused(result.paused ?? false);
       setQueueSize(result.queueSize ?? 0);
@@ -86,10 +88,16 @@ export function Dashboard() {
       <div className="rounded-lg border border-border bg-card px-4 py-2.5 flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span className={`inline-block h-2 w-2 rounded-full ${
-            heartbeat?.lastOk ? "bg-green-500" : heartbeat?.lastSentAt ? "bg-red-500" : "bg-gray-400"
+            heartbeat?.lastOk ? "bg-green-500"
+              : heartbeat?.lastSentAt ? "bg-red-500"
+              : running ? "bg-amber-400 animate-pulse"
+              : "bg-gray-400"
           }`} />
           <span className="text-[11px] font-medium text-foreground">
-            {heartbeat?.lastOk ? "Connected" : heartbeat?.lastSentAt ? "Disconnected" : "Connecting…"}
+            {heartbeat?.lastOk ? "Connected"
+              : heartbeat?.lastSentAt ? "Disconnected"
+              : running ? "Connecting…"
+              : "Service not running"}
           </span>
         </div>
         {heartbeat?.lastSentAt && (

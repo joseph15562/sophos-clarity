@@ -133,6 +133,7 @@ export class Scheduler {
         password: fw.password, skipSslVerify: fw.skipSslVerify,
       });
       if (deviceInfo.serialNumber) log.info(`Serial: ${deviceInfo.serialNumber}`, label);
+      else log.warn("Could not retrieve serial number — check API profile permissions", label);
       if (deviceInfo.hardwareModel) log.info(`Model: ${deviceInfo.hardwareModel}`, label);
 
       this.lastDeviceInfo = {

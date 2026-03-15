@@ -1,5 +1,5 @@
 import { app, ipcMain } from "electron";
-import { login } from "../firewall/auth";
+import { login, getDeviceInfo } from "../firewall/auth";
 import { detectCapabilities } from "../firewall/version";
 import { loadConfig, saveConfig, validateConfig, type AppConfig } from "../config";
 import { getLogBuffer, onLog } from "../logger";
@@ -8,7 +8,8 @@ import type { BackgroundService } from "./service";
 
 export function registerIpcHandlers(
   configPath: string,
-  getService: () => BackgroundService | null
+  getService: () => BackgroundService | null,
+  restartService?: (config: AppConfig) => void
 ): void {
   ipcMain.handle("api:test-key", async (_event, url: string, key: string) => {
     try {
@@ -32,6 +33,7 @@ export function registerIpcHandlers(
     const errors = validateConfig(config);
     if (errors.length) return { ok: false, errors };
     saveConfig(configPath, config);
+    restartService?.(config);
     return { ok: true };
   });
 
@@ -50,10 +52,15 @@ export function registerIpcHandlers(
       }
 
       const caps = detectCapabilities(result.apiVersion);
+      const creds = { host: fw.host, port: fw.port, username: fw.username, password: fw.password, skipSslVerify: fw.skipSslVerify ?? true };
+      const deviceInfo = await getDeviceInfo(creds);
+
       return {
         ok: true,
         firmwareVersion: caps.firmwareVersion,
         apiVersion: result.apiVersion,
+        serialNumber: deviceInfo.serialNumber ?? undefined,
+        hardwareModel: deviceInfo.hardwareModel ?? undefined,
         capabilities: {
           hasAtp: caps.hasAtp,
           hasMdr: caps.hasMdr,

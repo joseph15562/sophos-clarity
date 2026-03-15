@@ -3,7 +3,7 @@ import path from "node:path";
 import { setupTray } from "./tray";
 import { registerIpcHandlers } from "./ipc-handlers";
 import { BackgroundService } from "./service";
-import { loadConfig } from "../config";
+import { loadConfig, type AppConfig } from "../config";
 import { initLogger } from "../logger";
 
 let mainWindow: BrowserWindow | null = null;
@@ -11,6 +11,13 @@ let service: BackgroundService | null = null;
 
 const CONFIG_PATH = path.join(app.getPath("userData"), "config.json");
 const isDev = !app.isPackaged;
+
+function startService(config: AppConfig): void {
+  service?.stop();
+  initLogger(config.logFile, config.logLevel);
+  service = new BackgroundService(config, app.getPath("userData"));
+  service.start();
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -49,11 +56,10 @@ app.whenReady().then(() => {
 
   createWindow();
   setupTray(mainWindow!, () => service?.runNow(), () => service?.togglePause());
-  registerIpcHandlers(CONFIG_PATH, () => service);
+  registerIpcHandlers(CONFIG_PATH, () => service, startService);
 
   if (config) {
-    service = new BackgroundService(config, app.getPath("userData"));
-    service.start();
+    startService(config);
   }
 });
 

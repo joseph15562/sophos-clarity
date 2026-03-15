@@ -114,19 +114,38 @@ export interface DeviceInfo {
 }
 
 export async function getDeviceInfo(creds: FirewallCredentials): Promise<DeviceInfo> {
+  let serial: string | null = null;
+  let model: string | null = null;
+  let regStatus: string | null = null;
+
+  // Try LicenseDetails first — most reliable source for serial on SFOS
   try {
-    const xml = await apiRequest(creds, "<Get><RegistrationDetails/></Get>");
+    const licXml = await apiRequest(creds, "<Get><LicenseDetails/></Get>");
+    serial = licXml.match(/<ApplianceKey>([^<]+)<\/ApplianceKey>/)?.[1]
+          ?? licXml.match(/<SerialNumber>([^<]+)<\/SerialNumber>/)?.[1]
+          ?? null;
+    model = licXml.match(/<Model>([^<]+)<\/Model>/)?.[1]
+         ?? licXml.match(/<ApplianceModel>([^<]+)<\/ApplianceModel>/)?.[1]
+         ?? null;
+  } catch { /* fall through to next attempt */ }
 
-    const serial = xml.match(/<SerialNumber>([^<]+)<\/SerialNumber>/)?.[1] ?? null;
-    const model = xml.match(/<Model>([^<]+)<\/Model>/)?.[1]
-                ?? xml.match(/<ApplianceModel>([^<]+)<\/ApplianceModel>/)?.[1]
-                ?? null;
-    const regStatus = xml.match(/<RegistrationStatus>([^<]+)<\/RegistrationStatus>/)?.[1] ?? null;
-
-    return { serialNumber: serial, hardwareModel: model, registrationStatus: regStatus };
-  } catch {
-    return { serialNumber: null, hardwareModel: null, registrationStatus: null };
+  // Fallback to RegistrationDetails
+  if (!serial) {
+    try {
+      const regXml = await apiRequest(creds, "<Get><RegistrationDetails/></Get>");
+      serial = regXml.match(/<SerialNumber>([^<]+)<\/SerialNumber>/)?.[1]
+            ?? regXml.match(/<ApplianceKey>([^<]+)<\/ApplianceKey>/)?.[1]
+            ?? null;
+      if (!model) {
+        model = regXml.match(/<Model>([^<]+)<\/Model>/)?.[1]
+             ?? regXml.match(/<ApplianceModel>([^<]+)<\/ApplianceModel>/)?.[1]
+             ?? null;
+      }
+      regStatus = regXml.match(/<RegistrationStatus>([^<]+)<\/RegistrationStatus>/)?.[1] ?? null;
+    } catch { /* both queries failed */ }
   }
+
+  return { serialNumber: serial, hardwareModel: model, registrationStatus: regStatus };
 }
 
 function escapeXml(str: string): string {
