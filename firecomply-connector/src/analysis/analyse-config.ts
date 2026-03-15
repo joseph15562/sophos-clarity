@@ -24,6 +24,10 @@ function getHeaders(sections: ExtractedSections, name: string): string[] {
   return sections[name]?.tables?.[0]?.headers ?? [];
 }
 
+function getDetails(sections: ExtractedSections, name: string): Array<{ title: string; fields: Record<string, string> }> {
+  return sections[name]?.details ?? [];
+}
+
 export function analyseConfig(sections: ExtractedSections): AnalysisResult {
   findingCounter = 0;
   const findings: Finding[] = [];
@@ -191,6 +195,260 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       section: "Local Service ACL",
       confidence: "high",
     });
+  }
+
+  // ── Admin / authentication checks ──
+
+  const adminDetails = getDetails(sections, "Admin Settings");
+  if (adminDetails.length) {
+    const admin = adminDetails[0].fields;
+    const loginSecurity = (admin["LoginSecurity"] ?? admin["WebAdminSettings.LoginSecurity"] ?? "").toLowerCase();
+    if (!loginSecurity || loginSecurity === "none" || loginSecurity === "disable") {
+      findings.push({
+        id: nextId(),
+        severity: "high",
+        title: "Admin login security (CAPTCHA/lockout) not enabled",
+        detail: "Without login security, the admin portal is vulnerable to brute-force attacks. Enable CAPTCHA or account lockout.",
+        section: "Admin Settings",
+        confidence: "medium",
+      });
+    }
+  }
+
+  // OTP / MFA checks
+  const otpDetails = getDetails(sections, "OTP / MFA Settings");
+  if (otpDetails.length) {
+    const otp = otpDetails[0].fields;
+    const otpEnabled = (otp["OTPEnabled"] ?? otp["Status"] ?? "").toLowerCase();
+    if (otpEnabled === "disable" || otpEnabled === "off" || otpEnabled === "false") {
+      findings.push({
+        id: nextId(),
+        severity: "high",
+        title: "Multi-factor authentication (OTP) is disabled",
+        detail: "MFA adds a critical layer of authentication security. Enable OTP for admin and VPN users.",
+        section: "OTP / MFA Settings",
+        confidence: "high",
+      });
+    }
+  } else {
+    findings.push({
+      id: nextId(),
+      severity: "medium",
+      title: "OTP / MFA configuration not found",
+      detail: "Could not determine MFA status. Verify that OTP is enabled for admin and VPN portal authentication.",
+      section: "OTP / MFA Settings",
+      confidence: "low",
+    });
+  }
+
+  // ── DNS checks ──
+
+  const dnsDetails = getDetails(sections, "DNS Configuration");
+  if (dnsDetails.length) {
+    const dns = dnsDetails[0].fields;
+    const dns1 = dns["DNS1"] ?? dns["PrimaryDNS"] ?? "";
+    const dns2 = dns["DNS2"] ?? dns["SecondaryDNS"] ?? "";
+    if (!dns1 && !dns2) {
+      findings.push({
+        id: nextId(),
+        severity: "medium",
+        title: "No DNS servers configured",
+        detail: "The firewall has no DNS servers configured, which may affect name resolution for security services.",
+        section: "DNS Configuration",
+        confidence: "medium",
+      });
+    }
+  }
+
+  // ── Syslog / logging checks ──
+
+  const syslogRows = getRows(sections, "Syslog Servers");
+  if (syslogRows.length === 0 && !sections["Syslog Servers"]) {
+    findings.push({
+      id: nextId(),
+      severity: "medium",
+      title: "No syslog server configured",
+      detail: "Without centralised logging, security events may be lost if the firewall is compromised or logs rotate. Configure an external syslog server.",
+      section: "Syslog Servers",
+      confidence: "medium",
+    });
+  }
+
+  // ── Backup checks ──
+
+  const backupDetails = getDetails(sections, "Backup & Restore");
+  if (backupDetails.length) {
+    const backup = backupDetails[0].fields;
+    const schedMode = (backup["Mode"] ?? backup["BackupMode"] ?? backup["ScheduleBackup"] ?? "").toLowerCase();
+    if (schedMode === "disable" || schedMode === "off" || schedMode === "manual" || !schedMode) {
+      findings.push({
+        id: nextId(),
+        severity: "medium",
+        title: "Automated backups not configured",
+        detail: "Without scheduled backups, configuration recovery after failure requires manual reconfiguration. Enable scheduled backups to a remote location.",
+        section: "Backup & Restore",
+        confidence: "medium",
+      });
+    }
+  }
+
+  // ── VPN checks ──
+
+  const vpnConns = getRows(sections, "IPSec VPN Connections");
+  if (vpnConns.length) {
+    const weakCrypto = vpnConns.filter((r) => {
+      const enc = (r["EncryptionAlgorithm"] ?? r["Encryption"] ?? "").toLowerCase();
+      return enc.includes("des") && !enc.includes("3des") && !enc.includes("aes");
+    });
+    if (weakCrypto.length > 0) {
+      findings.push({
+        id: nextId(),
+        severity: "high",
+        title: `${weakCrypto.length} IPSec VPN connection${weakCrypto.length > 1 ? "s" : ""} using weak encryption (DES)`,
+        detail: "DES encryption is considered broken. Upgrade to AES-256 or AES-128 at minimum.",
+        section: "IPSec VPN Connections",
+        confidence: "medium",
+      });
+    }
+
+    const disabledPfs = vpnConns.filter((r) => {
+      const pfs = (r["PFS"] ?? r["PerfectForwardSecrecy"] ?? "").toLowerCase();
+      return pfs === "disable" || pfs === "off" || pfs === "no" || pfs === "false";
+    });
+    if (disabledPfs.length > 0) {
+      findings.push({
+        id: nextId(),
+        severity: "medium",
+        title: `${disabledPfs.length} IPSec VPN${disabledPfs.length > 1 ? "s" : ""} without Perfect Forward Secrecy`,
+        detail: "PFS ensures that past sessions cannot be decrypted if keys are later compromised. Enable PFS on all VPN connections.",
+        section: "IPSec VPN Connections",
+        confidence: "medium",
+      });
+    }
+  }
+
+  const sslVpn = getRows(sections, "SSL VPN Policies");
+  if (sslVpn.length) {
+    const fullTunnel = sslVpn.filter((r) => {
+      const policy = (r["PolicyType"] ?? r["Policy"] ?? "").toLowerCase();
+      return policy.includes("full") || policy.includes("tunnel");
+    });
+    if (fullTunnel.length === 0) {
+      findings.push({
+        id: nextId(),
+        severity: "low",
+        title: "No full-tunnel SSL VPN policies detected",
+        detail: "Split-tunnel VPN allows some traffic to bypass the firewall's security controls. Consider full-tunnel for remote workers.",
+        section: "SSL VPN Policies",
+        confidence: "low",
+      });
+    }
+  }
+
+  // ── DoS protection ──
+
+  const dosDetails = getDetails(sections, "DoS Protection");
+  if (dosDetails.length) {
+    const dos = dosDetails[0].fields;
+    const synFlood = (dos["SYNFloodProtection"] ?? dos["SynFlood"] ?? dos["Status"] ?? "").toLowerCase();
+    if (synFlood === "disable" || synFlood === "off") {
+      findings.push({
+        id: nextId(),
+        severity: "medium",
+        title: "SYN flood protection is disabled",
+        detail: "SYN flood attacks can exhaust connection state tables. Enable SYN flood protection in DoS settings.",
+        section: "DoS Protection",
+        confidence: "medium",
+      });
+    }
+  }
+
+  // ── High Availability ──
+
+  const haDetails = getDetails(sections, "High Availability");
+  if (haDetails.length === 0 || !sections["High Availability"]) {
+    findings.push({
+      id: nextId(),
+      severity: "low",
+      title: "High availability not configured",
+      detail: "Without HA, a single firewall failure causes a complete network outage. Consider Active-Passive HA for business continuity.",
+      section: "High Availability",
+      confidence: "low",
+    });
+  }
+
+  // ── ATP (Advanced Threat Protection) ──
+
+  const atpDetails = getDetails(sections, "Advanced Threat Protection");
+  if (atpDetails.length) {
+    const atp = atpDetails[0].fields;
+    const atpStatus = (atp["Status"] ?? atp["ATPStatus"] ?? "").toLowerCase();
+    if (atpStatus === "disable" || atpStatus === "off") {
+      findings.push({
+        id: nextId(),
+        severity: "high",
+        title: "Advanced Threat Protection (ATP) is disabled",
+        detail: "ATP provides real-time threat intelligence and botnet/C2 detection. Enable ATP to protect against advanced threats.",
+        section: "Advanced Threat Protection",
+        confidence: "high",
+      });
+    }
+  }
+
+  // ── Zero Day Protection ──
+
+  const zdDetails = getDetails(sections, "Zero Day Protection");
+  if (zdDetails.length) {
+    const zd = zdDetails[0].fields;
+    const zdStatus = (zd["Status"] ?? zd["SandstormEnabled"] ?? "").toLowerCase();
+    if (zdStatus === "disable" || zdStatus === "off" || zdStatus === "false") {
+      findings.push({
+        id: nextId(),
+        severity: "medium",
+        title: "Zero Day Protection (Sandstorm) is disabled",
+        detail: "Zero Day Protection sends suspicious files to Sophos cloud sandboxing. Enable it for enhanced malware detection.",
+        section: "Zero Day Protection",
+        confidence: "medium",
+      });
+    }
+  }
+
+  // ── Spoof Prevention ──
+
+  const spoofDetails = getDetails(sections, "Spoof Prevention");
+  if (spoofDetails.length) {
+    const spoof = spoofDetails[0].fields;
+    const spoofStatus = (spoof["Status"] ?? spoof["IPSpoofPrevention"] ?? "").toLowerCase();
+    if (spoofStatus === "disable" || spoofStatus === "off") {
+      findings.push({
+        id: nextId(),
+        severity: "medium",
+        title: "IP spoof prevention is disabled",
+        detail: "IP spoofing allows attackers to masquerade as trusted sources. Enable spoof prevention on all zones.",
+        section: "Spoof Prevention",
+        confidence: "medium",
+      });
+    }
+  }
+
+  // ── Wireless security ──
+
+  const wirelessRows = getRows(sections, "Wireless Networks");
+  if (wirelessRows.length) {
+    const weakWifi = wirelessRows.filter((r) => {
+      const enc = (r["EncryptionMode"] ?? r["SecurityMode"] ?? r["Encryption"] ?? "").toLowerCase();
+      return enc.includes("wep") || enc.includes("wpa ") || (enc.includes("wpa") && !enc.includes("wpa2") && !enc.includes("wpa3"));
+    });
+    if (weakWifi.length > 0) {
+      findings.push({
+        id: nextId(),
+        severity: "high",
+        title: `${weakWifi.length} wireless network${weakWifi.length > 1 ? "s" : ""} using weak encryption (WEP/WPA)`,
+        detail: "WEP and WPA are considered insecure. Upgrade all wireless networks to WPA2 or WPA3.",
+        section: "Wireless Networks",
+        confidence: "medium",
+      });
+    }
   }
 
   return { stats, findings, inspectionPosture, ruleColumns: getHeaders(sections, "Firewall Rules") };

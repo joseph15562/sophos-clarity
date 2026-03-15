@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { login, getDeviceInfo } from "./firewall/auth";
 import { detectCapabilities } from "./firewall/version";
 import { exportAllEntities } from "./firewall/export-config";
-import { parseEntityResults } from "./firewall/parse-entities";
+import { parseEntityResults, buildRawConfig } from "./firewall/parse-entities";
 import { collectThreatStatus } from "./firewall/threat-status";
 import { analyseConfig } from "./analysis/analyse-config";
 import { computeRiskScore } from "./analysis/risk-score";
@@ -155,13 +155,14 @@ export class Scheduler {
       const successCount = entities.filter((e) => e.success).length;
       log.info(`Retrieved ${successCount}/${entities.length} entity types`, label);
 
-      // Parse to ExtractedSections
+      // Parse to ExtractedSections + raw config
       const sections = parseEntityResults(entities);
+      const rawConfig = buildRawConfig(entities);
 
       // Analyse
       const analysis = analyseConfig(sections);
       const riskScore = computeRiskScore(analysis);
-      log.info(`Score: ${riskScore.overall}/${riskScore.grade} — ${analysis.findings.length} findings`, label);
+      log.info(`Score: ${riskScore.overall}/${riskScore.grade} — ${analysis.findings.length} findings (${Object.keys(rawConfig).length} entity types captured)`, label);
 
       // Threat telemetry
       let threatStatus: ThreatStatus | null = null;
@@ -177,7 +178,7 @@ export class Scheduler {
       const payload = buildPayload(
         this.config.firewalls.length === 1 ? "" : fw.label,
         label, capabilities.firmwareVersion, AGENT_VERSION,
-        analysis, riskScore, threatStatus
+        analysis, riskScore, threatStatus, rawConfig
       );
 
       try {

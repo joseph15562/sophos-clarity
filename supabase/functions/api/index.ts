@@ -385,6 +385,7 @@ async function handleSubmit(
     threat_status: body.threat_status ?? null,
     drift,
     full_analysis: body.full_analysis ?? null,
+    raw_config: body.raw_config ?? null,
   });
 
   if (subError) return json({ error: subError.message }, 500);

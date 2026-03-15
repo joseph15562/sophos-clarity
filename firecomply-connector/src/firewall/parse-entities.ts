@@ -25,15 +25,8 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   textNodeName: "#text",
-  isArray: (name) => ARRAY_TAGS.has(name),
+  isArray: (_name, _jpath, isLeaf) => !isLeaf,
 });
-
-const ARRAY_TAGS = new Set([
-  "FirewallRule", "NATRule", "Zone", "IPHost", "Interface",
-  "WebFilterPolicy", "IPSPolicy", "LocalServiceACL", "SecurityGroup",
-  "AVPolicy", "SSLTLSInspectionRule", "SophosXOpsThreatFeeds",
-  "MDRThreatFeed", "NDREssentials", "ThirdPartyThreatFeed",
-]);
 
 const FIREWALL_RULE_FIELDS: [string, string][] = [
   ["Name", "Rule Name"],
@@ -96,7 +89,7 @@ function parseNatRules(entities: unknown[]): TableData {
   return { headers, rows };
 }
 
-function parseGenericEntities(entities: unknown[], entityType: string): TableData {
+function parseGenericEntities(entities: unknown[], _entityType: string): TableData {
   if (!entities.length) return { headers: [], rows: [] };
   const first = entities[0] as Record<string, unknown>;
   const headers = Object.keys(first).filter((k) => !k.startsWith("@_") && typeof first[k] !== "object");
@@ -110,20 +103,76 @@ function parseGenericEntities(entities: unknown[], entityType: string): TableDat
 
 const SECTION_MAP: Record<string, string> = {
   FirewallRule: "Firewall Rules",
+  FirewallRuleGroup: "Firewall Rule Groups",
   NATRule: "NAT Rules",
   Zone: "Zones",
-  IPHost: "Networks",
-  Interface: "Interfaces & Ports",
-  WebFilterPolicy: "Web Filters",
-  IPSPolicy: "Intrusion Prevention",
   LocalServiceACL: "Local Service ACL",
-  SecurityGroup: "Groups",
-  AVPolicy: "Virus Scanning",
+  IPHost: "Networks",
+  IPHostGroup: "Network Groups",
+  FQDNHost: "FQDN Hosts",
+  FQDNHostGroup: "FQDN Host Groups",
+  CountryGroup: "Country Groups",
+  Services: "Services",
+  ServiceGroup: "Service Groups",
+  Interface: "Interfaces & Ports",
+  VLAN: "VLANs",
+  Alias: "Interface Aliases",
+  WebFilterPolicy: "Web Filters",
+  WebFilterSettings: "Web Filter Settings",
+  WebFilterAdvancedSettings: "Web Filter Advanced Settings",
+  WebFilterCategory: "Web Filter Categories",
+  WebFilterException: "Web Filter Exceptions",
+  WebFilterURLGroup: "Web Filter URL Groups",
+  IPSPolicy: "Intrusion Prevention",
+  IPSSwitch: "IPS Engine Settings",
   SSLTLSInspectionRule: "SSL/TLS Inspection Rules",
+  SSLTLSInspectionSettings: "SSL/TLS Settings",
+  DecryptionProfile: "Decryption Profiles",
+  ApplicationFilterPolicy: "Application Filter Policies",
+  ApplicationFilterCategory: "Application Filter Categories",
+  AVPolicy: "Virus Scanning",
+  MalwareProtection: "Malware Protection",
+  ZeroDayProtectionSettings: "Zero Day Protection",
+  AntiSpamRules: "Anti-Spam Rules",
+  VPNIPSecConnection: "IPSec VPN Connections",
+  VPNProfile: "VPN Profiles",
+  SSLVPNPolicy: "SSL VPN Policies",
+  SSLTunnelAccessSettings: "SSL VPN Tunnel Access",
+  SophosConnectClient: "Sophos Connect Client",
+  SDWANPolicyRoute: "SD-WAN Routes",
+  GatewayConfiguration: "Gateway Configuration",
+  QoSPolicy: "QoS Policies",
+  AdminSettings: "Admin Settings",
+  AdministrationProfile: "Admin Profiles",
+  OTPSettings: "OTP / MFA Settings",
+  SecurityGroup: "Groups",
+  UserGroup: "User Groups",
+  AuthenticationServer: "Authentication Servers",
+  DNS: "DNS Configuration",
+  DNSRequestRoute: "DNS Request Routes",
+  DHCPServer: "DHCP Servers",
+  SyslogServers: "Syslog Servers",
+  SNMPAgentConfiguration: "SNMP Agent Config",
+  BackupRestore: "Backup & Restore",
+  DoSSettings: "DoS Protection",
+  SpoofPrevention: "Spoof Prevention",
+  ProtocolSecurity: "Protocol Security",
+  Certificate: "Certificates",
+  WirelessNetworks: "Wireless Networks",
+  WirelessProtectionGlobalSettings: "Wireless Settings",
+  RED: "RED Configuration",
+  HAConfigure: "High Availability",
+  ATP: "Advanced Threat Protection",
   SophosXOpsThreatFeeds: "ATP Status",
   MDRThreatFeed: "MDR Status",
   NDREssentials: "NDR Status",
   ThirdPartyThreatFeed: "Third-party Feeds",
+  Notification: "Notifications",
+  Time: "Time Settings",
+  Schedule: "Schedules",
+  DataTransferPolicy: "Data Transfer Policies",
+  WAFSlowHTTP: "WAF Slow HTTP",
+  WAFTLS: "WAF TLS Settings",
 };
 
 /**
@@ -141,26 +190,27 @@ export function parseEntityResults(results: EntityResult[]): ExtractedSections {
       const response = parsed?.Response;
       if (!response) continue;
 
-      const entities = response[result.entityType];
-      if (!entities || (Array.isArray(entities) && entities.length === 0)) continue;
+      let entities = response[result.entityType];
+      if (!entities) continue;
+      if (!Array.isArray(entities)) entities = [entities];
+      if (entities.length === 0) continue;
 
-      const entityList = Array.isArray(entities) ? entities : [entities];
       const sectionName = SECTION_MAP[result.entityType] ?? result.entityType;
 
       let table: TableData;
       if (result.entityType === "FirewallRule") {
-        table = parseFirewallRules(entityList);
+        table = parseFirewallRules(entities);
       } else if (result.entityType === "NATRule") {
-        table = parseNatRules(entityList);
+        table = parseNatRules(entities);
       } else {
-        table = parseGenericEntities(entityList, result.entityType);
+        table = parseGenericEntities(entities, result.entityType);
       }
 
       sections[sectionName] = {
         tables: [table],
         text: "",
-        details: entityList.map((e: any) => ({
-          title: asString(e.Name ?? e.RuleName ?? sectionName),
+        details: entities.map((e: any) => ({
+          title: asString(e.Name ?? e.RuleName ?? e.Description ?? sectionName),
           fields: flattenObject(e),
         })),
       };
@@ -170,6 +220,32 @@ export function parseEntityResults(results: EntityResult[]): ExtractedSections {
   }
 
   return sections;
+}
+
+/**
+ * Build a raw config map from entity results: { entityType: parsedJSON }
+ * This gives the server a complete picture of the firewall config.
+ */
+export function buildRawConfig(results: EntityResult[]): Record<string, unknown> {
+  const raw: Record<string, unknown> = {};
+
+  for (const result of results) {
+    if (!result.success || !result.xml) continue;
+    try {
+      const parsed = parser.parse(result.xml);
+      const response = parsed?.Response;
+      if (!response) continue;
+      let entities = response[result.entityType];
+      if (!entities) continue;
+      if (!Array.isArray(entities)) entities = [entities];
+      if (entities.length === 0) continue;
+      raw[result.entityType] = entities;
+    } catch {
+      // skip unparseable
+    }
+  }
+
+  return raw;
 }
 
 function flattenObject(obj: unknown, prefix = ""): Record<string, string> {

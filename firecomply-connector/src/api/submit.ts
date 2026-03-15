@@ -23,6 +23,7 @@ export interface SubmissionPayload {
   finding_titles: string[];
   threat_status: ThreatStatus | null;
   full_analysis: AnalysisResult | null;
+  raw_config: Record<string, unknown> | null;
 }
 
 export interface SubmitResponse {
@@ -48,7 +49,8 @@ export function buildPayload(
   agentVersion: string,
   analysis: AnalysisResult,
   riskScore: RiskScoreResult,
-  threatStatus: ThreatStatus | null
+  threatStatus: ThreatStatus | null,
+  rawConfig: Record<string, unknown> | null = null
 ): SubmissionPayload {
   return {
     customer_name: customerName,
@@ -73,5 +75,6 @@ export function buildPayload(
     finding_titles: analysis.findings.map((f) => f.title),
     threat_status: threatStatus,
     full_analysis: analysis,
+    raw_config: rawConfig,
   };
 }
