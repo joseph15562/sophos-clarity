@@ -1419,20 +1419,26 @@ function analyseSyncAppControl(
   const section = findSection(sections, /^ApplicationClassification$/i) ?? findSection(sections, /application.?classification$/i);
   if (!section) return;
 
-  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
-
-  const enabled = /ACTION[^}]*?Enable/i.test(text) || /Enabled/i.test(text);
-  if (!enabled) {
-    findings.push({
-      id: `f${nextId()}`, severity: "medium",
-      title: "Synchronized Application Control disabled",
-      detail: "Synchronized Application Control is not enabled. This feature uses Security Heartbeat data from endpoints to identify and classify unknown application traffic.",
-      section: "Application Classification",
-      remediation: "Go to Applications > Synchronized Application Control > Enable the feature. Requires Security Heartbeat and Sophos Endpoint.",
-      confidence: "medium",
-      evidence: "ApplicationClassification section: ACTION not set to Enable",
-    });
+  // Check details block (API path)
+  for (const d of section.details ?? []) {
+    for (const [k, v] of Object.entries(d.fields ?? {})) {
+      if (/action|status|enable/i.test(k) && /enable/i.test(v)) return;
+    }
   }
+
+  // Fallback: scan table rows + text (HTML path)
+  const blob = sectionToBlob(section);
+  if (/action[=":,\s]*enable/i.test(blob) || /status[=":,\s]*enable/i.test(blob)) return;
+
+  findings.push({
+    id: `f${nextId()}`, severity: "medium",
+    title: "Synchronized Application Control disabled",
+    detail: "Synchronized Application Control is not enabled. This feature uses Security Heartbeat data from endpoints to identify and classify unknown application traffic.",
+    section: "Application Classification",
+    remediation: "Go to Applications > Synchronized Application Control > Enable the feature. Requires Security Heartbeat and Sophos Endpoint.",
+    confidence: "medium",
+    evidence: "ApplicationClassification section: ACTION not set to Enable",
+  });
 }
 
 function analyseATP(
