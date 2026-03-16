@@ -50,6 +50,14 @@ function policyField(e: any, field: string): string {
          extractNested(e, `UserPolicy.${field}`) || "";
 }
 
+function isSystemRule(e: Record<string, unknown>): boolean {
+  const name = asString(e.Name ?? "").toLowerCase();
+  if (name.startsWith("#") || name.startsWith("auto added")) return true;
+  const pt = asString(e.PolicyType ?? "").toLowerCase();
+  if (pt && pt !== "network" && pt !== "user") return true;
+  return false;
+}
+
 function parseFirewallRules(entities: unknown[]): TableData {
   const headers = [
     "Rule Name", "Status", "Policy Type", "Action",
@@ -61,7 +69,8 @@ function parseFirewallRules(entities: unknown[]): TableData {
     "Log", "Log Traffic", "Description",
   ];
 
-  const rows: Record<string, string>[] = entities.map((e: any) => {
+  const userRules = entities.filter((e: any) => !isSystemRule(e));
+  const rows: Record<string, string>[] = userRules.map((e: any) => {
     const srcZone = policyField(e, "SourceZones.Zone");
     const dstZone = policyField(e, "DestinationZones.Zone");
     const service = policyField(e, "Services.Service");
@@ -375,6 +384,15 @@ export function parseEntityResults(results: EntityResult[]): ExtractedSections {
 
       if (result.entityType === "AuthenticationServer") {
         entities = unpackAuthServers(entities);
+      }
+
+      const HOST_TYPES = new Set(["IPHost", "IPHostGroup", "FQDNHost", "FQDNHostGroup"]);
+      if (HOST_TYPES.has(result.entityType)) {
+        entities = entities.filter((e: any) => {
+          const name = asString(e.Name ?? "");
+          return !name.startsWith("##");
+        });
+        if (entities.length === 0) continue;
       }
 
       const sectionName = SECTION_MAP[result.entityType] ?? result.entityType;

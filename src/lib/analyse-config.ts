@@ -339,15 +339,16 @@ function countRows(sections: ExtractedSections, pattern: RegExp): number {
 
 /** Count interface rows from the ports/VLANs section only, excluding Setting/Value grid noise. */
 function countInterfaceRows(sections: ExtractedSections): number {
+  let total = 0;
   for (const key of Object.keys(sections)) {
     if (!/interface|port|vlan/i.test(key)) continue;
+    if (/alias|xfrm/i.test(key)) continue;
     for (const t of sections[key].tables) {
-      if (t.headers.includes("Interface / VLAN")) {
-        return t.rows.length;
-      }
+      if (t.headers.includes("Interface / VLAN")) return t.rows.length;
+      if (t.headers.includes("Name") && t.rows.length > 0) total += t.rows.length;
     }
   }
-  return 0;
+  return total;
 }
 
 /** Extract the firewall hostname from Admin Settings > Hostname Settings. */
@@ -588,31 +589,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   }
 
   // --- MFA/OTP checks ---
-  const otpSection = findOtpSection(sections);
-  if (otpSection) {
-    const otpDisabled: string[] = [];
-    for (const table of otpSection.tables) {
-      for (const row of table.rows) {
-        const setting = row["Setting"] ?? Object.keys(row)[0] ?? "";
-        const value = (row["Value"] ?? row[setting] ?? "").toLowerCase();
-        if (/otp|mfa|2fa/i.test(setting) && (value === "disabled" || value === "off" || value === "no")) {
-          otpDisabled.push(setting);
-        }
-      }
-    }
-    if (otpDisabled.length > 0) {
-      findings.push({
-        id: `f${++fid}`,
-        severity: "high",
-        title: `MFA/OTP disabled for ${otpDisabled.length} area${otpDisabled.length > 1 ? "s" : ""}`,
-        detail: `Multi-factor authentication is not enabled for: ${otpDisabled.join(", ")}. All admin and VPN access should require MFA.`,
-        section: "Authentication & OTP",
-        remediation: "Go to Authentication > Multi-factor authentication. Set One-time password to 'All users'. Select all services: Web admin console, User portal, VPN portal, SSL VPN, IPsec. Enable 'Generate OTP token with next sign-in'.",
-        confidence: "high",
-        evidence: `OTP/Auth section: ${otpDisabled.slice(0, 3).join(", ")} set to disabled/off`,
-      });
-    }
-  }
+  analyseOtpSettings(sections, findings, () => ++fid);
 
   // --- Duplicate / overlapping rules ---
   const sigMap = new Map<string, string[]>();
@@ -1546,6 +1523,135 @@ function analyseHA(
       section: "High Availability",
       confidence: "high",
       evidence: `HA section: Device mode=${mode}${nodeName ? `, NodeName=${nodeName}` : ""}`,
+    });
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  MFA / OTP Analysis                                                 */
+/* ------------------------------------------------------------------ */
+
+const OTP_SERVICE_KEYS: Record<string, string> = {
+  webadminconsole: "Web admin console",
+  webadmin: "Web admin console",
+  otpwebadmin: "Web admin console",
+  userportal: "User portal",
+  otpuserportal: "User portal",
+  vpnportal: "VPN portal",
+  otpvpnportal: "VPN portal",
+  sslvpn: "SSL VPN remote access",
+  sslvpnremoteaccess: "SSL VPN remote access",
+  otpsslvpn: "SSL VPN remote access",
+  ipsecremoteaccess: "IPsec remote access",
+  ipsec: "IPsec remote access",
+  otpipsec: "IPsec remote access",
+  webapplicationfirewall: "Web application firewall",
+};
+
+function analyseOtpSettings(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const otpSection = findOtpSection(sections);
+  if (!otpSection) return;
+
+  const kv = new Map<string, string>();
+  for (const table of otpSection.tables) {
+    for (const row of table.rows) {
+      const setting = row["Setting"] ?? row["setting"];
+      const value = row["Value"] ?? row["value"];
+      if (setting && value) {
+        kv.set(setting.replace(/[\s_-]/g, "").toLowerCase(), value.trim());
+      } else {
+        for (const [k, v] of Object.entries(row)) {
+          kv.set(k.replace(/[\s_-]/g, "").toLowerCase(), (v ?? "").trim());
+        }
+      }
+    }
+  }
+  for (const detail of otpSection.details ?? []) {
+    for (const [k, v] of Object.entries(detail.fields ?? {})) {
+      kv.set(k.replace(/[\s_-]/g, "").toLowerCase(), (v ?? "").trim());
+    }
+  }
+
+  const otpMode = (
+    kv.get("otp") ?? kv.get("onetimepassword") ?? kv.get("otpmode") ?? kv.get("status") ?? ""
+  ).toLowerCase().replace(/[\s_-]/g, "");
+
+  if (otpMode.includes("nootp") || otpMode === "disabled" || otpMode === "off") {
+    findings.push({
+      id: `f${nextId()}`, severity: "critical",
+      title: "MFA/OTP is completely disabled",
+      detail: "One-time passwords (MFA) are not enabled for any users. All admin, portal, and VPN access lacks multi-factor authentication, making credential theft attacks trivially exploitable.",
+      section: "Authentication & OTP",
+      remediation: "Go to Authentication \u203a Multi-factor authentication. Set One-time password to 'All users'. Enable MFA for: Web admin console, User portal, VPN portal, SSL VPN, IPsec remote access.",
+      confidence: "high",
+      evidence: "OTP setting: No OTP / Disabled",
+    });
+    return;
+  }
+
+  if (otpMode.includes("specific")) {
+    const otpUsers = (
+      kv.get("otpusersandgroups") ??
+      kv.get("otpusersgroups") ??
+      kv.get("otprequiredforthese") ??
+      kv.get("otprequiredfortheseusersandgroups") ??
+      ""
+    );
+    const userList = otpUsers
+      .split(/[,;\n]/)
+      .map((u) => u.trim())
+      .filter(Boolean);
+    const nonApiUsers = userList.filter(
+      (u) => !/\bapi\b/i.test(u),
+    );
+
+    if (nonApiUsers.length > 0) {
+      findings.push({
+        id: `f${nextId()}`, severity: "medium",
+        title: "MFA/OTP not enforced for all users",
+        detail: `OTP is set to 'Specific users and groups' rather than 'All users'. ${nonApiUsers.length} non-API user${nonApiUsers.length > 1 ? "s/groups" : "/group"} configured: ${nonApiUsers.slice(0, 5).join(", ")}${nonApiUsers.length > 5 ? ` (+${nonApiUsers.length - 5} more)` : ""}. New users may not be covered.`,
+        section: "Authentication & OTP",
+        remediation: "Go to Authentication \u203a Multi-factor authentication. Change One-time password from 'Specific users and groups' to 'All users' to ensure every account requires MFA by default.",
+        confidence: "high",
+        evidence: `OTP mode: Specific users and groups (${nonApiUsers.length} non-API entries)`,
+      });
+    }
+  }
+
+  const disabledServices: string[] = [];
+  for (const [key, label] of Object.entries(OTP_SERVICE_KEYS)) {
+    const val = (kv.get(key) ?? "").toLowerCase();
+    if (!val) continue;
+    if (val === "disable" || val === "disabled" || val === "off" || val === "no" || val === "false") {
+      if (!disabledServices.includes(label)) disabledServices.push(label);
+    }
+  }
+  if (disabledServices.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "high",
+      title: `MFA not required for ${disabledServices.length} service${disabledServices.length > 1 ? "s" : ""}`,
+      detail: `Multi-factor authentication is not enforced for: ${disabledServices.join(", ")}. These services can be accessed with password-only authentication.`,
+      section: "Authentication & OTP",
+      remediation: `Go to Authentication \u203a Multi-factor authentication. Under 'Require MFA for', tick: ${disabledServices.join(", ")}.`,
+      confidence: "high",
+      evidence: `MFA disabled services: ${disabledServices.join(", ")}`,
+    });
+  }
+
+  const hashAlgo = (
+    kv.get("hashalgorithm") ?? kv.get("otphashalgorithm") ?? ""
+  ).toUpperCase();
+  if (hashAlgo && hashAlgo.includes("SHA1") && !hashAlgo.includes("SHA1[0-9]")) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "OTP hash algorithm uses SHA1",
+      detail: "The OTP hash algorithm is set to SHA1, which has known collision weaknesses. SHA256 or SHA512 provides stronger TOTP codes and better future-proofing.",
+      section: "Authentication & OTP",
+      remediation: "Go to Authentication \u203a Multi-factor authentication. Change 'OTP hash algorithm' from SHA1 to SHA256 or SHA512. Note: existing OTP tokens will need to be re-enrolled.",
+      confidence: "medium",
+      evidence: `OTP hash algorithm: ${hashAlgo}`,
     });
   }
 }

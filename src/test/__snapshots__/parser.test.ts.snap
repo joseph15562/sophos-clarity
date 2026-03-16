@@ -35,7 +35,7 @@ exports[`analyseConfig > snapshot of findings 1`] = `
   {
     "section": "Authentication & OTP",
     "severity": "high",
-    "title": "MFA/OTP disabled for 2 areas",
+    "title": "MFA not required for 2 services",
   },
   {
     "section": "Firewall Rules",
@@ -56,11 +56,6 @@ exports[`analyseConfig > snapshot of findings 1`] = `
     "section": "SSL/TLS Inspection",
     "severity": "critical",
     "title": "No SSL/TLS inspection rules configured (DPI inactive)",
-  },
-  {
-    "section": "DoS & Spoof Protection",
-    "severity": "medium",
-    "title": "No DoS & Spoof Protection configuration found",
   },
   {
     "section": "Logging & Monitoring",

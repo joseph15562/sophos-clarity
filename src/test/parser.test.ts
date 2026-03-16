@@ -160,11 +160,11 @@ describe("analyseConfig", () => {
     expect(finding!.detail).toContain("Duplicate-WAN");
   });
 
-  it("flags MFA/OTP disabled", () => {
-    const finding = result.findings.find((f) => f.title.includes("MFA/OTP"));
+  it("flags MFA/OTP disabled services", () => {
+    const finding = result.findings.find((f) => f.title.includes("MFA not required"));
     expect(finding).toBeDefined();
-    expect(finding!.detail).toContain("otpVPNPortal");
-    expect(finding!.detail).toContain("otpIPsec");
+    expect(finding!.detail).toContain("VPN portal");
+    expect(finding!.detail).toContain("IPsec remote access");
   });
 
   it("flags missing SSL/TLS inspection (DPI inactive)", () => {

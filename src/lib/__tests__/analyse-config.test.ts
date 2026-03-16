@@ -247,8 +247,7 @@ describe("analyseConfig", () => {
             {
               headers: ["Setting", "Value"],
               rows: [
-                { Setting: "OTP for Admin", Value: "Disabled" },
-                { Setting: "OTP for VPN", Value: "Off" },
+                { Setting: "otp", Value: "NoOTP" },
               ],
             },
           ],
@@ -258,7 +257,7 @@ describe("analyseConfig", () => {
       });
       const result = analyseConfig(sections);
       const finding = result.findings.find(
-        (f) => f.title.includes("MFA/OTP disabled") && f.section === "Authentication & OTP",
+        (f) => f.title.includes("MFA/OTP is completely disabled") && f.section === "Authentication & OTP",
       );
       expect(finding).toBeDefined();
     });
