@@ -878,7 +878,8 @@ function findSection(sections: ExtractedSections, pattern: RegExp): SectionData 
 }
 
 function extractAtpStatus(sections: ExtractedSections): AtpStatus | undefined {
-  const atp = findSection(sections, /advanced\s*threat\s*protection|^atp$/i);
+  const atp = findSection(sections, /advanced\s*threat\s*protection|^atp$/i)
+           ?? findSection(sections, /^atp\s*status$/i);
   if (!atp) return undefined;
 
   let enabled = false;
@@ -886,6 +887,7 @@ function extractAtpStatus(sections: ExtractedSections): AtpStatus | undefined {
 
   for (const t of atp.tables) {
     for (const row of t.rows) {
+      // HTML format: Setting/Value columns
       const setting = (row["Setting"] ?? "").toLowerCase();
       const value = (row["Value"] ?? "").trim();
       if (setting.includes("threatprotectionstatus") || setting.includes("status")) {
@@ -894,7 +896,26 @@ function extractAtpStatus(sections: ExtractedSections): AtpStatus | undefined {
       if (setting.includes("policy") || setting.includes("action")) {
         policy = value;
       }
+
+      // API format: direct column names
+      const directStatus = (row["ThreatProtectionStatus"] ?? row["Status"] ?? "").trim();
+      if (directStatus) {
+        enabled = /enable|on|yes|true/i.test(directStatus);
+      }
+      const directPolicy = (row["Policy"] ?? row["Action"] ?? "").trim();
+      if (directPolicy && !policy) {
+        policy = directPolicy;
+      }
     }
+  }
+
+  // Also check detail blocks (API data stored as fields)
+  for (const detail of atp.details ?? []) {
+    const fields = detail.fields ?? {};
+    const status = (fields["ThreatProtectionStatus"] ?? fields["Status"] ?? "").trim();
+    if (status) enabled = /enable|on|yes|true/i.test(status);
+    const p = (fields["Policy"] ?? fields["Action"] ?? "").trim();
+    if (p && !policy) policy = p;
   }
 
   return { enabled, policy };
@@ -1440,14 +1461,41 @@ function analyseSyncAppControl(
 function analyseATP(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^ATP$/i) ?? findSection(sections, /advanced.?threat.?protect/i);
+  const section = findSection(sections, /^ATP$/i)
+    ?? findSection(sections, /^atp\s*status$/i)
+    ?? findSection(sections, /advanced.?threat.?protect/i);
   if (!section) return;
 
-  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  let atpEnabled: boolean | null = null;
+  let atpPolicy = "";
 
-  // Check ThreatProtectionStatus
-  const statusMatch = text.match(/ThreatProtectionStatus[^}]*?(Enable|Disable)/i)?.[1];
-  if (statusMatch && !/enable/i.test(statusMatch)) {
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const directStatus = (row["ThreatProtectionStatus"] ?? row["Status"] ?? "").trim();
+      if (directStatus) atpEnabled = /enable|on|yes|true/i.test(directStatus);
+      const directPolicy = (row["Policy"] ?? row["Action"] ?? "").trim();
+      if (directPolicy) atpPolicy = directPolicy;
+    }
+  }
+  for (const detail of section.details ?? []) {
+    const fields = detail.fields ?? {};
+    const s = (fields["ThreatProtectionStatus"] ?? fields["Status"] ?? "").trim();
+    if (s) atpEnabled = /enable|on|yes|true/i.test(s);
+    const p = (fields["Policy"] ?? fields["Action"] ?? "").trim();
+    if (p) atpPolicy = p;
+  }
+
+  // Fallback: JSON text scan for HTML Setting/Value format
+  if (atpEnabled === null) {
+    const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ");
+    const statusMatch = text.match(/ThreatProtectionStatus[^}]*?(Enable|Disable)/i)?.[1];
+    if (statusMatch) atpEnabled = /enable/i.test(statusMatch);
+    if (!atpPolicy) {
+      atpPolicy = text.match(/Policy[^}]*?[":]?\s*(Log and Drop|Drop|Log only|Monitor|None)/i)?.[1] ?? "";
+    }
+  }
+
+  if (atpEnabled === false) {
     findings.push({
       id: `f${nextId()}`, severity: "high",
       title: "Sophos X-Ops (ATP) threat protection disabled",
@@ -1459,19 +1507,36 @@ function analyseATP(
     });
   }
 
-  // Check Policy action — should be "Log and Drop"
-  const policy = text.match(/Policy[^}]*?[":]?\s*(Log and Drop|Drop|Log only|Monitor|None)/i)?.[1];
-  if (policy && !/log and drop/i.test(policy)) {
+  if (atpPolicy && !/log and drop/i.test(atpPolicy)) {
     findings.push({
       id: `f${nextId()}`, severity: "medium",
-      title: `Sophos X-Ops (ATP) policy set to "${policy}" instead of "Log and Drop"`,
-      detail: `The ATP/X-Ops policy is set to "${policy}". Sophos recommends "Log and Drop" to both block malicious traffic and create log entries for investigation.`,
+      title: `Sophos X-Ops (ATP) policy set to "${atpPolicy}" instead of "Log and Drop"`,
+      detail: `The ATP/X-Ops policy is set to "${atpPolicy}". Sophos recommends "Log and Drop" to both block malicious traffic and create log entries for investigation.`,
       section: "Active Threat Response",
       remediation: "Go to Active threat response > Sophos X-Ops threat feeds > Set the Action to 'Log and drop'.",
       confidence: "high",
-      evidence: `ATP section: Policy="${policy}" (recommended: Log and Drop)`,
+      evidence: `ATP section: Policy="${atpPolicy}" (recommended: Log and Drop)`,
     });
   }
+}
+
+function extractSectionEnabled(section: SectionData): boolean | null {
+  for (const t of section.tables) {
+    for (const row of t.rows) {
+      const status = (row["Status"] ?? row["Enable"] ?? row["Enabled"] ?? "").trim();
+      if (status) return /enable|on|yes|true/i.test(status);
+    }
+  }
+  for (const detail of section.details ?? []) {
+    const fields = detail.fields ?? {};
+    const s = (fields["Status"] ?? fields["Enable"] ?? fields["Enabled"] ?? "").trim();
+    if (s) return /enable|on|yes|true/i.test(s);
+  }
+  // Fallback: text scan
+  const blob = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  if (/disable/i.test(blob) && !/enable/i.test(blob)) return false;
+  if (/enable/i.test(blob) && !/disable/i.test(blob)) return true;
+  return null;
 }
 
 function analyseMdrFeed(
@@ -1480,15 +1545,8 @@ function analyseMdrFeed(
   const section = findSection(sections, /^MDR\s*(Status|Threat)/i);
   if (!section) return;
 
-  const blob = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
-  for (const detail of section.details ?? []) {
-    for (const [, v] of Object.entries(detail.fields ?? {})) {
-      if (v) blob.concat(" ", v);
-    }
-  }
-
-  const isDisabled = /disable/i.test(blob) && !/enable/i.test(blob);
-  if (isDisabled) {
+  const enabled = extractSectionEnabled(section);
+  if (enabled === false) {
     findings.push({
       id: `f${nextId()}`, severity: "medium",
       title: "MDR threat feed is not active",
@@ -1507,15 +1565,8 @@ function analyseNdrEssentials(
   const section = findSection(sections, /^NDR\s*(Status|Essentials)/i);
   if (!section) return;
 
-  const blob = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
-  for (const detail of section.details ?? []) {
-    for (const [, v] of Object.entries(detail.fields ?? {})) {
-      if (v) blob.concat(" ", v);
-    }
-  }
-
-  const isDisabled = /disable/i.test(blob) && !/enable/i.test(blob);
-  if (isDisabled) {
+  const enabled = extractSectionEnabled(section);
+  if (enabled === false) {
     findings.push({
       id: `f${nextId()}`, severity: "medium",
       title: "NDR Essentials is not enabled",

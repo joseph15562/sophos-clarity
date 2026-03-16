@@ -40,7 +40,7 @@ export function detectCapabilities(
   hardwareModel?: string
 ): FirewallCapabilities {
   const major = parseApiMajor(apiVersion);
-  const isXgs = !!hardwareModel && /^xgs/i.test(hardwareModel.trim());
+  const isXgs = major >= 2200 || (!!hardwareModel && /^xgs/i.test(hardwareModel.trim()));
 
   return {
     firmwareVersion: apiVersionToFirmware(apiVersion),
