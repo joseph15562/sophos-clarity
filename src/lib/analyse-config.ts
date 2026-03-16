@@ -357,6 +357,9 @@ function countInterfaceRows(sections: ExtractedSections): number {
         vlanCount++;
         const parent = row["Interface"] ?? row["HardwareInterface"] ?? row["Member"] ?? "";
         if (parent) parentPorts.add(parent);
+        const vlanName = row["Name"] ?? row["HardwareName"] ?? "";
+        const dotIdx = vlanName.indexOf(".");
+        if (dotIdx > 0) parentPorts.add(vlanName.substring(0, dotIdx));
       }
     }
   }
