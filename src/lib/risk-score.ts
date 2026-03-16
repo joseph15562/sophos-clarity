@@ -118,7 +118,7 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
     segScore -= penalty;
     segDetails.push(`${anyCount} ANY service rules (-${penalty})`);
   }
-  if (dupeFindings.length > 0) { segScore -= 10; segDetails.push("overlapping rules (-10)"); }
+  // Overlapping detection removed — unreliable across HTML/API data sources
   if (!ip.dpiEngineEnabled && ip.totalWanRules > 0) { segScore -= 25; segDetails.push("no SSL/TLS Decrypt (DPI inactive) (-25)"); }
   if (ip.sslUncoveredZones.length > 0) {
     const penalty = Math.min(15, ip.sslUncoveredZones.length * 5);
