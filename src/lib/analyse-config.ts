@@ -378,7 +378,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const totalSections = sectionNames.length;
   const rulesTable = findFirewallRulesTable(sections);
   const totalRules = rulesTable ? rulesTable.rows.length : 0;
-  const totalHosts = countRows(sections, /hosts?|networks?/i, /wireless/i);
+  const totalHosts = countRows(sections, /hosts?|networks?/i, /wireless|groups?/i);
   const totalNatRules = countRows(sections, /nat/i);
   const interfaces = countInterfaceRows(sections);
 

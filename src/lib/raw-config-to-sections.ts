@@ -389,7 +389,10 @@ export function rawConfigToSections(
     if (HOST_TYPES.has(entityType)) {
       entities = entities.filter((e) => {
         const name = asString(e.Name ?? "");
-        return !name.startsWith("##");
+        if (name.startsWith("#")) return false;
+        const hostType = asString(e.HostType ?? "");
+        if (hostType.toLowerCase() === "system") return false;
+        return true;
       });
       if (entities.length === 0) continue;
     }
