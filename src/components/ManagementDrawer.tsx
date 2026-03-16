@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck, Globe } from "lucide-react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Mail, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck, Globe } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ const CentralIntegration = lazy(() => import("@/components/CentralIntegration").
 const InviteStaff = lazy(() => import("@/components/InviteStaff").then((m) => ({ default: m.InviteStaff })));
 const AuditLog = lazy(() => import("@/components/AuditLog").then((m) => ({ default: m.AuditLog })));
 const AlertSettings = lazy(() => import("@/components/AlertSettings").then((m) => ({ default: m.AlertSettings })));
+const ScheduledReportSettings = lazy(() => import("@/components/ScheduledReportSettings").then((m) => ({ default: m.ScheduledReportSettings })));
 const AgentManager = lazy(() => import("@/components/AgentManager").then((m) => ({ default: m.AgentManager })));
 const MfaEnrollment = lazy(() => import("@/components/MfaEnrollment").then((m) => ({ default: m.MfaEnrollment })));
 const PasskeyManager = lazy(() => import("@/components/PasskeyManager").then((m) => ({ default: m.PasskeyManager })));
@@ -504,6 +505,13 @@ export function ManagementDrawer({
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
                     <AlertSettings />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              <SettingsSection title="Scheduled Reports" icon={<Mail className="h-3.5 w-3.5 text-[#009CFB]" />} subtitle="Auto-send compliance reports to clients">
+                <div className="p-4">
+                  <Suspense fallback={<Skeleton />}>
+                    <ScheduledReportSettings />
                   </Suspense>
                 </div>
               </SettingsSection>
