@@ -204,12 +204,16 @@ function hasIps(row: Record<string, string>): boolean {
   return ips !== "" && ips !== "none" && ips !== "not specified" && ips !== "-" && !ips.includes("disable") && ips !== "off" && ips !== "n/a";
 }
 
+function normalizeMultiValue(val: string): string {
+  return val.split(/[,;]\s*/).map((s) => s.trim()).filter(Boolean).sort().join(",");
+}
+
 function ruleSignature(row: Record<string, string>): string {
-  const src = (row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? "").toLowerCase().trim();
-  const dst = (row["Destination Networks"] ?? row["Destination"] ?? row["Dest Networks"] ?? "").toLowerCase().trim();
-  const svc = (row["Service"] ?? row["Services"] ?? row["Services/Ports"] ?? row["service"] ?? "").toLowerCase().trim();
-  const srcZ = (row["Source Zone"] ?? row["Source Zones"] ?? row["Src Zone"] ?? "").toLowerCase().trim();
-  const dstZ = (row["Destination Zone"] ?? row["Destination Zones"] ?? row["Dest Zone"] ?? row["DestZone"] ?? "").toLowerCase().trim();
+  const src = normalizeMultiValue((row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? "").toLowerCase());
+  const dst = normalizeMultiValue((row["Destination Networks"] ?? row["Destination"] ?? row["Dest Networks"] ?? "").toLowerCase());
+  const svc = normalizeMultiValue((row["Service"] ?? row["Services"] ?? row["Services/Ports"] ?? row["service"] ?? "").toLowerCase());
+  const srcZ = normalizeMultiValue((row["Source Zone"] ?? row["Source Zones"] ?? row["Src Zone"] ?? "").toLowerCase());
+  const dstZ = normalizeMultiValue((row["Destination Zone"] ?? row["Destination Zones"] ?? row["Dest Zone"] ?? row["DestZone"] ?? "").toLowerCase());
   return `${srcZ}|${src}|${dstZ}|${dst}|${svc}`;
 }
 
