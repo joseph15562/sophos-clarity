@@ -25,6 +25,12 @@ const SIZES = [
   { value: "large", label: "Large (500+)", multiplier: 1.5 },
 ] as const;
 
+const CURRENCIES = [
+  { value: "usd", label: "USD ($)", symbol: "$", rate: 1.0 },
+  { value: "gbp", label: "GBP (£)", symbol: "£", rate: 0.79 },
+  { value: "eur", label: "EUR (€)", symbol: "€", rate: 0.92 },
+] as const;
+
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
 }
@@ -32,6 +38,11 @@ interface Props {
 export function CostOfRiskEstimator({ analysisResults }: Props) {
   const [industry, setIndustry] = useState<string>("technology");
   const [size, setSize] = useState<string>("medium");
+  const [currency, setCurrency] = useState<string>("usd");
+
+  const curr = CURRENCIES.find((c) => c.value === currency) ?? CURRENCIES[0];
+  const fmt = (n: number) =>
+    `${curr.symbol}${Math.round(n * curr.rate).toLocaleString()}`;
 
   const riskExposure = useMemo(() => {
     const counts: Record<Severity, number> = {
@@ -83,10 +94,9 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
       <h3 className="text-sm font-semibold text-foreground">Cost of Risk Estimator</h3>
       <div className="mt-4 space-y-4">
         <p className="text-2xl font-bold text-destructive">
-          Estimated Annual Risk Exposure: ${riskExposure.minExposure.toLocaleString()} – $
-          {riskExposure.maxExposure.toLocaleString()}
+          Estimated Annual Risk Exposure: {fmt(riskExposure.minExposure)} – {fmt(riskExposure.maxExposure)}
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Industry</label>
             <select
@@ -115,6 +125,20 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
               ))}
             </select>
           </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Currency</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">Breakdown by severity</p>
@@ -129,7 +153,7 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
               >
                 <span className="capitalize">{sev}</span>
                 <span className="text-destructive">
-                  {count} × ${min.toLocaleString()}–${max.toLocaleString()}
+                  {count} × {fmt(min)}–{fmt(max)}
                 </span>
               </div>
             );
@@ -140,7 +164,7 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
             Resolving {criticalSavings.count} critical finding{criticalSavings.count !== 1 ? "s" : ""}{" "}
             could reduce exposure by{" "}
             <span className="font-semibold">
-              ${criticalSavings.min.toLocaleString()} – ${criticalSavings.max.toLocaleString()}
+              {fmt(criticalSavings.min)} – {fmt(criticalSavings.max)}
             </span>
           </p>
         )}
