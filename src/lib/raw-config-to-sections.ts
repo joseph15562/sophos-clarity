@@ -329,6 +329,35 @@ function buildLocalServiceAclTable(entities: Record<string, unknown>[]): TableDa
   return { headers: Array.from(headers), rows };
 }
 
+function buildInterfaceTable(entities: Record<string, unknown>[]): TableData {
+  const headers = ["Name", "HardwareName", "Zone", "NetworkZone", "IPAddress", "Status", "Speed", "MACAddress"];
+  const rows = entities.map((e) => ({
+    "Name": textOf(e.Name ?? e.HardwareName),
+    "HardwareName": textOf(e.HardwareName ?? e.Name),
+    "Zone": textOf(e.Zone ?? e.NetworkZone),
+    "NetworkZone": textOf(e.NetworkZone ?? e.Zone),
+    "IPAddress": textOf(e.IPAddress ?? e.IPv4Address ?? e.IP),
+    "Status": textOf(e.Status),
+    "Speed": textOf(e.Speed),
+    "MACAddress": textOf(e.MACAddress ?? e.MAC),
+  }));
+  return { headers, rows };
+}
+
+function buildVlanTable(entities: Record<string, unknown>[]): TableData {
+  const headers = ["Name", "VLANID", "Interface", "Zone", "NetworkZone", "IPAddress", "Status"];
+  const rows = entities.map((e) => ({
+    "Name": textOf(e.Name),
+    "VLANID": textOf(e.VLANID ?? e.VlanID ?? e.VID),
+    "Interface": textOf(e.Interface ?? e.HardwareInterface ?? e.Member),
+    "Zone": textOf(e.Zone ?? e.NetworkZone),
+    "NetworkZone": textOf(e.NetworkZone ?? e.Zone),
+    "IPAddress": textOf(e.IPAddress ?? e.IPv4Address ?? e.IP),
+    "Status": textOf(e.Status),
+  }));
+  return { headers, rows };
+}
+
 function buildGenericTable(entities: Record<string, unknown>[]): TableData {
   if (!entities.length) return { headers: [], rows: [] };
   const first = entities[0];
@@ -443,6 +472,10 @@ export function rawConfigToSections(
       table = buildWirelessNetworksTable(entities);
     } else if (entityType === "LocalServiceACL") {
       table = buildLocalServiceAclTable(entities);
+    } else if (entityType === "VLAN") {
+      table = buildVlanTable(entities);
+    } else if (entityType === "Interface") {
+      table = buildInterfaceTable(entities);
     } else {
       table = buildGenericTable(entities);
     }
