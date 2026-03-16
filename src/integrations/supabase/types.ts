@@ -290,6 +290,14 @@ export type Database = {
           { foreignKeyName: "alert_rules_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
         ]
       }
+      portal_config: {
+        Row: { id: string; org_id: string; slug: string | null; tenant_name: string | null; logo_url: string | null; company_name: string | null; accent_color: string; welcome_message: string | null; sla_info: string | null; contact_email: string | null; contact_phone: string | null; footer_text: string | null; visible_sections: Json; show_branding: boolean; created_at: string; updated_at: string }
+        Insert: { id?: string; org_id: string; slug?: string | null; tenant_name?: string | null; logo_url?: string | null; company_name?: string | null; accent_color?: string; welcome_message?: string | null; sla_info?: string | null; contact_email?: string | null; contact_phone?: string | null; footer_text?: string | null; visible_sections?: Json; show_branding?: boolean; created_at?: string; updated_at?: string }
+        Update: { id?: string; org_id?: string; slug?: string | null; tenant_name?: string | null; logo_url?: string | null; company_name?: string | null; accent_color?: string; welcome_message?: string | null; sla_info?: string | null; contact_email?: string | null; contact_phone?: string | null; footer_text?: string | null; visible_sections?: Json; show_branding?: boolean; created_at?: string; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "portal_config_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

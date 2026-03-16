@@ -91,6 +91,17 @@ interface PortalBranding {
   showBranding: boolean;
 }
 
+interface PortalFirewall {
+  agentId: string;
+  label: string;
+  serialNumber: string | null;
+  model: string | null;
+  score: number | null;
+  grade: string | null;
+  lastSeen: string | null;
+  lastAssessed: string | null;
+}
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -297,6 +308,8 @@ export default function ClientPortal() {
     "feedback",
   ]);
   const [orgId, setOrgId] = useState<string>("");
+  const [tenantName, setTenantName] = useState<string | null>(null);
+  const [portalFirewalls, setPortalFirewalls] = useState<PortalFirewall[]>([]);
 
   // Auth state
   const [authUser, setAuthUser] = useState<{ email: string } | null>(null);
@@ -349,10 +362,12 @@ export default function ClientPortal() {
 
         const data = await resp.json();
         setOrgId(data.orgId ?? "");
-        setCustomerName(data.customerName ?? "Customer");
+        setTenantName(data.tenantName ?? null);
+        setCustomerName(data.tenantName ?? data.customerName ?? "Customer");
         setScoreHistory(data.scoreHistory ?? []);
         setFindings(data.findings ?? []);
         setBranding(data.branding ?? null);
+        setPortalFirewalls(data.firewalls ?? []);
         setVisibleSections(
           data.visibleSections ?? [
             "score",
@@ -538,9 +553,11 @@ export default function ClientPortal() {
                   : customerName}
               </h1>
               <p className="text-xs text-muted-foreground">
-                {showBranding && branding?.companyName
-                  ? `${customerName} — Security Assessment`
-                  : "Firewall Configuration Assessment"}
+                {tenantName
+                  ? `${tenantName} — Security Assessment`
+                  : showBranding && branding?.companyName
+                    ? `${customerName} — Security Assessment`
+                    : "Firewall Configuration Assessment"}
               </p>
             </div>
           </div>
@@ -671,6 +688,76 @@ export default function ClientPortal() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Per-Firewall Breakdown */}
+        {sectionVisible("score") && portalFirewalls.length > 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Firewall Overview</CardTitle>
+              <CardDescription>
+                Individual firewall scores for {tenantName ?? customerName}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Firewall</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Grade</TableHead>
+                    <TableHead>Last Assessed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {portalFirewalls.map((fw) => (
+                    <TableRow key={fw.agentId}>
+                      <TableCell>
+                        <div>
+                          <span className="font-medium text-foreground">{fw.label}</span>
+                          {fw.serialNumber && (
+                            <span className="block text-xs text-muted-foreground">
+                              SN: {fw.serialNumber}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {fw.model ?? "—"}
+                      </TableCell>
+                      <TableCell className="font-medium tabular-nums">
+                        {fw.score ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        {fw.grade ? (
+                          <span
+                            className={cn(
+                              "font-bold",
+                              GRADE_COLORS[fw.grade] ?? GRADE_COLORS.C,
+                            )}
+                          >
+                            {fw.grade}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {fw.lastAssessed
+                          ? new Date(fw.lastAssessed).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "Never"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}
