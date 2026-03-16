@@ -1233,20 +1233,7 @@ function analyseBackupRestore(
   const section = findSection(sections, /^BackupRestore$/i) ?? findSection(sections, /backup/i);
   if (!section) return;
 
-  // Build a single searchable string from ALL section data (details, tables, text)
-  const chunks: string[] = [];
-
-  for (const d of section.details ?? []) {
-    for (const [k, v] of Object.entries(d.fields ?? {})) {
-      chunks.push(`${k}=${v}`);
-    }
-  }
-  for (const t of section.tables) {
-    for (const r of t.rows) chunks.push(JSON.stringify(r));
-  }
-  if (section.text) chunks.push(section.text);
-
-  const blob = chunks.join(" ").toLowerCase();
+  const blob = sectionToBlob(section).toLowerCase();
 
   // Look for evidence of scheduled backup being configured:
   // - A frequency value that isn't "never" (daily, weekly, monthly)
@@ -1610,26 +1597,103 @@ function analyseVpnSecurity(
 function analyseDoSProtection(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /dos|spoof/i);
-  if (!section) {
-    findings.push({
-      id: `f${nextId()}`, severity: "medium",
-      title: "No DoS & Spoof Protection configuration found",
-      detail: "No DoS or spoof protection section was detected in the configuration export. Without DoS protection, the firewall is vulnerable to SYN flood, UDP flood, and ICMP flood attacks.",
-      section: "DoS & Spoof Protection",
-      remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection, UDP flood protection, ICMP flood protection, and IP spoof prevention.",
-      confidence: "medium",
-      evidence: "No DoS/Spoof section found in config export",
-    });
+  const dosSection = findSection(sections, /^dos\b/i) ?? findSection(sections, /dos.*protect/i);
+  const spoofSection = findSection(sections, /spoof/i);
+
+  if (!dosSection && !spoofSection) {
+    const combined = findSection(sections, /dos|spoof/i);
+    if (!combined) {
+      findings.push({
+        id: `f${nextId()}`, severity: "medium",
+        title: "No DoS & Spoof Protection configuration found",
+        detail: "No DoS or spoof protection section was detected in the configuration export. Without DoS protection, the firewall is vulnerable to SYN flood, UDP flood, and ICMP flood attacks.",
+        section: "DoS & Spoof Protection",
+        remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection, UDP flood protection, ICMP flood protection, and IP spoof prevention.",
+        confidence: "medium",
+        evidence: "No DoS/Spoof section found in config export",
+      });
+      return;
+    }
+    analyseSingleDosSection(combined, findings, nextId);
     return;
   }
 
-  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  // Check DoS (SYN flood) from details or table data
+  if (dosSection) {
+    const blob = sectionToBlob(dosSection);
+    const details = dosSection.details ?? [];
+    let synDisabled = false;
 
-  const spoofDisabled = /spoof.*?prevent.*?(disable|off)/i.test(text) || /ip\s*spoof.*?(disable|off)/i.test(text);
-  const synFloodDisabled = /syn.*?flood.*?(disable|off)/i.test(text);
+    if (details.length > 0) {
+      const fields = details[0].fields ?? {};
+      const synVal = (
+        fields["SYNFloodProtection"] ?? fields["SynFlood"] ?? fields["Status"] ?? ""
+      ).toLowerCase();
+      synDisabled = synVal === "disable" || synVal === "off" || synVal === "0";
+    }
+    if (!synDisabled) {
+      synDisabled = /syn.*?flood.*?(disable|off)/i.test(blob);
+    }
 
-  if (spoofDisabled) {
+    if (synDisabled) {
+      findings.push({
+        id: `f${nextId()}`, severity: "high",
+        title: "SYN flood protection disabled",
+        detail: "SYN flood protection is not active. SYN flood attacks can exhaust server connection tables, causing denial of service.",
+        section: "DoS & Spoof Protection",
+        remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection with appropriate thresholds.",
+        confidence: "high",
+        evidence: "DoS section: SYN flood protection set to disabled/off",
+      });
+    }
+  }
+
+  // Check Spoof Prevention from details or table data
+  if (spoofSection) {
+    const blob = sectionToBlob(spoofSection);
+    const details = spoofSection.details ?? [];
+    let spoofDisabled = false;
+
+    if (details.length > 0) {
+      const fields = details[0].fields ?? {};
+      const spoofVal = (
+        fields["Status"] ?? fields["IPSpoofPrevention"] ?? ""
+      ).toLowerCase();
+      spoofDisabled = spoofVal === "disable" || spoofVal === "off" || spoofVal === "0";
+    }
+    if (!spoofDisabled) {
+      spoofDisabled = /spoof.*?prevent.*?(disable|off)/i.test(blob) || /ip\s*spoof.*?(disable|off)/i.test(blob);
+    }
+
+    if (spoofDisabled) {
+      findings.push({
+        id: `f${nextId()}`, severity: "high",
+        title: "IP spoof prevention disabled",
+        detail: "IP spoof prevention is disabled. Attackers can forge source IP addresses to bypass ACLs and launch amplification attacks.",
+        section: "DoS & Spoof Protection",
+        remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable IP spoof prevention for all interfaces.",
+        confidence: "high",
+        evidence: "Spoof Prevention section: IP spoof prevention set to disabled/off",
+      });
+    }
+  }
+}
+
+function sectionToBlob(section: SectionData): string {
+  const chunks: string[] = [];
+  for (const d of section.details ?? []) {
+    for (const [k, v] of Object.entries(d.fields ?? {})) chunks.push(`${k}=${v}`);
+  }
+  for (const t of section.tables) {
+    for (const r of t.rows) chunks.push(JSON.stringify(r));
+  }
+  if (section.text) chunks.push(section.text);
+  return chunks.join(" ");
+}
+
+function analyseSingleDosSection(section: SectionData, findings: Finding[], nextId: () => number) {
+  const blob = sectionToBlob(section);
+  if (/spoof.*?prevent.*?(disable|off)/i.test(blob) || /ip\s*spoof.*?(disable|off)/i.test(blob)) {
     findings.push({
       id: `f${nextId()}`, severity: "high",
       title: "IP spoof prevention disabled",
@@ -1640,7 +1704,7 @@ function analyseDoSProtection(
       evidence: "DoS section: IP spoof prevention set to disabled/off",
     });
   }
-  if (synFloodDisabled) {
+  if (/syn.*?flood.*?(disable|off)/i.test(blob)) {
     findings.push({
       id: `f${nextId()}`, severity: "high",
       title: "SYN flood protection disabled",
