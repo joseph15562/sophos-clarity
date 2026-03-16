@@ -339,12 +339,17 @@ function countRows(sections: ExtractedSections, pattern: RegExp, exclude?: RegEx
 
 /** Count interface rows from the ports/VLANs section only, excluding Setting/Value grid noise. */
 function countInterfaceRows(sections: ExtractedSections): number {
-  let total = 0;
   for (const key of Object.keys(sections)) {
     if (!/interface|port|vlan/i.test(key)) continue;
-    if (/alias|xfrm/i.test(key)) continue;
     for (const t of sections[key].tables) {
       if (t.headers.includes("Interface / VLAN")) return t.rows.length;
+    }
+  }
+  let total = 0;
+  for (const key of Object.keys(sections)) {
+    if (!/interface|port/i.test(key)) continue;
+    if (/alias|xfrm|vlan/i.test(key)) continue;
+    for (const t of sections[key].tables) {
       const isSettingsGrid = t.headers.length === 2 &&
         t.headers.includes("Setting") && t.headers.includes("Value");
       if (!isSettingsGrid && t.rows.length > 0) total += t.rows.length;

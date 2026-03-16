@@ -404,6 +404,19 @@ export function rawConfigToSections(
         const hostType = textOf(e.HostType).toLowerCase();
         if (hostType === "system") return false;
         if (entityType === "IPHost" && (hostType === "network" || hostType === "iprange" || hostType === "iplist")) return false;
+        const readOnly = textOf(e.ReadOnly ?? e.Readonly ?? e.IsReadOnly).toLowerCase();
+        if (readOnly === "enable" || readOnly === "yes" || readOnly === "true" || readOnly === "1") return false;
+        return true;
+      });
+      if (entities.length === 0) continue;
+    }
+
+    if (entityType === "NATRule") {
+      entities = entities.filter((e) => {
+        const name = textOf(e.RuleName ?? e.Name);
+        if (name.startsWith("#")) return false;
+        const readOnly = textOf(e.ReadOnly ?? e.Readonly ?? e.IsReadOnly).toLowerCase();
+        if (readOnly === "enable" || readOnly === "yes" || readOnly === "true" || readOnly === "1") return false;
         return true;
       });
       if (entities.length === 0) continue;
