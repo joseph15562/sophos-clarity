@@ -332,14 +332,14 @@ function buildLocalServiceAclTable(entities: Record<string, unknown>[]): TableDa
 function buildInterfaceTable(entities: Record<string, unknown>[]): TableData {
   const headers = ["Name", "HardwareName", "Zone", "NetworkZone", "IPAddress", "Status", "Speed", "MACAddress"];
   const rows = entities.map((e) => ({
-    "Name": textOf(e.Name ?? e.HardwareName),
-    "HardwareName": textOf(e.HardwareName ?? e.Name),
-    "Zone": textOf(e.Zone ?? e.NetworkZone),
-    "NetworkZone": textOf(e.NetworkZone ?? e.Zone),
-    "IPAddress": textOf(e.IPAddress ?? e.IPv4Address ?? e.IP),
+    "Name": textOf(e.Name) || textOf(e.HardwareName),
+    "HardwareName": textOf(e.HardwareName) || textOf(e.Name),
+    "Zone": textOf(e.Zone) || textOf(e.NetworkZone),
+    "NetworkZone": textOf(e.NetworkZone) || textOf(e.Zone),
+    "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP),
     "Status": textOf(e.Status),
     "Speed": textOf(e.Speed),
-    "MACAddress": textOf(e.MACAddress ?? e.MAC),
+    "MACAddress": textOf(e.MACAddress) || textOf(e.MAC),
   }));
   return { headers, rows };
 }
@@ -347,15 +347,15 @@ function buildInterfaceTable(entities: Record<string, unknown>[]): TableData {
 function buildVlanTable(entities: Record<string, unknown>[]): TableData {
   const headers = ["Name", "VLANID", "Interface", "Hardware", "Zone", "NetworkZone", "IPAddress", "Status"];
   const rows = entities.map((e) => {
-    const parent = textOf(e.Interface ?? e.Hardware ?? e.HardwareInterface ?? e.HardwareName ?? e.Member ?? e.Port);
+    const parent = textOf(e.Hardware) || textOf(e.Interface) || textOf(e.HardwareInterface) || textOf(e.HardwareName) || textOf(e.Member) || textOf(e.Port);
     return {
       "Name": textOf(e.Name),
-      "VLANID": textOf(e.VLANID ?? e.VlanID ?? e.VID),
+      "VLANID": textOf(e.VLANID) || textOf(e.VlanID) || textOf(e.VID),
       "Interface": parent,
       "Hardware": parent,
-      "Zone": textOf(e.Zone ?? e.NetworkZone),
-      "NetworkZone": textOf(e.NetworkZone ?? e.Zone),
-      "IPAddress": textOf(e.IPAddress ?? e.IPv4Address ?? e.IP),
+      "Zone": textOf(e.Zone) || textOf(e.NetworkZone),
+      "NetworkZone": textOf(e.NetworkZone) || textOf(e.Zone),
+      "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP),
       "Status": textOf(e.Status),
     };
   });
@@ -457,7 +457,7 @@ export function rawConfigToSections(
 
     if (entityType === "Interface" || entityType === "VLAN") {
       entities = entities.filter((e) => {
-        const zone = textOf(e.NetworkZone ?? e.Zone).trim();
+        const zone = (textOf(e.NetworkZone) || textOf(e.Zone)).trim();
         return zone.length > 0;
       });
       if (entities.length === 0) continue;
