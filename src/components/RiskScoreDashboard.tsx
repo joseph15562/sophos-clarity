@@ -160,7 +160,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
                 c.pct >= 50 ? "text-[#b8a200] dark:text-[#F8E300]" :
                 "text-[#EA0022]";
               return (
-                <div key={c.label} className="flex items-center gap-2">
+                <div key={c.label} className="flex items-center gap-2" title={c.details}>
                   <span className={`font-bold tabular-nums ${color}`}>{c.pct}%</span>
                   {delta > 0 && (
                     <span className="font-bold tabular-nums text-[#00b8d4] dark:text-[#00EDFF] text-[10px]">→{projCat!.pct}%</span>
