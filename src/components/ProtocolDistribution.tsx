@@ -1,5 +1,4 @@
-import { useMemo } from "react";
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
+import { useMemo, useState } from "react";
 
 type ExtractedSection = {
   tables: Array<{ headers: string[]; rows: Record<string, string>[] }>;
@@ -14,13 +13,19 @@ interface Props {
   }>;
 }
 
-const SOPHOS_COLORS = [
+const COLORS = [
   "#2006F7",
   "#5A00FF",
   "#009CFB",
   "#00995a",
   "#F29400",
   "#EA0022",
+  "#6366f1",
+  "#8b5cf6",
+  "#06b6d4",
+  "#14b8a6",
+  "#f59e0b",
+  "#ef4444",
 ];
 
 function isFirewallRulesSection(key: string): boolean {
@@ -39,8 +44,7 @@ function getServiceColumn(row: Record<string, string>): string {
     row["service"] ??
     row["Services Used"] ??
     ""
-  )
-    .trim();
+  ).trim();
 }
 
 function splitServices(raw: string): string[] {
@@ -52,7 +56,9 @@ function splitServices(raw: string): string[] {
 }
 
 export function ProtocolDistribution({ files }: Props) {
-  const { data, total } = useMemo(() => {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  const { data, total, maxCount } = useMemo(() => {
     const counts = new Map<string, number>();
 
     for (const file of files) {
@@ -70,7 +76,6 @@ export function ProtocolDistribution({ files }: Props) {
             const svcRaw = getServiceColumn(row);
             const services = splitServices(svcRaw);
             if (services.length === 0 && svcRaw) {
-              // Single value, no delimiter
               const s = svcRaw.toLowerCase();
               const name = s === "any" ? "Any" : svcRaw;
               counts.set(name, (counts.get(name) ?? 0) + 1);
@@ -85,17 +90,18 @@ export function ProtocolDistribution({ files }: Props) {
       }
     }
 
-    const treemapData = Array.from(counts.entries())
+    const sorted = Array.from(counts.entries())
       .map(([name, value], idx) => ({
         name,
         value,
-        color: SOPHOS_COLORS[idx % SOPHOS_COLORS.length],
+        color: COLORS[idx % COLORS.length],
       }))
       .sort((a, b) => b.value - a.value);
 
-    const total = treemapData.reduce((sum, d) => sum + d.value, 0);
+    const total = sorted.reduce((sum, d) => sum + d.value, 0);
+    const maxCount = sorted.length > 0 ? sorted[0].value : 0;
 
-    return { data: treemapData, total };
+    return { data: sorted, total, maxCount };
   }, [files]);
 
   if (data.length === 0) {
@@ -111,69 +117,54 @@ export function ProtocolDistribution({ files }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">
-        Protocol Distribution
-      </h3>
-      <div style={{ height: 250 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <Treemap
-            data={data}
-            dataKey="value"
-            stroke="hsl(var(--border))"
-            content={({ x, y, width, height, name, value, color }) => {
-              if (name === "root" || width < 30 || height < 20) return null;
-              return (
-                <g>
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    fill={color}
-                    fillOpacity={0.7}
-                    stroke="hsl(var(--border))"
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={x + width / 2}
-                    y={y + height / 2 - 6}
-                    textAnchor="middle"
-                    fill="hsl(var(--card))"
-                    fontSize={10}
-                    fontWeight={600}
-                  >
-                    {name}
-                  </text>
-                  <text
-                    x={x + width / 2}
-                    y={y + height / 2 + 6}
-                    textAnchor="middle"
-                    fill="hsl(var(--card))"
-                    fontSize={9}
-                    fillOpacity={0.9}
-                  >
-                    {value}
-                  </text>
-                </g>
-              );
-            }}
-          >
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                const pct =
-                  total > 0 ? Math.round((d.value / total) * 100) : 0;
-                return (
-                  <div className="rounded-md border border-border bg-card px-2 py-1.5 text-xs shadow-md">
-                    <span className="font-medium">{d.name}</span>: {d.value}{" "}
-                    ({pct}%)
-                  </div>
-                );
-              }}
-            />
-          </Treemap>
-        </ResponsiveContainer>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-foreground">
+          Protocol Distribution
+        </h3>
+        <span className="text-[10px] text-muted-foreground">
+          {data.length} protocol{data.length !== 1 ? "s" : ""} · {total} rules
+        </span>
+      </div>
+
+      <div className="space-y-1.5" style={{ maxHeight: 280, overflowY: "auto" }}>
+        {data.map((d, i) => {
+          const pct = total > 0 ? (d.value / total) * 100 : 0;
+          const barWidth = maxCount > 0 ? (d.value / maxCount) * 100 : 0;
+          const isHovered = hoveredIdx === i;
+
+          return (
+            <div
+              key={d.name}
+              className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/30 cursor-default"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: d.color }}
+              />
+              <span className="text-[11px] font-medium text-foreground w-24 truncate shrink-0">
+                {d.name}
+              </span>
+              <div className="flex-1 h-4 rounded-sm bg-muted/20 overflow-hidden relative">
+                <div
+                  className="h-full rounded-sm transition-all duration-300"
+                  style={{
+                    width: `${barWidth}%`,
+                    backgroundColor: d.color,
+                    opacity: isHovered ? 0.9 : 0.6,
+                  }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground w-7 text-right shrink-0 tabular-nums">
+                {d.value}
+              </span>
+              <span className="text-[9px] text-muted-foreground/60 w-9 text-right shrink-0 tabular-nums">
+                {pct < 1 && pct > 0 ? "<1" : Math.round(pct)}%
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
