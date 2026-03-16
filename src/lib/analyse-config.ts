@@ -618,7 +618,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const sigMap = new Map<string, string[]>();
   for (const row of rulesTable.rows) {
     const sig = ruleSignature(row);
-    if (!sig || sig === "||||") continue;
+    if (!sig || sig === "||||" || sig === "*|*|*|*|*") continue;
     const name = ruleName(row);
     const existing = sigMap.get(sig);
     if (existing) existing.push(name);
