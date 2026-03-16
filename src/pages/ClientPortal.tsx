@@ -349,8 +349,12 @@ export default function ClientPortal() {
         // Use the edge function for slug-based or unauthenticated access
         const paramKey = isSlug ? "slug" : "org_id";
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-data?${paramKey}=${encodeURIComponent(identifier)}`;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
         const resp = await fetch(url, {
-          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "" },
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+          },
         });
 
         if (!resp.ok) {
