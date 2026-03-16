@@ -458,6 +458,14 @@ serve(async (req: Request) => {
     if (req.method === "GET" && route === "config") return handleConfig(agent);
     if (req.method === "GET" && route === "firewalls")
       return handleFirewalls(agent);
+    if (req.method === "GET" && route === "commands") {
+      const cmd = agent.pending_command as string | null;
+      if (cmd) {
+        const db = adminClient();
+        await db.from("agents").update({ pending_command: null }).eq("id", agent.id);
+      }
+      return json({ command: cmd ?? null });
+    }
     if (req.method === "POST" && route === "heartbeat")
       return handleHeartbeat(req, agent);
     if (req.method === "POST" && route === "submit")

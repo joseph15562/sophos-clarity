@@ -42,6 +42,7 @@ export class Scheduler {
   private client: ApiClient;
   private task: cron.ScheduledTask | null = null;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private commandPollInterval: ReturnType<typeof setInterval> | null = null;
   private paused = false;
   private firewallStatuses: Map<string, FirewallStatus> = new Map();
   private dataDir: string;
@@ -72,6 +73,7 @@ export class Scheduler {
     });
 
     this.heartbeatInterval = setInterval(() => this.heartbeat(), 60 * 1000);
+    this.commandPollInterval = setInterval(() => this.pollCommands(), 10 * 1000);
     this.heartbeat();
     this.flushQueue();
   }
@@ -81,6 +83,8 @@ export class Scheduler {
     this.task = null;
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
     this.heartbeatInterval = null;
+    if (this.commandPollInterval) clearInterval(this.commandPollInterval);
+    this.commandPollInterval = null;
     log.info("Scheduler stopped");
   }
 
@@ -247,6 +251,23 @@ export class Scheduler {
         commandReceivedAt: this._heartbeatInfo.commandReceivedAt,
       };
       log.warn(`Heartbeat failed: ${msg}`);
+    }
+  }
+
+  private async pollCommands(): Promise<void> {
+    try {
+      const res = await this.client.get<{ command: string | null }>("/api/agent/commands");
+      if (res.command === "run-now") {
+        log.info("Received run-now command from dashboard — triggering scan");
+        this._heartbeatInfo.commandReceived = "run-now";
+        this._heartbeatInfo.commandReceivedAt = new Date().toISOString();
+        this.emit("command:run-now", null);
+        this.runAll().catch((err) => {
+          log.error(`Remote run-now failed: ${err instanceof Error ? err.message : err}`);
+        });
+      }
+    } catch {
+      // Command poll failures are non-critical; heartbeat will catch issues
     }
   }
 
