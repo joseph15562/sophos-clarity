@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { ArrowLeftRight, RotateCcw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadedFile } from "@/components/FileUpload";
@@ -63,6 +63,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [analysisTab, setAnalysisTab] = useState("overview");
   const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
   const [analysisOverride, setAnalysisOverride] = useState<Record<string, AnalysisResult> | null>(null);
+  const prevResultCountRef = useRef(0);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
   const [parsingProgress, setParsingProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
@@ -178,6 +179,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, [analysisResults, files, branding.customerName]);
 
+  // Scroll to top when analysis results first appear (HTML upload or agent load)
+  useEffect(() => {
+    const count = Object.keys(analysisResults).length;
+    if (count > 0 && prevResultCountRef.current === 0) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    prevResultCountRef.current = count;
+  }, [analysisResults]);
+
   // Restore session on mount
   useEffect(() => {
     const session = loadSession();
@@ -277,6 +287,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setActiveReportId("");
     setReportsSaved(false);
     setLoadedSavedSummary(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [setReports, setActiveReportId]);
 
   // Clear analysis override when user uploads new files normally
