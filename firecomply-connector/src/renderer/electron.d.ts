@@ -8,6 +8,8 @@ interface ElectronAPI {
   runNow(): Promise<{ ok: boolean }>;
   togglePause(): Promise<void>;
   getVersion(): Promise<string>;
+  checkForUpdate(): Promise<{ available: boolean; currentVersion: string; latestVersion?: string; downloadUrl?: string; releaseNotes?: string; error?: string }>;
+  openUrl(url: string): Promise<void>;
   getLogs(): Promise<any[]>;
   onStatusUpdate(callback: (status: unknown) => void): void;
   onScanProgress(callback: (progress: unknown) => void): void;

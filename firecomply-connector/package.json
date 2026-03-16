@@ -1,6 +1,6 @@
 {
   "name": "firecomply-connector",
-  "version": "1.0.0",
+  "version": "1.3.5",
   "description": "FireComply Connector — Automated Sophos Firewall monitoring agent",
   "author": "FireComply <support@firecomply.io>",
   "homepage": "https://github.com/joseph15562/sophos-clarity",

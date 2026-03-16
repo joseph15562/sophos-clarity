@@ -33,6 +33,8 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState("1.0.0");
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{ available: boolean; latestVersion?: string; downloadUrl?: string; releaseNotes?: string; error?: string } | null>(null);
 
   useEffect(() => {
     window.electronAPI?.getConfig().then((cfg: any) => {
@@ -258,12 +260,54 @@ export function SettingsPage() {
         </select>
       </div>
 
-      {/* About */}
-      <div className="bg-card border border-border rounded-xl p-4 space-y-2 text-xs text-muted-foreground">
-        <h2 className="text-sm font-semibold text-foreground">About</h2>
+      {/* About & Updates */}
+      <div className="bg-card border border-border rounded-xl p-4 space-y-3 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">About</h2>
+          <button
+            onClick={async () => {
+              setCheckingUpdate(true);
+              setUpdateInfo(null);
+              try {
+                const result = await window.electronAPI?.checkForUpdate();
+                if (result) setUpdateInfo(result);
+              } catch {
+                setUpdateInfo({ available: false, error: "Failed to check for updates" });
+              }
+              setCheckingUpdate(false);
+            }}
+            disabled={checkingUpdate}
+            className="text-xs px-3 py-1.5 rounded-lg bg-[#6B5BFF] text-white hover:bg-[#5a4be6] disabled:opacity-50"
+          >
+            {checkingUpdate ? "Checking…" : "Check for Updates"}
+          </button>
+        </div>
         <p>FireComply Connector v{version}</p>
         <p>API: {config?.firecomplyApiUrl ?? "Not configured"}</p>
         <p className="text-[10px]">API key is stored securely and unchanged when you update settings above.</p>
+
+        {updateInfo && (
+          <div className={`rounded-lg px-3 py-2.5 mt-2 ${updateInfo.available ? "bg-green-500/10 border border-green-500/20" : updateInfo.error ? "bg-red-500/10 border border-red-500/20" : "bg-muted/20 border border-border"}`}>
+            {updateInfo.available ? (
+              <div className="space-y-2">
+                <p className="text-green-500 font-medium">Update available: v{updateInfo.latestVersion}</p>
+                {updateInfo.releaseNotes && (
+                  <p className="text-[10px] text-muted-foreground whitespace-pre-wrap line-clamp-4">{updateInfo.releaseNotes.slice(0, 300)}</p>
+                )}
+                <button
+                  onClick={() => updateInfo.downloadUrl && window.electronAPI?.openUrl(updateInfo.downloadUrl)}
+                  className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700"
+                >
+                  Download v{updateInfo.latestVersion}
+                </button>
+              </div>
+            ) : updateInfo.error ? (
+              <p className="text-red-400">{updateInfo.error}</p>
+            ) : (
+              <p className="text-muted-foreground">You're on the latest version (v{version})</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

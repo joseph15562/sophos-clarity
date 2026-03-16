@@ -1,4 +1,4 @@
-import { app, ipcMain } from "electron";
+import { app, ipcMain, shell } from "electron";
 import { login, getDeviceInfo } from "../firewall/auth";
 import { testSnmpConnection } from "../firewall/snmp";
 import { detectCapabilities } from "../firewall/version";
@@ -6,6 +6,17 @@ import { loadConfig, saveConfig, validateConfig, type AppConfig } from "../confi
 import { getLogBuffer, onLog } from "../logger";
 import { queueSize } from "../api/queue";
 import type { BackgroundService } from "./service";
+
+const GITHUB_RELEASES_URL = "https://api.github.com/repos/joseph15562/sophos-clarity/releases";
+
+interface UpdateCheckResult {
+  available: boolean;
+  currentVersion: string;
+  latestVersion?: string;
+  downloadUrl?: string;
+  releaseNotes?: string;
+  error?: string;
+}
 
 export function registerIpcHandlers(
   configPath: string,
@@ -118,4 +129,50 @@ export function registerIpcHandlers(
     });
     event.sender.on("destroyed", unsubscribe);
   });
+
+  ipcMain.handle("app:check-update", async (): Promise<UpdateCheckResult> => {
+    const currentVersion = app.getVersion();
+    try {
+      const res = await fetch(GITHUB_RELEASES_URL, {
+        headers: { "Accept": "application/vnd.github+json", "User-Agent": "FireComply-Connector" },
+      });
+      if (!res.ok) return { available: false, currentVersion, error: `GitHub API: ${res.status}` };
+
+      const releases = (await res.json()) as Array<{ tag_name: string; html_url: string; body?: string; assets?: Array<{ name: string; browser_download_url: string }> }>;
+      const connectorReleases = releases.filter((r) => r.tag_name.startsWith("connector-v"));
+      if (connectorReleases.length === 0) return { available: false, currentVersion, error: "No connector releases found" };
+
+      const latest = connectorReleases[0];
+      const latestVersion = latest.tag_name.replace("connector-v", "");
+
+      const isNewer = compareVersions(latestVersion, currentVersion) > 0;
+      const exeAsset = latest.assets?.find((a) => a.name.endsWith(".exe"));
+
+      return {
+        available: isNewer,
+        currentVersion,
+        latestVersion,
+        downloadUrl: exeAsset?.browser_download_url ?? latest.html_url,
+        releaseNotes: latest.body ?? undefined,
+      };
+    } catch (err) {
+      return { available: false, currentVersion, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  ipcMain.handle("app:open-url", (_event, url: string) => {
+    shell.openExternal(url);
+  });
+}
+
+function compareVersions(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] ?? 0;
+    const nb = pb[i] ?? 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
 }

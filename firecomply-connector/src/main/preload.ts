@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   runNow: () => ipcRenderer.invoke("firewall:run-now"),
   togglePause: () => ipcRenderer.invoke("service:toggle"),
   getVersion: () => ipcRenderer.invoke("app:version"),
+  checkForUpdate: () => ipcRenderer.invoke("app:check-update"),
+  openUrl: (url: string) => ipcRenderer.invoke("app:open-url", url),
   getLogs: () => ipcRenderer.invoke("logs:get"),
 
   onStatusUpdate: (callback: (status: unknown) => void) => {
