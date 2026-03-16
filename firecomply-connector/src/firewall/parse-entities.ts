@@ -96,6 +96,25 @@ function parseNatRules(entities: unknown[]): TableData {
   return { headers, rows };
 }
 
+function parseSslTlsRules(entities: unknown[]): TableData {
+  const headers = [
+    "Name", "Status", "Decrypt Action", "Source Zones", "Destination Zones",
+    "Source Networks", "Destination Networks", "Service", "Decryption Profile",
+  ];
+  const rows = entities.map((e: any) => ({
+    "Name": asString(e.Name),
+    "Status": asString(e.Enable ?? e.Status ?? ""),
+    "Decrypt Action": asString(e.DecryptAction ?? e.Action ?? ""),
+    "Source Zones": extractNested(e, "SourceZones.Zone"),
+    "Destination Zones": extractNested(e, "DestinationZones.Zone"),
+    "Source Networks": extractNested(e, "SourceNetworks.Network"),
+    "Destination Networks": extractNested(e, "DestinationNetworks.Network"),
+    "Service": extractNested(e, "Services.Service"),
+    "Decryption Profile": asString(e.DecryptionProfile ?? ""),
+  }));
+  return { headers, rows };
+}
+
 function parseGenericEntities(entities: unknown[], _entityType: string): TableData {
   if (!entities.length) return { headers: [], rows: [] };
   const first = entities[0] as Record<string, unknown>;
@@ -209,6 +228,8 @@ export function parseEntityResults(results: EntityResult[]): ExtractedSections {
         table = parseFirewallRules(entities);
       } else if (result.entityType === "NATRule") {
         table = parseNatRules(entities);
+      } else if (result.entityType === "SSLTLSInspectionRule") {
+        table = parseSslTlsRules(entities);
       } else {
         table = parseGenericEntities(entities, result.entityType);
       }

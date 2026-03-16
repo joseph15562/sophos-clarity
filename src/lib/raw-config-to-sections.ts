@@ -160,6 +160,25 @@ function buildNatRuleTable(entities: Record<string, unknown>[]): TableData {
   return { headers, rows };
 }
 
+function buildSslTlsTable(entities: Record<string, unknown>[]): TableData {
+  const headers = [
+    "Name", "Status", "Decrypt Action", "Source Zones", "Destination Zones",
+    "Source Networks", "Destination Networks", "Service", "Decryption Profile",
+  ];
+  const rows = entities.map((e) => ({
+    "Name": asString(e.Name),
+    "Status": asString(e.Enable ?? e.Status ?? ""),
+    "Decrypt Action": asString(e.DecryptAction ?? e.Action ?? ""),
+    "Source Zones": extractNested(e, "SourceZones.Zone"),
+    "Destination Zones": extractNested(e, "DestinationZones.Zone"),
+    "Source Networks": extractNested(e, "SourceNetworks.Network"),
+    "Destination Networks": extractNested(e, "DestinationNetworks.Network"),
+    "Service": extractNested(e, "Services.Service"),
+    "Decryption Profile": asString(e.DecryptionProfile ?? ""),
+  }));
+  return { headers, rows };
+}
+
 function buildGenericTable(entities: Record<string, unknown>[]): TableData {
   if (!entities.length) return { headers: [], rows: [] };
   const first = entities[0];
@@ -197,6 +216,8 @@ export function rawConfigToSections(
       table = buildFirewallRuleTable(entities);
     } else if (entityType === "NATRule") {
       table = buildNatRuleTable(entities);
+    } else if (entityType === "SSLTLSInspectionRule") {
+      table = buildSslTlsTable(entities);
     } else {
       table = buildGenericTable(entities);
     }
