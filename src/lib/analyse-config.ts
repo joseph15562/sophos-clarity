@@ -355,9 +355,11 @@ function countInterfaceRows(sections: ExtractedSections): number {
     for (const t of sections[key].tables) {
       for (const row of t.rows) {
         vlanCount++;
-        const parent = row["Interface"] ?? row["HardwareInterface"] ?? row["Member"] ?? "";
-        if (parent) parentPorts.add(parent);
-        const vlanName = row["Name"] ?? row["HardwareName"] ?? "";
+        for (const field of ["Interface", "Hardware", "HardwareInterface", "HardwareName", "Member", "Port"]) {
+          const val = (row[field] ?? "").trim();
+          if (val) parentPorts.add(val);
+        }
+        const vlanName = (row["Name"] ?? "").trim();
         const dotIdx = vlanName.indexOf(".");
         if (dotIdx > 0) parentPorts.add(vlanName.substring(0, dotIdx));
       }
@@ -373,8 +375,9 @@ function countInterfaceRows(sections: ExtractedSections): number {
         t.headers.includes("Setting") && t.headers.includes("Value");
       if (isSettingsGrid) continue;
       for (const row of t.rows) {
-        const name = row["Name"] ?? row["HardwareName"] ?? "";
-        if (!parentPorts.has(name)) portCount++;
+        const name = (row["Name"] ?? "").trim();
+        const hw = (row["HardwareName"] ?? "").trim();
+        if (!parentPorts.has(name) && !parentPorts.has(hw)) portCount++;
       }
     }
   }
