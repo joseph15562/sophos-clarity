@@ -396,7 +396,11 @@ export function rawConfigToSections(
 
     if (entityType === "Interface") {
       entities = entities.filter((e) => {
-        const zone = asString(e.NetworkZone ?? e.Zone ?? "").trim();
+        const zoneVal = e.NetworkZone ?? e.Zone;
+        if (zoneVal == null) return false;
+        const zone = typeof zoneVal === "object"
+          ? String((zoneVal as Record<string, unknown>)["#text"] ?? "").trim()
+          : String(zoneVal).trim();
         return zone.length > 0;
       });
       if (entities.length === 0) continue;
