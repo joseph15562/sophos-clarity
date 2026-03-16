@@ -128,59 +128,114 @@ export function RuleOverlapVis({ files }: Props) {
 
       <div className="overflow-x-auto">
         <div className="inline-block min-w-0">
-          <table className="border-collapse" style={{ tableLayout: "fixed" }}>
-            <thead>
-              <tr>
-                <th className="w-4 h-4 p-0" />
+          <div className="flex">
+            {/* Row labels column */}
+            <div className="shrink-0" style={{ paddingTop: rules.length > 10 ? 72 : 56 }}>
+              {rules.map((r, i) => (
+                <div
+                  key={i}
+                  className={`text-[8px] font-mono truncate pr-1.5 flex items-center transition-colors ${
+                    hovered?.i === i || hovered?.j === i
+                      ? "text-foreground font-semibold"
+                      : "text-muted-foreground"
+                  }`}
+                  style={{ height: 18, maxWidth: 80 }}
+                  title={r.name}
+                >
+                  {r.name.length > 12 ? r.name.slice(0, 11) + "…" : r.name}
+                </div>
+              ))}
+            </div>
+
+            {/* Matrix with rotated column headers */}
+            <div>
+              {/* Column headers */}
+              <div className="flex" style={{ height: rules.length > 10 ? 72 : 56 }}>
                 {rules.map((r, j) => (
-                  <th
+                  <div
                     key={j}
-                    className="w-4 h-4 p-0 text-[8px] font-mono text-muted-foreground truncate max-w-[16px]"
-                    title={r.name}
+                    className="relative"
+                    style={{ width: 18, height: "100%" }}
                   >
-                    {r.name.length > 3 ? r.name.slice(0, 2) + "…" : r.name}
-                  </th>
+                    <span
+                      className="absolute text-[8px] font-mono text-muted-foreground whitespace-nowrap origin-bottom-left"
+                      style={{
+                        bottom: 2,
+                        left: 10,
+                        transform: "rotate(-55deg)",
+                        maxWidth: rules.length > 10 ? 68 : 52,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                      title={r.name}
+                    >
+                      {r.name.length > 12 ? r.name.slice(0, 11) + "…" : r.name}
+                    </span>
+                  </div>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </div>
+
+              {/* Grid cells */}
               {matrix.map((row, i) => (
-                <tr key={i}>
-                  <td className="w-4 h-4 p-0 text-[8px] font-mono text-muted-foreground truncate align-middle">
-                    {rules[i].name.length > 3 ? rules[i].name.slice(0, 2) + "…" : rules[i].name}
-                  </td>
+                <div key={i} className="flex">
                   {row.map((score, j) => {
                     const isSelf = i === j;
                     const isHovered = hovered?.i === i && hovered?.j === j;
+                    const isRowOrCol =
+                      hovered !== null &&
+                      !isHovered &&
+                      (hovered.i === i || hovered.j === j);
                     let bg = "bg-transparent";
-                    if (isSelf) bg = "bg-muted";
+                    if (isSelf) bg = "bg-muted/60";
                     else if (score === 3) bg = "bg-red-500/80";
                     else if (score === 2) bg = "bg-amber-500/60";
                     else if (score === 1) bg = "bg-amber-400/30";
                     return (
-                      <td
+                      <div
                         key={j}
-                        className={`w-4 h-4 p-0 border border-border/50 ${bg} ${isHovered ? "ring-1 ring-foreground" : ""}`}
-                        style={{ width: 16, height: 16, minWidth: 16, minHeight: 16 }}
+                        className={`border border-border/40 ${bg} transition-all duration-75 ${
+                          isHovered
+                            ? "ring-1 ring-foreground z-10"
+                            : isRowOrCol
+                              ? "brightness-125"
+                              : ""
+                        }`}
+                        style={{ width: 18, height: 18 }}
                         onMouseEnter={() => setHovered({ i, j })}
                         onMouseLeave={() => setHovered(null)}
-                        title={
-                          i === j
-                            ? `Rule ${rules[i].name} (self)`
-                            : `Rule ${rules[i].name} and Rule ${rules[j].name}: ${overlapScore(rules[i], rules[j]).reasons.join(", ") || "no overlap"}`
-                        }
                       />
                     );
                   })}
-                </tr>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </div>
 
-      {tooltip && (
-        <p className="mt-3 text-[10px] text-muted-foreground">{tooltip}</p>
+      {hovered !== null && (
+        <div className="mt-3 rounded-md bg-muted/20 border border-border/50 px-2.5 py-1.5">
+          {hovered.i === hovered.j ? (
+            <p className="text-[10px] text-muted-foreground">
+              <span className="font-medium text-foreground">{rules[hovered.i].name}</span> (self)
+            </p>
+          ) : (
+            <div className="text-[10px] text-muted-foreground space-y-0.5">
+              <p>
+                <span className="font-medium text-foreground">{rules[hovered.i].name}</span>
+                {" ↔ "}
+                <span className="font-medium text-foreground">{rules[hovered.j].name}</span>
+              </p>
+              <p>
+                {(() => {
+                  const { score, reasons } = overlapScore(rules[hovered.i], rules[hovered.j]);
+                  if (score === 0) return "No overlap";
+                  return reasons.join(", ");
+                })()}
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="flex gap-4 mt-3 text-[9px] text-muted-foreground">
