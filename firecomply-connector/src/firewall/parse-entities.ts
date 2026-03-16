@@ -272,6 +272,10 @@ const SECTION_MAP: Record<string, string> = {
   SecurityGroup: "Groups",
   UserGroup: "User Groups",
   AuthenticationServer: "Authentication Servers",
+  LDAPServer: "Authentication Servers",
+  ActiveDirectoryServer: "Authentication Servers",
+  RADIUSServer: "Authentication Servers",
+  TACACSServer: "Authentication Servers",
   DNS: "DNS Configuration",
   DNSRequestRoute: "DNS Request Routes",
   DHCP: "DHCP",
@@ -354,14 +358,25 @@ export function parseEntityResults(results: EntityResult[]): ExtractedSections {
         table = parseGenericEntities(entities, result.entityType);
       }
 
-      sections[sectionName] = {
-        tables: [table],
-        text: "",
-        details: entities.map((e: any) => ({
-          title: asString(e.Name ?? e.RuleName ?? e.Description ?? sectionName),
-          fields: flattenObject(e),
-        })),
-      };
+      const newDetails = entities.map((e: any) => ({
+        title: asString(e.Name ?? e.RuleName ?? e.Description ?? sectionName),
+        fields: flattenObject(e),
+      }));
+
+      const existing = sections[sectionName];
+      if (existing) {
+        existing.tables[0] = {
+          headers: [...new Set([...existing.tables[0].headers, ...table.headers])],
+          rows: [...existing.tables[0].rows, ...table.rows],
+        };
+        existing.details = [...existing.details, ...newDetails];
+      } else {
+        sections[sectionName] = {
+          tables: [table],
+          text: "",
+          details: newDetails,
+        };
+      }
     } catch (err) {
       console.warn(`[parse-entities] Failed to parse ${result.entityType}:`, err);
     }

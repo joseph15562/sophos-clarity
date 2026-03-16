@@ -63,6 +63,10 @@ const SECTION_MAP: Record<string, string> = {
   SecurityGroup: "Groups",
   UserGroup: "User Groups",
   AuthenticationServer: "Authentication Servers",
+  LDAPServer: "Authentication Servers",
+  ActiveDirectoryServer: "Authentication Servers",
+  RADIUSServer: "Authentication Servers",
+  TACACSServer: "Authentication Servers",
   DNS: "DNS Configuration",
   DNSRequestRoute: "DNS Request Routes",
   DHCP: "DHCP",
@@ -352,11 +356,20 @@ export function rawConfigToSections(
       fields: flattenObject(e),
     }));
 
-    sections[sectionName] = {
-      tables: [table],
-      text: "",
-      details,
-    };
+    const existing = sections[sectionName];
+    if (existing) {
+      existing.tables[0] = {
+        headers: [...new Set([...existing.tables[0].headers, ...table.headers])],
+        rows: [...existing.tables[0].rows, ...table.rows],
+      };
+      existing.details = [...existing.details, ...details];
+    } else {
+      sections[sectionName] = {
+        tables: [table],
+        text: "",
+        details,
+      };
+    }
   }
 
   return sections;
