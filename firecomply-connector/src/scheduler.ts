@@ -71,7 +71,7 @@ export class Scheduler {
       if (!this.paused) this.runAll();
     });
 
-    this.heartbeatInterval = setInterval(() => this.heartbeat(), 5 * 60 * 1000);
+    this.heartbeatInterval = setInterval(() => this.heartbeat(), 60 * 1000);
     this.heartbeat();
     this.flushQueue();
   }
