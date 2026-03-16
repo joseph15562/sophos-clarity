@@ -101,33 +101,38 @@ export function computeRiskScore(result: AnalysisResult): RiskScoreResult {
   const broadFindings = findings.filter((f) => f.title.includes("broad source"));
   const dupeFindings = findings.filter((f) => f.title.includes("overlapping"));
   const anyServiceFindings = findings.filter((f) => f.title.includes('"ANY" service'));
+  const fullyOpenFindings = findings.filter((f) => f.title.includes("fully open rule"));
   let segScore = 100;
+  const segDetails: string[] = [];
 
-  if (broadFindings.length > 0) segScore -= 20;
+  if (broadFindings.length > 0) { segScore -= 20; segDetails.push("broad rules (-20)"); }
+  if (fullyOpenFindings.length > 0) {
+    const openCount = parseInt(fullyOpenFindings[0].title.match(/\d+/)?.[0] ?? "0");
+    const penalty = Math.min(25, openCount * 3);
+    segScore -= penalty;
+    segDetails.push(`${openCount} fully open rules (-${penalty})`);
+  }
   if (anyServiceFindings.length > 0) {
     const anyCount = parseInt(anyServiceFindings[0].title.match(/\d+/)?.[0] ?? "0");
-    segScore -= Math.min(25, anyCount * 5);
+    const penalty = Math.min(25, anyCount * 5);
+    segScore -= penalty;
+    segDetails.push(`${anyCount} ANY service rules (-${penalty})`);
   }
-  if (dupeFindings.length > 0) segScore -= 10;
-  // No SSL/TLS Decrypt = DPI inactive on Sophos XGS — significant penalty
-  if (!ip.dpiEngineEnabled && ip.totalWanRules > 0) segScore -= 25;
-  // Zone gaps in SSL/TLS coverage
-  if (ip.sslUncoveredZones.length > 0) segScore -= Math.min(15, ip.sslUncoveredZones.length * 5);
-
-  // Penalise for disabled WAN rules — suggests abandoned or incomplete policy
+  if (dupeFindings.length > 0) { segScore -= 10; segDetails.push("overlapping rules (-10)"); }
+  if (!ip.dpiEngineEnabled && ip.totalWanRules > 0) { segScore -= 25; segDetails.push("no SSL/TLS Decrypt (DPI inactive) (-25)"); }
+  if (ip.sslUncoveredZones.length > 0) {
+    const penalty = Math.min(15, ip.sslUncoveredZones.length * 5);
+    segScore -= penalty;
+    segDetails.push(`zone gaps: ${ip.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")} (-${penalty})`);
+  }
   if (ip.disabledWanRules > 0 && ip.totalWanRules > 0) {
     const disabledPct = ip.disabledWanRules / ip.totalWanRules;
-    segScore -= Math.round(disabledPct * 15);
+    const penalty = Math.round(disabledPct * 15);
+    segScore -= penalty;
+    segDetails.push(`${ip.disabledWanRules} disabled WAN rules (-${penalty})`);
   }
 
   segScore = clamp(segScore);
-  const segDetails: string[] = [];
-  if (!ip.dpiEngineEnabled && ip.totalWanRules > 0) segDetails.push("no SSL/TLS Decrypt rules (DPI inactive)");
-  if (ip.sslUncoveredZones.length > 0) segDetails.push(`zone gaps: ${ip.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")}`);
-  if (ip.disabledWanRules > 0) segDetails.push(`${ip.disabledWanRules} disabled WAN rules`);
-  if (broadFindings.length > 0) segDetails.push("broad rules detected");
-  if (anyServiceFindings.length > 0) segDetails.push("ANY service rules");
-  if (dupeFindings.length > 0) segDetails.push("overlapping rules");
 
   categories.push({
     label: "Rule Hygiene",
