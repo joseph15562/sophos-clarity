@@ -350,7 +350,7 @@ export default function ClientPortal() {
         const paramKey = isSlug ? "slug" : "org_id";
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-data?${paramKey}=${encodeURIComponent(identifier)}`;
         const resp = await fetch(url, {
-          headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? "" },
+          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "" },
         });
 
         if (!resp.ok) {
