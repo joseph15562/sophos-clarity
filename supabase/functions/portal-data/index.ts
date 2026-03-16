@@ -99,7 +99,7 @@ serve(async (req: Request) => {
       // ── Tenant-scoped: query agents with matching tenant_name ──
       const { data: agents } = await admin
         .from("agents")
-        .select("id, label, serial_number, hardware_model, tenant_name, last_seen_at")
+        .select("id, name, serial_number, hardware_model, tenant_name, last_seen_at")
         .eq("org_id", orgId)
         .eq("tenant_name", tenantName);
 
@@ -156,7 +156,7 @@ serve(async (req: Request) => {
           const latest = latestByAgent.get(agent.id as string);
           return {
             agentId: agent.id,
-            label: agent.label ?? "Unnamed",
+            label: agent.name ?? "Unnamed",
             serialNumber: agent.serial_number ?? null,
             model: agent.hardware_model ?? null,
             score: latest ? (latest.overall_score as number) : null,
