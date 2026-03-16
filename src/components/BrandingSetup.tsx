@@ -356,6 +356,13 @@ export function BrandingSetup({ branding, onChange }: Props) {
               style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}
             >
               <option value="" disabled>Select customer…</option>
+              {branding.customerName &&
+                !centralTenants.some((t) => t.name === branding.customerName) &&
+                !knownCustomers.includes(branding.customerName) && (
+                <option key="__current__" value={branding.customerName}>
+                  {branding.customerName} (from connector)
+                </option>
+              )}
               {centralTenants.length > 0 && (
                 <optgroup label="Sophos Central Tenants">
                   {centralTenants
