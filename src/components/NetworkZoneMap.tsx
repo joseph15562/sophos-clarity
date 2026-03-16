@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 
 interface ExtractedSection {
   tables: Array<{ headers: string[]; rows: Record<string, string>[] }>;
@@ -23,6 +23,7 @@ interface ZoneFlow {
 }
 
 type SecurityLevel = "full" | "partial" | "none";
+type ZoneCategory = "external" | "perimeter" | "internal";
 
 function findSection(
   sections: Record<string, ExtractedSection>,
@@ -45,39 +46,20 @@ function isWebTraffic(service: string): boolean {
 function getFlowSecurityLevel(f: ZoneFlow): SecurityLevel {
   if (f.count === 0) return "none";
   const ipsPct = f.hasIps / f.count;
-  const wfApplicable = isWebTraffic("HTTP") ? 1 : 0;
-  const wfPct = wfApplicable > 0 ? f.hasWebFilter / f.count : 1;
-  const hasAny = ipsPct > 0 || wfPct > 0;
-  const hasAll = ipsPct >= 1 && (wfApplicable === 0 || wfPct >= 1);
-  if (hasAll) return "full";
-  if (hasAny) return "partial";
+  const wfPct = f.webFilterable > 0 ? f.hasWebFilter / f.webFilterable : 1;
+  if (ipsPct >= 1 && wfPct >= 1) return "full";
+  if (ipsPct > 0 || (f.webFilterable > 0 && wfPct > 0)) return "partial";
   return "none";
 }
 
-function getZoneSecurityLevel(
-  flows: ZoneFlow[],
-  zone: string
-): SecurityLevel {
+function getZoneSecurityLevel(flows: ZoneFlow[], zone: string): SecurityLevel {
   const zoneFlows = flows.filter((f) => f.source === zone || f.dest === zone);
+  if (zoneFlows.length === 0) return "none";
   const levels = zoneFlows.map((f) => getFlowSecurityLevel(f));
   if (levels.every((l) => l === "full")) return "full";
   if (levels.some((l) => l === "full") || levels.some((l) => l === "partial"))
     return "partial";
   return "none";
-}
-
-const ZONE_BORDER: Record<string, string> = {
-  wan: "#EA0022",
-  lan: "#00995a",
-  dmz: "#F29400",
-};
-
-function getZoneBorder(zone: string): string {
-  const z = zone.toLowerCase();
-  if (z.includes("wan")) return ZONE_BORDER.wan;
-  if (z.includes("lan") || z.includes("server")) return ZONE_BORDER.lan;
-  if (z.includes("dmz")) return ZONE_BORDER.dmz;
-  return "transparent";
 }
 
 const FLOW_COLORS: Record<SecurityLevel, string> = {
@@ -86,51 +68,82 @@ const FLOW_COLORS: Record<SecurityLevel, string> = {
   none: "#EA0022",
 };
 
-const ZONE_PRIORITY: [RegExp, number][] = [
-  [/^wan$/i, 0],
-  [/wan/i, 1],
-  [/dmz/i, 2],
-  [/guest/i, 3],
-  [/vpn/i, 4],
-  [/wifi|wlan|wireless/i, 5],
-  [/server/i, 6],
-  [/lan/i, 7],
-  [/local/i, 8],
-];
+const LEVEL_LABELS: Record<SecurityLevel, string> = {
+  full: "Secured",
+  partial: "Partial",
+  none: "Unprotected",
+};
 
-function zoneOrder(name: string): number {
-  for (const [re, order] of ZONE_PRIORITY) {
-    if (re.test(name)) return order;
-  }
-  return 5;
+function categorizeZone(name: string): ZoneCategory {
+  const z = name.toLowerCase();
+  if (/^wan$|wan_|_wan$/.test(z) || z === "wan") return "external";
+  if (z.includes("dmz")) return "external";
+  if (z.includes("guest")) return "perimeter";
+  if (z.includes("vpn")) return "perimeter";
+  if (z.includes("wifi") || z.includes("wlan") || z.includes("wireless")) return "perimeter";
+  if (z.includes("red")) return "perimeter";
+  if (z.includes("discover")) return "perimeter";
+  return "internal";
 }
 
-function smartLayout(
+function zoneSortKey(name: string): number {
+  const z = name.toLowerCase();
+  if (z === "wan") return 0;
+  if (z.includes("wan")) return 1;
+  if (z.includes("dmz")) return 2;
+  if (z.includes("guest")) return 10;
+  if (z.includes("vpn")) return 11;
+  if (z.includes("wifi") || z.includes("wlan")) return 12;
+  if (z.includes("red")) return 13;
+  if (z.includes("discover")) return 14;
+  if (z === "lan") return 20;
+  if (z.includes("lan")) return 21;
+  if (z.includes("server")) return 22;
+  if (z.includes("local")) return 23;
+  if (z.includes("manage")) return 24;
+  return 25;
+}
+
+function twoColumnLayout(
   zones: string[],
   width: number,
   height: number
-): Map<string, { x: number; y: number }> {
-  const sorted = [...zones].sort((a, b) => zoneOrder(a) - zoneOrder(b));
-  const map = new Map<string, { x: number; y: number }>();
-  const cx = width / 2;
-  const cy = height / 2;
-  const rx = width * 0.38;
-  const ry = height * 0.36;
-  const n = sorted.length;
-  sorted.forEach((z, i) => {
-    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
-    map.set(z, {
-      x: cx + rx * Math.cos(angle),
-      y: cy + ry * Math.sin(angle),
+): Map<string, { x: number; y: number; cat: ZoneCategory }> {
+  const map = new Map<string, { x: number; y: number; cat: ZoneCategory }>();
+
+  const external = zones
+    .filter((z) => categorizeZone(z) === "external")
+    .sort((a, b) => zoneSortKey(a) - zoneSortKey(b));
+  const perimeter = zones
+    .filter((z) => categorizeZone(z) === "perimeter")
+    .sort((a, b) => zoneSortKey(a) - zoneSortKey(b));
+  const internal = zones
+    .filter((z) => categorizeZone(z) === "internal")
+    .sort((a, b) => zoneSortKey(a) - zoneSortKey(b));
+
+  const colX = { internal: width * 0.15, perimeter: width * 0.5, external: width * 0.85 };
+  const pad = 46;
+
+  const placeColumn = (list: string[], x: number, cat: ZoneCategory) => {
+    const totalH = height - pad * 2;
+    const spacing = list.length > 1 ? totalH / (list.length - 1) : 0;
+    const startY = list.length > 1 ? pad : height / 2;
+    list.forEach((z, i) => {
+      map.set(z, { x, y: startY + spacing * i, cat });
     });
-  });
+  };
+
+  placeColumn(internal, colX.internal, "internal");
+  placeColumn(perimeter, colX.perimeter, "perimeter");
+  placeColumn(external, colX.external, "external");
+
   return map;
 }
 
 function bezierPath(
   x1: number, y1: number,
   x2: number, y2: number,
-  offset: number,
+  offset: number
 ): string {
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
@@ -139,16 +152,34 @@ function bezierPath(
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
   const nx = -dy / len;
   const ny = dx / len;
-  const cx = mx + nx * offset;
-  const cy = my + ny * offset;
-  return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
+  return `M${x1},${y1} Q${mx + nx * offset},${my + ny * offset} ${x2},${y2}`;
 }
 
 export function NetworkZoneMap({ files }: Props) {
-  const [hoverZone, setHoverZone] = useState<string | null>(null);
-  const [hoverFlow, setHoverFlow] = useState<string | null>(null);
+  const [activeZone, setActiveZone] = useState<string | null>(null);
+  const [pinned, setPinned] = useState(false);
 
-  const { zones, flows, zonePositions } = useMemo(() => {
+  const handleZoneHover = useCallback(
+    (zone: string | null) => {
+      if (!pinned) setActiveZone(zone);
+    },
+    [pinned]
+  );
+
+  const handleZoneClick = useCallback(
+    (zone: string) => {
+      if (pinned && activeZone === zone) {
+        setPinned(false);
+        setActiveZone(null);
+      } else {
+        setActiveZone(zone);
+        setPinned(true);
+      }
+    },
+    [pinned, activeZone]
+  );
+
+  const { allZones, flows, positions } = useMemo(() => {
     const zoneSet = new Set<string>();
     const flowMap = new Map<string, ZoneFlow>();
 
@@ -159,7 +190,9 @@ export function NetworkZoneMap({ files }: Props) {
         sections["Firewall Rules"] ??
         sections["firewallRules"];
       const zoneSection =
-        findSection(sections, /^zones?$/i) ?? sections["Zone"] ?? sections["zones"];
+        findSection(sections, /^zones?$/i) ??
+        sections["Zone"] ??
+        sections["zones"];
 
       if (zoneSection) {
         for (const t of zoneSection.tables) {
@@ -196,19 +229,13 @@ export function NetworkZoneMap({ files }: Props) {
               row["Web Filter Policy"] ??
               row["WebFilter"] ??
               "";
-            const hasWf = !!(
-              wf &&
-              !/none|not specified|-|n\/a/i.test(wf)
-            );
+            const hasWf = !!(wf && !/none|not specified|-|n\/a/i.test(wf));
             const ips =
               row["IPS"] ??
               row["Intrusion Prevention"] ??
               row["IntrusionPrevention"] ??
               "";
-            const hasIps = !!(
-              ips &&
-              !/none|off|-|n\/a|disabled/i.test(ips)
-            );
+            const hasIps = !!(ips && !/none|off|-|n\/a|disabled/i.test(ips));
             const service = row["Service"] ?? row["Services"] ?? "Any";
             const needsWf = isWebTraffic(service);
 
@@ -244,19 +271,14 @@ export function NetworkZoneMap({ files }: Props) {
     }
 
     const zoneList = [...zoneSet];
-    const positions = smartLayout(zoneList, 500, 400);
+    const svgW = 520;
+    const svgH = Math.max(360, zoneList.length * 22 + 80);
+    const pos = twoColumnLayout(zoneList, svgW, svgH);
 
-    return {
-      zones: zoneList,
-      flows: [...flowMap.values()],
-      zonePositions: positions,
-    };
+    return { allZones: zoneList, flows: [...flowMap.values()], positions: pos };
   }, [files]);
 
-  const svgWidth = 500;
-  const svgHeight = 400;
-
-  if (zones.length === 0 && flows.length === 0) {
+  if (allZones.length === 0 && flows.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-5">
         <h3 className="text-sm font-semibold text-foreground">Network Zone Map</h3>
@@ -265,148 +287,285 @@ export function NetworkZoneMap({ files }: Props) {
     );
   }
 
-  const displayZones = zones.length > 0 ? zones : [...new Set(flows.flatMap((f) => [f.source, f.dest]))];
-  const positions = zones.length > 0 ? zonePositions : smartLayout(displayZones, svgWidth, svgHeight);
+  const displayZones =
+    allZones.length > 0
+      ? allZones
+      : [...new Set(flows.flatMap((f) => [f.source, f.dest]))];
 
-  const reverseFlowKeys = new Set<string>();
-  for (const f of flows) {
-    const rev = `${f.dest}→${f.source}`;
-    if (flows.some((x) => x.source === f.dest && x.dest === f.source)) {
-      reverseFlowKeys.add(rev);
-    }
-  }
+  const svgW = 520;
+  const svgH = Math.max(360, displayZones.length * 22 + 80);
+
+  const activeFlows = activeZone
+    ? flows.filter((f) => f.source === activeZone || f.dest === activeZone)
+    : [];
+  const connectedZones = new Set(
+    activeFlows.flatMap((f) => [f.source, f.dest])
+  );
+
+  const outbound = activeFlows.filter((f) => f.source === activeZone);
+  const inbound = activeFlows.filter((f) => f.dest === activeZone);
+
+  const columnLabels = { internal: false, perimeter: false, external: false };
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">Network Zone Map</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Network Zone Map</h3>
+        <p className="text-[9px] text-muted-foreground">
+          {activeZone
+            ? pinned
+              ? "Click zone again to deselect"
+              : "Click to pin selection"
+            : "Hover or click a zone"}
+        </p>
+      </div>
 
-      <div className="w-full overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="w-full"
-          style={{ height: 380, minWidth: 320 }}
-        >
-          {flows.map((f) => {
-            const srcPos = positions.get(f.source);
-            const dstPos = positions.get(f.dest);
-            if (!srcPos || !dstPos) return null;
+      <div className="flex gap-4">
+        {/* SVG Map */}
+        <div className="flex-1 min-w-0 overflow-x-auto">
+          <svg
+            viewBox={`0 0 ${svgW} ${svgH}`}
+            className="w-full"
+            style={{ height: Math.min(svgH, 480), minWidth: 280 }}
+            onMouseLeave={() => handleZoneHover(null)}
+          >
+            {/* Column headers */}
+            <text x={svgW * 0.15} y={16} textAnchor="middle" className="text-[8px] font-semibold fill-muted-foreground/60 uppercase tracking-wider">Internal</text>
+            <text x={svgW * 0.5} y={16} textAnchor="middle" className="text-[8px] font-semibold fill-muted-foreground/60 uppercase tracking-wider">Perimeter</text>
+            <text x={svgW * 0.85} y={16} textAnchor="middle" className="text-[8px] font-semibold fill-muted-foreground/60 uppercase tracking-wider">External</text>
 
-            const level = getFlowSecurityLevel(f);
-            const key = `${f.source}→${f.dest}`;
-            const hasReverse = reverseFlowKeys.has(key);
-            const curveOffset = hasReverse ? 18 : 8;
-            const isHovered =
-              hoverFlow === key ||
-              (hoverZone && (hoverZone === f.source || hoverZone === f.dest));
+            {/* Column divider lines */}
+            <line x1={svgW * 0.33} y1={24} x2={svgW * 0.33} y2={svgH - 8} stroke="currentColor" strokeOpacity={0.06} strokeDasharray="4 4" />
+            <line x1={svgW * 0.67} y1={24} x2={svgW * 0.67} y2={svgH - 8} stroke="currentColor" strokeOpacity={0.06} strokeDasharray="4 4" />
 
-            return (
-              <path
-                key={key}
-                d={bezierPath(srcPos.x, srcPos.y, dstPos.x, dstPos.y, curveOffset)}
-                fill="none"
-                stroke={FLOW_COLORS[level]}
-                strokeWidth={isHovered ? 2.5 : 1.5}
-                strokeOpacity={isHovered ? 0.9 : 0.2}
-                className="transition-all duration-150 cursor-pointer"
-                onMouseEnter={() => setHoverFlow(key)}
-                onMouseLeave={() => setHoverFlow(null)}
-              >
-                <title>
-                  {f.count} rule{f.count !== 1 ? "s" : ""} from {f.source} to {f.dest}
-                </title>
-              </path>
-            );
-          })}
+            {/* Flow lines — only for active zone */}
+            {activeFlows.map((f) => {
+              const srcPos = positions.get(f.source);
+              const dstPos = positions.get(f.dest);
+              if (!srcPos || !dstPos) return null;
 
-          {displayZones.map((zone) => {
-            const pos = positions.get(zone);
-            if (!pos) return null;
+              const level = getFlowSecurityLevel(f);
+              const key = `${f.source}→${f.dest}`;
+              const hasReverse = flows.some(
+                (x) => x.source === f.dest && x.dest === f.source
+              );
+              const curveOffset = hasReverse ? 20 : 6;
 
-            const level = getZoneSecurityLevel(flows, zone);
-            const fill =
-              level === "full"
-                ? "#00995a"
-                : level === "partial"
-                  ? "#F29400"
-                  : "#6A889B";
-            const border = getZoneBorder(zone);
-            const isHovered = hoverZone === zone;
-            const r = isHovered ? 22 : 18;
-            const ruleCount = flows
-              .filter((f) => f.source === zone || f.dest === zone)
-              .reduce((s, f) => s + f.count, 0);
-
-            return (
-              <g
-                key={zone}
-                onMouseEnter={() => setHoverZone(zone)}
-                onMouseLeave={() => setHoverZone(null)}
-                className="cursor-pointer"
-              >
-                <circle
-                  cx={pos.x}
-                  cy={pos.y}
-                  r={r}
-                  fill={fill}
-                  fillOpacity={0.85}
-                  stroke={border !== "transparent" ? border : "currentColor"}
-                  strokeWidth={border !== "transparent" ? 2.5 : 0.8}
-                  strokeOpacity={border !== "transparent" ? 1 : 0.2}
-                  className="transition-all duration-150"
+              return (
+                <path
+                  key={key}
+                  d={bezierPath(srcPos.x, srcPos.y, dstPos.x, dstPos.y, curveOffset)}
+                  fill="none"
+                  stroke={FLOW_COLORS[level]}
+                  strokeWidth={2}
+                  strokeOpacity={0.7}
+                  className="transition-all duration-200 pointer-events-none"
                 />
-                <text
-                  x={pos.x}
-                  y={pos.y + r + 12}
-                  textAnchor="middle"
-                  className="text-[8px] font-medium fill-muted-foreground pointer-events-none"
+              );
+            })}
+
+            {/* Zone circles */}
+            {displayZones.map((zone) => {
+              const pos = positions.get(zone);
+              if (!pos) return null;
+
+              const level = getZoneSecurityLevel(flows, zone);
+              const isActive = activeZone === zone;
+              const isConnected = activeZone ? connectedZones.has(zone) : false;
+              const isDimmed = activeZone !== null && !isActive && !isConnected;
+
+              const cat = pos.cat;
+              if (!columnLabels[cat]) columnLabels[cat] = true;
+
+              const fill =
+                level === "full"
+                  ? "#00995a"
+                  : level === "partial"
+                    ? "#F29400"
+                    : "#6A889B";
+
+              const r = isActive ? 20 : isConnected ? 17 : 15;
+              const ruleCount = flows
+                .filter((f) => f.source === zone || f.dest === zone)
+                .reduce((s, f) => s + f.count, 0);
+
+              return (
+                <g
+                  key={zone}
+                  onMouseEnter={() => handleZoneHover(zone)}
+                  onClick={() => handleZoneClick(zone)}
+                  className="cursor-pointer"
+                  opacity={isDimmed ? 0.25 : 1}
                 >
-                  {zone.length > 12 ? zone.slice(0, 11) + "…" : zone}
-                </text>
-                {isHovered && (
+                  {isActive && (
+                    <circle
+                      cx={pos.x}
+                      cy={pos.y}
+                      r={r + 5}
+                      fill="none"
+                      stroke={fill}
+                      strokeWidth={1.5}
+                      strokeOpacity={0.4}
+                      strokeDasharray="3 3"
+                      className="animate-[spin_8s_linear_infinite]"
+                      style={{ transformOrigin: `${pos.x}px ${pos.y}px` }}
+                    />
+                  )}
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={r}
+                    fill={fill}
+                    fillOpacity={isActive ? 1 : 0.8}
+                    stroke={isActive ? "#fff" : "transparent"}
+                    strokeWidth={isActive ? 2 : 0}
+                    className="transition-all duration-200"
+                  />
                   <text
                     x={pos.x}
                     y={pos.y + 3}
                     textAnchor="middle"
-                    className="text-[7px] font-bold fill-white pointer-events-none"
+                    className="text-[7px] font-bold fill-white pointer-events-none select-none"
                   >
-                    {ruleCount}
+                    {ruleCount || ""}
                   </text>
-                )}
-                <title>
-                  {zone} — {ruleCount} rules
-                </title>
-              </g>
-            );
-          })}
-        </svg>
+                  <text
+                    x={pos.x}
+                    y={pos.y + r + 12}
+                    textAnchor="middle"
+                    className="text-[8px] font-medium fill-muted-foreground pointer-events-none select-none"
+                  >
+                    {zone.length > 14 ? zone.slice(0, 13) + "…" : zone}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Detail panel */}
+        <div
+          className="w-48 shrink-0 space-y-2 transition-opacity duration-200"
+          style={{ opacity: activeZone ? 1 : 0.4 }}
+        >
+          {activeZone ? (
+            <>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-foreground truncate">
+                  {activeZone}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {(() => {
+                    const level = getZoneSecurityLevel(flows, activeZone);
+                    return (
+                      <span className="flex items-center gap-1">
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: FLOW_COLORS[level] }}
+                        />
+                        {LEVEL_LABELS[level]}
+                      </span>
+                    );
+                  })()}
+                </p>
+              </div>
+
+              {outbound.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Outbound ({outbound.reduce((s, f) => s + f.count, 0)} rules)
+                  </p>
+                  <div className="space-y-0.5">
+                    {outbound
+                      .sort((a, b) => b.count - a.count)
+                      .map((f) => {
+                        const level = getFlowSecurityLevel(f);
+                        return (
+                          <div
+                            key={f.dest}
+                            className="flex items-center gap-1.5 text-[10px] py-0.5"
+                          >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: FLOW_COLORS[level] }}
+                            />
+                            <span className="truncate text-foreground">{f.dest}</span>
+                            <span className="ml-auto text-muted-foreground shrink-0">
+                              {f.count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {inbound.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Inbound ({inbound.reduce((s, f) => s + f.count, 0)} rules)
+                  </p>
+                  <div className="space-y-0.5">
+                    {inbound
+                      .sort((a, b) => b.count - a.count)
+                      .map((f) => {
+                        const level = getFlowSecurityLevel(f);
+                        return (
+                          <div
+                            key={f.source}
+                            className="flex items-center gap-1.5 text-[10px] py-0.5"
+                          >
+                            <span
+                              className="w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: FLOW_COLORS[level] }}
+                            />
+                            <span className="truncate text-foreground">
+                              {f.source}
+                            </span>
+                            <span className="ml-auto text-muted-foreground shrink-0">
+                              {f.count}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {outbound.length === 0 && inbound.length === 0 && (
+                <p className="text-[10px] text-muted-foreground">
+                  No firewall rules reference this zone
+                </p>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto text-muted-foreground/40 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+              <p className="text-[10px] text-muted-foreground">
+                Hover or click a zone to see its connections
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 text-[9px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.full }} />
-            IPS + Web Filter
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.partial }} />
-            Partial coverage
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.none }} />
-            No IPS / WF
-          </span>
-        </div>
-        {hoverFlow && (
-          <p className="text-[9px] text-muted-foreground">
-            {(() => {
-              const [src, dst] = hoverFlow.split("→");
-              const f = flows.find((x) => x.source === src && x.dest === dst);
-              return f
-                ? `${f.count} rule${f.count !== 1 ? "s" : ""}: ${src} → ${dst}`
-                : "";
-            })()}
-          </p>
-        )}
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-[9px] text-muted-foreground pt-1 border-t border-border/30">
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.full }} />
+          IPS + Web Filter
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.partial }} />
+          Partial coverage
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.none }} />
+          No IPS / WF
+        </span>
+        <span className="ml-auto text-[8px]">
+          {displayZones.length} zones · {flows.length} flows
+        </span>
       </div>
     </div>
   );
