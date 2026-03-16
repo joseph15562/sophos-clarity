@@ -10,7 +10,7 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FirewallLinkerProps {
-  configs: Array<{ label: string; hostname?: string; configHash: string }>;
+  configs: Array<{ label: string; hostname?: string; serialNumber?: string; configHash: string }>;
   customerName: string;
   analysisResults: Record<string, AnalysisResult>;
   onLink?: () => void;
@@ -83,16 +83,24 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
     load();
   }, [orgId, configs, central.firewalls]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-match by hostname
+  // Auto-match by serial number then hostname
   useEffect(() => {
     if (central.firewalls.length === 0 || !matchedTenant) return;
     setLinks((prev) => {
       const next = { ...prev };
       for (const config of configs) {
-        if (next[config.configHash] || !config.hostname) continue;
-        const match = central.firewalls.find((fw) =>
-          fw.hostname?.toLowerCase() === config.hostname?.toLowerCase()
-        );
+        if (next[config.configHash]) continue;
+        let match: CentralFirewall | undefined;
+        if (config.serialNumber) {
+          match = central.firewalls.find((fw) =>
+            fw.serialNumber?.toLowerCase() === config.serialNumber!.toLowerCase()
+          );
+        }
+        if (!match && config.hostname) {
+          match = central.firewalls.find((fw) =>
+            fw.hostname?.toLowerCase() === config.hostname?.toLowerCase()
+          );
+        }
         if (match) {
           next[config.configHash] = {
             firewallId: match.id,
@@ -254,9 +262,9 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                 <Server className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-medium text-foreground truncate block">{config.label}</span>
-                  {config.hostname && (
-                    <span className="text-[10px] text-muted-foreground font-mono">{config.hostname}</span>
-                  )}
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {[config.hostname, config.serialNumber && `S/N: ${config.serialNumber}`].filter(Boolean).join(" · ") || null}
+                  </span>
                 </div>
 
                 {link ? (

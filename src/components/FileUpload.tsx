@@ -8,6 +8,9 @@ export type UploadedFile = {
   fileName: string;
   label: string;
   content: string;
+  serialNumber?: string;
+  agentHostname?: string;
+  hardwareModel?: string;
 };
 
 type Props = {
@@ -116,11 +119,16 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               placeholder="Firewall name (e.g. Sophos Firewall)"
               className="w-full bg-transparent border-b border-[#2006F7]/25 focus:border-[#2006F7] outline-none font-bold text-foreground text-sm pb-0.5"
             />
-            <p className="text-[11px] text-muted-foreground">{f.fileName}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {f.serialNumber
+                ? [f.hardwareModel, `S/N: ${f.serialNumber}`].filter(Boolean).join(" · ")
+                : f.fileName}
+            </p>
             <FirewallLinkPicker
               configId={f.id}
-              configHostname={fileHostnames[f.id] ?? ""}
+              configHostname={fileHostnames[f.id] || f.agentHostname || ""}
               configHash={fileHashes[f.id] ?? ""}
+              configSerialNumber={f.serialNumber}
               onLinked={(link) => onFirewallLinked?.(f.id, link)}
             />
           </div>

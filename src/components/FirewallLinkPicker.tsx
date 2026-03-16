@@ -40,10 +40,11 @@ interface Props {
   configId: string;
   configHostname: string;
   configHash: string;
+  configSerialNumber?: string;
   onLinked?: (link: FirewallLink | null) => void;
 }
 
-export function FirewallLinkPicker({ configId, configHostname, configHash, onLinked }: Props) {
+export function FirewallLinkPicker({ configId, configHostname, configHash, configSerialNumber, onLinked }: Props) {
   const { org, isGuest } = useAuth();
   const orgId = org?.id ?? "";
 
@@ -98,7 +99,16 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, onLin
     if (!orgId || !selectedTenantId) { setFirewalls([]); return; }
     getCachedFirewalls(orgId, selectedTenantId).then((fws) => {
       setFirewalls(fws);
-      // Auto-match by hostname
+      // Auto-match by serial number first, then hostname
+      if (configSerialNumber) {
+        const match = fws.find((f) =>
+          f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase()
+        );
+        if (match) {
+          setSelectedFwId(match.firewallId);
+          return;
+        }
+      }
       if (configHostname) {
         const match = fws.find((f) =>
           f.hostname.toLowerCase() === configHostname.toLowerCase()
@@ -109,7 +119,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, onLin
         }
       }
     }).catch(() => {});
-  }, [orgId, selectedTenantId, configHostname]);
+  }, [orgId, selectedTenantId, configHostname, configSerialNumber]);
 
   const groups = useMemo(() => {
     const seen = new Map<string, string>();

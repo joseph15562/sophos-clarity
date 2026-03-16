@@ -77,6 +77,9 @@ export type ParsedFile = {
   content: string;
   extractedData: ExtractedSections;
   centralEnrichment?: CentralEnrichment;
+  serialNumber?: string;
+  agentHostname?: string;
+  hardwareModel?: string;
 };
 
 export function useReportGeneration(files: ParsedFile[], branding: BrandingData) {

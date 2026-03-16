@@ -26,7 +26,7 @@ export interface UploadSectionProps {
   branding: BrandingData;
   setBranding: React.Dispatch<React.SetStateAction<BrandingData>>;
   analysisResult: Record<string, AnalysisResult>;
-  configMetas: Array<{ label: string; hostname?: string; configHash: string }>;
+  configMetas: Array<{ label: string; hostname?: string; serialNumber?: string; configHash: string }>;
   hasFiles: boolean;
   hasReports: boolean;
   reports: Array<{ id: string; label: string; markdown: string }>;
@@ -40,7 +40,7 @@ export interface UploadSectionProps {
   onGenerateCompliance: () => void;
   onGenerateAll: () => void;
   setViewingReports: (v: boolean) => void;
-  onLoadAgentAssessment: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>) => void;
+  onLoadAgentAssessment: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string }) => void;
   setCentralEnriched: (v: boolean | ((prev: boolean) => boolean)) => void;
   saveError: string;
   savingReports: boolean;

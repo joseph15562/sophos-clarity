@@ -17,8 +17,14 @@ import { toast } from "sonner";
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
 
+export interface AgentMeta {
+  serialNumber?: string;
+  hostname?: string;
+  model?: string;
+}
+
 interface AgentFleetPanelProps {
-  onLoadAssessment?: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>) => void;
+  onLoadAssessment?: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: AgentMeta) => void;
 }
 
 function StatusDot({ status, lastSeenAt }: { status: string; lastSeenAt: string | null }) {
@@ -393,6 +399,11 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
       fullAnalysis,
       sub.customer_name,
       rawConfig ?? undefined,
+      {
+        serialNumber: agent.serial_number ?? undefined,
+        hostname: agent.firewall_host,
+        model: agent.hardware_model ?? undefined,
+      },
     );
   };
 

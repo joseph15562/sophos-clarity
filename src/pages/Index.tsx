@@ -101,7 +101,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       const result = analysisResults[f.label || f.fileName.replace(/\.(html|htm)$/i, "")];
       return {
         label: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
-        hostname: result?.hostname,
+        hostname: result?.hostname || f.agentHostname,
+        serialNumber: f.serialNumber,
         configHash: f.id,
       };
     }),
@@ -237,12 +238,22 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, [files, reports.length, setReports, setActiveReportId, org?.id]);
 
-  const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>) => {
+  const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string }) => {
     const extractedData = rawConfig
       ? rawConfigToSections(rawConfig)
       : {} as ExtractedSections;
     const hasRealSections = Object.keys(extractedData).length > 0;
-    setFiles([{ id: label, fileName: label, label, content: "", extractedData }]);
+    const subLabel = [agentMeta?.model, agentMeta?.serialNumber].filter(Boolean).join(" · ") || label;
+    setFiles([{
+      id: label,
+      fileName: subLabel,
+      label,
+      content: "",
+      extractedData,
+      serialNumber: agentMeta?.serialNumber,
+      agentHostname: agentMeta?.hostname,
+      hardwareModel: agentMeta?.model,
+    }]);
     setAnalysisOverride(hasRealSections ? null : { [label]: analysis });
     setBranding((prev) => ({ ...prev, customerName }));
     setReports([]);
