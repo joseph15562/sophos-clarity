@@ -747,7 +747,6 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   analyseSnmpCommunity(sections, findings, () => ++fid);
   analyseDnsSecurity(sections, findings, () => ++fid);
   analyseRedSecurity(sections, findings, () => ++fid);
-  analyseAdminProfiles(sections, findings, () => ++fid);
 
   // --- L2/L6/L7/L8: Certificates, Hotspots, App Filter, Interface Security ---
   analyseCertificates(sections, findings, () => ++fid);
