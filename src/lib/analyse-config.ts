@@ -2153,6 +2153,9 @@ function analyseUserGroupRules(
     }
 
     if (identity && !/any/i.test(identity)) {
+      // Skip Sophos auto-created SSLVPN rules — these inherently require authentication
+      if (/sslvpn.*auto\s*created/i.test(name)) continue;
+
       findings.push({
         id: `f${nextId()}`,
         severity: "low",
