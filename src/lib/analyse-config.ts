@@ -1330,30 +1330,51 @@ function analyseAuthServers(
   if (!section) return;
 
   const unencrypted: string[] = [];
+  const UNENC_VALUES = /^(simple|plain|plaintext|none|unencrypted|no|disable|disabled|off|0)$/i;
 
   // Check table rows (HTML upload path)
   for (const t of section.tables) {
     for (const row of t.rows) {
       const name = row["Server Name"] ?? row["Name"] ?? row["col1"] ?? "";
-      const security = (row["Connection Security"] ?? row["ConnectionSecurity"] ?? "").toLowerCase();
-      if (name && security && (security === "simple" || security === "plain" || security === "none")) {
+      const security = (row["Connection Security"] ?? row["ConnectionSecurity"] ?? "").trim();
+      if (name && security && UNENC_VALUES.test(security)) {
         unencrypted.push(name);
       }
     }
   }
 
-  // Check details block (API path — flattened fields from raw config)
+  // Check details block (API path — scan all fields for security/encryption evidence)
   if (unencrypted.length === 0) {
     for (const d of section.details ?? []) {
       const fields = d.fields ?? {};
       const name = fields["Name"] ?? fields["ServerName"] ?? d.title ?? "";
-      const security = (
-        fields["ConnectionSecurity"] ?? fields["Connection Security"] ??
-        fields["Encryption"] ?? fields["Security"] ?? ""
-      ).toLowerCase();
-      if (name && security && (security === "simple" || security === "plain" || security === "none" || security === "plaintext")) {
-        unencrypted.push(name);
+      if (!name) continue;
+
+      let isUnencrypted = false;
+
+      // Scan all fields for connection security indicators
+      for (const [k, v] of Object.entries(fields)) {
+        const kl = k.toLowerCase();
+        const vl = v.toLowerCase().trim();
+
+        // Direct security/encryption field checks
+        if (/connection\s*security|encryption|tls|ssl|starttls/i.test(k)) {
+          if (UNENC_VALUES.test(v.trim())) isUnencrypted = true;
+          // If explicitly SSL/TLS/STARTTLS enabled, it's encrypted
+          if (/ssl|tls|starttls|encrypted|enable/i.test(vl) && !UNENC_VALUES.test(v.trim())) {
+            isUnencrypted = false;
+            break;
+          }
+        }
+
+        // Port-based detection: 389 = unencrypted LDAP, 636 = LDAPS
+        if (kl === "port" || kl.endsWith(".port")) {
+          if (vl === "389") isUnencrypted = true;
+          if (vl === "636") { isUnencrypted = false; break; }
+        }
       }
+
+      if (isUnencrypted) unencrypted.push(name);
     }
   }
 
