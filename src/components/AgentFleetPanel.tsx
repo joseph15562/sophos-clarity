@@ -27,6 +27,7 @@ export interface AgentMeta {
 interface AgentFleetPanelProps {
   onLoadAssessment?: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: AgentMeta) => void;
   filterTenantName?: string;
+  loadedLabels?: Set<string>;
 }
 
 function StatusDot({ status, lastSeenAt }: { status: string; lastSeenAt: string | null }) {
@@ -119,6 +120,7 @@ function AgentSummaryCard({
   onLoadFull,
   onRequestScan,
   scanRequested,
+  isLoaded,
 }: {
   agent: Agent;
   submission: Submission | null;
@@ -126,6 +128,7 @@ function AgentSummaryCard({
   onLoadFull: () => void;
   onRequestScan: () => void;
   scanRequested: boolean;
+  isLoaded?: boolean;
 }) {
   const recomputed = submission ? recomputeFromRaw(submission) : null;
 
@@ -254,11 +257,11 @@ function AgentSummaryCard({
             size="sm"
             className="gap-1.5 text-[10px] h-7"
             onClick={onLoadFull}
-            disabled={!submission.full_analysis}
-            title={!submission.full_analysis ? "Full analysis not yet available — the agent will include it on the next submission" : "Load into the full analysis view"}
+            disabled={!submission.full_analysis || isLoaded}
+            title={isLoaded ? "This firewall is already loaded in the assessment" : !submission.full_analysis ? "Full analysis not yet available — the agent will include it on the next submission" : "Load into the full analysis view"}
           >
             <ArrowRight className="h-3 w-3" />
-            {submission.full_analysis ? "Load Full Assessment" : "Full view pending…"}
+            {isLoaded ? "Already Loaded" : submission.full_analysis ? "Load Full Assessment" : "Full view pending…"}
           </Button>
         </div>
       </div>
@@ -266,7 +269,7 @@ function AgentSummaryCard({
   );
 }
 
-export function AgentFleetPanel({ onLoadAssessment, filterTenantName }: AgentFleetPanelProps) {
+export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabels }: AgentFleetPanelProps) {
   const { org, isGuest } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -481,8 +484,10 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName }: AgentFle
                     const recomputed = sub ? recomputeFromRaw(sub) : null;
                     const headerScore = recomputed?.score ?? agent.last_score;
                     const headerGrade = recomputed?.grade ?? agent.last_grade;
+                    const agentLabel = agent.name || agent.firewall_host;
+                    const isLoaded = loadedLabels?.has(agentLabel) ?? false;
                     return (
-                      <div key={agent.id} className="border-t border-border/50">
+                      <div key={agent.id} className={`border-t border-border/50 ${isLoaded ? "opacity-50" : ""}`}>
                         <button
                           onClick={() => handleAgentClick(agent.id)}
                           className="w-full flex items-center gap-2.5 px-6 py-2 text-left hover:bg-muted/30 transition-colors"
@@ -492,6 +497,11 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName }: AgentFle
                             <p className="text-[10px] font-medium text-foreground truncate">{agent.name}</p>
                             <p className="text-[9px] text-muted-foreground truncate">{agent.firewall_host}:{agent.firewall_port}</p>
                           </div>
+                          {isLoaded && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-bold shrink-0">
+                              ✓ Loaded
+                            </span>
+                          )}
                           {agent.hardware_model && (
                             <span className="text-[9px] text-muted-foreground shrink-0">{agent.hardware_model}</span>
                           )}
@@ -523,6 +533,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName }: AgentFle
                               onLoadFull={() => handleLoadFull(agent)}
                               onRequestScan={() => handleRequestScan(agent.id)}
                               scanRequested={!!scanRequested[agent.id]}
+                              isLoaded={isLoaded}
                             />
                           </div>
                         )}
