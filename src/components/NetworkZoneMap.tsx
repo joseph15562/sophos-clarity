@@ -122,7 +122,7 @@ function twoColumnLayout(
     .sort((a, b) => zoneSortKey(a) - zoneSortKey(b));
 
   const colX = { internal: width * 0.15, perimeter: width * 0.5, external: width * 0.85 };
-  const pad = 46;
+  const pad = 52;
 
   const placeColumn = (list: string[], x: number, cat: ZoneCategory) => {
     const totalH = height - pad * 2;
@@ -272,7 +272,7 @@ export function NetworkZoneMap({ files }: Props) {
 
     const zoneList = [...zoneSet];
     const svgW = 520;
-    const svgH = Math.max(360, zoneList.length * 22 + 80);
+    const svgH = Math.max(420, zoneList.length * 36 + 80);
     const pos = twoColumnLayout(zoneList, svgW, svgH);
 
     return { allZones: zoneList, flows: [...flowMap.values()], positions: pos };
@@ -293,11 +293,20 @@ export function NetworkZoneMap({ files }: Props) {
       : [...new Set(flows.flatMap((f) => [f.source, f.dest]))];
 
   const svgW = 520;
-  const svgH = Math.max(360, displayZones.length * 22 + 80);
+  const svgH = Math.max(420, displayZones.length * 36 + 80);
 
   const activeFlows = activeZone
-    ? flows.filter((f) => f.source === activeZone || f.dest === activeZone)
+    ? flows.filter(
+        (f) =>
+          (f.source === activeZone || f.dest === activeZone) &&
+          f.source !== f.dest
+      )
     : [];
+  const intraZoneRules = activeZone
+    ? flows
+        .filter((f) => f.source === activeZone && f.dest === activeZone)
+        .reduce((s, f) => s + f.count, 0)
+    : 0;
   const connectedZones = new Set(
     activeFlows.flatMap((f) => [f.source, f.dest])
   );
@@ -445,11 +454,11 @@ export function NetworkZoneMap({ files }: Props) {
 
         {/* Detail panel */}
         <div
-          className="w-48 shrink-0 space-y-2 transition-opacity duration-200"
-          style={{ opacity: activeZone ? 1 : 0.4 }}
+          className="w-52 shrink-0 transition-opacity duration-200 overflow-y-auto"
+          style={{ opacity: activeZone ? 1 : 0.4, maxHeight: Math.min(svgH, 480) }}
         >
           {activeZone ? (
-            <>
+            <div className="space-y-2.5">
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-foreground truncate">
                   {activeZone}
@@ -468,12 +477,17 @@ export function NetworkZoneMap({ files }: Props) {
                     );
                   })()}
                 </p>
+                {intraZoneRules > 0 && (
+                  <p className="text-[9px] text-muted-foreground/70">
+                    + {intraZoneRules} intra-zone rule{intraZoneRules !== 1 ? "s" : ""}
+                  </p>
+                )}
               </div>
 
               {outbound.length > 0 && (
                 <div className="space-y-1">
                   <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                    Outbound ({outbound.reduce((s, f) => s + f.count, 0)} rules)
+                    Outbound ({outbound.reduce((s, f) => s + f.count, 0)})
                   </p>
                   <div className="space-y-0.5">
                     {outbound
@@ -503,7 +517,7 @@ export function NetworkZoneMap({ files }: Props) {
               {inbound.length > 0 && (
                 <div className="space-y-1">
                   <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                    Inbound ({inbound.reduce((s, f) => s + f.count, 0)} rules)
+                    Inbound ({inbound.reduce((s, f) => s + f.count, 0)})
                   </p>
                   <div className="space-y-0.5">
                     {inbound
@@ -532,12 +546,12 @@ export function NetworkZoneMap({ files }: Props) {
                 </div>
               )}
 
-              {outbound.length === 0 && inbound.length === 0 && (
+              {outbound.length === 0 && inbound.length === 0 && intraZoneRules === 0 && (
                 <p className="text-[10px] text-muted-foreground">
                   No firewall rules reference this zone
                 </p>
               )}
-            </>
+            </div>
           ) : (
             <div className="text-center py-8">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto text-muted-foreground/40 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
