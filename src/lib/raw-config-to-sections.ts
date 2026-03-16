@@ -322,6 +322,40 @@ function buildGenericTable(entities: Record<string, unknown>[]): TableData {
 }
 
 /**
+ * Unpack the AuthenticationServer wrapper into individual server entries.
+ * The Sophos XML export wraps ActiveDirectory and LDAPServer entries
+ * inside a single AuthenticationServer parent element.
+ */
+function unpackAuthServers(data: unknown): Record<string, unknown>[] {
+  const items = Array.isArray(data) ? data : [data as Record<string, unknown>];
+  const servers: Record<string, unknown>[] = [];
+  const childTypes = ["ActiveDirectory", "LDAPServer", "RadiusServer", "TacacsServer", "eDirectory"];
+
+  for (const item of items) {
+    if (item == null || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    let hadChildren = false;
+
+    for (const childType of childTypes) {
+      const children = obj[childType];
+      if (!children) continue;
+      hadChildren = true;
+      const arr = Array.isArray(children) ? children : [children];
+      for (const child of arr) {
+        if (child && typeof child === "object") {
+          servers.push({ _serverType: childType, ...(child as Record<string, unknown>) });
+        }
+      }
+    }
+
+    if (!hadChildren) {
+      servers.push(obj);
+    }
+  }
+  return servers;
+}
+
+/**
  * Convert a raw_config object (keyed by Sophos entity type) into
  * ExtractedSections compatible with all existing web app analysis.
  */
@@ -332,9 +366,12 @@ export function rawConfigToSections(
 
   for (const [entityType, data] of Object.entries(rawConfig)) {
     if (!data) continue;
-    const entities: Record<string, unknown>[] = Array.isArray(data)
-      ? data
-      : [data as Record<string, unknown>];
+    let entities: Record<string, unknown>[];
+    if (entityType === "AuthenticationServer") {
+      entities = unpackAuthServers(data);
+    } else {
+      entities = Array.isArray(data) ? data : [data as Record<string, unknown>];
+    }
     if (entities.length === 0) continue;
 
     const sectionName = SECTION_MAP[entityType] ?? entityType;

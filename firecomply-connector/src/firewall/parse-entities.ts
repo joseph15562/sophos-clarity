@@ -324,6 +324,35 @@ const SECTION_MAP: Record<string, string> = {
   SystemModules: "System Modules",
 };
 
+function unpackAuthServers(data: unknown): Record<string, unknown>[] {
+  const items = Array.isArray(data) ? data : [data as Record<string, unknown>];
+  const servers: Record<string, unknown>[] = [];
+  const childTypes = ["ActiveDirectory", "LDAPServer", "RadiusServer", "TacacsServer", "eDirectory"];
+
+  for (const item of items) {
+    if (item == null || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    let hadChildren = false;
+
+    for (const childType of childTypes) {
+      const children = obj[childType];
+      if (!children) continue;
+      hadChildren = true;
+      const arr = Array.isArray(children) ? children : [children];
+      for (const child of arr) {
+        if (child && typeof child === "object") {
+          servers.push({ _serverType: childType, ...(child as Record<string, unknown>) });
+        }
+      }
+    }
+
+    if (!hadChildren) {
+      servers.push(obj);
+    }
+  }
+  return servers;
+}
+
 /**
  * Convert XML API entity results into the ExtractedSections format
  * expected by analyseConfig().
@@ -343,6 +372,10 @@ export function parseEntityResults(results: EntityResult[]): ExtractedSections {
       if (!entities) continue;
       if (!Array.isArray(entities)) entities = [entities];
       if (entities.length === 0) continue;
+
+      if (result.entityType === "AuthenticationServer") {
+        entities = unpackAuthServers(entities);
+      }
 
       const sectionName = SECTION_MAP[result.entityType] ?? result.entityType;
 
@@ -405,6 +438,9 @@ export function buildRawConfig(results: EntityResult[]): Record<string, unknown>
       if (!entities) continue;
       if (!Array.isArray(entities)) entities = [entities];
       if (entities.length === 0) continue;
+      if (result.entityType === "AuthenticationServer") {
+        entities = unpackAuthServers(entities);
+      }
       raw[result.entityType] = entities;
     } catch {
       // skip unparseable
