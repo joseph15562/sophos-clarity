@@ -1233,31 +1233,30 @@ function analyseBackupRestore(
   const section = findSection(sections, /^BackupRestore$/i) ?? findSection(sections, /backup/i);
   if (!section) return;
 
-  // Check details block first (API path — flattened fields from raw config)
-  const details = section.details ?? [];
-  if (details.length > 0) {
-    const fields = details[0].fields ?? {};
-    const mode = (
-      fields["Mode"] ?? fields["BackupMode"] ?? fields["ScheduleBackup"] ?? ""
-    ).toLowerCase();
-    const freq = (
-      fields["BackupFrequency"] ?? fields["Frequency"] ?? ""
-    ).toLowerCase();
+  // Build a single searchable string from ALL section data (details, tables, text)
+  const chunks: string[] = [];
 
-    // If mode indicates backup is active (email/ftp/local) or frequency is set, it's configured
-    const hasActiveMode = mode && mode !== "disable" && mode !== "off" && mode !== "manual" && mode !== "never";
-    const hasFrequency = freq && freq !== "never";
-
-    if (hasActiveMode || hasFrequency) return;
+  for (const d of section.details ?? []) {
+    for (const [k, v] of Object.entries(d.fields ?? {})) {
+      chunks.push(`${k}=${v}`);
+    }
   }
+  for (const t of section.tables) {
+    for (const r of t.rows) chunks.push(JSON.stringify(r));
+  }
+  if (section.text) chunks.push(section.text);
 
-  // Fallback: scan table rows + text (HTML upload path)
-  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
-  const freq = text.match(/BackupFrequency[^}]*?[":]?\s*(Never|Daily|Weekly|Monthly)/i)?.[1] ??
-    text.match(/Frequency[^}]*?[":]?\s*(Never|Daily|Weekly|Monthly)/i)?.[1] ??
-    text.match(/BackupMode[^}]*?[":]?\s*(Email|FTP|Local)/i)?.[1];
+  const blob = chunks.join(" ").toLowerCase();
 
-  if (freq && !/never/i.test(freq)) return;
+  // Look for evidence of scheduled backup being configured:
+  // - A frequency value that isn't "never" (daily, weekly, monthly)
+  // - A backup mode that indicates active backup (email, ftp, local)
+  const hasScheduledFreq =
+    /(?:frequency|backupfrequency)[=":,\s]*(daily|weekly|monthly)/i.test(blob);
+  const hasActiveMode =
+    /(?:mode|backupmode)[=":,\s]*(email|ftp)/i.test(blob);
+
+  if (hasScheduledFreq || hasActiveMode) return;
 
   findings.push({
     id: `f${nextId()}`, severity: "medium",
