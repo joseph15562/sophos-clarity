@@ -118,10 +118,13 @@ export class Scheduler {
   async runFirewall(fw: FirewallConfig): Promise<void> {
     const label = fw.label;
     this.updateStatus(label, { status: "running", error: undefined });
-    log.info(`Processing firewall: ${label}`, label);
+    const t0 = Date.now();
+    const elapsed = () => `${((Date.now() - t0) / 1000).toFixed(1)}s`;
+    log.info(`[${elapsed()}] Starting scan: ${label}`, label);
 
     try {
-      // Auth + version detection
+      // Step 1: Auth
+      log.info(`[${elapsed()}] Step 1/7: Authenticating...`, label);
       const loginResult = await login({
         host: fw.host, port: fw.port, username: fw.username,
         password: fw.password, skipSslVerify: fw.skipSslVerify,
@@ -130,18 +133,22 @@ export class Scheduler {
       if (!loginResult.success) {
         throw new Error(loginResult.error ?? "Authentication failed");
       }
+      log.info(`[${elapsed()}] Auth OK`, label);
 
+      // Step 2: Device info + version detection
+      log.info(`[${elapsed()}] Step 2/7: Getting device info...`, label);
       const apiVersion = fw.versionOverride ?? loginResult.apiVersion;
-      const capabilities = detectCapabilities(apiVersion, undefined);
-      log.info(`Firmware: ${capabilities.firmwareVersion} (API ${apiVersion})`, label);
 
       const deviceInfo = await getDeviceInfo({
         host: fw.host, port: fw.port, username: fw.username,
         password: fw.password, skipSslVerify: fw.skipSslVerify,
       }, fw.snmpCommunity);
-      if (deviceInfo.serialNumber) log.info(`Serial: ${deviceInfo.serialNumber}`, label);
-      else log.warn("Could not retrieve serial number — check API profile permissions or add SNMP community", label);
-      if (deviceInfo.hardwareModel) log.info(`Model: ${deviceInfo.hardwareModel}`, label);
+
+      const capabilities = detectCapabilities(apiVersion, deviceInfo.hardwareModel ?? undefined);
+      log.info(`[${elapsed()}] Firmware: ${capabilities.firmwareVersion} (API ${apiVersion}) | Model: ${deviceInfo.hardwareModel ?? "unknown"} | XGS: ${capabilities.isXgs}`, label);
+      log.info(`[${elapsed()}] Capabilities: ATP=${capabilities.hasAtp} MDR=${capabilities.hasMdr} NDR=${capabilities.hasNdr} SSL=${capabilities.hasSslTlsInspection}`, label);
+      if (deviceInfo.serialNumber) log.info(`[${elapsed()}] Serial: ${deviceInfo.serialNumber}`, label);
+      else log.warn(`[${elapsed()}] Could not retrieve serial number — check API profile permissions or add SNMP community`, label);
 
       this.lastDeviceInfo = {
         serialNumber: deviceInfo.serialNumber ?? undefined,
@@ -149,45 +156,67 @@ export class Scheduler {
         firmwareVersion: capabilities.firmwareVersion,
       };
 
-      // Export config entities
+      // Step 3: Export config entities
+      log.info(`[${elapsed()}] Step 3/7: Exporting config entities...`, label);
+      let lastProgressLog = Date.now();
       const entities = await exportAllEntities(
         { host: fw.host, port: fw.port, username: fw.username, password: fw.password, skipSslVerify: fw.skipSslVerify },
         capabilities,
-        (entity, idx, total) => log.debug(`Fetching ${entity} (${idx + 1}/${total})`, label)
+        (entity, idx, total) => {
+          const now = Date.now();
+          if (now - lastProgressLog > 5000 || idx === 0 || idx === total - 1) {
+            log.info(`[${elapsed()}]   Fetching ${entity} (${idx + 1}/${total})`, label);
+            lastProgressLog = now;
+          } else {
+            log.debug(`Fetching ${entity} (${idx + 1}/${total})`, label);
+          }
+        }
       );
 
       const successCount = entities.filter((e) => e.success).length;
-      log.info(`Retrieved ${successCount}/${entities.length} entity types`, label);
+      const failedEntities = entities.filter((e) => !e.success);
+      log.info(`[${elapsed()}] Retrieved ${successCount}/${entities.length} entity types`, label);
+      if (failedEntities.length > 0) {
+        log.warn(`[${elapsed()}] Failed entities: ${failedEntities.map((e) => `${e.entityType}(${e.error ?? "unknown"})`).join(", ")}`, label);
+      }
 
-      // Parse to ExtractedSections + raw config
+      // Step 4: Parse
+      log.info(`[${elapsed()}] Step 4/7: Parsing config...`, label);
       const sections = parseEntityResults(entities);
       const rawConfig = buildRawConfig(entities);
+      log.info(`[${elapsed()}] Parsed ${Object.keys(sections).length} sections, ${Object.keys(rawConfig).length} raw entity types`, label);
 
-      // Analyse
+      // Step 5: Analyse
+      log.info(`[${elapsed()}] Step 5/7: Analysing...`, label);
       const analysis = analyseConfig(sections);
       const riskScore = computeRiskScore(analysis);
-      log.info(`Score: ${riskScore.overall}/${riskScore.grade} — ${analysis.findings.length} findings (${Object.keys(rawConfig).length} entity types captured)`, label);
+      log.info(`[${elapsed()}] Score: ${riskScore.overall}/${riskScore.grade} — ${analysis.findings.length} findings`, label);
 
-      // Threat telemetry
+      // Step 6: Threat telemetry
       let threatStatus: ThreatStatus | null = null;
       if (capabilities.hasAtp || capabilities.hasMdr || capabilities.hasNdr) {
+        log.info(`[${elapsed()}] Step 6/7: Collecting threat telemetry...`, label);
         threatStatus = await collectThreatStatus(
           { host: fw.host, port: fw.port, username: fw.username, password: fw.password, skipSslVerify: fw.skipSslVerify },
           capabilities
         );
-        log.info("Collected threat telemetry", label);
+        log.info(`[${elapsed()}] Threat telemetry collected (ATP: ${threatStatus.atp ? "yes" : "no"}, MDR: ${threatStatus.mdr ? "yes" : "no"}, NDR: ${threatStatus.ndr ? "yes" : "no"})`, label);
+      } else {
+        log.info(`[${elapsed()}] Step 6/7: Skipping threat telemetry (no capabilities)`, label);
       }
 
-      // Submit
+      // Step 7: Submit
+      log.info(`[${elapsed()}] Step 7/7: Submitting assessment...`, label);
       const payload = buildPayload(
         this.config.customerName || "",
         label, capabilities.firmwareVersion, AGENT_VERSION,
         analysis, riskScore, threatStatus, rawConfig
       );
+      log.info(`[${elapsed()}] Payload size: ${(JSON.stringify(payload).length / 1024).toFixed(0)} KB`, label);
 
       try {
         const result = await submitAssessment(this.client, payload);
-        log.info(`Submitted successfully${result.drift ? ` — ${result.drift.new.length} new, ${result.drift.fixed.length} fixed` : ""}`, label);
+        log.info(`[${elapsed()}] Submitted successfully${result.drift ? ` — ${result.drift.new.length} new, ${result.drift.fixed.length} fixed` : ""}`, label);
         this.updateStatus(label, {
           status: "success",
           lastScore: riskScore.overall,
@@ -196,7 +225,7 @@ export class Scheduler {
           firmwareVersion: capabilities.firmwareVersion,
         });
       } catch (err) {
-        log.warn(`API unreachable, queuing submission: ${err instanceof Error ? err.message : err}`, label);
+        log.warn(`[${elapsed()}] API unreachable, queuing submission: ${err instanceof Error ? err.message : err}`, label);
         enqueue(this.dataDir, payload);
         this.updateStatus(label, {
           status: "success",
@@ -206,9 +235,12 @@ export class Scheduler {
           firmwareVersion: capabilities.firmwareVersion,
         });
       }
+
+      log.info(`[${elapsed()}] Scan complete for ${label}`, label);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      log.error(`Failed: ${msg}`, label);
+      log.error(`[${elapsed()}] FAILED: ${msg}`, label);
+      if (err instanceof Error && err.stack) log.debug(err.stack, label);
       this.updateStatus(label, { status: "error", error: msg });
     }
 

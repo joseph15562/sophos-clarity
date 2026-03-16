@@ -268,7 +268,7 @@ function parseSslTlsRules(sections: ExtractedSections): SslTlsRule[] {
         ).trim();
         const status = (row["Status"] ?? "").toLowerCase().trim();
 
-        const isExclude = actionRaw.includes("do not") || actionRaw.includes("don't") || actionRaw.includes("bypass");
+        const isExclude = actionRaw.includes("do not") || actionRaw.includes("donot") || actionRaw.includes("don't") || actionRaw.includes("bypass");
         const splitZones = (z: string) =>
           z.toLowerCase() === "any" ? ["any"] : z.split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
 
@@ -327,10 +327,10 @@ function findUncoveredZones(
   return uncovered;
 }
 
-function countRows(sections: ExtractedSections, pattern: RegExp): number {
+function countRows(sections: ExtractedSections, pattern: RegExp, exclude?: RegExp): number {
   let count = 0;
   for (const key of Object.keys(sections)) {
-    if (pattern.test(key)) {
+    if (pattern.test(key) && (!exclude || !exclude.test(key))) {
       for (const t of sections[key].tables) count += t.rows.length;
     }
   }
@@ -345,7 +345,9 @@ function countInterfaceRows(sections: ExtractedSections): number {
     if (/alias|xfrm/i.test(key)) continue;
     for (const t of sections[key].tables) {
       if (t.headers.includes("Interface / VLAN")) return t.rows.length;
-      if (t.headers.includes("Name") && t.rows.length > 0) total += t.rows.length;
+      const isSettingsGrid = t.headers.length === 2 &&
+        t.headers.includes("Setting") && t.headers.includes("Value");
+      if (!isSettingsGrid && t.rows.length > 0) total += t.rows.length;
     }
   }
   return total;
@@ -376,7 +378,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const totalSections = sectionNames.length;
   const rulesTable = findFirewallRulesTable(sections);
   const totalRules = rulesTable ? rulesTable.rows.length : 0;
-  const totalHosts = countRows(sections, /hosts?|networks?/i);
+  const totalHosts = countRows(sections, /hosts?|networks?/i, /wireless/i);
   const totalNatRules = countRows(sections, /nat/i);
   const interfaces = countInterfaceRows(sections);
 

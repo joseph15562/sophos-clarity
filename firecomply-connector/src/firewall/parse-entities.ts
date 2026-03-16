@@ -47,15 +47,13 @@ function extractNested(obj: Record<string, unknown>, path: string): string {
 
 function policyField(e: any, field: string): string {
   return extractNested(e, `NetworkPolicy.${field}`) ||
-         extractNested(e, `UserPolicy.${field}`) || "";
+         extractNested(e, `UserPolicy.${field}`) ||
+         extractNested(e, `SecurityPolicy.${field}`) || "";
 }
 
 function isSystemRule(e: Record<string, unknown>): boolean {
   const name = asString(e.Name ?? "").toLowerCase();
-  if (name.startsWith("#") || name.startsWith("auto added")) return true;
-  const pt = asString(e.PolicyType ?? "").toLowerCase();
-  if (pt && pt !== "network" && pt !== "user") return true;
-  return false;
+  return name.startsWith("#") || name.startsWith("auto added");
 }
 
 function parseFirewallRules(entities: unknown[]): TableData {
