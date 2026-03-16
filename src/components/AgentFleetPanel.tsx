@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import { rawConfigToSections } from "@/lib/raw-config-to-sections";
+import { analyseConfig } from "@/lib/analyse-config";
+import { computeRiskScore } from "@/lib/risk-score";
 import { toast } from "sonner";
 
 type Agent = Tables<"agents">;
@@ -74,6 +77,23 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   );
 }
 
+function useRecomputedScore(submission: Submission | null): { score: number; grade: string } | null {
+  return useMemo(() => {
+    if (!submission) return null;
+    const rawConfig = submission.raw_config as unknown as Record<string, unknown> | null;
+    if (!rawConfig || Object.keys(rawConfig).length === 0) return null;
+    try {
+      const sections = rawConfigToSections(rawConfig);
+      if (Object.keys(sections).length === 0) return null;
+      const analysis = analyseConfig(sections);
+      const risk = computeRiskScore(analysis);
+      return { score: risk.overall, grade: risk.grade };
+    } catch {
+      return null;
+    }
+  }, [submission?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 function AgentSummaryCard({
   agent,
   submission,
@@ -89,6 +109,8 @@ function AgentSummaryCard({
   onRequestScan: () => void;
   scanRequested: boolean;
 }) {
+  const recomputed = useRecomputedScore(submission);
+
   if (loadingSubmission) {
     return (
       <div className="flex items-center justify-center py-6 gap-2 text-xs text-muted-foreground">
@@ -112,6 +134,9 @@ function AgentSummaryCard({
     );
   }
 
+  const displayScore = recomputed?.score ?? submission.overall_score;
+  const displayGrade = recomputed?.grade ?? submission.overall_grade;
+
   const findings = (submission.findings_summary as Array<{ title: string; severity: string; confidence?: string }>) ?? [];
   const drift = submission.drift as { new?: string[]; fixed?: string[]; regressed?: string[] } | null;
   const threatStatus = submission.threat_status as Record<string, unknown> | null;
@@ -123,7 +148,7 @@ function AgentSummaryCard({
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-4">
-        <ScoreGauge score={submission.overall_score} grade={submission.overall_grade} />
+        <ScoreGauge score={displayScore} grade={displayGrade} />
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {(["critical", "high", "medium", "low"] as const).map((sev) =>
