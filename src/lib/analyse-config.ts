@@ -1035,17 +1035,6 @@ function analyseNatRules(
     }
   }
 
-  if (dnatRules.length > 0) {
-    findings.push({
-      id: `f${nextId()}`, severity: "high",
-      title: `${dnatRules.length} DNAT/port forwarding rule${dnatRules.length > 1 ? "s" : ""} expose internal services`,
-      detail: `DNAT rules forward inbound traffic to internal servers: ${dnatRules.slice(0, 6).join(", ")}${dnatRules.length > 6 ? ` (+${dnatRules.length - 6} more)` : ""}. Each forwarded port is an entry point — ensure IPS, web filtering, and logging are enabled on the corresponding firewall rules.`,
-      section: "NAT Rules",
-      remediation: "Review each DNAT rule under Rules and policies > NAT rules. Ensure the matching firewall rule has IPS enabled to detect exploits against the exposed service. Consider restricting source IPs where possible (geo-IP or known partner ranges).",
-      confidence: "high",
-      evidence: `NAT rules: ${dnatRules.slice(0, 4).join(", ")} have Type=DNAT/port forward`,
-    });
-  }
   if (broadNat.length > 0) {
     findings.push({
       id: `f${nextId()}`, severity: "medium",

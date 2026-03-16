@@ -58,11 +58,6 @@ exports[`analyseConfig > snapshot of findings 1`] = `
     "title": "No SSL/TLS inspection rules configured (DPI inactive)",
   },
   {
-    "section": "NAT Rules",
-    "severity": "high",
-    "title": "1 DNAT/port forwarding rule expose internal services",
-  },
-  {
     "section": "DoS & Spoof Protection",
     "severity": "medium",
     "title": "No DoS & Spoof Protection configuration found",
