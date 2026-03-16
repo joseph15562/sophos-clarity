@@ -155,7 +155,7 @@ export function UploadSection({
             />
           </div>
         )}
-        <FileUpload files={files} onFilesChange={onFilesChange} />
+        <FileUpload files={files} onFilesChange={onFilesChange} onFirewallLinked={() => setCentralEnriched(false)} />
 
         {/* Connected firewalls — add from agent fleet */}
         {!isGuest && org && (

@@ -84,7 +84,9 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
         </h3>
         <p className="mt-3 text-sm text-muted-foreground flex items-center gap-2">
           <Shield className="h-4 w-4 opacity-50" />
-          Connect to Sophos Central to see threat intelligence
+          {hasCentralEnrichment
+            ? "No recent alerts — all clear"
+            : "Link to Sophos Central to see threat intelligence"}
         </p>
       </div>
     );
