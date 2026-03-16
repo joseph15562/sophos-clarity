@@ -3,7 +3,8 @@ import {
   ArrowRight, ArrowLeft, Building2, Wifi, Upload, Sparkles, Check, X, RotateCcw,
   FileText, LayoutDashboard, Settings, Eye, Download, MousePointerClick,
   ChevronDown, Shield, BarChart3, History, Users, Activity, ExternalLink,
-  Plug, Key, RefreshCw,
+  Plug, Key, RefreshCw, Bell, Globe, Lock, Fingerprint, Mail, Webhook,
+  BookOpen, UserPlus, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +49,7 @@ interface Props {
   isGuest?: boolean;
 }
 
-type StepId = "welcome" | "branding" | "central" | "connector-agent" | "guide-upload" | "guide-pre-ai" | "guide-ai-reports" | "guide-management" | "done";
+type StepId = "welcome" | "branding" | "central" | "connector-agent" | "guide-upload" | "guide-pre-ai" | "guide-ai-reports" | "guide-management" | "guide-team-security" | "guide-portal-alerts" | "done";
 
 interface Step {
   id: StepId;
@@ -64,6 +65,8 @@ const BASE_STEPS: Step[] = [
   { id: "guide-pre-ai", title: "Pre-AI Assessment", icon: Shield },
   { id: "guide-ai-reports", title: "AI Reports", icon: Sparkles },
   { id: "guide-management", title: "Management", icon: LayoutDashboard },
+  { id: "guide-team-security", title: "Team & Security", icon: Users },
+  { id: "guide-portal-alerts", title: "Portal & Alerts", icon: Globe },
   { id: "done", title: "Ready", icon: Check },
 ];
 
@@ -439,11 +442,15 @@ function MockSettingsPanel() {
     <div className="space-y-2">
       {[
         { icon: <Wifi className="h-3.5 w-3.5 text-[#005BC8]" />, title: "Sophos Central API", desc: "Connected · Partner account · Last synced 3m ago" },
+        { icon: <Plug className="h-3.5 w-3.5 text-[#00995a]" />, title: "Connector Agents", desc: "2 agents online · 1 drift alert" },
         { icon: <Users className="h-3.5 w-3.5 text-[#2006F7]" />, title: "Team Management", desc: "3 members · 1 pending invite" },
+        { icon: <Globe className="h-3.5 w-3.5 text-[#005BC8]" />, title: "Client Portal", desc: "Branded customer access" },
+        { icon: <Lock className="h-3.5 w-3.5 text-[#00995a]" />, title: "Security", desc: "MFA enabled · 1 passkey registered" },
+        { icon: <Bell className="h-3.5 w-3.5 text-[#F29400]" />, title: "Alerts", desc: "3 rules active · Email + webhook" },
         { icon: <Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />, title: "Activity Log", desc: "47 events · Last: report.saved 2h ago" },
       ].map((s) => (
-        <div key={s.title} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-          <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{s.icon}</div>
+        <div key={s.title} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+          <div className="h-6 w-6 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{s.icon}</div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-semibold text-foreground">{s.title}</p>
             <p className="text-[9px] text-muted-foreground">{s.desc}</p>
@@ -451,6 +458,161 @@ function MockSettingsPanel() {
           <ChevronDown className="h-3 w-3 text-muted-foreground/40 -rotate-90" />
         </div>
       ))}
+    </div>
+  );
+}
+
+function MockTeamPanel() {
+  const members = [
+    { name: "Joseph McDonald", email: "joseph@acme-it.co.uk", role: "Owner", status: "active" },
+    { name: "Sarah Chen", email: "sarah@acme-it.co.uk", role: "Engineer", status: "active" },
+    { name: "Alex Rivera", email: "alex@acme-it.co.uk", role: "Viewer", status: "pending" },
+  ];
+  return (
+    <div className="space-y-2">
+      {members.map((m) => (
+        <div key={m.email} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+          <div className="h-8 w-8 rounded-full bg-[#2006F7]/10 flex items-center justify-center shrink-0">
+            <span className="text-[11px] font-bold text-[#2006F7]">{m.name.split(" ").map((n) => n[0]).join("")}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-foreground">{m.name}</p>
+            <p className="text-[9px] text-muted-foreground">{m.email}</p>
+          </div>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+            m.role === "Owner" ? "bg-[#2006F7]/10 text-[#2006F7]" :
+            m.role === "Engineer" ? "bg-[#6B5BFF]/10 text-[#6B5BFF]" :
+            "bg-muted text-muted-foreground"
+          }`}>{m.role}</span>
+          {m.status === "pending" && (
+            <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#F29400]/10 text-[#F29400] font-medium">Pending</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockSecurityPanel() {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-3">
+        <div className="h-9 w-9 rounded-lg bg-[#00995a]/10 flex items-center justify-center shrink-0">
+          <ShieldCheck className="h-4 w-4 text-[#00995a]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold text-foreground">Multi-Factor Authentication</p>
+          <p className="text-[9px] text-muted-foreground">TOTP-based authenticator app verification</p>
+        </div>
+        <div className="px-2 py-1 rounded text-[9px] font-semibold bg-[#00995a]/10 text-[#00995a]">Enabled</div>
+      </div>
+      <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-3">
+        <div className="h-9 w-9 rounded-lg bg-[#6B5BFF]/10 flex items-center justify-center shrink-0">
+          <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold text-foreground">Passkeys</p>
+          <p className="text-[9px] text-muted-foreground">Passwordless sign-in with biometrics or hardware keys</p>
+        </div>
+        <div className="px-2 py-1 rounded text-[9px] font-semibold bg-[#6B5BFF]/10 text-[#6B5BFF]">1 registered</div>
+      </div>
+    </div>
+  );
+}
+
+function MockAlertPanel() {
+  const rules = [
+    { name: "Critical findings detected", channel: "Email", icon: <Mail className="h-3 w-3" />, color: "#EA0022" },
+    { name: "Agent offline > 24 hours", channel: "Email + Webhook", icon: <Bell className="h-3 w-3" />, color: "#F29400" },
+    { name: "Config drift detected", channel: "Webhook", icon: <Webhook className="h-3 w-3" />, color: "#2006F7" },
+  ];
+  return (
+    <div className="space-y-2">
+      {rules.map((r) => (
+        <div key={r.name} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+          <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0" style={{ color: r.color }}>
+            {r.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-foreground">{r.name}</p>
+            <p className="text-[9px] text-muted-foreground">{r.channel}</p>
+          </div>
+          <div className="h-4 w-7 rounded-full bg-[#00995a] flex items-center justify-end px-0.5">
+            <div className="h-3 w-3 rounded-full bg-white" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockClientPortalPanel() {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-border overflow-hidden">
+        <div className="bg-[#001A47] px-4 py-3 flex items-center gap-3">
+          <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center">
+            <Building2 className="h-4 w-4 text-white/70" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[11px] font-bold text-white">Acme Corp</p>
+            <p className="text-[9px] text-white/60">Security Assessment Portal</p>
+          </div>
+        </div>
+        <div className="p-3 space-y-2 bg-card">
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Risk Score", value: "78", color: "#00995a" },
+              { label: "Findings", value: "14", color: "#F29400" },
+              { label: "Reports", value: "3", color: "#2006F7" },
+            ].map((s) => (
+              <div key={s.label} className="rounded border border-border bg-muted/20 p-2 text-center">
+                <p className="text-sm font-bold" style={{ color: s.color }}>{s.value}</p>
+                <p className="text-[8px] text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <span className="px-2 py-1 rounded text-[9px] font-medium bg-[#2006F7]/10 text-[#2006F7]">Reports</span>
+            <span className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">Compliance</span>
+            <span className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">History</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockCustomFrameworkPanel() {
+  const controls = [
+    { id: "CF-01", name: "Firewall Rule Hygiene", desc: "No disabled or orphaned rules", status: "pass" },
+    { id: "CF-02", name: "Admin Access Policy", desc: "No WAN admin services exposed", status: "fail" },
+    { id: "CF-03", name: "Encryption Standards", desc: "TLS 1.2+ enforced on all VPNs", status: "pass" },
+    { id: "CF-04", name: "Logging Requirements", desc: "All rule actions logged", status: "partial" },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="flex items-center gap-2 mb-2.5">
+          <BookOpen className="h-3.5 w-3.5 text-[#6B5BFF]" />
+          <p className="text-[10px] font-semibold text-foreground">Internal Security Standard v2.1</p>
+          <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#6B5BFF]/10 text-[#6B5BFF] font-medium ml-auto">Custom</span>
+        </div>
+        <div className="space-y-1.5">
+          {controls.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 text-[9px] rounded bg-muted/20 px-2 py-1.5">
+              <span className="font-mono text-muted-foreground w-10 shrink-0">{c.id}</span>
+              <div className="flex-1 min-w-0">
+                <span className="text-foreground font-medium">{c.name}</span>
+                <span className="text-muted-foreground ml-1">— {c.desc}</span>
+              </div>
+              <span className={`font-bold ${
+                c.status === "pass" ? "text-[#00995a]" : c.status === "fail" ? "text-[#EA0022]" : "text-[#F29400]"
+              }`}>{c.status === "pass" ? "\u2713" : c.status === "fail" ? "\u2717" : "~"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -554,18 +716,18 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 <div className="grid grid-cols-3 gap-3 pt-2">
                   <div className="rounded-lg border border-border bg-card p-3 text-center">
                     <Building2 className="h-5 w-5 mx-auto text-[#2006F7] dark:text-[#6B5BFF] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Company Branding</p>
-                    <p className="text-[9px] text-muted-foreground">Logo & report details</p>
+                    <p className="text-[10px] font-medium text-foreground">Branding & Central</p>
+                    <p className="text-[9px] text-muted-foreground">Company details & API</p>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3 text-center">
-                    <Wifi className="h-5 w-5 mx-auto text-[#005BC8] dark:text-[#00EDFF] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Sophos Central</p>
-                    <p className="text-[9px] text-muted-foreground">Live firewall data</p>
+                    <Shield className="h-5 w-5 mx-auto text-[#00995a] dark:text-[#00F2B3] mb-1.5" />
+                    <p className="text-[10px] font-medium text-foreground">Team & Security</p>
+                    <p className="text-[9px] text-muted-foreground">MFA, passkeys, roles</p>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3 text-center">
-                    <Upload className="h-5 w-5 mx-auto text-[#00995a] dark:text-[#00F2B3] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Upload & Assess</p>
-                    <p className="text-[9px] text-muted-foreground">Start auditing</p>
+                    <Globe className="h-5 w-5 mx-auto text-[#005BC8] dark:text-[#00EDFF] mb-1.5" />
+                    <p className="text-[10px] font-medium text-foreground">Portal & Alerts</p>
+                    <p className="text-[9px] text-muted-foreground">Client portals, notifications</p>
                   </div>
                 </div>
               </div>
@@ -919,10 +1081,10 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   </FeatureOverlay>
                 )}
                 {activeOverlay === "mgmt-settings" && (
-                  <FeatureOverlay title="Settings" subtitle="Central API, team management, and audit log" onClose={() => setActiveOverlay(null)}>
+                  <FeatureOverlay title="Settings" subtitle="Central API, security, team, alerts, and more" onClose={() => setActiveOverlay(null)}>
                     <MockSettingsPanel />
                     <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you see:</strong> Manage your Sophos Central API connection, invite and manage team members, and review all activity across your workspace.</p>
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">What you see:</strong> Manage your Sophos Central API, connector agents, team members and roles, client portal branding, MFA and passkeys, alert rules, custom compliance frameworks, and audit log — all in one place.</p>
                     </div>
                   </FeatureOverlay>
                 )}
@@ -953,6 +1115,140 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureButton icon={<FileText className="h-4 w-4" />} title="Reports" desc="Browse and reload all previously saved reports" color="text-[#2006F7]" onClick={() => setActiveOverlay("mgmt-reports")} />
                   <FeatureButton icon={<History className="h-4 w-4" />} title="History" desc="Track assessment scores over time per customer" color="text-[#2006F7]" onClick={() => setActiveOverlay("mgmt-history")} />
                   <FeatureButton icon={<Settings className="h-4 w-4" />} title="Settings" desc="Central API, team management, activity log, and re-run setup" color="text-[#2006F7]" onClick={() => setActiveOverlay("mgmt-settings")} />
+                </div>
+              </div>
+            )}
+
+            {step.id === "guide-team-security" && (
+              <div className="space-y-5 relative">
+                {activeOverlay === "team-mgmt" && (
+                  <FeatureOverlay title="Team Management" subtitle="Invite colleagues and assign roles" onClose={() => setActiveOverlay(null)}>
+                    <MockTeamPanel />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Invite team members by email, assign them roles (Owner, Engineer, or Viewer), and collaborate on assessments. Each role has different permissions — Engineers can run assessments and generate reports, while Viewers have read-only access.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "mfa" && (
+                  <FeatureOverlay title="Multi-Factor Authentication" subtitle="TOTP-based authenticator app" onClose={() => setActiveOverlay(null)}>
+                    <div className="space-y-4">
+                      <MockSecurityPanel />
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-semibold text-foreground">Setup Process</p>
+                        <div className="space-y-1.5">
+                          {[
+                            { step: "1", text: "Open Settings > Security and click 'Enable MFA'" },
+                            { step: "2", text: "Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)" },
+                            { step: "3", text: "Enter the 6-digit code to verify and activate" },
+                          ].map((s) => (
+                            <div key={s.step} className="flex items-start gap-2 text-[9px]">
+                              <span className="flex items-center justify-center h-4 w-4 rounded-full bg-[#00995a] text-white text-[8px] font-bold shrink-0 mt-0.5">{s.step}</span>
+                              <span className="text-muted-foreground">{s.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">Why MFA?</strong> Multi-factor authentication adds a critical second layer of protection to your account. Even if your password is compromised, your account stays secure.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "passkeys" && (
+                  <FeatureOverlay title="Passkeys" subtitle="Passwordless sign-in with biometrics" onClose={() => setActiveOverlay(null)}>
+                    <div className="space-y-4">
+                      <div className="flex flex-col items-center gap-3 py-4">
+                        <div className="h-14 w-14 rounded-2xl bg-[#6B5BFF]/10 flex items-center justify-center">
+                          <Fingerprint className="h-7 w-7 text-[#6B5BFF]" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-semibold text-foreground">Passwordless Authentication</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">Sign in with Face ID, Touch ID, Windows Hello, or a hardware security key</p>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border bg-card p-3">
+                        <p className="text-[10px] font-semibold text-foreground mb-2">Registered Passkeys</p>
+                        <div className="flex items-center gap-3 rounded bg-muted/20 p-2.5">
+                          <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />
+                          <div className="flex-1">
+                            <p className="text-[10px] font-medium text-foreground">MacBook Pro Touch ID</p>
+                            <p className="text-[9px] text-muted-foreground">Added 12 Mar 2026</p>
+                          </div>
+                          <span className="text-[9px] text-[#00995a] font-medium">Active</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Passkeys use your device's built-in biometric or hardware security to authenticate. They're phishing-resistant and more secure than traditional passwords. Register one in Settings > Security.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Team & Security</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Invite your team and secure your workspace with <strong className="text-foreground">multi-factor authentication</strong> and <strong className="text-foreground">passkeys</strong>. Click each to learn more.
+                  </p>
+                </div>
+
+                <div className="space-y-2.5">
+                  <FeatureButton icon={<UserPlus className="h-4 w-4" />} title="Team Management" desc="Invite colleagues by email and assign Owner, Engineer, or Viewer roles" color="text-[#2006F7]" onClick={() => setActiveOverlay("team-mgmt")} />
+                  <FeatureButton icon={<Lock className="h-4 w-4" />} title="Multi-Factor Authentication" desc="Add TOTP-based verification via authenticator app for all logins" color="text-[#00995a]" onClick={() => setActiveOverlay("mfa")} />
+                  <FeatureButton icon={<Fingerprint className="h-4 w-4" />} title="Passkeys" desc="Passwordless sign-in with Face ID, Touch ID, or hardware security keys" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("passkeys")} />
+                </div>
+
+                <div className="rounded-lg bg-[#00995a]/5 border border-[#00995a]/15 p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Recommendation:</strong> Enable MFA or register a passkey for your account as soon as possible. You can set these up in Settings &gt; Security.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {step.id === "guide-portal-alerts" && (
+              <div className="space-y-5 relative">
+                {activeOverlay === "client-portal" && (
+                  <FeatureOverlay title="Client Portal" subtitle="Branded assessment portal for your customers" onClose={() => setActiveOverlay(null)}>
+                    <MockClientPortalPanel />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Create branded, read-only portals for your customers. Each client gets their own secure view showing risk scores, reports, compliance status, and assessment history — with your MSP branding and logo.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "alerts" && (
+                  <FeatureOverlay title="Alerts & Notifications" subtitle="Email and webhook notifications" onClose={() => setActiveOverlay(null)}>
+                    <MockAlertPanel />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Configure alert rules to get notified when critical events happen — new critical findings, agents going offline, configuration drift, or licence expiry. Send alerts via email, webhook (Slack, Teams, etc.), or both.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "custom-frameworks" && (
+                  <FeatureOverlay title="Custom Compliance Frameworks" subtitle="Create your own compliance standards" onClose={() => setActiveOverlay(null)}>
+                    <MockCustomFrameworkPanel />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Build custom compliance frameworks with your own controls and assessment criteria. Define pass/fail conditions mapped to firewall configuration checks, then include them in compliance reports alongside standard frameworks like ISO 27001 and NIST CSF.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Client Portal & Alerts</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Share results with customers through <strong className="text-foreground">branded portals</strong>, stay informed with <strong className="text-foreground">real-time alerts</strong>, and build <strong className="text-foreground">custom compliance frameworks</strong>. Click each to learn more.
+                  </p>
+                </div>
+
+                <div className="space-y-2.5">
+                  <FeatureButton icon={<Globe className="h-4 w-4" />} title="Client Portal" desc="Branded read-only portal for customers with scores, reports, and compliance" color="text-[#005BC8]" onClick={() => setActiveOverlay("client-portal")} />
+                  <FeatureButton icon={<Bell className="h-4 w-4" />} title="Alerts & Notifications" desc="Email and webhook alerts for critical findings, agent status, and drift detection" color="text-[#F29400]" onClick={() => setActiveOverlay("alerts")} />
+                  <FeatureButton icon={<BookOpen className="h-4 w-4" />} title="Custom Compliance Frameworks" desc="Create your own standards with custom controls mapped to firewall checks" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("custom-frameworks")} />
+                </div>
+
+                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Tip:</strong> You can configure all of these from Settings. Client portals are especially useful for MSPs who want to give customers visibility into their security posture without sharing full access.
+                  </p>
                 </div>
               </div>
             )}
