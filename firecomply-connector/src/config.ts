@@ -53,6 +53,7 @@ export interface FirewallConfig {
 export interface AppConfig {
   firecomplyApiUrl: string;
   agentApiKey: string;
+  customerName: string;
   firewalls: FirewallConfig[];
   schedule: string;
   proxy: string | null;
@@ -63,6 +64,7 @@ export interface AppConfig {
 const DEFAULT_CONFIG: AppConfig = {
   firecomplyApiUrl: "",
   agentApiKey: "",
+  customerName: "",
   firewalls: [],
   schedule: "0 2 * * *",
   proxy: null,

@@ -217,10 +217,13 @@ async function handleRunNow(req: Request, agentId: string) {
 // ── Agent config (agent API key auth) ──
 
 function handleConfig(agent: Record<string, unknown>) {
+  const resolvedName = (agent.customer_name === "Unnamed" && agent.tenant_name)
+    ? agent.tenant_name
+    : agent.customer_name;
   return json({
     id: agent.id,
     name: agent.name,
-    customer_name: agent.customer_name,
+    customer_name: resolvedName,
     environment: agent.environment,
     schedule_cron: agent.schedule_cron,
     firewall_host: agent.firewall_host,
@@ -285,6 +288,7 @@ async function handleHeartbeat(
   if (body.firmware_version) update.firmware_version = body.firmware_version;
   if (body.serial_number) update.serial_number = body.serial_number;
   if (body.hardware_model) update.hardware_model = body.hardware_model;
+  if (body.customer_name) update.customer_name = body.customer_name;
 
   // Auto-match to Central firewall by serial number
   if (body.serial_number && !agent.central_firewall_id) {
@@ -319,9 +323,14 @@ async function handleHeartbeat(
     await db.from("agents").update({ pending_command: null }).eq("id", agent.id);
   }
 
+  const currentName = (update.customer_name as string) || (agent.customer_name as string);
+  const resolvedName = (currentName === "Unnamed" && (update.tenant_name || agent.tenant_name))
+    ? (update.tenant_name || agent.tenant_name)
+    : currentName;
+
   return json({
     schedule_cron: agent.schedule_cron,
-    customer_name: agent.customer_name,
+    customer_name: resolvedName,
     environment: agent.environment,
     firmware_version_override: agent.firmware_version_override,
     pending_command: pendingCommand,
@@ -367,7 +376,10 @@ async function handleSubmit(
     drift = { new: trulyNew, fixed: fixedFindings, regressed };
   }
 
-  const customerName = body.customer_name ?? (agent.customer_name as string);
+  const rawName = body.customer_name ?? (agent.customer_name as string);
+  const customerName = (rawName === "Unnamed" && agent.tenant_name)
+    ? (agent.tenant_name as string)
+    : rawName;
   const overallScore = body.overall_score ?? 0;
   const overallGrade = body.overall_grade ?? "F";
   const firewalls = body.firewalls ?? [];

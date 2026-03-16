@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Building2, Shield, ChevronDown, Search, ArrowUpDown, Cloud, HardDrive, Plug, Download, Maximize2, X, ChevronRight } from "lucide-react";
+import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
@@ -92,6 +93,8 @@ export function TenantDashboard() {
   const [heatmapDrill, setHeatmapDrill] = useState<string | null>(null);
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
   const nocRotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevThemeRef = useRef<string | undefined>(undefined);
+  const { setTheme, resolvedTheme } = useTheme();
 
   useEffect(() => {
     (useCloud ? loadHistoryCloud() : loadHistory()).then(setHistory);
@@ -101,15 +104,19 @@ export function TenantDashboard() {
     if (!useCloud) return;
     supabase
       .from("agents")
-      .select("id, name, customer_name, last_seen_at, status")
+      .select("id, name, customer_name, tenant_name, last_seen_at, status")
       .then(({ data }) => {
         if (!data) return;
         const map = new Map<string, { lastSeen: string | null; status: string }>();
-        for (const a of data) {
+        const enriched = (data as Array<{ id: string; name: string; customer_name: string; tenant_name?: string; last_seen_at: string | null; status: string }>).map((a) => {
+          const displayName = a.tenant_name || (a.customer_name !== "Unnamed" ? a.customer_name : a.name) || a.customer_name;
+          return { ...a, customer_name: displayName };
+        });
+        for (const a of enriched) {
           map.set(a.customer_name, { lastSeen: a.last_seen_at, status: a.status });
         }
         setAgentCustomers(map);
-        setAgentList(data as { id: string; name: string; customer_name: string; last_seen_at: string | null; status: string }[]);
+        setAgentList(enriched);
       });
   }, [useCloud]);
 
@@ -169,8 +176,16 @@ export function TenantDashboard() {
   }, [useCloud, org?.id]);
 
   const customers = useMemo(() => {
+    const agentTenantNames = new Set(agentList.map((a) => a.customer_name).filter((n) => n && n !== "Unnamed"));
+    const resolvedHistory = history.map((snap) => {
+      if (snap.customerName !== "Unnamed") return snap;
+      const bestName = agentTenantNames.size === 1 ? [...agentTenantNames][0] : null;
+      if (!bestName) return snap;
+      return { ...snap, customerName: bestName };
+    });
+
     const byCustomer = new Map<string, AssessmentSnapshot[]>();
-    for (const snap of history) {
+    for (const snap of resolvedHistory) {
       const key = `${snap.customerName}||${snap.environment}`;
       if (!byCustomer.has(key)) byCustomer.set(key, []);
       byCustomer.get(key)!.push(snap);
@@ -192,7 +207,7 @@ export function TenantDashboard() {
       });
     }
     return summaries;
-  }, [history]);
+  }, [history, agentList]);
 
   const filtered = useMemo(() => {
     let list = customers;
@@ -364,12 +379,15 @@ export function TenantDashboard() {
 
   useEffect(() => {
     if (!nocMode) return;
+    prevThemeRef.current = resolvedTheme;
+    setTheme("dark");
     const el = document.documentElement;
     el.requestFullscreen?.().catch(() => {});
     nocRotateRef.current = setInterval(() => setNocSlide((s) => (s + 1) % 2), 30_000);
     return () => {
       if (nocRotateRef.current) clearInterval(nocRotateRef.current);
-      document.exitFullscreen?.();
+      if (prevThemeRef.current) setTheme(prevThemeRef.current);
+      document.exitFullscreen?.().catch(() => {});
     };
   }, [nocMode]);
 

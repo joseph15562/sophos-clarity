@@ -6,6 +6,7 @@ export interface HeartbeatPayload {
   error_message?: string;
   serial_number?: string;
   hardware_model?: string;
+  customer_name?: string;
 }
 
 export interface HeartbeatResponse {

@@ -402,10 +402,13 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
     const fullAnalysis = sub.full_analysis as unknown as AnalysisResult | null;
     if (!fullAnalysis) return;
     const rawConfig = sub.raw_config as unknown as Record<string, unknown> | null;
+    const displayName = (sub.customer_name === "Unnamed" && agent.tenant_name)
+      ? agent.tenant_name
+      : sub.customer_name;
     onLoadAssessment(
       agent.name || agent.firewall_host,
       fullAnalysis,
-      sub.customer_name,
+      displayName,
       rawConfig ?? undefined,
       {
         serialNumber: agent.serial_number ?? undefined,

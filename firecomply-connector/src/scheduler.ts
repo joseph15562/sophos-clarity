@@ -180,7 +180,7 @@ export class Scheduler {
 
       // Submit
       const payload = buildPayload(
-        this.config.firewalls.length === 1 ? "" : fw.label,
+        this.config.customerName || "",
         label, capabilities.firmwareVersion, AGENT_VERSION,
         analysis, riskScore, threatStatus, rawConfig
       );
@@ -222,6 +222,7 @@ export class Scheduler {
         firmware_version: this.lastDeviceInfo.firmwareVersion,
         serial_number: this.lastDeviceInfo.serialNumber,
         hardware_model: this.lastDeviceInfo.hardwareModel,
+        customer_name: this.config.customerName || undefined,
       });
       this._heartbeatInfo = {
         lastSentAt: new Date().toISOString(),

@@ -24,6 +24,7 @@ interface FirewallEntry {
 export function SettingsPage() {
   const navigate = useNavigate();
   const [config, setConfig] = useState<any>(null);
+  const [customerName, setCustomerName] = useState("");
   const [schedule, setSchedule] = useState("0 2 * * *");
   const [firewalls, setFirewalls] = useState<FirewallEntry[]>([]);
   const [editingFw, setEditingFw] = useState<number | null>(null);
@@ -40,6 +41,7 @@ export function SettingsPage() {
     window.electronAPI?.getConfig().then((cfg: any) => {
       if (cfg) {
         setConfig(cfg);
+        setCustomerName(cfg.customerName ?? "");
         setSchedule(cfg.schedule ?? "0 2 * * *");
         setFirewalls(cfg.firewalls ?? []);
       }
@@ -126,7 +128,7 @@ export function SettingsPage() {
   const saveAll = async () => {
     if (!config) return;
     setSaving(true);
-    const updated = { ...config, schedule, firewalls };
+    const updated = { ...config, customerName, schedule, firewalls };
     const result = await window.electronAPI?.saveConfig(updated);
     if (result?.ok) {
       setConfig(updated);
@@ -151,6 +153,18 @@ export function SettingsPage() {
             {saving ? "Saving…" : "Save All Changes"}
           </button>
         )}
+      </div>
+
+      {/* Customer Name */}
+      <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+        <h2 className="text-sm font-semibold text-foreground">Customer Name</h2>
+        <p className="text-[10px] text-muted-foreground">The client/tenant name shown in reports and the dashboard.</p>
+        <input
+          value={customerName}
+          onChange={(e) => { setCustomerName(e.target.value); setDirty(true); }}
+          placeholder="e.g. Acme Corp"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        />
       </div>
 
       {/* Firewalls */}
