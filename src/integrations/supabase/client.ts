@@ -12,13 +12,8 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-    lock: async (name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => {
-      if (!navigator?.locks) return fn();
-      try {
-        return await navigator.locks.request(name, { mode: "exclusive" }, async () => fn());
-      } catch {
-        return fn();
-      }
+    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => {
+      return fn();
     },
   }
 });
