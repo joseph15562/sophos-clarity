@@ -68,8 +68,7 @@ function parseFirewallRules(entities: unknown[]): TableData {
     "Minimum Source HB Permitted", "Minimum Destination HB Permitted",
   ];
 
-  const userRules = entities.filter((e: any) => !isSystemRule(e));
-  const rows: Record<string, string>[] = userRules.map((e: any) => {
+  const rows: Record<string, string>[] = entities.map((e: any) => {
     const srcZone = policyField(e, "SourceZones.Zone");
     const dstZone = policyField(e, "DestinationZones.Zone");
     const service = policyField(e, "Services.Service");

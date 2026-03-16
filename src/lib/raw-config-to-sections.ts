@@ -169,8 +169,7 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
     "Log", "Log Traffic", "Description",
     "Minimum Source HB Permitted", "Minimum Destination HB Permitted",
   ];
-  const userRules = entities.filter((e) => !isSystemRule(e));
-  const rows = userRules.map((e) => {
+  const rows = entities.map((e) => {
     const srcZone = policyField(e, "SourceZones.Zone");
     const dstZone = policyField(e, "DestinationZones.Zone");
     const service = policyField(e, "Services.Service");
