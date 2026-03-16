@@ -88,6 +88,10 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
   const fileHashes = useMemo(() => {
     const map: Record<string, string> = {};
     for (const f of files) {
+      if (!f.content) {
+        map[f.id] = f.id;
+        continue;
+      }
       let hash = 0;
       const str = f.fileName + (f.content.length > 200 ? f.content.slice(0, 200) : f.content);
       for (let i = 0; i < str.length; i++) {
