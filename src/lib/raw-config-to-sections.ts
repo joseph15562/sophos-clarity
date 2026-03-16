@@ -422,7 +422,7 @@ export function rawConfigToSections(
       if (entities.length === 0) continue;
     }
 
-    if (entityType === "Interface") {
+    if (entityType === "Interface" || entityType === "VLAN") {
       entities = entities.filter((e) => {
         const zone = textOf(e.NetworkZone ?? e.Zone).trim();
         return zone.length > 0;
