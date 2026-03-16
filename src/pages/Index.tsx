@@ -9,6 +9,7 @@ import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { AuthFlow } from "@/components/AuthFlow";
 import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
+import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import type { AnalysisResult } from "@/lib/analyse-config";
@@ -224,15 +225,22 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     for (let i = 0; i < toProcess.length; i++) {
       setParsingProgress({ current: i + 1, total: toProcess.length, phase: "parsing" });
       await new Promise((r) => setTimeout(r, 0));
+      const file = toProcess[i];
+      const isXml = file.fileName.endsWith(".xml") || file.content.trimStart().startsWith("<?xml");
       let extractedData: ExtractedSections;
       try {
-        extractedData = extractSections(toProcess[i].content);
+        if (isXml) {
+          const rawConfig = parseEntitiesXml(file.content);
+          extractedData = rawConfigToSections(rawConfig);
+        } else {
+          extractedData = extractSections(file.content);
+        }
       } catch (err) {
-        console.warn(`[parser] Failed to parse ${toProcess[i].fileName}`, err);
-        toast.error(`Could not parse ${toProcess[i].fileName} — it may not be a Sophos Config Viewer export`);
+        console.warn(`[parser] Failed to parse ${file.fileName}`, err);
+        toast.error(`Could not parse ${file.fileName} — it may not be a valid Sophos config export`);
         extractedData = {} as ExtractedSections;
       }
-      parsed.push({ ...toProcess[i], extractedData });
+      parsed.push({ ...file, extractedData });
     }
     setParsingProgress({ current: toProcess.length, total: toProcess.length, phase: "analysing" });
     await new Promise((r) => setTimeout(r, 0));

@@ -41,7 +41,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
         });
 
       const valid = Array.from(fileList).filter(
-        (f) => f.name.endsWith(".html") || f.name.endsWith(".htm"),
+        (f) => f.name.endsWith(".html") || f.name.endsWith(".htm") || f.name.endsWith(".xml"),
       );
 
       Promise.all(valid.map(readFile)).then((parsed) => {
@@ -63,7 +63,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
   const onBrowse = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".html,.htm";
+    input.accept = ".html,.htm,.xml";
     input.multiple = true;
     input.onchange = (e) => {
       const fl = (e.target as HTMLInputElement).files;
@@ -175,7 +175,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               Drop your Sophos Config HTML file(s) here
             </p>
             <p className="text-sm text-muted-foreground">
-              or click to browse &middot; Accepts .html / .htm &middot; Multiple files supported
+              or click to browse &middot; Accepts .html / .htm / .xml &middot; Multiple files supported
             </p>
           </>
         )}
