@@ -205,7 +205,8 @@ function hasIps(row: Record<string, string>): boolean {
 }
 
 function normalizeMultiValue(val: string): string {
-  return val.split(/[,;]\s*/).map((s) => s.trim()).filter(Boolean).sort().join(",");
+  const normed = val.split(/[,;]\s*/).map((s) => s.trim()).filter(Boolean).sort().join(",");
+  return normed === "any" || normed === "" ? "*" : normed;
 }
 
 function ruleSignature(row: Record<string, string>): string {
