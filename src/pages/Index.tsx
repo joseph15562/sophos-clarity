@@ -268,7 +268,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       }
       return null;
     });
-    setBranding((prev) => prev.customerName ? prev : { ...prev, customerName });
+    const autoCustomer = agentMeta?.tenantName || customerName;
+    if (autoCustomer) {
+      setBranding((prev) => prev.customerName ? prev : { ...prev, customerName: autoCustomer });
+    }
     if (agentMeta?.tenantName) setActiveTenantName(agentMeta.tenantName);
     setReports([]);
     setActiveReportId("");
