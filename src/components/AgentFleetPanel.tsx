@@ -77,21 +77,31 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   );
 }
 
-function useRecomputedScore(submission: Submission | null): { score: number; grade: string } | null {
-  return useMemo(() => {
-    if (!submission) return null;
-    const rawConfig = submission.raw_config as unknown as Record<string, unknown> | null;
-    if (!rawConfig || Object.keys(rawConfig).length === 0) return null;
-    try {
-      const sections = rawConfigToSections(rawConfig);
-      if (Object.keys(sections).length === 0) return null;
-      const analysis = analyseConfig(sections);
-      const risk = computeRiskScore(analysis);
-      return { score: risk.overall, grade: risk.grade };
-    } catch {
+const recomputeCache = new Map<string, { score: number; grade: string } | null>();
+
+function recomputeFromRaw(submission: Submission): { score: number; grade: string } | null {
+  const cacheKey = submission.id;
+  if (recomputeCache.has(cacheKey)) return recomputeCache.get(cacheKey)!;
+  const rawConfig = submission.raw_config as unknown as Record<string, unknown> | null;
+  if (!rawConfig || Object.keys(rawConfig).length === 0) {
+    recomputeCache.set(cacheKey, null);
+    return null;
+  }
+  try {
+    const sections = rawConfigToSections(rawConfig);
+    if (Object.keys(sections).length === 0) {
+      recomputeCache.set(cacheKey, null);
       return null;
     }
-  }, [submission?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    const analysis = analyseConfig(sections);
+    const risk = computeRiskScore(analysis);
+    const result = { score: risk.overall, grade: risk.grade };
+    recomputeCache.set(cacheKey, result);
+    return result;
+  } catch {
+    recomputeCache.set(cacheKey, null);
+    return null;
+  }
 }
 
 function AgentSummaryCard({
@@ -109,7 +119,7 @@ function AgentSummaryCard({
   onRequestScan: () => void;
   scanRequested: boolean;
 }) {
-  const recomputed = useRecomputedScore(submission);
+  const recomputed = submission ? recomputeFromRaw(submission) : null;
 
   if (loadingSubmission) {
     return (
@@ -450,6 +460,10 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
                 <div className="bg-muted/10">
                   {tenantAgents.map((agent) => {
                     const isAgentOpen = expandedAgent === agent.id;
+                    const sub = submissions[agent.id];
+                    const recomputed = sub ? recomputeFromRaw(sub) : null;
+                    const headerScore = recomputed?.score ?? agent.last_score;
+                    const headerGrade = recomputed?.grade ?? agent.last_grade;
                     return (
                       <div key={agent.id} className="border-t border-border/50">
                         <button
@@ -469,12 +483,12 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
                               {agent.firmware_version}
                             </span>
                           )}
-                          {agent.last_score != null && (
+                          {headerScore != null && (
                             <span className={`text-[10px] font-bold shrink-0 ${
-                              agent.last_score >= 75 ? "text-[#00995a] dark:text-[#00F2B3]" :
-                              agent.last_score >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
+                              headerScore >= 75 ? "text-[#00995a] dark:text-[#00F2B3]" :
+                              headerScore >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
                             }`}>
-                              {agent.last_score}/{agent.last_grade}
+                              {headerScore}/{headerGrade}
                             </span>
                           )}
                           <span className="text-[9px] text-muted-foreground whitespace-nowrap shrink-0">
