@@ -121,6 +121,17 @@ function asString(val: unknown): string {
   return String(val);
 }
 
+/** Extract the actual text from an XML-parsed value that may be wrapped in an object with attributes. */
+function textOf(val: unknown): string {
+  if (val == null) return "";
+  if (typeof val !== "object") return String(val);
+  const obj = val as Record<string, unknown>;
+  if ("#text" in obj) return String(obj["#text"] ?? "");
+  const nonAttr = Object.keys(obj).filter((k) => !k.startsWith("@_"));
+  if (nonAttr.length === 0) return "";
+  return String(obj[nonAttr[0]] ?? "");
+}
+
 function extractNested(obj: Record<string, unknown>, path: string): string {
   const parts = path.split(".");
   let current: unknown = obj;
@@ -388,10 +399,10 @@ export function rawConfigToSections(
     const HOST_TYPES = new Set(["IPHost", "IPHostGroup", "FQDNHost", "FQDNHostGroup"]);
     if (HOST_TYPES.has(entityType)) {
       entities = entities.filter((e) => {
-        const name = asString(e.Name ?? "");
+        const name = textOf(e.Name);
         if (name.startsWith("#")) return false;
-        const hostType = asString(e.HostType ?? "");
-        if (hostType.toLowerCase() === "system") return false;
+        const hostType = textOf(e.HostType).toLowerCase();
+        if (hostType === "system") return false;
         return true;
       });
       if (entities.length === 0) continue;
@@ -399,11 +410,7 @@ export function rawConfigToSections(
 
     if (entityType === "Interface") {
       entities = entities.filter((e) => {
-        const zoneVal = e.NetworkZone ?? e.Zone;
-        if (zoneVal == null) return false;
-        const zone = typeof zoneVal === "object"
-          ? String((zoneVal as Record<string, unknown>)["#text"] ?? "").trim()
-          : String(zoneVal).trim();
+        const zone = textOf(e.NetworkZone ?? e.Zone).trim();
         return zone.length > 0;
       });
       if (entities.length === 0) continue;
