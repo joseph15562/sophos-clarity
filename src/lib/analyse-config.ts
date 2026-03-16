@@ -526,6 +526,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   }
 
   // --- Classify rules by openness: fully open vs ANY service only vs broad network only ---
+  const KNOWN_SYSTEM_RULES = /^(allow dns requests|auto added firewall policy for mta|auto added rule for mta)$/i;
   const fullyOpen: string[] = [];
   const anySvcOnly: string[] = [];
   const broadNetOnly: string[] = [];
@@ -537,7 +538,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       fullyOpen.push(name);
     } else if (anyService) {
       anySvcOnly.push(name);
-    } else if (broadNet) {
+    } else if (broadNet && !KNOWN_SYSTEM_RULES.test(name)) {
       broadNetOnly.push(name);
     }
   }
