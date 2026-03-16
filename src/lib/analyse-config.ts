@@ -1339,16 +1339,22 @@ function analyseAuthServers(
   if (details.length > 0) {
     for (const d of details) {
       const fields = d.fields ?? {};
-      const name = fields["Name"] ?? d.title ?? "Unknown";
+      const name = fields["ServerName"] ?? fields["Name"] ?? d.title ?? "Unknown";
       const blob = Object.entries(fields).map(([k, v]) => `${k}=${v}`).join(" ").toLowerCase();
 
-      // Skip if explicitly encrypted
-      if (/connectionsecurity[=\s]*ssl/i.test(blob) || /connectionsecurity[=\s]*starttls/i.test(blob)) continue;
-      if (/encryption[=\s]*ssl/i.test(blob) || /encryption[=\s]*starttls/i.test(blob)) continue;
+      // Sophos API uses numeric ConnectionSecurity: 1=Plain, 2=SSL, 3=STARTTLS
+      // AD servers use text: Simple, SSL, StartTLS
+      const csVal = fields["ConnectionSecurity"] ?? "";
+
+      // Skip if explicitly encrypted (text or numeric)
+      if (/^(ssl|starttls|2|3)$/i.test(csVal.trim())) continue;
+      if (/connectionsecurity[=\s]*(ssl|starttls)/i.test(blob)) continue;
+      if (/encryption[=\s]*(ssl|starttls)/i.test(blob)) continue;
       if (/port[=\s]*636/i.test(blob)) continue;
 
-      // Flag if plaintext/simple/none or on port 389
-      const hasUnencValue = /connectionsecurity[=\s]*(plain|simple|none|plaintext)/i.test(blob) ||
+      // Flag if plaintext (text: simple/plain/none, numeric: 1) or on port 389
+      const isPlainCs = /^(1|simple|plain|plaintext|none)$/i.test(csVal.trim());
+      const hasUnencValue = isPlainCs ||
         /encryption[=\s]*(plain|simple|none|plaintext|disable)/i.test(blob);
       const onLdapPort = /\bport[=\s]*389\b/.test(blob);
 
