@@ -158,9 +158,8 @@ function isRuleDisabled(row: Record<string, string>): boolean {
   const status = (
     row["Status"] ?? row["Rule Status"] ?? row["Enabled"] ?? row["Active"] ?? ""
   ).toLowerCase().trim();
-  // Real Sophos exports use "✓ On" / "✗ Off" or "✓ Enabled" / "✗ Disabled"
-  if (status.includes("off") || status.includes("disabled") || status.includes("inactive")) return true;
-  if (status === "no" || status === "false") return true;
+  if (status.includes("off") || status.includes("disable") || status.includes("inactive")) return true;
+  if (status === "no" || status === "false" || status === "0") return true;
   return false;
 }
 
@@ -202,7 +201,7 @@ function hasIps(row: Record<string, string>): boolean {
     row["IPS"] ?? row["Intrusion Prevention"] ?? row["IPS Policy"] ??
     row["IPS policy"] ?? row["Intrusion prevention"] ?? ""
   ).toLowerCase().trim();
-  return ips !== "" && ips !== "none" && ips !== "not specified" && ips !== "-" && ips !== "disabled" && ips !== "off" && ips !== "n/a";
+  return ips !== "" && ips !== "none" && ips !== "not specified" && ips !== "-" && !ips.includes("disable") && ips !== "off" && ips !== "n/a";
 }
 
 function ruleSignature(row: Record<string, string>): string {
@@ -273,7 +272,7 @@ function parseSslTlsRules(sections: ExtractedSections): SslTlsRule[] {
           action: isExclude ? "exclude" : "decrypt",
           sourceZones: splitZones(source),
           destZones: splitZones(dest),
-          enabled: !status.includes("off") && !status.includes("disabled") && !status.includes("inactive"),
+          enabled: !status.includes("off") && !status.includes("disable") && !status.includes("inactive") && status !== "0",
         });
       }
     }
