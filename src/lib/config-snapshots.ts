@@ -42,15 +42,20 @@ export function saveConfigSnapshot(snapshot: Omit<ConfigSnapshot, "id" | "create
   );
   if (recent) return recent;
 
+  const { sections: _sections, ...withoutSections } = snapshot as ConfigSnapshot;
   const newSnapshot: ConfigSnapshot = {
-    ...snapshot,
+    ...withoutSections,
     id: crypto.randomUUID(),
     created_at: new Date().toISOString(),
   };
   snapshots.push(newSnapshot);
-  // Keep last 100 snapshots
   while (snapshots.length > 100) snapshots.shift();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
+  } catch {
+    while (snapshots.length > 10) snapshots.shift();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots)); } catch { /* quota still exceeded, give up */ }
+  }
   return newSnapshot;
 }
 

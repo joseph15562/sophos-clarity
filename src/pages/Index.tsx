@@ -172,7 +172,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         findings_count: result.findings.length,
         overall_score: computeRiskScore(result).overall,
         snapshot_hash: hashConfig(sections as Record<string, unknown>),
-        sections: sections as Record<string, unknown>,
       });
     }
   }, [analysisResults, files, branding.customerName]);
