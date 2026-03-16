@@ -126,18 +126,20 @@ export function UploadSection({
       )}
 
       {/* Step 1 — Choose a connected firewall */}
-      {!hasFiles && !isGuest && org && (
+      {!isGuest && org && (
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">1</span>
-            <h2 className="text-lg font-display font-bold text-foreground">Choose a Firewall</h2>
+            <h2 className="text-lg font-display font-bold text-foreground">
+              {hasFiles ? "Add Another Firewall" : "Choose a Firewall"}
+            </h2>
           </div>
           <AgentFleetPanel onLoadAssessment={onLoadAgentAssessment} />
         </section>
       )}
 
       {/* "Or" divider between fleet panel and upload */}
-      {!hasFiles && !isGuest && org && (
+      {!isGuest && org && (
         <div className="flex items-center gap-4 py-1">
           <div className="flex-1 border-t border-border" />
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Or</span>

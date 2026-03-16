@@ -244,7 +244,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       : {} as ExtractedSections;
     const hasRealSections = Object.keys(extractedData).length > 0;
     const subLabel = [agentMeta?.model, agentMeta?.serialNumber].filter(Boolean).join(" · ") || label;
-    setFiles([{
+    const newFile = {
       id: label,
       fileName: subLabel,
       label,
@@ -253,9 +253,21 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       serialNumber: agentMeta?.serialNumber,
       agentHostname: agentMeta?.hostname,
       hardwareModel: agentMeta?.model,
-    }]);
-    setAnalysisOverride(hasRealSections ? null : { [label]: analysis });
-    setBranding((prev) => ({ ...prev, customerName }));
+    };
+    setFiles((prev) => {
+      if (prev.some((f) => f.id === label)) return prev;
+      return [...prev, newFile];
+    });
+    setAnalysisOverride((prev) => {
+      if (!hasRealSections) return { ...(prev ?? {}), [label]: analysis };
+      if (prev) {
+        const next = { ...prev };
+        delete next[label];
+        return Object.keys(next).length > 0 ? next : null;
+      }
+      return null;
+    });
+    setBranding((prev) => prev.customerName ? prev : { ...prev, customerName });
     setReports([]);
     setActiveReportId("");
     setReportsSaved(false);
