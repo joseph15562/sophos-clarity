@@ -57,6 +57,7 @@ function parseFirewallRules(entities: unknown[]): TableData {
     "Source Networks", "Destination Networks",
     "Service", "Web Filter", "IPS Policy", "IPS",
     "Intrusion Prevention", "Application Control",
+    "Match Known Users", "Identity",
     "Log", "Log Traffic", "Description",
   ];
 
@@ -70,6 +71,8 @@ function parseFirewallRules(entities: unknown[]): TableData {
     const logTraffic = policyField(e, "LogTraffic");
     const srcNetworks = policyField(e, "SourceNetworks.Network");
     const dstNetworks = policyField(e, "DestinationNetworks.Network");
+    const matchIdentity = asString(e.MatchIdentity ?? policyField(e, "MatchIdentity") ?? "");
+    const identity = extractNested(e, "Identity.Member") || asString(e.Identity ?? "");
 
     return {
       "Rule Name": asString(e.Name),
@@ -88,6 +91,8 @@ function parseFirewallRules(entities: unknown[]): TableData {
       "IPS": ips || "None",
       "Intrusion Prevention": ips || "None",
       "Application Control": appCtrl || "None",
+      "Match Known Users": matchIdentity,
+      "Identity": identity,
       "Log": logTraffic,
       "Log Traffic": logTraffic,
       "Description": asString(e.Description ?? ""),

@@ -1468,14 +1468,33 @@ function analyseHA(
     return;
   }
 
-  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  // Check details block first (API path)
+  let deviceMode: string | undefined;
+  let nodeName: string | undefined;
+  let clusterId: string | undefined;
 
-  const deviceMode = text.match(/Device[^}]*?[":]?\s*(Active[_\s]?Passive|Active[_\s]?Active|Standalone)/i)?.[1];
-  const nodeName = text.match(/NodeName[^}]*?[":]?\s*(\w+)/i)?.[1];
-  const clusterId = text.match(/ClusterID[^}]*?[":]?\s*(\d+)/i)?.[1];
+  for (const d of section.details ?? []) {
+    const f = d.fields ?? {};
+    for (const [k, v] of Object.entries(f)) {
+      const kl = k.toLowerCase();
+      if (!deviceMode && (kl === "device" || kl === "hamode" || kl.endsWith(".device") || kl.endsWith(".hamode"))) {
+        if (/active.?passive|active.?active|standalone/i.test(v)) deviceMode = v;
+      }
+      if (!nodeName && (kl === "nodename" || kl.endsWith(".nodename"))) nodeName = v;
+      if (!clusterId && (kl === "clusterid" || kl.endsWith(".clusterid"))) clusterId = v;
+    }
+  }
+
+  // Fallback: scan table rows + text (HTML path)
+  if (!deviceMode) {
+    const text = sectionToBlob(section);
+    deviceMode = text.match(/(?:Device|HAMode)[=":,\s]*(Active[_\s-]?Passive|Active[_\s-]?Active|Standalone)/i)?.[1];
+    if (!nodeName) nodeName = text.match(/NodeName[=":,\s]*(\w+)/i)?.[1];
+    if (!clusterId) clusterId = text.match(/ClusterID[=":,\s]*(\d+)/i)?.[1];
+  }
 
   if (deviceMode) {
-    const mode = deviceMode.replace(/_/g, "-");
+    const mode = deviceMode.replace(/[_\s]+/g, "-");
     const clusterInfo = clusterId != null ? ` Cluster ID: ${clusterId}.` : "";
     findings.push({
       id: `f${nextId()}`, severity: "info",
@@ -1596,6 +1615,10 @@ function analyseVpnSecurity(
     let totalPolicies = 0;
     for (const t of sslVpnSection.tables) {
       totalPolicies += t.rows.length;
+    }
+    // Also count details entries (API path — generic table may be empty if fields are objects)
+    if (totalPolicies === 0) {
+      totalPolicies = (sslVpnSection.details ?? []).length;
     }
     if (totalPolicies > 0) {
       findings.push({
@@ -2092,12 +2115,24 @@ function analyseUserGroupRules(
   if (!rulesTable || rulesTable.rows.length === 0) return;
 
   const identityCol = rulesTable.headers.find((h) =>
-    /source\s*identity|match\s*known\s*users|user\s*or\s*group|user|identity|source\s*user/i.test(h)
+    /^identity$|source\s*identity|user\s*or\s*group|source\s*user/i.test(h)
   );
-  if (!identityCol) return;
+  const matchIdentityCol = rulesTable.headers.find((h) =>
+    /match\s*known\s*users/i.test(h)
+  );
+  if (!identityCol && !matchIdentityCol) return;
 
-  const getIdentity = (row: Record<string, string>): string =>
-    (row[identityCol] ?? "").trim();
+  const getIdentity = (row: Record<string, string>): string => {
+    if (identityCol) {
+      const val = (row[identityCol] ?? "").trim();
+      if (val && !/^(enable|disable)$/i.test(val)) return val;
+    }
+    if (matchIdentityCol) {
+      const match = (row[matchIdentityCol] ?? "").trim().toLowerCase();
+      if (match === "enable") return row["Identity"] ?? "Known Users";
+    }
+    return "";
+  };
 
   for (const row of rulesTable.rows) {
     if (isRuleDisabled(row)) continue;
