@@ -67,6 +67,7 @@ function parseFirewallRules(entities: unknown[]): TableData {
     "Intrusion Prevention", "Application Control",
     "Match Known Users", "Identity",
     "Log", "Log Traffic", "Description",
+    "Minimum Source HB Permitted", "Minimum Destination HB Permitted",
   ];
 
   const userRules = entities.filter((e: any) => !isSystemRule(e));
@@ -82,6 +83,8 @@ function parseFirewallRules(entities: unknown[]): TableData {
     const dstNetworks = policyField(e, "DestinationNetworks.Network");
     const matchIdentity = asString(e.MatchIdentity ?? policyField(e, "MatchIdentity") ?? "");
     const identity = extractNested(e, "Identity.Member") || asString(e.Identity ?? "");
+    const srcHB = policyField(e, "MinimumSourceHBPermitted") || asString(e.MinimumSourceHBPermitted ?? "");
+    const dstHB = policyField(e, "MinimumDestinationHBPermitted") || asString(e.MinimumDestinationHBPermitted ?? "");
 
     return {
       "Rule Name": asString(e.Name),
@@ -105,6 +108,8 @@ function parseFirewallRules(entities: unknown[]): TableData {
       "Log": logTraffic,
       "Log Traffic": logTraffic,
       "Description": asString(e.Description ?? ""),
+      "Minimum Source HB Permitted": srcHB,
+      "Minimum Destination HB Permitted": dstHB,
     };
   });
 

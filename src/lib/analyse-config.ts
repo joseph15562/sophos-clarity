@@ -720,6 +720,9 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   analyseHotfix(sections, findings, () => ++fid);
   analyseSyncAppControl(sections, findings, () => ++fid);
   analyseATP(sections, findings, () => ++fid);
+  analyseMdrFeed(sections, findings, () => ++fid);
+  analyseNdrEssentials(sections, findings, () => ++fid);
+  analyseSecurityHeartbeat(sections, findings, () => ++fid, rulesTable);
 
   // --- Extended security analysis (VPN, DoS, SNMP, Wireless, Syslog, DNS, etc.) ---
   analyseVpnSecurity(sections, findings, () => ++fid);
@@ -1467,6 +1470,114 @@ function analyseATP(
       remediation: "Go to Active threat response > Sophos X-Ops threat feeds > Set the Action to 'Log and drop'.",
       confidence: "high",
       evidence: `ATP section: Policy="${policy}" (recommended: Log and Drop)`,
+    });
+  }
+}
+
+function analyseMdrFeed(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /^MDR\s*(Status|Threat)/i);
+  if (!section) return;
+
+  const blob = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  for (const detail of section.details ?? []) {
+    for (const [, v] of Object.entries(detail.fields ?? {})) {
+      if (v) blob.concat(" ", v);
+    }
+  }
+
+  const isDisabled = /disable/i.test(blob) && !/enable/i.test(blob);
+  if (isDisabled) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "MDR threat feed is not active",
+      detail: "The Managed Detection and Response threat feed is disabled. Enable it to receive real-time threat indicators from Sophos MDR analysts.",
+      section: "Active Threat Response",
+      remediation: "Go to Active threat response > MDR threat feeds. Enable the feed to receive Sophos MDR analyst-curated indicators.",
+      confidence: "high",
+      evidence: "MDR Status section: Feed disabled",
+    });
+  }
+}
+
+function analyseNdrEssentials(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+) {
+  const section = findSection(sections, /^NDR\s*(Status|Essentials)/i);
+  if (!section) return;
+
+  const blob = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  for (const detail of section.details ?? []) {
+    for (const [, v] of Object.entries(detail.fields ?? {})) {
+      if (v) blob.concat(" ", v);
+    }
+  }
+
+  const isDisabled = /disable/i.test(blob) && !/enable/i.test(blob);
+  if (isDisabled) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "NDR Essentials is not enabled",
+      detail: "Network Detection and Response Essentials provides encrypted traffic analysis for advanced threat detection. Enable NDR to gain visibility into lateral movement and encrypted traffic anomalies.",
+      section: "Active Threat Response",
+      remediation: "Go to Active threat response > NDR Essentials. Enable NDR and select the interfaces to monitor.",
+      confidence: "high",
+      evidence: "NDR Status section: NDR Essentials disabled",
+    });
+  }
+}
+
+function analyseSecurityHeartbeat(
+  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+  rulesTable: TableData | null,
+) {
+  if (!rulesTable) return;
+
+  const srcHBCol = rulesTable.headers.find((h) => /minimum.*source.*hb/i.test(h));
+  const dstHBCol = rulesTable.headers.find((h) => /minimum.*dest.*hb/i.test(h));
+  if (!srcHBCol && !dstHBCol) return;
+
+  const enabledWanRules = rulesTable.rows.filter((r) => {
+    const status = (r["Status"] ?? "").toLowerCase();
+    if (status === "off" || status === "disabled" || status === "0") return false;
+    const dstZone = (r["Destination Zone"] ?? r["Destination Zones"] ?? "").toLowerCase();
+    const srcZone = (r["Source Zone"] ?? r["Source Zones"] ?? "").toLowerCase();
+    return dstZone.includes("wan") || srcZone.includes("wan");
+  });
+
+  if (enabledWanRules.length === 0) return;
+
+  const noHeartbeat: string[] = [];
+  for (const rule of enabledWanRules) {
+    const srcHB = srcHBCol ? (rule[srcHBCol] ?? "").toLowerCase() : "";
+    const dstHB = dstHBCol ? (rule[dstHBCol] ?? "").toLowerCase() : "";
+    const hasHB = (srcHB && srcHB !== "no restriction" && srcHB !== "none" && srcHB !== "") ||
+                  (dstHB && dstHB !== "no restriction" && dstHB !== "none" && dstHB !== "");
+    if (!hasHB) {
+      noHeartbeat.push(rule["Rule Name"] ?? "unnamed");
+    }
+  }
+
+  if (noHeartbeat.length === enabledWanRules.length) {
+    findings.push({
+      id: `f${nextId()}`, severity: "medium",
+      title: "Security Heartbeat not configured on any WAN rule",
+      detail: `None of the ${enabledWanRules.length} enabled WAN rules enforce a minimum Security Heartbeat health. Compromised endpoints can still access the internet and internal resources.`,
+      section: "Synchronized Security",
+      remediation: "Go to Rules and policies \u203a Firewall rules. Edit each WAN rule and set 'Minimum source HB permitted' to at least 'Green' to block unhealthy endpoints.",
+      confidence: "high",
+      evidence: `${enabledWanRules.length} WAN rules with no heartbeat restriction`,
+    });
+  } else if (noHeartbeat.length > 0) {
+    findings.push({
+      id: `f${nextId()}`, severity: "low",
+      title: `${noHeartbeat.length} WAN rule${noHeartbeat.length > 1 ? "s" : ""} without Security Heartbeat`,
+      detail: `${noHeartbeat.length} of ${enabledWanRules.length} WAN rules do not enforce a minimum heartbeat health: ${noHeartbeat.slice(0, 5).join(", ")}${noHeartbeat.length > 5 ? ` (+${noHeartbeat.length - 5} more)` : ""}.`,
+      section: "Synchronized Security",
+      remediation: "Go to Rules and policies \u203a Firewall rules. Set 'Minimum source HB permitted' to at least 'Green' on all WAN rules.",
+      confidence: "medium",
+      evidence: `Rules without heartbeat: ${noHeartbeat.slice(0, 3).join(", ")}`,
     });
   }
 }

@@ -298,8 +298,20 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/SophosCentral/SecurityHeartbeatOverview/",
     requiredModule: "networkProtection",
     weight: 7,
-    evaluate: () => {
-      return { status: "warn", detail: "Security Heartbeat status not in config export — verify in Sophos Central > Firewall Management" };
+    evaluate: (r) => {
+      const hbFindings = findingMatches(r.findings, /Security Heartbeat/i);
+      if (hbFindings.length === 0) {
+        const hasHBColumns = r.ruleColumns?.some((h) => /minimum.*hb/i.test(h));
+        if (hasHBColumns) {
+          return { status: "pass", detail: "Security Heartbeat enforced on WAN rules" };
+        }
+        return { status: "warn", detail: "Security Heartbeat status not in config export — verify in Sophos Central > Firewall Management" };
+      }
+      const allMissing = hbFindings.some((f) => /not configured on any/i.test(f.title));
+      if (allMissing) {
+        return { status: "fail", detail: "No WAN rules enforce Security Heartbeat — set minimum health to Green" };
+      }
+      return { status: "warn", detail: `${hbFindings[0].title} — add heartbeat restrictions to remaining rules` };
     },
   },
   {
@@ -310,8 +322,15 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ConfigureFeeds/MDRThreatFeeds/",
     requiredModule: "networkProtection",
     weight: 6,
-    evaluate: () => {
-      return { status: "warn", detail: "MDR feed status not in config export — verify under Active threat response if MDR licence is active" };
+    evaluate: (r) => {
+      const hasSection = r.stats.sectionNames.some((s) => /^MDR\s*(Status|Threat)/i.test(s));
+      if (!hasSection) {
+        return { status: "warn", detail: "MDR feed status not in config export — verify under Active threat response if MDR licence is active" };
+      }
+      const hits = findingMatches(r.findings, /MDR threat feed.*not active/i);
+      return hits.length === 0
+        ? { status: "pass", detail: "MDR threat feeds are active" }
+        : { status: "fail", detail: "MDR threat feed is disabled — enable under Active threat response > MDR threat feeds" };
     },
   },
   {
@@ -322,8 +341,15 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ConfigureFeeds/NDREssentials/",
     requiredModule: "networkProtection",
     weight: 7,
-    evaluate: () => {
-      return { status: "warn", detail: "NDR Essentials status not in config export — enable under Active threat response > NDR Essentials" };
+    evaluate: (r) => {
+      const hasSection = r.stats.sectionNames.some((s) => /^NDR\s*(Status|Essentials)/i.test(s));
+      if (!hasSection) {
+        return { status: "warn", detail: "NDR Essentials status not in config export — enable under Active threat response > NDR Essentials" };
+      }
+      const hits = findingMatches(r.findings, /NDR Essentials.*not enabled/i);
+      return hits.length === 0
+        ? { status: "pass", detail: "NDR Essentials is enabled for encrypted traffic analysis" }
+        : { status: "fail", detail: "NDR Essentials is disabled — enable under Active threat response > NDR Essentials" };
     },
   },
 
