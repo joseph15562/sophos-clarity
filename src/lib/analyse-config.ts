@@ -746,7 +746,6 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
 
   // --- Extended security analysis (VPN, DoS, SNMP, Wireless, Syslog, DNS, etc.) ---
   analyseVpnSecurity(sections, findings, () => ++fid);
-  analyseDoSProtection(sections, findings, () => ++fid);
   analyseSyslogServers(sections, findings, () => ++fid, options);
   analyseWirelessSecurity(sections, findings, () => ++fid);
   analyseSnmpCommunity(sections, findings, () => ++fid);
