@@ -395,6 +395,14 @@ export function rawConfigToSections(
       if (entities.length === 0) continue;
     }
 
+    if (entityType === "Interface") {
+      entities = entities.filter((e) => {
+        const zone = asString(e.NetworkZone ?? e.Zone ?? "").trim();
+        return zone.length > 0;
+      });
+      if (entities.length === 0) continue;
+    }
+
     const sectionName = SECTION_MAP[entityType] ?? entityType;
 
     let table: TableData;
