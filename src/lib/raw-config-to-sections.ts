@@ -461,6 +461,12 @@ export function rawConfigToSections(
         return zone.length > 0;
       });
       if (entities.length === 0) continue;
+      if (entityType === "VLAN") {
+        console.log("[DEBUG VLAN] count:", entities.length, "keys:", Object.keys(entities[0] ?? {}), "sample:", JSON.stringify(entities[0], null, 2).substring(0, 500));
+      }
+      if (entityType === "Interface") {
+        console.log("[DEBUG Interface] count:", entities.length, "keys:", Object.keys(entities[0] ?? {}), "sample:", JSON.stringify(entities[0], null, 2).substring(0, 500));
+      }
     }
 
     const sectionName = SECTION_MAP[entityType] ?? entityType;
