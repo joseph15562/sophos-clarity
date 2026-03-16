@@ -1233,21 +1233,41 @@ function analyseBackupRestore(
   const section = findSection(sections, /^BackupRestore$/i) ?? findSection(sections, /backup/i);
   if (!section) return;
 
+  // Check details block first (API path — flattened fields from raw config)
+  const details = section.details ?? [];
+  if (details.length > 0) {
+    const fields = details[0].fields ?? {};
+    const mode = (
+      fields["Mode"] ?? fields["BackupMode"] ?? fields["ScheduleBackup"] ?? ""
+    ).toLowerCase();
+    const freq = (
+      fields["BackupFrequency"] ?? fields["Frequency"] ?? ""
+    ).toLowerCase();
+
+    // If mode indicates backup is active (email/ftp/local) or frequency is set, it's configured
+    const hasActiveMode = mode && mode !== "disable" && mode !== "off" && mode !== "manual" && mode !== "never";
+    const hasFrequency = freq && freq !== "never";
+
+    if (hasActiveMode || hasFrequency) return;
+  }
+
+  // Fallback: scan table rows + text (HTML upload path)
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
   const freq = text.match(/BackupFrequency[^}]*?[":]?\s*(Never|Daily|Weekly|Monthly)/i)?.[1] ??
-    text.match(/Frequency[^}]*?[":]?\s*(Never|Daily|Weekly|Monthly)/i)?.[1];
+    text.match(/Frequency[^}]*?[":]?\s*(Never|Daily|Weekly|Monthly)/i)?.[1] ??
+    text.match(/BackupMode[^}]*?[":]?\s*(Email|FTP|Local)/i)?.[1];
 
-  if (!freq || /never/i.test(freq)) {
-    findings.push({
-      id: `f${nextId()}`, severity: "medium",
-      title: "Automated backups not scheduled",
-      detail: "No scheduled backup configuration detected. Without regular backups, configuration recovery after failure is at risk.",
-      section: "Backup & Restore",
-      remediation: "Go to System services > Backup & firmware > Schedule automated backups (daily or weekly). Send to email or Sophos Central.",
-      confidence: "medium",
-      evidence: "Backup section: BackupFrequency not found or set to Never",
-    });
-  }
+  if (freq && !/never/i.test(freq)) return;
+
+  findings.push({
+    id: `f${nextId()}`, severity: "medium",
+    title: "Automated backups not scheduled",
+    detail: "No scheduled backup configuration detected. Without regular backups, configuration recovery after failure is at risk.",
+    section: "Backup & Restore",
+    remediation: "Go to System services > Backup & firmware > Schedule automated backups (daily or weekly). Send to email or Sophos Central.",
+    confidence: "medium",
+    evidence: "Backup section: BackupFrequency not found or set to Never",
+  });
 }
 
 function analyseNotificationSettings(
