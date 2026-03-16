@@ -60,8 +60,13 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
 
   useEffect(() => {
     if (!orgId || isGuest) return;
-    getCachedTenants(orgId).then(setTenants).catch(() => {});
-  }, [orgId, isGuest]);
+    getCachedTenants(orgId).then((t) => {
+      setTenants(t);
+      if (t.length === 1 && !selectedTenantId) {
+        setSelectedTenantId(t[0].id);
+      }
+    }).catch(() => {});
+  }, [orgId, isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load existing link
   useEffect(() => {
@@ -94,18 +99,42 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
       });
   }, [orgId, configHash, configId, onLinked]);
 
+  // Auto-link helper: persists the link and updates state
+  const autoLink = useCallback(async (fw: CachedFw) => {
+    if (!orgId) return;
+    await supabase.from("firewall_config_links").upsert({
+      org_id: orgId,
+      config_hostname: configHostname,
+      config_hash: configHash,
+      central_firewall_id: fw.firewallId,
+      central_tenant_id: fw.centralTenantId,
+    }, { onConflict: "org_id,config_hash" });
+    const l: FirewallLink = {
+      configId,
+      firewallId: fw.firewallId,
+      tenantId: fw.centralTenantId,
+      hostname: fw.hostname,
+      serialNumber: fw.serialNumber,
+      model: fw.model,
+      firmwareVersion: fw.firmwareVersion,
+    };
+    setLinked(l);
+    setOpen(false);
+    onLinked?.(l);
+  }, [orgId, configId, configHostname, configHash, onLinked]);
+
   // Load firewalls when tenant changes
   useEffect(() => {
     if (!orgId || !selectedTenantId) { setFirewalls([]); return; }
     getCachedFirewalls(orgId, selectedTenantId).then((fws) => {
       setFirewalls(fws);
-      // Auto-match by serial number first, then hostname
+      // Auto-link by serial number if available
       if (configSerialNumber) {
         const match = fws.find((f) =>
           f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase()
         );
         if (match) {
-          setSelectedFwId(match.firewallId);
+          autoLink(match);
           return;
         }
       }
@@ -119,7 +148,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
         }
       }
     }).catch(() => {});
-  }, [orgId, selectedTenantId, configHostname, configSerialNumber]);
+  }, [orgId, selectedTenantId, configHostname, configSerialNumber, autoLink]);
 
   const groups = useMemo(() => {
     const seen = new Map<string, string>();
