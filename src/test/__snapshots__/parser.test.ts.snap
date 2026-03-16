@@ -19,13 +19,18 @@ exports[`analyseConfig > snapshot of findings 1`] = `
   },
   {
     "section": "Firewall Rules",
-    "severity": "medium",
-    "title": "3 rules using "ANY" service",
+    "severity": "critical",
+    "title": "2 fully open rules (any source, destination, and service)",
   },
   {
     "section": "Firewall Rules",
     "severity": "medium",
-    "title": "3 rules with broad source and destination",
+    "title": "1 rule using "ANY" service",
+  },
+  {
+    "section": "Firewall Rules",
+    "severity": "medium",
+    "title": "1 rule with broad source and destination",
   },
   {
     "section": "Authentication & OTP",

@@ -145,7 +145,7 @@ describe("analyseConfig", () => {
   it("flags ANY service rules", () => {
     const finding = result.findings.find((f) => f.title.includes('"ANY" service'));
     expect(finding).toBeDefined();
-    expect(finding!.detail).toContain("Open-WAN");
+    expect(finding!.detail).toContain("VPN-Access");
   });
 
   it("flags broad source and destination", () => {
