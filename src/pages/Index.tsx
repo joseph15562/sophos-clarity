@@ -66,6 +66,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
   const [parsingProgress, setParsingProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
+  const [activeTenantName, setActiveTenantName] = useState<string | undefined>(undefined);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -238,7 +239,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, [files, reports.length, setReports, setActiveReportId, org?.id]);
 
-  const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string }) => {
+  const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string; tenantName?: string }) => {
     const extractedData = rawConfig
       ? rawConfigToSections(rawConfig)
       : {} as ExtractedSections;
@@ -268,6 +269,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       return null;
     });
     setBranding((prev) => prev.customerName ? prev : { ...prev, customerName });
+    if (agentMeta?.tenantName) setActiveTenantName(agentMeta.tenantName);
     setReports([]);
     setActiveReportId("");
     setReportsSaved(false);
@@ -595,6 +597,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onGenerateAll={() => { setViewingReports(true); generateAll(); if (org?.id) logAudit(org.id, "report.generated", "report", "all"); addNotification("info", "Generating Reports", `Generating all reports for ${branding.customerName || "this assessment"}…`); }}
               setViewingReports={setViewingReports}
               onLoadAgentAssessment={handleLoadAgentAssessment}
+              activeTenantName={activeTenantName}
               setCentralEnriched={setCentralEnriched}
               saveError={saveError}
               savingReports={savingReports}

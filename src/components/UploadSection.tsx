@@ -40,7 +40,8 @@ export interface UploadSectionProps {
   onGenerateCompliance: () => void;
   onGenerateAll: () => void;
   setViewingReports: (v: boolean) => void;
-  onLoadAgentAssessment: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string }) => void;
+  onLoadAgentAssessment: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string; tenantName?: string }) => void;
+  activeTenantName?: string;
   setCentralEnriched: (v: boolean | ((prev: boolean) => boolean)) => void;
   saveError: string;
   savingReports: boolean;
@@ -72,6 +73,7 @@ export function UploadSection({
   onGenerateAll,
   setViewingReports,
   onLoadAgentAssessment,
+  activeTenantName,
   setCentralEnriched,
   saveError,
   savingReports,
@@ -134,7 +136,7 @@ export function UploadSection({
               {hasFiles ? "Add Another Firewall" : "Choose a Firewall"}
             </h2>
           </div>
-          <AgentFleetPanel onLoadAssessment={onLoadAgentAssessment} />
+          <AgentFleetPanel onLoadAssessment={onLoadAgentAssessment} filterTenantName={activeTenantName} />
         </section>
       )}
 

@@ -21,10 +21,12 @@ export interface AgentMeta {
   serialNumber?: string;
   hostname?: string;
   model?: string;
+  tenantName?: string;
 }
 
 interface AgentFleetPanelProps {
   onLoadAssessment?: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: AgentMeta) => void;
+  filterTenantName?: string;
 }
 
 function StatusDot({ status, lastSeenAt }: { status: string; lastSeenAt: string | null }) {
@@ -264,7 +266,7 @@ function AgentSummaryCard({
   );
 }
 
-export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
+export function AgentFleetPanel({ onLoadAssessment, filterTenantName }: AgentFleetPanelProps) {
   const { org, isGuest } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -289,8 +291,11 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
   useEffect(() => { loadAgents(); }, [loadAgents]);
 
   const grouped = useMemo(() => {
+    const filtered = filterTenantName
+      ? agents.filter((a) => (a.tenant_name || "Unassigned") === filterTenantName)
+      : agents;
     const map = new Map<string, Agent[]>();
-    for (const a of agents) {
+    for (const a of filtered) {
       const key = a.tenant_name || "Unassigned";
       const list = map.get(key) ?? [];
       list.push(a);
@@ -299,7 +304,7 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
     return Array.from(map.entries()).sort(([a], [b]) =>
       a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b)
     );
-  }, [agents]);
+  }, [agents, filterTenantName]);
 
   useEffect(() => {
     if (grouped.length === 1) {
@@ -403,6 +408,7 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
         serialNumber: agent.serial_number ?? undefined,
         hostname: agent.firewall_host,
         model: agent.hardware_model ?? undefined,
+        tenantName: agent.tenant_name ?? undefined,
       },
     );
   };
