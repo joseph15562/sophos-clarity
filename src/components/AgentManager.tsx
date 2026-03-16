@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plug, Plus, Trash2, RefreshCw, Copy, Check, ChevronDown,
-  ChevronRight, Download, Server, Key, Play, Link2, Unlink,
+  ChevronRight, Download, Server, Key, Play, Link2, Unlink, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -284,6 +284,7 @@ export function AgentManager() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Record<string, Submission[]>>({});
   const [retention, setRetention] = useState(90);
+  const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
 
   const loadAgents = useCallback(async () => {
     if (!org) return;
@@ -365,6 +366,8 @@ export function AgentManager() {
       const session = (await supabase.auth.getSession()).data.session;
       if (!session) { toast.error("Not authenticated"); return; }
 
+      setScanRequested((p) => ({ ...p, [agentId]: true }));
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}/run-now`,
         {
@@ -378,10 +381,35 @@ export function AgentManager() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
+        setScanRequested((p) => ({ ...p, [agentId]: false }));
         throw new Error(err.error ?? `HTTP ${res.status}`);
       }
 
-      toast.success("Scan requested — agent will run within 5 minutes");
+      toast.success("Scan requested — waiting for agent to complete…");
+
+      let attempts = 0;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        const { data: agentData } = await supabase
+          .from("agents")
+          .select("last_seen_at, last_score, last_grade, pending_command")
+          .eq("id", agentId)
+          .maybeSingle();
+
+        if (agentData && !agentData.pending_command) {
+          clearInterval(pollInterval);
+          setScanRequested((p) => ({ ...p, [agentId]: false }));
+          toast.success(`Scan complete — Score: ${agentData.last_score}/${agentData.last_grade}`);
+          loadAgents();
+          return;
+        }
+
+        if (attempts >= 36) {
+          clearInterval(pollInterval);
+          setScanRequested((p) => ({ ...p, [agentId]: false }));
+          toast.info("Scan is taking longer than expected — refresh to check results");
+        }
+      }, 5000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed");
     }
@@ -581,9 +609,9 @@ export function AgentManager() {
                                     size="sm"
                                     className="gap-1.5 text-[10px] h-7"
                                     onClick={() => handleRunNow(agent.id)}
+                                    disabled={!!scanRequested[agent.id]}
                                   >
-                                    <Play className="h-3 w-3" />
-                                    Request Scan
+                                    {scanRequested[agent.id] ? <><Loader2 className="h-3 w-3 animate-spin" /> Scanning…</> : <><Play className="h-3 w-3" /> Request Scan</>}
                                   </Button>
                                   <Button
                                     variant="outline"

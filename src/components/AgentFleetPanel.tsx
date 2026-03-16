@@ -80,12 +80,14 @@ function AgentSummaryCard({
   loadingSubmission,
   onLoadFull,
   onRequestScan,
+  scanRequested,
 }: {
   agent: Agent;
   submission: Submission | null;
   loadingSubmission: boolean;
   onLoadFull: () => void;
   onRequestScan: () => void;
+  scanRequested: boolean;
 }) {
   if (loadingSubmission) {
     return (
@@ -102,8 +104,8 @@ function AgentSummaryCard({
           No submissions yet. The agent will submit data after its first scheduled run.
         </p>
         {agent.status === "online" && (
-          <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={onRequestScan}>
-            <Play className="h-3 w-3" /> Request Scan Now
+          <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={onRequestScan} disabled={scanRequested}>
+            {scanRequested ? <><Loader2 className="h-3 w-3 animate-spin" /> Scan Requested…</> : <><Play className="h-3 w-3" /> Request Scan Now</>}
           </Button>
         )}
       </div>
@@ -201,8 +203,8 @@ function AgentSummaryCard({
           <Clock className="h-2.5 w-2.5" /> {new Date(submission.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
         </span>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={onRequestScan}>
-            <Play className="h-3 w-3" /> Request Scan
+          <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={onRequestScan} disabled={scanRequested}>
+            {scanRequested ? <><Loader2 className="h-3 w-3 animate-spin" /> Scan Requested…</> : <><Play className="h-3 w-3" /> Request Scan</>}
           </Button>
           <Button
             variant="outline"
@@ -229,6 +231,7 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Record<string, Submission | null>>({});
   const [loadingSub, setLoadingSub] = useState<Record<string, boolean>>({});
+  const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
 
   const loadAgents = useCallback(async () => {
     if (!org) return;
@@ -290,6 +293,8 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
       const session = (await supabase.auth.getSession()).data.session;
       if (!session) { toast.error("Not authenticated"); return; }
 
+      setScanRequested((p) => ({ ...p, [agentId]: true }));
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}/run-now`,
         {
@@ -303,10 +308,40 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
+        setScanRequested((p) => ({ ...p, [agentId]: false }));
         throw new Error(err.error ?? `HTTP ${res.status}`);
       }
 
-      toast.success("Scan requested — agent will run within 5 minutes");
+      toast.success("Scan requested — waiting for agent to complete…");
+
+      const existingTs = submissions[agentId]?.created_at;
+      let attempts = 0;
+      const maxAttempts = 36; // 3 minutes at 5s intervals
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        const { data } = await supabase
+          .from("agent_submissions")
+          .select("*")
+          .eq("agent_id", agentId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        const latest = data?.[0] ?? null;
+        if (latest && latest.created_at !== existingTs) {
+          clearInterval(pollInterval);
+          setSubmissions((p) => ({ ...p, [agentId]: latest }));
+          setScanRequested((p) => ({ ...p, [agentId]: false }));
+          toast.success(`Scan complete — Score: ${latest.overall_score}/${latest.overall_grade}`);
+          loadAgents();
+          return;
+        }
+
+        if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          setScanRequested((p) => ({ ...p, [agentId]: false }));
+          toast.info("Scan is taking longer than expected — refresh the page to check results");
+        }
+      }, 5000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed");
     }
@@ -431,6 +466,7 @@ export function AgentFleetPanel({ onLoadAssessment }: AgentFleetPanelProps) {
                               loadingSubmission={!!loadingSub[agent.id]}
                               onLoadFull={() => handleLoadFull(agent)}
                               onRequestScan={() => handleRequestScan(agent.id)}
+                              scanRequested={!!scanRequested[agent.id]}
                             />
                           </div>
                         )}
