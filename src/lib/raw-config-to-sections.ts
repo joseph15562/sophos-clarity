@@ -396,13 +396,14 @@ export function rawConfigToSections(
     }
     if (entities.length === 0) continue;
 
-    const HOST_TYPES = new Set(["IPHost", "IPHostGroup", "FQDNHost", "FQDNHostGroup"]);
-    if (HOST_TYPES.has(entityType)) {
+    const HOST_ENTITY_TYPES = new Set(["IPHost", "IPHostGroup", "FQDNHost", "FQDNHostGroup"]);
+    if (HOST_ENTITY_TYPES.has(entityType)) {
       entities = entities.filter((e) => {
         const name = textOf(e.Name);
         if (name.startsWith("#")) return false;
         const hostType = textOf(e.HostType).toLowerCase();
         if (hostType === "system") return false;
+        if (entityType === "IPHost" && (hostType === "network" || hostType === "iprange" || hostType === "iplist")) return false;
         return true;
       });
       if (entities.length === 0) continue;
