@@ -1137,7 +1137,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         <p className="text-[10px] font-semibold text-foreground">Setup Process</p>
                         <div className="space-y-1.5">
                           {[
-                            { step: "1", text: "Open Settings > Security and click 'Enable MFA'" },
+                            { step: "1", text: "Open Settings \u203a Security and click 'Enable MFA'" },
                             { step: "2", text: "Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)" },
                             { step: "3", text: "Enter the 6-digit code to verify and activate" },
                           ].map((s) => (
@@ -1179,7 +1179,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                       </div>
                     </div>
                     <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Passkeys use your device's built-in biometric or hardware security to authenticate. They're phishing-resistant and more secure than traditional passwords. Register one in Settings > Security.</p>
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Passkeys use your device's built-in biometric or hardware security to authenticate. They're phishing-resistant and more secure than traditional passwords. Register one in Settings &gt; Security.</p>
                     </div>
                   </FeatureOverlay>
                 )}
