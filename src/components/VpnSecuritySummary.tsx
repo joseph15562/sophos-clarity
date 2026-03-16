@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-const VPN_SECTION_PATTERN = /ipsec|site.?to.?site|vpn.*connection|vpn.*tunnel|ssl.*vpn|remote.*access.*vpn/i;
+const VPN_SECTION_PATTERN = /ipsec|site.?to.?site|vpn.*connection|vpn.*tunnel|ssl.*vpn|remote.*access.*vpn|VPNIPSecConnection|VPNProfile|SSLVPNPolicy/i;
 
 const WEAK_CIPHERS = /3des|des(?!3)|rc4|null|blowfish|cast/i;
 const WEAK_AUTH = /md5|sha1(?![\d])/i;
@@ -105,8 +105,8 @@ function extractTunnels(files: Props["files"]): VpnTunnel[] {
 
   for (const file of files) {
     const sections = file.extractedData;
-    const ipsecConn = findSection(sections, /vpn\s*ipsec\s*connection|ipsec\s*connection|site.?to.?site/i);
-    const profileSection = findSection(sections, /vpn\s*profile|ipsec\s*profile/i);
+    const ipsecConn = findSection(sections, /vpn\s*ipsec\s*connection|ipsec\s*vpn\s*connection|ipsec\s*connection|VPNIPSecConnection|site.?to.?site/i);
+    const profileSection = findSection(sections, /vpn\s*profile|VPNProfile|ipsec\s*profile/i);
 
     const profileByName = new Map<string, Record<string, string>>();
     if (profileSection) {
@@ -164,7 +164,7 @@ function extractTunnels(files: Props["files"]): VpnTunnel[] {
       }
     }
 
-    const sslSection = findSection(sections, /ssl\s*vpn\s*polic|ssl\s*vpn/i);
+    const sslSection = findSection(sections, /ssl\s*vpn\s*polic|SSLVPNPolicy|ssl\s*vpn/i);
     if (sslSection) {
       for (const t of sslSection.data.tables) {
         for (const row of t.rows) {
@@ -214,8 +214,14 @@ export function VpnSecuritySummary({ files }: Props) {
   if (total === 0) {
     return (
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground">VPN Security Summary</h3>
-        <p className="mt-2 text-xs text-muted-foreground">No VPN tunnels detected</p>
+        <h3 className="text-sm font-semibold text-foreground mb-3">VPN Security Summary</h3>
+        <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          <div className="text-[11px] text-muted-foreground space-y-0.5">
+            <p className="font-medium">No IPsec or SSL VPN tunnels configured</p>
+            <p>VPN tunnel encryption strength analysis will appear here when IPsec or SSL VPN connections are detected in the configuration.</p>
+          </div>
+        </div>
       </div>
     );
   }

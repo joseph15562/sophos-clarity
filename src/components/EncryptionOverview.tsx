@@ -108,12 +108,13 @@ export function EncryptionOverview({
   analysisResults,
   files,
 }: EncryptionOverviewProps) {
-  const { data, weakItems, hasVpnData, sslStatus } = useMemo(() => {
+  const { data, weakItems, hasVpnData, sslStatus, sslUncovered } = useMemo(() => {
     const firstResult = Object.values(analysisResults)[0];
     const ip = firstResult?.inspectionPosture ?? {
       dpiEngineEnabled: false,
       sslDecryptRules: 0,
       sslExclusionRules: 0,
+      sslUncoveredZones: [] as string[],
     };
 
     const result = analyseEncryption(files);
@@ -135,7 +136,9 @@ export function EncryptionOverview({
           }
         : null;
 
-    return { data, weakItems: wi, hasVpnData, sslStatus };
+    const sslUncovered = (ip as Record<string, unknown>).sslUncoveredZones as string[] | undefined;
+
+    return { data, weakItems: wi, hasVpnData, sslStatus, sslUncovered };
   }, [analysisResults, files]);
 
   if (data.length === 0 && !sslStatus) {
@@ -208,15 +211,39 @@ export function EncryptionOverview({
         </>
       ) : null}
       {sslStatus && !hasVpnData && (
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p>
-            SSL/TLS inspection:{" "}
-            {sslStatus.dpiEngineEnabled ? "DPI enabled" : "DPI disabled"}
-          </p>
-          <p>
-            Decrypt rules: {sslStatus.sslDecryptRules} | Exclusion rules:{" "}
-            {sslStatus.sslExclusionRules}
-          </p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            <div className={`rounded-lg p-3 text-center ${
+              sslStatus.dpiEngineEnabled
+                ? "bg-[#00995a]/10 border border-[#00995a]/20"
+                : "bg-[#EA0022]/10 border border-[#EA0022]/20"
+            }`}>
+              <p className={`text-lg font-bold ${
+                sslStatus.dpiEngineEnabled ? "text-[#00995a]" : "text-[#EA0022]"
+              }`}>
+                {sslStatus.dpiEngineEnabled ? "ON" : "OFF"}
+              </p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">DPI Engine</p>
+            </div>
+            <div className="rounded-lg bg-muted/30 border border-border p-3 text-center">
+              <p className="text-lg font-bold text-foreground">{sslStatus.sslDecryptRules}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Decrypt Rules</p>
+            </div>
+            <div className="rounded-lg bg-muted/30 border border-border p-3 text-center">
+              <p className="text-lg font-bold text-foreground">{sslStatus.sslExclusionRules}</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">Exclusions</p>
+            </div>
+          </div>
+          {sslUncovered && sslUncovered.length > 0 && (
+            <div className="rounded-lg border border-[#F29400]/20 bg-[#F29400]/5 p-2.5">
+              <p className="text-[10px] font-medium text-[#F29400] mb-1">
+                SSL/TLS not covering {sslUncovered.length} zone{sslUncovered.length !== 1 ? "s" : ""}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {sslUncovered.join(", ")}
+              </p>
+            </div>
+          )}
         </div>
       )}
       {weakItems.length > 0 && (

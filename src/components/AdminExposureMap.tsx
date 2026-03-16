@@ -46,7 +46,7 @@ function parseLocalServiceAcl(
 
     const acl = findSection(
       sections,
-      /local.*service.*acl|device.*access|admin.*service/i
+      /local.*service.*acl|LocalServiceACL|device.*access|admin.*service/i
     );
     if (!acl?.tables) continue;
 
@@ -54,6 +54,7 @@ function parseLocalServiceAcl(
       for (const row of table.rows) {
         const service =
           row["Service"] ??
+          row["ServiceType"] ??
           row["Name"] ??
           row["Service Name"] ??
           Object.values(row)[0] ??
@@ -66,6 +67,7 @@ function parseLocalServiceAcl(
         for (const [key, val] of Object.entries(row)) {
           if (
             key === "Service" ||
+            key === "ServiceType" ||
             key === "Name" ||
             key === "Service Name"
           )
@@ -146,12 +148,16 @@ export function AdminExposureMap({
   if (!hasData) {
     return (
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">
+        <h3 className="text-sm font-semibold text-foreground mb-3">
           Admin Access Exposure
         </h3>
-        <p className="text-xs text-muted-foreground">
-          Local Service ACL data not found in config
-        </p>
+        <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <div className="text-[11px] text-muted-foreground space-y-0.5">
+            <p className="font-medium">Local Service ACL data not available</p>
+            <p>Admin service exposure will appear here when the configuration includes Local Service ACL settings (HTTPS, SSH, Ping access per zone).</p>
+          </div>
+        </div>
       </div>
     );
   }

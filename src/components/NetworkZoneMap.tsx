@@ -86,24 +86,62 @@ const FLOW_COLORS: Record<SecurityLevel, string> = {
   none: "#EA0022",
 };
 
-function circularLayout(
+const ZONE_PRIORITY: [RegExp, number][] = [
+  [/^wan$/i, 0],
+  [/wan/i, 1],
+  [/dmz/i, 2],
+  [/guest/i, 3],
+  [/vpn/i, 4],
+  [/wifi|wlan|wireless/i, 5],
+  [/server/i, 6],
+  [/lan/i, 7],
+  [/local/i, 8],
+];
+
+function zoneOrder(name: string): number {
+  for (const [re, order] of ZONE_PRIORITY) {
+    if (re.test(name)) return order;
+  }
+  return 5;
+}
+
+function smartLayout(
   zones: string[],
   width: number,
   height: number
 ): Map<string, { x: number; y: number }> {
+  const sorted = [...zones].sort((a, b) => zoneOrder(a) - zoneOrder(b));
   const map = new Map<string, { x: number; y: number }>();
   const cx = width / 2;
   const cy = height / 2;
-  const radius = Math.min(width, height) * 0.35;
-  const n = zones.length;
-  zones.forEach((z, i) => {
+  const rx = width * 0.38;
+  const ry = height * 0.36;
+  const n = sorted.length;
+  sorted.forEach((z, i) => {
     const angle = (2 * Math.PI * i) / n - Math.PI / 2;
     map.set(z, {
-      x: cx + radius * Math.cos(angle),
-      y: cy + radius * Math.sin(angle),
+      x: cx + rx * Math.cos(angle),
+      y: cy + ry * Math.sin(angle),
     });
   });
   return map;
+}
+
+function bezierPath(
+  x1: number, y1: number,
+  x2: number, y2: number,
+  offset: number,
+): string {
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const cx = mx + nx * offset;
+  const cy = my + ny * offset;
+  return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
 }
 
 export function NetworkZoneMap({ files }: Props) {
@@ -206,7 +244,7 @@ export function NetworkZoneMap({ files }: Props) {
     }
 
     const zoneList = [...zoneSet];
-    const positions = circularLayout(zoneList, 400, 300);
+    const positions = smartLayout(zoneList, 500, 400);
 
     return {
       zones: zoneList,
@@ -215,8 +253,8 @@ export function NetworkZoneMap({ files }: Props) {
     };
   }, [files]);
 
-  const svgWidth = 400;
-  const svgHeight = 300;
+  const svgWidth = 500;
+  const svgHeight = 400;
 
   if (zones.length === 0 && flows.length === 0) {
     return (
@@ -228,53 +266,58 @@ export function NetworkZoneMap({ files }: Props) {
   }
 
   const displayZones = zones.length > 0 ? zones : [...new Set(flows.flatMap((f) => [f.source, f.dest]))];
-  const positions = zones.length > 0 ? zonePositions : circularLayout(displayZones, svgWidth, svgHeight);
+  const positions = zones.length > 0 ? zonePositions : smartLayout(displayZones, svgWidth, svgHeight);
+
+  const reverseFlowKeys = new Set<string>();
+  for (const f of flows) {
+    const rev = `${f.dest}→${f.source}`;
+    if (flows.some((x) => x.source === f.dest && x.dest === f.source)) {
+      reverseFlowKeys.add(rev);
+    }
+  }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-3">
       <h3 className="text-sm font-semibold text-foreground">Network Zone Map</h3>
 
       <div className="w-full overflow-x-auto">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           className="w-full"
-          style={{ height: 300, minWidth: 280 }}
+          style={{ height: 380, minWidth: 320 }}
         >
-          {/* Flow lines */}
           {flows.map((f) => {
             const srcPos = positions.get(f.source);
             const dstPos = positions.get(f.dest);
             if (!srcPos || !dstPos) return null;
 
             const level = getFlowSecurityLevel(f);
-            const thickness = Math.min(4, Math.max(1, Math.ceil(f.count / 5)));
             const key = `${f.source}→${f.dest}`;
+            const hasReverse = reverseFlowKeys.has(key);
+            const curveOffset = hasReverse ? 18 : 8;
             const isHovered =
               hoverFlow === key ||
               (hoverZone && (hoverZone === f.source || hoverZone === f.dest));
 
             return (
-              <line
+              <path
                 key={key}
-                x1={srcPos.x}
-                y1={srcPos.y}
-                x2={dstPos.x}
-                y2={dstPos.y}
+                d={bezierPath(srcPos.x, srcPos.y, dstPos.x, dstPos.y, curveOffset)}
+                fill="none"
                 stroke={FLOW_COLORS[level]}
-                strokeWidth={isHovered ? thickness + 1 : thickness}
-                strokeOpacity={isHovered ? 1 : 0.7}
-                className="transition-all cursor-pointer"
+                strokeWidth={isHovered ? 2.5 : 1.5}
+                strokeOpacity={isHovered ? 0.9 : 0.2}
+                className="transition-all duration-150 cursor-pointer"
                 onMouseEnter={() => setHoverFlow(key)}
                 onMouseLeave={() => setHoverFlow(null)}
               >
                 <title>
                   {f.count} rule{f.count !== 1 ? "s" : ""} from {f.source} to {f.dest}
                 </title>
-              </line>
+              </path>
             );
           })}
 
-          {/* Zone nodes */}
           {displayZones.map((zone) => {
             const pos = positions.get(zone);
             if (!pos) return null;
@@ -288,6 +331,10 @@ export function NetworkZoneMap({ files }: Props) {
                   : "#6A889B";
             const border = getZoneBorder(zone);
             const isHovered = hoverZone === zone;
+            const r = isHovered ? 22 : 18;
+            const ruleCount = flows
+              .filter((f) => f.source === zone || f.dest === zone)
+              .reduce((s, f) => s + f.count, 0);
 
             return (
               <g
@@ -299,29 +346,34 @@ export function NetworkZoneMap({ files }: Props) {
                 <circle
                   cx={pos.x}
                   cy={pos.y}
-                  r={isHovered ? 28 : 24}
+                  r={r}
                   fill={fill}
-                  fillOpacity={0.9}
+                  fillOpacity={0.85}
                   stroke={border !== "transparent" ? border : "currentColor"}
-                  strokeWidth={border !== "transparent" ? 3 : 1}
-                  strokeOpacity={border !== "transparent" ? 1 : 0.3}
-                  className="transition-all"
+                  strokeWidth={border !== "transparent" ? 2.5 : 0.8}
+                  strokeOpacity={border !== "transparent" ? 1 : 0.2}
+                  className="transition-all duration-150"
                 />
                 <text
                   x={pos.x}
-                  y={pos.y}
+                  y={pos.y + r + 12}
                   textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="text-[9px] font-medium fill-foreground pointer-events-none"
+                  className="text-[8px] font-medium fill-muted-foreground pointer-events-none"
                 >
-                  {zone.length > 8 ? zone.slice(0, 7) + "…" : zone}
+                  {zone.length > 12 ? zone.slice(0, 11) + "…" : zone}
                 </text>
+                {isHovered && (
+                  <text
+                    x={pos.x}
+                    y={pos.y + 3}
+                    textAnchor="middle"
+                    className="text-[7px] font-bold fill-white pointer-events-none"
+                  >
+                    {ruleCount}
+                  </text>
+                )}
                 <title>
-                  {zone} —{" "}
-                  {flows
-                    .filter((f) => f.source === zone || f.dest === zone)
-                    .reduce((s, f) => s + f.count, 0)}{" "}
-                  rules
+                  {zone} — {ruleCount} rules
                 </title>
               </g>
             );
@@ -329,17 +381,33 @@ export function NetworkZoneMap({ files }: Props) {
         </svg>
       </div>
 
-      {hoverFlow && (
-        <p className="text-[10px] text-muted-foreground">
-          {(() => {
-            const [src, dst] = hoverFlow.split("→");
-            const f = flows.find((x) => x.source === src && x.dest === dst);
-            return f
-              ? `${f.count} rule${f.count !== 1 ? "s" : ""} from ${src} to ${dst}`
-              : "";
-          })()}
-        </p>
-      )}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4 text-[9px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.full }} />
+            IPS + Web Filter
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.partial }} />
+            Partial coverage
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.none }} />
+            No IPS / WF
+          </span>
+        </div>
+        {hoverFlow && (
+          <p className="text-[9px] text-muted-foreground">
+            {(() => {
+              const [src, dst] = hoverFlow.split("→");
+              const f = flows.find((x) => x.source === src && x.dest === dst);
+              return f
+                ? `${f.count} rule${f.count !== 1 ? "s" : ""}: ${src} → ${dst}`
+                : "";
+            })()}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
