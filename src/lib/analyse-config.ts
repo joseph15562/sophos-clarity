@@ -337,7 +337,9 @@ function countRows(sections: ExtractedSections, pattern: RegExp, exclude?: RegEx
   return count;
 }
 
-/** Count interface rows from the ports/VLANs section only, excluding Setting/Value grid noise. */
+/** Count interface rows from the ports/VLANs section only, excluding Setting/Value grid noise.
+ *  Matches the HTML Config Viewer logic: ports with VLANs are replaced by
+ *  their VLAN rows (the parent port itself isn't counted). */
 function countInterfaceRows(sections: ExtractedSections): number {
   for (const key of Object.keys(sections)) {
     if (!/interface|port|vlan/i.test(key)) continue;
@@ -345,17 +347,36 @@ function countInterfaceRows(sections: ExtractedSections): number {
       if (t.headers.includes("Interface / VLAN")) return t.rows.length;
     }
   }
-  let total = 0;
+
+  const parentPorts = new Set<string>();
+  let vlanCount = 0;
   for (const key of Object.keys(sections)) {
-    if (!/interface|port|vlan/i.test(key)) continue;
-    if (/alias|xfrm/i.test(key)) continue;
+    if (!/^vlans?$/i.test(key)) continue;
+    for (const t of sections[key].tables) {
+      for (const row of t.rows) {
+        vlanCount++;
+        const parent = row["Interface"] ?? row["HardwareInterface"] ?? row["Member"] ?? "";
+        if (parent) parentPorts.add(parent);
+      }
+    }
+  }
+
+  let portCount = 0;
+  for (const key of Object.keys(sections)) {
+    if (!/interface|port/i.test(key)) continue;
+    if (/alias|xfrm|vlan/i.test(key)) continue;
     for (const t of sections[key].tables) {
       const isSettingsGrid = t.headers.length === 2 &&
         t.headers.includes("Setting") && t.headers.includes("Value");
-      if (!isSettingsGrid && t.rows.length > 0) total += t.rows.length;
+      if (isSettingsGrid) continue;
+      for (const row of t.rows) {
+        const name = row["Name"] ?? row["HardwareName"] ?? "";
+        if (!parentPorts.has(name)) portCount++;
+      }
     }
   }
-  return total;
+
+  return portCount + vlanCount;
 }
 
 /** Extract the firewall hostname from Admin Settings > Hostname Settings. */
