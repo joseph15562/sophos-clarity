@@ -315,6 +315,17 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
     }
   }, [grouped]);
 
+  useEffect(() => {
+    if (!expandedTenant) return;
+    const tenantAgents = grouped.find(([name]) => name === expandedTenant)?.[1];
+    if (!tenantAgents) return;
+    for (const agent of tenantAgents) {
+      if (submissions[agent.id] === undefined) {
+        loadSubmission(agent.id);
+      }
+    }
+  }, [expandedTenant, grouped]);
+
   const loadSubmission = useCallback(async (agentId: string) => {
     if (submissions[agentId] !== undefined) return;
     setLoadingSub((p) => ({ ...p, [agentId]: true }));
