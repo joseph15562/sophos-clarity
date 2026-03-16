@@ -737,7 +737,6 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   analyseHotfix(sections, findings, () => ++fid);
   analyseSyncAppControl(sections, findings, () => ++fid);
   analyseATP(sections, findings, () => ++fid);
-  analyseHA(sections, findings, () => ++fid);
 
   // --- Extended security analysis (VPN, DoS, SNMP, Wireless, Syslog, DNS, etc.) ---
   analyseVpnSecurity(sections, findings, () => ++fid);
@@ -1441,16 +1440,18 @@ function analyseSyncAppControl(
   const section = findSection(sections, /^ApplicationClassification$/i) ?? findSection(sections, /application.?classification$/i);
   if (!section) return;
 
-  // Check details block (API path)
-  for (const d of section.details ?? []) {
-    for (const [k, v] of Object.entries(d.fields ?? {})) {
-      if (/action|status|enable/i.test(k) && /enable/i.test(v)) return;
-    }
-  }
-
-  // Fallback: scan table rows + text (HTML path)
   const blob = sectionToBlob(section);
-  if (/action[=":,\s]*enable/i.test(blob) || /status[=":,\s]*enable/i.test(blob)) return;
+
+  // Only flag if we find an explicit indication it's disabled.
+  // The API entity often omits the toggle entirely (just lists classified apps),
+  // so absence of "Enable" is NOT proof it's disabled.
+  const isExplicitlyDisabled =
+    /action[=":,\s]*disable/i.test(blob) ||
+    /status[=":,\s]*disable/i.test(blob) ||
+    /action[=":,\s]*off/i.test(blob) ||
+    /status[=":,\s]*off/i.test(blob);
+
+  if (!isExplicitlyDisabled) return;
 
   findings.push({
     id: `f${nextId()}`, severity: "medium",
@@ -1459,7 +1460,7 @@ function analyseSyncAppControl(
     section: "Application Classification",
     remediation: "Go to Applications > Synchronized Application Control > Enable the feature. Requires Security Heartbeat and Sophos Endpoint.",
     confidence: "medium",
-    evidence: "ApplicationClassification section: ACTION not set to Enable",
+    evidence: "ApplicationClassification section: ACTION set to Disable",
   });
 }
 
@@ -2053,7 +2054,13 @@ function analyseRedSecurity(
   }
 }
 
-/** Admin Authentication & Profiles — check for overly permissive admin roles */
+/** Admin Authentication & Profiles — check for overly permissive admin roles.
+ *  Ignores Sophos factory-default profiles that ship on every XGS. */
+const SOPHOS_DEFAULT_PROFILES = new Set([
+  "super admin", "audit admin", "crypto admin", "security admin", "network admin",
+  "superadmin", "auditadmin", "cryptoadmin", "securityadmin", "networkadmin",
+]);
+
 function analyseAdminProfiles(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
@@ -2063,6 +2070,8 @@ function analyseAdminProfiles(
   let fullAccessCount = 0;
   for (const t of profileSection.tables) {
     for (const row of t.rows) {
+      const name = (row["Name"] ?? row["Profile Name"] ?? row["Profile"] ?? "").toLowerCase().trim();
+      if (SOPHOS_DEFAULT_PROFILES.has(name)) continue;
       const allValues = Object.values(row).map((v) => v.toLowerCase());
       const readWriteCount = allValues.filter((v) => v === "readwrite" || v === "read-write" || v === "full").length;
       if (readWriteCount > 10) fullAccessCount++;
@@ -2072,12 +2081,12 @@ function analyseAdminProfiles(
   if (fullAccessCount > 1) {
     findings.push({
       id: `f${nextId()}`, severity: "medium",
-      title: `${fullAccessCount} admin profiles with full access permissions`,
-      detail: `${fullAccessCount} administration profiles grant full read-write access to all firewall features. Follow least-privilege principles — create role-specific profiles (e.g. read-only, network-admin, security-admin).`,
+      title: `${fullAccessCount} custom admin profiles with full access permissions`,
+      detail: `${fullAccessCount} custom administration profiles grant full read-write access to all firewall features. Follow least-privilege principles — create role-specific profiles (e.g. read-only, network-admin, security-admin).`,
       section: "Admin Security",
       remediation: "Go to Administration > Device access > Administration profiles. Create role-specific profiles with minimum required permissions rather than granting full access to multiple profiles.",
       confidence: "medium",
-      evidence: `${fullAccessCount} admin profiles have ReadWrite on 10+ feature areas`,
+      evidence: `${fullAccessCount} custom admin profiles have ReadWrite on 10+ feature areas`,
     });
   }
 }

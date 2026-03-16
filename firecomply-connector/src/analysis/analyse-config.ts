@@ -601,20 +601,6 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
     }
   }
 
-  // ── High Availability ──
-
-  const haDetails = getDetails(sections, "High Availability");
-  if (haDetails.length === 0 || !sections["High Availability"]) {
-    findings.push({
-      id: nextId(),
-      severity: "low",
-      title: "High availability not configured",
-      detail: "Without HA, a single firewall failure causes a complete network outage. Consider Active-Passive HA for business continuity.",
-      section: "High Availability",
-      confidence: "low",
-    });
-  }
-
   // ── ATP (Advanced Threat Protection) ──
 
   const atpDetails = getDetails(sections, "Advanced Threat Protection");
