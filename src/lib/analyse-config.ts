@@ -1330,11 +1330,28 @@ function analyseAuthServers(
   if (!section) return;
 
   const unencrypted: string[] = [];
+
+  // Check table rows (HTML upload path)
   for (const t of section.tables) {
     for (const row of t.rows) {
       const name = row["Server Name"] ?? row["Name"] ?? row["col1"] ?? "";
       const security = (row["Connection Security"] ?? row["ConnectionSecurity"] ?? "").toLowerCase();
       if (name && security && (security === "simple" || security === "plain" || security === "none")) {
+        unencrypted.push(name);
+      }
+    }
+  }
+
+  // Check details block (API path — flattened fields from raw config)
+  if (unencrypted.length === 0) {
+    for (const d of section.details ?? []) {
+      const fields = d.fields ?? {};
+      const name = fields["Name"] ?? fields["ServerName"] ?? d.title ?? "";
+      const security = (
+        fields["ConnectionSecurity"] ?? fields["Connection Security"] ??
+        fields["Encryption"] ?? fields["Security"] ?? ""
+      ).toLowerCase();
+      if (name && security && (security === "simple" || security === "plain" || security === "none" || security === "plaintext")) {
         unencrypted.push(name);
       }
     }
