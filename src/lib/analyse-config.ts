@@ -525,39 +525,59 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     });
   }
 
-  // --- ANY service rules ---
-  const anySvc: string[] = [];
+  // --- Classify rules by openness: fully open vs ANY service only vs broad network only ---
+  const fullyOpen: string[] = [];
+  const anySvcOnly: string[] = [];
+  const broadNetOnly: string[] = [];
   for (const row of rulesTable.rows) {
-    if (isAnyService(row)) anySvc.push(ruleName(row));
+    const anyService = isAnyService(row);
+    const broadNet = isBroadSource(row) && isBroadDest(row);
+    const name = ruleName(row);
+    if (anyService && broadNet) {
+      fullyOpen.push(name);
+    } else if (anyService) {
+      anySvcOnly.push(name);
+    } else if (broadNet) {
+      broadNetOnly.push(name);
+    }
   }
-  if (anySvc.length > 0) {
+
+  if (fullyOpen.length > 0) {
     findings.push({
       id: `f${++fid}`,
-      severity: "medium",
-      title: `${anySvc.length} rule${anySvc.length > 1 ? "s" : ""} using "ANY" service`,
-      detail: `Rules permitting all services: ${anySvc.slice(0, 8).join(", ")}${anySvc.length > 8 ? ` (+${anySvc.length - 8} more)` : ""}. Broad service rules increase attack surface — restrict to required protocols where possible.`,
+      severity: "critical",
+      title: `${fullyOpen.length} fully open rule${fullyOpen.length > 1 ? "s" : ""} (any source, destination, and service)`,
+      detail: `These rules permit all traffic from any source to any destination on any service: ${fullyOpen.slice(0, 6).join(", ")}${fullyOpen.length > 6 ? ` (+${fullyOpen.length - 6} more)` : ""}. Fully open rules effectively bypass firewall protection.`,
       section: "Firewall Rules",
-      remediation: "Review traffic logs via the Log viewer (upper-right corner) to identify which protocols are in use. Create specific service objects under Hosts and services > Services. Edit each rule to replace 'Any' with specific services.",
+      remediation: "Review each rule under Rules and policies > Firewall rules. Restrict source/destination to specific network objects and replace 'Any' service with specific protocols. Use the Log viewer to identify actual traffic patterns before tightening.",
       confidence: "high",
-      evidence: `Rules ${anySvc.slice(0, 3).join(", ")} have Service=ANY`,
+      evidence: `Rules ${fullyOpen.slice(0, 3).join(", ")} have Source=Any, Destination=Any, Service=ANY`,
     });
   }
 
-  // --- Broad source/destination rules ---
-  const broadRules: string[] = [];
-  for (const row of rulesTable.rows) {
-    if (isBroadSource(row) && isBroadDest(row)) broadRules.push(ruleName(row));
-  }
-  if (broadRules.length > 0) {
+  if (anySvcOnly.length > 0) {
     findings.push({
       id: `f${++fid}`,
       severity: "medium",
-      title: `${broadRules.length} rule${broadRules.length > 1 ? "s" : ""} with broad source and destination`,
-      detail: `Rules with both Source and Destination set to "Any" or blank: ${broadRules.slice(0, 6).join(", ")}${broadRules.length > 6 ? ` (+${broadRules.length - 6} more)` : ""}. Consider restricting to specific networks.`,
+      title: `${anySvcOnly.length} rule${anySvcOnly.length > 1 ? "s" : ""} using "ANY" service`,
+      detail: `Rules permitting all services but with specific source/destination: ${anySvcOnly.slice(0, 8).join(", ")}${anySvcOnly.length > 8 ? ` (+${anySvcOnly.length - 8} more)` : ""}. Broad service rules increase attack surface.`,
+      section: "Firewall Rules",
+      remediation: "Review traffic logs via the Log viewer to identify which protocols are in use. Create specific service objects under Hosts and services > Services. Edit each rule to replace 'Any' with specific services.",
+      confidence: "high",
+      evidence: `Rules ${anySvcOnly.slice(0, 3).join(", ")} have Service=ANY`,
+    });
+  }
+
+  if (broadNetOnly.length > 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: "medium",
+      title: `${broadNetOnly.length} rule${broadNetOnly.length > 1 ? "s" : ""} with broad source and destination`,
+      detail: `Rules with both Source and Destination set to "Any" but with specific services: ${broadNetOnly.slice(0, 6).join(", ")}${broadNetOnly.length > 6 ? ` (+${broadNetOnly.length - 6} more)` : ""}. Consider restricting to specific networks.`,
       section: "Firewall Rules",
       remediation: "Create specific IP host or IP host group objects under Hosts and services. Edit each broad rule under Rules and policies > Firewall rules to replace 'Any' source/destination with named network objects.",
       confidence: "high",
-      evidence: `Rules ${broadRules.slice(0, 3).join(", ")} have Source=Any and Destination=Any`,
+      evidence: `Rules ${broadNetOnly.slice(0, 3).join(", ")} have Source=Any and Destination=Any`,
     });
   }
 
