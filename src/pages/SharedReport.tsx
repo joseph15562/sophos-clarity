@@ -15,6 +15,11 @@ const SharedReport = () => {
     return () => { cancelled = true; };
   }, [token]);
 
+  // Hooks must run unconditionally (before any early return) to avoid React error #310
+  const markdown = report?.markdown ?? "";
+  const html = useMemo(() => buildReportHtml(markdown), [markdown]);
+  const headings = useMemo(() => extractTocHeadings(markdown), [markdown]);
+
   if (!token) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
@@ -52,9 +57,6 @@ const SharedReport = () => {
       </div>
     );
   }
-
-  const html = useMemo(() => buildReportHtml(report.markdown), [report.markdown]);
-  const headings = useMemo(() => extractTocHeadings(report.markdown), [report.markdown]);
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
