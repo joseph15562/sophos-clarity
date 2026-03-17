@@ -378,8 +378,8 @@ serve(async (req) => {
       });
     }
 
-    // Prefer faster model for lower latency; gemini-2.0-flash is production and typically quicker to first token
-    const model = Deno.env.get("GEMINI_REPORT_MODEL") || "gemini-2.0-flash";
+    // gemini-2.0-flash returns 404 for new users. Use 1.5-flash for broad availability; set GEMINI_REPORT_MODEL to e.g. gemini-2.5-flash if your project has it.
+    const model = Deno.env.get("GEMINI_REPORT_MODEL") || "gemini-1.5-flash";
 
     const doRequest = () =>
       fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -433,6 +433,14 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 403 || /quota|resource exhausted|billing/i.test(message)) {
+        return new Response(
+          JSON.stringify({
+            error: "AI quota unavailable. The Google project used for reports has hit its limit or billing isn’t set up. In Google AI Studio or Cloud Console, check the project that owns GEMINI_API_KEY: enable billing, increase quotas, or switch to a project with available Gemini API access.",
+          }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
