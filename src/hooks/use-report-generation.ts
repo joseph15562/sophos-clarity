@@ -22,7 +22,15 @@ export function buildCoverPageMarkdown(branding: BrandingData): string {
   }
   lines.push(`**Date:** ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`);
   lines.push("");
+  if (branding.preparedBy?.trim()) {
+    lines.push(`**Prepared by:** ${branding.preparedBy.trim()}`);
+    lines.push("");
+  }
   lines.push(`*${COVER_DISCLAIMER}*`);
+  if (branding.footerText?.trim()) {
+    lines.push("");
+    lines.push(`*${branding.footerText.trim()}*`);
+  }
   return lines.join("\n");
 }
 

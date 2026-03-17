@@ -530,7 +530,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   }, [analysisTab, totalFindings, files.length]);
 
   const keyboardShortcuts = useMemo<ShortcutAction[]>(() => [
-    { key: "?", description: "Show keyboard shortcuts", handler: () => setShortcutsOpen((v) => !v) },
+    { key: "?", shift: true, description: "Show keyboard shortcuts", handler: () => setShortcutsOpen((v) => !v) },
     { key: "Escape", description: "Go back / close modal", handler: () => {
       if (shortcutsOpen) { setShortcutsOpen(false); return; }
       if (drawerOpen) { setDrawerOpen(false); return; }
