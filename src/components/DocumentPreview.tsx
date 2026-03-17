@@ -4,7 +4,7 @@ import { BrandingData } from "./BrandingSetup";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { mapToFramework, type FrameworkMapping } from "@/lib/compliance-map";
-import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Share2, Copy } from "lucide-react";
+import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Share2, Copy, Bug, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +43,10 @@ type Props = {
   topActions?: ReactNode;
   /** Per-firewall analysis results for evidence verification sidebar */
   analysisResults?: Record<string, AnalysisResult>;
+  /** Backend debug info from parse-config (when debug: true). */
+  backendDebugInfo?: Record<string, unknown> | null;
+  /** Fetch backend debug for the currently active report. */
+  onFetchBackendDebug?: () => void;
 };
 
 function extractTocHeadings(md: string): { id: string; text: string; level: number }[] {
@@ -565,7 +569,15 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
                 );
               })}
             </div>
-            <p className="text-xs mt-4 text-muted-foreground">This may take a minute for large configs</p>
+            {loadingStatus && (
+              <p className="text-[11px] mt-3 font-medium text-foreground/80" role="status" aria-live="polite">
+                {loadingStatus}
+              </p>
+            )}
+            <p className="text-xs mt-4 text-muted-foreground">This may take a minute or two for large configs.</p>
+            <p className="text-[10px] mt-3 text-muted-foreground/80 max-w-sm text-center">
+              To see backend activity: Supabase Dashboard → Edge Functions → <strong className="font-mono text-foreground/70">parse-config</strong> → <strong className="text-foreground/70">Invocations</strong> or <strong className="text-foreground/70">Logs</strong>.
+            </p>
           </div>
         )}
 
@@ -577,7 +589,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
                 {errorMessage}
               </p>
             )}
-            <p className="text-sm text-muted-foreground mb-4">Click retry to try again, or wait a minute if the API hit its rate limit.</p>
+            <p className="text-sm text-muted-foreground mb-4">Click retry to try again. If it keeps timing out, the report may be too large for the server — try generating <strong className="text-foreground">individual reports</strong> first, or use fewer configs.</p>
             <Button variant="destructive" onClick={onRetry} className="gap-2">
               <RefreshCw className="h-4 w-4" /> Retry Generation
             </Button>
@@ -649,7 +661,59 @@ function EvidenceVerification({ analysisResults, reportLabel }: { analysisResult
   );
 }
 
-export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions, analysisResults }: Props) {
+function BackendDebugPanel({ backendDebugInfo, onFetchBackendDebug }: { backendDebugInfo?: Record<string, unknown> | null; onFetchBackendDebug?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFetch = async () => {
+    if (!onFetchBackendDebug) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await (onFetchBackendDebug as () => Promise<void>)();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Request failed");
+    } finally {
+      setLoading(false);
+      setOpen(true);
+    }
+  };
+
+  if (!onFetchBackendDebug) return null;
+  return (
+    <div className="no-print rounded-lg border border-border bg-muted/30 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 px-4 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/50"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <Bug className="h-3.5 w-3.5 text-muted-foreground" />
+        Backend debug — input and processing summary
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-0 space-y-3 border-t border-border">
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Fetches what the <code className="rounded bg-muted px-1 font-mono">parse-config</code> function received and will send to the AI (no report is generated).
+          </p>
+          <Button size="sm" variant="outline" onClick={handleFetch} disabled={loading} className="gap-1.5">
+            <Bug className="h-3 w-3" />
+            {loading ? "Fetching…" : "Fetch debug for this report"}
+          </Button>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          {backendDebugInfo && (
+            <pre className="text-[10px] bg-muted/50 rounded p-3 overflow-auto max-h-80 border border-border font-mono text-foreground">
+              {JSON.stringify(backendDebugInfo, null, 2)}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions, analysisResults, backendDebugInfo, onFetchBackendDebug }: Props) {
   if (reports.length === 0 && !isLoading) return null;
 
   const allDone = reports.length > 0 && !isLoading && reports.every(r => r.markdown && !failedReportIds.has(r.id));
@@ -691,6 +755,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     return (
       <div className="space-y-4">
         {topActions}
+        <BackendDebugPanel backendDebugInfo={backendDebugInfo} onFetchBackendDebug={onFetchBackendDebug} />
         <div className="flex items-center justify-between no-print">
           <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
           {oneReportDone && (
@@ -725,6 +790,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-foreground no-print">Document Preview</h2>
+        <BackendDebugPanel backendDebugInfo={backendDebugInfo} onFetchBackendDebug={onFetchBackendDebug} />
         <ReportContent markdown="" isLoading={true} isFailed={false} onRetry={() => {}} branding={branding} pdfFilename="report.pdf" loadingStatus="Starting…" />
       </div>
     );
@@ -733,6 +799,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
   return (
     <div className="space-y-4">
       {topActions}
+      <BackendDebugPanel backendDebugInfo={backendDebugInfo} onFetchBackendDebug={onFetchBackendDebug} />
       <div className="flex items-center justify-between no-print">
         <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
         {allDone && (

@@ -286,15 +286,6 @@ serve(async (req) => {
       );
     }
 
-    // Debug mode
-    const url = new URL(req.url);
-    if (url.searchParams.get("debug") === "1") {
-      return new Response(JSON.stringify({ sections, sectionCount: sections ? Object.keys(sections).length : 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // Gemini API key (required)
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
@@ -362,7 +353,33 @@ serve(async (req) => {
       maxTokens = 8192;
     }
 
-    const model = "gemini-3-flash-preview";
+    // Debug mode (body.debug === true): return what the backend received and will send to the AI, without calling Gemini
+    if (body?.debug === true) {
+      const sectionKeys = sections && typeof sections === "object" ? Object.keys(sections) : [];
+      const payloadForSize = typeof sections === "object" ? JSON.stringify(pruneEmpty(sections)) : "";
+      const debugPayload = {
+        reportType: chat ? "chat" : compliance ? "compliance" : executive ? "executive" : "technical",
+        sectionCount: sectionKeys.length,
+        sectionKeys,
+        payloadSizeBytes: payloadForSize.length,
+        payloadSizeKB: Math.round((payloadForSize.length / 1024) * 10) / 10,
+        systemPromptLength: systemPrompt.length,
+        userMessageLength: userMessage.length,
+        maxTokens,
+        firewallLabels: firewallLabels ?? null,
+        hasCentralEnrichment: centralEnrichment != null && Object.keys(centralEnrichment).length > 0,
+        environment: environment ?? null,
+        country: country ?? null,
+        selectedFrameworksCount: selectedFrameworks?.length ?? 0,
+      };
+      return new Response(JSON.stringify(debugPayload, null, 2), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Prefer faster model for lower latency; gemini-2.0-flash is production and typically quicker to first token
+    const model = Deno.env.get("GEMINI_REPORT_MODEL") || "gemini-2.0-flash";
 
     const doRequest = () =>
       fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -425,7 +442,25 @@ serve(async (req) => {
       );
     }
 
-    return new Response(response.body, {
+    // Send an immediate empty SSE chunk so the client gets 200 + first byte right away and can show "Generating…" instead of staying on "Sending request" for 30–90s
+    const immediateChunk = new TextEncoder().encode("data: {\"choices\":[{\"delta\":{\"content\":\"\"}}]}\n");
+    const reader = response.body!.getReader();
+    const stream = new ReadableStream({
+      async start(controller) {
+        controller.enqueue(immediateChunk);
+        try {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+        } finally {
+          reader.releaseLock();
+          controller.close();
+        }
+      },
+    });
+    return new Response(stream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {

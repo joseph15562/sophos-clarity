@@ -18,6 +18,7 @@ import { useAuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { getCentralStatus, getCachedFirewalls, getAlerts, getFirewallLicences } from "@/lib/sophos-central";
 import type { CentralEnrichment as CentralEnrichmentType } from "@/lib/stream-ai";
+import { fetchParseConfigDebug } from "@/lib/stream-ai";
 import { saveReportCloud, saveReportLocal, type SavedReportEntry, type AnalysisSummary } from "@/lib/saved-reports";
 import { saveAssessmentCloud } from "@/lib/assessment-cloud";
 import { saveAssessment as saveAssessmentLocal } from "@/lib/assessment-history";
@@ -69,6 +70,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
   const [parsingProgress, setParsingProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
   const [activeTenantName, setActiveTenantName] = useState<string | undefined>(undefined);
+  const [backendDebugInfo, setBackendDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   const {
     reports, setReports, activeReportId, setActiveReportId,
@@ -466,6 +468,58 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setLocalMode(enabled);
     setLocalModeState(enabled);
   }, []);
+
+  const fetchBackendDebug = useCallback(async () => {
+    if (files.length === 0) return;
+    const label = (f: ParsedFile) => f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+    if (activeReportId === "report-executive" && files.length >= 2) {
+      const mergedSections: Record<string, ExtractedSections> = {};
+      const labels = files.map((f) => {
+        const l = label(f);
+        mergedSections[l] = f.extractedData;
+        return l;
+      });
+      const info = await fetchParseConfigDebug({
+        sections: mergedSections as unknown as ExtractedSections,
+        executive: true,
+        firewallLabels: labels,
+        environment: branding.environment || undefined,
+        country: branding.country || undefined,
+        customerName: branding.customerName || undefined,
+        selectedFrameworks: branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined,
+      });
+      setBackendDebugInfo(info);
+      return;
+    }
+    if (activeReportId === "report-compliance") {
+      const labels = files.map((f) => label(f));
+      const mergedSections: Record<string, ExtractedSections> = {};
+      files.forEach((f) => { mergedSections[label(f)] = f.extractedData; });
+      const info = await fetchParseConfigDebug({
+        sections: (files.length === 1 ? files[0].extractedData : (mergedSections as unknown as ExtractedSections)),
+        compliance: true,
+        firewallLabels: labels,
+        environment: branding.environment || undefined,
+        country: branding.country || undefined,
+        customerName: branding.customerName || undefined,
+        selectedFrameworks: branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined,
+      });
+      setBackendDebugInfo(info);
+      return;
+    }
+    const file = files.find((f) => `report-${f.id}` === activeReportId) ?? files[0];
+    const info = await fetchParseConfigDebug({
+      sections: file.extractedData,
+      firewallLabels: [label(file)],
+      centralEnrichment: file.centralEnrichment,
+      environment: branding.environment || undefined,
+      country: branding.country || undefined,
+      customerName: branding.customerName || undefined,
+      selectedFrameworks: branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined,
+    });
+    setBackendDebugInfo(info);
+  }, [activeReportId, files, branding]);
+
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
@@ -724,6 +778,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                 onRetry={handleRetry}
                 branding={branding}
                 analysisResults={analysisResults}
+                backendDebugInfo={backendDebugInfo}
+                onFetchBackendDebug={localMode ? undefined : fetchBackendDebug}
               />
             </Suspense>
 
