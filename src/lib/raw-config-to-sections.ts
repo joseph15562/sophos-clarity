@@ -111,7 +111,6 @@ const SECTION_MAP: Record<string, string> = {
   SurfingQuotaPolicy: "Surfing Quota Policies",
   CellularWAN: "Cellular WAN",
   SupportAccess: "Support Access",
-  SystemServices: "System Services",
   SystemModules: "System Modules",
 };
 

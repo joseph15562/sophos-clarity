@@ -144,7 +144,6 @@ const ALL_ENTITIES = [
   "VoucherDefinition",
 
   // System services & network
-  "SystemServices",
   "SystemModules",
   "DNS",
   "DNSRequestRoute",
