@@ -93,13 +93,15 @@ Rules
 - Use the actual data provided — never invent or assume configuration details
 - If a section has no data, write "No configuration found in export."
 - **Do not include DHCP in the report**: Omit any section that is solely about DHCP (e.g. "DHCP", "DHCP Servers", "DHCPBinding", "CliDhcp"). Do not document DHCP configuration, DHCP servers, or DHCP bindings. Skip these sections entirely — do not write a heading or table for them.
-- **Do not include these sections**: Omit the following from the report — do not write a heading or table for any of them; skip entirely: "WAF TLS Settings", "ArpFlux", "AuthCTA", "FQDN Hosts", "QoS Policies", "Cellular WAN", "Gateway Hosts", "High Availability", "Network Groups", "Letsencrypt", "Parent Proxy", "QoS Settings", "WAF Slow HTTP", "AntiVirus FTP", "Country Groups", "Anti-Spam Rules", "FQDN Host Groups", "FileType", "Schedules", "Services", "WebProxy", "Admin Profiles", "Web Filters", "Web Filter Categories", "Web Filter URL Groups", "Web Filter Exceptions", "Zero Day Protection", "Malware Protection", "AntiVirusHTTPsConfiguration", "AntiVirusMailSMTPScanningRules", "AntiVirusHTTPSScanningExceptions", "POP/IMAP Scanning", "POP/IMAP Scanning Policy", "DNS Request Routes", "Application Control Policies", "Web Filtering Policies", "Admin Accounts and Profiles", "User Groups", "Application Objects", "SD-WAN Routes", "API & Service Accounts", "SNMP Community", "Syslog Servers", "System Services", "OverridePolicy", "DataManagement", "HttpProxy", "Networks", "Networks (Hosts)", "Hosts", "Web Filtering / Inspection Method", "Web Filter Settings", "Default Captive Portal", "Sophos Connect Client", "Decryption Profiles", "Application Filter Policies", "Application Classification", "Application Filter Categories", "Email Protection", "Email Scanning", "SMTP Scanning", "Anti-Spam". Omit any section that is solely or primarily about email protection (e.g. Email Protection, Email Scanning, SMTP, Anti-Spam, POP/IMAP, mail scanning) — do not write a heading or table for them.
+- **Do not include these sections**: Omit the following from the report — do not write a heading or table for any of them; skip entirely: "WAF TLS Settings", "ArpFlux", "AuthCTA", "FQDN Hosts", "QoS Policies", "Cellular WAN", "Gateway Hosts", "High Availability", "Network Groups", "Letsencrypt", "Parent Proxy", "QoS Settings", "WAF Slow HTTP", "AntiVirus FTP", "Country Groups", "Anti-Spam Rules", "FQDN Host Groups", "FileType", "Schedules", "Services", "WebProxy", "Admin Profiles", "Web Filters", "Web Filter Categories", "Web Filter URL Groups", "Web Filter Exceptions", "Zero Day Protection", "Malware Protection", "AntiVirusHTTPsConfiguration", "AntiVirusMailSMTPScanningRules", "AntiVirusHTTPSScanningExceptions", "POP/IMAP Scanning", "POP/IMAP Scanning Policy", "DNS Request Routes", "Application Control Policies", "Web Filtering Policies", "Admin Accounts and Profiles", "User Groups", "Application Objects", "SD-WAN Routes", "API & Service Accounts", "SNMP Community", "Syslog Servers", "System Services", "OverridePolicy", "DataManagement", "HttpProxy", "Networks", "Networks (Hosts)", "Hosts", "Web Filtering / Inspection Method", "Web Filter Settings", "Default Captive Portal", "Sophos Connect Client", "Decryption Profiles", "Application Filter Policies", "Application Classification", "Application Filter Categories", "Email Protection", "Email Scanning", "SMTP Scanning", "Anti-Spam", "Firewall Rule Groups", "User Activity", "Service Groups", "SSL VPN Policies", "SPX Templates", "Notifications", "User Portal Authentication", "VpnConnRemoveOnFailover", "VpnConnRemoveTunnelUp", "SSL VPN Authentication", "MTA SPX Configuration", "Advanced SMTP Setting", "Spoof Prevention", "Route Precedence", "MTA SPX Templates", "MTA Address Group", "Local Service ACL", "IPS Full Signature Pack", "Gateway Configuration", "Virtual Host Failover Notification", "Default Web Filter Notification Settings", "Web Authentication", "Voucher Definition", "Smarthost Settings", "PPTP Configuration", "SNMP Agent Config", "Multicast Configuration", "Firewall Authentication", "SSL VPN Tunnel Access". Omit any section that is solely or primarily about email protection (e.g. Email Protection, Email Scanning, SMTP, Anti-Spam, POP/IMAP, mail scanning) — do not write a heading or table for them.
 - **Web Filter Settings and Web Filter Exceptions**: Do NOT include "Web Filter Settings", "Web Filter Exceptions", "WebFilterSettings", "WebFilterExceptions", or any section that is about global web filter settings or web filter exception lists. Do not write a heading, table, summary, findings, or recommendations for these — skip them entirely. If the payload contains such data, do not document it in the report.
 - **FQDN Host Groups**: Do NOT include "FQDN Host Groups", "FQDNHostGroups", or any section that lists FQDN host groups (e.g. collections of fully qualified domain names). Do not write a heading, table, or any content for this section — skip it entirely. If the payload contains FQDN Host Groups data, do not document it in the report.
 - **Admin Profiles**: Do NOT include "Admin Profiles", "AdminProfiles", or any section that lists admin profiles or administrator profiles. Do not write a heading, table, or any content for this section — skip it entirely.
 - **Syslog Servers**: Do NOT include "Syslog Servers", "SyslogServers", or any section that lists syslog servers. Do not write a heading, table, or any content for this section — skip it entirely.
 - **Networks**: Do NOT include "Networks", "Networks (Hosts)", "Hosts", or any standalone section that lists network objects or host/network definitions. Do not write a heading, table, or any content for this section — skip it entirely. (Firewall rules may still reference source/destination networks in their columns; only omit the dedicated Networks/Hosts section.)
-- **No repeated headings**: Each section heading (e.g. ## Firewall Rules, ## Zones) must appear only once in the report. Do not repeat the same ## or ### heading later in the document; merge content under a single occurrence of that heading. Do not add a separate "Summary of [Section Name]" or similar heading after a section — write any summary as a normal paragraph under the main section heading, not as another ## or ### that repeats the section name.
+- **No repeated headings**: Each section heading (e.g. ## Firewall Rules, ## Zones) must appear only once in the report. Do not repeat the same ## or ### heading later in the document; merge content under a single occurrence of that heading. Do not add a separate "Summary of [Section Name]" or "Summary of Firewall Rules" or similar heading after a section — write any summary as a normal paragraph under the main section heading, not as another ## or ### that repeats the section name.
+- **Consistent numbers**: The firewall rule count must be identical everywhere in the report. Count the actual number of rule rows in the Firewall Rules payload and use that exact number in the Executive Summary, in the paragraph under ## Firewall Rules (after the table), and in any other mention (e.g. "N rules", "N disabled"). Never state different totals in different sections (e.g. 29 in one place and 33 in another).
+- **Complete sentences**: Write only complete sentences. Do not cut off mid-word or mid-sentence. Every paragraph must end with a full sentence. Avoid duplicate consecutive words (e.g. "rules rules" or "the the"); proofread for clarity.
 - **RED (Remote Ethernet Device)**: Do **not** include "RED Configuration" in the report. For RED devices, only include a short **RED Devices** section with a simple table: **Device** (or name) and **IP** (or address). Do not document full RED configuration, RED settings, or other RED fields — only device name and IP.
 - Do NOT output raw JSON — write documentation in Markdown tables and prose
 - **No placeholder or loading text**: Never write "Still generating...", "Generating...", "Loading...", or any similar text anywhere in the report — including in the Firewall Rules section. The Firewall Rules section must contain the actual rule table rows (or first 150 plus truncation note), not a loading message. The entire report must be real documentation only; no status or placeholder messages.
@@ -308,12 +310,10 @@ serve(async (req) => {
 
     let systemPrompt: string;
     let userMessage: string;
-    let maxTokens: number;
 
     if (chat) {
       systemPrompt = CHAT_SYSTEM_PROMPT;
       userMessage = chatContext!;
-      maxTokens = 2048;
     } else {
       // Compact payload: no pretty-print (saves tokens), strip empty fields
       const compactSections = pruneEmpty(sections) as Record<string, unknown>;
@@ -365,8 +365,6 @@ serve(async (req) => {
       } else {
         userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely. Use every column from each table; if a section has a 'details' or 'detail blocks' array, merge those fields (e.g. Security Features, Web Filter, Logging) into your rule table so the report is complete and suitable for compliance.\n\n" + payload;
       }
-
-      maxTokens = 65536;
     }
 
     // Debug mode (body.debug === true): return what the backend received and will send to the AI, without calling Gemini
@@ -381,7 +379,6 @@ serve(async (req) => {
         payloadSizeKB: Math.round((payloadForSize.length / 1024) * 10) / 10,
         systemPromptLength: systemPrompt.length,
         userMessageLength: userMessage.length,
-        maxTokens,
         firewallLabels: firewallLabels ?? null,
         hasCentralEnrichment: centralEnrichment != null && Object.keys(centralEnrichment).length > 0,
         environment: environment ?? null,
@@ -412,7 +409,6 @@ serve(async (req) => {
           ],
           stream: true,
           temperature: 0.1,
-          max_tokens: maxTokens,
         }),
       });
 
