@@ -170,7 +170,7 @@ function isSystemRule(e: Record<string, unknown>): boolean {
 
 function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData {
   const headers = [
-    "Rule Name", "Status", "Policy Type", "Action",
+    "#", "Rule Name", "Status", "Policy Type", "Action",
     "Source Zone", "Source Zones", "Destination Zone", "Destination Zones",
     "Source Networks", "Destination Networks",
     "Service", "Web Filter", "IPS Policy", "IPS",
@@ -179,7 +179,7 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
     "Log", "Log Traffic", "Description",
     "Minimum Source HB Permitted", "Minimum Destination HB Permitted",
   ];
-  const rows = entities.map((e) => {
+  const rows = entities.map((e, i) => {
     const srcZone = policyField(e, "SourceZones.Zone");
     const dstZone = policyField(e, "DestinationZones.Zone");
     const service = policyField(e, "Services.Service");
@@ -195,6 +195,7 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
     const dstHB = policyField(e, "MinimumDestinationHBPermitted") || asString(e.MinimumDestinationHBPermitted ?? "");
 
     return {
+      "#": String(i + 1),
       "Rule Name": asString(e.Name),
       "Status": asString(e.Status),
       "Policy Type": asString(e.PolicyType ?? ""),

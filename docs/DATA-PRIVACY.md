@@ -16,7 +16,7 @@ When **local mode is off** (default), the following may happen:
   When you generate a technical report, executive summary, or compliance evidence pack, the app sends **extracted configuration data** to:
   - **Supabase Edge Functions** (hosted by your Supabase project), which then call **Google Gemini** to produce the report text.
   - Data is sent over HTTPS. Supabase and the Edge Function do not persist the config payload; it is used only to call Gemini and stream the response back.
-  - **Gemini**: Google’s API receives the (optionally anonymised) config and returns generated markdown. Use of Gemini is subject to [Google’s API terms and privacy policy](https://ai.google.dev/terms); we do not control Google’s retention or processing of request data.
+  - **Gemini**: Google’s API receives the (optionally anonymised) config and returns generated markdown. Use of Gemini is subject to [Google’s API terms and privacy policy](https://ai.google.dev/terms); we do not control Google’s retention or processing of request data. Gemini is operated by Google; request data may be processed in the United States or other regions per Google’s infrastructure. For EU or other data-residency requirements, consider local mode (no AI) or review Google’s data processing terms.
 
 - **Anonymisation (optional)**  
   Before sending config to the Edge Function, the app can **anonymise** sensitive values so the cloud never sees real IPs, customer names, or firewall labels. See [Anonymisation](#anonymisation) below. The mapping exists only in the browser; the streamed report is de-anonymised locally so your exported documents show real values.
@@ -67,7 +67,7 @@ Implementation: `src/lib/anonymise.ts` — `buildAnonymisationMap`, `anonymiseDa
 | Assessments (signed in)  | Supabase Postgres          | Yes, per your RLS/schema |
 | Connector submissions   | FireComply API / Supabase  | Yes, per your project |
 
-We do not control retention on Google’s side. For Supabase, retention follows your project settings and RLS policies; see [TENANT-MODEL.md](TENANT-MODEL.md) for how data is isolated per organisation.
+We do not control retention on Google’s side. For Supabase, retention follows your project settings and RLS policies; see [TENANT-MODEL.md](TENANT-MODEL.md) for how data is isolated per organisation. Organisations can set submission retention (e.g. auto-delete connector submissions after N days) in the app; a full “delete my data” / right-to-erasure flow is on the roadmap.
 
 ---
 

@@ -58,7 +58,7 @@ function isSystemRule(e: Record<string, unknown>): boolean {
 
 function parseFirewallRules(entities: unknown[]): TableData {
   const headers = [
-    "Rule Name", "Status", "Policy Type", "Action",
+    "#", "Rule Name", "Status", "Policy Type", "Action",
     "Source Zone", "Source Zones", "Destination Zone", "Destination Zones",
     "Source Networks", "Destination Networks",
     "Service", "Web Filter", "IPS Policy", "IPS",
@@ -68,7 +68,7 @@ function parseFirewallRules(entities: unknown[]): TableData {
     "Minimum Source HB Permitted", "Minimum Destination HB Permitted",
   ];
 
-  const rows: Record<string, string>[] = entities.map((e: any) => {
+  const rows: Record<string, string>[] = entities.map((e: any, i: number) => {
     const srcZone = policyField(e, "SourceZones.Zone");
     const dstZone = policyField(e, "DestinationZones.Zone");
     const service = policyField(e, "Services.Service");
@@ -84,6 +84,7 @@ function parseFirewallRules(entities: unknown[]): TableData {
     const dstHB = policyField(e, "MinimumDestinationHBPermitted") || asString(e.MinimumDestinationHBPermitted ?? "");
 
     return {
+      "#": String(i + 1),
       "Rule Name": asString(e.Name),
       "Status": asString(e.Status),
       "Policy Type": asString(e.PolicyType ?? ""),

@@ -128,6 +128,10 @@ Add Supabase Auth + Supabase Postgres with Row Level Security (RLS) to create a 
 - **WAF Security Analysis** — Parse WAF rules and policies, check for OWASP coverage
 - **SD-WAN Analysis** — Analyse SD-WAN profiles, SLA routing, and gateway health
 
+### Operations and governance
+- **Data retention and erasure** — Explicit retention policy wording in docs and UI; user/org "delete my data" (right-to-erasure) flow for GDPR. Org-level submission retention already exists.
+- **Operational visibility** — Structured logging and diagnostics for Edge Functions and Connector; document retry and rate-limit behaviour (Central, Gemini) for support runbooks.
+
 ### Skipped
 - **Syslog / SIEM Integration Check** — Skipped because Sophos Central uploads to the data lake without needing a syslog connector; the connector is only useful for third-party SIEM
 
