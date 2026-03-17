@@ -52,6 +52,18 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
 
   useEffect(() => { loadStatus(); }, [loadStatus]);
 
+  // Refetch when user opens the popover so we show current state after connecting in Settings
+  useEffect(() => {
+    if (showPopover && orgId) loadStatus();
+  }, [showPopover, orgId, loadStatus]);
+
+  // Refetch when tab becomes visible so we pick up connection changes from another tab/settings
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible" && orgId) loadStatus(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [orgId, loadStatus]);
+
   // Auto-refresh: fires when data is >15 min old, then schedules next check
   useEffect(() => {
     if (!status?.connected || !status.last_synced_at || refreshing) return;

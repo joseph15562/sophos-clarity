@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import DOMPurify from "dompurify";
 import { BrandingData } from "./BrandingSetup";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
@@ -14,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { marked } from "marked";
+import { extractTocHeadings, buildReportHtml } from "@/lib/report-html";
 import { saveAs } from "file-saver";
 import { generateShareToken, saveSharedReport } from "@/lib/share-report";
 import { buildPdfHtml, generateWordBlob, generatePptxBlob } from "@/lib/report-export";
@@ -48,19 +47,6 @@ type Props = {
   /** Fetch backend debug for the currently active report. */
   onFetchBackendDebug?: () => void;
 };
-
-function extractTocHeadings(md: string): { id: string; text: string; level: number }[] {
-  const headings: { id: string; text: string; level: number }[] = [];
-  for (const line of md.split("\n")) {
-    const match = line.trim().match(/^(#{2,3})\s+(.*)/);
-    if (match) {
-      const text = match[2].replace(/\*\*/g, "").replace(/`/g, "").trim();
-      const id = text.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "");
-      headings.push({ id, text, level: match[1].length });
-    }
-  }
-  return headings;
-}
 
 function ReportToc({ markdown }: { markdown: string }) {
   const [open, setOpen] = useState(false);
@@ -437,11 +423,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   const [shareUrl, setShareUrl] = useState("");
   const [shareExpiresAt, setShareExpiresAt] = useState("");
 
-  const html = useMemo(() => {
-    if (!markdown) return "";
-    const rawHtml = marked.parse(markdown, { async: false }) as string;
-    return DOMPurify.sanitize(rawHtml);
-  }, [markdown]);
+  const html = useMemo(() => buildReportHtml(markdown), [markdown]);
 
   const handlePdf = async () => {
     const el = docRef.current;
@@ -732,8 +714,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
       reportsFolder.file(`${baseName}-report.docx`, wordBlob);
 
       // Styled HTML report
-      const rawHtml = marked.parse(report.markdown, { async: false }) as string;
-      const sanitized = DOMPurify.sanitize(rawHtml);
+      const sanitized = buildReportHtml(report.markdown);
       const pdfHtml = buildPdfHtml(sanitized, baseName, branding);
       reportsFolder.file(`${baseName}-report.html`, pdfHtml);
 

@@ -213,6 +213,8 @@ export async function streamConfigParse({ sections, environment, country, custom
   }, onStatus);
 }
 
+const SSE_INACTIVITY_MS = 90_000; // If no new content for 90s after we've started receiving, treat stream as done so UI doesn't stay on "Still generating..."
+
 async function consumeSSEStream(
   body: ReadableStream<Uint8Array>,
   onDelta: (text: string) => void,
@@ -223,59 +225,80 @@ async function consumeSSEStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let hasReceivedContent = false;
+  let inactivityDone = false;
+  let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!hasReceivedContent) {
-      hasReceivedContent = true;
-      onStatus?.("Generating…");
-    }
-    buffer += decoder.decode(value, { stream: true });
-
-    let newlineIdx: number;
-    while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-      let line = buffer.slice(0, newlineIdx);
-      buffer = buffer.slice(newlineIdx + 1);
-
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      if (line.startsWith(":") || line.trim() === "") continue;
-      if (!line.startsWith("data: ")) continue;
-
-      const jsonStr = line.slice(6).trim();
-      if (jsonStr === "[DONE]") {
-        onDone();
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
-      } catch (err) {
-        console.warn("[parseStreamChunk]", err);
-        buffer = line + "\n" + buffer;
-        break;
-      }
-    }
+  function scheduleInactivityTimeout() {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      inactivityTimer = null;
+      inactivityDone = true;
+      reader.cancel();
+      onDone();
+    }, SSE_INACTIVITY_MS);
   }
 
-  if (buffer.trim()) {
-    for (let raw of buffer.split("\n")) {
-      if (!raw) continue;
-      if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-      if (!raw.startsWith("data: ")) continue;
-      const jsonStr = raw.slice(6).trim();
-      if (jsonStr === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
-      } catch (err) {
-        console.warn("[parseStreamChunk] fallback", err);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!hasReceivedContent) {
+        hasReceivedContent = true;
+        onStatus?.("Generating…");
+      }
+      buffer += decoder.decode(value, { stream: true });
+
+      let newlineIdx: number;
+      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, newlineIdx);
+        buffer = buffer.slice(newlineIdx + 1);
+
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
+        if (!line.startsWith("data: ")) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") {
+          if (inactivityTimer) clearTimeout(inactivityTimer);
+          onDone();
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) {
+            onDelta(content);
+            scheduleInactivityTimeout();
+          }
+        } catch (err) {
+          console.warn("[parseStreamChunk]", err);
+          buffer = line + "\n" + buffer;
+          break;
+        }
       }
     }
-  }
 
-  onDone();
+    if (buffer.trim()) {
+      for (let raw of buffer.split("\n")) {
+        if (!raw) continue;
+        if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+        if (!raw.startsWith("data: ")) continue;
+        const jsonStr = raw.slice(6).trim();
+        if (jsonStr === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) onDelta(content);
+        } catch (err) {
+          console.warn("[parseStreamChunk] fallback", err);
+        }
+      }
+    }
+  } catch (e) {
+    if (!inactivityDone) console.warn("[consumeSSEStream] stream read error", e);
+  } finally {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    if (!inactivityDone) onDone();
+  }
 }
