@@ -537,14 +537,14 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       if (viewingReports) setViewingReports(false);
       if (inDiffMode) setDiffSelection(null);
     }},
-    { key: "s", ctrl: true, description: "Save reports", handler: () => { if (hasReports) handleSaveReports(true); else if (hasFiles && totalFindings > 0) handleSaveReports(false); }},
-    { key: "g", ctrl: true, description: "Generate all reports", handler: () => { if (hasFiles && !isLoading && !localMode) { setViewingReports(true); generateAll(); } }},
+    { key: "s", ctrl: true, description: "Save reports", handler: () => { if (!isViewerOnly && hasReports) handleSaveReports(true); else if (!isViewerOnly && hasFiles && totalFindings > 0) handleSaveReports(false); }},
+    { key: "g", ctrl: true, description: "Generate all reports", handler: () => { if (hasFiles && !isLoading && !localMode && !isViewerOnly) { setViewingReports(true); generateAll(); } }},
     ...Array.from({ length: 9 }, (_, i) => ({
       key: String(i + 1),
       description: `Switch to report tab ${i + 1}`,
       handler: () => { if (viewingReports && reports[i]) setActiveReportId(reports[i].id); },
     })),
-  ], [shortcutsOpen, drawerOpen, viewingReports, inDiffMode, hasReports, hasFiles, totalFindings, isLoading, reports, handleSaveReports, generateAll, setActiveReportId, localMode]);
+  ], [shortcutsOpen, drawerOpen, viewingReports, inDiffMode, hasReports, hasFiles, totalFindings, isLoading, reports, handleSaveReports, generateAll, setActiveReportId, localMode, isViewerOnly]);
 
   useKeyboardShortcuts(keyboardShortcuts);
 
@@ -778,6 +778,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                 onRetry={handleRetry}
                 branding={branding}
                 analysisResults={analysisResults}
+                selectedFrameworks={branding.selectedFrameworks}
                 backendDebugInfo={backendDebugInfo}
                 onFetchBackendDebug={localMode ? undefined : fetchBackendDebug}
               />

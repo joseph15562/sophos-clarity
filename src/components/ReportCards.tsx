@@ -27,7 +27,10 @@ export function ReportCards({
     <section className="space-y-4">
       <div className="flex items-center gap-2">
         <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">3</span>
-        <h2 className="text-lg font-display font-bold text-foreground">Generate Reports</h2>
+        <div>
+          <h2 className="text-lg font-display font-bold text-foreground">Generate Reports</h2>
+          <p className="text-[10px] text-muted-foreground">Technical Report, Executive Brief, Compliance Pack — export deliverables for customer handoff or audit.</p>
+        </div>
       </div>
 
       {localMode && (
@@ -52,7 +55,7 @@ export function ReportCards({
               <div className="h-11 w-11 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0 group-hover:bg-[#2006F7]/15 dark:group-hover:bg-[#2006F7]/25 transition-colors">
                 <img src="/icons/sophos-document.svg" alt="" className="h-6 w-6 sophos-icon" />
               </div>
-              <span className="font-display font-bold text-foreground text-[15px]">Technical Report</span>
+              <span className="font-display font-bold text-foreground text-[15px]">Generate Technical Report</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Comprehensive per-firewall assessment covering rules, NAT, interfaces, hosts, policies, and security posture. Includes prioritised findings, NCSC-aligned recommendations, and remediation guidance.
@@ -77,7 +80,7 @@ export function ReportCards({
               <div className="h-11 w-11 rounded-lg bg-[#5A00FF]/10 dark:bg-[#5A00FF]/15 flex items-center justify-center shrink-0">
                 <img src="/icons/sophos-chart.svg" alt="" className="h-6 w-6 sophos-icon" />
               </div>
-              <span className="font-display font-bold text-foreground text-[15px]">Executive Brief</span>
+              <span className="font-display font-bold text-foreground text-[15px]">Generate Executive Brief</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {fileCount >= 2
@@ -103,7 +106,7 @@ export function ReportCards({
               <div className="h-11 w-11 rounded-lg bg-[#B529F7]/10 dark:bg-[#B529F7]/15 flex items-center justify-center shrink-0 group-hover:bg-[#B529F7]/15 dark:group-hover:bg-[#B529F7]/25 transition-colors">
                 <FileText className="h-6 w-6 text-[#B529F7]" />
               </div>
-              <span className="font-display font-bold text-foreground text-[15px]">Executive One-Pager</span>
+              <span className="font-display font-bold text-foreground text-[15px]">Generate Executive One-Pager</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Instant one-page summary with overall score, grade, top 5 risks, and 3 recommended next steps. No AI required — generated locally from your analysis.
@@ -127,7 +130,7 @@ export function ReportCards({
               <div className="h-11 w-11 rounded-lg bg-[#009CFB]/10 dark:bg-[#009CFB]/15 flex items-center justify-center shrink-0 group-hover:bg-[#009CFB]/15 dark:group-hover:bg-[#009CFB]/25 transition-colors">
                 <img src="/icons/sophos-governance.svg" alt="" className="h-6 w-6 sophos-icon" />
               </div>
-              <span className="font-display font-bold text-foreground text-[15px]">Compliance Readiness Report</span>
+              <span className="font-display font-bold text-foreground text-[15px]">Generate Compliance Pack</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Compliance readiness assessment mapping firewall controls to your selected frameworks. Includes control status, gap analysis, and remediation priorities. Results are indicative and should be validated by a qualified auditor.

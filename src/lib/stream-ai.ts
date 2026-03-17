@@ -210,16 +210,20 @@ export async function streamConfigParse({ sections, environment, country, custom
     if (remaining) onDelta(remaining);
     onStatus?.("");
     onDone();
-  }, onStatus);
+  }, onStatus, onError);
 }
 
 const SSE_INACTIVITY_MS = 90_000; // If no new content for 90s after we've started receiving, treat stream as done so UI doesn't stay on "Still generating..."
+
+const INACTIVITY_MESSAGE =
+  "Generation stopped after 90 seconds with no new content. The report below may be partial — you can export it or retry.";
 
 async function consumeSSEStream(
   body: ReadableStream<Uint8Array>,
   onDelta: (text: string) => void,
   onDone: () => void,
   onStatus?: (status: string) => void,
+  onError?: (error: string) => void,
 ) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -234,6 +238,8 @@ async function consumeSSEStream(
       inactivityTimer = null;
       inactivityDone = true;
       reader.cancel();
+      onStatus?.("");
+      onError?.(INACTIVITY_MESSAGE);
       onDone();
     }, SSE_INACTIVITY_MS);
   }
@@ -296,7 +302,11 @@ async function consumeSSEStream(
       }
     }
   } catch (e) {
-    if (!inactivityDone) console.warn("[consumeSSEStream] stream read error", e);
+    if (!inactivityDone) {
+      console.warn("[consumeSSEStream] stream read error", e);
+      const msg = e instanceof Error ? e.message : "Stream read failed";
+      onError?.(`Connection error: ${msg}. You can retry or export any partial report below.`);
+    }
   } finally {
     if (inactivityTimer) clearTimeout(inactivityTimer);
     if (!inactivityDone) onDone();

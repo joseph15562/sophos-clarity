@@ -29,13 +29,20 @@ export function extractTocHeadings(md: string): { id: string; text: string; leve
   return headings;
 }
 
+export type BuildReportHtmlOptions = {
+  /** Optional footer line for traceability (e.g. "Generated from Sophos FireComply · N sections, M rules"). */
+  footer?: string;
+};
+
 /**
  * Convert report markdown to sanitized HTML with id attributes on h2/h3 for TOC linking.
+ * Optionally appends a footer for validation metadata.
  */
-export function buildReportHtml(markdown: string): string {
+export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptions): string {
   if (!markdown) return "";
   const rawHtml = marked.parse(markdown, { async: false }) as string;
   const headings = extractTocHeadings(markdown);
+  let out: string;
   if (headings.length > 0 && typeof document !== "undefined") {
     const wrap = document.createElement("div");
     wrap.innerHTML = rawHtml;
@@ -43,7 +50,12 @@ export function buildReportHtml(markdown: string): string {
     headingEls.forEach((el, i) => {
       if (headings[i]) el.id = headings[i].id;
     });
-    return DOMPurify.sanitize(wrap.innerHTML);
+    out = wrap.innerHTML;
+  } else {
+    out = rawHtml;
   }
-  return DOMPurify.sanitize(rawHtml);
+  if (options?.footer?.trim()) {
+    out += `<footer class="report-footer report-meta text-[10px] text-muted-foreground mt-8 pt-4 border-t border-border">${DOMPurify.sanitize(options.footer)}</footer>`;
+  }
+  return DOMPurify.sanitize(out);
 }

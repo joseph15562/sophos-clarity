@@ -192,6 +192,39 @@ describe("analyseConfig", () => {
   });
 });
 
+describe("extractSections — minimal-sophos fixture", () => {
+  const html = loadFixture("minimal-sophos.html");
+  const sections = extractSections(html);
+
+  it("extracts firewall rules with row-count parity", () => {
+    const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k));
+    expect(fwKey).toBeDefined();
+    const totalRows = sections[fwKey!].tables.reduce((sum, t) => sum + t.rows.length, 0);
+    expect(totalRows).toBe(2);
+  });
+
+  it("extracts zones with row-count parity", () => {
+    const zoneKey = Object.keys(sections).find((k) => /zone/i.test(k));
+    expect(zoneKey).toBeDefined();
+    const totalRows = sections[zoneKey!].tables.reduce((sum, t) => sum + t.rows.length, 0);
+    expect(totalRows).toBe(2);
+  });
+});
+
+describe("analyseConfig — minimal-sophos fixture", () => {
+  const html = loadFixture("minimal-sophos.html");
+  const sections = extractSections(html);
+  const result = analyseConfig(sections);
+
+  it("counts rules from second fixture", () => {
+    expect(result.stats.totalRules).toBe(2);
+  });
+
+  it("detects zones", () => {
+    expect(result.stats.totalSections).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe("analyseMultiConfig", () => {
   const html = loadFixture("basic-firewall.html");
   const sections = extractSections(html);

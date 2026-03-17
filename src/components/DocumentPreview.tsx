@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { extractTocHeadings, buildReportHtml } from "@/lib/report-html";
+import { findingToFrameworks } from "@/lib/compliance-map";
 import { saveAs } from "file-saver";
 import { generateShareToken, saveSharedReport } from "@/lib/share-report";
 import { buildPdfHtml, generateWordBlob, generatePptxBlob } from "@/lib/report-export";
@@ -42,6 +43,8 @@ type Props = {
   topActions?: ReactNode;
   /** Per-firewall analysis results for evidence verification sidebar */
   analysisResults?: Record<string, AnalysisResult>;
+  /** Selected frameworks for control traceability in evidence verification */
+  selectedFrameworks?: string[];
   /** Backend debug info from parse-config (when debug: true). */
   backendDebugInfo?: Record<string, unknown> | null;
   /** Fetch backend debug for the currently active report. */
@@ -406,7 +409,7 @@ function ShareReportDialog({
   );
 }
 
-function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename, errorMessage, loadingStatus, reportId, analysisResults }: {
+function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFilename, errorMessage, loadingStatus, reportId, reportLabel, analysisResults }: {
   markdown: string;
   isLoading: boolean;
   isFailed: boolean;
@@ -416,14 +419,26 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   errorMessage?: string;
   loadingStatus?: string;
   reportId?: string;
+  reportLabel?: string;
   analysisResults?: Record<string, AnalysisResult>;
 }) {
   const docRef = useRef<HTMLDivElement>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareExpiresAt, setShareExpiresAt] = useState("");
+  const [extractedOpen, setExtractedOpen] = useState(false);
 
-  const html = useMemo(() => buildReportHtml(markdown), [markdown]);
+  const activeResult = reportLabel && analysisResults ? analysisResults[reportLabel] : undefined;
+  const html = useMemo(() => {
+    const footer = activeResult
+      ? `Generated from Sophos FireComply · ${activeResult.stats.totalSections} sections, ${activeResult.stats.totalRules} rules`
+      : undefined;
+    return buildReportHtml(markdown, { footer });
+  }, [markdown, activeResult]);
+
+  const reportTruncated = Boolean(
+    activeResult && activeResult.stats.totalRules > 150 && /150|more rules|truncat/i.test(markdown),
+  );
 
   const handlePdf = async () => {
     const el = docRef.current;
@@ -592,6 +607,25 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
         )}
 
         {html && !isLoading && <ReportToc markdown={markdown} />}
+        {activeResult && !isLoading && (
+          <div className="no-print mb-4">
+            <button
+              type="button"
+              onClick={() => setExtractedOpen((o) => !o)}
+              className="text-xs font-semibold text-[#2006F7] dark:text-[#009CFB] hover:underline flex items-center gap-1.5"
+            >
+              {extractedOpen ? "Hide" : "Show"} extracted structure
+            </button>
+            {extractedOpen && (
+              <div className="mt-2 rounded-lg border border-border bg-muted/30 p-3 text-[11px] text-muted-foreground space-y-1">
+                <p><span className="font-semibold text-foreground">{activeResult.stats.totalSections}</span> sections · <span className="font-semibold text-foreground">{activeResult.stats.totalRules}</span> firewall rules</p>
+                {reportTruncated && (
+                  <p className="text-[#F29400] dark:text-[#F8E300]">Report documents first 150 rules; extracted config has {activeResult.stats.totalRules} rules.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {html && <div dangerouslySetInnerHTML={{ __html: html }} />}
 
         {isLoading && markdown && (
@@ -606,7 +640,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   );
 }
 
-function EvidenceVerification({ analysisResults, reportLabel }: { analysisResults?: Record<string, AnalysisResult>; reportLabel: string }) {
+function EvidenceVerification({ analysisResults, reportLabel, selectedFrameworks = [] }: { analysisResults?: Record<string, AnalysisResult>; reportLabel: string; selectedFrameworks?: string[] }) {
   if (!analysisResults) return null;
   const result = analysisResults[reportLabel];
   if (!result) {
@@ -625,6 +659,9 @@ function EvidenceVerification({ analysisResults, reportLabel }: { analysisResult
     );
   }
   const { stats, findings, inspectionPosture } = result;
+  const mappedFrameworks = selectedFrameworks.length > 0 && findings.length > 0
+    ? [...new Set(findings.flatMap((f) => findingToFrameworks(f.title, selectedFrameworks)))]
+    : [];
   return (
     <div className="no-print rounded-lg border border-border bg-muted/30 px-4 py-3 mt-3">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Evidence Verification — {reportLabel}</p>
@@ -639,6 +676,11 @@ function EvidenceVerification({ analysisResults, reportLabel }: { analysisResult
           <span><span className="font-semibold text-foreground">{inspectionPosture.withWebFilter}/{inspectionPosture.totalWanRules}</span> WAN rules filtered</span>
         )}
       </div>
+      {mappedFrameworks.length > 0 && (
+        <p className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border">
+          Findings map to framework controls: {mappedFrameworks.join(", ")}.
+        </p>
+      )}
     </div>
   );
 }
@@ -695,7 +737,7 @@ function BackendDebugPanel({ backendDebugInfo, onFetchBackendDebug }: { backendD
   );
 }
 
-export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions, analysisResults, backendDebugInfo, onFetchBackendDebug }: Props) {
+export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions, analysisResults, selectedFrameworks, backendDebugInfo, onFetchBackendDebug }: Props) {
   if (reports.length === 0 && !isLoading) return null;
 
   const allDone = reports.length > 0 && !isLoading && reports.every(r => r.markdown && !failedReportIds.has(r.id));
@@ -827,10 +869,11 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
               errorMessage={r.errorMessage}
               loadingStatus={r.loadingStatus}
               reportId={r.id}
+              reportLabel={r.label}
               analysisResults={analysisResults}
             />
             {r.markdown && !loadingReportIds.has(r.id) && (
-              <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} />
+              <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} selectedFrameworks={selectedFrameworks} />
             )}
           </TabsContent>
         ))}

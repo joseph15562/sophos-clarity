@@ -225,9 +225,14 @@ function ExtractionCoverage({ extractionPct, totalPopulated, totalSections, tota
         <p className="text-[10px] text-muted-foreground mt-1.5">
           {totalPopulated} of {totalSections} sections contain parseable data &middot; {totalRules} rules &middot; {totalNatRules} NAT rules &middot; {totalInterfaces} interfaces
         </p>
+        {extractionPct >= 80 && totalRules > 0 && (
+          <p className="text-[10px] text-[#00995a] dark:text-[#00F2B3] font-medium mt-1" role="status">
+            Parsed {totalSections} sections, {totalRules} firewall rules successfully.
+          </p>
+        )}
       </div>
       {extractionPct < 80 && (
-        <div className="text-[10px] text-muted-foreground max-w-[180px] leading-tight">
+        <div className="text-[10px] text-muted-foreground max-w-[180px] leading-tight" role="alert">
           Some sections parsed empty. This may indicate an unsupported export format or unconfigured areas.
         </div>
       )}

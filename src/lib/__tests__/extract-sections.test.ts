@@ -58,4 +58,50 @@ describe("extractSections", () => {
       expect(extractSections(undefined)).toEqual({});
     });
   });
+
+  describe("fixture coverage — section presence and row-count parity", () => {
+    const contentFixtures = [
+      { name: "basic-firewall.html", minFirewallRules: 6, minZones: 4 },
+      { name: "minimal-sophos.html", minFirewallRules: 2, minZones: 2 },
+    ] as const;
+
+    contentFixtures.forEach(({ name, minFirewallRules, minZones }) => {
+      describe(name, () => {
+        let sections: ReturnType<typeof extractSections>;
+
+        beforeAll(() => {
+          const html = loadFixture(name);
+          sections = extractSections(html);
+        });
+
+        it("extracts firewall rules section with expected minimum row count", () => {
+          const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k));
+          expect(fwKey, `fixture ${name} should have firewall rules section`).toBeDefined();
+          const fw = sections[fwKey!];
+          expect(fw.tables.length).toBeGreaterThanOrEqual(1);
+          const totalRows = fw.tables.reduce((sum, t) => sum + t.rows.length, 0);
+          expect(totalRows).toBeGreaterThanOrEqual(minFirewallRules);
+        });
+
+        it("extracts zones section with expected minimum row count", () => {
+          const zoneKey = Object.keys(sections).find((k) => /zone/i.test(k));
+          expect(zoneKey, `fixture ${name} should have zones section`).toBeDefined();
+          const zone = sections[zoneKey!];
+          expect(zone.tables.length).toBeGreaterThanOrEqual(1);
+          const totalRows = zone.tables.reduce((sum, t) => sum + t.rows.length, 0);
+          expect(totalRows).toBeGreaterThanOrEqual(minZones);
+        });
+
+        it("produces tables with headers and rows for critical sections", () => {
+          const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k));
+          if (!fwKey) return;
+          const fw = sections[fwKey];
+          fw.tables.forEach((t) => {
+            expect(t.headers.length).toBeGreaterThan(0);
+            expect(Array.isArray(t.rows)).toBe(true);
+          });
+        });
+      });
+    });
+  });
 });

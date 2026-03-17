@@ -130,3 +130,11 @@ Add Supabase Auth + Supabase Postgres with Row Level Security (RLS) to create a 
 
 ### Skipped
 - **Syslog / SIEM Integration Check** — Skipped because Sophos Central uploads to the data lake without needing a syslog connector; the connector is only useful for third-party SIEM
+
+---
+
+## Phase 4 — Compliance productization (next steps)
+
+- **Control-level evidence mapping** — Evidence Verification panel now shows "Findings map to framework controls: [frameworks]" when frameworks are selected. Next: per-finding control IDs and traceable evidence references in exports.
+- **Reviewer sign-off and annotations** — Not yet started; would allow reviewers to attest or annotate controls.
+- **Validation layer** — Compare FireComply deterministic findings with Sophos/open audit tooling where available; surface confidence and traceability in the UI.

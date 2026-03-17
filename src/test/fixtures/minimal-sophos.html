@@ -1,0 +1,88 @@
+<!--
+  Minimal Sophos XGS-style fixture (second format/version).
+  Used for parser fixture coverage: 2 firewall rules, 2 zones.
+-->
+<!DOCTYPE html>
+<html>
+<head><title>Sophos Config Viewer</title></head>
+<body>
+  <div id="sidebar">
+    <div data-section-name="Firewall Rules">
+      <input type="checkbox" data-section-key="firewallRules" checked />
+    </div>
+    <div data-section-name="Zones">
+      <input type="checkbox" data-section-key="Zone" checked />
+    </div>
+  </div>
+
+  <div id="section-content-firewall-rules">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Rule Name</th>
+          <th>Status</th>
+          <th>Source</th>
+          <th>Destination</th>
+          <th>Services</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="row-fw-0">
+          <td>1</td>
+          <td>Rule-A</td>
+          <td><span>On</span></td>
+          <td>LAN</td>
+          <td>WAN</td>
+          <td>HTTPS</td>
+        </tr>
+        <tr id="details-fw-0" style="display:none;">
+          <td colspan="6">
+            <div id="rule-content-0">
+              <table><tbody>
+                <tr><td>Source Zones</td><td>LAN</td></tr>
+                <tr><td>Destination Zones</td><td>WAN</td></tr>
+                <tr><td>Web Filter</td><td>Default</td></tr>
+                <tr><td>Log Traffic</td><td>Enable</td></tr>
+              </tbody></table>
+            </div>
+          </td>
+        </tr>
+        <tr id="row-fw-1">
+          <td>2</td>
+          <td>Rule-B</td>
+          <td><span>On</span></td>
+          <td>LAN</td>
+          <td>LAN</td>
+          <td>DNS</td>
+        </tr>
+        <tr id="details-fw-1" style="display:none;">
+          <td colspan="6">
+            <div id="rule-content-1">
+              <table><tbody>
+                <tr><td>Source Zones</td><td>LAN</td></tr>
+                <tr><td>Destination Zones</td><td>LAN</td></tr>
+              </tbody></table>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="section-content-zones">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>LAN</td><td>LAN</td></tr>
+        <tr><td>WAN</td><td>WAN</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

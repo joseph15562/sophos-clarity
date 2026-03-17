@@ -5,112 +5,33 @@
  */
 
 import type { ExtractedSections, SectionData, TableData } from "./extract-sections";
+import { findSection as findSectionHelper } from "./analysis/helpers";
+import { analyseNatRules as analyseNatRulesDomain } from "./analysis/domains/nat";
+import type {
+  Severity,
+  ConfigStats,
+  SslTlsRule,
+  InspectionPosture,
+  Finding,
+  AtpStatus,
+  ThreatStatus,
+  AnalysisResult,
+  AnalyseOptions,
+} from "./analysis/types";
 
-export type Severity = "critical" | "high" | "medium" | "low" | "info";
-
-export interface ConfigStats {
-  totalRules: number;
-  totalSections: number;
-  totalHosts: number;
-  totalNatRules: number;
-  interfaces: number;
-  populatedSections: number;
-  emptySections: number;
-  sectionNames: string[];
-}
-
-export interface SslTlsRule {
-  name: string;
-  action: "decrypt" | "exclude";
-  sourceZones: string[];
-  destZones: string[];
-  enabled: boolean;
-}
-
-export interface InspectionPosture {
-  totalWanRules: number;
-  enabledWanRules: number;
-  disabledWanRules: number;
-  /** Enabled WAN rules with HTTP/HTTPS/ANY service that should have web filtering */
-  webFilterableRules: number;
-  withWebFilter: number;
-  withoutWebFilter: number;
-  withAppControl: number;
-  withIps: number;
-  /** Total SSL/TLS inspection rules (Decrypt + Do-not-decrypt) */
-  withSslInspection: number;
-  /** Only Decrypt rules (actual inspection) */
-  sslDecryptRules: number;
-  /** Do-not-decrypt exclusion rules */
-  sslExclusionRules: number;
-  /** Parsed SSL/TLS rules with zone/action detail */
-  sslRules: SslTlsRule[];
-  /** Firewall WAN source zones not covered by any SSL/TLS Decrypt rule */
-  sslUncoveredZones: string[];
-  wanRuleNames: string[];
-  totalDisabledRules: number;
-  /** true when at least one SSL/TLS Decrypt rule exists (DPI active on Sophos XGS) */
-  dpiEngineEnabled: boolean;
-}
-
-export type Confidence = "high" | "medium" | "low";
-
-export interface Finding {
-  id: string;
-  severity: Severity;
-  title: string;
-  detail: string;
-  section: string;
-  remediation?: string;
-  confidence?: Confidence;
-  evidence?: string;
-}
-
-export interface AtpStatus {
-  enabled: boolean;
-  policy: string;
-}
-
-export interface ThreatStatus {
-  firmwareVersion: string;
-  atp: { enabled: boolean; policy: string; inspectContent: string } | null;
-  mdr: { enabled: boolean; policy: string; connected: boolean } | null;
-  ndr: {
-    enabled: boolean;
-    interfaces: string[];
-    dataCenter: string;
-    minThreatScore: string;
-    iocCount?: number;
-  } | null;
-  thirdPartyFeeds: Array<{
-    name: string;
-    syncStatus: string;
-    lastSync?: string;
-  }> | null;
-  collectedAt: string;
-}
-
-export interface AnalysisResult {
-  stats: ConfigStats;
-  findings: Finding[];
-  inspectionPosture: InspectionPosture;
-  ruleColumns?: string[];
-  hostname?: string;
-  atpStatus?: AtpStatus;
-  threatStatus?: ThreatStatus;
-}
-
-const SEVERITY_ICON: Record<Severity, string> = {
-  critical: "\u{1F534}",
-  high: "\u{1F7E0}",
-  medium: "\u{1F7E1}",
-  low: "\u{1F7E2}",
-  info: "\u{1F535}",
-};
-
-export function severityIcon(s: Severity): string {
-  return SEVERITY_ICON[s];
-}
+export type {
+  Severity,
+  ConfigStats,
+  SslTlsRule,
+  InspectionPosture,
+  Confidence,
+  Finding,
+  AtpStatus,
+  ThreatStatus,
+  AnalysisResult,
+  AnalyseOptions,
+} from "./analysis/types";
+export { severityIcon } from "./analysis/types";
 
 function isWanDest(row: Record<string, string>): boolean {
   // Prefer detail-block "Destination Zones" over main-table "Destination" (which may also be zone)
@@ -387,16 +308,11 @@ function countInterfaceRows(sections: ExtractedSections): number {
 
 /** Extract the firewall hostname from Admin Settings > Hostname Settings. */
 function extractHostname(sections: ExtractedSections): string | undefined {
-  const section = findSection(sections, /^AdminSettings$/i) ?? findSection(sections, /admin.?settings/i);
+  const section = findSectionHelper(sections, /^AdminSettings$/i) ?? findSectionHelper(sections, /admin.?settings/i);
   if (!section) return undefined;
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
   const m = text.match(/Host\s*Name["\s:]+([^\s",}]+)/i);
   return m?.[1] || undefined;
-}
-
-export interface AnalyseOptions {
-  /** True when the firewall is linked to Sophos Central (logs forwarded automatically). */
-  centralLinked?: boolean;
 }
 
 /**
@@ -733,7 +649,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   analyseLocalServiceAcl(sections, findings, () => ++fid);
 
   // --- NAT Rule Security Analysis ---
-  analyseNatRules(sections, findings, () => ++fid);
+  analyseNatRulesDomain(sections, findings, () => ++fid);
 
   // --- Web Filter Policy Deep Dive ---
   analyseWebFilterPolicies(sections, findings, () => ++fid);
@@ -904,16 +820,9 @@ export function analyseThreatStatus(threatStatus: ThreatStatus): Finding[] {
 // Extended analysis functions — analyse sections beyond firewall rules
 // ---------------------------------------------------------------------------
 
-function findSection(sections: ExtractedSections, pattern: RegExp): SectionData | null {
-  for (const key of Object.keys(sections)) {
-    if (pattern.test(key)) return sections[key];
-  }
-  return null;
-}
-
 function extractAtpStatus(sections: ExtractedSections): AtpStatus | undefined {
-  const atp = findSection(sections, /advanced\s*threat\s*protection|^atp$/i)
-           ?? findSection(sections, /^atp\s*status$/i);
+  const atp = findSectionHelper(sections, /advanced\s*threat\s*protection|^atp$/i)
+           ?? findSectionHelper(sections, /^atp\s*status$/i);
   if (!atp) return undefined;
 
   let enabled = false;
@@ -959,7 +868,7 @@ function extractAtpStatus(sections: ExtractedSections): AtpStatus | undefined {
 function analyseLocalServiceAcl(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const acl = findSection(sections, /local\s*service\s*acl|device\s*access|admin\s*service/i);
+  const acl = findSectionHelper(sections, /local\s*service\s*acl|device\s*access|admin\s*service/i);
   if (!acl) return;
 
   const SENSITIVE_SERVICES = /https|ssh|admin|webadmin|gui|snmp|api|telnet/i;
@@ -1039,58 +948,11 @@ function analyseLocalServiceAcl(
   }
 }
 
-/** NAT Rule Security Analysis */
-function analyseNatRules(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number,
-) {
-  const natSection = findSection(sections, /nat\s*rule/i);
-  if (!natSection) return;
-
-  const dnatRules: string[] = [];
-  const broadNat: string[] = [];
-  for (const t of natSection.tables) {
-    for (const row of t.rows) {
-      const name = row["Rule Name"] ?? row["Name"] ?? row["#"] ?? "Unnamed";
-      const type = (
-        row["Type"] ?? row["NAT Type"] ?? row["Rule Type"] ?? row["Action"] ?? ""
-      ).toLowerCase().trim();
-      const origDest = (
-        row["Original Destination"] ?? row["Destination"] ?? row["Dest"] ?? ""
-      ).toLowerCase().trim();
-      const transTo = (
-        row["Translated To"] ?? row["Translated Destination"] ?? row["Translation"] ?? row["Mapped To"] ?? ""
-      ).toLowerCase().trim();
-      const origSrc = (
-        row["Original Source"] ?? row["Source"] ?? ""
-      ).toLowerCase().trim();
-
-      if (type.includes("dnat") || type.includes("destination") || type.includes("port forward") || transTo) {
-        dnatRules.push(name);
-      }
-      if ((origSrc === "any" || origSrc === "") && (origDest === "any" || origDest === "")) {
-        broadNat.push(name);
-      }
-    }
-  }
-
-  if (broadNat.length > 0) {
-    findings.push({
-      id: `f${nextId()}`, severity: "medium",
-      title: `${broadNat.length} NAT rule${broadNat.length > 1 ? "s" : ""} with broad source/destination`,
-      detail: `NAT rules with overly broad scope: ${broadNat.slice(0, 6).join(", ")}${broadNat.length > 6 ? ` (+${broadNat.length - 6} more)` : ""}. Broad NAT rules can unintentionally expose services or masquerade traffic.`,
-      section: "NAT Rules",
-      remediation: "Go to Rules and policies > NAT rules. Restrict original source and destination to specific network objects rather than 'Any'. This reduces the blast radius if the rule is misconfigured.",
-      confidence: "high",
-      evidence: `NAT rules ${broadNat.slice(0, 3).join(", ")} have Original Source=Any, Dest=Any`,
-    });
-  }
-}
-
 /** Web Filter Policy Deep Dive */
 function analyseWebFilterPolicies(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const wfSection = findSection(sections, /web\s*filter\s*polic/i);
+  const wfSection = findSectionHelper(sections, /web\s*filter\s*polic/i);
   if (!wfSection) return;
 
   const RISKY_CATEGORIES = /proxy|vpn|anonymi|p2p|peer|torrent|malware|phish|spyware|botnet|crypto\s*min/i;
@@ -1126,7 +988,7 @@ function analyseWebFilterPolicies(
 function analyseIpsPolicies(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const ipsSection = findSection(sections, /ips\s*polic/i);
+  const ipsSection = findSectionHelper(sections, /ips\s*polic/i);
   if (!ipsSection) return;
 
   let totalPolicies = 0;
@@ -1165,7 +1027,7 @@ function analyseIpsPolicies(
 function analyseVirusScanning(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const vsSection = findSection(sections, /virus|malware|anti.?virus|scanning/i);
+  const vsSection = findSectionHelper(sections, /virus|malware|anti.?virus|scanning/i);
   if (!vsSection) return;
 
   const disabledProtocols: string[] = [];
@@ -1226,7 +1088,7 @@ function analyseVirusScanning(
 function analyseAdminSettings(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^AdminSettings$/i) ?? findSection(sections, /admin.?settings/i);
+  const section = findSectionHelper(sections, /^AdminSettings$/i) ?? findSectionHelper(sections, /admin.?settings/i);
   if (!section) return;
 
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
@@ -1277,7 +1139,7 @@ function analyseAdminSettings(
 function analyseBackupRestore(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^BackupRestore$/i) ?? findSection(sections, /backup/i);
+  const section = findSectionHelper(sections, /^BackupRestore$/i) ?? findSectionHelper(sections, /backup/i);
   if (!section) return;
 
   const blob = sectionToBlob(section).toLowerCase();
@@ -1306,7 +1168,7 @@ function analyseBackupRestore(
 function analyseNotificationSettings(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^Notification$/i) ?? findSection(sections, /^Notificationlist$/i);
+  const section = findSectionHelper(sections, /^Notification$/i) ?? findSectionHelper(sections, /^Notificationlist$/i);
   if (!section) return;
 
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
@@ -1328,7 +1190,7 @@ function analyseNotificationSettings(
 function analysePatternDownload(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^PatternDownload$/i) ?? findSection(sections, /pattern/i);
+  const section = findSectionHelper(sections, /^PatternDownload$/i) ?? findSectionHelper(sections, /pattern/i);
   if (!section) return;
 
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
@@ -1350,7 +1212,7 @@ function analysePatternDownload(
 function analyseTimeSettings(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^Time$/i);
+  const section = findSectionHelper(sections, /^Time$/i);
   if (!section) return;
 
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
@@ -1373,9 +1235,9 @@ function analyseTimeSettings(
 function analyseAuthServers(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^AuthenticationServer$/i)
-    ?? findSection(sections, /^authentication\s*servers?$/i)
-    ?? findSection(sections, /authentication.?server/i);
+  const section = findSectionHelper(sections, /^AuthenticationServer$/i)
+    ?? findSectionHelper(sections, /^authentication\s*servers?$/i)
+    ?? findSectionHelper(sections, /authentication.?server/i);
   if (!section) return;
 
   const UNENC_VALUES = /^(simple|plain|plaintext|none|unencrypted|no|disable|disabled|off|0)$/i;
@@ -1443,7 +1305,7 @@ function analyseAuthServers(
 function analyseHotfix(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^Hotfix$/i);
+  const section = findSectionHelper(sections, /^Hotfix$/i);
   if (!section) return;
 
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
@@ -1465,7 +1327,7 @@ function analyseHotfix(
 function analyseSyncAppControl(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^ApplicationClassification$/i) ?? findSection(sections, /application.?classification$/i);
+  const section = findSectionHelper(sections, /^ApplicationClassification$/i) ?? findSectionHelper(sections, /application.?classification$/i);
   if (!section) return;
 
   const blob = sectionToBlob(section);
@@ -1495,9 +1357,9 @@ function analyseSyncAppControl(
 function analyseATP(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^ATP$/i)
-    ?? findSection(sections, /^atp\s*status$/i)
-    ?? findSection(sections, /advanced.?threat.?protect/i);
+  const section = findSectionHelper(sections, /^ATP$/i)
+    ?? findSectionHelper(sections, /^atp\s*status$/i)
+    ?? findSectionHelper(sections, /advanced.?threat.?protect/i);
   if (!section) return;
 
   let atpEnabled: boolean | null = null;
@@ -1576,7 +1438,7 @@ function extractSectionEnabled(section: SectionData): boolean | null {
 function analyseMdrFeed(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^MDR\s*(Status|Threat)/i);
+  const section = findSectionHelper(sections, /^MDR\s*(Status|Threat)/i);
   if (!section) return;
 
   const enabled = extractSectionEnabled(section);
@@ -1596,7 +1458,7 @@ function analyseMdrFeed(
 function analyseNdrEssentials(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^NDR\s*(Status|Essentials)/i);
+  const section = findSectionHelper(sections, /^NDR\s*(Status|Essentials)/i);
   if (!section) return;
 
   const enabled = extractSectionEnabled(section);
@@ -1670,7 +1532,7 @@ function analyseSecurityHeartbeat(
 function analyseHA(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^HAConfigure$/i) ?? findSection(sections, /high.?availability/i);
+  const section = findSectionHelper(sections, /^HAConfigure$/i) ?? findSectionHelper(sections, /high.?availability/i);
   if (!section) {
     findings.push({
       id: `f${nextId()}`, severity: "info",
@@ -1865,7 +1727,7 @@ function analyseVpnSecurity(
   const WEAK_AUTH = /md5|sha1(?![\d])/i;
 
   // Build set of profile names actually referenced by IPSec connections
-  const ipsecSection = findSection(sections, /vpn\s*ipsec\s*connection/i);
+  const ipsecSection = findSectionHelper(sections, /vpn\s*ipsec\s*connection/i);
   const usedProfiles = new Set<string>();
   if (ipsecSection) {
     for (const t of ipsecSection.tables) {
@@ -1877,7 +1739,7 @@ function analyseVpnSecurity(
   }
 
   // VPN Profiles — only flag if the profile is actively used by a connection
-  const profileSection = findSection(sections, /vpn\s*profile/i);
+  const profileSection = findSectionHelper(sections, /vpn\s*profile/i);
   if (profileSection) {
     const weakProfiles: string[] = [];
     const noPfs: string[] = [];
@@ -1955,7 +1817,7 @@ function analyseVpnSecurity(
   }
 
   // SSL VPN Policies
-  const sslVpnSection = findSection(sections, /ssl\s*vpn\s*polic/i);
+  const sslVpnSection = findSectionHelper(sections, /ssl\s*vpn\s*polic/i);
   if (sslVpnSection) {
     let totalPolicies = 0;
     for (const t of sslVpnSection.tables) {
@@ -1982,11 +1844,11 @@ function analyseVpnSecurity(
 function analyseDoSProtection(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const dosSection = findSection(sections, /^dos\b/i) ?? findSection(sections, /dos.*protect/i);
-  const spoofSection = findSection(sections, /spoof/i);
+  const dosSection = findSectionHelper(sections, /^dos\b/i) ?? findSectionHelper(sections, /dos.*protect/i);
+  const spoofSection = findSectionHelper(sections, /spoof/i);
 
   if (!dosSection && !spoofSection) {
-    const combined = findSection(sections, /dos|spoof/i);
+    const combined = findSectionHelper(sections, /dos|spoof/i);
     if (!combined) {
       findings.push({
         id: `f${nextId()}`, severity: "medium",
@@ -2105,13 +1967,13 @@ function analyseSingleDosSection(section: SectionData, findings: Finding[], next
 /** Check if the firewall is registered to Sophos Central (logs forwarded automatically). */
 function isCentralManaged(sections: ExtractedSections): boolean {
   // Admin profiles contain "Central Management: Read-Write" when Central-registered
-  const adminProfiles = findSection(sections, /admin.*profile|administration\s*profile/i);
+  const adminProfiles = findSectionHelper(sections, /admin.*profile|administration\s*profile/i);
   if (adminProfiles) {
     const text = adminProfiles.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (adminProfiles.text ?? "");
     if (/central\s*management.*read.?write/i.test(text)) return true;
   }
   // Firewall rules created by Central prove connectivity
-  const fwRules = findSection(sections, /firewall\s*rules?/i);
+  const fwRules = findSectionHelper(sections, /firewall\s*rules?/i);
   if (fwRules) {
     for (const t of fwRules.tables) {
       for (const row of t.rows) {
@@ -2121,7 +1983,7 @@ function isCentralManaged(sections: ExtractedSections): boolean {
     }
   }
   // System services may reference Central
-  const sysSvc = findSection(sections, /system\s*service/i);
+  const sysSvc = findSectionHelper(sections, /system\s*service/i);
   if (sysSvc) {
     const text = sysSvc.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (sysSvc.text ?? "");
     if (/central.*management.*running/i.test(text) || /central.*management.*start/i.test(text)) return true;
@@ -2137,7 +1999,7 @@ function analyseSyslogServers(
   if (options?.centralLinked) return;
   if (isCentralManaged(sections)) return;
 
-  const section = findSection(sections, /syslog\s*server/i);
+  const section = findSectionHelper(sections, /syslog\s*server/i);
   if (!section) {
     findings.push({
       id: `f${nextId()}`, severity: "medium",
@@ -2182,7 +2044,7 @@ function analyseWirelessSecurity(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
   // Check if any wireless access points are actually registered/online
-  const apSection = findSection(sections, /wireless\s*access\s*point/i);
+  const apSection = findSectionHelper(sections, /wireless\s*access\s*point/i);
   let activeAps = 0;
   if (apSection) {
     for (const t of apSection.tables) {
@@ -2199,7 +2061,7 @@ function analyseWirelessSecurity(
   // No APs registered → wireless is not in use via this firewall, skip entirely
   if (activeAps === 0) return;
 
-  const section = findSection(sections, /wireless\s*network(?!.*status)/i);
+  const section = findSectionHelper(sections, /wireless\s*network(?!.*status)/i);
   if (!section) return;
 
   const openSsids: string[] = [];
@@ -2252,7 +2114,7 @@ function analyseWirelessSecurity(
 function analyseSnmpCommunity(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /snmp\s*community/i);
+  const section = findSectionHelper(sections, /snmp\s*community/i);
   if (!section) return;
 
   const DEFAULT_STRINGS = /^(public|private|community|snmp|default|test|monitor|read|write)$/i;
@@ -2284,7 +2146,7 @@ function analyseSnmpCommunity(
 function analyseDnsSecurity(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /^dns$/i) ?? findSection(sections, /^dns\s*(?!request)/i);
+  const section = findSectionHelper(sections, /^dns$/i) ?? findSectionHelper(sections, /^dns\s*(?!request)/i);
   if (!section) return;
 
   const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
@@ -2305,7 +2167,7 @@ function analyseDnsSecurity(
   }
 
   // Check DNS request routes for external DNS use
-  const dnsRoutes = findSection(sections, /dns\s*request\s*route/i);
+  const dnsRoutes = findSectionHelper(sections, /dns\s*request\s*route/i);
   if (dnsRoutes) {
     for (const t of dnsRoutes.tables) {
       for (const row of t.rows) {
@@ -2330,7 +2192,7 @@ function analyseDnsSecurity(
 function analyseRedSecurity(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const redConfig = findSection(sections, /^red\s*config/i) ?? findSection(sections, /^red$/i);
+  const redConfig = findSectionHelper(sections, /^red\s*config/i) ?? findSectionHelper(sections, /^red$/i);
   if (!redConfig) return;
 
   const text = redConfig.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (redConfig.text ?? "");
@@ -2359,7 +2221,7 @@ const SOPHOS_DEFAULT_PROFILES = new Set([
 function analyseAdminProfiles(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const profileSection = findSection(sections, /admin.*profile|administration\s*profile/i);
+  const profileSection = findSectionHelper(sections, /admin.*profile|administration\s*profile/i);
   if (!profileSection) return;
 
   let fullAccessCount = 0;
@@ -2527,8 +2389,8 @@ function analyseUserGroupRules(
 function analyseWafPolicies(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const wafSection = findSection(sections, /waf|web.*application.*firewall|server.*access.*control/i);
-  const natSection = findSection(sections, /nat\s*rule/i);
+  const wafSection = findSectionHelper(sections, /waf|web.*application.*firewall|server.*access.*control/i);
+  const natSection = findSectionHelper(sections, /nat\s*rule/i);
 
   const getDnatRules = (): string[] => {
     if (!natSection) return [];
@@ -2590,7 +2452,7 @@ function analyseWafPolicies(
 function analyseCertificates(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /certificate|ca\b|ssl.*cert/i);
+  const section = findSectionHelper(sections, /certificate|ca\b|ssl.*cert/i);
   if (!section) return;
 
   const now = new Date();
@@ -2678,7 +2540,7 @@ function analyseCertificates(
 function analyseHotspots(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /hotspot|captive.*portal|guest.*access/i);
+  const section = findSectionHelper(sections, /hotspot|captive.*portal|guest.*access/i);
   if (!section) return;
 
   const seen = new Set<string>();
@@ -2764,7 +2626,7 @@ function analyseHotspots(
 function analyseAppFilterPolicies(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /app.*filter|application.*filter|application.*control.*polic/i);
+  const section = findSectionHelper(sections, /app.*filter|application.*filter|application.*control.*polic/i);
   if (!section) {
     findings.push({
       id: `f${nextId()}`, severity: "medium",
@@ -2895,7 +2757,7 @@ function analyseInterfaceSecurity(
 function analyseZtna(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const ztnaSection = findSection(sections, /ztna|zero.*trust|zero-trust/i);
+  const ztnaSection = findSectionHelper(sections, /ztna|zero.*trust|zero-trust/i);
   if (!ztnaSection) return;
 
   let hasGateway = false;
@@ -2930,7 +2792,7 @@ function analyseZtna(
 function analyseFirmwareVersion(
   sections: ExtractedSections, findings: Finding[], nextId: () => number,
 ) {
-  const section = findSection(sections, /device.*info|system.*info|firmware|about/i);
+  const section = findSectionHelper(sections, /device.*info|system.*info|firmware|about/i);
   if (!section) return;
 
   const FIRMWARE_EOL: Record<string, string> = {
@@ -2983,14 +2845,14 @@ function analyseLicenceUsage(
 ) {
   if (!options?.centralLinked) return;
 
-  const licenceSection = findSection(sections, /licen[cs]e|subscription|module/i);
+  const licenceSection = findSectionHelper(sections, /licen[cs]e|subscription|module/i);
   if (!licenceSection) return;
 
   const licenceText = JSON.stringify(licenceSection).toLowerCase();
 
   if (/web\s*protection|web\s*server\s*protection/i.test(licenceText)) {
-    const wfSection = findSection(sections, /web\s*filter\s*polic/i);
-    const wafSection = findSection(sections, /waf|web.*application.*firewall|server.*access.*control/i);
+    const wfSection = findSectionHelper(sections, /web\s*filter\s*polic/i);
+    const wafSection = findSectionHelper(sections, /waf|web.*application.*firewall|server.*access.*control/i);
     const hasWebFilter = wfSection && wfSection.tables.some((t) => t.rows.length > 0);
     const hasWaf = wafSection && wafSection.tables.some((t) => t.rows.length > 0);
     if (!hasWebFilter && !hasWaf) {
@@ -3007,8 +2869,8 @@ function analyseLicenceUsage(
   }
 
   if (/email\s*protection/i.test(licenceText)) {
-    const relaySection = findSection(sections, /relay\s*setting|smarthost/i);
-    const dkimSection = findSection(sections, /dkim/i);
+    const relaySection = findSectionHelper(sections, /relay\s*setting|smarthost/i);
+    const dkimSection = findSectionHelper(sections, /dkim/i);
     const hasRelay = relaySection && (relaySection.tables.some((t) => t.rows.length > 0) || relaySection.text);
     const hasDkim = dkimSection && (dkimSection.tables.some((t) => t.rows.length > 0) || dkimSection.text);
     if (!hasRelay && !hasDkim) {
@@ -3025,7 +2887,7 @@ function analyseLicenceUsage(
   }
 
   if (/sandstorm|zero.?day\s*protection/i.test(licenceText)) {
-    const vsSection = findSection(sections, /virus|malware|anti.?virus|scanning/i);
+    const vsSection = findSectionHelper(sections, /virus|malware|anti.?virus|scanning/i);
     let sandboxEnabled = false;
     if (vsSection) {
       for (const t of vsSection.tables) {
