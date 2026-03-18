@@ -156,6 +156,20 @@ export class Scheduler {
         firmwareVersion: capabilities.firmwareVersion,
       };
 
+      // Push serial and version to FireComply immediately so the UI shows connection before the report is done
+      try {
+        await sendHeartbeat(this.client, {
+          agent_version: AGENT_VERSION,
+          firmware_version: capabilities.firmwareVersion,
+          serial_number: deviceInfo.serialNumber ?? undefined,
+          hardware_model: deviceInfo.hardwareModel ?? undefined,
+          customer_name: this.config.customerName || undefined,
+        });
+        log.info(`[${elapsed()}] Heartbeat sent (serial/version pushed to FireComply)`, label);
+      } catch (hbErr) {
+        log.warn(`[${elapsed()}] Early heartbeat failed (non-fatal): ${hbErr instanceof Error ? hbErr.message : hbErr}`, label);
+      }
+
       // Step 3: Export config entities
       log.info(`[${elapsed()}] Step 3/7: Exporting config entities...`, label);
       let lastProgressLog = Date.now();
