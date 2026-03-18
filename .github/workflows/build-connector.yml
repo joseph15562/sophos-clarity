@@ -2,12 +2,70 @@ name: Build FireComply Connector
 
 on:
   push:
+    branches: [main]
+    paths:
+      - "firecomply-connector/src/**"
+      - "firecomply-connector/package.json"
     tags:
       - "connector-v*"
   workflow_dispatch:
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Resolve version
+        id: resolve
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/connector-v* ]]; then
+            VERSION="${GITHUB_REF_NAME#connector-v}"
+            echo "Using tag version: $VERSION"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            cd firecomply-connector
+            CURRENT=$(node -p "require('./package.json').version")
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            NEW_PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+            echo "Bumping $CURRENT -> $VERSION"
+            npm version "$VERSION" --no-git-tag-version --allow-same-version
+            cd ..
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add firecomply-connector/package.json firecomply-connector/package-lock.json
+            if git diff --cached --quiet; then
+              echo "No version change needed"
+              echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+              echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            else
+              git commit -m "chore(connector): auto-bump to v${VERSION} [skip ci]"
+              git tag "connector-v${VERSION}"
+              git push origin HEAD:main --follow-tags
+              echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+              echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -27,6 +85,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,14 +95,11 @@ jobs:
           cache: npm
           cache-dependency-path: firecomply-connector/package-lock.json
 
-      - name: Sync version from git tag
-        if: startsWith(github.ref, 'refs/tags/connector-v')
+      - name: Set version
         working-directory: firecomply-connector
         shell: bash
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#connector-v}"
-          echo "Setting package.json version to $TAG_VERSION"
-          npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+          npm version "${{ needs.prepare.outputs.version }}" --no-git-tag-version --allow-same-version
 
       - name: Install dependencies
         working-directory: firecomply-connector
@@ -60,9 +117,8 @@ jobs:
           if-no-files-found: warn
 
   release:
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/connector-v')
     permissions:
       contents: write
 
@@ -79,9 +135,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "FireComply Connector ${{ github.ref_name }}"
+          tag_name: "connector-v${{ needs.prepare.outputs.version }}"
+          name: "FireComply Connector v${{ needs.prepare.outputs.version }}"
           body: |
-            ## FireComply Connector ${{ github.ref_name }}
+            ## FireComply Connector v${{ needs.prepare.outputs.version }}
 
             Download the installer for your operating system:
             - **Windows**: `.exe` installer
