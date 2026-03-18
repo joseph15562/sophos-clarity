@@ -556,6 +556,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const tourCallbacks = useMemo<TourCallbacks>(() => ({
     openDrawer: () => setDrawerOpen(true),
     setDrawerTab: (tab: string) => setDrawerTab(tab),
+    setAnalysisTab: (tab: string) => setAnalysisTab(tab),
   }), []);
 
   const fileLabel = (f: ParsedFile) => f.label || f.fileName.replace(/\.(html|htm)$/i, "");

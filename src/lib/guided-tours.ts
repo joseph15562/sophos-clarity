@@ -4,6 +4,7 @@ import "driver.js/dist/driver.css";
 export interface TourCallbacks {
   openDrawer?: () => void;
   setDrawerTab?: (tab: string) => void;
+  setAnalysisTab?: (tab: string) => void;
 }
 
 function sel(id: string) {
@@ -68,78 +69,95 @@ export function startDashboardTour() {
 // ---------------------------------------------------------------------------
 // 3. Risk Score Explained
 // ---------------------------------------------------------------------------
-export function startRiskScoreTour() {
-  const t = createTour([
-    { element: sel("score-dial"), popover: { title: "Risk Score", description: "Your overall risk score from 0–100, based on weighted analysis across multiple security categories.", side: "right", align: "center" } },
-    { element: sel("score-grade"), popover: { title: "Grade", description: "Letter grade for quick assessment. <strong>A</strong> = 90+, <strong>B</strong> = 75+, <strong>C</strong> = 60+, <strong>D</strong> = 40+, <strong>F</strong> = below 40.", side: "bottom", align: "center" } },
-    { element: sel("score-categories"), popover: { title: "Category Breakdown", description: "Scores split across: Rule Hygiene, Inspection Coverage, Access Control, Network Segmentation, Logging & Visibility, and Authentication.", side: "top", align: "center" } },
-    { element: sel("score-simulator"), popover: { title: "Score Simulator", description: "Simulate the impact of fixing specific findings to see how your score would improve.", side: "top", align: "center" } },
-  ]);
-  t.drive();
+export function startRiskScoreTour(cb?: TourCallbacks) {
+  if (cb?.setAnalysisTab) cb.setAnalysisTab("overview");
+  setTimeout(() => {
+    const t = createTour([
+      { element: sel("score-dial"), popover: { title: "Risk Score", description: "Your overall risk score from 0–100, based on weighted analysis across multiple security categories.", side: "right", align: "center" } },
+      { element: sel("score-grade"), popover: { title: "Grade", description: "Letter grade for quick assessment. <strong>A</strong> = 90+, <strong>B</strong> = 75+, <strong>C</strong> = 60+, <strong>D</strong> = 40+, <strong>F</strong> = below 40.", side: "bottom", align: "center" } },
+      { element: sel("score-categories"), popover: { title: "Category Breakdown", description: "Scores split across: Rule Hygiene, Inspection Coverage, Access Control, Network Segmentation, Logging & Visibility, and Authentication.", side: "top", align: "center" } },
+      { element: sel("score-simulator"), popover: { title: "Score Simulator", description: "Simulate the impact of fixing specific findings to see how your score would improve.", side: "top", align: "center" } },
+    ]);
+    t.drive();
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------
 // 4. Compliance Mapping
 // ---------------------------------------------------------------------------
-export function startComplianceTour() {
-  const t = createTour([
-    { element: sel("framework-selector"), popover: { title: "Framework Selection", description: "Choose from NIST 800-53, ISO 27001, CIS, PCI DSS, HIPAA, HITECH, Essential Eight, Cyber Essentials, and more.", side: "bottom", align: "center" } },
-    { element: sel("compliance-heatmap"), popover: { title: "Compliance Heatmap", description: "View a heatmap of control coverage, gaps, and readiness per framework.", side: "top", align: "center" } },
-    { element: sel("sophos-best-practice"), popover: { title: "Sophos Best Practice", description: "Automatic checks against the Sophos recommended configuration baseline.", side: "top", align: "center" } },
-    { element: sel("custom-frameworks"), popover: { title: "Custom Frameworks", description: "Build your own compliance framework in Settings with custom controls and mappings.", side: "top", align: "center" } },
-  ]);
-  t.drive();
+export function startComplianceTour(cb?: TourCallbacks) {
+  if (cb?.setAnalysisTab) cb.setAnalysisTab("compliance");
+  setTimeout(() => {
+    const t = createTour([
+      { element: sel("framework-selector"), popover: { title: "Framework Selection", description: "Choose from NIST 800-53, ISO 27001, CIS, PCI DSS, HIPAA, HITECH, Essential Eight, Cyber Essentials, and more.", side: "bottom", align: "center" } },
+      { element: sel("compliance-heatmap"), popover: { title: "Compliance Heatmap", description: "View a heatmap of control coverage, gaps, and readiness per framework.", side: "top", align: "center" } },
+      { element: sel("sophos-best-practice"), popover: { title: "Sophos Best Practice", description: "Automatic checks against the Sophos recommended configuration baseline.", side: "top", align: "center" } },
+      { element: sel("custom-frameworks"), popover: { title: "Custom Frameworks", description: "Build your own compliance framework in Settings with custom controls and mappings.", side: "top", align: "center" } },
+    ]);
+    t.drive();
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------
 // 5. Config Comparison
 // ---------------------------------------------------------------------------
-export function startConfigDiffTour() {
-  const t = createTour([
-    { element: sel("compare-tab"), popover: { title: "Compare Tab", description: "Select two firewall configs to compare side-by-side for change detection.", side: "bottom", align: "center" } },
-    { element: sel("compare-before"), popover: { title: "Before Config", description: "Choose the baseline configuration.", side: "bottom", align: "center" } },
-    { element: sel("compare-after"), popover: { title: "After Config", description: "Choose the updated configuration to compare against.", side: "bottom", align: "center" } },
-    { element: sel("compare-button"), popover: { title: "Run Comparison", description: "Generate a diff showing added, removed, and modified rules and settings. Green = additions, red = removals, amber = modifications.", side: "bottom", align: "center" } },
-  ]);
-  t.drive();
+export function startConfigDiffTour(cb?: TourCallbacks) {
+  if (cb?.setAnalysisTab) cb.setAnalysisTab("compare");
+  setTimeout(() => {
+    const t = createTour([
+      { element: sel("compare-before"), popover: { title: "Before Config", description: "Choose the baseline configuration.", side: "bottom", align: "center" } },
+      { element: sel("compare-after"), popover: { title: "After Config", description: "Choose the updated configuration to compare against.", side: "bottom", align: "center" } },
+      { element: sel("compare-button"), popover: { title: "Run Comparison", description: "Generate a diff showing added, removed, and modified rules and settings. Green = additions, red = removals, amber = modifications.", side: "bottom", align: "center" } },
+    ]);
+    t.drive();
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------
 // 6. Remediation Workflow
 // ---------------------------------------------------------------------------
-export function startRemediationTour() {
-  const t = createTour([
-    { element: sel("remediation-playbooks"), popover: { title: "Remediation Playbooks", description: "Step-by-step guides to fix each finding on a Sophos XGS firewall, with severity and impact.", side: "top", align: "center" } },
-    { element: sel("change-approval"), popover: { title: "Change Approval", description: "Submit remediation plans for approval. Track status: draft → pending → approved or rejected.", side: "top", align: "center" } },
-    { element: sel("remediation-progress"), popover: { title: "Progress Tracking", description: "Track remediation progress across all findings.", side: "top", align: "center" } },
-    { element: sel("remediation-roadmap"), popover: { title: "Remediation Roadmap", description: "View the prioritised roadmap of fixes.", side: "top", align: "center" } },
-    { element: sel("findings-bulk"), popover: { title: "Bulk Actions", description: "Select multiple findings for bulk status updates.", side: "top", align: "center" } },
-  ]);
-  t.drive();
+export function startRemediationTour(cb?: TourCallbacks) {
+  if (cb?.setAnalysisTab) cb.setAnalysisTab("remediation");
+  setTimeout(() => {
+    const t = createTour([
+      { element: sel("remediation-playbooks"), popover: { title: "Remediation Playbooks", description: "Step-by-step guides to fix each finding on a Sophos XGS firewall, with severity and impact.", side: "top", align: "center" } },
+      { element: sel("change-approval"), popover: { title: "Change Approval", description: "Submit remediation plans for approval. Track status: draft → pending → approved or rejected.", side: "top", align: "center" } },
+      { element: sel("remediation-progress"), popover: { title: "Progress Tracking", description: "Track remediation progress across all findings.", side: "top", align: "center" } },
+      { element: sel("remediation-roadmap"), popover: { title: "Remediation Roadmap", description: "View the prioritised roadmap of fixes.", side: "top", align: "center" } },
+      { element: sel("findings-bulk"), popover: { title: "Bulk Actions", description: "Select multiple findings for bulk status updates.", side: "top", align: "center" } },
+    ]);
+    t.drive();
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------
 // 7. Baselines & What-If
 // ---------------------------------------------------------------------------
-export function startBaselineTour() {
-  const t = createTour([
-    { element: sel("baseline-manager"), popover: { title: "Baseline Manager", description: "Save a snapshot of your current config as a baseline for future comparison.", side: "top", align: "center" } },
-    { element: sel("compare-baseline"), popover: { title: "Compare to Baseline", description: "Compare your current analysis against a saved baseline to detect config drift.", side: "top", align: "center" } },
-    { element: sel("what-if"), popover: { title: "What-If Comparison", description: "Model what-if scenarios to evaluate different configuration approaches.", side: "top", align: "center" } },
-  ]);
-  t.drive();
+export function startBaselineTour(cb?: TourCallbacks) {
+  if (cb?.setAnalysisTab) cb.setAnalysisTab("tools");
+  setTimeout(() => {
+    const t = createTour([
+      { element: sel("baseline-manager"), popover: { title: "Baseline Manager", description: "Save a snapshot of your current config as a baseline for future comparison.", side: "top", align: "center" } },
+      { element: sel("compare-baseline"), popover: { title: "Compare to Baseline", description: "Compare your current analysis against a saved baseline to detect config drift.", side: "top", align: "center" } },
+      { element: sel("what-if"), popover: { title: "What-If Comparison", description: "Model what-if scenarios to evaluate different configuration approaches.", side: "top", align: "center" } },
+    ]);
+    t.drive();
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------
 // 8. Geographic & Network Maps
 // ---------------------------------------------------------------------------
-export function startMapsTour() {
-  const t = createTour([
-    { element: sel("fleet-map"), popover: { title: "Geographic Fleet Map", description: "View your firewalls' external IP addresses and their geographic locations.", side: "top", align: "center" } },
-    { element: sel("attack-surface"), popover: { title: "Attack Surface Map", description: "Visualise your network's attack surface based on firewall rules and exposed services.", side: "top", align: "center" } },
-    { element: sel("zone-map"), popover: { title: "Network Zone Map", description: "Zone-to-zone traffic flow and security level visualisation.", side: "top", align: "center" } },
-  ]);
-  t.drive();
+export function startMapsTour(cb?: TourCallbacks) {
+  if (cb?.setAnalysisTab) cb.setAnalysisTab("tools");
+  setTimeout(() => {
+    const t = createTour([
+      { element: sel("fleet-map"), popover: { title: "Geographic Fleet Map", description: "View your firewalls' external IP addresses and their geographic locations.", side: "top", align: "center" } },
+      { element: sel("attack-surface"), popover: { title: "Attack Surface Map", description: "Visualise your network's attack surface based on firewall rules and exposed services.", side: "top", align: "center" } },
+      { element: sel("zone-map"), popover: { title: "Network Zone Map", description: "Zone-to-zone traffic flow and security level visualisation.", side: "top", align: "center" } },
+    ]);
+    t.drive();
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------

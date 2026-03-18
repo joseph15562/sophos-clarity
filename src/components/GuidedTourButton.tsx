@@ -71,22 +71,22 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
               <DropdownMenuItem onClick={() => startDashboardTour()}>
                 <BarChart3 className="h-3.5 w-3.5 mr-2 shrink-0" /> Dashboard Guide
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startRiskScoreTour()}>
+              <DropdownMenuItem onClick={() => startRiskScoreTour(cb)}>
                 <Gauge className="h-3.5 w-3.5 mr-2 shrink-0" /> Risk Score Explained
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startComplianceTour()}>
+              <DropdownMenuItem onClick={() => startComplianceTour(cb)}>
                 <Shield className="h-3.5 w-3.5 mr-2 shrink-0" /> Compliance Mapping
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startConfigDiffTour()}>
+              <DropdownMenuItem onClick={() => startConfigDiffTour(cb)}>
                 <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Config Comparison
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startRemediationTour()}>
+              <DropdownMenuItem onClick={() => startRemediationTour(cb)}>
                 <Wrench className="h-3.5 w-3.5 mr-2 shrink-0" /> Remediation Workflow
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startBaselineTour()}>
+              <DropdownMenuItem onClick={() => startBaselineTour(cb)}>
                 <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Baselines & What-If
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startMapsTour()}>
+              <DropdownMenuItem onClick={() => startMapsTour(cb)}>
                 <Map className="h-3.5 w-3.5 mr-2 shrink-0" /> Geographic & Network Maps
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => startWidgetTour()}>
