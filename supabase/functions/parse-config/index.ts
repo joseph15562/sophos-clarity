@@ -22,6 +22,22 @@ function getCorsHeaders(req: Request): Record<string, string> {
 
 let corsHeaders: Record<string, string> = {};
 
+/**
+ * Shared rules appended to every system prompt to avoid duplication.
+ * Covers VPN profiles, wireless, external logging, API accounts, SSL/TLS, and web filter scope.
+ */
+const SHARED_RULES = `
+Shared Assessment Rules
+
+- **Web filter scope**: Only flag missing web filtering for rules whose **Destination Zone is WAN** and **Service is HTTP, HTTPS, or ANY**. Rules with other destinations or non-web services do not require web filtering for compliance. Do not flag LAN-to-LAN, VPN-to-LAN, or non-web service rules.
+- **VPN Profiles**: Only flag weaknesses (weak encryption, weak DH groups, missing PFS) when the profile is **actively referenced** by a VPN IPSec Connection. Unused profiles are compliant.
+- **Wireless Security**: Only flag issues when **active wireless access points** are configured. No APs = compliant. Sophos AP6 models are Central-managed only; older APX models are approaching end-of-life.
+- **External Log Forwarding**: Sophos Central counts as external log forwarding. If the firewall shows Central management (e.g. "Central Management: Read-Write" in admin profiles, "Central Created" firewall rules), treat external logging as compliant — do not flag missing syslog.
+- **API / Monitoring Service Accounts**: Admin accounts with "Read-Only Administrator" profile or named for API/monitoring use (e.g. "firecomply-api") are service-to-service integration accounts. These cannot use interactive MFA. Document recommended compensating controls (IP restriction, read-only profile, strong password, audit logging). With compensating controls in place, a non-MFA service account is an accepted exception under ISO 27001 A.9.4.2, Cyber Essentials, NIST 800-53 IA-2, and PCI DSS 8.3. Only flag as a concern if the account has full admin privileges instead of read-only.
+- **SSL/TLS (DPI engine)**: These settings are for the DPI/inspection engine (what the firewall decrypts), not a TLS-terminating service. Do not recommend "Enforce TLS 1.2+ to comply with NCSC Guidelines" — NCSC guidance applies to services presenting TLS to end users, not the firewall's minimum decryption version. Focus on inspection coverage and operational best practice.
+- **Omitted sections**: Only document sections present in the payload. If a section is not in the payload, do not mention it or write a heading for it.
+`;
+
 /** Remove empty strings, empty arrays, and empty objects to cut payload size and token use. */
 function pruneEmpty(value: unknown): unknown {
   if (value === null || value === undefined) return undefined;
@@ -92,40 +108,21 @@ Rules
 - For policies: describe what each policy does in a table
 - Use the actual data provided — never invent or assume configuration details
 - If a section has no data, write "No configuration found in export."
-- **Do not include DHCP in the report**: Omit any section that is solely about DHCP (e.g. "DHCP", "DHCP Servers", "DHCPBinding", "CliDhcp"). Do not document DHCP configuration, DHCP servers, or DHCP bindings. Skip these sections entirely — do not write a heading or table for them.
-- **Do not include these sections**: Omit the following from the report — do not write a heading or table for any of them; skip entirely: "WAF TLS Settings", "ArpFlux", "AuthCTA", "FQDN Hosts", "QoS Policies", "Cellular WAN", "Gateway Hosts", "High Availability", "Network Groups", "Letsencrypt", "Parent Proxy", "QoS Settings", "WAF Slow HTTP", "AntiVirus FTP", "Country Groups", "Anti-Spam Rules", "FQDN Host Groups", "FileType", "Schedules", "Services", "WebProxy", "Admin Profiles", "Web Filters", "Web Filter Categories", "Web Filter URL Groups", "Web Filter Exceptions", "Zero Day Protection", "Malware Protection", "AntiVirusHTTPsConfiguration", "AntiVirusMailSMTPScanningRules", "AntiVirusHTTPSScanningExceptions", "POP/IMAP Scanning", "POP/IMAP Scanning Policy", "DNS Request Routes", "Application Control Policies", "Web Filtering Policies", "Admin Accounts and Profiles", "User Groups", "Application Objects", "SD-WAN Routes", "API & Service Accounts", "SNMP Community", "Syslog Servers", "System Services", "OverridePolicy", "DataManagement", "HttpProxy", "Networks", "Networks (Hosts)", "Hosts", "Web Filtering / Inspection Method", "Web Filter Settings", "Default Captive Portal", "Sophos Connect Client", "Decryption Profiles", "Application Filter Policies", "Application Classification", "Application Filter Categories", "Email Protection", "Email Scanning", "SMTP Scanning", "Anti-Spam", "Firewall Rule Groups", "User Activity", "Service Groups", "SSL VPN Policies", "SPX Templates", "Notifications", "User Portal Authentication", "VpnConnRemoveOnFailover", "VpnConnRemoveTunnelUp", "SSL VPN Authentication", "MTA SPX Configuration", "Advanced SMTP Setting", "Spoof Prevention", "Route Precedence", "MTA SPX Templates", "MTA Address Group", "Local Service ACL", "IPS Full Signature Pack", "Gateway Configuration", "Virtual Host Failover Notification", "Default Web Filter Notification Settings", "Web Authentication", "Voucher Definition", "Smarthost Settings", "PPTP Configuration", "SNMP Agent Config", "Multicast Configuration", "Firewall Authentication", "SSL VPN Tunnel Access". Omit any section that is solely or primarily about email protection (e.g. Email Protection, Email Scanning, SMTP, Anti-Spam, POP/IMAP, mail scanning) — do not write a heading or table for them.
-- **Web Filter Settings and Web Filter Exceptions**: Do NOT include "Web Filter Settings", "Web Filter Exceptions", "WebFilterSettings", "WebFilterExceptions", or any section that is about global web filter settings or web filter exception lists. Do not write a heading, table, summary, findings, or recommendations for these — skip them entirely. If the payload contains such data, do not document it in the report.
-- **FQDN Host Groups**: Do NOT include "FQDN Host Groups", "FQDNHostGroups", or any section that lists FQDN host groups (e.g. collections of fully qualified domain names). Do not write a heading, table, or any content for this section — skip it entirely. If the payload contains FQDN Host Groups data, do not document it in the report.
-- **Admin Profiles**: Do NOT include "Admin Profiles", "AdminProfiles", or any section that lists admin profiles or administrator profiles. Do not write a heading, table, or any content for this section — skip it entirely.
-- **Syslog Servers**: Do NOT include "Syslog Servers", "SyslogServers", or any section that lists syslog servers. Do not write a heading, table, or any content for this section — skip it entirely.
-- **Networks**: Do NOT include "Networks", "Networks (Hosts)", "Hosts", or any standalone section that lists network objects or host/network definitions. Do not write a heading, table, or any content for this section — skip it entirely. (Firewall rules may still reference source/destination networks in their columns; only omit the dedicated Networks/Hosts section.)
-- **No repeated headings**: Each section heading (e.g. ## Firewall Rules, ## Zones) must appear only once in the report. Do not repeat the same ## or ### heading later in the document; merge content under a single occurrence of that heading. Do not add a separate "Summary of [Section Name]" or "Summary of Firewall Rules" or similar heading after a section — write any summary as a normal paragraph under the main section heading, not as another ## or ### that repeats the section name.
-- **Consistent numbers**: The firewall rule count must be identical everywhere in the report. Count the actual number of rule rows in the Firewall Rules payload and use that exact number in the Executive Summary, in the paragraph under ## Firewall Rules (after the table), and in any other mention (e.g. "N rules", "N disabled"). Never state different totals in different sections (e.g. 29 in one place and 33 in another).
-- **Complete sentences**: Write only complete sentences. Do not cut off mid-word or mid-sentence. Every paragraph must end with a full sentence. Avoid duplicate consecutive words (e.g. "rules rules" or "the the"); proofread for clarity.
-- **RED (Remote Ethernet Device)**: Do **not** include "RED Configuration" in the report. For RED devices, only include a short **RED Devices** section with a simple table: **Device** (or name) and **IP** (or address). Do not document full RED configuration, RED settings, or other RED fields — only device name and IP.
-- Do NOT output raw JSON — write documentation in Markdown tables and prose
-- **No placeholder or loading text**: Never write "Still generating...", "Generating...", "Loading...", or any similar text anywhere in the report — including in the Firewall Rules section. The Firewall Rules section must contain the actual rule table rows (or first 150 plus truncation note), not a loading message. The entire report must be real documentation only; no status or placeholder messages.
-- **Table format**: Every table MUST be valid Markdown: (1) a header row with column names in pipes, e.g. | Rule Name | Status | Action | ... | (2) a separator row with one | --- | per column, e.g. | --- | --- | --- | (3) one data row per rule/entry, each row on a single line. Do not wrap a single row across multiple lines — each table row must be exactly one line of text. Put each cell in its own column; use a single pipe between cells and at the start/end of each row. If a table would have too many columns and cause wrapping, include only the most important columns (e.g. Name, Zone, Status) so every row stays on one line.
-- **Web filtering (Web Filter None)**: Only flag missing web filtering for rules whose **Destination Zone (or Dest Zone) is WAN** and **Service is HTTP, HTTPS, or ANY**. Rules with destination LAN/VPN, or with non-web services, do not require web filtering for KCSIE/compliance — do not list them as Critical or as "Missing Web Filtering".
-- **SSL/TLS Global Settings (DPI engine)**: Do not recommend "Enforce TLS 1.2+" or "comply with NCSC Guidelines" for minimum TLS version in this context. This is the inspection engine's decryption policy, not a service-facing TLS stack; NCSC guidance on TLS 1.2+ does not apply here. Do not mark "Insecure TLS Versions" or similar as a finding solely because the minimum decrypt version is below 1.2.
-- Start with the Executive Summary, then **Firewall Rules** (full table) if present in the payload, then proceed through all other sections in order. Never skip the Firewall Rules table. **Complete the entire report in one response** — do not stop mid-table or mid-section; output each section fully so the stream finishes cleanly.
+- Only document sections present in the payload. If a section is absent, skip it — do not write a heading.
+- **No repeated headings**: Each section heading (e.g. ## Firewall Rules, ## Zones) must appear only once. Do not add "Summary of [Section]" headings.
+- **Consistent numbers**: The firewall rule count must be identical everywhere in the report. Count actual rows and use that number consistently.
+- **Complete sentences**: Write only complete sentences. Avoid duplicate consecutive words.
+- **RED (Remote Ethernet Device)**: Only include a short **RED Devices** section with a table: **Device** and **IP**. Do not document full RED configuration.
+- Do NOT output raw JSON — write documentation in Markdown tables and prose.
+- **No placeholder or loading text**: Never write "Still generating...", "Loading...", etc. Output actual content only.
+- **Table format**: Every table MUST be valid Markdown with header, separator, and data rows — each row on a single line.
+- Start with the Executive Summary, then **Firewall Rules** (full table) if present, then remaining sections. Complete the entire report in one response.
 
-**Authentication & OTP Settings**: If the payload contains a section named "Authentication & OTP Settings", "OTP Settings", or "OTPSettings" with tables or data, you MUST document it. Create an "## Authentication & OTP Settings" section with a Markdown table (columns **Setting** and **Value**) for every row present (e.g. otp, allUsers, tokenAutoCreation, otpUserPortal, otpVPNPortal, otpSSLVPN, otpWebAdmin, otpIPsec — values are typically "Enabled" or "Disabled"). Add a brief summary and recommendations for MFA where disabled. Do NOT say "No configuration found in export" for this section when that data exists in the payload.
+**Authentication & OTP Settings**: If the payload contains "Authentication & OTP Settings", "OTP Settings", or "OTPSettings", create an "## Authentication & OTP Settings" section with a **Setting** / **Value** table. Add summary and MFA recommendations where disabled.
 
-**VPN Connections** (IPSec Connections, VPN tunnels): When documenting VPN connections, use a single table with only these columns: **Connection Name**, **Remote Host**, **Security / Encryption** (e.g. IKEv2, AES-256, PFS). After the table, add a short summary paragraph: state whether there are any issues (e.g. weak encryption, missing PFS, outdated protocol) or "No issues identified." Do not include a long list of columns or full verbose connection details — only the table above and the summary.
+**VPN Connections** (IPSec Connections): Use a single table: **Connection Name**, **Remote Host**, **Security / Encryption**. Add a short summary of issues or "No issues identified."
 
-**VPN Profiles**: Only flag VPN profile weaknesses (weak encryption, weak DH groups, missing PFS) when the profile is **actively referenced** by a VPN IPSec Connection. Unused VPN profiles should be considered compliant — do not raise findings for profiles that are defined but not in use by any connection.
-
-**Wireless Security**: Only flag wireless security issues (weak encryption, open SSIDs, etc.) when the configuration shows **active wireless access points** (registered/online APs in the Wireless Access Point section). If no wireless APs are configured or all are offline/decommissioned, wireless security is compliant — do not raise findings. Note: Sophos AP6 models are now Central-managed only; older APX models are approaching end-of-life; desktop firewall models with built-in WiFi should still be assessed.
-
-**External Log Forwarding**: Sophos Central counts as external log forwarding. If the firewall is registered with Sophos Central (indicators: "Central Management: Read-Write" in admin profiles, firewall rules named "Central Created", or Central management service running), treat external logging as compliant — do not flag missing syslog servers. Only flag "No external log forwarding" when the firewall has neither syslog servers configured NOR Sophos Central management detected.
-
-**API / Monitoring Service Accounts**: If the configuration shows admin accounts with "Read-Only Administrator" profile or accounts named for API/monitoring purposes (e.g. "firecomply-api", "monitoring", "api-user", or similar), these are service-to-service integration accounts used by automated compliance monitoring tools. Document them in an "## API & Service Accounts" section. Include:
-- The account name, profile/role, and whether OTP/MFA is enabled
-- A note that service accounts for machine-to-machine API integrations cannot use interactive MFA (no human to enter a code) — this is standard practice for SNMP, syslog, SIEM, and compliance monitoring integrations
-- Recommended compensating controls: (1) restrict API access to specific IP addresses via Backup & Firmware → API → Allowed IP addresses, (2) use Read-Only Administrator profile to enforce least privilege, (3) use a strong machine-generated password, (4) monitor API access via firewall audit logs
-- State that with these compensating controls in place, a non-MFA service account is an accepted exception under ISO 27001 A.9.4.2, Cyber Essentials "technical controls", NIST 800-53 IA-2, and PCI DSS 8.3 — all of which distinguish interactive human access (requires MFA) from non-interactive service-to-service access (compensating controls acceptable)
-- If the API account has full Administrator access instead of Read-Only, flag this as 🟡 Medium: "API service account has full admin privileges — recommend restricting to Read-Only Administrator profile for least privilege"`;
+**API / Monitoring Service Accounts**: If the configuration shows admin accounts with "Read-Only Administrator" profile or named for API/monitoring use, document them in "## API & Service Accounts". Include account name, profile/role, OTP status, note that service accounts cannot use interactive MFA, and recommended compensating controls (IP restriction, read-only profile, strong password, audit logging). If full admin privileges, flag as 🟡 Medium.`;
 
 const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing a consolidated executive summary report for an MSP covering MULTIPLE firewall configurations. Include best-practice recommendations and a compliance-suitable level of detail.
 
@@ -152,10 +149,6 @@ Rules
 - Do NOT reproduce every individual rule — summarise and highlight exceptions
 - Use Markdown tables for structured data
 - Level of detail must support compliance and audit
-- **VPN Profiles**: Only flag VPN profile weaknesses (weak encryption, weak DH groups, missing PFS) when the profile is **actively referenced** by a VPN IPSec Connection. Unused VPN profiles are compliant.
-- **Wireless Security**: Only flag wireless security issues when **active wireless access points** are configured. If no APs are present, wireless security is compliant.
-- **External Log Forwarding**: Sophos Central counts as external log forwarding. If the firewall shows Central management (e.g. "Central Management: Read-Write" in admin profiles, "Central Created" firewall rules), treat external logging as compliant — do not flag missing syslog.
-- **API / Monitoring Service Accounts**: If any firewall has admin accounts with Read-Only Administrator profile or named for API/monitoring use (e.g. "firecomply-api"), note them as service-to-service integration accounts. These cannot use interactive MFA. Document recommended compensating controls (IP restriction, read-only profile, strong password, audit logging) and note this is standard practice for monitoring integrations. Only flag as a concern if the account has full admin privileges instead of read-only.
 - End every report with a "Limitations" section that states: this assessment covers firewall configuration only. It does not assess endpoint security, email security, identity management, cloud infrastructure, or physical security controls. Results are point-in-time and should be validated by a qualified security professional.`;
 
 const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity analyst producing a Compliance Readiness Report from firewall configuration data. This document provides an indicative assessment of firewall configuration controls against compliance frameworks. It should be used as supporting material alongside a full compliance audit — not as a substitute for one.
@@ -206,8 +199,8 @@ List identified residual risks in a table:
 
 9. **Best Practice Recommendations** (required)
 - A section with actionable, compliance-focused recommendations across all firewalls
-- **SSL/TLS**: Document SSL/TLS settings found (these are DPI/inspection engine settings; do not recommend "Enforce TLS 1.2+ for NCSC compliance" for the firewall's minimum decryption version — that guidance applies to TLS-terminating services, not the inspection engine). Recommend inspection coverage and operational best practice where relevant.
-- **Web filtering / DPI**: For each firewall (or the estate) **not** using DPI for **outbound traffic to WAN** (rules whose Destination Zone is WAN and Service is HTTP, HTTPS, or ANY), include a clear recommendation: "Enable DPI (Deep Packet Inspection) for outbound web traffic to WAN to achieve visibility, control, and compliance; currently no DPI is in use for WAN-destined rules." Only consider destination-WAN rules with service HTTP/HTTPS/ANY when assessing. Do not mention Web proxy — focus on DPI only. Name the firewall(s) concerned.
+- **SSL/TLS**: Document SSL/TLS settings found. Apply the SSL/TLS DPI engine rule from Shared Assessment Rules. Recommend inspection coverage where relevant.
+- **Web filtering / DPI**: For each firewall not using DPI for outbound WAN web traffic, recommend enabling DPI. Apply the web filter scope rule. Do not mention Web proxy — focus on DPI only. Name the firewall(s) concerned.
 
 Rules
 - Use ONLY the actual configuration data provided — never invent details
@@ -215,16 +208,12 @@ Rules
 - Quote specific rule names, IP ranges, zones, and policy names as evidence
 - **SSL/TLS and DPI**: In evidence and control mapping, state whether each firewall uses DPI **for rules with Destination Zone = WAN and Service HTTP, HTTPS, or ANY**. Document SSL/TLS settings where present. Only for rules whose destination is WAN and service is web-related (HTTP, HTTPS, ANY): if a firewall has no DPI on those rules, recommend enabling DPI and note it in "Firewall(s) Lacking / What Is Missing" or Notes. Do not mention Web proxy — focus on DPI only.
 - **Security features (MFA, OTP, 2FA, etc.)**: If **any** firewall does not have the feature enabled in **all** relevant areas (e.g. VPN, Web Admin, SSL-VPN, IPsec), mark the control **⚠️ Partial**. In Notes/Evidence and in "Firewall(s) Lacking / What Is Missing", state **which firewall** and **what** is lacking (e.g. "Firewall A — MFA not enabled for SSL-VPN and Web Admin").
-- When citing firewall rules, include **Web Filter** (or web filtering policy) where the data provides it. **Web filtering affects compliance only when the rule's Destination Zone (or Dest Zone) is WAN and Service is HTTP, HTTPS, or ANY.** For KCSIE or any web-filtering-related control: only assess rules that have **Destination Zone = WAN** and **Service HTTP, HTTPS, or ANY** (or destination to WAN/internet with web-related service). If a rule's destination is not WAN, or its service is not HTTP/HTTPS/ANY (e.g. LAN to LAN, VPN to LAN, or non-web services), ignore web filter "None" for that rule — do not fail or partial the control for those. Only rules with destination WAN and web-related service must have web filtering for compliance.
+- When citing firewall rules, include **Web Filter** where the data provides it. Apply the web filter scope rule from Shared Assessment Rules (only WAN-destined web services matter for compliance).
 - **Logging / monitoring**: For any control that relates to monitoring, logging, or audit trail (e.g. "enable logging", "log traffic", "audit", "monitoring"), **fail that control (❌ Not Met)** if the config shows one or more firewall rules with logging disabled (e.g. "Log" off, "Logging" disabled, or no log option enabled). Note which rule(s) and which firewall(s) have logging off in Evidence/Notes.
 - Be specific about which rules/settings satisfy which controls
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
-- Every claim must be traceable to config data
-- **VPN Profiles**: Only flag VPN profile weaknesses (weak encryption, weak DH groups, missing PFS) when the profile is **actively referenced** by a VPN IPSec Connection. Unused/orphaned VPN profiles should not fail compliance controls.
-- **Wireless Security**: Only flag wireless security issues when **active wireless access points** are configured on the firewall. If no APs are registered or active, mark wireless controls as N/A or compliant, not as a gap.
-- **External Log Forwarding**: Sophos Central counts as external log forwarding. If the firewall is registered with Sophos Central (indicators: "Central Management: Read-Write" in admin profiles, "Central Created" firewall rules, Central management service running), the external logging control is **✅ Met** — do not flag missing syslog servers as a compliance gap.
-- **API / Monitoring Service Accounts**: Admin accounts with "Read-Only Administrator" profile or named for API/monitoring use (e.g. "firecomply-api", "monitoring", "api-user") are service-to-service integration accounts for automated compliance monitoring tools. For MFA-related compliance controls (ISO 27001 A.9.4.2, Cyber Essentials, NIST 800-53 IA-2, PCI DSS 8.3): these frameworks distinguish interactive human access (requires MFA) from non-interactive service-to-service access (compensating controls acceptable). If the API account is Read-Only, IP-restricted, and uses a strong password, mark MFA controls as **✅ Met** with a note documenting the compensating controls. If the API account has full Administrator privileges, mark as **⚠️ Partial** and recommend restricting to Read-Only Administrator. Document all API/monitoring service accounts in the "Security Feature Gaps by Firewall" section with their compensating controls.`;
+- Every claim must be traceable to config data`;
 
 const CHAT_SYSTEM_PROMPT = `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
 
@@ -354,7 +343,7 @@ serve(async (req) => {
       } else {
         basePrompt = SYSTEM_PROMPT;
       }
-      systemPrompt = basePrompt + complianceContext;
+      systemPrompt = basePrompt + SHARED_RULES + complianceContext;
 
       if (compliance && firewallLabels && firewallLabels.length > 1) {
         userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a comprehensive Compliance Readiness Report covering all firewalls:\n\n${payload}`;
@@ -391,8 +380,13 @@ serve(async (req) => {
       });
     }
 
-    // Use 2.5 Flash; override with GEMINI_REPORT_MODEL if needed.
-    const model = Deno.env.get("GEMINI_REPORT_MODEL") || "gemini-2.5-flash";
+    const reportModel = Deno.env.get("GEMINI_REPORT_MODEL") || "gemini-2.5-flash";
+    const chatModel = Deno.env.get("GEMINI_CHAT_MODEL") || "gemini-2.5-flash-lite";
+    const model = chat ? chatModel : reportModel;
+
+    const reasoningOverride = Deno.env.get("GEMINI_REASONING_EFFORT");
+    const reasoningEffort = reasoningOverride
+      || (chat ? "none" : (compliance || executive) ? "medium" : "low");
 
     const doRequest = () =>
       fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
@@ -409,6 +403,7 @@ serve(async (req) => {
           ],
           stream: true,
           temperature: 0.1,
+          reasoning_effort: reasoningEffort,
         }),
       });
 

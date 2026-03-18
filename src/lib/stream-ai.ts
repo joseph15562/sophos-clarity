@@ -2,6 +2,74 @@ import type { ExtractedSections } from "./extract-sections";
 import { buildAnonymisationMap, anonymiseData, anonymiseString, createStreamDeanonymiser } from "./anonymise";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Sections the AI prompt tells Gemini to ignore. Stripping them client-side
+ * before sending saves 30-50% of input tokens on a typical config.
+ */
+const OMITTED_SECTIONS: Set<string> = new Set([
+  "dhcp", "dhcp servers", "dhcpbinding", "clidhcp",
+  "waf tls settings", "arpflux", "authcta", "fqdn hosts",
+  "qos policies", "cellular wan", "gateway hosts", "high availability",
+  "network groups", "letsencrypt", "parent proxy", "qos settings",
+  "waf slow http", "antivirus ftp", "country groups", "anti-spam rules",
+  "fqdn host groups", "fqdnhostgroups", "filetype", "schedules",
+  "services", "webproxy", "admin profiles", "adminprofiles",
+  "web filters", "web filter categories", "web filter url groups",
+  "web filter exceptions", "webfiltersettings", "webfilterexceptions",
+  "web filter settings", "zero day protection", "malware protection",
+  "antivirushttpsconfiguration", "antivirusmailsmtpscanningrules",
+  "antivirushttpsscanningexceptions", "pop/imap scanning",
+  "pop/imap scanning policy", "dns request routes",
+  "application control policies", "web filtering policies",
+  "admin accounts and profiles", "user groups", "application objects",
+  "sd-wan routes", "api & service accounts", "snmp community",
+  "syslog servers", "syslogservers", "system services",
+  "overridepolicy", "datamanagement", "httpproxy",
+  "networks", "networks (hosts)", "hosts",
+  "web filtering / inspection method", "default captive portal",
+  "sophos connect client", "decryption profiles",
+  "application filter policies", "application classification",
+  "application filter categories", "email protection", "email scanning",
+  "smtp scanning", "anti-spam", "firewall rule groups", "user activity",
+  "service groups", "ssl vpn policies", "spx templates", "notifications",
+  "user portal authentication", "vpnconnremoveonfailover",
+  "vpnconnremovetunnelup", "ssl vpn authentication",
+  "mta spx configuration", "advanced smtp setting", "spoof prevention",
+  "route precedence", "mta spx templates", "mta address group",
+  "local service acl", "ips full signature pack", "gateway configuration",
+  "virtual host failover notification",
+  "default web filter notification settings", "web authentication",
+  "voucher definition", "smarthost settings", "pptp configuration",
+  "snmp agent config", "multicast configuration",
+  "firewall authentication", "ssl vpn tunnel access",
+  "red configuration",
+]);
+
+function isOmittedSection(key: string): boolean {
+  return OMITTED_SECTIONS.has(key.toLowerCase());
+}
+
+/**
+ * Remove sections the AI prompt ignores, cutting payload size and token cost.
+ * For executive/compliance reports the sections object is nested one level
+ * deep (firewallLabel → ExtractedSections), so we recurse once.
+ */
+function stripOmittedSections(sections: ExtractedSections): ExtractedSections {
+  const result: ExtractedSections = {};
+  for (const [key, value] of Object.entries(sections)) {
+    if (isOmittedSection(key)) continue;
+    if (value && typeof value === "object" && !Array.isArray(value) && !("tables" in value)) {
+      const nested = stripOmittedSections(value as unknown as ExtractedSections);
+      if (Object.keys(nested).length > 0) {
+        (result as Record<string, unknown>)[key] = nested;
+      }
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 export type CentralEnrichment = {
   firmware?: string;
   model?: string;
@@ -67,8 +135,9 @@ export type ParseConfigDebugPayload = Pick<
 
 export async function fetchParseConfigDebug(payload: ParseConfigDebugPayload): Promise<Record<string, unknown>> {
   const { sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, centralEnrichment } = payload;
-  const anonMap = buildAnonymisationMap(sections, customerName, firewallLabels);
-  const anonSections = anonymiseData(sections, anonMap);
+  const stripped = stripOmittedSections(sections);
+  const anonMap = buildAnonymisationMap(stripped, customerName, firewallLabels);
+  const anonSections = anonymiseData(stripped, anonMap);
   const anonCustomerName = customerName ? anonymiseString(customerName, anonMap) : undefined;
   const anonLabels = firewallLabels?.map((l) => anonymiseString(l, anonMap));
 
@@ -152,12 +221,14 @@ export async function streamChat({ chatContext, onDelta, onDone, onError, onStat
 export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, centralEnrichment, onDelta, onDone, onError, onStatus }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
-  // Anonymise sensitive data before sending to cloud API
-  const anonMap = buildAnonymisationMap(sections, customerName, firewallLabels);
-  const anonSections = anonymiseData(sections, anonMap);
+  const stripped = stripOmittedSections(sections);
+
+  const anonMap = buildAnonymisationMap(stripped, customerName, firewallLabels);
+  const anonSections = anonymiseData(stripped, anonMap);
   const anonCustomerName = customerName ? anonymiseString(customerName, anonMap) : undefined;
   const anonLabels = firewallLabels?.map((l) => anonymiseString(l, anonMap));
   const deanon = createStreamDeanonymiser(anonMap);
+  const reportType = compliance ? "compliance" : executive ? "executive" : "individual";
 
   // 8 minutes for large executive/compliance reports; Supabase may enforce a lower function limit
   const timeoutMs = 8 * 60 * 1000;
@@ -175,7 +246,7 @@ export async function streamConfigParse({ sections, environment, country, custom
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance, centralEnrichment }),
+      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance, centralEnrichment, reportType }),
     });
   } catch (e) {
     clearTimeout(timeoutId);
