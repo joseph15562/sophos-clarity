@@ -186,7 +186,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   useEffect(() => {
     const count = Object.keys(analysisResults).length;
     if (count > 0 && prevResultCountRef.current === 0) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      requestAnimationFrame(() => window.scrollTo({ top: 0 }));
     }
     prevResultCountRef.current = count;
   }, [analysisResults]);
@@ -299,7 +299,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setActiveReportId("");
     setReportsSaved(false);
     setLoadedSavedSummary(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    requestAnimationFrame(() => window.scrollTo({ top: 0 }));
   }, [setReports, setActiveReportId]);
 
   // Clear analysis override when user uploads new files normally
