@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import imgProfilesList from "../assets/help/01-profiles-list.png";
@@ -13,11 +14,31 @@ function Section({ children }: { children: React.ReactNode }) {
   return <div className="bg-card border border-border rounded-xl p-5 space-y-4">{children}</div>;
 }
 
-function StepImage({ src, alt }: { src: string; alt: string }) {
+function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
-    <div className="rounded-lg border border-border overflow-hidden bg-black/5">
-      <img src={src} alt={alt} className="w-full" loading="lazy" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold z-10" aria-label="Close">✕</button>
+      <img src={src} alt={alt} className="max-w-[95vw] max-h-[92vh] object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
     </div>
+  );
+}
+
+function StepImage({ src, alt }: { src: string; alt: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div className="rounded-lg border border-border overflow-hidden bg-black/5 cursor-zoom-in group" onClick={() => setOpen(true)}>
+        <img src={src} alt={alt} className="w-full transition-opacity group-hover:opacity-90" loading="lazy" />
+        <div className="text-center text-[9px] text-muted-foreground py-1 opacity-0 group-hover:opacity-100 transition-opacity">Click to enlarge</div>
+      </div>
+      {open && <Lightbox src={src} alt={alt} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 

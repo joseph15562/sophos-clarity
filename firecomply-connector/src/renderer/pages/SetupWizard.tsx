@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 interface Props { onComplete: () => void; }
@@ -28,6 +29,7 @@ const SCHEDULES = [
 const DEFAULT_API_URL = "https://rpnvyrxorfaqabkdhctl.supabase.co/functions/v1";
 
 export function SetupWizard({ onComplete }: Props) {
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>("api-key");
   const [apiKey, setApiKey] = useState("");
   const [apiUrl] = useState(DEFAULT_API_URL);
@@ -160,6 +162,13 @@ export function SetupWizard({ onComplete }: Props) {
         <div className="text-center">
           <h1 className="text-xl font-bold text-foreground">FireComply Connector</h1>
           <p className="text-sm text-muted-foreground mt-1">Setup Wizard</p>
+          <button
+            onClick={() => navigate("/help")}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs text-[#6B5BFF] hover:underline"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            Need help setting up your firewall?
+          </button>
         </div>
 
         {/* Step indicators */}
