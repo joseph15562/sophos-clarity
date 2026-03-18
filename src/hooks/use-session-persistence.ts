@@ -72,11 +72,12 @@ export function useAutoSave(
   branding: BrandingData,
   reports: ReportEntry[],
   activeReportId: string,
+  enabled = true,
 ) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    if (reports.length === 0) return;
+    if (!enabled || reports.length === 0) return;
     const hasContent = reports.some((r) => r.markdown);
     if (!hasContent) return;
 
@@ -86,5 +87,5 @@ export function useAutoSave(
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer.current);
-  }, [branding, reports, activeReportId]);
+  }, [branding, reports, activeReportId, enabled]);
 }

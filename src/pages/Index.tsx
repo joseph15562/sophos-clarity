@@ -131,7 +131,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     return { score: avgScore, grade, criticalHigh, coverage, totalRules };
   }, [analysisResults, aggregatedPosture, totalRules]);
 
-  useAutoSave(branding, reports, activeReportId);
+  useAutoSave(branding, reports, activeReportId, !isGuest);
 
   // Save finding snapshots when analysis completes (for regression detection)
   useEffect(() => {
@@ -191,8 +191,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     prevResultCountRef.current = count;
   }, [analysisResults]);
 
-  // Restore session on mount
+  // Restore session on mount (authenticated users only — guests get a clean slate)
   useEffect(() => {
+    if (isGuest) return;
     const session = loadSession();
     if (session && session.reports.length > 0) {
       setBranding(session.branding);
@@ -649,7 +650,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           </Suspense>
         )}
 
-        {!viewingReports && !isLoading && !inDiffMode && (
+        {(!viewingReports || isGuest) && !isLoading && !inDiffMode && (
           <>
             <UploadSection
               files={files}
