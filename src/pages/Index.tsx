@@ -54,6 +54,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [files, setFiles] = useFiles();
   const [branding, setBranding] = useBranding();
   const [viewingReports, setViewingReports] = useViewingReports();
+  const fileList = Array.isArray(files) ? files : [];
   const [diffSelection, setDiffSelection] = useState<DiffSelection>(null);
   const [restoredSession, setRestoredSession] = useState(false);
   const [savingReports, setSavingReports] = useState(false);
@@ -77,15 +78,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [backendDebugInfo, setBackendDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   const {
-    reports, setReports, activeReportId, setActiveReportId,
+    reports: reportsState, setReports, activeReportId, setActiveReportId,
     isLoading, loadingReportIds, failedReportIds,
     generateIndividual, generateExecutive, generateExecutiveOnePager, generateCompliance, generateAll, handleRetry,
-  } = useReportGeneration(files, branding);
-
+  } = useReportGeneration(fileList, branding);
+  const reports = Array.isArray(reportsState) ? reportsState : [];
   const {
     analysisResults: rawAnalysisResults, totalFindings: rawTotalFindings, totalRules: rawTotalRules, totalSections: rawTotalSections,
     totalPopulated: rawTotalPopulated, extractionPct: rawExtractionPct, aggregatedPosture: rawAggregatedPosture,
-  } = useFirewallAnalysis(files);
+  } = useFirewallAnalysis(fileList);
 
   const analysisResults = analysisOverride ?? rawAnalysisResults;
   const totalFindings = analysisOverride
@@ -106,7 +107,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const aggregatedPosture = rawAggregatedPosture;
 
   const configMetas = useMemo(() =>
-    files.map((f) => {
+    fileList.map((f) => {
       const label = getFileLabel(f);
       const result = analysisResults[label];
       return {
@@ -116,7 +117,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         configHash: f.id,
       };
     }),
-  [files, analysisResults]);
+  [fileList, analysisResults]);
 
   const securityStats = useMemo(() => {
     if (Object.keys(analysisResults).length === 0) return null;
@@ -136,11 +137,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     return { score: avgScore, grade, criticalHigh, coverage, totalRules };
   }, [analysisResults, aggregatedPosture, totalRules]);
 
-  useAutoSave(branding, reports, activeReportId);
+  useAutoSave(branding, reports, activeReportId, !isGuest);
 
-  // Save finding snapshots when analysis completes (for regression detection)
+  // Save finding snapshots when analysis completes (authenticated users only)
   useEffect(() => {
-    if (Object.keys(analysisResults).length === 0) return;
+    if (isGuest || Object.keys(analysisResults).length === 0) return;
     for (const [label, result] of Object.entries(analysisResults)) {
       const hostname = result.hostname || label;
       const score = computeRiskScore(result).overall;
@@ -166,12 +167,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, [analysisResults, isGuest, org?.id, branding.customerName]);
 
-  // Save config snapshots for version control (localStorage)
+  // Save config snapshots for version control (localStorage, authenticated users only)
   useEffect(() => {
-    if (Object.keys(analysisResults).length === 0) return;
+    if (isGuest || Object.keys(analysisResults).length === 0) return;
     for (const [label, result] of Object.entries(analysisResults)) {
       const hostname = result.hostname || label;
-      const file = files.find((f) => getFileLabel(f) === label);
+      const file = fileList.find((f) => getFileLabel(f) === label);
       const sections = file?.extractedData ?? {};
       const sectionKeys = Object.keys(sections);
       saveConfigSnapshot({
@@ -185,7 +186,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         snapshot_hash: hashConfig(sections as Record<string, unknown>),
       });
     }
-  }, [analysisResults, files, branding.customerName]);
+  }, [analysisResults, fileList, branding.customerName]);
 
   // Scroll to top when analysis results first appear (HTML upload or agent load)
   useEffect(() => {
@@ -196,23 +197,25 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     prevResultCountRef.current = count;
   }, [analysisResults]);
 
-  // Run once on mount to restore session; loadSession is stable and has no external deps.
+  // Restore session only for authenticated (non-guest) users
   useEffect(() => {
+    if (isGuest) return;
     const session = loadSession();
-    if (session && session.reports.length > 0) {
+    if (session && Array.isArray(session.reports) && session.reports.length > 0) {
       setBranding(session.branding);
       setReports(session.reports);
       setActiveReportId(session.activeReportId);
       setRestoredSession(true);
       setViewingReports(true);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilesChange = useCallback(async (uploaded: UploadedFile[]) => {
+    const uploadedList = Array.isArray(uploaded) ? uploaded : [];
     const existingParsed: ParsedFile[] = [];
     const toProcess: UploadedFile[] = [];
-    for (const f of uploaded) {
-      const existing = files.find((pf) => pf.id === f.id);
+    for (const f of uploadedList) {
+      const existing = fileList.find((pf) => pf.id === f.id);
       if (existing) existingParsed.push({ ...existing, label: f.label });
       else toProcess.push(f);
     }
@@ -265,7 +268,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     if (org?.id) {
       logAudit(org.id, "config.uploaded", "config", "", { count: toProcess.length });
     }
-  }, [files, reports.length, setReports, setActiveReportId, org?.id]);
+  }, [fileList, reports.length, setReports, setActiveReportId, org?.id]);
 
   const handleLoadAgentAssessment = useCallback((label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string; tenantName?: string }) => {
     const extractedData = rawConfig
@@ -320,13 +323,13 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   }, [rawAnalysisResults, analysisOverride]);
 
   // Enrich files with Sophos Central live data when firewalls are linked
-  const fileIds = useMemo(() => files.map((f) => f.id).join(","), [files]);
+  const fileIds = useMemo(() => fileList.map((f) => f.id).join(","), [fileList]);
   const centralEnrichRunIdRef = useRef(0);
 
   useEffect(() => { setCentralEnriched(false); }, [fileIds]);
 
   useEffect(() => {
-    if (!org?.id || isGuest || files.length === 0 || centralEnriched || localMode) return;
+    if (!org?.id || isGuest || fileList.length === 0 || centralEnriched || localMode) return;
     centralEnrichRunIdRef.current += 1;
     const thisRun = centralEnrichRunIdRef.current;
     let cancelled = false;
@@ -337,7 +340,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         const status = await getCentralStatus(orgId);
         if (!status?.connected || cancelled || thisRun !== centralEnrichRunIdRef.current) return;
 
-        const hashes = files.map((f) => f.id);
+        const hashes = fileList.map((f) => f.id);
         const { data: links } = await supabase
           .from("firewall_config_links")
           .select("config_hash, central_firewall_id, central_tenant_id")
@@ -411,7 +414,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     })();
 
     return () => { cancelled = true; };
-  }, [org?.id, isGuest, files.length, centralEnriched, localMode]); // eslint-disable-line react-hooks/exhaustive-deps -- fileIds/files not in deps; effect intentionally runs on length change
+  }, [org?.id, isGuest, fileList.length, centralEnriched, localMode]); // eslint-disable-line react-hooks/exhaustive-deps -- fileIds/fileList not in deps; effect intentionally runs on length change
 
   const handleSaveReports = useCallback(async (includeReports: boolean) => {
     if (Object.keys(analysisResults).length === 0) return;
@@ -482,10 +485,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   }, []);
 
   const fetchBackendDebug = useCallback(async () => {
-    if (files.length === 0) return;
-    if (activeReportId === REPORT_ID.EXECUTIVE && files.length >= 2) {
+    if (fileList.length === 0) return;
+    if (activeReportId === REPORT_ID.EXECUTIVE && fileList.length >= 2) {
       const mergedSections: Record<string, ExtractedSections> = {};
-      const labels = files.map((f) => {
+      const labels = fileList.map((f) => {
         const l = getFileLabel(f);
         mergedSections[l] = f.extractedData;
         return l;
@@ -503,11 +506,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       return;
     }
     if (activeReportId === REPORT_ID.COMPLIANCE) {
-      const labels = files.map((f) => getFileLabel(f));
+      const labels = fileList.map((f) => getFileLabel(f));
       const mergedSections: Record<string, ExtractedSections> = {};
-      files.forEach((f) => { mergedSections[getFileLabel(f)] = f.extractedData; });
+      fileList.forEach((f) => { mergedSections[getFileLabel(f)] = f.extractedData; });
       const info = await fetchParseConfigDebug({
-        sections: (files.length === 1 ? files[0].extractedData : (mergedSections as unknown as ExtractedSections)),
+        sections: (fileList.length === 1 ? fileList[0].extractedData : (mergedSections as unknown as ExtractedSections)),
         compliance: true,
         firewallLabels: labels,
         environment: branding.environment || undefined,
@@ -518,7 +521,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setBackendDebugInfo(info);
       return;
     }
-    const file = files.find((f) => reportIdForFile(f.id) === activeReportId) ?? files[0];
+    const file = fileList.find((f) => reportIdForFile(f.id) === activeReportId) ?? fileList[0];
     const info = await fetchParseConfigDebug({
       sections: file.extractedData,
       firewallLabels: [getFileLabel(file)],
@@ -529,16 +532,16 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       selectedFrameworks: branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined,
     });
     setBackendDebugInfo(info);
-  }, [activeReportId, files, branding]);
+  }, [activeReportId, fileList, branding]);
 
   const hasReports = reports.length > 0;
-  const hasFiles = files.length > 0;
+  const hasFiles = fileList.length > 0;
   const inDiffMode = diffSelection !== null;
 
   useEffect(() => {
     if (analysisTab === ANALYSIS_TAB.REMEDIATION && totalFindings === 0) setAnalysisTab(ANALYSIS_TAB.OVERVIEW);
-    if (analysisTab === ANALYSIS_TAB.COMPARE && files.length < 2) setAnalysisTab(ANALYSIS_TAB.OVERVIEW);
-  }, [analysisTab, totalFindings, files.length]);
+    if (analysisTab === ANALYSIS_TAB.COMPARE && fileList.length < 2) setAnalysisTab(ANALYSIS_TAB.OVERVIEW);
+  }, [analysisTab, totalFindings, fileList.length]);
 
   const keyboardShortcuts = useMemo<ShortcutAction[]>(() => [
     { key: "?", shift: true, description: "Show keyboard shortcuts", handler: () => setShortcutsOpen((v) => !v) },
@@ -562,7 +565,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const dashboardView = (
     <>
       <UploadSection
-        files={files}
+        files={fileList}
         onFilesChange={handleFilesChange}
         parsingProgress={parsingProgress}
         branding={branding}
@@ -595,7 +598,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       {hasFiles && (
         <AnalysisTabs
           analysisResult={analysisResults}
-          files={files}
+          files={fileList}
           branding={branding}
           activeTab={analysisTab}
           setActiveTab={setAnalysisTab}
@@ -633,7 +636,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           <div className="flex-1" />
           {!localMode && !isViewerOnly && (
           <div className="flex flex-wrap gap-2">
-            {files.length >= 2 && !reports.find((r) => r.id === REPORT_ID.EXECUTIVE) && (
+            {fileList.length >= 2 && !reports.find((r) => r.id === REPORT_ID.EXECUTIVE) && (
               <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
                 <img src="/icons/sophos-chart.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Executive Brief
               </Button>
@@ -651,7 +654,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         <div className="no-print flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]">
           <span className="font-semibold text-foreground mr-1">{reports.length} report{reports.length !== 1 ? "s" : ""}</span>
           <span className="w-px h-3 bg-border" />
-          <span className="text-muted-foreground">{files.length} firewall{files.length !== 1 ? "s" : ""}</span>
+          <span className="text-muted-foreground">{fileList.length} firewall{fileList.length !== 1 ? "s" : ""}</span>
           <span className="w-px h-3 bg-border" />
           <span className="text-muted-foreground">{totalRules} rules</span>
           {totalFindings > 0 && (
@@ -722,7 +725,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     <div className="min-h-screen bg-background">
       <AppHeader
         hasFiles={hasFiles}
-        fileCount={files.length}
+        fileCount={fileList.length}
         customerName={branding.customerName}
         environment={branding.environment}
         selectedFrameworks={branding.selectedFrameworks}
@@ -806,12 +809,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         {inDiffMode && (
           <Suspense fallback={<div className="text-center py-8 text-muted-foreground">Loading diff viewer…</div>}>
             <ConfigDiff
-              beforeLabel={getFileLabel(files[diffSelection.beforeIdx])}
-              afterLabel={getFileLabel(files[diffSelection.afterIdx])}
-              beforeSections={files[diffSelection.beforeIdx].extractedData}
-              afterSections={files[diffSelection.afterIdx].extractedData}
-              beforeAnalysis={analysisResults[getFileLabel(files[diffSelection.beforeIdx])]}
-              afterAnalysis={analysisResults[getFileLabel(files[diffSelection.afterIdx])]}
+              beforeLabel={getFileLabel(fileList[diffSelection.beforeIdx])}
+              afterLabel={getFileLabel(fileList[diffSelection.afterIdx])}
+              beforeSections={fileList[diffSelection.beforeIdx].extractedData}
+              afterSections={fileList[diffSelection.afterIdx].extractedData}
+              beforeAnalysis={analysisResults[getFileLabel(fileList[diffSelection.beforeIdx])]}
+              afterAnalysis={analysisResults[getFileLabel(fileList[diffSelection.afterIdx])]}
               onClose={() => setDiffSelection(null)}
             />
           </Suspense>

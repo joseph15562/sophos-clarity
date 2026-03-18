@@ -51,10 +51,19 @@ export function loadSession(): {
       return null;
     }
 
-    if (!data.reports?.length) return null;
+    if (!Array.isArray(data.reports) || data.reports.length === 0) return null;
 
+    const branding = data.branding && typeof data.branding === "object"
+      ? {
+          ...data.branding,
+          logoUrl: null,
+          selectedFrameworks: Array.isArray(data.branding.selectedFrameworks)
+            ? data.branding.selectedFrameworks
+            : [],
+        }
+      : { companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] as string[] };
     return {
-      branding: { ...data.branding, logoUrl: null },
+      branding,
       reports: data.reports,
       activeReportId: data.activeReportId || data.reports[0]?.id || "",
     };
@@ -66,17 +75,33 @@ export function loadSession(): {
 
 export function clearSession() {
   localStorage.removeItem(STORAGE_KEY);
+
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    if (
+      key.startsWith("sophos-") ||
+      key.startsWith("firecomply-") ||
+      key.startsWith("firecomply_") ||
+      key.startsWith("shared-report-")
+    ) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach((k) => localStorage.removeItem(k));
 }
 
 export function useAutoSave(
   branding: BrandingData,
   reports: ReportEntry[],
   activeReportId: string,
+  enabled = true,
 ) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    if (reports.length === 0) return;
+    if (!enabled || reports.length === 0) return;
     const hasContent = reports.some((r) => r.markdown);
     if (!hasContent) return;
 
@@ -86,5 +111,5 @@ export function useAutoSave(
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer.current);
-  }, [branding, reports, activeReportId]);
+  }, [branding, reports, activeReportId, enabled]);
 }

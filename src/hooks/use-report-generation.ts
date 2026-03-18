@@ -86,6 +86,7 @@ export type { ParsedFile } from "@/types/parsed-file";
 export function useReportGeneration(files: ParsedFile[], branding: BrandingData) {
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
+  const fileList = Array.isArray(files) ? files : [];
 
   const [reports, setReports] = useState<ReportEntry[]>([]);
   const [activeReportId, setActiveReportId] = useState("");
@@ -210,11 +211,11 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
   );
 
   const generateIndividual = async (keepLoading = false) => {
-    if (files.length === 0) return;
+    if (fileList.length === 0) return;
     setIsLoading(true);
     setFailedReportIds(new Set());
 
-    const newReports: ReportEntry[] = files.map((f) => ({
+    const newReports: ReportEntry[] = fileList.map((f) => ({
       id: reportIdForFile(f.id),
       label: getFileLabel(f),
       markdown: "",
@@ -222,23 +223,23 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     setReports(newReports);
     setActiveReportId(newReports[0].id);
 
-    for (const f of files) {
+    for (const f of fileList) {
       const reportId = reportIdForFile(f.id);
       const label = getFileLabel(f);
       await generateSingleReport(reportId, f.extractedData, { firewallLabels: [label], centralEnrichment: f.centralEnrichment });
-      if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
+      if (fileList.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
     if (!keepLoading) setIsLoading(false);
   };
 
   const generateExecutive = async (existingReports?: boolean) => {
-    if (files.length < 2) return;
+    if (fileList.length < 2) return;
     if (!existingReports) setIsLoading(true);
 
     const mergedSections: Record<string, ExtractedSections> = {};
     const labels: string[] = [];
-    files.forEach((f) => {
+    fileList.forEach((f) => {
       const label = getFileLabel(f);
       labels.push(label);
       mergedSections[label] = f.extractedData;
@@ -269,9 +270,9 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
   };
 
   const generateExecutiveOnePager = useCallback(() => {
-    if (files.length === 0) return;
+    if (fileList.length === 0) return;
     const analysisResults: Record<string, AnalysisResult> = {};
-    files.forEach((f) => {
+    fileList.forEach((f) => {
       const label = getFileLabel(f);
       analysisResults[label] = analyseConfig(f.extractedData, {
         centralLinked: !!f.centralEnrichment,
@@ -288,15 +289,15 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       return [...without, { id: execOnePagerId, label: "📄 Executive One-Pager", markdown: fullMarkdown }];
     });
     setActiveReportId(execOnePagerId);
-  }, [files, branding]);
+  }, [fileList, branding]);
 
   const generateCompliance = async () => {
-    if (files.length === 0) return;
+    if (fileList.length === 0) return;
     setIsLoading(true);
 
     const mergedSections: Record<string, ExtractedSections> = {};
     const labels: string[] = [];
-    files.forEach((f) => {
+    fileList.forEach((f) => {
       const label = getFileLabel(f);
       labels.push(label);
       mergedSections[label] = f.extractedData;
@@ -311,8 +312,8 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
 
     await generateSingleReport(
       complianceId,
-      files.length === 1
-        ? files[0].extractedData
+      fileList.length === 1
+        ? fileList[0].extractedData
         : (mergedSections as unknown as ExtractedSections),
       { compliance: true, firewallLabels: labels }
     );
@@ -321,11 +322,11 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
   };
 
   const generateAll = async () => {
-    if (files.length === 0) return;
+    if (fileList.length === 0) return;
     setIsLoading(true);
     setFailedReportIds(new Set());
 
-    const newReports: ReportEntry[] = files.map((f) => ({
+    const newReports: ReportEntry[] = fileList.map((f) => ({
       id: reportIdForFile(f.id),
       label: getFileLabel(f),
       markdown: "",
@@ -333,13 +334,13 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     setReports(newReports);
     setActiveReportId(newReports[0].id);
 
-    for (const f of files) {
+    for (const f of fileList) {
       const label = getFileLabel(f);
       await generateSingleReport(reportIdForFile(f.id), f.extractedData, { firewallLabels: [label] });
-      if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
+      if (fileList.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
-    if (files.length >= 2) {
+    if (fileList.length >= 2) {
       const execId = REPORT_ID.EXECUTIVE;
       setReports((prev) => {
         const without = prev.filter((r) => r.id !== execId);
@@ -350,9 +351,9 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     }
 
     const complianceId = REPORT_ID.COMPLIANCE;
-    const labels = files.map((f) => getFileLabel(f));
+    const labels = fileList.map((f) => getFileLabel(f));
     const mergedSections: Record<string, ExtractedSections> = {};
-    files.forEach((f) => {
+    fileList.forEach((f) => {
       const label = getFileLabel(f);
       mergedSections[label] = f.extractedData;
     });
@@ -363,8 +364,8 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     setActiveReportId(complianceId);
     await generateSingleReport(
       complianceId,
-      files.length === 1
-        ? files[0].extractedData
+      fileList.length === 1
+        ? fileList[0].extractedData
         : (mergedSections as unknown as ExtractedSections),
       { compliance: true, firewallLabels: labels }
     );
@@ -377,7 +378,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       if (reportId === REPORT_ID.EXECUTIVE) {
         const mergedSections: Record<string, ExtractedSections> = {};
         const labels: string[] = [];
-        files.forEach((f) => {
+        fileList.forEach((f) => {
           const label = getFileLabel(f);
           labels.push(label);
           mergedSections[label] = f.extractedData;
@@ -391,27 +392,27 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       } else if (reportId === REPORT_ID.COMPLIANCE) {
         const mergedSections: Record<string, ExtractedSections> = {};
         const labels: string[] = [];
-        files.forEach((f) => {
+        fileList.forEach((f) => {
           const label = getFileLabel(f);
           labels.push(label);
           mergedSections[label] = f.extractedData;
         });
         generateSingleReport(
           reportId,
-          files.length === 1
-            ? files[0].extractedData
+          fileList.length === 1
+            ? fileList[0].extractedData
             : (mergedSections as unknown as ExtractedSections),
           { compliance: true, firewallLabels: labels }
         );
       } else {
-        const file = files.find((f) => reportIdForFile(f.id) === reportId);
+        const file = fileList.find((f) => reportIdForFile(f.id) === reportId);
         if (file) {
           const label = file.label || file.fileName.replace(/\.(html|htm)$/i, "");
           generateSingleReport(reportId, file.extractedData, { firewallLabels: [label] });
         }
       }
     },
-    [files, generateSingleReport, generateExecutiveOnePager]
+    [fileList, generateSingleReport, generateExecutiveOnePager]
   );
 
   return {

@@ -5,16 +5,17 @@ import { getFileLabel } from "@/lib/utils";
 import type { ParsedFile } from "@/types/parsed-file";
 
 export function useFirewallAnalysis(files: ParsedFile[]) {
+  const fileList = Array.isArray(files) ? files : [];
   const analysisResults = useMemo<Record<string, AnalysisResult>>(() => {
     const results: Record<string, AnalysisResult> = {};
-    for (const f of files) {
+    for (const f of fileList) {
       const label = getFileLabel(f);
       results[label] = analyseConfig(f.extractedData, {
         centralLinked: !!f.centralEnrichment,
       });
     }
     return results;
-  }, [files]);
+  }, [fileList]);
 
   const totalFindings = useMemo(
     () => Object.values(analysisResults).reduce((sum, r) => sum + r.findings.length, 0),

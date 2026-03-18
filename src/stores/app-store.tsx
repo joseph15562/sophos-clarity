@@ -16,7 +16,7 @@ export interface AppState {
 }
 
 type AppAction =
-  | { type: "SET_FILES"; payload: ParsedFile[] }
+  | { type: "SET_FILES"; payload: ParsedFile[] | ((prev: ParsedFile[]) => ParsedFile[]) }
   | { type: "SET_BRANDING"; payload: BrandingData | ((prev: BrandingData) => BrandingData) }
   | { type: "SET_VIEWING_REPORTS"; payload: boolean };
 
@@ -37,12 +37,28 @@ const initialState: AppState = {
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case "SET_FILES":
-      return { ...state, files: action.payload };
+    case "SET_FILES": {
+      const next =
+        typeof action.payload === "function"
+          ? action.payload(state.files)
+          : Array.isArray(action.payload)
+            ? action.payload
+            : state.files;
+      return { ...state, files: Array.isArray(next) ? next : state.files };
+    }
     case "SET_BRANDING": {
       const next =
         typeof action.payload === "function" ? action.payload(state.branding) : action.payload;
-      return { ...state, branding: next };
+      const safeBranding =
+        next && typeof next === "object"
+          ? {
+              ...next,
+              selectedFrameworks: Array.isArray(next.selectedFrameworks)
+                ? next.selectedFrameworks
+                : [],
+            }
+          : state.branding;
+      return { ...state, branding: safeBranding };
     }
     case "SET_VIEWING_REPORTS":
       return { ...state, viewingReports: action.payload };
@@ -83,7 +99,11 @@ export function useFiles() {
   const { state, dispatch } = useAppStore();
   return [
     state.files,
-    useCallback((payload: ParsedFile[]) => dispatch({ type: "SET_FILES", payload }), [dispatch]),
+    useCallback(
+      (payload: ParsedFile[] | ((prev: ParsedFile[]) => ParsedFile[])) =>
+        dispatch({ type: "SET_FILES", payload }),
+      [dispatch],
+    ),
   ] as const;
 }
 

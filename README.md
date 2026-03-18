@@ -55,6 +55,60 @@ To install Git hooks (run ESLint + Prettier on staged files before commit): `npx
 
 For the `api` Edge Function (agent registration and auth), set **AGENT_API_HMAC_SECRET** in Supabase Dashboard → Project Settings → Edge Functions → Secrets. Use a dedicated secret (e.g. 32+ byte hex) for signing/verifying agent API keys; do not reuse the service role key. Rotate this secret independently when needed.
 
+## Related tools
+
+**[Sophos Central MCP Server](https://github.com/Aaronjacobs000/sophos-central-mcp)** — An [MCP](https://modelcontextprotocol.io/) server that exposes **265 tools** across 14 Sophos Central API namespaces (firewalls, endpoints, alerts, policies, email, XDR, SIEM, etc.).
+
+### Can it be integrated into FireComply?
+
+| Approach | Summary |
+|----------|--------|
+| **Run MCP inside the app** | Not a good fit. FireComply already talks to Sophos Central via a **Supabase Edge Function** (per-org credentials, region routing, firewall/alert/licence APIs). The MCP server is a separate Node process aimed at **AI tool use** (Claude/Cursor), not at being called by a web app. Replacing or wrapping the Edge Function with the MCP server would duplicate auth and add operational complexity without clear benefit. |
+| **Use MCP alongside FireComply (recommended)** | Use the MCP server in **Cursor** or **Claude** so the AI has Sophos Central context when you develop or debug FireComply. No change to the product; the app keeps using its existing Central integration. |
+| **In-app AI that queries Central** | A possible future feature: an AI assistant inside FireComply that can list tenants, firewalls, alerts, etc. That would require a backend that runs an LLM with tool use and passes the user’s (or org’s) Central context securely. The MCP server could inform the **tool contract** (e.g. same operations), but you’d still implement auth and proxy in your own backend rather than running the MCP server directly in production. |
+
+**Practical integration today:** add the MCP server to your IDE so the AI can use Sophos Central when working on this repo.
+
+#### Adding to Cursor
+
+1. **Create or edit the MCP config**
+   - **Project-only:** create `.cursor/mcp.json` in this repo (you can commit it with placeholder env and use `${env:SOPHOS_CLIENT_ID}` so others don’t need your secrets).
+   - **All projects:** create or edit `~/.cursor/mcp.json` (macOS/Linux) or `%USERPROFILE%\.cursor\mcp.json` (Windows; the `.cursor` folder is hidden by default—enable “Hidden items” in File Explorer or run `Win+R` → `%USERPROFILE%\.cursor`).
+
+2. **Add the `sophos-central` server** — put this inside the `mcpServers` object (merge with any existing servers). Or copy `.cursor/mcp.json.example` to `.cursor/mcp.json` and set `SOPHOS_CLIENT_ID` and `SOPHOS_CLIENT_SECRET` in your environment (the example uses `${env:...}` so secrets stay out of the file).
+
+   ```json
+   {
+     "mcpServers": {
+       "sophos-central": {
+         "command": "npx",
+         "args": ["-y", "sophos-central-mcp-server"],
+         "env": {
+           "SOPHOS_CLIENT_ID": "your-client-id",
+           "SOPHOS_CLIENT_SECRET": "your-client-secret",
+           "TRANSPORT": "stdio"
+         }
+       }
+     }
+   }
+   ```
+
+   Replace `your-client-id` and `your-client-secret` with your [Sophos Central API credentials](https://github.com/Aaronjacobs000/sophos-central-mcp#creating-api-credentials). To avoid hardcoding secrets, use Cursor’s [config interpolation](https://cursor.com/docs/mcp): set `SOPHOS_CLIENT_ID` and `SOPHOS_CLIENT_SECRET` in your shell or system env, then use `"SOPHOS_CLIENT_ID": "${env:SOPHOS_CLIENT_ID}"` and the same for the secret.
+
+3. **Restart Cursor** fully (quit and reopen) so it picks up the new MCP server.
+
+4. **Confirm** — open **Settings → Features → Model Context Protocol** (or Cmd+Shift+J and check MCP). You should see `sophos-central` in the list. The AI can then use tools like `sophos_list_firewalls`, `sophos_list_alerts`, `sophos_partner_gap_analysis`, etc. when you’re working in this repo.
+
+#### Claude Code (one-time)
+
+```bash
+claude mcp add sophos-central \
+  -e SOPHOS_CLIENT_ID="your-client-id" \
+  -e SOPHOS_CLIENT_SECRET="your-client-secret" \
+  -e TRANSPORT="stdio" \
+  -- npx -y sophos-central-mcp-server
+```
+
 ## Target users
 
 - MSP security engineers

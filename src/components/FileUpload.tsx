@@ -22,6 +22,7 @@ type Props = {
 let fileIdCounter = 0;
 
 export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
+  const fileList = Array.isArray(files) ? files : [];
   const [dragActive, setDragActive] = useState(false);
 
   const handleFiles = useCallback(
@@ -45,10 +46,10 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
       );
 
       Promise.all(valid.map(readFile)).then((parsed) => {
-        if (parsed.length > 0) onFilesChange([...files, ...parsed]);
+        if (parsed.length > 0) onFilesChange([...fileList, ...parsed]);
       });
     },
-    [files, onFilesChange],
+    [fileList, onFilesChange],
   );
 
   const onDrop = useCallback(
@@ -73,21 +74,21 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
   };
 
   const removeFile = (id: string) => {
-    onFilesChange(files.filter((f) => f.id !== id));
+    onFilesChange(fileList.filter((f) => f.id !== id));
   };
 
   const fileHostnames = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const f of files) {
+    for (const f of fileList) {
       const match = f.content.match(/Host\s*Name\s*<\/td>\s*<td[^>]*>([^<]+)/i);
       map[f.id] = match?.[1]?.trim() ?? "";
     }
     return map;
-  }, [files]);
+  }, [fileList]);
 
   const fileHashes = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const f of files) {
+    for (const f of fileList) {
       if (!f.content) {
         map[f.id] = f.id;
         continue;
@@ -100,12 +101,12 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
       map[f.id] = Math.abs(hash).toString(36);
     }
     return map;
-  }, [files]);
+  }, [fileList]);
 
   return (
     <div className="space-y-3">
       {/* File list */}
-      {files.map((f) => (
+      {fileList.map((f) => (
         <div key={f.id} className="rounded-xl border border-[#2006F7]/25 dark:border-[#2006F7]/30 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] flex items-center gap-4 p-4">
           <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
             <img src="/icons/sophos-document.svg" alt="" className="h-5 w-5 sophos-icon" />
@@ -115,7 +116,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               type="text"
               value={f.label}
               onChange={(e) => {
-                const updated = files.map((file) =>
+                const updated = fileList.map((file) =>
                   file.id === f.id ? { ...file, label: e.target.value } : file
                 );
                 onFilesChange(updated);
@@ -141,7 +142,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
           </Button>
         </div>
       ))}
-      {files.length > 0 && (
+      {fileList.length > 0 && (
         <p className="text-[11px] text-muted-foreground">
           Click on the config name above to rename the firewall for the report.
         </p>
@@ -154,14 +155,14 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
         onDrop={onDrop}
         onClick={onBrowse}
         className={`cursor-pointer rounded-xl border-2 border-dashed text-center transition-all duration-200 ${
-          files.length > 0 ? "p-5" : "p-10"
+          fileList.length > 0 ? "p-5" : "p-10"
         } ${
           dragActive
             ? "border-[#2006F7] bg-[#2006F7]/5 scale-[1.01]"
             : "border-border/60 dark:border-border hover:border-[#2006F7]/40 hover:bg-[#2006F7]/[0.02] dark:hover:bg-[#2006F7]/[0.04]"
         }`}
       >
-        {files.length > 0 ? (
+        {fileList.length > 0 ? (
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Plus className="h-5 w-5" />
             <span className="text-sm font-medium">Add another firewall config</span>

@@ -738,9 +738,10 @@ function BackendDebugPanel({ backendDebugInfo, onFetchBackendDebug }: { backendD
 }
 
 export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions, analysisResults, selectedFrameworks, backendDebugInfo, onFetchBackendDebug }: Props) {
-  if (reports.length === 0 && !isLoading) return null;
+  const reportList = Array.isArray(reports) ? reports : [];
+  if (reportList.length === 0 && !isLoading) return null;
 
-  const allDone = reports.length > 0 && !isLoading && reports.every(r => r.markdown && !failedReportIds.has(r.id));
+  const allDone = reportList.length > 0 && !isLoading && reportList.every(r => r.markdown && !failedReportIds.has(r.id));
 
   const handleDownloadAll = async () => {
     if (!allDone) return;
@@ -748,7 +749,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     const reportsFolder = zip.folder("reports")!;
     const presentationsFolder = zip.folder("presentations")!;
 
-    for (const report of reports) {
+    for (const report of reportList) {
       const baseName = report.label.replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").toLowerCase();
 
       // Word
@@ -772,8 +773,8 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     saveAs(zipBlob, zipName);
   };
 
-  if (reports.length === 1 && !isLoading) {
-    const r = reports[0];
+  if (reportList.length === 1 && !isLoading) {
+    const r = reportList[0];
     const oneReportDone = r.markdown && !failedReportIds.has(r.id);
     return (
       <div className="space-y-4">
@@ -809,7 +810,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
     );
   }
 
-  if (reports.length === 0 && isLoading) {
+  if (reportList.length === 0 && isLoading) {
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-foreground no-print">Document Preview</h2>
@@ -836,7 +837,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
       </div>
       <Tabs value={activeReportId} onValueChange={onActiveChange} className="no-print-tabs">
         <div className="no-print flex items-center gap-0 border-b border-border mb-4">
-          {reports.map((r) => {
+          {reportList.map((r) => {
             const done = r.markdown && !loadingReportIds.has(r.id) && !failedReportIds.has(r.id);
             const isActive = r.id === activeReportId;
             return (
@@ -857,7 +858,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
             );
           })}
         </div>
-        {reports.map((r) => (
+        {reportList.map((r) => (
           <TabsContent key={r.id} value={r.id}>
             <ReportContent
               markdown={r.markdown}

@@ -20,7 +20,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.warn("[ErrorBoundary]", error.message, info.componentStack);
+    console.error("[ErrorBoundary]", error.message, "\nStack:", error.stack, "\nComponent stack:", info.componentStack);
   }
 
   handleRetry = () => {

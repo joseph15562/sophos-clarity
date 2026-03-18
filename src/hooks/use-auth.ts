@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, createContext, useContext } 
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
+import { clearSession } from "@/hooks/use-session-persistence";
 
 export interface OrgInfo {
   id: string;
@@ -146,6 +147,7 @@ export function useAuthProvider(): AuthState {
   const signOut = useCallback(async () => {
     const currentOrgId = org?.id ?? "";
     const currentEmail = user?.email ?? undefined;
+    clearSession();
     await supabase.auth.signOut();
     setOrg(null);
     setRole(null);

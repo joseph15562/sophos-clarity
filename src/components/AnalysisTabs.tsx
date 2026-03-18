@@ -137,6 +137,7 @@ export function AnalysisTabs({
   localMode,
   onExplainFinding,
 }: AnalysisTabsProps) {
+  const fileList = Array.isArray(files) ? files : [];
   const panelRef = useRef<HTMLDivElement>(null);
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
   const w = (id: string) => isWidgetVisible(widgetPrefs, id);
@@ -181,7 +182,7 @@ export function AnalysisTabs({
               Remediation
             </TabsTrigger>
           )}
-          {files.length >= 2 && (
+          {fileList.length >= 2 && (
             <TabsTrigger value={ANALYSIS_TAB.COMPARE} className="gap-2">
               <ArrowLeftRight className="h-3.5 w-3.5" />
               Compare
@@ -282,7 +283,7 @@ export function AnalysisTabs({
           )}
 
           <EstateOverview
-            fileCount={files.length}
+            fileCount={fileList.length}
             analysisResults={analysisResult}
             totalFindings={totalFindings}
             totalRules={totalRules}
@@ -306,12 +307,12 @@ export function AnalysisTabs({
             <div className="grid gap-6 lg:grid-cols-2">
               {w("mdr-status") && (
                 <Suspense fallback={<CardSkeleton />}>
-                  <MdrStatus analysisResults={analysisResult} files={files} />
+                  <MdrStatus analysisResults={analysisResult} files={fileList} />
                 </Suspense>
               )}
               {w("firmware-tracker") && (
                 <Suspense fallback={<CardSkeleton />}>
-                  <FirmwareTracker files={files} />
+                  <FirmwareTracker files={fileList} />
                 </Suspense>
               )}
             </div>
@@ -431,7 +432,7 @@ export function AnalysisTabs({
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Suspense fallback={<ChartSkeleton />}>
-              <ZoneTrafficFlow files={files} />
+              <ZoneTrafficFlow files={fileList} />
             </Suspense>
             {totalFindings > 0 && (
               <Suspense fallback={<CardSkeleton />}>
@@ -477,12 +478,12 @@ export function AnalysisTabs({
             <div className="grid gap-6 lg:grid-cols-2">
               {w("encryption-overview") && (
                 <Suspense fallback={<ChartSkeleton />}>
-                  <EncryptionOverview analysisResults={analysisResult} files={files} />
+                  <EncryptionOverview analysisResults={analysisResult} files={fileList} />
                 </Suspense>
               )}
               {w("admin-exposure-map") && (
                 <Suspense fallback={<CardSkeleton />}>
-                  <AdminExposureMap analysisResults={analysisResult} files={files} />
+                  <AdminExposureMap analysisResults={analysisResult} files={fileList} />
                 </Suspense>
               )}
             </div>
@@ -492,12 +493,12 @@ export function AnalysisTabs({
             <div className="grid gap-6 lg:grid-cols-2">
               {w("vpn-security-summary") && (
                 <Suspense fallback={<CardSkeleton />}>
-                  <VpnSecuritySummary files={files} />
+                  <VpnSecuritySummary files={fileList} />
                 </Suspense>
               )}
               {w("network-zone-map") && (
                 <Suspense fallback={<ChartSkeleton />}>
-                  <NetworkZoneMap files={files} />
+                  <NetworkZoneMap files={fileList} />
                 </Suspense>
               )}
             </div>
@@ -505,13 +506,13 @@ export function AnalysisTabs({
 
           {w("protocol-service-usage") && (
             <Suspense fallback={<ChartSkeleton />}>
-              <ProtocolServiceWidget files={files} />
+              <ProtocolServiceWidget files={fileList} />
             </Suspense>
           )}
 
           {w("rule-action-dist") && (
             <Suspense fallback={<ChartSkeleton />}>
-              <RuleActionDistribution files={files} />
+              <RuleActionDistribution files={fileList} />
             </Suspense>
           )}
 
@@ -523,7 +524,7 @@ export function AnalysisTabs({
 
           {w("threat-feed-timeline") && (
             <Suspense fallback={<CardSkeleton />}>
-              <ThreatFeedTimeline files={files} />
+              <ThreatFeedTimeline files={fileList} />
             </Suspense>
           )}
         </ErrorBoundary>
@@ -553,7 +554,7 @@ export function AnalysisTabs({
           <Suspense fallback={<CardSkeleton />}>
             <SophosBestPractice
               analysisResults={analysisResult}
-              centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
+              centralLicences={fileList.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
             />
           </Suspense>
 
@@ -595,7 +596,7 @@ export function AnalysisTabs({
             <div className="grid gap-6 lg:grid-cols-2">
               {w("compliance-calendar") && (
                 <Suspense fallback={<CardSkeleton />}>
-                  <ComplianceCalendar files={files} />
+                  <ComplianceCalendar files={fileList} />
                 </Suspense>
               )}
               {w("attestation-workflow") && (
@@ -618,33 +619,33 @@ export function AnalysisTabs({
       <TabsContent value="optimisation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Optimisation view failed to load">
           <Suspense fallback={<SectionSkeleton />}>
-            <RuleOptimiser files={files} />
+            <RuleOptimiser files={fileList} />
           </Suspense>
           {w("config-complexity") && (
             <div className="grid gap-6 lg:grid-cols-2">
               <ErrorBoundary fallbackTitle="Policy Complexity failed">
                 <Suspense fallback={<CardSkeleton />}>
-                  <PolicyComplexity analysisResults={analysisResult} files={files} />
+                  <PolicyComplexity analysisResults={analysisResult} files={fileList} />
                 </Suspense>
               </ErrorBoundary>
               <ErrorBoundary fallbackTitle="Config Composition failed">
                 <Suspense fallback={<CardSkeleton />}>
-                  <ConfigSizeMetrics analysisResults={analysisResult} files={files} />
+                  <ConfigSizeMetrics analysisResults={analysisResult} files={fileList} />
                 </Suspense>
               </ErrorBoundary>
             </div>
           )}
           {w("unused-objects") && (
             <Suspense fallback={<CardSkeleton />}>
-              <UnusedObjects files={files} />
+              <UnusedObjects files={fileList} />
             </Suspense>
           )}
           {w("rule-analysis") && (
             <Suspense fallback={<CardSkeleton />}>
-              <RuleAnalysisWidget files={files} />
+              <RuleAnalysisWidget files={fileList} />
             </Suspense>
           )}
-          {files.length >= 2 && (
+          {fileList.length >= 2 && (
             <Suspense fallback={null}>
               <ConsistencyChecker analysisResults={analysisResult} />
             </Suspense>
@@ -666,7 +667,7 @@ export function AnalysisTabs({
           )}
 
           <Suspense fallback={<CardSkeleton />}>
-            <AttackSurfaceMap files={files} />
+            <AttackSurfaceMap files={fileList} />
           </Suspense>
 
           {totalFindings > 0 && w("what-if-comparison") && (
@@ -689,7 +690,7 @@ export function AnalysisTabs({
 
           {w("geographic-fleet-map") && (
             <Suspense fallback={<CardSkeleton />}>
-              <GeographicFleetMap files={files} />
+              <GeographicFleetMap files={fileList} />
             </Suspense>
           )}
 
@@ -752,10 +753,10 @@ export function AnalysisTabs({
                   value={diffSelection?.beforeIdx ?? 0}
                   onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
                     beforeIdx: Number(e.target.value),
-                    afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
+                    afterIdx: prev?.afterIdx ?? Math.min(1, fileList.length - 1),
                   }))}
                 >
-                  {files.map((f, i) => (
+                  {fileList.map((f, i) => (
                     <option key={f.id} value={i}>{getFileLabel(f)}</option>
                   ))}
                 </select>
@@ -764,13 +765,13 @@ export function AnalysisTabs({
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
                 <select
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-                  value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
+                  value={diffSelection?.afterIdx ?? Math.min(1, fileList.length - 1)}
                   onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
                     beforeIdx: prev?.beforeIdx ?? 0,
                     afterIdx: Number(e.target.value),
                   }))}
                 >
-                  {files.map((f, i) => (
+                  {fileList.map((f, i) => (
                     <option key={f.id} value={i}>{getFileLabel(f)}</option>
                   ))}
                 </select>
@@ -781,7 +782,7 @@ export function AnalysisTabs({
               className="gap-2"
               onClick={() => setDiffSelection({
                 beforeIdx: diffSelection?.beforeIdx ?? 0,
-                afterIdx: diffSelection?.afterIdx ?? Math.min(1, files.length - 1),
+                afterIdx: diffSelection?.afterIdx ?? Math.min(1, fileList.length - 1),
               })}
             >
               <ArrowLeftRight className="h-3.5 w-3.5" /> Compare
