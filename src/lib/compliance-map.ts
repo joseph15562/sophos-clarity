@@ -222,6 +222,8 @@ const FRAMEWORK_CONTROLS: Record<string, string[]> = {
   "NIST 800-82": ["dpiEngine", "ips", "segmentation", "logging", "adminAccess", "dosProtection"],
   "NERC CIP": ["dpiEngine", "ips", "logging", "mfa", "segmentation", "adminAccess", "vpnSecurity", "externalLogging"],
   "MOD Cyber / ITAR": ["dpiEngine", "ips", "appControl", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging"],
+  "CIPA": ["dpiEngine", "webFilter", "sslInspection", "logging", "appControl", "adminAccess"],
+  "Ohio DPA": ["dpiEngine", "webFilter", "ips", "logging", "mfa", "segmentation", "sslInspection", "adminAccess", "antiMalware", "vpnSecurity", "dosProtection", "externalLogging"],
 };
 
 export function mapToFramework(

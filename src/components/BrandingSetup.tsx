@@ -48,6 +48,18 @@ export const COUNTRIES = [
   "Japan",
 ] as const;
 
+export const US_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+  "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia",
+  "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
+  "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
+  "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
+  "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
+  "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
+] as const;
+
 export const ALL_FRAMEWORKS = [
   "GDPR",
   "Cyber Essentials / CE+",
@@ -68,12 +80,14 @@ export const ALL_FRAMEWORKS = [
   "NIS2",
   "NERC CIP",
   "MOD Cyber / ITAR",
+  "CIPA",
+  "Ohio DPA",
 ] as const;
 
 export type ComplianceFramework = (typeof ALL_FRAMEWORKS)[number];
 
-/** Returns default frameworks for a given environment + country combo */
-function getDefaultFrameworks(environment: string, country: string): ComplianceFramework[] {
+/** Returns default frameworks for a given environment + country + state combo */
+function getDefaultFrameworks(environment: string, country: string, state?: string): ComplianceFramework[] {
   const fw: ComplianceFramework[] = [];
   const isUK = country === "United Kingdom";
   const isUS = country === "United States";
@@ -89,15 +103,20 @@ function getDefaultFrameworks(environment: string, country: string): ComplianceF
   if (isEU) {
     fw.push("GDPR", "NIS2");
   }
-  // Australia, Canada, NZ etc get ISO by default
   if (["Australia", "Canada", "New Zealand"].includes(country)) {
     fw.push("ISO 27001");
+  }
+
+  // State-level defaults (US only)
+  if (isUS && state === "Ohio") {
+    fw.push("Ohio DPA");
   }
 
   // Environment-level defaults
   switch (environment) {
     case "Education":
       if (isUK) fw.push("DfE / KCSIE");
+      if (isUS) fw.push("CIPA");
       break;
     case "Healthcare":
       if (isUS) fw.push("HIPAA", "HITECH");
@@ -134,6 +153,7 @@ export type BrandingData = {
   customerName: string;
   environment: string;
   country: string;
+  state?: string;
   selectedFrameworks: ComplianceFramework[];
   preparedBy?: string;
   footerText?: string;
@@ -208,10 +228,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
   useEffect(() => {
     if (userTouchedFrameworks.current) return;
     if (branding.environment || branding.country) {
-      const defaults = getDefaultFrameworks(branding.environment, branding.country);
+      const defaults = getDefaultFrameworks(branding.environment, branding.country, branding.state);
       onChange((prev) => ({ ...prev, selectedFrameworks: defaults }));
     }
-  }, [branding.environment, branding.country, onChange]);
+  }, [branding.environment, branding.country, branding.state, onChange]);
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -423,7 +443,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
         </Label>
         <Select
           value={branding.country}
-          onValueChange={(v) => onChange({ ...branding, country: v })}
+          onValueChange={(v) => onChange({ ...branding, country: v, state: v === "United States" ? branding.state : undefined })}
         >
           <SelectTrigger id="country" className="max-w-xs">
             <SelectValue placeholder="Select country…" />
@@ -441,13 +461,39 @@ export function BrandingSetup({ branding, onChange }: Props) {
         </p>
       </div>
 
+      {branding.country === "United States" && (
+        <div className="space-y-2">
+          <Label htmlFor="state" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" /> State
+          </Label>
+          <Select
+            value={branding.state ?? ""}
+            onValueChange={(v) => onChange({ ...branding, state: v })}
+          >
+            <SelectTrigger id="state" className="max-w-xs">
+              <SelectValue placeholder="Select state…" />
+            </SelectTrigger>
+            <SelectContent>
+              {US_STATES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            State-specific frameworks (e.g. Ohio DPA) will be auto-selected when applicable.
+          </p>
+        </div>
+      )}
+
       {/* Compliance Frameworks */}
       <div className="space-y-2" data-tour="framework-selector">
         <Label className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4" /> Compliance Frameworks
         </Label>
         <p className="text-xs text-muted-foreground">
-          Auto-selected based on environment & country. Tick or untick to customise.
+          Auto-selected based on environment, country & state. Tick or untick to customise.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
           {ALL_FRAMEWORKS.map((fw) => (
