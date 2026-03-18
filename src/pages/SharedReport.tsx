@@ -1,12 +1,18 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { saveAs } from "file-saver";
+import { FileText, Download } from "lucide-react";
 import { loadSharedReport, type SharedReport as SharedReportType } from "@/lib/share-report";
 import { extractTocHeadings, buildReportHtml } from "@/lib/report-html";
+import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
+import type { BrandingData } from "@/components/BrandingSetup";
+import { Button } from "@/components/ui/button";
 
 const SharedReport = () => {
   const { token } = useParams<{ token: string }>();
   const [report, setReport] = useState<SharedReportType | null | undefined>(undefined);
   const [tocOpen, setTocOpen] = useState(false);
+  const reportContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!token) { setReport(null); return; }
@@ -63,6 +69,36 @@ const SharedReport = () => {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const branding: BrandingData = {
+    companyName: report.customerName || "Customer",
+    customerName: report.customerName || "",
+    logoUrl: null,
+    environment: "",
+    country: "",
+    selectedFrameworks: [],
+  };
+
+  const baseTitle = "Firewall Configuration Assessment Report";
+  const wordFilename = `${report.customerName || "Report"}-${baseTitle.replace(/\s+/g, "-")}.docx`;
+
+  const handleWord = async () => {
+    if (!report.markdown) return;
+    const blob = await generateWordBlob(report.markdown, branding);
+    saveAs(blob, wordFilename);
+  };
+
+  const handlePdf = () => {
+    const el = reportContentRef.current;
+    if (!el) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const title = baseTitle;
+    printWindow.document.write(buildPdfHtml(el.innerHTML, title, branding, { theme: "light" }));
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Match main doc shell exactly: same classes and structure as DocumentPreview ReportContent */}
@@ -75,11 +111,34 @@ const SharedReport = () => {
                 Sophos FireComply — Document
               </span>
             </div>
-            <span className="text-[10px] text-white/40">
-              {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-              {" · Link expires "}
-              {new Date(report.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-            </span>
+            <div className="flex items-center gap-3">
+              {report.allowDownload !== false && (
+                <div className="no-print flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleWord}
+                    className="gap-1.5 h-8 text-white/90 bg-white/10 border-white/20 hover:bg-white/20"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Download Word
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handlePdf}
+                    className="gap-1.5 h-8 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white border-0"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Download PDF
+                  </Button>
+                </div>
+              )}
+              <span className="text-[10px] text-white/40">
+                {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                {" · Link expires "}
+                {new Date(report.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+            </div>
           </div>
           <div className="bg-card p-8 md:p-12">
             {/* Same title block as main doc: company name + report subtitle only */}
@@ -128,7 +187,7 @@ const SharedReport = () => {
               </div>
             )}
             {/* Report body: no prose class so it matches main doc styling exactly */}
-            <div dangerouslySetInnerHTML={{ __html: html }} />
+            <div ref={reportContentRef} dangerouslySetInnerHTML={{ __html: html }} />
           </div>
         </div>
       </div>
