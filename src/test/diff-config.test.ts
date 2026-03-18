@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { extractSections } from "@/lib/extract-sections";
@@ -10,7 +10,11 @@ function loadFixture(name: string): string {
 
 describe("diffConfigs", () => {
   const html = loadFixture("basic-firewall.html");
-  const sections = extractSections(html);
+  let sections: Awaited<ReturnType<typeof extractSections>>;
+
+  beforeAll(async () => {
+    sections = await extractSections(html);
+  });
 
   it("reports no changes when comparing identical configs", () => {
     const result = diffConfigs(sections, sections);

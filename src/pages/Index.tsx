@@ -235,7 +235,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           const rawConfig = parseEntitiesXml(file.content);
           extractedData = rawConfigToSections(rawConfig);
         } else {
-          extractedData = extractSections(file.content);
+          extractedData = await extractSections(file.content);
         }
       } catch (err) {
         console.warn(`[parser] Failed to parse ${file.fileName}`, err);

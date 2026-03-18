@@ -56,7 +56,6 @@ function extractTable(tableEl: Element): TableData {
       headers.push((th.textContent ?? "").replace(/\s+/g, " ").trim());
     });
   } else {
-    // Check if first row has sophos-table-header cells
     const firstRow = tableEl.querySelector("tr");
     if (firstRow) {
       const hdrCells = firstRow.querySelectorAll(".sophos-table-header");
@@ -67,14 +66,18 @@ function extractTable(tableEl: Element): TableData {
   }
 
   const rows: Record<string, string>[] = [];
-  const allRows = tableEl.querySelectorAll("tr");
+  // Only keep rows that belong directly to this table (not nested sub-tables).
+  // Uses closest("table") which is O(1) — far cheaper than the old
+  // closest('[id^="details-"]') attribute selector that had to climb the full tree.
+  const allRows = Array.from(tableEl.querySelectorAll("tr")).filter(
+    (tr) => tr.closest("table") === tableEl
+  );
 
   allRows.forEach((tr, idx) => {
     // Skip header row
     if (idx === 0 && headers.length > 0) return;
-    // Skip detail/expansion rows and any rows nested inside them
-    if (tr.id?.startsWith("details-")) return;
-    if (tr.closest('[id^="details-"]') || tr.closest('[id^="rule-content-"]')) return;
+    // Skip detail/expansion rows (direct children of this table)
+    if (tr.id?.startsWith("details-") || tr.id?.startsWith("rule-content-")) return;
 
     const cells = tr.querySelectorAll("td, .sophos-table-cell");
     if (cells.length === 0) return;
@@ -492,7 +495,9 @@ function isSophosConfigHtml(html: string): boolean {
   return SOPHOS_MARKERS.some((marker) => html.includes(marker));
 }
 
-export function extractSections(html: string): ExtractedSections {
+const yieldToMain = () => new Promise<void>((r) => setTimeout(r, 0));
+
+export async function extractSections(html: string): Promise<ExtractedSections> {
   if (!html || typeof html !== "string" || html.length < 50) {
     console.warn("[extractSections] Input too short or invalid, returning empty");
     return {};
@@ -509,11 +514,12 @@ export function extractSections(html: string): ExtractedSections {
 
     const sections: ExtractedSections = {};
 
-    const checkboxes = doc.querySelectorAll("input[data-section-key]");
+    const checkboxes = Array.from(doc.querySelectorAll("input[data-section-key]"));
 
-    checkboxes.forEach((cb) => {
+    for (let ci = 0; ci < checkboxes.length; ci++) {
+      const cb = checkboxes[ci];
       const sectionKey = cb.getAttribute("data-section-key");
-      if (!sectionKey) return;
+      if (!sectionKey) continue;
 
       const parent = cb.closest("[data-section-name]");
       const displayName = parent?.getAttribute("data-section-name") ?? sectionKey;
@@ -541,9 +547,14 @@ export function extractSections(html: string): ExtractedSections {
           : displayName;
         sections[readableName] = data;
       }
-    });
 
-    for (const [key, htmlId] of Object.entries(SECTION_ID_MAP)) {
+      // Yield to the main thread every few sections so the UI stays responsive
+      if (ci % 3 === 2) await yieldToMain();
+    }
+
+    const mapEntries = Object.entries(SECTION_ID_MAP);
+    for (let ei = 0; ei < mapEntries.length; ei++) {
+      const [key, htmlId] = mapEntries[ei];
       const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       const alreadyFound = Object.keys(sections).some(
         (name) => normalise(name) === normalise(key)
@@ -559,6 +570,8 @@ export function extractSections(html: string): ExtractedSections {
       } catch (err) {
         console.warn(`[extractSections] Failed fallback extraction for "${key}":`, err);
       }
+
+      if (ei % 3 === 2) await yieldToMain();
     }
 
     const hasOtp = Object.keys(sections).some((name) =>

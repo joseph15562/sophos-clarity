@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,49 +13,47 @@ function loadFixture(name: string): string {
 
 describe("extractSections", () => {
   describe("edge cases", () => {
-    it("handles empty config (empty string) gracefully", () => {
+    it("handles empty config (empty string) gracefully", async () => {
       const html = loadFixture("empty-config.html");
-      const result = extractSections(html);
+      const result = await extractSections(html);
       expect(result).toEqual({});
     });
 
-    it("handles no-rules config (valid Sophos structure, no firewall rules table) gracefully", () => {
+    it("handles no-rules config (valid Sophos structure, no firewall rules table) gracefully", async () => {
       const html = loadFixture("no-rules.html");
-      expect(() => extractSections(html)).not.toThrow();
-      const result = extractSections(html);
+      const result = await extractSections(html);
       expect(typeof result).toBe("object");
       expect(result).not.toBeNull();
     });
 
-    it("handles malformed HTML gracefully", () => {
+    it("handles malformed HTML gracefully", async () => {
       const html = loadFixture("malformed.html");
-      expect(() => extractSections(html)).not.toThrow();
-      const result = extractSections(html);
+      const result = await extractSections(html);
       expect(typeof result).toBe("object");
       expect(result).not.toBeNull();
     });
 
-    it("handles non-Sophos HTML (valid HTML, no Sophos markers) gracefully", () => {
+    it("handles non-Sophos HTML (valid HTML, no Sophos markers) gracefully", async () => {
       const html = loadFixture("non-sophos.html");
-      const result = extractSections(html);
+      const result = await extractSections(html);
       expect(result).toEqual({});
     });
   });
 
   describe("short or invalid input", () => {
-    it("returns empty object for empty string", () => {
-      expect(extractSections("")).toEqual({});
+    it("returns empty object for empty string", async () => {
+      expect(await extractSections("")).toEqual({});
     });
 
-    it("returns empty object for string shorter than 50 chars", () => {
-      expect(extractSections("short")).toEqual({});
+    it("returns empty object for string shorter than 50 chars", async () => {
+      expect(await extractSections("short")).toEqual({});
     });
 
-    it("returns empty object for non-string input", () => {
+    it("returns empty object for non-string input", async () => {
       // @ts-expect-error - testing runtime behaviour
-      expect(extractSections(null)).toEqual({});
+      expect(await extractSections(null)).toEqual({});
       // @ts-expect-error - testing runtime behaviour
-      expect(extractSections(undefined)).toEqual({});
+      expect(await extractSections(undefined)).toEqual({});
     });
   });
 
@@ -67,11 +65,11 @@ describe("extractSections", () => {
 
     contentFixtures.forEach(({ name, minFirewallRules, minZones }) => {
       describe(name, () => {
-        let sections: ReturnType<typeof extractSections>;
+        let sections: Awaited<ReturnType<typeof extractSections>>;
 
-        beforeAll(() => {
+        beforeAll(async () => {
           const html = loadFixture(name);
-          sections = extractSections(html);
+          sections = await extractSections(html);
         });
 
         it("extracts firewall rules section with expected minimum row count", () => {

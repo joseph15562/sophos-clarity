@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { extractSections } from "@/lib/extract-sections";
@@ -10,7 +10,11 @@ function loadFixture(name: string): string {
 
 describe("extractSections", () => {
   const html = loadFixture("basic-firewall.html");
-  const sections = extractSections(html);
+  let sections: Awaited<ReturnType<typeof extractSections>>;
+
+  beforeAll(async () => {
+    sections = await extractSections(html);
+  });
 
   it("extracts firewall rules section", () => {
     const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k));
@@ -83,8 +87,13 @@ describe("extractSections", () => {
 
 describe("analyseConfig", () => {
   const html = loadFixture("basic-firewall.html");
-  const sections = extractSections(html);
-  const result = analyseConfig(sections);
+  let sections: Awaited<ReturnType<typeof extractSections>>;
+  let result: ReturnType<typeof analyseConfig>;
+
+  beforeAll(async () => {
+    sections = await extractSections(html);
+    result = analyseConfig(sections);
+  });
 
   it("counts total rules correctly", () => {
     expect(result.stats.totalRules).toBe(6);
@@ -194,7 +203,11 @@ describe("analyseConfig", () => {
 
 describe("extractSections — minimal-sophos fixture", () => {
   const html = loadFixture("minimal-sophos.html");
-  const sections = extractSections(html);
+  let sections: Awaited<ReturnType<typeof extractSections>>;
+
+  beforeAll(async () => {
+    sections = await extractSections(html);
+  });
 
   it("extracts firewall rules with row-count parity", () => {
     const fwKey = Object.keys(sections).find((k) => /firewall\s*rules?/i.test(k));
@@ -213,8 +226,13 @@ describe("extractSections — minimal-sophos fixture", () => {
 
 describe("analyseConfig — minimal-sophos fixture", () => {
   const html = loadFixture("minimal-sophos.html");
-  const sections = extractSections(html);
-  const result = analyseConfig(sections);
+  let sections: Awaited<ReturnType<typeof extractSections>>;
+  let result: ReturnType<typeof analyseConfig>;
+
+  beforeAll(async () => {
+    sections = await extractSections(html);
+    result = analyseConfig(sections);
+  });
 
   it("counts rules from second fixture", () => {
     expect(result.stats.totalRules).toBe(2);
@@ -227,7 +245,11 @@ describe("analyseConfig — minimal-sophos fixture", () => {
 
 describe("analyseMultiConfig", () => {
   const html = loadFixture("basic-firewall.html");
-  const sections = extractSections(html);
+  let sections: Awaited<ReturnType<typeof extractSections>>;
+
+  beforeAll(async () => {
+    sections = await extractSections(html);
+  });
 
   it("aggregates across multiple firewalls", () => {
     const result = analyseMultiConfig({
