@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, Menu } from "electron";
 import path from "node:path";
 import { setupTray } from "./tray";
 import { registerIpcHandlers } from "./ipc-handlers";
@@ -49,6 +49,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
+
   const config = loadConfig(CONFIG_PATH);
   if (config) {
     initLogger(config.logFile, config.logLevel);

@@ -62,7 +62,7 @@ export function HelpPage() {
           <h2 className="text-sm font-semibold text-foreground">Create a Read-Only Admin Profile</h2>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          On your Sophos XGS firewall, navigate to <strong className="text-foreground">System → Profiles → Device access</strong>.
+          On your Sophos XGS firewall, navigate to <strong className="text-foreground">Profiles → Device access</strong> tab.
           Click <strong className="text-foreground">Add</strong> to create a new profile. Name it <code className="bg-muted px-1 rounded text-foreground">API read only</code>.
         </p>
         <StepImage src={imgProfilesList} alt="Profiles list showing API read only profile" />

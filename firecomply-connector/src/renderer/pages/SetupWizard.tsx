@@ -201,7 +201,7 @@ export function SetupWizard({ onComplete }: Props) {
               </summary>
               <div className="px-3 pb-3 pt-1 space-y-2 text-muted-foreground leading-relaxed">
                 <p className="font-semibold text-foreground">1. Create a read-only admin profile</p>
-                <p>Profiles (under SYSTEM) → <strong>Device access</strong> tab → <strong>Add</strong>. Name it <code className="bg-muted px-1 rounded">API read only</code> and set every category to <strong>Read-only</strong>.</p>
+                <p><strong>Profiles</strong> → <strong>Device access</strong> tab → <strong>Add</strong>. Name it <code className="bg-muted px-1 rounded">API read only</code> and set every category to <strong>Read-only</strong>.</p>
 
                 <p className="font-semibold text-foreground">2. Create the service account</p>
                 <p>Authentication → Users → <strong>Add</strong>. Set username to <code className="bg-muted px-1 rounded">firecomply-api</code>, user type <strong>Administrator</strong>, profile <strong>API read only</strong>. Use a strong password.</p>
