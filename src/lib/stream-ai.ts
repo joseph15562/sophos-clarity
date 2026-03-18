@@ -46,6 +46,8 @@ const OMITTED_SECTIONS: Set<string> = new Set([
   "virus scanning", "virusscanning",
   "smsgateway", "vpn profiles", "vpnprofiles",
   "antivirusftp", "spxtemplates", "relaysettings", "groups",
+  "dns configuration", "dnsconfiguration", "time settings", "timesettings",
+  "useractivity", "admin authentication", "adminauthentication",
   "support access", "supportaccess", "system modules", "systemmodules",
   "third-party feeds", "thirdpartyfeeds", "fqdnhostsetting",
   "mtaaddressgroup", "mtaspxtemplates", "patterndownload", "routeprecedence",

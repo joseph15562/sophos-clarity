@@ -5,6 +5,29 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 
+marked.setOptions({ gfm: true });
+
+/**
+ * Split single-line markdown tables into one line per row so marked can parse them.
+ * AI sometimes outputs "| A | B | | --- | --- | | 1 | 2 |" on one line; GFM requires newlines between rows.
+ */
+function normalizeMarkdownTables(md: string): string {
+  return md.split("\n").map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|") || trimmed.length < 4) return line;
+    const rowBoundary = " | | ";
+    if (!trimmed.includes(rowBoundary)) return line;
+    const parts = trimmed.split(rowBoundary);
+    const rows = parts.map((p) => {
+      let row = p.trim();
+      if (!row.startsWith("|")) row = "| " + row;
+      if (!row.endsWith("|")) row = row + " |";
+      return row;
+    });
+    return rows.join("\n");
+  }).join("\n");
+}
+
 function slugifyHeading(text: string): string {
   return text.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "") || "section";
 }
@@ -40,7 +63,8 @@ export type BuildReportHtmlOptions = {
  */
 export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptions): string {
   if (!markdown) return "";
-  const rawHtml = marked.parse(markdown, { async: false }) as string;
+  const normalized = normalizeMarkdownTables(markdown);
+  const rawHtml = marked.parse(normalized, { async: false }) as string;
   const headings = extractTocHeadings(markdown);
   let out: string;
   if (headings.length > 0 && typeof document !== "undefined") {
@@ -57,5 +81,7 @@ export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptio
   if (options?.footer?.trim()) {
     out += `<footer class="report-footer report-meta text-[10px] text-muted-foreground mt-8 pt-4 border-t border-border">${DOMPurify.sanitize(options.footer)}</footer>`;
   }
-  return DOMPurify.sanitize(out);
+  return DOMPurify.sanitize(out, {
+    ADD_TAGS: ["table", "thead", "tbody", "tr", "th", "td", "colgroup", "col"],
+  });
 }

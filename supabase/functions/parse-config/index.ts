@@ -102,7 +102,7 @@ Rules
 - **Use all columns** from the extracted tables and merge in any fields from detail blocks (e.g. Security Features, Web Filter, Logging) so the report pulls everything
 - For firewall rules: the table MUST have **the rule number (#) as the first column**, then Rule Name, then the rest. Include columns for Security Features, Web Filter (or Web Filter Policy), Logging, and App Control when that data exists in the payload (main table or details). Include every column from the export **except** the following — do **not** include these in the firewall rules table: Description, Schedule, Minimum Destination HB Permitted, Source Security Heartbeat, Destination Security Heartbeat, Block Quick Quic, SSL/TLS Decryption, Minimum Source HB Permitted. Include other columns (e.g. #, Rule Name, Status, Action, Source Zone, Source Networks, Dest Zone, Dest Networks, Service, Web Filter, App Control, IPS, Logging, AV/Zero-Day). If the payload has a "#" column, use it as the first column; otherwise use row order (1, 2, 3, …) as the first column. **Use exactly "Enabled" or "Disabled"** (capitalised) for Status, Logging, and any on/off fields — not "enable", "disable", "enabled", or "disabled". If no web filter data for a rule, show "None" or "Not specified"; **only call it out in Findings when the rule's Destination Zone (Dest Zone) is WAN and Service is HTTP, HTTPS, or ANY** — rules with destination other than WAN or non-web services do not require web filtering for compliance.
 - For NAT rules: create a table explaining the translation (what maps to what)
-- **Interfaces, Ports & VLANs**: Combine "VLANs" and "Interfaces & Ports" (or "Interfaces & Network") into a single section — **## Interfaces, Ports & VLANs**. Use one Markdown table with one row per line (no line breaks within a row). Include only these columns so the table stays readable: **Name** (interface/VLAN name, e.g. Port1.99, Port2:0), **Zone**, **IP/Network** (or IPv4), **Status** (or link state). Omit low-value columns (e.g. FEC, MSS, MTU, AutoNegotiation, BreakoutMembers, DHCPRapidCommit, GatewayName) to keep each row on a single line. Copy interface/VLAN names exactly as given. Do not add a "Summary of Interfaces, Ports & VLANs" heading — write any summary as a paragraph under the main section. Do not output separate "VLANs" and "Interfaces & Ports" sections; merge them into one.
+- **Interfaces, Ports & VLANs**: Combine "VLANs" and "Interfaces & Ports" (or "Interfaces & Network") into a single section — **## Interfaces, Ports & VLANs**. Use one Markdown table with one row per line (no line breaks within a row). Include these columns when present in the payload: **Name** (interface/VLAN name, e.g. Port1.99, Port2:0), **Port** (port number or hardware name, e.g. Port1, Port2 — from HardwareName, Interface, Hardware, or Port when available), **VLAN** (VLAN ID or number — from VLAN, VLANID, VlanID, VID, or "Interface / VLAN" when available), **Zone**, **IP/Network** (or IPv4), **Status** (or link state). Omit low-value columns (e.g. FEC, MSS, MTU, AutoNegotiation, BreakoutMembers, DHCPRapidCommit, GatewayName) to keep each row on a single line. Copy interface/VLAN names exactly as given. Do not add a "Summary of Interfaces, Ports & VLANs" heading — write any summary as a paragraph under the main section. Do not output separate "VLANs" and "Interfaces & Ports" sections; merge them into one.
 - **Appliance Access in Zones**: When the payload contains zone or appliance-access columns with \`ApplianceAccess.*\` identifiers, use **user-friendly names** in the report. Examples: \`ApplianceAccess.NetworkServices.Ping\` → "Ping", \`ApplianceAccess.OtherServices.WirelessProtection\` → "Wireless protection", \`ApplianceAccess.OtherServices.SMTPRelay\` → "SMTP relay", \`ApplianceAccess.VPNServices.RED\` or \`ApplianceAccess.VPN Services.RED\` → "RED (VPN)", \`ApplianceAccess.VPNServices.SSLVPN\` → "SSL VPN", \`ApplianceAccess.VPNServices.VPNPortal\` → "VPN Portal", \`ApplianceAccess.AdminServices.SSH\` or \`ApplianceAccess.Admin Services.SSH\` → "SSH (Admin)", \`ApplianceAccess.AdminServices.HTTPS\` or \`ApplianceAccess.Admin Services.HTTP\` → "HTTPS (Admin)", \`ApplianceAccess.OtherServices.WebProxy\` → "Web Proxy", \`ApplianceAccess.OtherServices.UserPortal\` → "User Portal", \`ApplianceAccess.OtherServices.SNMP\` → "SNMP", \`ApplianceAccess.OtherServices.DynamicRouting\` → "Dynamic routing", \`ApplianceAccess.NetworkServices.DNS\` → "DNS", \`ApplianceAccess.AuthenticationServices.ADSSO\` → "AD SSO", \`ApplianceAccess.AuthenticationServices.CaptivePortal\` → "Captive Portal", \`ApplianceAccess.AuthenticationServices.Radius SSO\` → "RADIUS SSO", \`ApplianceAccess.AuthenticationServices.Chromebook SSO\` → "Chromebook SSO", \`ApplianceAccess.AuthenticationServices.Client Authentication\` → "Client authentication". For any unlisted \`ApplianceAccess.X.Y\` value, use the last part as a readable label (e.g. Ping, Wireless protection, SMTP relay) — no raw \`ApplianceAccess.*\` strings in the report.
 - For hosts/networks: list all entries in a table with relevant columns
 - For policies: describe what each policy does in a table
@@ -179,9 +179,9 @@ For EACH applicable framework below, produce a Markdown table with columns:
 
 5. Textual Evidence Sections
 For each control area, provide:
-- Configuration excerpts — quote actual rule names, zone configurations, policy settings from the data
-- What was observed — factual statement of what the config shows, **per firewall where relevant**
-- Assessment — whether this meets the control requirement; if partial or not met, **which firewall(s)** lack it and **what** is missing
+- **Configuration excerpts** — present structured data (VLANs, interfaces, zones, DNS, time settings, ATP, etc.) as **Markdown tables**, not as raw JSON. For **VLANs**, **Interfaces & Ports**, or **Interfaces, Ports & VLANs**, use a table with columns: **Name**, **Port** (port or hardware name when present), **VLAN** (VLAN ID when present), **Zone**, **IP/Network**, **Status**. For other sections use a short table with the relevant columns from the data. Quote only specific values (e.g. rule names, zone names) in prose where needed. Do **not** paste raw JSON in configuration excerpts.
+- **What was observed** — factual statement of what the config shows, **per firewall where relevant**
+- **Assessment** — whether this meets the control requirement; if partial or not met, **which firewall(s)** lack it and **what** is missing
 
 6. Not Applicable Justifications
 For any control marked N/A, provide a clear justification statement suitable for an auditor.
@@ -213,7 +213,8 @@ Rules
 - Be specific about which rules/settings satisfy which controls
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
-- Every claim must be traceable to config data`;
+- Every claim must be traceable to config data
+- **Evidence format**: In "Configuration excerpts" and textual evidence, never output raw JSON. Use Markdown tables (with columns such as Name, Port, VLAN, Zone, IP/Network, Status for interface/VLAN data) and short prose so auditors see clear, readable evidence. Include **Port** and **VLAN** (or VLAN ID) in interface/VLAN tables when the payload contains that data.`;
 
 const CHAT_SYSTEM_PROMPT = `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
 
@@ -404,6 +405,7 @@ serve(async (req) => {
           stream: true,
           temperature: 0.1,
           reasoning_effort: reasoningEffort,
+          stream_options: { include_usage: true },
         }),
       });
 
@@ -460,6 +462,8 @@ serve(async (req) => {
     // Send an immediate empty SSE chunk so the client gets 200 + first byte right away and can show "Generating…" instead of staying on "Sending request" for 30–90s
     const immediateChunk = new TextEncoder().encode("data: {\"choices\":[{\"delta\":{\"content\":\"\"}}]}\n");
     const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
     const stream = new ReadableStream({
       async start(controller) {
         controller.enqueue(immediateChunk);
@@ -467,6 +471,24 @@ serve(async (req) => {
           for (;;) {
             const { done, value } = await reader.read();
             if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let newlineIdx: number;
+            while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+              const line = buffer.slice(0, newlineIdx).trim();
+              buffer = buffer.slice(newlineIdx + 1);
+              if (line.startsWith("data: ") && line !== "data: [DONE]") {
+                try {
+                  const json = JSON.parse(line.slice(6)) as { usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } };
+                  if (json.usage && (json.usage.prompt_tokens != null || json.usage.completion_tokens != null)) {
+                    const u = json.usage;
+                    const total = u.total_tokens ?? ((u.prompt_tokens ?? 0) + (u.completion_tokens ?? 0));
+                    console.log(`parse-config token usage: prompt=${u.prompt_tokens ?? "-"} completion=${u.completion_tokens ?? "-"} total=${total} (model=${model} chat=${chat})`);
+                  }
+                } catch (_) {
+                  /* ignore parse errors for non-usage lines */
+                }
+              }
+            }
             controller.enqueue(value);
           }
         } finally {
