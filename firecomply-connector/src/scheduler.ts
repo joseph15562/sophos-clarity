@@ -15,7 +15,7 @@ import type { AppConfig, FirewallConfig } from "./config";
 import type { RiskScoreResult } from "./analysis/types";
 import type { ThreatStatus } from "./firewall/threat-status";
 
-const AGENT_VERSION = "1.0.0";
+const AGENT_VERSION = "1.6.5";
 
 export interface FirewallStatus {
   label: string;
