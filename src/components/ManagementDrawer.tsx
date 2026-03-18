@@ -46,8 +46,8 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-3.5 w-3.5" />, guestVisible: false },
-  { id: "reports", label: "Reports", icon: <FileText className="h-3.5 w-3.5" />, guestVisible: true },
-  { id: "history", label: "History", icon: <History className="h-3.5 w-3.5" />, guestVisible: true },
+  { id: "reports", label: "Reports", icon: <FileText className="h-3.5 w-3.5" />, guestVisible: false },
+  { id: "history", label: "History", icon: <History className="h-3.5 w-3.5" />, guestVisible: false },
   { id: "settings", label: "Settings", icon: <Settings className="h-3.5 w-3.5" />, guestVisible: false },
 ];
 

@@ -16,6 +16,18 @@
     <meta property="og:type" content="website" />
 
     <meta name="twitter:card" content="summary" />
+
+    <script>
+      // Prevent FOUC: apply saved theme class before first paint
+      (function() {
+        var stored = null;
+        try { stored = localStorage.getItem('sophos-firecomply-theme'); } catch(e) {}
+        var dark = stored === 'dark' ||
+          (!stored || stored === 'system') &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.classList.add('dark');
+      })();
+    </script>
   </head>
 
   <body>

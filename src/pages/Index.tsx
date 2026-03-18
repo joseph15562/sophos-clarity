@@ -712,8 +712,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           </>
         )}
 
-        {/* Report view */}
-        {(viewingReports || isLoading) && (
+        {/* Report view (authenticated only) */}
+        {!isGuest && (viewingReports || isLoading) && (
           <>
             {/* Top bar: Back to Dashboard + actions */}
             {hasReports && !isLoading && (

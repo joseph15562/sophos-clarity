@@ -157,7 +157,7 @@ export function UploadSection({
         )}
         <FileUpload files={files} onFilesChange={onFilesChange} onFirewallLinked={() => setCentralEnriched(false)} />
 
-        {/* Connected firewalls — add from agent fleet */}
+        {/* Connected firewalls — add from agent fleet (authenticated only) */}
         {!isGuest && org && (
           <>
             {hasFiles && (
@@ -226,7 +226,7 @@ export function UploadSection({
       )}
 
       {/* Generate Reports — AI reports disabled in local mode */}
-      {hasFiles && (
+      {hasFiles && !isGuest && (
         <ReportCards
           fileCount={files.length}
           localMode={localMode}
@@ -239,8 +239,37 @@ export function UploadSection({
         />
       )}
 
-      {/* View Reports banner — shown when reports exist but user is on dashboard */}
-      {hasReports && (
+      {/* Guest sign-in prompt for reports */}
+      {hasFiles && isGuest && onShowAuth && (
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">3</span>
+            <h2 className="text-lg font-display font-bold text-foreground">Generate Reports</h2>
+          </div>
+          <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] px-5 py-4 flex items-center gap-4">
+            <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
+              <LogIn className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">Sign in to generate reports</p>
+              <p className="text-[10px] text-muted-foreground">
+                Create an account or sign in to generate technical reports, executive briefs, and compliance packs from your analysis.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5 text-xs border-[#2006F7]/30 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
+              onClick={onShowAuth}
+            >
+              <LogIn className="h-3 w-3" /> Sign In
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* View Reports banner — shown when reports exist but user is on dashboard (authenticated only) */}
+      {hasReports && !isGuest && (
         <div className="rounded-xl border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-5 py-4 flex items-center gap-4">
           <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
             <img src="/icons/sophos-document.svg" alt="" className="h-5 w-5 sophos-icon" />
@@ -260,8 +289,8 @@ export function UploadSection({
         </div>
       )}
 
-      {/* Save Assessment (pre-AI) */}
-      {hasFiles && totalFindings > 0 && !hasReports && !isViewerOnly && (
+      {/* Save Assessment (pre-AI) — authenticated only */}
+      {hasFiles && totalFindings > 0 && !hasReports && !isViewerOnly && !isGuest && (
         <div className="flex items-center justify-end gap-3">
           {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
           <button
