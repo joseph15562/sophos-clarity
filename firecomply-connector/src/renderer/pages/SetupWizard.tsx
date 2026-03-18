@@ -201,21 +201,24 @@ export function SetupWizard({ onComplete }: Props) {
               </summary>
               <div className="px-3 pb-3 pt-1 space-y-2 text-muted-foreground leading-relaxed">
                 <p className="font-semibold text-foreground">1. Create a read-only admin profile</p>
-                <p>Administration → Device access → Admin and user settings → Administration profiles → <strong>Add</strong>. Name it <code className="bg-muted px-1 rounded">API read only</code> and set every category to <strong>Read-only</strong>.</p>
+                <p>Profiles (under SYSTEM) → <strong>Device access</strong> tab → <strong>Add</strong>. Name it <code className="bg-muted px-1 rounded">API read only</code> and set every category to <strong>Read-only</strong>.</p>
 
                 <p className="font-semibold text-foreground">2. Create the service account</p>
-                <p>Authentication → Users → <strong>Add</strong>. Set username to <code className="bg-muted px-1 rounded">firecomply-api</code>, user type <strong>Administrator</strong>, profile <strong>API read only</strong>. Use a strong password. <strong>Do not enable OTP/MFA</strong> — the XML API does not support interactive MFA tokens.</p>
+                <p>Authentication → Users → <strong>Add</strong>. Set username to <code className="bg-muted px-1 rounded">firecomply-api</code>, user type <strong>Administrator</strong>, profile <strong>API read only</strong>. Use a strong password.</p>
 
-                <p className="font-semibold text-foreground">3. Enable the API</p>
-                <p>Backup &amp; firmware → API → toggle <strong>On</strong>.</p>
+                <p className="font-semibold text-foreground">3. Exclude from MFA</p>
+                <p>Authentication → <strong>Multi-factor authentication</strong>. If OTP is set to All users, change to <strong>Specific users and groups</strong> and make sure <code className="bg-muted px-1 rounded">firecomply-api</code> is <strong>not</strong> in the list. The XML API does not support interactive MFA tokens.</p>
 
-                <p className="font-semibold text-foreground">4. Restrict API access by IP</p>
-                <p>On the same page, under <strong>Allowed IP addresses</strong>, add the IP of this machine only.</p>
+                <p className="font-semibold text-foreground">4. Enable the API</p>
+                <p>Administration → <strong>API access</strong> tab → toggle <strong>On</strong>.</p>
 
-                <p className="font-semibold text-foreground">5. Enable SNMP (optional — for serial number)</p>
-                <p>Administration → SNMP → toggle <strong>On</strong>. Set a read-only community string (e.g. <code className="bg-muted px-1 rounded">firecomply-ro</code>). Under Device access, enable SNMP for the relevant zone.</p>
+                <p className="font-semibold text-foreground">5. Restrict API access by IP</p>
+                <p>On the same page, under <strong>Allowed IP hosts</strong>, add the IP of this machine only.</p>
 
-                <p className="text-[10px] text-muted-foreground/70 pt-1">A non-MFA service account is compliant when restricted to read-only access, IP-locked, and using a strong password. See docs/firewall-api-setup.md for the full guide and compliance notes.</p>
+                <p className="font-semibold text-foreground">6. Enable SNMP (optional — for serial number)</p>
+                <p>Administration → <strong>SNMP</strong> tab → enable SNMP agent. Add a SNMPv1/v2c community with <strong>Accept queries</strong> enabled, restricted to the connector's IP. Under <strong>Device access</strong>, enable SNMP for the zone where this machine sits.</p>
+
+                <p className="text-[10px] text-muted-foreground/70 pt-1">A non-MFA service account is secure when restricted to read-only access, IP-locked, and using a strong password. See the <strong>Help</strong> page for the full guide with screenshots.</p>
               </div>
             </details>
 
