@@ -1,6 +1,7 @@
 interface ElectronAPI {
   getConfig(): Promise<any>;
   saveConfig(config: any): Promise<{ ok: boolean; errors?: string[] }>;
+  resetConfig(): Promise<{ ok: boolean; error?: string }>;
   testFirewall(fw: { host: string; port: number; username: string; password: string; skipSslVerify: boolean; snmpCommunity?: string }): Promise<{ ok: boolean; firmwareVersion?: string; serialNumber?: string; hardwareModel?: string; apiVersion?: string; error?: string; capabilities?: any }>;
   testSnmp(host: string, community: string): Promise<{ ok: boolean; serialNumber?: string; model?: string; hostname?: string; firmwareVersion?: string; error?: string; rawOids?: Record<string, string> }>;
   testApiKey(url: string, key: string): Promise<{ ok: boolean; error?: string }>;

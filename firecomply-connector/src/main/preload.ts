@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("electronAPI", {
   getConfig: () => ipcRenderer.invoke("config:load"),
   saveConfig: (config: unknown) => ipcRenderer.invoke("config:save", config),
+  resetConfig: () => ipcRenderer.invoke("config:reset"),
   testFirewall: (fw: unknown) => ipcRenderer.invoke("firewall:test", fw),
   testSnmp: (host: string, community: string) => ipcRenderer.invoke("snmp:test", host, community),
   testApiKey: (url: string, key: string) => ipcRenderer.invoke("api:test-key", url, key),

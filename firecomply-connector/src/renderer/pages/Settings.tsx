@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -36,6 +36,8 @@ export function SettingsPage() {
   const [version, setVersion] = useState("1.0.0");
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<{ available: boolean; latestVersion?: string; downloadUrl?: string; releaseNotes?: string; error?: string } | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     window.electronAPI?.getConfig().then((cfg: any) => {
@@ -147,6 +149,7 @@ export function SettingsPage() {
         <div className="flex items-center gap-3">
           <button onClick={() => navigate("/dashboard")} className="text-xs text-muted-foreground hover:text-foreground">← Dashboard</button>
           <h1 className="text-lg font-bold text-foreground">Settings</h1>
+          <button onClick={() => navigate("/help")} className="text-xs text-[#6B5BFF] hover:underline ml-auto">Help</button>
         </div>
         {dirty && (
           <button onClick={saveAll} disabled={saving} className="px-4 py-2 rounded-lg bg-[#6B5BFF] text-white text-xs font-medium disabled:opacity-50">
@@ -320,6 +323,54 @@ export function SettingsPage() {
             ) : (
               <p className="text-muted-foreground">You're on the latest version (v{version})</p>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Danger Zone */}
+      <div className="bg-card border border-red-500/30 rounded-xl p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-red-500">Danger Zone</h2>
+        <p className="text-[10px] text-muted-foreground">
+          Disconnect this agent and clear all settings. You'll need to re-enter your API key and firewall credentials.
+        </p>
+        {!confirmReset ? (
+          <button
+            onClick={() => setConfirmReset(true)}
+            className="text-xs px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10"
+          >
+            Disconnect & Re-setup
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                setResetting(true);
+                try {
+                  const result = await window.electronAPI?.resetConfig();
+                  if (result?.ok) {
+                    toast.success("Configuration cleared");
+                    navigate("/setup", { replace: true });
+                  } else {
+                    toast.error(result?.error ?? "Failed to reset");
+                    setConfirmReset(false);
+                  }
+                } catch {
+                  toast.error("Failed to reset");
+                  setConfirmReset(false);
+                }
+                setResetting(false);
+              }}
+              disabled={resetting}
+              className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {resetting ? "Resetting…" : "Yes, clear everything"}
+            </button>
+            <button
+              onClick={() => setConfirmReset(false)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
           </div>
         )}
       </div>

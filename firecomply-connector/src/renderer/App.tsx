@@ -5,6 +5,7 @@ import { SetupWizard } from "./pages/SetupWizard";
 import { Dashboard } from "./pages/Dashboard";
 import { LogViewer } from "./pages/LogViewer";
 import { SettingsPage } from "./pages/Settings";
+import { HelpPage } from "./pages/Help";
 
 function SetupRoute({ onComplete }: { onComplete: () => void }) {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/logs" element={<LogViewer />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="*" element={<Navigate to={hasConfig ? "/dashboard" : "/setup"} replace />} />
       </Routes>
     </HashRouter>

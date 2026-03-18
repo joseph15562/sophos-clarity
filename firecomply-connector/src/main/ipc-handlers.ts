@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { app, ipcMain, shell } from "electron";
 import { login, getDeviceInfo } from "../firewall/auth";
 import { testSnmpConnection } from "../firewall/snmp";
@@ -47,6 +48,17 @@ export function registerIpcHandlers(
     saveConfig(configPath, config);
     restartService?.(config);
     return { ok: true };
+  });
+
+  ipcMain.handle("config:reset", () => {
+    try {
+      if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
+      const service = getService();
+      if (service) service.togglePause();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
   });
 
   ipcMain.handle("firewall:test", async (_event, fw: { host: string; port: number; username: string; password: string; skipSslVerify: boolean; snmpCommunity?: string }) => {

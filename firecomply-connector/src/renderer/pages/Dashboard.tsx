@@ -81,6 +81,9 @@ export function Dashboard() {
           <button onClick={() => navigate("/settings")} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted">
             Settings
           </button>
+          <button onClick={() => navigate("/help")} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted">
+            Help
+          </button>
         </div>
       </div>
 
