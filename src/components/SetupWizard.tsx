@@ -4,7 +4,9 @@ import {
   FileText, LayoutDashboard, Settings, Eye, Download, MousePointerClick,
   ChevronDown, Shield, BarChart3, History, Users, Activity, ExternalLink,
   Plug, Key, RefreshCw, Bell, Globe, Lock, Fingerprint, Mail, Webhook,
-  BookOpen, UserPlus, ShieldCheck,
+  BookOpen, UserPlus, ShieldCheck, Wrench, ListChecks, Compass, GitCompare,
+  Calendar, Layers, Trash2, Scale, Zap, Map, Package, ClipboardList, Play,
+  ArrowLeftRight, Target, TrendingUp, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +51,7 @@ interface Props {
   isGuest?: boolean;
 }
 
-type StepId = "welcome" | "branding" | "central" | "connector-agent" | "guide-upload" | "guide-pre-ai" | "guide-ai-reports" | "guide-management" | "guide-team-security" | "guide-portal-alerts" | "done";
+type StepId = "welcome" | "branding" | "central" | "connector-agent" | "guide-upload" | "guide-pre-ai" | "guide-ai-reports" | "guide-optimisation" | "guide-remediation" | "guide-tools" | "guide-management" | "guide-team-security" | "guide-portal-alerts" | "done";
 
 interface Step {
   id: StepId;
@@ -64,6 +66,9 @@ const BASE_STEPS: Step[] = [
   { id: "guide-upload", title: "Uploading Configs", icon: Upload },
   { id: "guide-pre-ai", title: "Pre-AI Assessment", icon: Shield },
   { id: "guide-ai-reports", title: "AI Reports", icon: Sparkles },
+  { id: "guide-optimisation", title: "Optimisation", icon: Wrench },
+  { id: "guide-remediation", title: "Remediation", icon: ListChecks },
+  { id: "guide-tools", title: "Tools & Compare", icon: Compass },
   { id: "guide-management", title: "Management", icon: LayoutDashboard },
   { id: "guide-team-security", title: "Team & Security", icon: Users },
   { id: "guide-portal-alerts", title: "Portal & Alerts", icon: Globe },
@@ -446,8 +451,11 @@ function MockSettingsPanel() {
         { icon: <Users className="h-3.5 w-3.5 text-[#2006F7]" />, title: "Team Management", desc: "3 members · 1 pending invite" },
         { icon: <Globe className="h-3.5 w-3.5 text-[#005BC8]" />, title: "Client Portal", desc: "Branded customer access" },
         { icon: <Lock className="h-3.5 w-3.5 text-[#00995a]" />, title: "Security", desc: "MFA enabled · 1 passkey registered" },
-        { icon: <Bell className="h-3.5 w-3.5 text-[#F29400]" />, title: "Alerts", desc: "3 rules active · Email + webhook" },
+        { icon: <Bell className="h-3.5 w-3.5 text-[#F29400]" />, title: "Alerts & Webhooks", desc: "3 alert rules · 2 webhooks active" },
+        { icon: <Calendar className="h-3.5 w-3.5 text-[#2006F7]" />, title: "Scheduled Reports", desc: "2 schedules active · Next: 24 Mar" },
+        { icon: <FileText className="h-3.5 w-3.5 text-[#6B5BFF]" />, title: "Report Template", desc: "Custom sections and headings" },
         { icon: <Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />, title: "Activity Log", desc: "47 events · Last: report.saved 2h ago" },
+        { icon: <BookOpen className="h-3.5 w-3.5 text-[#005BC8]" />, title: "API Documentation", desc: "REST API reference for automation" },
       ].map((s) => (
         <div key={s.title} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
           <div className="h-6 w-6 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{s.icon}</div>
@@ -583,6 +591,362 @@ function MockClientPortalPanel() {
   );
 }
 
+function MockRuleOptimiser() {
+  const rules = [
+    { id: "R-14", name: "Allow HTTPS outbound", status: "shadowed", detail: "Shadowed by R-02 (any → any HTTPS)", color: "#F29400" },
+    { id: "R-23", name: "Legacy VPN rule", status: "redundant", detail: "Duplicate of R-08 with identical match criteria", color: "#EA0022" },
+    { id: "R-31", name: "DNS allow internal", status: "ok", detail: "Unique rule, no overlaps detected", color: "#00995a" },
+    { id: "R-07", name: "Block telnet WAN", status: "consolidate", detail: "Can merge with R-09 and R-11 (same action, adjacent networks)", color: "#2006F7" },
+  ];
+  return (
+    <div className="space-y-2">
+      {rules.map((r) => (
+        <div key={r.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+          <span className="text-[9px] font-mono text-muted-foreground w-8 shrink-0">{r.id}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-foreground">{r.name}</p>
+            <p className="text-[9px] text-muted-foreground">{r.detail}</p>
+          </div>
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ backgroundColor: r.color + "15", color: r.color }}>
+            {r.status.toUpperCase()}
+          </span>
+        </div>
+      ))}
+      <div className="rounded-lg border border-border bg-muted/20 p-2.5 text-center">
+        <p className="text-[10px] font-semibold text-foreground">Consolidation Opportunity</p>
+        <p className="text-[9px] text-muted-foreground">33 rules → 24 rules (27% reduction)</p>
+      </div>
+    </div>
+  );
+}
+
+function MockPolicyComplexity() {
+  const metrics = [
+    { label: "Total Rules", value: "33", sub: "across 4 zones" },
+    { label: "Avg Conditions", value: "3.2", sub: "per rule" },
+    { label: "Nesting Depth", value: "4", sub: "max group depth" },
+    { label: "Complexity Score", value: "Medium", sub: "72 / 100" },
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        {metrics.map((m) => (
+          <div key={m.label} className="rounded-lg border border-border bg-card p-2.5 text-center">
+            <p className="text-lg font-bold text-foreground">{m.value}</p>
+            <p className="text-[9px] font-medium text-foreground">{m.label}</p>
+            <p className="text-[8px] text-muted-foreground">{m.sub}</p>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-border bg-muted/20 p-2.5">
+        <p className="text-[9px] text-muted-foreground"><strong className="text-foreground">Recommendation:</strong> Consolidate overlapping zone-pair rules and reduce group nesting to improve readability and audit compliance.</p>
+      </div>
+    </div>
+  );
+}
+
+function MockUnusedObjects() {
+  const objects = [
+    { type: "Host", name: "old-server-192.168.1.50", icon: <Layers className="h-3 w-3 text-[#F29400]" /> },
+    { type: "Service", name: "custom-tcp-8443", icon: <Package className="h-3 w-3 text-[#EA0022]" /> },
+    { type: "Group", name: "deprecated-vpn-users", icon: <Users className="h-3 w-3 text-[#2006F7]" /> },
+    { type: "Network", name: "legacy-subnet-10.0.99.0/24", icon: <Globe className="h-3 w-3 text-[#6B5BFF]" /> },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-3 text-center mb-2">
+        <div className="flex-1 rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-[#F29400]">12</p>
+          <p className="text-[8px] text-muted-foreground">Unused Objects</p>
+        </div>
+        <div className="flex-1 rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-[#00995a]">89</p>
+          <p className="text-[8px] text-muted-foreground">Active Objects</p>
+        </div>
+      </div>
+      {objects.map((o) => (
+        <div key={o.name} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
+          <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">{o.icon}</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-medium text-foreground truncate">{o.name}</p>
+            <p className="text-[8px] text-muted-foreground">{o.type} · Not referenced by any rule</p>
+          </div>
+          <Trash2 className="h-3 w-3 text-muted-foreground/40" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockRemediationProgress() {
+  const severities = [
+    { label: "Critical", total: 3, fixed: 2, color: "#EA0022" },
+    { label: "High", total: 8, fixed: 5, color: "#F29400" },
+    { label: "Medium", total: 14, fixed: 8, color: "#F8E300" },
+    { label: "Low", total: 7, fixed: 6, color: "#00995a" },
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-[#00995a]">21</p>
+          <p className="text-[8px] text-muted-foreground">Fixed</p>
+        </div>
+        <div className="rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-[#F29400]">8</p>
+          <p className="text-[8px] text-muted-foreground">In Progress</p>
+        </div>
+        <div className="rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-muted-foreground">3</p>
+          <p className="text-[8px] text-muted-foreground">Remaining</p>
+        </div>
+      </div>
+      {severities.map((s) => (
+        <div key={s.label} className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-medium" style={{ color: s.color }}>{s.label}</span>
+            <span className="text-[9px] text-muted-foreground">{s.fixed}/{s.total}</span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${(s.fixed / s.total) * 100}%`, backgroundColor: s.color }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockRemediationRoadmap() {
+  const phases = [
+    { phase: "Week 1", items: ["Disable WAN admin services", "Change default credentials"], severity: "Critical", color: "#EA0022" },
+    { phase: "Week 2–3", items: ["Enable IPS on WAN rules", "Add web filtering"], severity: "High", color: "#F29400" },
+    { phase: "Month 2", items: ["Enforce TLS 1.2+", "Enable DNS rebinding protection"], severity: "Medium", color: "#F8E300" },
+  ];
+  return (
+    <div className="space-y-2">
+      {phases.map((p) => (
+        <div key={p.phase} className="rounded-lg border border-border bg-card p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] font-semibold text-foreground">{p.phase}</span>
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold ml-auto" style={{ backgroundColor: p.color + "15", color: p.color }}>{p.severity}</span>
+          </div>
+          <ul className="space-y-1">
+            {p.items.map((item) => (
+              <li key={item} className="flex items-center gap-2 text-[9px] text-muted-foreground">
+                <span className="h-1 w-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockPlaybooks() {
+  return (
+    <div className="space-y-2">
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <ClipboardList className="h-3.5 w-3.5 text-[#EA0022]" />
+          <p className="text-[10px] font-semibold text-foreground">Disable WAN Admin Services</p>
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#EA0022]/10 text-[#EA0022] ml-auto">CRITICAL</span>
+        </div>
+        <div className="space-y-1.5 pl-5">
+          {[
+            "Navigate to Administration > Device access",
+            "Uncheck HTTPS and SSH under WAN zone",
+            "Enable admin access only on LAN/VPN zones",
+            "Save and verify access is blocked from WAN",
+          ].map((s, i) => (
+            <div key={i} className="flex items-start gap-2 text-[9px]">
+              <span className="flex items-center justify-center h-4 w-4 rounded-full bg-muted text-muted-foreground text-[8px] font-bold shrink-0">{i + 1}</span>
+              <span className="text-muted-foreground">{s}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-3.5 w-3.5 text-[#F29400]" />
+          <p className="text-[10px] font-semibold text-foreground">Enable IPS on WAN Rules</p>
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#F29400]/10 text-[#F29400] ml-auto">HIGH</span>
+        </div>
+        <p className="text-[9px] text-muted-foreground mt-1 pl-5">4 steps · ~10 min per rule</p>
+      </div>
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-3.5 w-3.5 text-[#F8E300]" />
+          <p className="text-[10px] font-semibold text-foreground">Enforce TLS 1.2+ on VPNs</p>
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#F8E300]/10 text-[#F8E300]  ml-auto">MEDIUM</span>
+        </div>
+        <p className="text-[9px] text-muted-foreground mt-1 pl-5">3 steps · ~5 min</p>
+      </div>
+    </div>
+  );
+}
+
+function MockScoreSimulator() {
+  const scenarios = [
+    { label: "Current Score", score: 54, color: "#F29400" },
+    { label: "Fix critical findings", score: 68, color: "#F29400" },
+    { label: "Fix critical + high", score: 82, color: "#00995a" },
+    { label: "All findings fixed", score: 96, color: "#00995a" },
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4 justify-center">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-[#F29400]">54</p>
+          <p className="text-[8px] text-muted-foreground">Current</p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+        <div className="text-center">
+          <p className="text-2xl font-bold text-[#00995a]">82</p>
+          <p className="text-[8px] text-muted-foreground">Projected</p>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        {scenarios.map((s) => (
+          <div key={s.label} className="flex items-center gap-2">
+            <span className="text-[9px] text-muted-foreground flex-1">{s.label}</span>
+            <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${s.score}%`, backgroundColor: s.color }} />
+            </div>
+            <span className="text-[10px] font-bold w-6 text-right" style={{ color: s.color }}>{s.score}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MockAttackSurface() {
+  const services = [
+    { port: "443", service: "HTTPS (Admin UI)", zone: "WAN", risk: "high", color: "#EA0022" },
+    { port: "22", service: "SSH (Management)", zone: "WAN", risk: "high", color: "#EA0022" },
+    { port: "500", service: "IKE (IPsec VPN)", zone: "WAN", risk: "medium", color: "#F29400" },
+    { port: "4444", service: "User Portal", zone: "WAN", risk: "low", color: "#00995a" },
+    { port: "8443", service: "Captive Portal", zone: "DMZ", risk: "low", color: "#00995a" },
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-border overflow-hidden">
+        <div className="grid grid-cols-[50px_1fr_60px_60px] gap-2 px-3 py-1.5 bg-muted/30 text-[8px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <span>Port</span><span>Service</span><span>Zone</span><span>Risk</span>
+        </div>
+        {services.map((s) => (
+          <div key={s.port + s.zone} className="grid grid-cols-[50px_1fr_60px_60px] gap-2 px-3 py-2 border-t border-border items-center">
+            <span className="text-[10px] font-mono font-medium text-foreground">{s.port}</span>
+            <span className="text-[9px] text-muted-foreground">{s.service}</span>
+            <span className="text-[9px] text-muted-foreground">{s.zone}</span>
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold text-center" style={{ backgroundColor: s.color + "15", color: s.color }}>{s.risk.toUpperCase()}</span>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-[#EA0022]">5</p>
+          <p className="text-[8px] text-muted-foreground">Exposed Services</p>
+        </div>
+        <div className="rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-[#F29400]">2</p>
+          <p className="text-[8px] text-muted-foreground">High Risk</p>
+        </div>
+        <div className="rounded border border-border bg-card p-2">
+          <p className="text-lg font-bold text-foreground">3</p>
+          <p className="text-[8px] text-muted-foreground">Zones</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockConfigCompare() {
+  const diffs = [
+    { field: "WAN Admin HTTPS", before: "Enabled", after: "Disabled", change: "fixed" },
+    { field: "IPS Policy", before: "None", after: "GeneralPolicy", change: "fixed" },
+    { field: "Firewall Rules", before: "33", after: "28", change: "improved" },
+    { field: "VPN TLS Version", before: "1.0+", after: "1.2+", change: "fixed" },
+    { field: "DNS Rebinding", before: "Off", after: "Off", change: "unchanged" },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="flex-1 rounded border border-border bg-card p-2 text-center">
+          <p className="text-[9px] text-muted-foreground">Before</p>
+          <p className="text-sm font-bold text-[#F29400]">Score 54</p>
+        </div>
+        <ArrowLeftRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="flex-1 rounded border border-border bg-card p-2 text-center">
+          <p className="text-[9px] text-muted-foreground">After</p>
+          <p className="text-sm font-bold text-[#00995a]">Score 78</p>
+        </div>
+      </div>
+      <div className="rounded-lg border border-border overflow-hidden">
+        {diffs.map((d) => (
+          <div key={d.field} className="flex items-center gap-2 px-3 py-2 border-b border-border last:border-0 text-[9px]">
+            <span className="font-medium text-foreground flex-1">{d.field}</span>
+            <span className="text-muted-foreground line-through">{d.before}</span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40" />
+            <span className={d.change === "fixed" ? "text-[#00995a] font-medium" : d.change === "improved" ? "text-[#2006F7] font-medium" : "text-muted-foreground"}>{d.after}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MockScheduledReports() {
+  const schedules = [
+    { customer: "Acme Corp", frequency: "Monthly", next: "1 Apr 2026", type: "Compliance", active: true },
+    { customer: "Global Bank", frequency: "Weekly", next: "24 Mar 2026", type: "Executive", active: true },
+    { customer: "MediHealth", frequency: "Quarterly", next: "1 Jun 2026", type: "Full Suite", active: false },
+  ];
+  return (
+    <div className="space-y-2">
+      {schedules.map((s) => (
+        <div key={s.customer} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+          <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+            <Calendar className="h-3.5 w-3.5 text-[#2006F7]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-foreground">{s.customer}</p>
+            <p className="text-[9px] text-muted-foreground">{s.frequency} · {s.type} · Next: {s.next}</p>
+          </div>
+          <div className={`h-4 w-7 rounded-full flex items-center px-0.5 ${s.active ? "bg-[#00995a] justify-end" : "bg-muted justify-start"}`}>
+            <div className="h-3 w-3 rounded-full bg-white" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockWebhookPanel() {
+  const hooks = [
+    { name: "PSA Ticket Creation", url: "https://psa.acme-it.co.uk/api/webhook", events: "assessment.complete, finding.critical", status: "active" },
+    { name: "Slack Notifications", url: "https://hooks.slack.com/services/...", events: "report.saved, agent.offline", status: "active" },
+  ];
+  return (
+    <div className="space-y-2">
+      {hooks.map((h) => (
+        <div key={h.name} className="rounded-lg border border-border bg-card p-3">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Webhook className="h-3.5 w-3.5 text-[#6B5BFF]" />
+            <p className="text-[10px] font-semibold text-foreground flex-1">{h.name}</p>
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-[#00995a]/10 text-[#00995a]">Active</span>
+          </div>
+          <p className="text-[9px] text-muted-foreground font-mono truncate">{h.url}</p>
+          <p className="text-[8px] text-muted-foreground mt-1">Events: {h.events}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MockCustomFrameworkPanel() {
   const controls = [
     { id: "CF-01", name: "Firewall Rule Hygiene", desc: "No disabled or orphaned rules", status: "pass" },
@@ -710,10 +1074,10 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     Welcome to Sophos FireComply{orgName ? `, ${orgName}` : ""}
                   </h2>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                    Let's get your workspace set up. This takes about 2 minutes and you can always change these settings later.
+                    Let's get your workspace set up. This takes about 3 minutes and you can always change these settings later.
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="grid grid-cols-4 gap-2.5 pt-2">
                   <div className="rounded-lg border border-border bg-card p-3 text-center">
                     <Building2 className="h-5 w-5 mx-auto text-[#2006F7] dark:text-[#6B5BFF] mb-1.5" />
                     <p className="text-[10px] font-medium text-foreground">Branding & Central</p>
@@ -721,13 +1085,18 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3 text-center">
                     <Shield className="h-5 w-5 mx-auto text-[#00995a] dark:text-[#00F2B3] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Team & Security</p>
-                    <p className="text-[9px] text-muted-foreground">MFA, passkeys, roles</p>
+                    <p className="text-[10px] font-medium text-foreground">Analysis & Reports</p>
+                    <p className="text-[9px] text-muted-foreground">AI, optimisation, tools</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-card p-3 text-center">
+                    <ListChecks className="h-5 w-5 mx-auto text-[#F29400] dark:text-[#F29400] mb-1.5" />
+                    <p className="text-[10px] font-medium text-foreground">Remediation</p>
+                    <p className="text-[9px] text-muted-foreground">Playbooks, roadmaps</p>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3 text-center">
                     <Globe className="h-5 w-5 mx-auto text-[#005BC8] dark:text-[#00EDFF] mb-1.5" />
                     <p className="text-[10px] font-medium text-foreground">Portal & Alerts</p>
-                    <p className="text-[9px] text-muted-foreground">Client portals, notifications</p>
+                    <p className="text-[9px] text-muted-foreground">Portals, webhooks, schedules</p>
                   </div>
                 </div>
               </div>
@@ -1054,6 +1423,234 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
               </div>
             )}
 
+            {step.id === "guide-optimisation" && (
+              <div className="space-y-5 relative">
+                {activeOverlay === "rule-optimiser" && (
+                  <FeatureOverlay title="Rule Optimiser" subtitle="Identify redundant, shadowed, and overlapping rules" onClose={() => setActiveOverlay(null)}>
+                    <MockRuleOptimiser />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> FireComply analyses every rule against every other rule to find shadows (a broader rule makes a narrower one unreachable), redundancies (identical match criteria), and consolidation opportunities (adjacent rules that can merge).</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "policy-complexity" && (
+                  <FeatureOverlay title="Policy Complexity" subtitle="Measure and reduce policy complexity" onClose={() => setActiveOverlay(null)}>
+                    <MockPolicyComplexity />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Analyses rule count, average conditions per rule, object group nesting depth, and zone-pair distribution to produce a complexity score. Lower complexity means easier auditing and fewer misconfigurations.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "unused-objects" && (
+                  <FeatureOverlay title="Unused Objects" subtitle="Find orphaned hosts, services, and groups" onClose={() => setActiveOverlay(null)}>
+                    <MockUnusedObjects />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Scans all network objects, service definitions, and groups in the config and cross-references them against every rule. Objects not referenced by any active rule are flagged for cleanup.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "consistency-checker" && (
+                  <FeatureOverlay title="Consistency Checker" subtitle="Cross-firewall rule consistency analysis" onClose={() => setActiveOverlay(null)}>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2 text-center">
+                        <div className="rounded border border-border bg-card p-2">
+                          <p className="text-lg font-bold text-[#00995a]">87%</p>
+                          <p className="text-[8px] text-muted-foreground">Consistency Score</p>
+                        </div>
+                        <div className="rounded border border-border bg-card p-2">
+                          <p className="text-lg font-bold text-[#F29400]">4</p>
+                          <p className="text-[8px] text-muted-foreground">Inconsistencies</p>
+                        </div>
+                      </div>
+                      {[
+                        { rule: "IPS Policy", fw1: "GeneralPolicy", fw2: "None", status: "mismatch" },
+                        { rule: "Web Filtering", fw1: "Enabled", fw2: "Enabled", status: "match" },
+                        { rule: "Admin HTTPS", fw1: "Disabled", fw2: "Enabled", status: "mismatch" },
+                        { rule: "SSL Inspection", fw1: "38%", fw2: "42%", status: "match" },
+                      ].map((r) => (
+                        <div key={r.rule} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-[9px]">
+                          <span className={`h-2 w-2 rounded-full shrink-0 ${r.status === "match" ? "bg-[#00995a]" : "bg-[#EA0022]"}`} />
+                          <span className="font-medium text-foreground flex-1">{r.rule}</span>
+                          <span className="text-muted-foreground">FW1: {r.fw1}</span>
+                          <span className="text-muted-foreground">FW2: {r.fw2}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> When multiple firewall configs are loaded, FireComply compares security feature settings, rule structures, and policy configurations across devices to identify inconsistencies that could indicate gaps in your security posture.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Optimisation</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    FireComply analyses your firewall rules for <strong className="text-foreground">redundancy, complexity, and hygiene</strong> — helping you clean up and streamline your policy. Click each to preview.
+                  </p>
+                </div>
+
+                <div className="space-y-2.5">
+                  <FeatureButton icon={<Wrench className="h-4 w-4" />} title="Rule Optimiser" desc="Identifies redundant, shadowed, and overlapping rules that can be consolidated" color="text-[#2006F7]" onClick={() => setActiveOverlay("rule-optimiser")} />
+                  <FeatureButton icon={<Layers className="h-4 w-4" />} title="Policy Complexity" desc="Measures rule complexity and suggests simplification opportunities" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("policy-complexity")} />
+                  <FeatureButton icon={<Trash2 className="h-4 w-4" />} title="Unused Objects" desc="Finds hosts, services, and groups no longer referenced by any rule" color="text-[#F29400]" onClick={() => setActiveOverlay("unused-objects")} />
+                  <FeatureButton icon={<Scale className="h-4 w-4" />} title="Consistency Checker" desc="Cross-firewall rule consistency analysis when multiple configs are loaded" color="text-[#00995a]" onClick={() => setActiveOverlay("consistency-checker")} />
+                </div>
+
+                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Tip:</strong> The Optimisation tab appears automatically after uploading a config. Upload multiple configs to enable cross-firewall consistency checking.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {step.id === "guide-remediation" && (
+              <div className="space-y-5 relative">
+                {activeOverlay === "remediation-progress" && (
+                  <FeatureOverlay title="Remediation Progress" subtitle="Track fix progress across all findings" onClose={() => setActiveOverlay(null)}>
+                    <MockRemediationProgress />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Track remediation status for every finding — mark items as fixed, in progress, or accepted risk. Progress bars show completion by severity so you can focus on what matters most.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "remediation-roadmap" && (
+                  <FeatureOverlay title="Remediation Roadmap" subtitle="Prioritised timeline with effort estimates" onClose={() => setActiveOverlay(null)}>
+                    <MockRemediationRoadmap />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Generates a prioritised remediation timeline based on finding severity and estimated effort. Critical issues first, then high, then medium — with suggested timelines for each phase.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "change-approval" && (
+                  <FeatureOverlay title="Change Approval" subtitle="Create, approve, and track change requests" onClose={() => setActiveOverlay(null)}>
+                    <div className="space-y-2">
+                      {[
+                        { id: "CR-001", title: "Disable WAN admin services", status: "Approved", statusColor: "#00995a", by: "Sarah Chen", date: "14 Mar 2026" },
+                        { id: "CR-002", title: "Enable IPS on all WAN rules", status: "Pending", statusColor: "#F29400", by: "Joseph McDonald", date: "16 Mar 2026" },
+                        { id: "CR-003", title: "Enforce TLS 1.2+ on VPNs", status: "Draft", statusColor: "#6B5BFF", by: "Alex Rivera", date: "18 Mar 2026" },
+                      ].map((cr) => (
+                        <div key={cr.id} className="rounded-lg border border-border bg-card p-3">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[9px] font-mono text-muted-foreground">{cr.id}</span>
+                            <p className="text-[10px] font-semibold text-foreground flex-1">{cr.title}</p>
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ backgroundColor: cr.statusColor + "15", color: cr.statusColor }}>{cr.status}</span>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground">Requested by {cr.by} · {cr.date}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Create formal change requests for remediation actions, assign them to team members for review, and track approval status. Once approved, mark changes as implemented and verify the fix in the next assessment.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "playbooks" && (
+                  <FeatureOverlay title="Remediation Playbooks" subtitle="Step-by-step guides for each finding" onClose={() => setActiveOverlay(null)}>
+                    <MockPlaybooks />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Each finding has a step-by-step playbook with exact navigation paths, CLI commands, and verification steps for the Sophos Firewall admin console. Follow along to fix issues quickly and correctly.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Remediation</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Plan, prioritise, and track the work needed to <strong className="text-foreground">fix security findings</strong> — from individual playbooks to full remediation roadmaps. Click each to preview.
+                  </p>
+                </div>
+
+                <div className="space-y-2.5">
+                  <FeatureButton icon={<TrendingUp className="h-4 w-4" />} title="Progress Tracking" desc="Track fix progress across all findings with completion metrics by severity" color="text-[#00995a]" onClick={() => setActiveOverlay("remediation-progress")} />
+                  <FeatureButton icon={<Map className="h-4 w-4" />} title="Remediation Roadmap" desc="Prioritised timeline of recommended fixes with effort estimates" color="text-[#2006F7]" onClick={() => setActiveOverlay("remediation-roadmap")} />
+                  <FeatureButton icon={<ClipboardList className="h-4 w-4" />} title="Playbooks" desc="Step-by-step remediation guides with exact navigation paths and commands" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("playbooks")} />
+                  <FeatureButton icon={<ShieldCheck className="h-4 w-4" />} title="Change Approval" desc="Create change requests, track approvals, and verify remediation results" color="text-[#005BC8]" onClick={() => setActiveOverlay("change-approval")} />
+                </div>
+
+                <div className="rounded-lg bg-[#00995a]/5 border border-[#00995a]/15 p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Tip:</strong> The Remediation tab appears when findings are detected. Use it to demonstrate ongoing security improvements to your customers.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {step.id === "guide-tools" && (
+              <div className="space-y-5 relative">
+                {activeOverlay === "score-simulator" && (
+                  <FeatureOverlay title="Score Simulator" subtitle="Model what-if scenarios for your risk score" onClose={() => setActiveOverlay(null)}>
+                    <MockScoreSimulator />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Select findings you plan to fix and instantly see how your risk score would change. Great for prioritising remediation work and showing customers the impact of proposed changes.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "attack-surface" && (
+                  <FeatureOverlay title="Attack Surface Map" subtitle="Visualise internet-facing services and exposed ports" onClose={() => setActiveOverlay(null)}>
+                    <MockAttackSurface />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Analyses firewall rules to identify every service accessible from external zones. Maps exposed ports, protocols, and admin interfaces to highlight your internet-facing attack surface.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "export-centre" && (
+                  <FeatureOverlay title="Export Centre" subtitle="Export reports, risk registers, and evidence" onClose={() => setActiveOverlay(null)}>
+                    <div className="space-y-2">
+                      {[
+                        { format: "PDF", desc: "Branded report ready for client delivery", icon: <FileText className="h-3.5 w-3.5 text-[#EA0022]" />, types: "Individual, Executive, Compliance" },
+                        { format: "Word (DOCX)", desc: "Editable document for custom modifications", icon: <FileText className="h-3.5 w-3.5 text-[#2006F7]" />, types: "Individual, Executive, Compliance" },
+                        { format: "PowerPoint (PPTX)", desc: "Presentation-ready slides with charts", icon: <FileText className="h-3.5 w-3.5 text-[#F29400]" />, types: "Executive Summary" },
+                        { format: "CSV / Excel", desc: "Raw data for analysis and risk registers", icon: <FileText className="h-3.5 w-3.5 text-[#00995a]" />, types: "Findings, Risk Register, Evidence" },
+                        { format: "ZIP Bundle", desc: "All reports and evidence in a single download", icon: <Package className="h-3.5 w-3.5 text-[#6B5BFF]" />, types: "Full assessment package" },
+                      ].map((f) => (
+                        <div key={f.format} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+                          <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{f.icon}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-semibold text-foreground">{f.format}</p>
+                            <p className="text-[9px] text-muted-foreground">{f.desc}</p>
+                            <p className="text-[8px] text-muted-foreground/60 mt-0.5">{f.types}</p>
+                          </div>
+                          <Download className="h-3 w-3 text-muted-foreground/40" />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> The Export Centre provides one-click downloads in multiple formats. Generate branded PDFs for clients, editable Word docs for customisation, PowerPoint decks for presentations, and CSV exports for data analysis — or download everything as a ZIP bundle.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "config-compare" && (
+                  <FeatureOverlay title="Config Compare" subtitle="Side-by-side diff between firewall configurations" onClose={() => setActiveOverlay(null)}>
+                    <MockConfigCompare />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Upload two configs (e.g. before and after remediation) and FireComply shows a detailed diff — changed rules, score impact, and whether findings were resolved. Also available in the Compare tab.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-foreground">Tools & Compare</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Power tools for deeper analysis — <strong className="text-foreground">simulate scores</strong>, <strong className="text-foreground">map your attack surface</strong>, <strong className="text-foreground">compare configs</strong>, and <strong className="text-foreground">export everything</strong>. Click each to preview.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <FeatureButton icon={<Zap className="h-4 w-4" />} title="Score Simulator" desc="Model what-if scenarios to see how fixes impact your score" color="text-[#F29400]" onClick={() => setActiveOverlay("score-simulator")} />
+                  <FeatureButton icon={<Target className="h-4 w-4" />} title="Attack Surface" desc="Map internet-facing services, ports, and access paths" color="text-[#EA0022]" onClick={() => setActiveOverlay("attack-surface")} />
+                  <FeatureButton icon={<GitCompare className="h-4 w-4" />} title="Config Compare" desc="Side-by-side diff between before and after configs" color="text-[#2006F7]" onClick={() => setActiveOverlay("config-compare")} />
+                  <FeatureButton icon={<Package className="h-4 w-4" />} title="Export Centre" desc="Export reports, risk registers, and evidence in PDF, Word, PPTX" color="text-[#00995a]" onClick={() => setActiveOverlay("export-centre")} />
+                </div>
+
+                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                  <p className="text-[10px] text-muted-foreground">
+                    <strong className="text-foreground">Tip:</strong> Upload two configs to enable the Compare tab. The Score Simulator and Attack Surface Map are in the Tools tab after uploading any config.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {step.id === "guide-management" && (
               <div className="space-y-5 relative">
                 {activeOverlay === "mgmt-dashboard" && (
@@ -1231,23 +1828,41 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     </div>
                   </FeatureOverlay>
                 )}
+                {activeOverlay === "scheduled-reports" && (
+                  <FeatureOverlay title="Scheduled Reports" subtitle="Automated report delivery to customers" onClose={() => setActiveOverlay(null)}>
+                    <MockScheduledReports />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Schedule automatic report delivery — compliance, executive, or full suite — on a weekly, monthly, or quarterly basis. Reports are generated and emailed directly to your customers with your MSP branding.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
+                {activeOverlay === "webhooks" && (
+                  <FeatureOverlay title="Webhook Integrations" subtitle="POST data to your PSA, RMM, or ticketing system" onClose={() => setActiveOverlay(null)}>
+                    <MockWebhookPanel />
+                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Configure webhook endpoints to receive JSON payloads when key events happen — assessments complete, critical findings detected, reports saved, or agents go offline. Integrate with Slack, Teams, ConnectWise, Datto, or any system that accepts webhooks.</p>
+                    </div>
+                  </FeatureOverlay>
+                )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Client Portal & Alerts</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Portal, Alerts & Integrations</h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Share results with customers through <strong className="text-foreground">branded portals</strong>, stay informed with <strong className="text-foreground">real-time alerts</strong>, and build <strong className="text-foreground">custom compliance frameworks</strong>. Click each to learn more.
+                    Share results with customers through <strong className="text-foreground">branded portals</strong>, automate <strong className="text-foreground">scheduled reports</strong>, stay informed with <strong className="text-foreground">real-time alerts</strong>, and connect to your <strong className="text-foreground">existing tools via webhooks</strong>. Click each to learn more.
                   </p>
                 </div>
 
-                <div className="space-y-2.5">
-                  <FeatureButton icon={<Globe className="h-4 w-4" />} title="Client Portal" desc="Branded read-only portal for customers with scores, reports, and compliance" color="text-[#005BC8]" onClick={() => setActiveOverlay("client-portal")} />
-                  <FeatureButton icon={<Bell className="h-4 w-4" />} title="Alerts & Notifications" desc="Email and webhook alerts for critical findings, agent status, and drift detection" color="text-[#F29400]" onClick={() => setActiveOverlay("alerts")} />
-                  <FeatureButton icon={<BookOpen className="h-4 w-4" />} title="Custom Compliance Frameworks" desc="Create your own standards with custom controls mapped to firewall checks" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("custom-frameworks")} />
+                <div className="grid grid-cols-2 gap-2.5">
+                  <FeatureButton icon={<Globe className="h-4 w-4" />} title="Client Portal" desc="Branded read-only portal for customers with scores and reports" color="text-[#005BC8]" onClick={() => setActiveOverlay("client-portal")} />
+                  <FeatureButton icon={<Bell className="h-4 w-4" />} title="Alerts" desc="Email and webhook alerts for critical findings and drift" color="text-[#F29400]" onClick={() => setActiveOverlay("alerts")} />
+                  <FeatureButton icon={<Calendar className="h-4 w-4" />} title="Scheduled Reports" desc="Auto-email compliance reports on a weekly, monthly, or quarterly basis" color="text-[#2006F7]" onClick={() => setActiveOverlay("scheduled-reports")} />
+                  <FeatureButton icon={<Webhook className="h-4 w-4" />} title="Webhooks" desc="POST assessment data to your PSA, RMM, or ticketing system" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("webhooks")} />
+                  <FeatureButton icon={<BookOpen className="h-4 w-4" />} title="Custom Frameworks" desc="Create your own compliance standards with custom controls" color="text-[#00995a]" onClick={() => setActiveOverlay("custom-frameworks")} />
                 </div>
 
                 <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Tip:</strong> You can configure all of these from Settings. Client portals are especially useful for MSPs who want to give customers visibility into their security posture without sharing full access.
+                    <strong className="text-foreground">Tip:</strong> Configure all of these from Settings. Client portals and scheduled reports are especially useful for MSPs who want to give customers ongoing visibility into their security posture.
                   </p>
                 </div>
               </div>
