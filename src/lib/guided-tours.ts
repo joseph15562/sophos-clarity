@@ -136,11 +136,22 @@ export function startRemediationTour(cb?: TourCallbacks) {
 export function startBaselineTour(cb?: TourCallbacks) {
   if (cb?.setAnalysisTab) cb.setAnalysisTab("tools");
   setTimeout(() => {
-    const t = createTour([
-      { element: sel("baseline-manager"), popover: { title: "Baseline Manager", description: "Save a snapshot of your current config as a baseline for future comparison.", side: "top", align: "center" } },
+    const steps: DriveStep[] = [
       { element: sel("compare-baseline"), popover: { title: "Compare to Baseline", description: "Compare your current analysis against a saved baseline to detect config drift.", side: "top", align: "center" } },
+      { element: sel("baseline-manager"), popover: { title: "Baseline Manager", description: "Save a snapshot of your current config as a baseline for future comparison.", side: "top", align: "center" } },
       { element: sel("what-if"), popover: { title: "What-If Comparison", description: "Model what-if scenarios to evaluate different configuration approaches.", side: "top", align: "center" } },
-    ]);
+    ];
+    const visible = filterVisible(steps);
+    if (visible.length < steps.length) {
+      visible.push({ element: sel("widget-customiser"), popover: { title: "Enable More Widgets", description: "Some tools are hidden. Click the <strong>Widgets</strong> button to enable <strong>Baseline Manager</strong> and <strong>What-If Comparison</strong> on the Tools tab.", side: "bottom", align: "center" } });
+    }
+    const t = driver({
+      showProgress: true, animate: true, overlayColor: "rgba(0,0,0,0.6)",
+      stagePadding: 8, stageRadius: 10, popoverOffset: 12,
+      progressText: "Step {{current}} of {{total}}",
+      nextBtnText: "Next →", prevBtnText: "← Back", doneBtnText: "Done",
+      steps: visible,
+    });
     t.drive();
   }, 300);
 }
@@ -151,11 +162,22 @@ export function startBaselineTour(cb?: TourCallbacks) {
 export function startMapsTour(cb?: TourCallbacks) {
   if (cb?.setAnalysisTab) cb.setAnalysisTab("tools");
   setTimeout(() => {
-    const t = createTour([
-      { element: sel("fleet-map"), popover: { title: "Geographic Fleet Map", description: "View your firewalls' external IP addresses and their geographic locations.", side: "top", align: "center" } },
+    const steps: DriveStep[] = [
       { element: sel("attack-surface"), popover: { title: "Attack Surface Map", description: "Visualise your network's attack surface based on firewall rules and exposed services.", side: "top", align: "center" } },
+      { element: sel("fleet-map"), popover: { title: "Geographic Fleet Map", description: "View your firewalls' external IP addresses and their geographic locations.", side: "top", align: "center" } },
       { element: sel("zone-map"), popover: { title: "Network Zone Map", description: "Zone-to-zone traffic flow and security level visualisation.", side: "top", align: "center" } },
-    ]);
+    ];
+    const visible = filterVisible(steps);
+    if (visible.length < steps.length) {
+      visible.push({ element: sel("widget-customiser"), popover: { title: "Enable More Widgets", description: "Some maps are hidden. Click the <strong>Widgets</strong> button to enable <strong>Geographic Fleet Map</strong> (Tools tab) and <strong>Network Zone Map</strong> (Security tab).", side: "bottom", align: "center" } });
+    }
+    const t = driver({
+      showProgress: true, animate: true, overlayColor: "rgba(0,0,0,0.6)",
+      stagePadding: 8, stageRadius: 10, popoverOffset: 12,
+      progressText: "Step {{current}} of {{total}}",
+      nextBtnText: "Next →", prevBtnText: "← Back", doneBtnText: "Done",
+      steps: visible,
+    });
     t.drive();
   }, 300);
 }
