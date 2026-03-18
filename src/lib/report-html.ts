@@ -9,15 +9,19 @@ marked.setOptions({ gfm: true });
 
 /**
  * Split single-line markdown tables into one line per row so marked can parse them.
- * AI sometimes outputs "| A | B | | --- | --- | | 1 | 2 |" on one line; GFM requires newlines between rows.
+ * Only split when the line contains a separator (|---|) AND at most 2 row boundaries (" | | "),
+ * so we only fix concatenated header+separator+body. Do NOT split wide rows with many empty
+ * cells (e.g. firewall rules), which would contain many " | | " and get broken.
  */
 function normalizeMarkdownTables(md: string): string {
+  const rowBoundary = " | | ";
   return md.split("\n").map((line) => {
     const trimmed = line.trim();
     if (!trimmed.startsWith("|") || trimmed.length < 4) return line;
-    const rowBoundary = " | | ";
-    if (!trimmed.includes(rowBoundary)) return line;
+    const hasSeparator = /\|\s*---\s*\|/.test(trimmed);
+    if (!hasSeparator || !trimmed.includes(rowBoundary)) return line;
     const parts = trimmed.split(rowBoundary);
+    if (parts.length > 3) return line;
     const rows = parts.map((p) => {
       let row = p.trim();
       if (!row.startsWith("|")) row = "| " + row;

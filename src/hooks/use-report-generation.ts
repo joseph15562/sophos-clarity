@@ -9,15 +9,16 @@ import { computeRiskScore } from "@/lib/risk-score";
 
 const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
 
-/** Build branded cover page markdown for reports */
-export function buildCoverPageMarkdown(branding: BrandingData): string {
+/** Build branded cover page markdown for reports. Use titleOverride for individual firewall reports (e.g. firewall name). */
+export function buildCoverPageMarkdown(branding: BrandingData, titleOverride?: string): string {
   const lines: string[] = [];
   if (branding.logoUrl) {
     lines.push(`![Company Logo](${branding.logoUrl})`);
     lines.push("");
   }
-  if (branding.customerName) {
-    lines.push(`# ${branding.customerName}`);
+  const title = titleOverride ?? branding.customerName;
+  if (title) {
+    lines.push(`# ${title}`);
     lines.push("");
   }
   lines.push(`**Date:** ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`);
@@ -150,8 +151,9 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
               setReports((prev) =>
                 prev.map((r) => {
                   if (r.id !== reportId) return r;
-                  const cover = buildCoverPageMarkdown(branding);
                   const isFirstChunk = r.markdown === "";
+                  const coverTitle = isFirstChunk && opts?.firewallLabels?.length === 1 && !opts?.executive && !opts?.compliance ? opts.firewallLabels[0] : undefined;
+                  const cover = buildCoverPageMarkdown(branding, coverTitle);
                   const newContent = isFirstChunk ? cover + "\n\n---\n\n" + text : text;
                   return { ...r, markdown: r.markdown + newContent };
                 })
