@@ -191,7 +191,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     prevResultCountRef.current = count;
   }, [analysisResults]);
 
-  // Restore session on mount (authenticated users only — guests get a clean slate)
+  // Restore session on mount (authenticated users only — guests get a clean slate).
+  // Restores reports + branding but stays on the dashboard so the user can
+  // click "View Reports" when ready.
   useEffect(() => {
     if (isGuest) return;
     const session = loadSession();
@@ -200,7 +202,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setReports(session.reports);
       setActiveReportId(session.activeReportId);
       setRestoredSession(true);
-      setViewingReports(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -576,7 +577,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
       <main id="main-content" className={`mx-auto px-4 py-8 space-y-8 ${viewingReports ? "max-w-full w-full" : "max-w-5xl"}`}>
         {/* Restored session banner */}
-        {restoredSession && viewingReports && hasReports && !isLoading && (
+        {restoredSession && !viewingReports && hasReports && !isLoading && (
           <div className="no-print rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-4 py-2.5 flex items-center gap-3 text-sm">
             <RotateCcw className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
             <span className="text-foreground">Previous session restored — {reports.length} report{reports.length !== 1 ? "s" : ""} recovered.</span>
