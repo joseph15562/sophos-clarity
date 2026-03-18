@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { BrandingData } from "./BrandingSetup";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
+import { severityIcon } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { mapToFramework, type FrameworkMapping } from "@/lib/compliance-map";
 import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Share2, Copy, Bug, ChevronDown, ChevronRight } from "lucide-react";
@@ -731,6 +732,13 @@ function EvidenceVerification({
   const mappedFrameworks = selectedFrameworks.length > 0 && filteredFindings.length > 0
     ? [...new Set(filteredFindings.flatMap((f) => findingToFrameworks(f.title, selectedFrameworks)))]
     : [];
+  const sevStyle: Record<string, string> = {
+    critical: "bg-[#EA0022]/10 text-[#EA0022]",
+    high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
+    medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
+    low: "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]",
+    info: "bg-[#009CFB]/10 text-[#009CFB]",
+  };
   return (
     <div className="no-print rounded-lg border border-border bg-muted/30 px-4 py-3 mt-3">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Evidence Verification — {reportLabel}</p>
@@ -745,6 +753,17 @@ function EvidenceVerification({
           <span><span className="font-semibold text-foreground">{inspectionPosture.withWebFilter}/{inspectionPosture.totalWanRules}</span> WAN rules filtered</span>
         )}
       </div>
+      {filteredFindings.length > 0 && (
+        <ul className="mt-2 pt-2 border-t border-border space-y-1.5 max-h-48 overflow-y-auto text-[11px] list-none pl-0">
+          {filteredFindings.map((f) => (
+            <li key={f.id} className="flex items-start gap-2">
+              <span className="shrink-0 mt-0.5" title={f.severity}>{severityIcon(f.severity)}</span>
+              <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${sevStyle[f.severity] ?? ""}`}>{f.severity}</span>
+              <span className="text-foreground min-w-0">{f.title}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {mappedFrameworks.length > 0 && (
         <p className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border">
           Findings map to framework controls: {mappedFrameworks.join(", ")}.
