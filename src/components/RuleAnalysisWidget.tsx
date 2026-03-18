@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { RuleConsolidation } from "./RuleConsolidation";
 import { RuleOverlapVis } from "./RuleOverlapVis";
-import type { ParsedFile } from "@/hooks/use-report-generation";
+import type { ParsedFile } from "@/types/parsed-file";
 
 interface Props {
   files: ParsedFile[];

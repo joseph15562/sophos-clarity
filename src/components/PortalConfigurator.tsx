@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,8 +79,6 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,46}[a-z0-9]$/;
 
 export function PortalConfigurator() {
   const { org } = useAuth();
-  const { toast } = useToast();
-
   const [tenants, setTenants] = useState<string[]>([]);
   const [portalConfigs, setPortalConfigs] = useState<PortalConfig[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
@@ -196,7 +194,7 @@ export function PortalConfigurator() {
       const file = e.target.files?.[0];
       if (!file) return;
       if (file.size > 512_000) {
-        toast({ title: "Logo too large", description: "Maximum file size is 500 KB.", variant: "destructive" });
+        toast.error("Logo too large: maximum file size is 500 KB.");
         return;
       }
       const reader = new FileReader();
@@ -266,18 +264,12 @@ export function PortalConfigurator() {
 
     if (error) {
       const isDupe = error.message?.includes("duplicate") || error.code === "23505";
-      toast({
-        title: isDupe ? "Slug already taken" : "Save failed",
-        description: isDupe
-          ? "Another portal is already using this slug."
-          : error.message,
-        variant: "destructive",
-      });
+      toast.error(isDupe ? "Slug already taken: another portal is already using this slug." : error.message);
     } else {
-      toast({ title: "Portal configuration saved" });
+      toast.success("Portal configuration saved");
       await loadTenants();
     }
-  }, [config, orgId, toast, update, loadTenants]);
+  }, [config, orgId, update, loadTenants]);
 
   const portalUrl = config?.slug
     ? `${window.location.origin}/portal/${config.slug}`
@@ -286,8 +278,8 @@ export function PortalConfigurator() {
   const copyLink = useCallback((url: string) => {
     if (!url) return;
     navigator.clipboard.writeText(url);
-    toast({ title: "Portal link copied to clipboard" });
-  }, [toast]);
+    toast.success("Portal link copied to clipboard");
+  }, []);
 
   if (loading) {
     return (

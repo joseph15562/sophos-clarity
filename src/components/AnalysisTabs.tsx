@@ -13,8 +13,10 @@ import { loadWidgetPreferences, isWidgetVisible, type WidgetPreferences } from "
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { InspectionPosture } from "@/lib/analyse-config";
 import type { BrandingData } from "@/components/BrandingSetup";
-import type { ParsedFile } from "@/hooks/use-report-generation";
+import type { ParsedFile } from "@/types/parsed-file";
 import type { RiskScoreResult } from "@/lib/risk-score";
+import { getFileLabel } from "@/lib/utils";
+import { ANALYSIS_TAB } from "@/constants/app";
 
 const RiskScoreDashboard = lazy(() => import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })));
 const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })));
@@ -113,10 +115,6 @@ export interface AnalysisTabsProps {
   onExplainFinding: (title: string) => void;
 }
 
-function fileLabel(f: ParsedFile) {
-  return f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-}
-
 export function AnalysisTabs({
   analysisResult,
   files,
@@ -154,7 +152,7 @@ export function AnalysisTabs({
         <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2">Detailed Security Analysis</h2>
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex-nowrap whitespace-nowrap w-max inline-flex">
-          <TabsTrigger value="overview" className="gap-2">
+          <TabsTrigger value={ANALYSIS_TAB.OVERVIEW} className="gap-2">
             <LayoutDashboard className="h-3.5 w-3.5" />
             Overview
             {totalFindings > 0 && (
@@ -178,13 +176,13 @@ export function AnalysisTabs({
             Tools
           </TabsTrigger>
           {totalFindings > 0 && (
-            <TabsTrigger value="remediation" className="gap-2">
+            <TabsTrigger value={ANALYSIS_TAB.REMEDIATION} className="gap-2">
               <Wrench className="h-3.5 w-3.5" />
               Remediation
             </TabsTrigger>
           )}
           {files.length >= 2 && (
-            <TabsTrigger value="compare" className="gap-2">
+            <TabsTrigger value={ANALYSIS_TAB.COMPARE} className="gap-2">
               <ArrowLeftRight className="h-3.5 w-3.5" />
               Compare
             </TabsTrigger>
@@ -202,7 +200,7 @@ export function AnalysisTabs({
 
       <div ref={panelRef} tabIndex={-1} aria-live="polite" className="outline-none">
       {/* Overview */}
-      <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+      <TabsContent value={ANALYSIS_TAB.OVERVIEW} className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Overview failed to load">
           <Suspense fallback={null}>
             <ScoreDeltaBanner analysisResults={analysisResult} />
@@ -704,7 +702,7 @@ export function AnalysisTabs({
       </TabsContent>
 
       {/* Remediation */}
-      <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+      <TabsContent value={ANALYSIS_TAB.REMEDIATION} className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Remediation view failed to load">
           {w("remediation-progress") && (
             <Suspense fallback={<CardSkeleton />}>
@@ -743,7 +741,7 @@ export function AnalysisTabs({
       </TabsContent>
 
       {/* Compare */}
-      <TabsContent value="compare" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+      <TabsContent value={ANALYSIS_TAB.COMPARE} className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Compare view failed to load">
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -758,7 +756,7 @@ export function AnalysisTabs({
                   }))}
                 >
                   {files.map((f, i) => (
-                    <option key={f.id} value={i}>{fileLabel(f)}</option>
+                    <option key={f.id} value={i}>{getFileLabel(f)}</option>
                   ))}
                 </select>
               </div>
@@ -773,7 +771,7 @@ export function AnalysisTabs({
                   }))}
                 >
                   {files.map((f, i) => (
-                    <option key={f.id} value={i}>{fileLabel(f)}</option>
+                    <option key={f.id} value={i}>{getFileLabel(f)}</option>
                   ))}
                 </select>
               </div>

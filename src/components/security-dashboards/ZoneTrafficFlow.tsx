@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { ParsedFile } from "@/hooks/use-report-generation";
+import type { ParsedFile } from "@/types/parsed-file";
 
 interface RuleDetail {
   name: string;

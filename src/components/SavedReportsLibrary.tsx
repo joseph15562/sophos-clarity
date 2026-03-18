@@ -10,6 +10,7 @@ import {
   type SavedReportEntry,
 } from "@/lib/saved-reports";
 import { logAudit } from "@/lib/audit";
+import { toast } from "sonner";
 
 export interface LoadSavedReportArgs {
   reports: SavedReportEntry[];
@@ -56,6 +57,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
       setPackages(items);
     } catch (err) {
       console.warn("[refresh] SavedReportsLibrary", err);
+      toast.error("Could not load saved reports. Please try again.");
     }
     setLoading(false);
   }, [useCloud]);

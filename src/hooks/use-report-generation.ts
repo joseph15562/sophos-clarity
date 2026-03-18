@@ -1,11 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { ReportEntry } from "@/components/DocumentPreview";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
-import { useToast } from "@/hooks/use-toast";
+import type { ParsedFile } from "@/types/parsed-file";
+import { toast } from "sonner";
 import { analyseConfig, type AnalysisResult, type Finding } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
+import { getFileLabel } from "@/lib/utils";
+import { REPORT_ID, reportIdForFile } from "@/constants/app";
 
 const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
 
@@ -78,20 +81,12 @@ export function buildExecutiveOnePagerMarkdown(
   return lines.join("\n");
 }
 
-export type ParsedFile = {
-  id: string;
-  label: string;
-  fileName: string;
-  content: string;
-  extractedData: ExtractedSections;
-  centralEnrichment?: CentralEnrichment;
-  serialNumber?: string;
-  agentHostname?: string;
-  hardwareModel?: string;
-};
+export type { ParsedFile } from "@/types/parsed-file";
 
 export function useReportGeneration(files: ParsedFile[], branding: BrandingData) {
-  const { toast } = useToast();
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const [reports, setReports] = useState<ReportEntry[]>([]);
   const [activeReportId, setActiveReportId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -104,6 +99,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       sections: ExtractedSections,
       opts?: { executive?: boolean; firewallLabels?: string[]; compliance?: boolean; centralEnrichment?: CentralEnrichment }
     ) => {
+      if (!mountedRef.current) return;
       setLoadingReportIds((prev) => new Set(prev).add(reportId));
       setFailedReportIds((prev) => {
         const n = new Set(prev);
@@ -125,6 +121,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       while (attempt <= MAX_RETRIES && !succeeded) {
         if (attempt > 0) {
           await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+          if (!mountedRef.current) return;
           setReports((prev) =>
             prev.map((r) =>
               r.id === reportId
@@ -146,7 +143,8 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
             firewallLabels: opts?.firewallLabels,
             compliance: opts?.compliance,
             centralEnrichment: opts?.centralEnrichment,
-            onDelta: (text) =>
+            onDelta: (text) => {
+              if (!mountedRef.current) return;
               setReports((prev) =>
                 prev.map((r) => {
                   if (r.id !== reportId) return r;
@@ -155,9 +153,11 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
                   const newContent = isFirstChunk ? cover + "\n\n---\n\n" + text : text;
                   return { ...r, markdown: r.markdown + newContent };
                 })
-              ),
+              );
+            },
             onDone: () => resolve(true),
             onError: (err) => {
+              if (mountedRef.current) {
               setReports((prev) =>
                 prev.map((r) =>
                   r.id === reportId
@@ -170,30 +170,35 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
                     : r
                 )
               );
+              }
               console.error(`Report ${reportId} attempt ${attempt + 1} failed:`, err);
               if (attempt >= MAX_RETRIES) {
-                const isExecutive = reportId === "report-executive";
+                const isExecutive = reportId === REPORT_ID.EXECUTIVE;
                 const description = isExecutive
                   ? `Executive summary uses data from all firewalls and often hits API limits. ${err} Try retry in a few minutes or use fewer configs.`
                   : `${err} — use the retry button to try again.`;
-                toast({ title: "Error", description, variant: "destructive" });
+                toast.error(description);
               }
               resolve(false);
             },
-            onStatus: (status) =>
+            onStatus: (status) => {
+              if (!mountedRef.current) return;
               setReports((prev) =>
                 prev.map((r) =>
                   r.id === reportId ? { ...r, loadingStatus: status } : r
                 )
-              ),
+              );
+            },
           });
         });
         attempt++;
       }
 
+      if (!mountedRef.current) return;
       if (!succeeded) {
         setFailedReportIds((prev) => new Set(prev).add(reportId));
       }
+      if (!mountedRef.current) return succeeded;
       setLoadingReportIds((prev) => {
         const n = new Set(prev);
         n.delete(reportId);
@@ -201,7 +206,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       });
       return succeeded;
     },
-    [branding, toast]
+    [branding]
   );
 
   const generateIndividual = async (keepLoading = false) => {
@@ -210,16 +215,16 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     setFailedReportIds(new Set());
 
     const newReports: ReportEntry[] = files.map((f) => ({
-      id: `report-${f.id}`,
-      label: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
+      id: reportIdForFile(f.id),
+      label: getFileLabel(f),
       markdown: "",
     }));
     setReports(newReports);
     setActiveReportId(newReports[0].id);
 
     for (const f of files) {
-      const reportId = `report-${f.id}`;
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const reportId = reportIdForFile(f.id);
+      const label = getFileLabel(f);
       await generateSingleReport(reportId, f.extractedData, { firewallLabels: [label], centralEnrichment: f.centralEnrichment });
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
@@ -234,12 +239,12 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     const mergedSections: Record<string, ExtractedSections> = {};
     const labels: string[] = [];
     files.forEach((f) => {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = getFileLabel(f);
       labels.push(label);
       mergedSections[label] = f.extractedData;
     });
 
-    const execId = "report-executive";
+    const execId = REPORT_ID.EXECUTIVE;
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== execId);
       const existing = prev.find((r) => r.id === execId);
@@ -267,7 +272,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     if (files.length === 0) return;
     const analysisResults: Record<string, AnalysisResult> = {};
     files.forEach((f) => {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = getFileLabel(f);
       analysisResults[label] = analyseConfig(f.extractedData, {
         centralLinked: !!f.centralEnrichment,
       });
@@ -277,7 +282,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     const cover = buildCoverPageMarkdown(branding);
     const fullMarkdown = cover + "\n\n---\n\n" + body;
 
-    const execOnePagerId = "report-executive-one-pager";
+    const execOnePagerId = REPORT_ID.EXECUTIVE_ONE_PAGER;
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== execOnePagerId);
       return [...without, { id: execOnePagerId, label: "📄 Executive One-Pager", markdown: fullMarkdown }];
@@ -292,12 +297,12 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     const mergedSections: Record<string, ExtractedSections> = {};
     const labels: string[] = [];
     files.forEach((f) => {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = getFileLabel(f);
       labels.push(label);
       mergedSections[label] = f.extractedData;
     });
 
-    const complianceId = "report-compliance";
+    const complianceId = REPORT_ID.COMPLIANCE;
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== complianceId);
       return [...without, { id: complianceId, label: "🛡️ Compliance Readiness Report", markdown: "" }];
@@ -321,21 +326,21 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     setFailedReportIds(new Set());
 
     const newReports: ReportEntry[] = files.map((f) => ({
-      id: `report-${f.id}`,
-      label: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
+      id: reportIdForFile(f.id),
+      label: getFileLabel(f),
       markdown: "",
     }));
     setReports(newReports);
     setActiveReportId(newReports[0].id);
 
     for (const f of files) {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      await generateSingleReport(`report-${f.id}`, f.extractedData, { firewallLabels: [label] });
+      const label = getFileLabel(f);
+      await generateSingleReport(reportIdForFile(f.id), f.extractedData, { firewallLabels: [label] });
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
     if (files.length >= 2) {
-      const execId = "report-executive";
+      const execId = REPORT_ID.EXECUTIVE;
       setReports((prev) => {
         const without = prev.filter((r) => r.id !== execId);
         return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
@@ -344,11 +349,11 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       await generateExecutive(true);
     }
 
-    const complianceId = "report-compliance";
-    const labels = files.map((f) => f.label || f.fileName.replace(/\.(html|htm)$/i, ""));
+    const complianceId = REPORT_ID.COMPLIANCE;
+    const labels = files.map((f) => getFileLabel(f));
     const mergedSections: Record<string, ExtractedSections> = {};
     files.forEach((f) => {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = getFileLabel(f);
       mergedSections[label] = f.extractedData;
     });
     setReports((prev) => {
@@ -369,11 +374,11 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
 
   const handleRetry = useCallback(
     (reportId: string) => {
-      if (reportId === "report-executive") {
+      if (reportId === REPORT_ID.EXECUTIVE) {
         const mergedSections: Record<string, ExtractedSections> = {};
         const labels: string[] = [];
         files.forEach((f) => {
-          const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+          const label = getFileLabel(f);
           labels.push(label);
           mergedSections[label] = f.extractedData;
         });
@@ -381,13 +386,13 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
           executive: true,
           firewallLabels: labels,
         });
-      } else if (reportId === "report-executive-one-pager") {
+      } else if (reportId === REPORT_ID.EXECUTIVE_ONE_PAGER) {
         generateExecutiveOnePager();
-      } else if (reportId === "report-compliance") {
+      } else if (reportId === REPORT_ID.COMPLIANCE) {
         const mergedSections: Record<string, ExtractedSections> = {};
         const labels: string[] = [];
         files.forEach((f) => {
-          const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+          const label = getFileLabel(f);
           labels.push(label);
           mergedSections[label] = f.extractedData;
         });
@@ -399,7 +404,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
           { compliance: true, firewallLabels: labels }
         );
       } else {
-        const file = files.find((f) => `report-${f.id}` === reportId);
+        const file = files.find((f) => reportIdForFile(f.id) === reportId);
         if (file) {
           const label = file.label || file.fileName.replace(/\.(html|htm)$/i, "");
           generateSingleReport(reportId, file.extractedData, { firewallLabels: [label] });

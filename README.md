@@ -49,6 +49,12 @@ cp .env.example .env
 npm run dev
 ```
 
+To install Git hooks (run ESLint + Prettier on staged files before commit): `npx husky install` then add a pre-commit hook that runs `npx lint-staged`. Optional.
+
+## Edge Function secrets (Supabase)
+
+For the `api` Edge Function (agent registration and auth), set **AGENT_API_HMAC_SECRET** in Supabase Dashboard → Project Settings → Edge Functions → Secrets. Use a dedicated secret (e.g. 32+ byte hex) for signing/verifying agent API keys; do not reuse the service role key. Rotate this secret independently when needed.
+
 ## Target users
 
 - MSP security engineers

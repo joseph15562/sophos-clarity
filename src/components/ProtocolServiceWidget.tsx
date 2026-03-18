@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ProtocolDistribution } from "./ProtocolDistribution";
 import { ServiceUsage } from "./ServiceUsage";
-import type { ParsedFile } from "@/hooks/use-report-generation";
+import type { ParsedFile } from "@/types/parsed-file";
 
 interface Props {
   files: ParsedFile[];

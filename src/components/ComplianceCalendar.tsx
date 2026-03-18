@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import type { ParsedFile } from "@/types/parsed-file";
 
 const ASSESSMENT_STORAGE_KEY = "sophos-assessment-schedule";
 
@@ -13,13 +14,6 @@ interface ScheduleEntry {
 interface LicenceEvent {
   product: string;
   endDate: string;
-  label?: string;
-}
-
-interface ParsedFile {
-  centralEnrichment?: {
-    licences?: Array<{ product: string; endDate: string; type?: string }>;
-  };
   label?: string;
 }
 

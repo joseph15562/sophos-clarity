@@ -25,7 +25,7 @@ import {
   Info,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -283,8 +283,6 @@ function PortalLoginForm({
 export default function ClientPortal() {
   const { tenantId: rawParam } = useParams<{ tenantId: string }>();
   const { setTheme, resolvedTheme } = useTheme();
-  const { toast } = useToast();
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scoreHistory, setScoreHistory] = useState<ScoreHistoryEntry[]>([]);
@@ -461,10 +459,7 @@ export default function ClientPortal() {
   };
 
   const handleFeedbackSubmit = () => {
-    toast({
-      title: "Thank you",
-      description: "Your feedback has been submitted.",
-    });
+    toast.success("Your feedback has been submitted.");
     setFeedbackStars(0);
     setFeedbackText("");
   };

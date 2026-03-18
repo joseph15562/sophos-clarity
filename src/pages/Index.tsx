@@ -10,7 +10,8 @@ import { AuthFlow } from "@/components/AuthFlow";
 import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
-import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
+import { useReportGeneration } from "@/hooks/use-report-generation";
+import type { ParsedFile } from "@/types/parsed-file";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-persistence";
@@ -41,20 +42,23 @@ import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { saveFindingSnapshot } from "@/lib/finding-snapshots";
 import { saveScoreSnapshot } from "@/lib/score-history";
 import { saveConfigSnapshot, hashConfig } from "@/lib/config-snapshots";
+import { getFileLabel, normalizeErrorMessage } from "@/lib/utils";
+import { useFiles, useBranding, useViewingReports } from "@/stores/app-store";
+import { ANALYSIS_TAB, REPORT_ID, reportIdForFile } from "@/constants/app";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
 function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const { isGuest, org, isViewerOnly } = useAuth();
   const { notifications, unreadCount, addNotification, markRead, markAllRead, dismiss: dismissNotif, clearAll: clearNotifs } = useNotifications();
-  const [files, setFiles] = useState<ParsedFile[]>([]);
-  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] });
+  const [files, setFiles] = useFiles();
+  const [branding, setBranding] = useBranding();
+  const [viewingReports, setViewingReports] = useViewingReports();
   const [diffSelection, setDiffSelection] = useState<DiffSelection>(null);
   const [restoredSession, setRestoredSession] = useState(false);
   const [savingReports, setSavingReports] = useState(false);
   const [reportsSaved, setReportsSaved] = useState(false);
   const [savedReportsTrigger, setSavedReportsTrigger] = useState(0);
-  const [viewingReports, setViewingReports] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [localMode, setLocalModeState] = useState(() => isLocalMode());
@@ -62,7 +66,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [loadedSavedSummary, setLoadedSavedSummary] = useState<{ customerName: string; summary: AnalysisSummary } | null>(null);
   const [centralEnriched, setCentralEnriched] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
-  const [analysisTab, setAnalysisTab] = useState("overview");
+  const [analysisTab, setAnalysisTab] = useState(ANALYSIS_TAB.OVERVIEW);
   const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
   const [analysisOverride, setAnalysisOverride] = useState<Record<string, AnalysisResult> | null>(null);
   const prevResultCountRef = useRef(0);
@@ -103,9 +107,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
   const configMetas = useMemo(() =>
     files.map((f) => {
-      const result = analysisResults[f.label || f.fileName.replace(/\.(html|htm)$/i, "")];
+      const label = getFileLabel(f);
+      const result = analysisResults[label];
       return {
-        label: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
+        label,
         hostname: result?.hostname || f.agentHostname,
         serialNumber: f.serialNumber,
         configHash: f.id,
@@ -166,7 +171,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     if (Object.keys(analysisResults).length === 0) return;
     for (const [label, result] of Object.entries(analysisResults)) {
       const hostname = result.hostname || label;
-      const file = files.find((f) => (f.label || f.fileName.replace(/\.(html|htm)$/i, "")) === label);
+      const file = files.find((f) => getFileLabel(f) === label);
       const sections = file?.extractedData ?? {};
       const sectionKeys = Object.keys(sections);
       saveConfigSnapshot({
@@ -191,7 +196,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     prevResultCountRef.current = count;
   }, [analysisResults]);
 
-  // Restore session on mount
+  // Run once on mount to restore session; loadSession is stable and has no external deps.
   useEffect(() => {
     const session = loadSession();
     if (session && session.reports.length > 0) {
@@ -224,25 +229,28 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
     setParsingProgress({ current: 0, total: toProcess.length, phase: "parsing" });
     const parsed: ParsedFile[] = [];
+    const failedNames: string[] = [];
     for (let i = 0; i < toProcess.length; i++) {
       setParsingProgress({ current: i + 1, total: toProcess.length, phase: "parsing" });
       await new Promise((r) => setTimeout(r, 0));
       const file = toProcess[i];
       const isXml = file.fileName.endsWith(".xml") || file.content.trimStart().startsWith("<?xml");
-      let extractedData: ExtractedSections;
       try {
-        if (isXml) {
-          const rawConfig = parseEntitiesXml(file.content);
-          extractedData = rawConfigToSections(rawConfig);
-        } else {
-          extractedData = extractSections(file.content);
-        }
+        const extractedData = isXml
+          ? rawConfigToSections(parseEntitiesXml(file.content))
+          : extractSections(file.content);
+        parsed.push({ ...file, extractedData });
       } catch (err) {
         console.warn(`[parser] Failed to parse ${file.fileName}`, err);
-        toast.error(`Could not parse ${file.fileName} — it may not be a valid Sophos config export`);
-        extractedData = {} as ExtractedSections;
+        failedNames.push(file.fileName);
       }
-      parsed.push({ ...file, extractedData });
+    }
+    if (failedNames.length > 0) {
+      toast.error(
+        failedNames.length === 1
+          ? `Could not parse ${failedNames[0]} — it may not be a valid Sophos config export`
+          : `Could not parse: ${failedNames.join(", ")}. They may not be valid Sophos config exports.`
+      );
     }
     setParsingProgress({ current: toProcess.length, total: toProcess.length, phase: "analysing" });
     await new Promise((r) => setTimeout(r, 0));
@@ -313,18 +321,21 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
   // Enrich files with Sophos Central live data when firewalls are linked
   const fileIds = useMemo(() => files.map((f) => f.id).join(","), [files]);
+  const centralEnrichRunIdRef = useRef(0);
 
   useEffect(() => { setCentralEnriched(false); }, [fileIds]);
 
   useEffect(() => {
     if (!org?.id || isGuest || files.length === 0 || centralEnriched || localMode) return;
+    centralEnrichRunIdRef.current += 1;
+    const thisRun = centralEnrichRunIdRef.current;
     let cancelled = false;
     const orgId = org.id;
 
     (async () => {
       try {
         const status = await getCentralStatus(orgId);
-        if (!status?.connected || cancelled) return;
+        if (!status?.connected || cancelled || thisRun !== centralEnrichRunIdRef.current) return;
 
         const hashes = files.map((f) => f.id);
         const { data: links } = await supabase
@@ -333,7 +344,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           .eq("org_id", orgId)
           .in("config_hash", hashes);
 
-        if (!links || links.length === 0 || cancelled) return;
+        if (!links || links.length === 0 || cancelled || thisRun !== centralEnrichRunIdRef.current) return;
 
         const cachedFws = await getCachedFirewalls(orgId);
         const tenantIds = [...new Set(links.map((l) => l.central_tenant_id))];
@@ -358,7 +369,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           console.warn("[enrichFromCentral] licensing API may not be available", err);
         }
 
-        if (cancelled) return;
+        if (cancelled || thisRun !== centralEnrichRunIdRef.current) return;
 
         const enrichments: Record<string, CentralEnrichmentType> = {};
         for (const link of links) {
@@ -385,7 +396,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           };
         }
 
-        if (cancelled || Object.keys(enrichments).length === 0) return;
+        if (cancelled || thisRun !== centralEnrichRunIdRef.current || Object.keys(enrichments).length === 0) return;
 
         setFiles((prev) =>
           prev.map((f) =>
@@ -395,11 +406,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         setCentralEnriched(true);
       } catch (err) {
         console.warn("[enrichFromCentral]", err);
+        toast.error("Could not load Sophos Central data. You can continue without it.");
       }
     })();
 
     return () => { cancelled = true; };
-  }, [org?.id, isGuest, files.length, centralEnriched, localMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [org?.id, isGuest, files.length, centralEnriched, localMode]); // eslint-disable-line react-hooks/exhaustive-deps -- fileIds/files not in deps; effect intentionally runs on length change
 
   const handleSaveReports = useCallback(async (includeReports: boolean) => {
     if (Object.keys(analysisResults).length === 0) return;
@@ -435,7 +447,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         addNotification("success", includeReports ? "Reports Saved" : "Assessment Saved", `${branding.customerName || "Assessment"} saved successfully with ${reportEntries.length} report${reportEntries.length !== 1 ? "s" : ""}.`);
       }
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Save failed");
+      setSaveError(normalizeErrorMessage(e) || "Save failed");
     }
     setSavingReports(false);
   }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment]);
@@ -471,11 +483,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
   const fetchBackendDebug = useCallback(async () => {
     if (files.length === 0) return;
-    const label = (f: ParsedFile) => f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-    if (activeReportId === "report-executive" && files.length >= 2) {
+    if (activeReportId === REPORT_ID.EXECUTIVE && files.length >= 2) {
       const mergedSections: Record<string, ExtractedSections> = {};
       const labels = files.map((f) => {
-        const l = label(f);
+        const l = getFileLabel(f);
         mergedSections[l] = f.extractedData;
         return l;
       });
@@ -491,10 +502,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setBackendDebugInfo(info);
       return;
     }
-    if (activeReportId === "report-compliance") {
-      const labels = files.map((f) => label(f));
+    if (activeReportId === REPORT_ID.COMPLIANCE) {
+      const labels = files.map((f) => getFileLabel(f));
       const mergedSections: Record<string, ExtractedSections> = {};
-      files.forEach((f) => { mergedSections[label(f)] = f.extractedData; });
+      files.forEach((f) => { mergedSections[getFileLabel(f)] = f.extractedData; });
       const info = await fetchParseConfigDebug({
         sections: (files.length === 1 ? files[0].extractedData : (mergedSections as unknown as ExtractedSections)),
         compliance: true,
@@ -507,10 +518,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setBackendDebugInfo(info);
       return;
     }
-    const file = files.find((f) => `report-${f.id}` === activeReportId) ?? files[0];
+    const file = files.find((f) => reportIdForFile(f.id) === activeReportId) ?? files[0];
     const info = await fetchParseConfigDebug({
       sections: file.extractedData,
-      firewallLabels: [label(file)],
+      firewallLabels: [getFileLabel(file)],
       centralEnrichment: file.centralEnrichment,
       environment: branding.environment || undefined,
       country: branding.country || undefined,
@@ -525,8 +536,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const inDiffMode = diffSelection !== null;
 
   useEffect(() => {
-    if (analysisTab === "remediation" && totalFindings === 0) setAnalysisTab("overview");
-    if (analysisTab === "compare" && files.length < 2) setAnalysisTab("overview");
+    if (analysisTab === ANALYSIS_TAB.REMEDIATION && totalFindings === 0) setAnalysisTab(ANALYSIS_TAB.OVERVIEW);
+    if (analysisTab === ANALYSIS_TAB.COMPARE && files.length < 2) setAnalysisTab(ANALYSIS_TAB.OVERVIEW);
   }, [analysisTab, totalFindings, files.length]);
 
   const keyboardShortcuts = useMemo<ShortcutAction[]>(() => [
@@ -548,7 +559,164 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
   useKeyboardShortcuts(keyboardShortcuts);
 
-  const fileLabel = (f: ParsedFile) => f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+  const dashboardView = (
+    <>
+      <UploadSection
+        files={files}
+        onFilesChange={handleFilesChange}
+        parsingProgress={parsingProgress}
+        branding={branding}
+        setBranding={setBranding}
+        analysisResult={analysisResults}
+        configMetas={configMetas}
+        hasFiles={hasFiles}
+        hasReports={hasReports}
+        reports={reports}
+        isGuest={isGuest}
+        onShowAuth={onShowAuth}
+        org={org}
+        localMode={localMode}
+        onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); if (org?.id) logAudit(org.id, "report.generated", "report", "individual"); }}
+        onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
+        onGenerateExecutiveOnePager={() => { setViewingReports(true); generateExecutiveOnePager(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive-one-pager"); }}
+        onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
+        onGenerateAll={() => { setViewingReports(true); generateAll(); if (org?.id) logAudit(org.id, "report.generated", "report", "all"); addNotification("info", "Generating Reports", `Generating all reports for ${branding.customerName || "this assessment"}…`); }}
+        setViewingReports={setViewingReports}
+        onLoadAgentAssessment={handleLoadAgentAssessment}
+        activeTenantName={activeTenantName}
+        setCentralEnriched={setCentralEnriched}
+        saveError={saveError}
+        savingReports={savingReports}
+        reportsSaved={reportsSaved}
+        onSaveReports={handleSaveReports}
+        totalFindings={totalFindings}
+        isViewerOnly={isViewerOnly}
+      />
+      {hasFiles && (
+        <AnalysisTabs
+          analysisResult={analysisResults}
+          files={files}
+          branding={branding}
+          activeTab={analysisTab}
+          setActiveTab={setAnalysisTab}
+          totalFindings={totalFindings}
+          totalRules={totalRules}
+          totalSections={totalSections}
+          totalPopulated={totalPopulated}
+          extractionPct={extractionPct}
+          aggregatedPosture={aggregatedPosture}
+          securityStats={securityStats}
+          configMetas={configMetas}
+          diffSelection={diffSelection}
+          setDiffSelection={setDiffSelection}
+          projectedScore={projectedScore}
+          setProjectedScore={setProjectedScore}
+          isGuest={isGuest}
+          localMode={localMode}
+          onExplainFinding={(title) => {
+            setAiChatOpen(true);
+            setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);
+          }}
+        />
+      )}
+    </>
+  );
+
+  const reportView = (
+    <>
+      {hasReports && !isLoading && (
+        <div className="no-print flex flex-wrap items-center gap-3 mb-2">
+          <Button variant="outline" onClick={() => setViewingReports(false)} className="gap-2">
+            <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
+            Back to Dashboard
+          </Button>
+          <div className="flex-1" />
+          {!localMode && !isViewerOnly && (
+          <div className="flex flex-wrap gap-2">
+            {files.length >= 2 && !reports.find((r) => r.id === REPORT_ID.EXECUTIVE) && (
+              <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
+                <img src="/icons/sophos-chart.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Executive Brief
+              </Button>
+            )}
+            {!reports.find((r) => r.id === REPORT_ID.COMPLIANCE) && (
+              <Button variant="outline" size="sm" onClick={generateCompliance} className="gap-1.5 text-xs">
+                <img src="/icons/sophos-governance.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Compliance Report
+              </Button>
+            )}
+          </div>
+          )}
+        </div>
+      )}
+      {hasReports && !isLoading && (
+        <div className="no-print flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]">
+          <span className="font-semibold text-foreground mr-1">{reports.length} report{reports.length !== 1 ? "s" : ""}</span>
+          <span className="w-px h-3 bg-border" />
+          <span className="text-muted-foreground">{files.length} firewall{files.length !== 1 ? "s" : ""}</span>
+          <span className="w-px h-3 bg-border" />
+          <span className="text-muted-foreground">{totalRules} rules</span>
+          {totalFindings > 0 && (
+            <>
+              <span className="w-px h-3 bg-border" />
+              {(() => {
+                const counts: Record<string, number> = {};
+                Object.values(analysisResults).forEach((r) =>
+                  r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
+                );
+                return Object.entries(counts).map(([sev, count]) => (
+                  <span key={sev} className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
+                    {count} {sev}
+                  </span>
+                ));
+              })()}
+            </>
+          )}
+        </div>
+      )}
+      <Suspense fallback={null}>
+        <DocumentPreview
+          reports={reports}
+          activeReportId={activeReportId}
+          onActiveChange={setActiveReportId}
+          isLoading={isLoading}
+          loadingReportIds={loadingReportIds}
+          failedReportIds={failedReportIds}
+          onRetry={handleRetry}
+          branding={branding}
+          analysisResults={analysisResults}
+          selectedFrameworks={branding.selectedFrameworks}
+          backendDebugInfo={backendDebugInfo}
+          onFetchBackendDebug={localMode ? undefined : fetchBackendDebug}
+        />
+      </Suspense>
+      {hasReports && !isLoading && (
+        <div className="no-print flex flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={() => setViewingReports(false)} className="gap-2">
+            <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
+            Back to Dashboard
+          </Button>
+          {!isViewerOnly && (
+          <button
+            onClick={() => handleSaveReports(true)}
+            disabled={savingReports}
+            className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
+              reportsSaved
+                ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                : "bg-[#2006F7] text-white hover:bg-[#10037C]"
+            }`}
+          >
+            <Save className="h-3.5 w-3.5" />
+            {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
+          </button>
+          )}
+          <div className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={handleStartOver} className="text-muted-foreground hover:text-foreground text-xs">
+            Start Over
+          </Button>
+          {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -638,182 +806,20 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         {inDiffMode && (
           <Suspense fallback={<div className="text-center py-8 text-muted-foreground">Loading diff viewer…</div>}>
             <ConfigDiff
-              beforeLabel={fileLabel(files[diffSelection.beforeIdx])}
-              afterLabel={fileLabel(files[diffSelection.afterIdx])}
+              beforeLabel={getFileLabel(files[diffSelection.beforeIdx])}
+              afterLabel={getFileLabel(files[diffSelection.afterIdx])}
               beforeSections={files[diffSelection.beforeIdx].extractedData}
               afterSections={files[diffSelection.afterIdx].extractedData}
-              beforeAnalysis={analysisResults[fileLabel(files[diffSelection.beforeIdx])]}
-              afterAnalysis={analysisResults[fileLabel(files[diffSelection.afterIdx])]}
+              beforeAnalysis={analysisResults[getFileLabel(files[diffSelection.beforeIdx])]}
+              afterAnalysis={analysisResults[getFileLabel(files[diffSelection.afterIdx])]}
               onClose={() => setDiffSelection(null)}
             />
           </Suspense>
         )}
 
-        {!viewingReports && !isLoading && !inDiffMode && (
-          <>
-            <UploadSection
-              files={files}
-              onFilesChange={handleFilesChange}
-              parsingProgress={parsingProgress}
-              branding={branding}
-              setBranding={setBranding}
-              analysisResult={analysisResults}
-              configMetas={configMetas}
-              hasFiles={hasFiles}
-              hasReports={hasReports}
-              reports={reports}
-              isGuest={isGuest}
-              onShowAuth={onShowAuth}
-              org={org}
-              localMode={localMode}
-              onGenerateIndividual={() => { setViewingReports(true); generateIndividual(); if (org?.id) logAudit(org.id, "report.generated", "report", "individual"); }}
-              onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
-              onGenerateExecutiveOnePager={() => { setViewingReports(true); generateExecutiveOnePager(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive-one-pager"); }}
-              onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
-              onGenerateAll={() => { setViewingReports(true); generateAll(); if (org?.id) logAudit(org.id, "report.generated", "report", "all"); addNotification("info", "Generating Reports", `Generating all reports for ${branding.customerName || "this assessment"}…`); }}
-              setViewingReports={setViewingReports}
-              onLoadAgentAssessment={handleLoadAgentAssessment}
-              activeTenantName={activeTenantName}
-              setCentralEnriched={setCentralEnriched}
-              saveError={saveError}
-              savingReports={savingReports}
-              reportsSaved={reportsSaved}
-              onSaveReports={handleSaveReports}
-              totalFindings={totalFindings}
-              isViewerOnly={isViewerOnly}
-            />
-            {hasFiles && (
-              <AnalysisTabs
-                analysisResult={analysisResults}
-                files={files}
-                branding={branding}
-                activeTab={analysisTab}
-                setActiveTab={setAnalysisTab}
-                totalFindings={totalFindings}
-                totalRules={totalRules}
-                totalSections={totalSections}
-                totalPopulated={totalPopulated}
-                extractionPct={extractionPct}
-                aggregatedPosture={aggregatedPosture}
-                securityStats={securityStats}
-                configMetas={configMetas}
-                diffSelection={diffSelection}
-                setDiffSelection={setDiffSelection}
-                projectedScore={projectedScore}
-                setProjectedScore={setProjectedScore}
-                isGuest={isGuest}
-                localMode={localMode}
-                onExplainFinding={(title) => {
-                  setAiChatOpen(true);
-                  setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);
-                }}
-              />
-            )}
-          </>
-        )}
+        {!viewingReports && !isLoading && !inDiffMode && dashboardView}
 
-        {/* Report view */}
-        {(viewingReports || isLoading) && (
-          <>
-            {/* Top bar: Back to Dashboard + actions */}
-            {hasReports && !isLoading && (
-              <div className="no-print flex flex-wrap items-center gap-3 mb-2">
-                <Button variant="outline" onClick={() => setViewingReports(false)} className="gap-2">
-                  <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
-                  Back to Dashboard
-                </Button>
-                <div className="flex-1" />
-                {!localMode && !isViewerOnly && (
-                <div className="flex flex-wrap gap-2">
-                  {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
-                    <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
-                      <img src="/icons/sophos-chart.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Executive Brief
-                    </Button>
-                  )}
-                  {!reports.find((r) => r.id === "report-compliance") && (
-                    <Button variant="outline" size="sm" onClick={generateCompliance} className="gap-1.5 text-xs">
-                      <img src="/icons/sophos-governance.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Compliance Report
-                    </Button>
-                  )}
-                </div>
-                )}
-              </div>
-            )}
-
-            {/* Stats bar */}
-            {hasReports && !isLoading && (
-              <div className="no-print flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]">
-                <span className="font-semibold text-foreground mr-1">{reports.length} report{reports.length !== 1 ? "s" : ""}</span>
-                <span className="w-px h-3 bg-border" />
-                <span className="text-muted-foreground">{files.length} firewall{files.length !== 1 ? "s" : ""}</span>
-                <span className="w-px h-3 bg-border" />
-                <span className="text-muted-foreground">{totalRules} rules</span>
-                {totalFindings > 0 && (
-                  <>
-                    <span className="w-px h-3 bg-border" />
-                    {(() => {
-                      const counts: Record<string, number> = {};
-                      Object.values(analysisResults).forEach((r) =>
-                        r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
-                      );
-                      return Object.entries(counts).map(([sev, count]) => (
-                        <span key={sev} className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
-                          {count} {sev}
-                        </span>
-                      ));
-                    })()}
-                  </>
-                )}
-              </div>
-            )}
-
-            <Suspense fallback={null}>
-              <DocumentPreview
-                reports={reports}
-                activeReportId={activeReportId}
-                onActiveChange={setActiveReportId}
-                isLoading={isLoading}
-                loadingReportIds={loadingReportIds}
-                failedReportIds={failedReportIds}
-                onRetry={handleRetry}
-                branding={branding}
-                analysisResults={analysisResults}
-                selectedFrameworks={branding.selectedFrameworks}
-                backendDebugInfo={backendDebugInfo}
-                onFetchBackendDebug={localMode ? undefined : fetchBackendDebug}
-              />
-            </Suspense>
-
-            {/* Bottom actions */}
-            {hasReports && !isLoading && (
-              <div className="no-print flex flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => setViewingReports(false)} className="gap-2">
-                  <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
-                  Back to Dashboard
-                </Button>
-                {!isViewerOnly && (
-                <button
-                  onClick={() => handleSaveReports(true)}
-                  disabled={savingReports}
-                  className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
-                    reportsSaved
-                      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
-                      : "bg-[#2006F7] text-white hover:bg-[#10037C]"
-                  }`}
-                >
-                  <Save className="h-3.5 w-3.5" />
-                  {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
-                </button>
-                )}
-                <div className="flex-1" />
-                <Button variant="ghost" size="sm" onClick={handleStartOver} className="text-muted-foreground hover:text-foreground text-xs">
-                  Start Over
-                </Button>
-                {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
-              </div>
-            )}
-          </>
-        )}
+        {(viewingReports || isLoading) && reportView}
       </main>
 
       {/* AI Chat — floating panel, hidden in local mode */}

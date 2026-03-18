@@ -7,7 +7,7 @@ import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
 import { ReportCards } from "@/components/ReportCards";
 import { AgentFleetPanel } from "@/components/AgentFleetPanel";
 import type { AnalysisResult } from "@/lib/analyse-config";
-import type { ParsedFile } from "@/hooks/use-report-generation";
+import type { ParsedFile } from "@/types/parsed-file";
 import type { OrgInfo } from "@/hooks/use-auth";
 import { Save } from "lucide-react";
 import { Suspense } from "react";

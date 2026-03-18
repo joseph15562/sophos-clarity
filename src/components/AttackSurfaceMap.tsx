@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { extractAttackSurface, extractExternalIps, type ExposedService } from "@/lib/attack-surface";
 import { GeoAttackMap } from "@/components/GeoAttackMap";
+import { getFileLabel } from "@/lib/utils";
 
 interface Props {
   files: Array<{ label: string; fileName: string; extractedData: ExtractedSections }>;
@@ -26,7 +27,7 @@ export function AttackSurfaceMap({ files }: Props) {
     const servicesByFile: ExposedService[][] = [];
 
     for (const f of files) {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = getFileLabel(f);
       const services = extractAttackSurface(f.extractedData);
       servicesByFile.push(services);
       for (const s of services) {

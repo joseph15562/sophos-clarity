@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Layers, Copy, EyeOff, Merge, ChevronDown } from "lucide-react";
-import type { ParsedFile } from "@/hooks/use-report-generation";
+import type { ParsedFile } from "@/types/parsed-file";
 import { analyseRuleOptimisation, type OptimiserResult, type RuleIssue } from "@/lib/rule-optimiser";
+import { getFileLabel } from "@/lib/utils";
 
 interface Props {
   files: ParsedFile[];
@@ -87,7 +88,7 @@ export function RuleOptimiser({ files }: Props) {
   const results = useMemo(() => {
     const out: Record<string, OptimiserResult> = {};
     for (const f of files) {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const label = getFileLabel(f);
       out[label] = analyseRuleOptimisation(f.extractedData ?? {});
     }
     return out;
