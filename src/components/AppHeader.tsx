@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown, SlidersHorizontal, Cpu } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { getCentralStatus, syncTenants, syncFirewalls, type CentralStatus } from "@/lib/sophos-central";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AppHeaderProps {
   hasFiles: boolean;
@@ -151,6 +152,80 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
   );
 }
 
+function ConnectorStatus({ orgId, onOpenSetup }: { orgId: string; onOpenSetup?: () => void }) {
+  const [agentCount, setAgentCount] = useState<number>(0);
+  const [lastRunAt, setLastRunAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!orgId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { count } = await supabase.from("agents").select("id", { count: "exact", head: true }).eq("org_id", orgId);
+        if (cancelled) return;
+        setAgentCount(count ?? 0);
+        if ((count ?? 0) > 0) {
+          const { data } = await supabase
+            .from("agent_submissions")
+            .select("created_at")
+            .eq("org_id", orgId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (!cancelled && data) setLastRunAt((data as { created_at: string }).created_at);
+        }
+      } catch {
+        if (!cancelled) setAgentCount(0);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [orgId]);
+
+  if (loading || (agentCount === 0 && !lastRunAt)) {
+    if (agentCount === 0 && !loading) {
+      return (
+        <button
+          type="button"
+          onClick={onOpenSetup}
+          className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+          title="No connector agents — click to set up"
+          aria-label="Connector: none configured"
+        >
+          <Cpu className="h-3 w-3" />
+          <span className="hidden sm:inline">Connector: none</span>
+        </button>
+      );
+    }
+    return null;
+  }
+
+  const timeAgo = (iso: string | null): string => {
+    if (!iso) return "never";
+    const diff = Date.now() - new Date(iso).getTime();
+    if (diff < 60_000) return "just now";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+    return `${Math.floor(diff / 86_400_000)}d ago`;
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onOpenSetup}
+      className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+      title={`Connector: ${agentCount} agent(s), last run ${timeAgo(lastRunAt)}`}
+      aria-label={`Connector: ${agentCount} agents, last run ${timeAgo(lastRunAt)}`}
+    >
+      <Cpu className="h-3 w-3" />
+      <span className="hidden sm:inline">Connector: {agentCount} agent{agentCount !== 1 ? "s" : ""}</span>
+      {lastRunAt && <span className="hidden md:inline opacity-70">· {timeAgo(lastRunAt)}</span>}
+    </button>
+  );
+}
+
 export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount, notificationSlot, onOrgClick, localMode }: AppHeaderProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { user, org, isGuest, signOut } = useAuth();
@@ -187,6 +262,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                 </button>
               )}
               {org && !localMode && <CentralStatusDot orgId={org.id} />}
+              {org && !localMode && <ConnectorStatus orgId={org.id} onOpenSetup={onOrgClick} />}
               {notificationSlot}
               <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
                 <User className="h-3 w-3 shrink-0" />

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Clock, Search, ChevronDown, FileText, Shield, Users, Wifi, Upload, Trash2 } from "lucide-react";
+import { Clock, Search, ChevronDown, FileText, Shield, Users, Wifi, Upload, Trash2, Download } from "lucide-react";
 import { loadAuditLog, type AuditEntry, type AuditAction } from "@/lib/audit";
 import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; color: string }> = {
   "report.generated": { label: "Report generated", icon: FileText, color: "text-[#2006F7] dark:text-[#00EDFF]" },
@@ -26,12 +28,20 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+function toISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 export function AuditLog() {
   const { org, isGuest } = useAuth();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showMore, setShowMore] = useState(false);
+  const [exportFrom, setExportFrom] = useState(() => toISODate(new Date(Date.now() - 30 * 86_400_000)));
+  const [exportTo, setExportTo] = useState(() => toISODate(new Date()));
+  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv");
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     if (!org?.id || isGuest) return;
@@ -42,6 +52,42 @@ export function AuditLog() {
   }, [org?.id, isGuest, showMore]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleExport = useCallback(async () => {
+    if (!org?.id || isGuest) return;
+    setExporting(true);
+    try {
+      const fromDate = `${exportFrom}T00:00:00.000Z`;
+      const toDate = `${exportTo}T23:59:59.999Z`;
+      const data = await loadAuditLog(org.id, 5000, 0, { fromDate, toDate });
+      const meta = ACTION_META;
+      if (exportFormat === "csv") {
+        const header = "Date,Action,Resource Type,Resource ID,Metadata,User ID\n";
+        const rows = data.map((e) => {
+          const metaLabel = meta[e.action as AuditAction]?.label ?? e.action;
+          const metaStr = JSON.stringify(e.metadata ?? {}).replace(/"/g, '""');
+          return `${e.created_at},${metaLabel},${e.resource_type},${e.resource_id},"${metaStr}",${e.user_id ?? ""}`;
+        });
+        const blob = new Blob([header + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `audit-log-${exportFrom}-to-${exportTo}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `audit-log-${exportFrom}-to-${exportTo}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      setExporting(false);
+    }
+  }, [org?.id, isGuest, exportFrom, exportTo, exportFormat]);
 
   if (isGuest) {
     return (
@@ -66,8 +112,8 @@ export function AuditLog() {
 
   return (
     <div className="p-5 space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 max-w-xs min-w-[180px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="text"
@@ -78,6 +124,37 @@ export function AuditLog() {
           />
         </div>
         <span className="text-[10px] text-muted-foreground">{filtered.length} event{filtered.length !== 1 ? "s" : ""}</span>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="date"
+            value={exportFrom}
+            onChange={(e) => setExportFrom(e.target.value)}
+            className="rounded-md border border-input bg-background px-2 py-1.5 text-[11px]"
+            title="Export from date"
+          />
+          <span className="text-[10px] text-muted-foreground">to</span>
+          <input
+            type="date"
+            value={exportTo}
+            onChange={(e) => setExportTo(e.target.value)}
+            className="rounded-md border border-input bg-background px-2 py-1.5 text-[11px]"
+            title="Export to date"
+          />
+          <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as "csv" | "json")}>
+            <SelectTrigger className="w-[100px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="csv">CSV</SelectItem>
+              <SelectItem value="json">JSON</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" variant="outline" onClick={handleExport} disabled={exporting} className="gap-1.5 h-8 text-xs">
+            <Download className="h-3 w-3" />
+            {exporting ? "Exporting…" : "Export"}
+          </Button>
+        </div>
       </div>
 
       {loading && (

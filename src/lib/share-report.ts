@@ -10,6 +10,8 @@ export interface SharedReport {
   customerName: string;
   expiresAt: string;
   createdAt: string;
+  /** When false, shared link is view-only (no export/download). */
+  allowDownload?: boolean;
 }
 
 const STORAGE_PREFIX = "sophos-shared-report:";
@@ -35,7 +37,8 @@ export async function saveSharedReport(
   token: string,
   reportMarkdown: string,
   customerName: string,
-  expiresInDays = 7
+  expiresInDays = 7,
+  allowDownload = true
 ): Promise<SharedReport> {
   const now = new Date();
   const expiresAt = new Date(now);
@@ -47,6 +50,7 @@ export async function saveSharedReport(
     customerName,
     expiresAt: expiresAt.toISOString(),
     createdAt: now.toISOString(),
+    allowDownload,
   };
 
   const ctx = await getOrgAndUser();
@@ -58,7 +62,8 @@ export async function saveSharedReport(
       customer_name: customerName,
       created_by: ctx.userId,
       expires_at: expiresAt.toISOString(),
-    });
+      allow_download: allowDownload,
+    } as Record<string, unknown>);
     if (!error) return report;
     console.warn("[share-report] Supabase insert failed, falling back to localStorage", error.message);
   }
@@ -88,6 +93,7 @@ export async function loadSharedReport(token: string): Promise<SharedReport | nu
         customerName: data.customer_name,
         expiresAt: data.expires_at,
         createdAt: data.created_at,
+        allowDownload: data.allow_download !== false,
       };
     }
     // 404 or 410 — fall through to localStorage
@@ -102,7 +108,7 @@ export async function loadSharedReport(token: string): Promise<SharedReport | nu
     const report = JSON.parse(raw) as SharedReport;
     const expiresAt = new Date(report.expiresAt);
     if (expiresAt <= new Date()) return null;
-    return report;
+    return { ...report, allowDownload: report.allowDownload !== false };
   } catch {
     return null;
   }

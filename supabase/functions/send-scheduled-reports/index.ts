@@ -199,6 +199,70 @@ serve(async (req: Request) => {
 
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+  // Preview: POST { report_id, preview: true } with Authorization → return subject, markdown, html, recipients (no send)
+  if (req.method === "POST") {
+    try {
+      const body = await req.json().catch(() => ({})) as { report_id?: string; preview?: boolean };
+      if (body.preview && body.report_id) {
+        const authHeader = req.headers.get("authorization");
+        if (!authHeader?.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+        }
+        const userJwt = authHeader.slice(7);
+        const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", { global: { headers: { Authorization: `Bearer ${userJwt}` } } });
+        const { data: { user } } = await userClient.auth.getUser();
+        if (!user) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+        }
+        const { data: member } = await sb.from("org_members").select("org_id").eq("user_id", user.id).limit(1).maybeSingle();
+        if (!member?.org_id) {
+          return new Response(JSON.stringify({ error: "No organisation" }), { status: 403, headers: { "Content-Type": "application/json" } });
+        }
+        const { data: report, error: reportErr } = await sb
+          .from("scheduled_reports")
+          .select("*, organisations!inner(name, logo_url)")
+          .eq("id", body.report_id)
+          .eq("org_id", member.org_id)
+          .maybeSingle();
+        if (reportErr || !report) {
+          return new Response(JSON.stringify({ error: "Report not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+        }
+        const { data: submissions } = await sb
+          .from("agent_submissions")
+          .select("full_analysis, customer_name")
+          .eq("org_id", report.org_id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        const allFindings: Finding[] = [];
+        for (const sub of submissions ?? []) {
+          const analysis = sub.full_analysis as Record<string, unknown> | null;
+          if (analysis && Array.isArray(analysis.findings)) {
+            for (const f of analysis.findings) {
+              if (f && typeof f === "object" && "title" in f && "severity" in f) {
+                allFindings.push({ title: String(f.title), severity: String(f.severity), detail: String(f.detail ?? "") });
+              }
+            }
+          }
+        }
+        const customerName = report.customer_name || (submissions?.[0]?.customer_name as string) || "Client";
+        const score = computeSimpleScore(allFindings);
+        const { subject, markdown } = buildOnePagerContent(customerName, allFindings, score);
+        const org = report.organisations as { name?: string; logo_url?: string } | undefined;
+        const orgName = org?.name ?? "FireComply";
+        const logoUrl = org?.logo_url ?? undefined;
+        const bodyHtml = markdownToHtml(markdown);
+        const emailHtml = buildEmailHtml(bodyHtml, orgName, logoUrl);
+        const recipients = (report.recipients as string[]) ?? [];
+        return new Response(
+          JSON.stringify({ subject, markdown, html: emailHtml, recipients }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    } catch {
+      // Fall through to cron logic
+    }
+  }
+
   // Query reports that are due
   const { data: dueReports, error: queryErr } = await sb
     .from("scheduled_reports")

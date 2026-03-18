@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Mail, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck, Globe } from "lucide-react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Mail, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck, Globe, Webhook, FileStack } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +32,8 @@ const PasskeyManager = lazy(() => import("@/components/PasskeyManager").then((m)
 const ScoreTrendChart = lazy(() => import("@/components/ScoreTrendChart").then((m) => ({ default: m.ScoreTrendChart })));
 const CustomFrameworkBuilder = lazy(() => import("@/components/CustomFrameworkBuilder").then((m) => ({ default: m.CustomFrameworkBuilder })));
 const PortalConfigurator = lazy(() => import("@/components/PortalConfigurator").then((m) => ({ default: m.PortalConfigurator })));
+const WebhookSettings = lazy(() => import("@/components/WebhookSettings").then((m) => ({ default: m.WebhookSettings })));
+const ReportTemplateSettings = lazy(() => import("@/components/ReportTemplateSettings").then((m) => ({ default: m.ReportTemplateSettings })));
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -508,6 +510,15 @@ export function ManagementDrawer({
                   </Suspense>
                 </div>
               </SettingsSection>
+              {canManageTeam && (
+              <SettingsSection title="Integrations (Webhook)" icon={<Webhook className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Notify a URL when reports are saved">
+                <div className="p-4">
+                  <Suspense fallback={<Skeleton />}>
+                    <WebhookSettings />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              )}
               <SettingsSection title="Scheduled Reports" icon={<Mail className="h-3.5 w-3.5 text-[#009CFB]" />} subtitle="Auto-send compliance reports to clients">
                 <div className="p-4">
                   <Suspense fallback={<Skeleton />}>
@@ -522,6 +533,15 @@ export function ManagementDrawer({
                   </Suspense>
                 </div>
               </SettingsSection>
+              {canManageTeam && (
+              <SettingsSection title="Report template" icon={<FileStack className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Custom sections/headings for generated reports">
+                <div className="p-4">
+                  <Suspense fallback={<Skeleton />}>
+                    <ReportTemplateSettings />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              )}
               <SettingsSection title="API Documentation" icon={<Code className="h-3.5 w-3.5 text-[#6B5BFF]" />} subtitle="REST API reference">
                 <div className="p-4">
                   <Dialog>

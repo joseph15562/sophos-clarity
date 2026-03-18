@@ -13,12 +13,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { extractTocHeadings, buildReportHtml } from "@/lib/report-html";
 import { findingToFrameworks } from "@/lib/compliance-map";
 import { saveAs } from "file-saver";
 import { generateShareToken, saveSharedReport } from "@/lib/share-report";
-import { buildPdfHtml, generateWordBlob, generatePptxBlob } from "@/lib/report-export";
+import { buildPdfHtml, generateWordBlob, generatePptxBlob, type ReportExportTheme } from "@/lib/report-export";
 import JSZip from "jszip";
+import { useTheme } from "next-themes";
 
 export type ReportEntry = {
   id: string;
@@ -369,13 +371,24 @@ function ShareReportDialog({
   shareUrl,
   expiresAt,
   onCopy,
+  onCreateLink,
+  markdown,
+  customerName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shareUrl: string;
   expiresAt: string;
   onCopy: () => void;
+  onCreateLink?: (allowDownload: boolean) => Promise<void>;
+  markdown?: string;
+  customerName?: string;
 }) {
+  const [allowDownload, setAllowDownload] = useState(true);
+  const [creating, setCreating] = useState(false);
+
+  const hasLink = shareUrl.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -385,25 +398,49 @@ function ShareReportDialog({
             Share Report
           </DialogTitle>
           <DialogDescription>
-            Anyone with this link can view the report. It expires on{" "}
-            {new Date(expiresAt).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-            .
+            {hasLink
+              ? `Anyone with this link can view the report. It expires on ${new Date(expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.`
+              : "Create a link that recipients can use to view this report. You can choose whether they can download/export."}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-3">
-          <input
-            readOnly
-            value={shareUrl}
-            className="flex-1 min-w-0 bg-transparent text-sm text-foreground outline-none"
-          />
-          <Button size="sm" variant="secondary" onClick={onCopy} className="gap-1.5 shrink-0">
-            <Copy className="h-3.5 w-3.5" /> Copy
-          </Button>
-        </div>
+        {!hasLink && onCreateLink && markdown ? (
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowDownload}
+                onChange={(e) => setAllowDownload(e.target.checked)}
+                className="rounded border-border"
+              />
+              Allow recipients to download/export (Word, PDF)
+            </label>
+            <Button
+              className="w-full gap-2"
+              disabled={creating}
+              onClick={async () => {
+                setCreating(true);
+                try {
+                  await onCreateLink(allowDownload);
+                } finally {
+                  setCreating(false);
+                }
+              }}
+            >
+              {creating ? "Creating link…" : "Create link"}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-3">
+            <input
+              readOnly
+              value={shareUrl}
+              className="flex-1 min-w-0 bg-transparent text-sm text-foreground outline-none"
+            />
+            <Button size="sm" variant="secondary" onClick={onCopy} className="gap-1.5 shrink-0">
+              <Copy className="h-3.5 w-3.5" /> Copy
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -423,10 +460,12 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   analysisResults?: Record<string, AnalysisResult>;
 }) {
   const docRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useTheme();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareExpiresAt, setShareExpiresAt] = useState("");
   const [extractedOpen, setExtractedOpen] = useState(false);
+  const exportTheme: ReportExportTheme = resolvedTheme === "dark" ? "dark" : "light";
 
   const activeResult = reportLabel && analysisResults ? analysisResults[reportLabel] : undefined;
   const html = useMemo(() => {
@@ -448,7 +487,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     if (!printWindow) return;
 
     const title = pdfFilename.replace(/\.pdf$/i, "");
-    printWindow.document.write(buildPdfHtml(el.innerHTML, title, branding));
+    printWindow.document.write(buildPdfHtml(el.innerHTML, title, branding, { theme: exportTheme }));
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => {
@@ -463,13 +502,17 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     saveAs(blob, wordFilename);
   };
 
-  const handleShare = async () => {
-    const token = generateShareToken();
-    const report = await saveSharedReport(token, markdown, branding.customerName || "Customer", 7);
-    const url = `${window.location.origin}/shared/${token}`;
-    setShareUrl(url);
-    setShareExpiresAt(report.expiresAt);
+  const handleShare = () => {
+    setShareUrl("");
+    setShareExpiresAt("");
     setShareOpen(true);
+  };
+
+  const handleCreateShareLink = async (allowDownload: boolean) => {
+    const token = generateShareToken();
+    const report = await saveSharedReport(token, markdown, branding.customerName || "Customer", 7, allowDownload);
+    setShareUrl(`${window.location.origin}/shared/${token}`);
+    setShareExpiresAt(report.expiresAt);
   };
 
   const handleCopyShareUrl = async () => {
@@ -516,6 +559,9 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
         shareUrl={shareUrl}
         expiresAt={shareExpiresAt}
         onCopy={handleCopyShareUrl}
+        onCreateLink={handleCreateShareLink}
+        markdown={markdown}
+        customerName={branding.customerName}
       />
 
       {/* Enterprise document studio shell */}
@@ -640,12 +686,33 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   );
 }
 
-function EvidenceVerification({ analysisResults, reportLabel, selectedFrameworks = [] }: { analysisResults?: Record<string, AnalysisResult>; reportLabel: string; selectedFrameworks?: string[] }) {
+type SeverityFilterValue = "all" | "critical-high" | "critical";
+
+type SeverityFilterValue = "all" | "critical-high" | "critical";
+
+function EvidenceVerification({
+  analysisResults,
+  reportLabel,
+  selectedFrameworks = [],
+  severityFilter = "all",
+}: {
+  analysisResults?: Record<string, AnalysisResult>;
+  reportLabel: string;
+  selectedFrameworks?: string[];
+  severityFilter?: SeverityFilterValue;
+}) {
   if (!analysisResults) return null;
   const result = analysisResults[reportLabel];
   if (!result) {
     const totalRules = Object.values(analysisResults).reduce((s, r) => s + r.stats.totalRules, 0);
-    const totalFindings = Object.values(analysisResults).reduce((s, r) => s + r.findings.length, 0);
+    let totalFindings = Object.values(analysisResults).reduce((s, r) => s + r.findings.length, 0);
+    if (severityFilter !== "all") {
+      const allowed = severityFilter === "critical" ? ["critical"] : ["critical", "high"];
+      totalFindings = Object.values(analysisResults).reduce(
+        (s, r) => s + r.findings.filter((f) => allowed.includes(f.severity)).length,
+        0
+      );
+    }
     if (totalRules === 0 && totalFindings === 0) return null;
     return (
       <div className="no-print rounded-lg border border-border bg-muted/30 px-4 py-3 mt-3">
@@ -653,14 +720,16 @@ function EvidenceVerification({ analysisResults, reportLabel, selectedFrameworks
         <div className="flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
           <span><span className="font-semibold text-foreground">{Object.keys(analysisResults).length}</span> firewalls</span>
           <span><span className="font-semibold text-foreground">{totalRules}</span> rules parsed</span>
-          <span><span className="font-semibold text-foreground">{totalFindings}</span> deterministic findings</span>
+          <span><span className="font-semibold text-foreground">{totalFindings}</span> findings{severityFilter !== "all" ? ` (${severityFilter === "critical" ? "Critical only" : "Critical & High"})` : ""}</span>
         </div>
       </div>
     );
   }
   const { stats, findings, inspectionPosture } = result;
-  const mappedFrameworks = selectedFrameworks.length > 0 && findings.length > 0
-    ? [...new Set(findings.flatMap((f) => findingToFrameworks(f.title, selectedFrameworks)))]
+  const allowedSeverities = severityFilter === "all" ? null : severityFilter === "critical" ? ["critical"] : ["critical", "high"];
+  const filteredFindings = allowedSeverities ? findings.filter((f) => allowedSeverities.includes(f.severity)) : findings;
+  const mappedFrameworks = selectedFrameworks.length > 0 && filteredFindings.length > 0
+    ? [...new Set(filteredFindings.flatMap((f) => findingToFrameworks(f.title, selectedFrameworks)))]
     : [];
   return (
     <div className="no-print rounded-lg border border-border bg-muted/30 px-4 py-3 mt-3">
@@ -671,7 +740,7 @@ function EvidenceVerification({ analysisResults, reportLabel, selectedFrameworks
         <span><span className="font-semibold text-foreground">{stats.interfaces}</span> interfaces</span>
         <span><span className="font-semibold text-foreground">{stats.totalHosts}</span> hosts/networks</span>
         <span><span className="font-semibold text-foreground">{stats.populatedSections}/{stats.totalSections}</span> sections</span>
-        <span><span className="font-semibold text-foreground">{findings.length}</span> findings</span>
+        <span><span className="font-semibold text-foreground">{filteredFindings.length}</span> findings{severityFilter !== "all" ? ` (${severityFilter === "critical" ? "Critical only" : "Critical & High"})` : ""}</span>
         {inspectionPosture.totalWanRules > 0 && (
           <span><span className="font-semibold text-foreground">{inspectionPosture.withWebFilter}/{inspectionPosture.totalWanRules}</span> WAN rules filtered</span>
         )}
@@ -738,6 +807,10 @@ function BackendDebugPanel({ backendDebugInfo, onFetchBackendDebug }: { backendD
 }
 
 export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoading, loadingReportIds, failedReportIds, onRetry, branding, topActions, analysisResults, selectedFrameworks, backendDebugInfo, onFetchBackendDebug }: Props) {
+  const { resolvedTheme } = useTheme();
+  const exportTheme: ReportExportTheme = resolvedTheme === "dark" ? "dark" : "light";
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilterValue>("all");
+
   if (reports.length === 0 && !isLoading) return null;
 
   const allDone = reports.length > 0 && !isLoading && reports.every(r => r.markdown && !failedReportIds.has(r.id));
@@ -757,7 +830,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
 
       // Styled HTML report
       const sanitized = buildReportHtml(report.markdown);
-      const pdfHtml = buildPdfHtml(sanitized, baseName, branding);
+      const pdfHtml = buildPdfHtml(sanitized, baseName, branding, { theme: exportTheme });
       reportsFolder.file(`${baseName}-report.html`, pdfHtml);
 
       // PowerPoint presentation
@@ -803,7 +876,22 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
           analysisResults={analysisResults}
         />
         {r.markdown && !loadingReportIds.has(r.id) && (
-          <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} />
+          <>
+            <div className="no-print flex items-center gap-2 mt-2 mb-1">
+              <span className="text-[10px] text-muted-foreground">Findings:</span>
+              <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as SeverityFilterValue)}>
+                <SelectTrigger className="w-[160px] h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="critical-high">Critical & High</SelectItem>
+                  <SelectItem value="critical">Critical only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} severityFilter={severityFilter} />
+          </>
         )}
       </div>
     );
@@ -835,7 +923,8 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
         )}
       </div>
       <Tabs value={activeReportId} onValueChange={onActiveChange} className="no-print-tabs">
-        <div className="no-print flex items-center gap-0 border-b border-border mb-4">
+        <div className="no-print flex flex-wrap items-center gap-2 border-b border-border mb-4">
+          <div className="flex items-center gap-0 flex-1 min-w-0">
           {reports.map((r) => {
             const done = r.markdown && !loadingReportIds.has(r.id) && !failedReportIds.has(r.id);
             const isActive = r.id === activeReportId;
@@ -856,6 +945,22 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
               </button>
             );
           })}
+          </div>
+          {reports.some((r) => r.markdown && !loadingReportIds.has(r.id)) && (
+            <div className="flex items-center gap-2 pb-2">
+              <span className="text-[10px] text-muted-foreground">Findings:</span>
+              <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as SeverityFilterValue)}>
+                <SelectTrigger className="w-[160px] h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="critical-high">Critical & High</SelectItem>
+                  <SelectItem value="critical">Critical only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         {reports.map((r) => (
           <TabsContent key={r.id} value={r.id}>
@@ -873,7 +978,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
               analysisResults={analysisResults}
             />
             {r.markdown && !loadingReportIds.has(r.id) && (
-              <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} selectedFrameworks={selectedFrameworks} />
+              <EvidenceVerification analysisResults={analysisResults} reportLabel={r.label} selectedFrameworks={selectedFrameworks} severityFilter={severityFilter} />
             )}
           </TabsContent>
         ))}

@@ -79,6 +79,8 @@ const AttestationWorkflow = lazy(() => import("@/components/AttestationWorkflow"
 const RegulatoryTracker = lazy(() => import("@/components/RegulatoryTracker").then((m) => ({ default: m.RegulatoryTracker })));
 const FleetComparison = lazy(() => import("@/components/FleetComparison").then((m) => ({ default: m.FleetComparison })));
 const BaselineManager = lazy(() => import("@/components/BaselineManager").then((m) => ({ default: m.BaselineManager })));
+const CompareToSavedBaseline = lazy(() => import("@/components/CompareToSavedBaseline").then((m) => ({ default: m.CompareToSavedBaseline })));
+const FindingsBulkView = lazy(() => import("@/components/FindingsBulkView").then((m) => ({ default: m.FindingsBulkView })));
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -700,6 +702,12 @@ export function AnalysisTabs({
               <BaselineManager analysisResults={analysisResult} />
             </Suspense>
           )}
+
+          {w("compare-to-baseline") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <CompareToSavedBaseline analysisResults={analysisResult} customerName={branding.customerName} />
+            </Suspense>
+          )}
         </ErrorBoundary>
       </TabsContent>
 
@@ -733,6 +741,11 @@ export function AnalysisTabs({
             </div>
           )}
 
+          {w("findings-bulk") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <FindingsBulkView analysisResults={analysisResult} />
+            </Suspense>
+          )}
           <Suspense fallback={null}>
             <RemediationPlaybooks analysisResults={analysisResult} />
           </Suspense>

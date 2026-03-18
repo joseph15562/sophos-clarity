@@ -15,9 +15,9 @@ export type Database = {
   public: {
     Tables: {
       organisations: {
-        Row: { id: string; name: string; submission_retention_days: number; mfa_required: boolean; created_at: string }
-        Insert: { id?: string; name: string; submission_retention_days?: number; mfa_required?: boolean; created_at?: string }
-        Update: { id?: string; name?: string; submission_retention_days?: number; mfa_required?: boolean; created_at?: string }
+        Row: { id: string; name: string; submission_retention_days: number; mfa_required: boolean; webhook_url: string | null; webhook_secret: string | null; report_template: Json | null; created_at: string }
+        Insert: { id?: string; name: string; submission_retention_days?: number; mfa_required?: boolean; webhook_url?: string | null; webhook_secret?: string | null; report_template?: Json | null; created_at?: string }
+        Update: { id?: string; name?: string; submission_retention_days?: number; mfa_required?: boolean; webhook_url?: string | null; webhook_secret?: string | null; report_template?: Json | null; created_at?: string }
         Relationships: []
       }
       passkey_credentials: {
@@ -275,9 +275,9 @@ export type Database = {
         ]
       }
       shared_reports: {
-        Row: { id: string; org_id: string; share_token: string; markdown: string; customer_name: string; created_by: string | null; expires_at: string; created_at: string }
-        Insert: { id?: string; org_id: string; share_token: string; markdown: string; customer_name?: string; created_by?: string | null; expires_at: string; created_at?: string }
-        Update: { id?: string; org_id?: string; share_token?: string; markdown?: string; customer_name?: string; created_by?: string | null; expires_at?: string; created_at?: string }
+        Row: { id: string; org_id: string; share_token: string; markdown: string; customer_name: string; created_by: string | null; expires_at: string; created_at: string; allow_download: boolean }
+        Insert: { id?: string; org_id: string; share_token: string; markdown: string; customer_name?: string; created_by?: string | null; expires_at: string; created_at?: string; allow_download?: boolean }
+        Update: { id?: string; org_id?: string; share_token?: string; markdown?: string; customer_name?: string; created_by?: string | null; expires_at?: string; created_at?: string; allow_download?: boolean }
         Relationships: [
           { foreignKeyName: "shared_reports_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
         ]

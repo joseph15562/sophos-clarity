@@ -47,7 +47,7 @@ export async function loadScoreHistory(
   if (hostname) query = query.eq("hostname", hostname);
 
   const { data, error } = await query;
-  if (error || !data) return [];
+  if (error || !data || !Array.isArray(data)) return [];
   return data as unknown as ScoreHistoryEntry[];
 }
 
@@ -62,6 +62,6 @@ export async function loadScoreHistoryForFleet(
     .eq("org_id", orgId)
     .order("assessed_at", { ascending: false })
     .limit(limit);
-  if (error || !data) return [];
+  if (error || !data || !Array.isArray(data)) return [];
   return data as unknown as ScoreHistoryEntry[];
 }

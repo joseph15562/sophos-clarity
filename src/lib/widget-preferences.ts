@@ -51,6 +51,8 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   { id: "export-centre",          label: "Export Centre",             tab: "tools",     isDefault: false },
   { id: "geographic-fleet-map",   label: "Geographic Fleet Map",     tab: "tools",     isDefault: false },
   { id: "baseline-manager",       label: "Baseline Manager",         tab: "tools",     isDefault: false },
+  { id: "compare-to-baseline",    label: "Compare to Saved Baseline", tab: "tools",   isDefault: true },
+  { id: "findings-bulk",          label: "Findings bulk actions",     tab: "remediation", isDefault: false },
 
   // ── Remediation ──
   { id: "remediation-progress", label: "Remediation Progress",    tab: "remediation",   isDefault: false },

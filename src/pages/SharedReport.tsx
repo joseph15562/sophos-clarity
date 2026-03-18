@@ -122,6 +122,11 @@ const SharedReport = () => {
               </div>
             )}
 
+            {report.allowDownload === false && (
+              <div className="no-print mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:text-amber-200">
+                View only — export and download are disabled by the report owner.
+              </div>
+            )}
             {/* Report body: no prose class so it matches main doc styling exactly */}
             <div dangerouslySetInnerHTML={{ __html: html }} />
           </div>

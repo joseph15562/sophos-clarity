@@ -83,7 +83,7 @@ export async function saveReportCloud(
 
   if (error || !data) return null;
 
-  return {
+  const result = {
     id: data.id,
     customerName: customerName || "Unnamed",
     environment: environment || "",
@@ -93,6 +93,56 @@ export async function saveReportCloud(
     createdAt: new Date(data.created_at).getTime(),
     createdBy: user.user.id,
   };
+
+  // Notify org webhook if configured (fire-and-forget)
+  supabase
+    .from("organisations")
+    .select("webhook_url, webhook_secret")
+    .eq("id", orgId)
+    .single()
+    .then(({ data: org }) => {
+      const url = (org as { webhook_url?: string; webhook_secret?: string } | null)?.webhook_url;
+      if (!url?.trim()) return;
+      const payload = {
+        event: "report.saved",
+        org_id: orgId,
+        customer_name: customerName || "Unnamed",
+        environment: environment || "",
+        report_count: reports.length,
+        saved_at: new Date().toISOString(),
+        package_id: data.id,
+      };
+      const body = JSON.stringify(payload);
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "User-Agent": "Sophos-FireComply-Webhook/1",
+      };
+      const secret = (org as { webhook_secret?: string }).webhook_secret;
+      if (secret?.trim()) {
+        try {
+          const enc = new TextEncoder();
+          const key = await crypto.subtle.importKey(
+            "raw",
+            enc.encode(secret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["sign"]
+          );
+          const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
+          headers["X-Webhook-Signature"] = Array.from(new Uint8Array(sig))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+        } catch {
+          // Skip signature on error
+        }
+      }
+      fetch(url, { method: "POST", headers, body }).catch((err) =>
+        console.warn("[saved-reports] webhook failed", err)
+      );
+    })
+    .catch(() => {});
+
+  return result;
 }
 
 export async function loadSavedReportsCloud(): Promise<SavedReportPackage[]> {

@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Calendar, Mail, Plus, Trash2, Send, Clock, ToggleLeft, ToggleRight } from "lucide-react";
+import { Calendar, Mail, Plus, Trash2, Send, Clock, ToggleLeft, ToggleRight, Eye } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ScheduledReport {
   id: string;
@@ -57,12 +64,18 @@ function relativeDate(iso: string): string {
   return `In ${days} days`;
 }
 
+type EmailPreview = { subject: string; markdown: string; html: string; recipients: string[] };
+
 export function ScheduledReportSettings() {
   const { org } = useAuth();
   const [reports, setReports] = useState<ScheduledReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<EmailPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -163,6 +176,40 @@ export function ScheduledReportSettings() {
       }
     } finally {
       setSending(null);
+    }
+  };
+
+  const handlePreview = async (report: ScheduledReport) => {
+    setPreviewError(null);
+    setPreviewData(null);
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-scheduled-reports`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ report_id: report.id, preview: true }),
+        }
+      );
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        setPreviewError((err as { error?: string }).error ?? `Request failed (${resp.status})`);
+        return;
+      }
+      const data = await resp.json() as EmailPreview;
+      setPreviewData(data);
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : "Preview failed");
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -366,6 +413,14 @@ export function ScheduledReportSettings() {
 
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    onClick={() => handlePreview(report)}
+                    disabled={previewLoading}
+                    className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Preview email"
+                  >
+                    <Eye className={`h-3.5 w-3.5 ${previewLoading ? "animate-pulse" : ""}`} />
+                  </button>
+                  <button
                     onClick={() => handleSendNow(report)}
                     disabled={sending === report.id}
                     className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
@@ -397,6 +452,48 @@ export function ScheduledReportSettings() {
           ))}
         </div>
       )}
+
+      {/* Email preview dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Email preview
+            </DialogTitle>
+            <DialogDescription>
+              This is how the scheduled report email will look when sent. No email is sent when previewing.
+            </DialogDescription>
+          </DialogHeader>
+          {previewLoading && (
+            <div className="flex items-center justify-center py-12">
+              <span className="animate-spin h-8 w-8 border-2 border-[#2006F7]/30 border-t-[#2006F7] rounded-full" />
+            </div>
+          )}
+          {previewError && (
+            <p className="text-sm text-destructive py-2">{previewError}</p>
+          )}
+          {!previewLoading && previewData && (
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">To</p>
+                <p className="text-xs text-foreground">{previewData.recipients.join(", ")}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Subject</p>
+                <p className="text-sm text-foreground font-medium">{previewData.subject}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Body</p>
+                <div
+                  className="rounded-lg border border-border bg-muted/20 p-4 text-xs prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: previewData.html }}
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

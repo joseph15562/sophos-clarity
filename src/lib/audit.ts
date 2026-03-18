@@ -50,14 +50,19 @@ export async function loadAuditLog(
   orgId: string,
   limit = 50,
   offset = 0,
+  options?: { fromDate?: string; toDate?: string }
 ): Promise<AuditEntry[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("audit_log")
     .select("id, action, resource_type, resource_id, metadata, created_at, user_id")
     .eq("org_id", orgId)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
+  if (options?.fromDate) query = query.gte("created_at", options.fromDate);
+  if (options?.toDate) query = query.lte("created_at", options.toDate);
+
+  const { data, error } = await query;
   if (error || !data) return [];
   return data as unknown as AuditEntry[];
 }

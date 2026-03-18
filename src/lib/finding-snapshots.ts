@@ -113,6 +113,44 @@ export async function loadSnapshotBeforePrevious(hostname: string): Promise<Find
   } catch { return null; }
 }
 
+/** Load recent finding snapshots for a hostname (for baseline comparison). */
+export async function loadFindingSnapshotsForHostname(
+  orgId: string,
+  hostname: string,
+  limit = 50
+): Promise<FindingSnapshot[]> {
+  const { data } = await supabase
+    .from("finding_snapshots")
+    .select("hostname, titles, score, created_at")
+    .eq("org_id", orgId)
+    .eq("hostname", hostname)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (!Array.isArray(data) || !data.length) return [];
+  return data.map((row) => ({
+    hostname: row.hostname,
+    titles: row.titles ?? [],
+    score: row.score ?? 0,
+    timestamp: row.created_at,
+  }));
+}
+
+/** Get the snapshot closest to a given date (at or before) for baseline comparison. */
+export function snapshotClosestToDate(snapshots: FindingSnapshot[], targetDate: string): FindingSnapshot | null {
+  const target = new Date(targetDate).getTime();
+  let best: FindingSnapshot | null = null;
+  let bestDiff = Infinity;
+  for (const s of snapshots) {
+    const t = new Date(s.timestamp).getTime();
+    const diff = target - t;
+    if (diff >= 0 && diff < bestDiff) {
+      bestDiff = diff;
+      best = s;
+    }
+  }
+  return best;
+}
+
 export interface FindingDiff {
   newFindings: string[];
   fixedFindings: string[];

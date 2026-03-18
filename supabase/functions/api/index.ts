@@ -905,7 +905,7 @@ serve(async (req: Request) => {
     const db = adminClient();
     const { data, error } = await db
       .from("shared_reports")
-      .select("share_token, markdown, customer_name, expires_at, created_at")
+      .select("share_token, markdown, customer_name, expires_at, created_at, allow_download")
       .eq("share_token", token)
       .maybeSingle();
 
@@ -923,6 +923,7 @@ serve(async (req: Request) => {
       customer_name: data.customer_name,
       expires_at: data.expires_at,
       created_at: data.created_at,
+      allow_download: (data as { allow_download?: boolean }).allow_download !== false,
     });
   }
 
