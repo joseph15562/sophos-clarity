@@ -177,27 +177,21 @@ For EACH applicable framework below, produce a Markdown table with columns:
 
 4. Frameworks to Assess
 
-5. Textual Evidence Sections
-For each control area, provide:
-- **Configuration excerpts** — present structured data (VLANs, interfaces, zones, DNS, time settings, ATP, etc.) as **Markdown tables**, not as raw JSON. For **VLANs**, **Interfaces & Ports**, or **Interfaces, Ports & VLANs**, use a table with columns: **Name**, **Port** (port or hardware name when present), **VLAN** (VLAN ID when present), **Zone**, **IP/Network**, **Status**. For other sections use a short table with the relevant columns from the data. Quote only specific values (e.g. rule names, zone names) in prose where needed. Do **not** paste raw JSON in configuration excerpts.
-- **What was observed** — factual statement of what the config shows, **per firewall where relevant**
-- **Assessment** — whether this meets the control requirement; if partial or not met, **which firewall(s)** lack it and **what** is missing
-
-6. Not Applicable Justifications
+5. Not Applicable Justifications
 For any control marked N/A, provide a clear justification statement suitable for an auditor.
 
-7. Residual Risk Statements
+6. Residual Risk Statements
 List identified residual risks in a table:
 | Risk ID | Description | Affected Firewalls | Affected Controls | Severity | Recommended Mitigation |
 
-8. Summary of Findings
+7. Summary of Findings
 - Total controls assessed per framework
 - Met / Partial / Not Met / N/A counts
 - **Per-firewall security feature summary**: for each firewall, list any missing or partial security features (e.g. MFA not in all areas, logging off on rules)
 - **Per-firewall SSL/TLS and DPI**: for each firewall, state SSL/TLS settings and whether DPI is in use for web traffic; if not, note "Recommend enabling DPI"
 - Overall compliance posture: if any firewall lacks a required security feature (e.g. MFA in all areas), the posture must be **Partial** and state which firewall(s) and what is lacking
 
-9. **Best Practice Recommendations** (required)
+8. **Best Practice Recommendations** (required)
 - A section with actionable, compliance-focused recommendations across all firewalls
 - **SSL/TLS**: Document SSL/TLS settings found. Apply the SSL/TLS DPI engine rule from Shared Assessment Rules. Recommend inspection coverage where relevant.
 - **Web filtering / DPI**: For each firewall not using DPI for outbound WAN web traffic, recommend enabling DPI. Apply the web filter scope rule. Do not mention Web proxy — focus on DPI only. Name the firewall(s) concerned.
@@ -214,7 +208,7 @@ Rules
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
 - Every claim must be traceable to config data
-- **Evidence format**: In "Configuration excerpts" and textual evidence, never output raw JSON. Use Markdown tables (with columns such as Name, Port, VLAN, Zone, IP/Network, Status for interface/VLAN data) and short prose so auditors see clear, readable evidence. Include **Port** and **VLAN** (or VLAN ID) in interface/VLAN tables when the payload contains that data.`;
+- **Evidence format**: In configuration excerpts and evidence, never output raw JSON. Use Markdown tables (with columns such as Name, Port, VLAN, Zone, IP/Network, Status for interface/VLAN data) and short prose so auditors see clear, readable evidence. Include **Port** and **VLAN** (or VLAN ID) in interface/VLAN tables when the payload contains that data.`;
 
 const CHAT_SYSTEM_PROMPT = `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
 
