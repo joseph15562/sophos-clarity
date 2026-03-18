@@ -100,7 +100,7 @@ export async function saveReportCloud(
     .select("webhook_url, webhook_secret")
     .eq("id", orgId)
     .single()
-    .then(({ data: org }) => {
+    .then(async ({ data: org }) => {
       const url = (org as { webhook_url?: string; webhook_secret?: string } | null)?.webhook_url;
       if (!url?.trim()) return;
       const payload = {
