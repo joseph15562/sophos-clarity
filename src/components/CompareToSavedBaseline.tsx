@@ -89,7 +89,7 @@ export function CompareToSavedBaseline({ analysisResults, customerName }: Compar
   );
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="compare-baseline">
       <div className="flex items-center gap-2">
         <History className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
         <h3 className="text-sm font-semibold text-foreground">Compare to saved baseline</h3>

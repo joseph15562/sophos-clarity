@@ -248,7 +248,7 @@ export function NetworkZoneMap({ files }: Props) {
 
   if (allZones.length === 0 && flows.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="rounded-xl border border-border bg-card p-5" data-tour="zone-map">
         <h3 className="text-sm font-semibold text-foreground">
           Network Zone Map
         </h3>
@@ -275,7 +275,7 @@ export function NetworkZoneMap({ files }: Props) {
   ).filter((cat) => grouped[cat].length > 0);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="zone-map">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
           Network Zone Map

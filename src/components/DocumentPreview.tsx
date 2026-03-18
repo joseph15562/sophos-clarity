@@ -540,13 +540,13 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
         )}
         {markdown && !isLoading && !isFailed && (
           <>
-            <Button variant="secondary" onClick={handleShare} className="gap-2">
+            <Button variant="secondary" onClick={handleShare} className="gap-2" data-tour="share-report">
               <Share2 className="h-4 w-4" /> Share Report
             </Button>
-            <Button variant="secondary" onClick={handleWord} className="gap-2">
+            <Button variant="secondary" onClick={handleWord} className="gap-2" data-tour="export-word">
               <FileText className="h-4 w-4" /> Download Word
             </Button>
-            <Button onClick={handlePdf} className="gap-2">
+            <Button onClick={handlePdf} className="gap-2" data-tour="export-pdf">
               <Download className="h-4 w-4" /> Download PDF
             </Button>
           </>
@@ -856,7 +856,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
           <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
           {oneReportDone && (
             <div className="flex flex-col items-end gap-1">
-              <Button onClick={handleDownloadAll} className="gap-2">
+              <Button onClick={handleDownloadAll} className="gap-2" data-tour="export-zip">
                 <Archive className="h-4 w-4" /> Download All (.zip)
               </Button>
               <p className="text-xs text-muted-foreground">Powerpoint presentations, HTML reports and Docx reports</p>
@@ -915,7 +915,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
         <h2 className="text-xl font-bold text-foreground">Document Preview</h2>
         {allDone && (
           <div className="flex flex-col items-end gap-1">
-            <Button onClick={handleDownloadAll} className="gap-2">
+            <Button onClick={handleDownloadAll} className="gap-2" data-tour="export-zip">
               <Archive className="h-4 w-4" /> Download All (.zip)
             </Button>
             <p className="text-xs text-muted-foreground">Powerpoint presentations, HTML reports and Docx reports</p>

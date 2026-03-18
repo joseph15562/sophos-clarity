@@ -317,6 +317,7 @@ ${reportSummary}`;
       {/* Floating trigger button */}
       {!isOpen && (
         <button
+          data-tour="ai-chat-trigger"
           onClick={() => setIsOpen(true)}
           className="no-print fixed bottom-20 right-6 z-50 h-12 w-12 rounded-full bg-[#2006F7] text-white shadow-lg hover:bg-[#10037C] transition-colors flex items-center justify-center group"
           aria-label="Open AI chat assistant"

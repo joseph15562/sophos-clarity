@@ -46,6 +46,7 @@ export function WidgetCustomiser({ tab, prefs, onChange }: Props) {
     <div className="relative">
       <button
         type="button"
+        data-tour="widget-customiser"
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-[#2006F7]/30 dark:hover:border-[#00EDFF]/30 transition-colors"
       >

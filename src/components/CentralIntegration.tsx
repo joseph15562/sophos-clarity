@@ -108,7 +108,7 @@ export function CentralIntegration() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4" data-tour="central-section">
           {/* Guide toggle */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -163,6 +163,7 @@ export function CentralIntegration() {
                 onChange={(e) => setClientId(e.target.value)}
                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 className="font-mono text-xs"
+                data-tour="central-client-id"
               />
             </div>
             <div className="space-y-1.5">
@@ -174,6 +175,7 @@ export function CentralIntegration() {
                   onChange={(e) => setClientSecret(e.target.value)}
                   placeholder="Enter your client secret"
                   className="font-mono text-xs pr-10"
+                  data-tour="central-client-secret"
                 />
                 <button
                   type="button"
@@ -195,6 +197,7 @@ export function CentralIntegration() {
                 onClick={handleConnect}
                 disabled={connecting || !clientId.trim() || !clientSecret.trim()}
                 className="gap-2 bg-[#2006F7] hover:bg-[#10037C] text-white"
+                data-tour="central-connect-btn"
               >
                 <Wifi className="h-3.5 w-3.5" />
                 {connecting ? "Connecting..." : "Connect to Sophos Central"}

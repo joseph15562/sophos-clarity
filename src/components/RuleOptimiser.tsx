@@ -96,7 +96,7 @@ export function RuleOptimiser({ files }: Props) {
   const totalIssues = Object.values(results).reduce((s, r) => s + r.issues.length, 0);
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-5 space-y-4" data-tour="rule-optimiser">
       <div className="flex items-center gap-2 mb-3">
         <Layers className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
         <h3 className="text-sm font-display font-bold text-foreground">Rule Optimisation</h3>

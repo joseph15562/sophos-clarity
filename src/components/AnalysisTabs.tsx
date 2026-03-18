@@ -155,7 +155,7 @@ export function AnalysisTabs({
       <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm">
         <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2">Detailed Security Analysis</h2>
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="flex-nowrap whitespace-nowrap w-max inline-flex">
+          <TabsList className="flex-nowrap whitespace-nowrap w-max inline-flex" data-tour="analysis-tabs">
           <TabsTrigger value="overview" className="gap-2">
             <LayoutDashboard className="h-3.5 w-3.5" />
             Overview
@@ -186,7 +186,7 @@ export function AnalysisTabs({
             </TabsTrigger>
           )}
           {files.length >= 2 && (
-            <TabsTrigger value="compare" className="gap-2">
+            <TabsTrigger value="compare" className="gap-2" data-tour="compare-tab">
               <ArrowLeftRight className="h-3.5 w-3.5" />
               Compare
             </TabsTrigger>
@@ -223,12 +223,13 @@ export function AnalysisTabs({
           )}
 
           {totalFindings > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2" data-tour="export-buttons">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => downloadRiskRegisterCSV(analysisResult, branding.customerName)}
                 className="gap-1.5 text-xs"
+                data-tour="export-risk-register"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export Risk Register (CSV)
@@ -238,6 +239,7 @@ export function AnalysisTabs({
                 size="sm"
                 onClick={() => downloadRiskRegisterExcel(analysisResult, branding.customerName)}
                 className="gap-1.5 text-xs"
+                data-tour="export-excel"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export Excel
@@ -536,7 +538,7 @@ export function AnalysisTabs({
       {/* Compliance */}
       <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Compliance view failed to load">
-          <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <div className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="compliance-heatmap">
             <div className="flex items-center gap-2">
               <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
               <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
@@ -554,12 +556,14 @@ export function AnalysisTabs({
             </Suspense>
           </div>
 
-          <Suspense fallback={<CardSkeleton />}>
-            <SophosBestPractice
-              analysisResults={analysisResult}
-              centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
-            />
-          </Suspense>
+          <div data-tour="sophos-best-practice">
+            <Suspense fallback={<CardSkeleton />}>
+              <SophosBestPractice
+                analysisResults={analysisResult}
+                centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
+              />
+            </Suspense>
+          </div>
 
           <Suspense fallback={<CardSkeleton />}>
             <PeerBenchmark analysisResults={analysisResult} environment={branding.environment} />
@@ -765,6 +769,7 @@ export function AnalysisTabs({
                 <select
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                   value={diffSelection?.beforeIdx ?? 0}
+                  data-tour="compare-before"
                   onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
                     beforeIdx: Number(e.target.value),
                     afterIdx: prev?.afterIdx ?? Math.min(1, files.length - 1),
@@ -780,6 +785,7 @@ export function AnalysisTabs({
                 <select
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                   value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
+                  data-tour="compare-after"
                   onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
                     beforeIdx: prev?.beforeIdx ?? 0,
                     afterIdx: Number(e.target.value),
@@ -794,6 +800,7 @@ export function AnalysisTabs({
             <Button
               size="sm"
               className="gap-2"
+              data-tour="compare-button"
               onClick={() => setDiffSelection({
                 beforeIdx: diffSelection?.beforeIdx ?? 0,
                 afterIdx: diffSelection?.afterIdx ?? Math.min(1, files.length - 1),

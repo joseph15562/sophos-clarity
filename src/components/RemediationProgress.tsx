@@ -126,7 +126,7 @@ export function RemediationProgress({ analysisResults }: Props) {
 
   if (playbooks.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="rounded-xl border border-border bg-card p-5" data-tour="remediation-progress">
         <h3 className="text-sm font-semibold text-foreground mb-2">Remediation Progress</h3>
         <p className="text-sm text-muted-foreground">No findings to remediate</p>
       </div>
@@ -137,7 +137,7 @@ export function RemediationProgress({ analysisResults }: Props) {
   const weeksEstimate = hoursRemaining > 0 ? Math.ceil(hoursRemaining / 8) : 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border bg-card p-5" data-tour="remediation-progress">
       <h3 className="text-sm font-semibold text-foreground mb-4">Remediation Progress</h3>
 
       <div className="mb-4">

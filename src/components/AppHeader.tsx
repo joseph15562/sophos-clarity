@@ -255,6 +255,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                   className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
                   title="Open management panel"
                   aria-label="Open management panel"
+                  data-tour="management-panel"
                 >
                   <Building2 className="h-3 w-3 shrink-0" />
                   <span className="font-medium text-white/80 max-w-[120px] truncate hidden sm:inline">{org.name}</span>
@@ -300,6 +301,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
             className="shrink-0 text-[#6A889B] hover:text-white hover:bg-[#10037C]/40"
             aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            data-tour="theme-toggle"
           >
             {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>

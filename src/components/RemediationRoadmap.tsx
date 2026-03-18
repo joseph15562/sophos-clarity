@@ -89,7 +89,7 @@ export function RemediationRoadmap({ analysisResults }: Props) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
+      <div className="rounded-xl border border-border bg-card p-5" data-tour="remediation-roadmap">
         <h3 className="text-sm font-semibold text-foreground mb-2">Remediation Roadmap</h3>
         <p className="text-sm text-muted-foreground">No findings to remediate</p>
       </div>
@@ -99,7 +99,7 @@ export function RemediationRoadmap({ analysisResults }: Props) {
   const totalWeekMinutes = totalWeeks * MINUTES_PER_WEEK;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border bg-card p-5" data-tour="remediation-roadmap">
       <h3 className="text-sm font-semibold text-foreground mb-1">Remediation Roadmap</h3>
       <p className="text-xs text-muted-foreground mb-4">
         Estimated {totalWeeks} week{totalWeeks !== 1 ? "s" : ""} to resolve all findings

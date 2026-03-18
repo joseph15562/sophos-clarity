@@ -32,6 +32,7 @@ export function NotificationCentre({ notifications, unreadCount, onMarkRead, onM
   return (
     <div className="relative shrink-0">
       <button
+        data-tour="notification-bell"
         onClick={() => setOpen(!open)}
         className="relative flex items-center justify-center h-7 w-7 rounded text-[#6A889B] hover:text-white hover:bg-[#10037C]/40 transition-colors"
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}

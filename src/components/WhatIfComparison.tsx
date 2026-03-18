@@ -82,7 +82,7 @@ export function WhatIfComparison({ analysisResults }: Props) {
   const improved = currentScore && projectedScore && projectedScore.overall > currentScore.overall;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border bg-card p-5" data-tour="what-if">
       <h3 className="text-sm font-semibold text-foreground">What-If Analysis</h3>
       <div className="mt-4 flex flex-wrap items-center gap-6">
         <div className="flex flex-col items-center rounded-lg border border-border bg-muted/30 px-6 py-4">

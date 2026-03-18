@@ -29,6 +29,8 @@ import { NotificationCentre } from "@/components/NotificationCentre";
 import { useKeyboardShortcuts, type ShortcutAction } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 import { ManagementDrawer } from "@/components/ManagementDrawer";
+import { GuidedTourButton } from "@/components/GuidedTourButton";
+import type { TourCallbacks } from "@/lib/guided-tours";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
 import { toast } from "sonner";
@@ -57,6 +59,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [viewingReports, setViewingReports] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<string | undefined>(undefined);
   const [localMode, setLocalModeState] = useState(() => isLocalMode());
   const [saveError, setSaveError] = useState("");
   const [loadedSavedSummary, setLoadedSavedSummary] = useState<{ customerName: string; summary: AnalysisSummary } | null>(null);
@@ -550,6 +553,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
   useKeyboardShortcuts(keyboardShortcuts);
 
+  const tourCallbacks = useMemo<TourCallbacks>(() => ({
+    openDrawer: () => setDrawerOpen(true),
+    setDrawerTab: (tab: string) => setDrawerTab(tab),
+  }), []);
+
   const fileLabel = (f: ParsedFile) => f.label || f.fileName.replace(/\.(html|htm)$/i, "");
 
   return (
@@ -744,7 +752,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
             {/* Stats bar */}
             {hasReports && !isLoading && (
-              <div className="no-print flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]">
+              <div className="no-print flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]" data-tour="stats-bar">
                 <span className="font-semibold text-foreground mr-1">{reports.length} report{reports.length !== 1 ? "s" : ""}</span>
                 <span className="w-px h-3 bg-border" />
                 <span className="text-muted-foreground">{files.length} firewall{files.length !== 1 ? "s" : ""}</span>
@@ -860,19 +868,27 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           onLoadReports={handleLoadSavedReports}
           savedReportsTrigger={savedReportsTrigger}
           hasFiles={hasFiles}
+          initialTab={drawerTab as "dashboard" | "reports" | "history" | "settings" | undefined}
           onRerunSetup={() => { resetSetupFlag(); setDrawerOpen(false); setWizardOpen(true); }}
           localMode={localMode}
           onLocalModeChange={handleLocalModeChange}
         />
       </ErrorBoundary>
 
-      {/* Keyboard shortcut hint */}
-      <div className="fixed bottom-4 right-4 z-10 no-print">
+      {/* Keyboard shortcut hint + Tours */}
+      <div className="fixed bottom-4 right-4 z-10 no-print flex items-center gap-2">
+        <GuidedTourButton
+          hasFiles={hasFiles}
+          hasReports={hasReports}
+          isGuest={isGuest}
+          tourCallbacks={tourCallbacks}
+        />
         <button
           onClick={() => setShortcutsOpen(true)}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-[#2006F7]/30 transition-colors shadow-sm"
           title="Keyboard shortcuts (?)"
           aria-label="Keyboard shortcuts"
+          data-tour="shortcuts-button"
         >
           <kbd className="inline-flex items-center justify-center w-4 h-4 rounded border border-border bg-muted text-[9px] font-mono font-bold">?</kbd>
           Shortcuts

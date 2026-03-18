@@ -149,6 +149,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
 
       {/* Drop zone */}
       <div
+        data-tour="step-upload"
         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
         onDragLeave={() => setDragActive(false)}
         onDrop={onDrop}

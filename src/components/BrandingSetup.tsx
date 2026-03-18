@@ -442,7 +442,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
       </div>
 
       {/* Compliance Frameworks */}
-      <div className="space-y-2">
+      <div className="space-y-2" data-tour="framework-selector">
         <Label className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4" /> Compliance Frameworks
         </Label>

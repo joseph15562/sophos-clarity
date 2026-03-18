@@ -62,7 +62,7 @@ export function SecurityFeatureCoverage({ analysisResults }: { analysisResults: 
   const overallPct = Math.round((overallPcts.reduce((a, b) => a + b, 0) / featureKeys.length) * 100);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border bg-card p-5" data-tour="inspection-posture">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-foreground">Feature Coverage</h3>
         <div className="flex items-center gap-2">

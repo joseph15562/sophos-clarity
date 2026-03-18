@@ -443,7 +443,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-xl border border-border bg-card overflow-hidden" data-tour="agent-fleet">
       <div className="px-4 py-3 flex items-center gap-2 border-b border-border bg-card">
         <div className="h-6 w-6 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
           <Activity className="h-3 w-3 text-[#2006F7] dark:text-[#00EDFF]" />

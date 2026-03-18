@@ -195,7 +195,7 @@ export function ScoreDialGauge({ analysisResults }: ScoreDialGaugeProps) {
 
       <div className="flex flex-col items-center gap-6">
         {/* Main gauge */}
-        <div className="relative flex items-center justify-center">
+        <div className="relative flex items-center justify-center" data-tour="score-dial">
           <div
             className="gauge-needle-mount"
             style={{

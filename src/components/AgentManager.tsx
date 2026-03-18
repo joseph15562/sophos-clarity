@@ -435,7 +435,7 @@ export function AgentManager() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-tour="connector-section">
       <RegisterDialog open={showRegister} onClose={() => setShowRegister(false)} onRegistered={loadAgents} />
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -451,6 +451,7 @@ export function AgentManager() {
             size="sm"
             onClick={() => setShowRegister(true)}
             className="gap-1.5 text-[10px] h-7"
+            data-tour="connector-register"
           >
             <Plus className="h-3 w-3" />
             Register Agent
@@ -465,7 +466,7 @@ export function AgentManager() {
           <p className="text-[11px]">No agents registered</p>
           <p className="text-[9px] mt-1">Register an agent to start automated firewall monitoring</p>
           {canManageAgents && (
-            <Button variant="outline" size="sm" onClick={() => setShowRegister(true)} className="mt-3 gap-1.5 text-[10px] h-7">
+            <Button variant="outline" size="sm" onClick={() => setShowRegister(true)} className="mt-3 gap-1.5 text-[10px] h-7" data-tour="connector-register">
               <Plus className="h-3 w-3" /> Register Agent
             </Button>
           )}
@@ -659,7 +660,7 @@ export function AgentManager() {
       )}
 
       {/* Download section */}
-      <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+      <div className="rounded-lg border border-border bg-card p-3 space-y-2" data-tour="connector-download">
         <p className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
           <Download className="h-3 w-3" /> Download Agent
         </p>

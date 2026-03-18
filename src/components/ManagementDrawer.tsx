@@ -280,6 +280,10 @@ export function ManagementDrawer({
   const visibleTabs = TABS.filter((t) => t.guestVisible || !isGuest);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? visibleTabs[0]?.id ?? "reports");
 
+  useEffect(() => {
+    if (initialTab && open) setActiveTab(initialTab);
+  }, [initialTab, open]);
+
   if (!open) return null;
 
   const currentTab = visibleTabs.find((t) => t.id === activeTab) ? activeTab : visibleTabs[0]?.id;
@@ -344,6 +348,7 @@ export function ManagementDrawer({
           {visibleTabs.map((tab) => (
             <button
               key={tab.id}
+              data-tour={`drawer-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium border-b-2 transition-colors ${
                 currentTab === tab.id
@@ -362,19 +367,25 @@ export function ManagementDrawer({
           {currentTab === "dashboard" && (
             <div className="space-y-0">
               <Suspense fallback={<Skeleton />}>
-                <TenantDashboard />
+                <div data-tour="tenant-dashboard">
+                  <TenantDashboard />
+                </div>
               </Suspense>
               {!isGuest && org?.id && (
                 <Suspense fallback={<Skeleton />}>
-                  <div className="px-4 pb-2">
+                  <div className="px-4 pb-2" data-tour="score-trend-chart">
                     <ScoreTrendChart orgId={org.id} />
                   </div>
                 </Suspense>
               )}
               <Suspense fallback={<Skeleton />}>
                 <div className="px-4 pb-4 space-y-4">
-                  <LicenceExpiryWidget />
-                  <AssessmentScheduler />
+                  <div data-tour="licence-expiry">
+                    <LicenceExpiryWidget />
+                  </div>
+                  <div data-tour="assessment-scheduler">
+                    <AssessmentScheduler />
+                  </div>
                 </div>
               </Suspense>
             </div>
@@ -471,68 +482,86 @@ export function ManagementDrawer({
               </SettingsSection>
               )}
               {canManageTeam && (
-              <SettingsSection title="Team Management" icon={<Users className="h-3.5 w-3.5 text-[#2006F7]" />} subtitle="Invite and manage team members">
-                <div className="p-4">
-                  <Suspense fallback={<Skeleton />}>
-                    <InviteStaff />
-                  </Suspense>
-                </div>
-              </SettingsSection>
+              <div data-tour="drawer-team">
+                <SettingsSection title="Team Management" icon={<Users className="h-3.5 w-3.5 text-[#2006F7]" />} subtitle="Invite and manage team members">
+                  <div className="p-4">
+                    <Suspense fallback={<Skeleton />}>
+                      <InviteStaff />
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+              </div>
               )}
               {canManageTeam && (
-              <SettingsSection title="Client Portal" icon={<Globe className="h-3.5 w-3.5 text-[#009CFB]" />} subtitle="Branding, sections & customer access">
-                <div className="p-4">
-                  <Suspense fallback={<Skeleton />}>
-                    <PortalConfigurator />
-                  </Suspense>
-                </div>
-              </SettingsSection>
+              <div data-tour="drawer-portal">
+                <SettingsSection title="Client Portal" icon={<Globe className="h-3.5 w-3.5 text-[#009CFB]" />} subtitle="Branding, sections & customer access">
+                  <div className="p-4">
+                    <Suspense fallback={<Skeleton />}>
+                      <PortalConfigurator />
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+              </div>
               )}
               <SettingsSection title="Security" icon={<Fingerprint className="h-3.5 w-3.5 text-[#00995a]" />} subtitle="MFA and passkey settings">
                 <div className="p-4 space-y-6">
-                  <Suspense fallback={<Skeleton />}>
-                    <MfaEnrollment />
-                  </Suspense>
-                  <Suspense fallback={<Skeleton />}>
-                    <PasskeyManager />
-                  </Suspense>
+                  <div data-tour="drawer-mfa">
+                    <Suspense fallback={<Skeleton />}>
+                      <MfaEnrollment />
+                    </Suspense>
+                  </div>
+                  <div data-tour="drawer-passkeys">
+                    <Suspense fallback={<Skeleton />}>
+                      <PasskeyManager />
+                    </Suspense>
+                  </div>
                 </div>
               </SettingsSection>
-              <SettingsSection title="Activity Log" icon={<Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />} subtitle="Review workspace activity">
-                <Suspense fallback={<Skeleton />}>
-                  <AuditLog />
-                </Suspense>
-              </SettingsSection>
-              <SettingsSection title="Alerts" icon={<Bell className="h-3.5 w-3.5 text-[#F29400]" />} subtitle="Email and webhook notifications">
-                <div className="p-4">
+              <div data-tour="drawer-audit">
+                <SettingsSection title="Activity Log" icon={<Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />} subtitle="Review workspace activity">
                   <Suspense fallback={<Skeleton />}>
-                    <AlertSettings />
+                    <AuditLog />
                   </Suspense>
-                </div>
-              </SettingsSection>
+                </SettingsSection>
+              </div>
+              <div data-tour="drawer-alerts">
+                <SettingsSection title="Alerts" icon={<Bell className="h-3.5 w-3.5 text-[#F29400]" />} subtitle="Email and webhook notifications">
+                  <div className="p-4">
+                    <Suspense fallback={<Skeleton />}>
+                      <AlertSettings />
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+              </div>
               {canManageTeam && (
-              <SettingsSection title="Integrations (Webhook)" icon={<Webhook className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Notify a URL when reports are saved">
-                <div className="p-4">
-                  <Suspense fallback={<Skeleton />}>
-                    <WebhookSettings />
-                  </Suspense>
-                </div>
-              </SettingsSection>
+              <div data-tour="drawer-webhooks">
+                <SettingsSection title="Integrations (Webhook)" icon={<Webhook className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Notify a URL when reports are saved">
+                  <div className="p-4">
+                    <Suspense fallback={<Skeleton />}>
+                      <WebhookSettings />
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+              </div>
               )}
-              <SettingsSection title="Scheduled Reports" icon={<Mail className="h-3.5 w-3.5 text-[#009CFB]" />} subtitle="Auto-send compliance reports to clients">
-                <div className="p-4">
-                  <Suspense fallback={<Skeleton />}>
-                    <ScheduledReportSettings />
-                  </Suspense>
-                </div>
-              </SettingsSection>
-              <SettingsSection title="Custom Compliance Frameworks" icon={<ClipboardCheck className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Create and manage custom compliance frameworks">
-                <div className="p-4">
-                  <Suspense fallback={<Skeleton />}>
-                    <CustomFrameworkBuilder />
-                  </Suspense>
-                </div>
-              </SettingsSection>
+              <div data-tour="drawer-scheduled-reports">
+                <SettingsSection title="Scheduled Reports" icon={<Mail className="h-3.5 w-3.5 text-[#009CFB]" />} subtitle="Auto-send compliance reports to clients">
+                  <div className="p-4">
+                    <Suspense fallback={<Skeleton />}>
+                      <ScheduledReportSettings />
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+              </div>
+              <div data-tour="custom-frameworks">
+                <SettingsSection title="Custom Compliance Frameworks" icon={<ClipboardCheck className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Create and manage custom compliance frameworks">
+                  <div className="p-4">
+                    <Suspense fallback={<Skeleton />}>
+                      <CustomFrameworkBuilder />
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+              </div>
               {canManageTeam && (
               <SettingsSection title="Report template" icon={<FileStack className="h-3.5 w-3.5 text-[#5A00FF]" />} subtitle="Custom sections/headings for generated reports">
                 <div className="p-4">

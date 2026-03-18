@@ -60,7 +60,7 @@ export function BaselineManager({ analysisResults }: BaselineManagerProps) {
   if (labels.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border bg-card p-5" data-tour="baseline-manager">
       <h3 className="text-sm font-semibold text-foreground mb-4">Configuration Baseline</h3>
 
       {!baselineLabel ? (

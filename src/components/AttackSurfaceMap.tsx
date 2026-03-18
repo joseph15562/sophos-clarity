@@ -70,7 +70,7 @@ export function AttackSurfaceMap({ files }: Props) {
   for (const s of allServices) counts[s.risk]++;
 
   return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
+    <section className="rounded-xl border border-border bg-card overflow-hidden" data-tour="attack-surface">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"

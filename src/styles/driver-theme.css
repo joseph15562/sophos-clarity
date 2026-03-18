@@ -1,0 +1,149 @@
+/* Sophos-branded driver.js theme */
+
+.driver-popover {
+  background: #001A47 !important;
+  border: 1px solid rgba(32, 6, 247, 0.4) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(32, 6, 247, 0.15) !important;
+  color: #fff !important;
+  font-family: inherit !important;
+  max-width: 380px !important;
+  padding: 0 !important;
+}
+
+.driver-popover * {
+  font-family: inherit !important;
+}
+
+.driver-popover-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  padding: 20px 20px 4px !important;
+  letter-spacing: -0.01em !important;
+}
+
+.driver-popover-description {
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  padding: 4px 20px 8px !important;
+}
+
+.driver-popover-description strong {
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.driver-popover-progress-text {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  padding: 0 20px !important;
+  letter-spacing: 0.02em !important;
+}
+
+.driver-popover-footer {
+  padding: 12px 20px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-top: 8px !important;
+}
+
+.driver-popover-footer button {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  border: none !important;
+}
+
+.driver-popover-prev-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+.driver-popover-prev-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.driver-popover-next-btn {
+  background: #2006F7 !important;
+  color: #fff !important;
+}
+.driver-popover-next-btn:hover {
+  background: #10037C !important;
+}
+
+.driver-popover-close-btn {
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-size: 18px !important;
+  top: 14px !important;
+  right: 14px !important;
+}
+.driver-popover-close-btn:hover {
+  color: #fff !important;
+}
+
+.driver-popover-arrow {
+  border-color: #001A47 !important;
+}
+.driver-popover-arrow-side-left { border-right-color: #001A47 !important; }
+.driver-popover-arrow-side-right { border-left-color: #001A47 !important; }
+.driver-popover-arrow-side-top { border-bottom-color: #001A47 !important; }
+.driver-popover-arrow-side-bottom { border-top-color: #001A47 !important; }
+
+.driver-overlay {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Light mode overrides */
+:root:not(.dark) .driver-popover {
+  background: #fff !important;
+  border-color: rgba(32, 6, 247, 0.25) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(32, 6, 247, 0.1) !important;
+  color: #0f172a !important;
+}
+:root:not(.dark) .driver-popover-title {
+  color: #0f172a !important;
+}
+:root:not(.dark) .driver-popover-description {
+  color: #475569 !important;
+}
+:root:not(.dark) .driver-popover-description strong {
+  color: #0f172a !important;
+}
+:root:not(.dark) .driver-popover-progress-text {
+  color: #94a3b8 !important;
+}
+:root:not(.dark) .driver-popover-footer {
+  border-top-color: #e2e8f0 !important;
+}
+:root:not(.dark) .driver-popover-prev-btn {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+}
+:root:not(.dark) .driver-popover-prev-btn:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+:root:not(.dark) .driver-popover-close-btn {
+  color: #94a3b8 !important;
+}
+:root:not(.dark) .driver-popover-close-btn:hover {
+  color: #0f172a !important;
+}
+:root:not(.dark) .driver-popover-arrow {
+  border-color: #fff !important;
+}
+:root:not(.dark) .driver-popover-arrow-side-left { border-right-color: #fff !important; }
+:root:not(.dark) .driver-popover-arrow-side-right { border-left-color: #fff !important; }
+:root:not(.dark) .driver-popover-arrow-side-top { border-bottom-color: #fff !important; }
+:root:not(.dark) .driver-popover-arrow-side-bottom { border-top-color: #fff !important; }
+:root:not(.dark) .driver-overlay {
+  background: rgba(0, 0, 0, 0.4) !important;
+}

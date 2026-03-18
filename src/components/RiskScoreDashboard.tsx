@@ -144,14 +144,14 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
 
       <div className="grid gap-6 md:grid-cols-2 items-center">
         {/* Gauge + legend */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4" data-tour="score-grade">
           <GaugeRing
             score={aggregated.overall}
             grade={aggregated.grade}
             projectedScore={projected?.overall}
             projectedGrade={projected?.grade}
           />
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs" data-tour="score-categories">
             {aggregated.categories.map((c) => {
               const projCat = projected?.categories.find((p) => p.label === c.label);
               const delta = projCat ? projCat.pct - c.pct : 0;

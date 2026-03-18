@@ -187,7 +187,7 @@ export function UploadSection({
 
       {/* Step 2 — Assessment Context (before findings so compliance tags are dynamic) */}
       {hasFiles && (
-        <section className="space-y-4">
+        <section className="space-y-4" data-tour="step-context">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">2</span>
             <h2 className="text-lg font-display font-bold text-foreground">Assessment Context</h2>
@@ -227,6 +227,7 @@ export function UploadSection({
 
       {/* Generate Reports — AI reports disabled in local mode */}
       {hasFiles && !isGuest && (
+        <div data-tour="step-reports">
         <ReportCards
           fileCount={files.length}
           localMode={localMode}
@@ -237,6 +238,7 @@ export function UploadSection({
           onGenerateCompliance={onGenerateCompliance}
           onGenerateAll={onGenerateAll}
         />
+        </div>
       )}
 
       {/* Guest sign-in prompt for reports */}
