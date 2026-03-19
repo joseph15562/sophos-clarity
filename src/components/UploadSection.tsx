@@ -26,7 +26,7 @@ export interface UploadSectionProps {
   branding: BrandingData;
   setBranding: React.Dispatch<React.SetStateAction<BrandingData>>;
   analysisResult: Record<string, AnalysisResult>;
-  configMetas: Array<{ label: string; hostname?: string; serialNumber?: string; configHash: string }>;
+  configMetas: Array<{ label: string; hostname?: string; serialNumber?: string; configHash: string; fromUpload?: boolean }>;
   hasFiles: boolean;
   hasReports: boolean;
   reports: Array<{ id: string; label: string; markdown: string }>;

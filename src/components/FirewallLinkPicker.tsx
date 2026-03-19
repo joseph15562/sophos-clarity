@@ -41,10 +41,12 @@ interface Props {
   configHostname: string;
   configHash: string;
   configSerialNumber?: string;
+  /** When true, do not auto-persist a link when serial/hostname matches (e.g. manual XML/HTML upload). */
+  disableAutoLink?: boolean;
   onLinked?: (link: FirewallLink | null) => void;
 }
 
-export function FirewallLinkPicker({ configId, configHostname, configHash, configSerialNumber, onLinked }: Props) {
+export function FirewallLinkPicker({ configId, configHostname, configHash, configSerialNumber, disableAutoLink, onLinked }: Props) {
   const { org, isGuest } = useAuth();
   const orgId = org?.id ?? "";
 
@@ -128,8 +130,8 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
     if (!orgId || !selectedTenantId) { setFirewalls([]); return; }
     getCachedFirewalls(orgId, selectedTenantId).then((fws) => {
       setFirewalls(fws);
-      // Auto-link by serial number if available
-      if (configSerialNumber) {
+      // Auto-link by serial number only when not from manual upload (disableAutoLink)
+      if (configSerialNumber && !disableAutoLink) {
         const match = fws.find((f) =>
           f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase()
         );
@@ -148,7 +150,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
         }
       }
     }).catch(() => {});
-  }, [orgId, selectedTenantId, configHostname, configSerialNumber, autoLink]);
+  }, [orgId, selectedTenantId, configHostname, configSerialNumber, disableAutoLink, autoLink]);
 
   const groups = useMemo(() => {
     const seen = new Map<string, string>();

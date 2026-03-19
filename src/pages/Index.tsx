@@ -125,6 +125,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         hostname: result?.hostname || f.agentHostname,
         serialNumber: f.serialNumber,
         configHash: f.id,
+        fromUpload: f.source === "upload",
       };
     }),
   [files, analysisResults]);
@@ -260,7 +261,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         toast.error(`Could not parse ${file.fileName} — it may not be a valid Sophos config export`);
         extractedData = {} as ExtractedSections;
       }
-      parsed.push({ ...file, extractedData });
+      parsed.push({ ...file, extractedData, source: "upload" });
     }
     setParsingProgress({ current: toProcess.length, total: toProcess.length, phase: "analysing" });
     await new Promise((r) => setTimeout(r, 0));
@@ -292,6 +293,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       serialNumber: agentMeta?.serialNumber,
       agentHostname: agentMeta?.hostname,
       hardwareModel: agentMeta?.model,
+      source: "agent" as const,
     };
     setFiles((prev) => {
       if (prev.some((f) => f.id === label)) return prev;

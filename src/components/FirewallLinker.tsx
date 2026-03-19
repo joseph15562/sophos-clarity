@@ -10,7 +10,7 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FirewallLinkerProps {
-  configs: Array<{ label: string; hostname?: string; serialNumber?: string; configHash: string }>;
+  configs: Array<{ label: string; hostname?: string; serialNumber?: string; configHash: string; fromUpload?: boolean }>;
   customerName: string;
   analysisResults: Record<string, AnalysisResult>;
   onLink?: () => void;
@@ -87,13 +87,13 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
     load();
   }, [orgId, configs, central.firewalls]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-match by serial number then hostname
+  // Auto-match by serial number then hostname (skip configs from manual upload — do not link to a different Central firewall)
   useEffect(() => {
     if (central.firewalls.length === 0 || !matchedTenant) return;
     setLinks((prev) => {
       const next = { ...prev };
       for (const config of configs) {
-        if (next[config.configHash]) continue;
+        if (config.fromUpload || next[config.configHash]) continue;
         let match: CentralFirewall | undefined;
         if (config.serialNumber) {
           match = central.firewalls.find((fw) =>

@@ -11,6 +11,8 @@ export type UploadedFile = {
   serialNumber?: string;
   agentHostname?: string;
   hardwareModel?: string;
+  /** When "upload", do not auto-link to Central (manual upload may be a different firewall). */
+  source?: "upload" | "agent";
 };
 
 type Props = {
@@ -133,6 +135,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               configHostname={fileHostnames[f.id] || f.agentHostname || ""}
               configHash={fileHashes[f.id] ?? ""}
               configSerialNumber={f.serialNumber}
+              disableAutoLink={f.source === "upload"}
               onLinked={(link) => onFirewallLinked?.(f.id, link)}
             />
           </div>

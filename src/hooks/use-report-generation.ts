@@ -90,6 +90,8 @@ export type ParsedFile = {
   serialNumber?: string;
   agentHostname?: string;
   hardwareModel?: string;
+  /** When "upload", do not auto-link to Central (manual upload may be a different firewall). */
+  source?: "upload" | "agent";
 };
 
 /** Prefer hostname (from analysis or agent) for report labels when present, so Scope shows the real device name instead of e.g. "Firewall-A". */
