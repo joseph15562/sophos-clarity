@@ -77,14 +77,19 @@ You receive structured JSON data extracted from a Sophos XGS firewall configurat
 - **tables**: array of { headers, rows } — use every column in the headers and every row; do not drop columns.
 - **details** (or **detail blocks**): per-rule or per-item expansion data with "title" and "fields". Merge Web Filter and Logging from detail blocks into your rule table. Do **not** add a Security Features column to the firewall rules table; omit Security Features / Scan FTP / Scan IMAP etc. from the table.
 
+**Individual firewall report layout (keep this structure exactly when the prompt specifies an individual firewall):**
+- **Opening block**: Follow the "Individual report: required opening layout" instructions in the context (title line, Assessment Date, Scope, Compliance Context, Selected Compliance Frameworks, Executive Summary heading and paragraph).
+- **Per section**: For each configuration section (Firewall Rules, Interfaces Ports & VLANs, Zones, NAT Rules, Authentication Servers, etc.), use this pattern: (1) Section heading (e.g. ## Firewall Rules), (2) short intro paragraph, (3) full Markdown table when applicable, (4) **Summary of [Section Name]** paragraph, (5) **Findings** with severity bullets (🔴 Critical, 🟠 High, 🟡 Medium, 🟢 Low), (6) **Best Practice Recommendations** with actionable items and "How to remediate" where relevant.
+- **Final section**: End the report with **## Overall Security Recommendations for [firewall name]** (use the firewall name from the context), covering cross-cutting critical gaps, then enhanced inspection/control, then network segmentation and access control, then operational security and maintenance. Use the exact heading format "Overall Security Recommendations for [name]".
+
 Output Format
 
 Write well-structured Markdown with:
-- An Executive Summary at the top with a brief overview of the firewall configuration (number of rules, key security posture observations, overall assessment)
-- **Immediately after the Executive Summary**, if the payload contains a "Firewall Rules" section (or "FirewallRule" data), you MUST output a **## Firewall Rules** section with a Markdown table listing every rule (or first 150 rules plus a truncation note if there are more than 150). This section is mandatory and must not be skipped or moved to the end. Include the required columns (Rule Name, Status, Action, Source Zone, Source Networks, Dest Zone, Dest Networks, Service, Web Filter, Logging, etc.). Do **not** include a Security Features column. Merge detail-block fields for Web Filter and Logging only. Then add a short Summary, Findings, and Best Practice Recommendations for the firewall rules.
-- Clear Section headings for each remaining configuration area
+- An Executive Summary at the top with a brief overview of the firewall configuration (number of rules, key security posture observations, overall assessment). When the context specifies the opening layout, output the exact title, Assessment Date, Scope, Compliance Context, and frameworks list before the Executive Summary.
+- **Immediately after the Executive Summary**, if the payload contains a "Firewall Rules" section (or "FirewallRule" data), you MUST output a **## Firewall Rules** section with a Markdown table listing every rule (or first 150 rules plus a truncation note if there are more than 150). This section is mandatory and must not be skipped or moved to the end. Include the required columns (Rule Name, Status, Action, Source Zone, Source Networks, Dest Zone, Dest Networks, Service, Web Filter, Logging, etc.). Do **not** include a Security Features column. Merge detail-block fields for Web Filter and Logging only. Then add **Summary of Firewall Rules**, **Findings**, and **Best Practice Recommendations** for the firewall rules.
+- Clear Section headings for each remaining configuration area. For each section include: **Summary of [Section Name]** paragraph, **Findings** subsection, **Best Practice Recommendations** subsection.
 - Markdown tables that include **every column** from the extracted data. If a column exists in the export or in rule details, it must appear in your table. Merge detail-block fields into the rule table for Web Filter and Logging only; do not add a Security Features column.
-- After each section's table(s), include a Summary paragraph that is specific and compliance-focused: e.g. how many rules with **Destination Zone = WAN** and **Service HTTP, HTTPS, or ANY** have Web Filter "None", how many have logging disabled, reliance on "Any" services, and one-line recommendations.
+- After each section's table(s), include a **Summary of [Section Name]** paragraph that is specific and compliance-focused: e.g. how many rules with **Destination Zone = WAN** and **Service HTTP, HTTPS, or ANY** have Web Filter "None", how many have logging disabled, reliance on "Any" services, and one-line recommendations.
 - After each section, include a **Findings** subsection listing specific issues. Findings must be about **firewall configuration only** (rules, zones, logging, web filter, etc.) — do not create findings from Sophos Central alert count or list framework control numbers (e.g. 1.1, 1.2, … 1.890). Keep each finding to one short line; no long control-ID lists. You MUST include: (1) every rule with **Destination Zone = WAN** (or Dest Zone WAN) and **Service HTTP, HTTPS, or ANY** that has Web Filter "None" or "Not specified" — list rule names and state "No web filtering for outbound WAN; consider DPI for compliance". **Do not flag rules whose destination is not WAN** or whose service is not HTTP/HTTPS/ANY (e.g. LAN to LAN, VPN to LAN, or non-web services) for web filtering — only destination-WAN rules with web-related service require web filtering for KCSIE/compliance; (2) every rule with logging disabled — list rule names; (3) rules with no or minimal Security Features. For each finding, indicate severity: 🔴 Critical, 🟠 High, 🟡 Medium, 🟢 Low.
 - After each section, include a **Best Practice Recommendations** subsection with actionable, detailed advice specific to the configuration shown. Each recommendation should explain WHY it matters and HOW to remediate it.
 
@@ -155,46 +160,40 @@ const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity analyst produci
 
 When multiple firewalls are assessed, **security features (e.g. MFA, OTP, 2FA) must be enabled across all firewalls and in all relevant areas**. If any single firewall lacks a required security feature in any area, the report must show **⚠️ Partial** for that control and clearly state **which firewall** is lacking it and **what** is missing (e.g. "Firewall A — MFA not enabled for SSL-VPN"; "Firewall B — OTP disabled for Web Admin").
 
-Output Format
+Required Report Layout (keep this structure and section order exactly)
 
-Write a structured Markdown document with these sections:
+The report body must follow this layout. The cover block (title, date, prepared by, disclaimer) is prepended by the system; you output the following only.
 
-1. Document Header
-- **Title**: "Compliance Readiness Report — Firewall Configuration Assessment"
-- **Date**: Current assessment date
-- **Scope**: Firewalls assessed, environment type
+**Opening (first two lines of your output):**
+- Line 1: Compliance Readiness Report — Firewall Configuration Assessment
+- Line 2: Date: [assessment date] Scope: [firewall name(s), comma-separated if multiple] ([customer/tenant name]), [Environment] Environment, [Country]. Example: "Date: 19 March 2026 Scope: firewall.salesengineers.uk (Customer Name), Education Environment, United Kingdom"
 
-2. **Security Feature Gaps by Firewall** (required; output the full table immediately)
-- Output a Markdown table with columns: **Firewall Name** | **Feature Lacking / Partial** | **Where Lacking**. For each firewall that is **missing** a required security feature (MFA, OTP, logging, etc.), add one row with firewall name, the feature lacking, and where (e.g. "Firewall A | MFA/OTP | Not enabled for SSL-VPN, Web Admin"). If no firewall has gaps, output exactly one data row: "| — | No gaps identified | — |". Complete this table in full right after the section heading; do not leave it empty or use placeholder text.
+**Then these sections in order, with these exact headings and numbering:**
 
-3. Control → Evidence Mapping Tables
-For EACH applicable framework below, produce a Markdown table with columns:
-| Control ID | Control Description | Status | Firewall(s) Lacking / What Is Missing | Evidence | Example of non-compliance | Notes |
+**2. Security Feature Gaps by Firewall**
+- One Markdown table with columns: **Firewall Name** | **Feature Lacking / Partial** | **Where Lacking**
+- One data row per gap (firewall name, feature lacking, where). If no gaps: one row "| — | No gaps identified | — |". Complete the table immediately; no placeholders.
 
-- **Status**: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A
-- **Firewall(s) Lacking / What Is Missing**: When Status is ⚠️ Partial or ❌ Not Met because one or more firewalls lack the control, list the **firewall name(s)** and **what is missing** (e.g. "Firewall A — MFA not enabled for VPN"; "Firewall B — logging off on rule X"). Leave blank or "—" when Met or N/A.
-- **Example of non-compliance**: When Status is ⚠️ Partial or ❌ Not Met, give a short example: **which firewall** and **one concrete example** of what is not compliant (e.g. "Firewall A: Rule 'VPN allow' has Logging Disabled"; "Firewall B: Rule 'dales red to WAN' has Web Filter None for destination WAN"). Omit or "—" when Met or N/A.
+**3. Control → Evidence Mapping Tables**
+- For each framework (GDPR, Cyber Essentials / CE+, NCSC Guidelines, DfE / KCSIE, etc. as selected), output the subheading "Framework: [Framework Name]" then a Markdown table with columns:
+  | Control ID | Control Description | Status | Firewall(s) Lacking / What Is Missing | Evidence | Example of non-compliance | Notes |
+- Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A. Fill all columns; use "—" where not applicable.
 
-4. Frameworks to Assess
+**5. Not Applicable Justifications**
+- Short paragraph or list explaining any controls marked N/A. If none, state "No controls were marked as N/A as all assessed controls were relevant to the provided configuration data and the selected compliance frameworks."
 
-5. Not Applicable Justifications
-For any control marked N/A, provide a clear justification statement suitable for an auditor.
+**6. Residual Risk Statements**
+- One Markdown table: | Risk ID | Description | Affected Firewalls | Affected Controls | Severity | Recommended Mitigation |
 
-6. Residual Risk Statements
-List identified residual risks in a table:
-| Risk ID | Description | Affected Firewalls | Affected Controls | Severity | Recommended Mitigation |
+**7. Summary of Findings**
+- "Total Controls Assessed per Framework:" then a short list (e.g. "GDPR: 4", "Cyber Essentials / CE+: 5", …).
+- "Control Status Counts:" then ✅ Met, ⚠️ Partial, ❌ Not Met, N/A counts.
+- "Per-firewall Security Feature Summary ([firewall name]):" for each firewall — bullet list of missing/partial features.
+- "Per-firewall SSL/TLS and DPI ([firewall name]):" for each firewall — SSL/TLS settings, DPI usage, DPI gaps and recommendation if any.
+- "Overall Compliance Posture:" one paragraph stating Partial or Met and which firewall(s) lack what.
 
-7. Summary of Findings
-- Total controls assessed per framework
-- Met / Partial / Not Met / N/A counts
-- **Per-firewall security feature summary**: for each firewall, list any missing or partial security features (e.g. MFA not in all areas, logging off on rules)
-- **Per-firewall SSL/TLS and DPI**: for each firewall, state SSL/TLS settings and whether DPI is in use for web traffic; if not, note "Recommend enabling DPI"
-- Overall compliance posture: if any firewall lacks a required security feature (e.g. MFA in all areas), the posture must be **Partial** and state which firewall(s) and what is lacking
-
-8. **Best Practice Recommendations** (required)
-- A section with actionable, compliance-focused recommendations across all firewalls
-- **SSL/TLS**: Document SSL/TLS settings found. Apply the SSL/TLS DPI engine rule from Shared Assessment Rules. Recommend inspection coverage where relevant.
-- **Web filtering / DPI**: For each firewall not using DPI for outbound WAN web traffic, recommend enabling DPI. Apply the web filter scope rule. Do not mention Web proxy — focus on DPI only. Name the firewall(s) concerned.
+**8. Best Practice Recommendations**
+- Numbered subsections 8.1, 8.2, 8.3, … each with a title, "Recommendation:", "Justification:" and where relevant "Specific Rules:", "Specific Servers:", or "Current SSL/TLS Settings:". Cover MFA, Logging, IPS, Wireless Security, Authentication Server Security, SSL/TLS DPI, Web Filtering Scope, and any other gaps identified.
 
 Rules
 - Use ONLY the actual configuration data provided — never invent details
@@ -312,29 +311,47 @@ serve(async (req) => {
       const singleFirewallName = isIndividualReport && firewallLabels && firewallLabels.length === 1 ? firewallLabels[0] : null;
       const reportDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
       if (singleFirewallName) {
-        complianceContext += `\n\n## Report subject (individual firewall)\nThis is an **individual firewall report** for the firewall named **${singleFirewallName}**. Use this firewall name (not the customer/tenant name) everywhere: the document subject, the introductory paragraph (e.g. "This report documents the firewall configuration for ${singleFirewallName}"), the Executive Summary (e.g. "Sophos XGS firewall configuration for ${singleFirewallName}"), and the section heading **Overall Security Recommendations for ${singleFirewallName}**. Do not use "(This tenant)" or a different name for this report.\n`;
+        complianceContext += `\n\n## Individual report: required opening layout (output exactly in this order)\nThe cover block (title, date, prepared by, disclaimer) is prepended by the system. You output the report body only. Start your response with the following lines exactly:\n\nSophos XGS Firewall Configuration Report for ${singleFirewallName}\nAssessment Date: ${reportDate}\n\nScope: This report documents the Sophos XGS firewall configuration for ${singleFirewallName}.\n\nCompliance Context:\n`;
+        if (environment && environment.trim()) complianceContext += `Environment type: ${environment.trim()}\n`;
+        if (country && country.trim()) complianceContext += `Country: ${country.trim()}\n`;
+        if (selectedFrameworks && selectedFrameworks.length > 0) {
+          complianceContext += `Selected Compliance Frameworks:\n`;
+          selectedFrameworks.forEach((fw) => { complianceContext += `${fw}\n`; });
+        }
+        complianceContext += `\nExecutive Summary\n`;
+        complianceContext += `(Then write your Executive Summary paragraph. Then output these sections in this order, each with section heading, intro, table if applicable, "Summary of [Section Name]", Findings, Best Practice Recommendations: Firewall Rules; Interfaces, Ports & VLANs; Zones; Interface Aliases; NAT Rules; Authentication Servers; Azure AD SSO; Authentication & OTP Settings; Advanced Threat Protection; Intrusion Prevention; IPS Engine Settings; Hotfix Settings; RED Devices; XFRM Interfaces; Wireless Networks; Wireless Access Points; Wireless Settings; Content Condition List; SSL/TLS Inspection Rules; SSL/TLS Settings; Admin Settings; Backup & Restore. End with ## Overall Security Recommendations for ${singleFirewallName}.)\n`;
       } else if (customerName && customerName.trim() && !/^\(this tenant\)$/i.test(customerName.trim())) {
         complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Use this exact customer name throughout the document (Scope, Executive Summary, Overall Security Recommendations, Frameworks to Assess). Do not use "(This tenant)" or any placeholder — use **${customerName}** only.\n`;
       } else {
         complianceContext += `\n\n## Client Context\nDo not use "(This tenant)" or a placeholder in the report. Use "the assessed organisation" or the firewall name(s) from the data in Scope and body text.\n`;
       }
-      complianceContext += `\n\n## Report date\nUse **${reportDate}** as the assessment date in the document header and anywhere the report date is shown.\n`;
-      complianceContext += `\n\n## Scope\nIn the Scope line, list the firewall name(s) exactly as provided in the request (e.g. hostname or device name). Never write "(This tenant)" in Scope — use the firewall name(s) or "the assessed organisation" only.\n`;
 
-      if (environment || country) {
-        complianceContext += "\n\n## Compliance Context\n";
-        if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
-        if (country) complianceContext += `- **Country**: ${country}\n`;
-      }
+      if (!singleFirewallName) {
+        complianceContext += `\n\n## Report date\nUse **${reportDate}** as the assessment date in the document header and in the Scope line.\n`;
+        const scopeFirewalls = firewallLabels && firewallLabels.length > 0 ? firewallLabels.join(", ") : "firewall(s)";
+        const scopeTenant = (customerName && customerName.trim() && !/^\(this tenant\)$/i.test(customerName.trim())) ? customerName.trim() : "(This tenant)";
+        const scopeEnv = environment && environment.trim() ? `${environment.trim()} Environment` : "";
+        const scopeCountry = country && country.trim() ? country.trim() : "";
+        const scopeRest = [scopeEnv, scopeCountry].filter(Boolean).join(", ");
+        complianceContext += `\n\n## Scope line (output exactly)\nAfter the title "Compliance Readiness Report — Firewall Configuration Assessment", output this exact line (one line):\nDate: ${reportDate} Scope: ${scopeFirewalls} (${scopeTenant})${scopeRest ? ", " + scopeRest : ""}\n`;
 
-      if (selectedFrameworks && selectedFrameworks.length > 0) {
-        complianceContext += `\n\n## Selected Compliance Frameworks\nThe following frameworks have been selected for this assessment. You MUST assess against ALL of these and ONLY these frameworks:\n`;
-        selectedFrameworks.forEach((fw) => {
-          complianceContext += `- **${fw}**\n`;
-        });
-        complianceContext += `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
-      } else if (environment || country) {
-        complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
+        if (environment || country) {
+          complianceContext += "\n\n## Compliance Context\n";
+          if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
+          if (country) complianceContext += `- **Country**: ${country}\n`;
+        }
+
+        if (selectedFrameworks && selectedFrameworks.length > 0) {
+          complianceContext += `\n\n## Selected Compliance Frameworks\nThe following frameworks have been selected for this assessment. You MUST assess against ALL of these and ONLY these frameworks:\n`;
+          selectedFrameworks.forEach((fw) => {
+            complianceContext += `- **${fw}**\n`;
+          });
+          complianceContext += `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
+        } else if (environment || country) {
+          complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
+        }
+      } else if (selectedFrameworks && selectedFrameworks.length > 0) {
+        complianceContext += `\n\n## Frameworks for individual report\nTailor "Best Practice Recommendations" and "Overall Security Recommendations for ${singleFirewallName}" to the selected frameworks: ${selectedFrameworks.join(", ")}.\n`;
       }
 
       if (centralEnrichment && Object.keys(centralEnrichment).length > 0) {
