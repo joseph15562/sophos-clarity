@@ -15,16 +15,67 @@ function Section({ children }: { children: React.ReactNode }) {
 }
 
 function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const [zoomed, setZoomed] = useState(false);
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (zoomed) setZoomed(false);
+        else onClose();
+      }
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, zoomed]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out" onClick={onClose}>
-      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold z-10" aria-label="Close">✕</button>
-      <img src={src} alt={alt} className="max-w-[95vw] max-h-[92vh] object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={() => {
+        setZoomed(false);
+        onClose();
+      }}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold z-10"
+        aria-label="Close"
+      >
+        ✕
+      </button>
+      <div
+        className={`relative flex items-center justify-center ${zoomed ? "overflow-auto max-h-[92vh] max-w-[95vw]" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={src}
+          alt={alt}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setZoomed((z) => !z);
+            }
+          }}
+          className={`rounded-lg shadow-2xl transition-[transform] duration-200 select-none ${
+            zoomed
+              ? "max-w-none w-auto h-auto min-w-0 cursor-zoom-out scale-[1.35] sm:scale-150 origin-center"
+              : "max-w-[95vw] max-h-[92vh] object-contain cursor-zoom-in"
+          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setZoomed((z) => !z);
+          }}
+        />
+      </div>
+      <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center text-[11px] text-white/60 pointer-events-none max-w-[90vw]">
+        {zoomed ? "Click image again to zoom out · Click backdrop or ✕ to close" : "Click image to zoom in · Click backdrop or ✕ to close"}
+      </p>
     </div>
   );
 }
