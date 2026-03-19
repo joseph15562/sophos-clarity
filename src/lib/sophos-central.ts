@@ -132,6 +132,22 @@ export interface CentralFirewall {
   geoLocation?: { latitude: string; longitude: string };
 }
 
+/** True if string looks like a serial or node ID (long alphanumeric, no dots). */
+function looksLikeSerialOrNodeId(s: string): boolean {
+  const t = s.trim();
+  if (t.length < 8) return false;
+  return /^[A-Za-z0-9]+$/.test(t) && !t.includes(".");
+}
+
+/** Prefer hostname when it looks like a real hostname; avoid using serial/node-id as display name. */
+export function getFirewallDisplayName(fw: { name?: string; hostname?: string; serialNumber?: string }): string {
+  const name = (fw.name ?? "").trim();
+  const hostname = (fw.hostname ?? "").trim();
+  if (hostname && (hostname.includes(".") || !looksLikeSerialOrNodeId(hostname))) return hostname;
+  if (name && !looksLikeSerialOrNodeId(name)) return name;
+  return hostname || name || (fw.serialNumber ?? "");
+}
+
 export async function syncFirewalls(orgId: string, tenantId: string): Promise<CentralFirewall[]> {
   const res = await callCentral<{ items: CentralFirewall[] }>({ mode: "firewalls", orgId, tenantId });
   return res.items;

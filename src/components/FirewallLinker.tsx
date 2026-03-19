@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";
-import type { CentralFirewall } from "@/lib/sophos-central";
+import { getFirewallDisplayName, type CentralFirewall } from "@/lib/sophos-central";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -272,7 +272,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                     <div className="flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-[#00995a] dark:text-[#00F2B3]" />
                       <div className="text-right">
-                        <span className="text-[10px] font-medium text-foreground block">{link.firewall?.hostname || link.firewall?.name || link.firewallId}</span>
+                        <span className="text-[10px] font-medium text-foreground block">{link.firewall ? getFirewallDisplayName(link.firewall) : link.firewallId}</span>
                         <span className="text-[9px] text-muted-foreground block">
                           {link.firewall?.serialNumber && <span className="font-mono">{link.firewall.serialNumber} · </span>}
                           {link.firewall?.firmwareVersion}
@@ -341,7 +341,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                             }`}
                           >
                             <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"}`} />
-                            <span className="font-medium text-foreground truncate">{fw.hostname || fw.name}</span>
+                            <span className="font-medium text-foreground truncate">{getFirewallDisplayName(fw)}</span>
                             <span className="font-mono text-[10px] text-muted-foreground shrink-0">{fw.serialNumber}</span>
                             <span className="text-[10px] text-muted-foreground shrink-0">{fw.firmwareVersion}</span>
                             {entry.isHA && (

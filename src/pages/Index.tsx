@@ -46,6 +46,19 @@ import { saveConfigSnapshot, hashConfig } from "@/lib/config-snapshots";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
+/** Scroll to top in a way that works in Chrome (double rAF + both window and document scroll). */
+function scrollPageToTop() {
+  const run = () => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+  requestAnimationFrame(() => {
+    requestAnimationFrame(run);
+  });
+  setTimeout(run, 50);
+}
+
 function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const { isGuest, org, isViewerOnly } = useAuth();
   const { notifications, unreadCount, addNotification, markRead, markAllRead, dismiss: dismissNotif, clearAll: clearNotifs } = useNotifications();
@@ -189,7 +202,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   useEffect(() => {
     const count = Object.keys(analysisResults).length;
     if (count > 0 && prevResultCountRef.current === 0) {
-      requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+      scrollPageToTop();
     }
     prevResultCountRef.current = count;
   }, [analysisResults]);
@@ -302,7 +315,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setActiveReportId("");
     setReportsSaved(false);
     setLoadedSavedSummary(null);
-    requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+    scrollPageToTop();
   }, [setReports, setActiveReportId]);
 
   // Clear analysis override when user uploads new files normally
@@ -457,7 +470,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setLoadedSavedSummary({ customerName, summary: analysisSummary });
     }
     setBranding((prev) => ({ ...prev, customerName, environment }));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollPageToTop();
   }, [setReports, setActiveReportId]);
 
   const handleStartOver = useCallback(() => {

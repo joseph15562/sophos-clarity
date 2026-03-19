@@ -3,7 +3,7 @@ import { Shield, Download, ChevronDown, RefreshCw, Server, Clock, Link2 } from "
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";
-import { getFirewallLicences, type FirewallLicence, type FirewallSubscription } from "@/lib/sophos-central";
+import { getFirewallLicences, getFirewallDisplayName, type FirewallLicence, type FirewallSubscription } from "@/lib/sophos-central";
 
 interface FlattenedLicence {
   serialNumber: string;
@@ -166,8 +166,8 @@ export function LicenceExpiryWidget() {
   const serialToDisplayName = useMemo(() => {
     const map = new Map<string, string>();
     for (const fw of central.firewalls) {
-      const name = (fw.name && fw.name.trim()) || (fw.hostname && fw.hostname.trim());
-      if (name) map.set(fw.serialNumber, name);
+      const displayName = getFirewallDisplayName(fw);
+      if (displayName && displayName !== fw.serialNumber) map.set(fw.serialNumber, displayName);
     }
     return map;
   }, [central.firewalls]);

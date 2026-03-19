@@ -3,7 +3,7 @@ import { Link2, Search, Server, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { getCachedFirewalls, getCachedTenants, type CentralTenant } from "@/lib/sophos-central";
+import { getCachedFirewalls, getCachedTenants, getFirewallDisplayName, type CentralTenant } from "@/lib/sophos-central";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CachedFw {
@@ -357,7 +357,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                       <Server className="h-3 w-3 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-foreground truncate">{haGroup.primary.hostname || haGroup.primary.name || haGroup.primary.serialNumber}</span>
+                          <span className="font-medium text-foreground truncate">{getFirewallDisplayName(haGroup.primary)}</span>
                           {haGroup.isHa && (
                             <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B529F7] shrink-0">HA PAIR</span>
                           )}
