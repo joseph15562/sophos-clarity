@@ -163,6 +163,15 @@ export function LicenceExpiryWidget() {
     return haPartnerMap.get(serial) ?? serial;
   }, [haPartnerMap]);
 
+  const serialToDisplayName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const fw of central.firewalls) {
+      const name = (fw.name && fw.name.trim()) || (fw.hostname && fw.hostname.trim());
+      if (name) map.set(fw.serialNumber, name);
+    }
+    return map;
+  }, [central.firewalls]);
+
   const buildGroups = useCallback((items: FlattenedLicence[]): LicenceGroup[] => {
     const map = new Map<string, LicenceGroup>();
     for (const item of items) {
@@ -375,19 +384,32 @@ export function LicenceExpiryWidget() {
                       >
                         <Server className={`h-3.5 w-3.5 shrink-0 ${group.modelType === "virtual" ? "text-[#009CFB]" : "text-muted-foreground"}`} />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-semibold text-foreground">{group.model}</span>
-                            {group.isHaPair ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-mono text-muted-foreground" title={group.serials.join(" / ")}>
-                                <Link2 className="h-2.5 w-2.5 text-[#009CFB]" />
-                                {group.serials.map((s) => s.slice(-8)).join(" / ")}
-                              </span>
-                            ) : (
-                              <span className="text-[9px] font-mono text-muted-foreground" title={group.serials[0]}>
-                                {group.serials[0].slice(-8)}
-                              </span>
-                            )}
-                          </div>
+                          {(() => {
+                            const names = group.serials.map((s) => serialToDisplayName.get(s)).filter(Boolean) as string[];
+                            const displayName = names.length > 0 ? (group.isHaPair ? names.join(" / ") : names[0]) : null;
+                            return (
+                              <>
+                                {displayName && (
+                                  <div className="text-[10px] font-semibold text-foreground truncate" title={displayName}>
+                                    {displayName}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-semibold text-foreground">{group.model}</span>
+                                  {group.isHaPair ? (
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-mono text-muted-foreground" title={group.serials.join(" / ")}>
+                                      <Link2 className="h-2.5 w-2.5 text-[#009CFB]" />
+                                      {group.serials.map((s) => s.slice(-8)).join(" / ")}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-mono text-muted-foreground" title={group.serials[0]}>
+                                      {group.serials[0].slice(-8)}
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })()}
                           <div className="flex items-center gap-2">
                             <span className="text-[9px] text-muted-foreground">
                               {dedupedItems.length} licence{dedupedItems.length !== 1 ? "s" : ""}
