@@ -212,8 +212,8 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
       "IPS": ips || "None",
       "Intrusion Prevention": ips || "None",
       "Application Control": appCtrl || "None",
-      "Match Known Users": matchIdentity,
-      "Identity": identity,
+      "Match Known Users": matchIdentity || "Disabled",
+      "Identity": identity || "N/A",
       "Log": logTraffic,
       "Log Traffic": logTraffic,
       "Description": asString(e.Description ?? ""),
@@ -330,13 +330,14 @@ function buildLocalServiceAclTable(entities: Record<string, unknown>[]): TableDa
 }
 
 function buildInterfaceTable(entities: Record<string, unknown>[]): TableData {
-  const headers = ["Name", "HardwareName", "Zone", "NetworkZone", "IPAddress", "Status", "Speed", "MACAddress"];
+  const headers = ["Name", "VLANID", "HardwareName", "Zone", "NetworkZone", "IPAddress", "Status", "Speed", "MACAddress"];
   const rows = entities.map((e) => ({
     "Name": textOf(e.Name) || textOf(e.HardwareName),
+    "VLANID": "N/A",
     "HardwareName": textOf(e.HardwareName) || textOf(e.Name),
     "Zone": textOf(e.Zone) || textOf(e.NetworkZone),
     "NetworkZone": textOf(e.NetworkZone) || textOf(e.Zone),
-    "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP),
+    "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP) || "N/A",
     "Status": textOf(e.Status),
     "Speed": textOf(e.Speed),
     "MACAddress": textOf(e.MACAddress) || textOf(e.MAC),
@@ -350,12 +351,12 @@ function buildVlanTable(entities: Record<string, unknown>[]): TableData {
     const parent = textOf(e.Hardware) || textOf(e.Interface) || textOf(e.HardwareInterface) || textOf(e.HardwareName) || textOf(e.Member) || textOf(e.Port);
     return {
       "Name": textOf(e.Name),
-      "VLANID": textOf(e.VLANID) || textOf(e.VlanID) || textOf(e.VID),
+      "VLANID": textOf(e.VLANID) || textOf(e.VlanID) || textOf(e.VID) || "N/A",
       "Interface": parent,
       "Hardware": parent,
       "Zone": textOf(e.Zone) || textOf(e.NetworkZone),
       "NetworkZone": textOf(e.NetworkZone) || textOf(e.Zone),
-      "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP),
+      "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP) || "N/A",
       "Status": textOf(e.Status),
     };
   });

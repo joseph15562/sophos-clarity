@@ -290,18 +290,18 @@ function extractPortsVlansTable(container: Element): TableData | null {
       vlanBlocks.forEach((block) => {
         const text = (block.textContent ?? "").replace(/\s+/g, " ");
         const idMatch = text.match(/ID:\s*(\d+)/i);
-        const vlanId = idMatch ? idMatch[1] : "-";
+        const vlanId = idMatch ? idMatch[1] : "N/A";
         const nameSpan = block.querySelector('span[style*="font-weight"]');
         const desc = (nameSpan?.textContent ?? "").trim() || (text.match(/^([^I]+?)(?=\s*ID:|\s*ON\s|$)/)?.[1]?.trim() ?? "").replace(/\s+/g, " ") || baseName + "." + vlanId;
         const pairs = getGridPairs(block);
         const ip = pairs["IP"] ?? pairs["IPv4"] ?? "";
         const zone = pairs["Zone"] ?? "";
-        const ifName = vlanId !== "-" ? `${baseName}.${vlanId}` : baseName;
+        const ifName = vlanId !== "N/A" ? `${baseName}.${vlanId}` : baseName;
         rows.push({
           "Interface / VLAN": ifName,
           VLAN: vlanId,
           Zone: zone,
-          "IP Address": ip,
+          "IP Address": ip || "N/A",
           Description: desc,
         });
       });
@@ -324,9 +324,9 @@ function extractPortsVlansTable(container: Element): TableData | null {
         const ip = ipMatch ? ipMatch[1].trim() : "";
         rows.push({
           "Interface / VLAN": aliasName,
-          VLAN: "-",
+          VLAN: "N/A",
           Zone: "-",
-          "IP Address": ip,
+          "IP Address": ip || "N/A",
           Description: "Alias",
         });
       });
@@ -342,9 +342,9 @@ function extractPortsVlansTable(container: Element): TableData | null {
       if (baseName.includes(".") && !ip) return;
       rows.push({
         "Interface / VLAN": baseName,
-        VLAN: "-",
+        VLAN: "N/A",
         Zone: zone,
-        "IP Address": ip,
+        "IP Address": ip || "N/A",
         Description: baseName === "HA link" ? "HA link" : "",
       });
     }

@@ -168,32 +168,32 @@ The report body must follow this layout. The cover block (title, date, prepared 
 - Line 1: Compliance Readiness Report — Firewall Configuration Assessment
 - Line 2: Date: [assessment date] Scope: [firewall name(s), comma-separated if multiple] ([customer/tenant name]), [Environment] Environment, [Country]. Example: "Date: 19 March 2026 Scope: firewall.salesengineers.uk (Customer Name), Education Environment, United Kingdom"
 
-**Then these sections in order, with these exact headings and numbering:**
+**Then these sections in order, with these exact headings and numbering (start at 1):**
 
-**2. Security Feature Gaps by Firewall**
+**1. Security Feature Gaps by Firewall**
 - One Markdown table with columns: **Firewall Name** | **Feature Lacking / Partial** | **Where Lacking**
 - One data row per gap (firewall name, feature lacking, where). If no gaps: one row "| — | No gaps identified | — |". Complete the table immediately; no placeholders.
 
-**3. Control → Evidence Mapping Tables**
+**2. Control → Evidence Mapping Tables**
 - For each framework (GDPR, Cyber Essentials / CE+, NCSC Guidelines, DfE / KCSIE, etc. as selected), output the subheading "Framework: [Framework Name]" then a Markdown table with columns:
   | Control ID | Control Description | Status | Firewall(s) Lacking / What Is Missing | Evidence | Example of non-compliance | Notes |
 - Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A. Fill all columns; use "—" where not applicable.
 
-**5. Not Applicable Justifications**
+**3. Not Applicable Justifications**
 - Short paragraph or list explaining any controls marked N/A. If none, state "No controls were marked as N/A as all assessed controls were relevant to the provided configuration data and the selected compliance frameworks."
 
-**6. Residual Risk Statements**
+**4. Residual Risk Statements**
 - One Markdown table: | Risk ID | Description | Affected Firewalls | Affected Controls | Severity | Recommended Mitigation |
 
-**7. Summary of Findings**
+**5. Summary of Findings**
 - "Total Controls Assessed per Framework:" then a short list (e.g. "GDPR: 4", "Cyber Essentials / CE+: 5", …).
 - "Control Status Counts:" then ✅ Met, ⚠️ Partial, ❌ Not Met, N/A counts.
 - "Per-firewall Security Feature Summary ([firewall name]):" for each firewall — bullet list of missing/partial features.
 - "Per-firewall SSL/TLS and DPI ([firewall name]):" for each firewall — SSL/TLS settings, DPI usage, DPI gaps and recommendation if any.
 - "Overall Compliance Posture:" one paragraph stating Partial or Met and which firewall(s) lack what.
 
-**8. Best Practice Recommendations**
-- Numbered subsections 8.1, 8.2, 8.3, … each with a title, "Recommendation:", "Justification:" and where relevant "Specific Rules:", "Specific Servers:", or "Current SSL/TLS Settings:". Cover MFA, Logging, IPS, Wireless Security, Authentication Server Security, SSL/TLS DPI, Web Filtering Scope, and any other gaps identified.
+**6. Best Practice Recommendations**
+- Numbered subsections 6.1, 6.2, 6.3, … each with a title, "Recommendation:", "Justification:" and where relevant "Specific Rules:", "Specific Servers:", or "Current SSL/TLS Settings:". Cover MFA, Logging, IPS, Wireless Security, Authentication Server Security, SSL/TLS DPI, Web Filtering Scope, and any other gaps identified.
 
 Rules
 - Use ONLY the actual configuration data provided — never invent details
