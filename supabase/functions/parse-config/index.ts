@@ -319,7 +319,8 @@ serve(async (req) => {
         complianceContext += `\n\n## Client Context\nDo not use "(This tenant)" or a placeholder in the report. Use "the assessed organisation" or the firewall name(s) from the data in Scope and body text.\n`;
       }
       complianceContext += `\n\n## Report date\nUse **${reportDate}** as the assessment date in the document header and anywhere the report date is shown.\n`;
-      
+      complianceContext += `\n\n## Scope\nIn the Scope line, list the firewall name(s) exactly as provided in the request (e.g. hostname or device name). Never write "(This tenant)" in Scope — use the firewall name(s) or "the assessed organisation" only.\n`;
+
       if (environment || country) {
         complianceContext += "\n\n## Compliance Context\n";
         if (environment) complianceContext += `- **Environment type**: ${environment}\n`;

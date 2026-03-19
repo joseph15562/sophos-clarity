@@ -5,6 +5,7 @@ import type { ExtractedSections } from "@/lib/extract-sections";
 import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
 import { useToast } from "@/hooks/use-toast";
 import { analyseConfig, type AnalysisResult, type Finding } from "@/lib/analyse-config";
+import type { InspectionPosture } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
 
 const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
@@ -91,7 +92,21 @@ export type ParsedFile = {
   hardwareModel?: string;
 };
 
-export function useReportGeneration(files: ParsedFile[], branding: BrandingData) {
+/** Prefer hostname (from analysis or agent) for report labels when present, so Scope shows the real device name instead of e.g. "Firewall-A". */
+function displayLabelForFile(
+  f: ParsedFile,
+  lookupKey: string,
+  analysisResults?: Record<string, AnalysisResult>,
+): string {
+  const hostname = analysisResults?.[lookupKey]?.hostname || f.agentHostname;
+  return (hostname && hostname.trim()) ? hostname.trim() : lookupKey;
+}
+
+export function useReportGeneration(
+  files: ParsedFile[],
+  branding: BrandingData,
+  analysisResults?: Record<string, AnalysisResult>,
+) {
   const { toast } = useToast();
   const [reports, setReports] = useState<ReportEntry[]>([]);
   const [activeReportId, setActiveReportId] = useState("");
@@ -203,7 +218,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       });
       return succeeded;
     },
-    [branding, toast]
+    [branding, toast],
   );
 
   const generateIndividual = async (keepLoading = false) => {
@@ -294,9 +309,10 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     const mergedSections: Record<string, ExtractedSections> = {};
     const labels: string[] = [];
     files.forEach((f) => {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      labels.push(label);
-      mergedSections[label] = f.extractedData;
+      const lookupKey = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const displayLabel = displayLabelForFile(f, lookupKey, analysisResults);
+      labels.push(displayLabel);
+      mergedSections[displayLabel] = f.extractedData;
     });
 
     const complianceId = "report-compliance";
@@ -347,11 +363,13 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
     }
 
     const complianceId = "report-compliance";
-    const labels = files.map((f) => f.label || f.fileName.replace(/\.(html|htm)$/i, ""));
-    const mergedSections: Record<string, ExtractedSections> = {};
+    const mergedSectionsCompliance: Record<string, ExtractedSections> = {};
+    const labelsCompliance: string[] = [];
     files.forEach((f) => {
-      const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      mergedSections[label] = f.extractedData;
+      const lookupKey = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const displayLabel = displayLabelForFile(f, lookupKey, analysisResults);
+      labelsCompliance.push(displayLabel);
+      mergedSectionsCompliance[displayLabel] = f.extractedData;
     });
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== complianceId);
@@ -362,8 +380,8 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       complianceId,
       files.length === 1
         ? files[0].extractedData
-        : (mergedSections as unknown as ExtractedSections),
-      { compliance: true, firewallLabels: labels }
+        : (mergedSectionsCompliance as unknown as ExtractedSections),
+      { compliance: true, firewallLabels: labelsCompliance }
     );
 
     setIsLoading(false);
@@ -386,19 +404,20 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
       } else if (reportId === "report-executive-one-pager") {
         generateExecutiveOnePager();
       } else if (reportId === "report-compliance") {
-        const mergedSections: Record<string, ExtractedSections> = {};
-        const labels: string[] = [];
+        const mergedSectionsRetry: Record<string, ExtractedSections> = {};
+        const labelsRetry: string[] = [];
         files.forEach((f) => {
-          const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-          labels.push(label);
-          mergedSections[label] = f.extractedData;
+          const lookupKey = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+          const displayLabel = displayLabelForFile(f, lookupKey, analysisResults);
+          labelsRetry.push(displayLabel);
+          mergedSectionsRetry[displayLabel] = f.extractedData;
         });
         generateSingleReport(
           reportId,
           files.length === 1
             ? files[0].extractedData
-            : (mergedSections as unknown as ExtractedSections),
-          { compliance: true, firewallLabels: labels }
+            : (mergedSectionsRetry as unknown as ExtractedSections),
+          { compliance: true, firewallLabels: labelsRetry }
         );
       } else {
         const file = files.find((f) => `report-${f.id}` === reportId);
@@ -408,7 +427,7 @@ export function useReportGeneration(files: ParsedFile[], branding: BrandingData)
         }
       }
     },
-    [files, generateSingleReport, generateExecutiveOnePager]
+    [files, analysisResults, generateSingleReport, generateExecutiveOnePager]
   );
 
   return {

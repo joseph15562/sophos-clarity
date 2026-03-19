@@ -76,17 +76,17 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [backendDebugInfo, setBackendDebugInfo] = useState<Record<string, unknown> | null>(null);
 
   const {
-    reports, setReports, activeReportId, setActiveReportId,
-    isLoading, loadingReportIds, failedReportIds,
-    generateIndividual, generateExecutive, generateExecutiveOnePager, generateCompliance, generateAll, handleRetry,
-  } = useReportGeneration(files, branding);
-
-  const {
     analysisResults: rawAnalysisResults, totalFindings: rawTotalFindings, totalRules: rawTotalRules, totalSections: rawTotalSections,
     totalPopulated: rawTotalPopulated, extractionPct: rawExtractionPct, aggregatedPosture: rawAggregatedPosture,
   } = useFirewallAnalysis(files);
 
   const analysisResults = analysisOverride ?? rawAnalysisResults;
+
+  const {
+    reports, setReports, activeReportId, setActiveReportId,
+    isLoading, loadingReportIds, failedReportIds,
+    generateIndividual, generateExecutive, generateExecutiveOnePager, generateCompliance, generateAll, handleRetry,
+  } = useReportGeneration(files, branding, analysisResults);
   const totalFindings = analysisOverride
     ? Object.values(analysisOverride).reduce((s, r) => s + r.findings.length, 0)
     : rawTotalFindings;
