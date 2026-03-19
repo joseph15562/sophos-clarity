@@ -267,11 +267,25 @@ serve(async (req) => {
     if (mode === "tenants") {
       if (creds.partnerType === "tenant") {
         const identity = await whoami(token);
+        const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
+        let tenantName = "(This tenant)";
+        try {
+          const tenantList = await fetchAllPages(
+            `${apiHost}/organization/v1/tenants`,
+            token,
+            { "X-Tenant-ID": identity.id },
+            1,
+          ) as Array<{ id: string; name?: string; showAs?: string }>;
+          const self = tenantList?.find((t) => t.id === identity.id);
+          if (self && (self.showAs ?? self.name)) tenantName = (self.showAs ?? self.name) as string;
+        } catch (_) {
+          /* whoami does not return tenant display name; org API may not be available for tenant-type */
+        }
         const tenantItem = {
           id: identity.id,
-          name: "(This tenant)",
+          name: tenantName,
           dataRegion: identity.apiHosts.dataRegion?.replace("https://api-", "").replace(".central.sophos.com", "") ?? "",
-          apiHost: identity.apiHosts.dataRegion ?? identity.apiHosts.global,
+          apiHost,
           billingType: "",
         };
 

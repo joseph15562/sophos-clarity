@@ -139,6 +139,16 @@ function looksLikeSerialOrNodeId(s: string): boolean {
   return /^[A-Za-z0-9]+$/.test(t) && !t.includes(".");
 }
 
+/** When the API returns "(This tenant)" for a single-tenant account, use the provided display name (e.g. from branding or connector). */
+export function getEffectiveTenantDisplayName(
+  tenant: { name?: string } | null,
+  fallbackDisplayName?: string | null,
+): string {
+  if (!tenant?.name) return fallbackDisplayName ?? "";
+  if (/^\s*\(this tenant\)\s*$/i.test(tenant.name.trim()) && fallbackDisplayName?.trim()) return fallbackDisplayName.trim();
+  return tenant.name;
+}
+
 /** Prefer hostname when it looks like a real hostname; avoid using serial/node-id as display name. */
 export function getFirewallDisplayName(fw: { name?: string; hostname?: string; serialNumber?: string }): string {
   const name = (fw.name ?? "").trim();

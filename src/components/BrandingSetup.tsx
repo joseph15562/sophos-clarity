@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadSavedReportsCloud, loadSavedReportsLocal } from "@/lib/saved-reports";
-import { getCachedTenants, type CentralTenant } from "@/lib/sophos-central";
+import { getCachedTenants, getEffectiveTenantDisplayName, type CentralTenant } from "@/lib/sophos-central";
 
 export const ENVIRONMENT_TYPES = [
   "Education",
@@ -377,7 +377,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
             >
               <option value="" disabled>Select customer…</option>
               {branding.customerName &&
-                !centralTenants.some((t) => t.name === branding.customerName) &&
+                !centralTenants.some((t) => getEffectiveTenantDisplayName(t, branding.customerName) === branding.customerName || t.name === branding.customerName) &&
                 !knownCustomers.includes(branding.customerName) && (
                 <option key="__current__" value={branding.customerName}>
                   {branding.customerName} (from connector)
@@ -386,12 +386,15 @@ export function BrandingSetup({ branding, onChange }: Props) {
               {centralTenants.length > 0 && (
                 <optgroup label="Sophos Central Tenants">
                   {centralTenants
-                    .filter((t) => !knownCustomers.includes(t.name))
-                    .map((t) => (
-                      <option key={`central-${t.id}`} value={t.name}>
-                        {t.name} {t.dataRegion ? `(${t.dataRegion})` : ""}
-                      </option>
-                    ))}
+                    .filter((t) => !knownCustomers.includes(getEffectiveTenantDisplayName(t, branding.customerName)))
+                    .map((t) => {
+                      const displayName = getEffectiveTenantDisplayName(t, branding.customerName) || t.name;
+                      return (
+                        <option key={`central-${t.id}`} value={displayName}>
+                          {displayName} {t.dataRegion ? `(${t.dataRegion})` : ""}
+                        </option>
+                      );
+                    })}
                 </optgroup>
               )}
               {knownCustomers.length > 0 && (

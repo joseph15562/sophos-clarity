@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";
-import { getFirewallDisplayName, type CentralFirewall } from "@/lib/sophos-central";
+import { getFirewallDisplayName, getEffectiveTenantDisplayName, type CentralFirewall } from "@/lib/sophos-central";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,10 +38,14 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
   const matchedTenant = useMemo(() => {
     if (!central.isConnected) return null;
     if (central.status?.partner_type === "tenant") {
-      // For single-tenant accounts, use cached tenant or fall back to status partner_id
-      return central.tenants[0] ?? (central.status?.partner_id
+      // For single-tenant accounts, use cached tenant or fall back to status partner_id. Use customerName when API returns "(This tenant)".
+      const single = central.tenants[0] ?? (central.status?.partner_id
         ? { id: central.status.partner_id, name: "(This tenant)", dataRegion: "", apiHost: "", billingType: "" }
         : null);
+      if (single && customerName?.trim()) {
+        return { ...single, name: getEffectiveTenantDisplayName(single, customerName) || single.name };
+      }
+      return single;
     }
     if (!customerName) return null;
     return central.tenants.find((t) =>
