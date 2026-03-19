@@ -164,8 +164,8 @@ Write a structured Markdown document with these sections:
 - **Date**: Current assessment date
 - **Scope**: Firewalls assessed, environment type
 
-2. **Security Feature Gaps by Firewall** (required when any firewall lacks a feature)
-- A table or list: for each firewall that is **missing** a required security feature (MFA, OTP, logging, etc.), state the **firewall name**, the **feature that is lacking**, and **where** (e.g. "Firewall A | MFA/OTP | Not enabled for SSL-VPN, Web Admin"). Use this so auditors can see at a glance which firewall lacks what.
+2. **Security Feature Gaps by Firewall** (required; output the full table immediately)
+- Output a Markdown table with columns: **Firewall Name** | **Feature Lacking / Partial** | **Where Lacking**. For each firewall that is **missing** a required security feature (MFA, OTP, logging, etc.), add one row with firewall name, the feature lacking, and where (e.g. "Firewall A | MFA/OTP | Not enabled for SSL-VPN, Web Admin"). If no firewall has gaps, output exactly one data row: "| — | No gaps identified | — |". Complete this table in full right after the section heading; do not leave it empty or use placeholder text.
 
 3. Control → Evidence Mapping Tables
 For EACH applicable framework below, produce a Markdown table with columns:
@@ -208,7 +208,8 @@ Rules
 - If data is insufficient to assess a control, mark as "⚠️ Partial — Insufficient evidence in config export"
 - Format for direct use as an audit appendix — professional, factual, no narrative fluff
 - Every claim must be traceable to config data
-- **Evidence format**: In configuration excerpts and evidence, never output raw JSON. Use Markdown tables (with columns such as Name, Port, VLAN, Zone, IP/Network, Status for interface/VLAN data) and short prose so auditors see clear, readable evidence. Include **Port** and **VLAN** (or VLAN ID) in interface/VLAN tables when the payload contains that data.`;
+- **Evidence format**: In configuration excerpts and evidence, never output raw JSON. Use Markdown tables (with columns such as Name, Port, VLAN, Zone, IP/Network, Status for interface/VLAN data) and short prose so auditors see clear, readable evidence. Include **Port** and **VLAN** (or VLAN ID) in interface/VLAN tables when the payload contains that data.
+- **No placeholders**: Never write "Still generating...", "Loading...", "Generating...", or any placeholder in the report. Every section (including **Security Feature Gaps by Firewall**) must contain actual content: complete table header and data rows, or state "No gaps identified" or "—" if there are none. Do not leave tables empty or with loading text. Output the full report in one pass.`;
 
 const CHAT_SYSTEM_PROMPT = `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
 
@@ -242,12 +243,14 @@ serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+  const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+  const adminClient = SUPABASE_SERVICE_KEY ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY) : null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
@@ -307,11 +310,15 @@ serve(async (req) => {
       let complianceContext = "";
       const isIndividualReport = !chat && !executive && !compliance;
       const singleFirewallName = isIndividualReport && firewallLabels && firewallLabels.length === 1 ? firewallLabels[0] : null;
+      const reportDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
       if (singleFirewallName) {
         complianceContext += `\n\n## Report subject (individual firewall)\nThis is an **individual firewall report** for the firewall named **${singleFirewallName}**. Use this firewall name (not the customer/tenant name) everywhere: the document subject, the introductory paragraph (e.g. "This report documents the firewall configuration for ${singleFirewallName}"), the Executive Summary (e.g. "Sophos XGS firewall configuration for ${singleFirewallName}"), and the section heading **Overall Security Recommendations for ${singleFirewallName}**. Do not use "(This tenant)" or a different name for this report.\n`;
-      } else if (customerName) {
-        complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Address the customer by name throughout the document (e.g. "This report documents the firewall configuration for ${customerName}"). Use the customer name in the Executive Summary, Overall Security Recommendations and Frameworks to Assess.\n`;
+      } else if (customerName && customerName.trim() && !/^\(this tenant\)$/i.test(customerName.trim())) {
+        complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Use this exact customer name throughout the document (Scope, Executive Summary, Overall Security Recommendations, Frameworks to Assess). Do not use "(This tenant)" or any placeholder — use **${customerName}** only.\n`;
+      } else {
+        complianceContext += `\n\n## Client Context\nDo not use "(This tenant)" or a placeholder in the report. Use "the assessed organisation" or the firewall name(s) from the data in Scope and body text.\n`;
       }
+      complianceContext += `\n\n## Report date\nUse **${reportDate}** as the assessment date in the document header and anywhere the report date is shown.\n`;
       
       if (environment || country) {
         complianceContext += "\n\n## Compliance Context\n";
@@ -476,11 +483,31 @@ serve(async (req) => {
               buffer = buffer.slice(newlineIdx + 1);
               if (line.startsWith("data: ") && line !== "data: [DONE]") {
                 try {
-                  const json = JSON.parse(line.slice(6)) as { usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } };
-                  if (json.usage && (json.usage.prompt_tokens != null || json.usage.completion_tokens != null)) {
-                    const u = json.usage;
-                    const total = u.total_tokens ?? ((u.prompt_tokens ?? 0) + (u.completion_tokens ?? 0));
-                    console.log(`parse-config token usage: prompt=${u.prompt_tokens ?? "-"} completion=${u.completion_tokens ?? "-"} total=${total} (model=${model} chat=${chat})`);
+                  const json = JSON.parse(line.slice(6)) as Record<string, unknown>;
+                  // OpenAI-style usage (openai/completions stream)
+                  const usage = json.usage as { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
+                  // Gemini native style (usage_metadata in last chunk)
+                  const meta = json.usage_metadata as { prompt_token_count?: number; candidates_token_count?: number; total_token_count?: number } | undefined;
+                  const promptTokens = usage?.prompt_tokens ?? meta?.prompt_token_count;
+                  const completionTokens = usage?.completion_tokens ?? meta?.candidates_token_count;
+                  const totalFromUsage = usage?.total_tokens;
+                  const totalFromMeta = meta?.total_token_count;
+                  const total = totalFromUsage ?? totalFromMeta ?? (promptTokens != null || completionTokens != null ? (promptTokens ?? 0) + (completionTokens ?? 0) : 0);
+                  if (total > 0) {
+                    console.log(`parse-config token usage: prompt=${promptTokens ?? "-"} completion=${completionTokens ?? "-"} total=${total} (model=${model} chat=${chat})`);
+                    if (adminClient) {
+                      adminClient.from("gemini_usage").insert({
+                        total_tokens: total,
+                        prompt_tokens: promptTokens ?? null,
+                        completion_tokens: completionTokens ?? null,
+                        model,
+                        is_chat: chat,
+                      }).then(() => {}).catch((err) => console.warn("[parse-config] gemini_usage insert failed:", err.message));
+                    }
+                    const FREE_TIER_TPM = 250_000;
+                    if (total >= FREE_TIER_TPM) {
+                      console.warn(`parse-config: single request used ${total} tokens (>= ${FREE_TIER_TPM} TPM free tier). Check gemini_usage table for per-minute totals.`);
+                    }
                   }
                 } catch (_) {
                   /* ignore parse errors for non-usage lines */
@@ -491,6 +518,8 @@ serve(async (req) => {
           }
         } finally {
           reader.releaseLock();
+          // Send explicit [DONE] so the client clears "Still generating..." and calls onDone()
+          controller.enqueue(new TextEncoder().encode("data: [DONE]\n"));
           controller.close();
         }
       },

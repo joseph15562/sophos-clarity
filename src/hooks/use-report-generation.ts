@@ -16,11 +16,11 @@ export function buildCoverPageMarkdown(branding: BrandingData, titleOverride?: s
     lines.push(`![Company Logo](${branding.logoUrl})`);
     lines.push("");
   }
-  const title = titleOverride ?? branding.customerName;
-  if (title) {
-    lines.push(`# ${title}`);
-    lines.push("");
-  }
+  let title = titleOverride ?? branding.customerName ?? "";
+  if (/^\s*\(this tenant\)\s*$/i.test(title)) title = "";
+  if (!title) title = "Firewall Configuration Assessment";
+  lines.push(`# ${title}`);
+  lines.push("");
   lines.push(`**Date:** ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`);
   lines.push("");
   if (branding.preparedBy?.trim()) {
