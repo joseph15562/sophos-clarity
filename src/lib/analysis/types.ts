@@ -109,10 +109,6 @@ export interface AnalyseOptions {
   webFilterComplianceMode?: WebFilterComplianceMode;
   /** Rule names excluded from the "missing web filtering" WAN check (MSP-agreed scope). */
   webFilterExemptRuleNames?: string[];
-  /** Source zones excluded from the missing-web-filter check when all rule source zones match (same idea as DPI zone exclusions). */
-  webFilterExemptZones?: string[];
-  /** Source networks excluded from the missing-web-filter check when all rule source networks match. */
-  webFilterExemptNetworks?: string[];
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {

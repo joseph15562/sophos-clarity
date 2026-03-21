@@ -335,50 +335,6 @@ function findUncoveredNetworks(
   return { uncoveredNetworks, allWanSourceNetworks };
 }
 
-/** Firewall rule source zones (WAN rules). `null` means Any / not zone-specific for exempt logic. */
-function ruleFirewallSourceZonesForWfExempt(row: Record<string, string>): string[] | null {
-  const sz = (row["Source Zones"] ?? row["Source Zone"] ?? row["Src Zone"] ?? row["Source"] ?? "").trim();
-  if (!sz) return [];
-  const lower = sz.toLowerCase();
-  if (lower === "any") return null;
-  const parts = sz.split(/[,;]/).map((z) => z.trim().toLowerCase()).filter(Boolean);
-  return parts.length ? parts : [];
-}
-
-/** Firewall rule source networks. `null` means Any / not network-specific for exempt logic. */
-function ruleFirewallSourceNetworksForWfExempt(row: Record<string, string>): string[] | null {
-  const sn = (row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? "").trim();
-  if (!sn) return [];
-  const lower = sn.toLowerCase();
-  if (lower === "any") return null;
-  const parts = sn.split(/[,;]/).map((n) => n.trim().toLowerCase()).filter(Boolean);
-  return parts.length ? parts : [];
-}
-
-/**
- * When MSP marks zones/networks as out of web-filter scope: skip the missing-web-filter finding if
- * every explicit source zone is in exemptZones, or every explicit source network is in exemptNets.
- */
-function isWebFilterTopologyExempt(
-  row: Record<string, string>,
-  exemptZones: Set<string>,
-  exemptNets: Set<string>,
-): boolean {
-  if (exemptZones.size > 0) {
-    const zones = ruleFirewallSourceZonesForWfExempt(row);
-    if (zones !== null && zones.length > 0 && zones.every((z) => exemptZones.has(z))) {
-      return true;
-    }
-  }
-  if (exemptNets.size > 0) {
-    const nets = ruleFirewallSourceNetworksForWfExempt(row);
-    if (nets !== null && nets.length > 0 && nets.every((n) => exemptNets.has(n))) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function countRows(sections: ExtractedSections, pattern: RegExp, exclude?: RegExp): number {
   let count = 0;
   for (const key of Object.keys(sections)) {
@@ -539,19 +495,9 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const wfExempt = new Set(
     (options?.webFilterExemptRuleNames ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
   );
-  const wfZoneExempt = new Set(
-    (options?.webFilterExemptZones ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
-  );
-  const wfNetExempt = new Set(
-    (options?.webFilterExemptNetworks ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
-  );
 
   const wanMissingWebFilterRuleNames = wanRules
-    .filter((w) => {
-      if (!w.enabled || !isWebService(w.row) || hasWebFilter(w.row)) return false;
-      if (isWebFilterTopologyExempt(w.row, wfZoneExempt, wfNetExempt)) return false;
-      return true;
-    })
+    .filter((w) => w.enabled && isWebService(w.row) && !hasWebFilter(w.row))
     .map((w) => w.name);
 
   const inspectionPosture: InspectionPosture = {
@@ -607,23 +553,13 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   for (const { name, row, enabled } of wanRules) {
     if (!enabled || !isWebService(row) || hasWebFilter(row)) continue;
     if (wfExempt.has(name.toLowerCase().trim())) continue;
-    if (isWebFilterTopologyExempt(row, wfZoneExempt, wfNetExempt)) continue;
     wanNoFilter.push(name);
   }
   if (wanNoFilter.length > 0) {
-    const nameExc = (options?.webFilterExemptRuleNames ?? []).filter(Boolean);
-    const zoneExc = (options?.webFilterExemptZones ?? []).filter(Boolean);
-    const netExc = (options?.webFilterExemptNetworks ?? []).filter(Boolean);
-    let exemptNote = "";
-    if (nameExc.length > 0) {
-      exemptNote += ` MSP excluded ${nameExc.length} rule name(s) from this check: ${nameExc.slice(0, 6).join(", ")}${nameExc.length > 6 ? "…" : ""}.`;
-    }
-    if (zoneExc.length > 0) {
-      exemptNote += ` Excluded ${zoneExc.length} source zone(s) from web filter scope: ${zoneExc.slice(0, 4).join(", ")}${zoneExc.length > 4 ? "…" : ""}.`;
-    }
-    if (netExc.length > 0) {
-      exemptNote += ` Excluded ${netExc.length} source network(s) from web filter scope: ${netExc.slice(0, 3).join(", ")}${netExc.length > 3 ? "…" : ""}.`;
-    }
+    const exemptNote =
+      (options?.webFilterExemptRuleNames ?? []).filter(Boolean).length > 0
+        ? ` MSP excluded ${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).length} rule name(s) from this check: ${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).slice(0, 6).join(", ")}${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).length > 6 ? "…" : ""}.`
+        : "";
     const baseDetail = `Active rules with Destination Zone WAN and Service HTTP/HTTPS/ANY have no Web Filter applied: ${wanNoFilter.slice(0, 8).join(", ")}${wanNoFilter.length > 8 ? ` (+${wanNoFilter.length - 8} more)` : ""}.`;
     findings.push({
       id: `f${++fid}`,

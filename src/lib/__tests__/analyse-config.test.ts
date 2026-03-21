@@ -134,30 +134,6 @@ describe("analyseConfig", () => {
       expect(finding).toBeDefined();
     });
 
-    it("skips missing web filter finding when all rule source zones are in webFilterExemptZones", () => {
-      const sections = buildSections({
-        "Firewall Rules": buildFirewallRulesSection([
-          {
-            "Rule Name": "Guest-WAN",
-            "Source Zone": "Guest",
-            "Destination Zones": "WAN",
-            Service: "HTTP",
-            Log: "Enabled",
-            Status: "On",
-            "Web Filter": "",
-            IPS: "Default",
-            "Application Control": "Default",
-          },
-        ]),
-      });
-      const result = analyseConfig(sections, { webFilterExemptZones: ["Guest"] });
-      const finding = result.findings.find(
-        (f) => f.title.includes("missing web filtering") && f.section === "Firewall Rules",
-      );
-      expect(finding).toBeUndefined();
-      expect(result.inspectionPosture.wanMissingWebFilterRuleNames).not.toContain("Guest-WAN");
-    });
-
     it("does NOT flag LAN-to-LAN rules without web filter", () => {
       const sections = buildSections({
         "Firewall Rules": buildFirewallRulesSection([

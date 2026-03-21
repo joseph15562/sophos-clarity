@@ -95,8 +95,6 @@ function HealthCheckInner() {
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
   const [webFilterComplianceMode, setWebFilterComplianceMode] = useState<WebFilterComplianceMode>("strict");
   const [webFilterExemptRuleNames, setWebFilterExemptRuleNames] = useState<string[]>([]);
-  const [webFilterExemptZones, setWebFilterExemptZones] = useState<string[]>([]);
-  const [webFilterExemptNetworks, setWebFilterExemptNetworks] = useState<string[]>([]);
 
   const baselineResults = useMemo(() => {
     const out: Record<string, ReturnType<typeof evaluateBaseline>> = {};
@@ -120,21 +118,10 @@ function HealthCheckInner() {
         dpiExemptNetworks,
         webFilterComplianceMode,
         webFilterExemptRuleNames,
-        webFilterExemptZones,
-        webFilterExemptNetworks,
       });
     }
     setAnalysisResults(next);
-  }, [
-    files,
-    centralValidated,
-    dpiExemptZones,
-    dpiExemptNetworks,
-    webFilterComplianceMode,
-    webFilterExemptRuleNames,
-    webFilterExemptZones,
-    webFilterExemptNetworks,
-  ]);
+  }, [files, centralValidated, dpiExemptZones, dpiExemptNetworks, webFilterComplianceMode, webFilterExemptRuleNames]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
@@ -247,8 +234,6 @@ function HealthCheckInner() {
     setDpiExemptNetworks([]);
     setWebFilterComplianceMode("strict");
     setWebFilterExemptRuleNames([]);
-    setWebFilterExemptZones([]);
-    setWebFilterExemptNetworks([]);
   }, []);
 
   const exportSummaryJson = useCallback(() => {
@@ -622,26 +607,14 @@ function HealthCheckInner() {
               return (
                 <div className="space-y-3">
                   {(allZones.length > 0 || allNets.length > 0) && (
-                    <>
-                      <DpiExclusionBar
-                        variant="dpi"
-                        detectedZones={allZones}
-                        excludedZones={dpiExemptZones}
-                        onZonesChange={setDpiExemptZones}
-                        detectedNetworks={allNets}
-                        excludedNetworks={dpiExemptNetworks}
-                        onNetworksChange={setDpiExemptNetworks}
-                      />
-                      <DpiExclusionBar
-                        variant="webFilter"
-                        detectedZones={allZones}
-                        excludedZones={webFilterExemptZones}
-                        onZonesChange={setWebFilterExemptZones}
-                        detectedNetworks={allNets}
-                        excludedNetworks={webFilterExemptNetworks}
-                        onNetworksChange={setWebFilterExemptNetworks}
-                      />
-                    </>
+                    <DpiExclusionBar
+                      detectedZones={allZones}
+                      excludedZones={dpiExemptZones}
+                      onZonesChange={setDpiExemptZones}
+                      detectedNetworks={allNets}
+                      excludedNetworks={dpiExemptNetworks}
+                      onNetworksChange={setDpiExemptNetworks}
+                    />
                   )}
                   {hasWanWebRules && (
                     <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">

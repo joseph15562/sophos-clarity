@@ -16,8 +16,6 @@ export type FirewallAnalysisHookOptions = {
   dpiExemptNetworks?: string[];
   webFilterComplianceMode?: WebFilterComplianceMode;
   webFilterExemptRuleNames?: string[];
-  webFilterExemptZones?: string[];
-  webFilterExemptNetworks?: string[];
 };
 
 export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnalysisHookOptions) {
@@ -31,20 +29,10 @@ export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnal
         dpiExemptNetworks: hookOpts?.dpiExemptNetworks,
         webFilterComplianceMode: hookOpts?.webFilterComplianceMode,
         webFilterExemptRuleNames: hookOpts?.webFilterExemptRuleNames,
-        webFilterExemptZones: hookOpts?.webFilterExemptZones,
-        webFilterExemptNetworks: hookOpts?.webFilterExemptNetworks,
       });
     }
     return results;
-  }, [
-    files,
-    hookOpts?.dpiExemptZones,
-    hookOpts?.dpiExemptNetworks,
-    hookOpts?.webFilterComplianceMode,
-    hookOpts?.webFilterExemptRuleNames,
-    hookOpts?.webFilterExemptZones,
-    hookOpts?.webFilterExemptNetworks,
-  ]);
+  }, [files, hookOpts?.dpiExemptZones, hookOpts?.dpiExemptNetworks, hookOpts?.webFilterComplianceMode, hookOpts?.webFilterExemptRuleNames]);
 
   const totalFindings = useMemo(
     () => Object.values(analysisResults).reduce((sum, r) => sum + r.findings.length, 0),
