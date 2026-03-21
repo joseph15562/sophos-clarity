@@ -140,7 +140,7 @@ Write a comprehensive executive Markdown document with:
 - A Per-Firewall Summary section with a subsection for each firewall, including: key stats (rule count, zones, networks), **SSL/TLS settings** (what is configured), whether **DPI (Deep Packet Inspection)** is in use for web traffic, and top concerns
 - If multiple firewalls: a Cross-Estate Findings section identifying common misconfigurations, inconsistencies, and shared vulnerabilities
 - A **Best Practice Recommendations** section: for any firewall not using DPI for outbound web filtering on **WAN rules with Service HTTP/HTTPS/ANY**, include a clear recommendation to enable DPI for visibility, control, and compliance
-- A Risk Matrix as a Markdown table: Finding | Severity | Affected Firewalls | Recommendation
+- A Risk Matrix as a Markdown table (top 15 findings max, prioritised by severity): Finding | Severity | Affected Firewalls | Recommendation
 - A Strategic Recommendations section with prioritised actions (including SSL/TLS and web inspection where relevant)
 - An Appendix briefly listing each firewall's configuration highlights (including SSL/TLS and DPI status)
 
@@ -151,6 +151,7 @@ Rules
 - Use the actual data provided — never invent details
 - Reference specific firewalls by their label names
 - Do NOT reproduce every individual rule — summarise and highlight exceptions
+- Keep the Risk Matrix concise: maximum 15 rows, focusing on critical and high severity first. If more findings exist, add a note: "X additional lower-severity findings documented in the detailed analysis."
 - Use Markdown tables for structured data
 - Level of detail must support compliance and audit
 - End every report with a "Limitations" section that states: this assessment covers firewall configuration only. It does not assess endpoint security, email security, identity management, cloud infrastructure, or physical security controls. Results are point-in-time and should be validated by a qualified security professional.`;
