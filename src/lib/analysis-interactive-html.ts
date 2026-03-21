@@ -1,4 +1,5 @@
 import type { AnalysisResult, Finding, Severity } from "./analyse-config";
+import { computeRiskScore } from "./risk-score";
 
 const SEVERITY_ORDER: Record<Severity, number> = {
   critical: 0,
@@ -6,14 +7,6 @@ const SEVERITY_ORDER: Record<Severity, number> = {
   medium: 2,
   low: 3,
   info: 4,
-};
-
-const SEVERITY_PENALTY: Record<Severity, number> = {
-  critical: 12,
-  high: 8,
-  medium: 4,
-  low: 2,
-  info: 0,
 };
 
 function escapeHtml(raw: string): string {
@@ -68,9 +61,9 @@ function sumSeverityCounts(
   };
 }
 
-function firewallRiskScore(findings: Finding[]): number {
-  const penalty = findings.reduce((sum, f) => sum + SEVERITY_PENALTY[f.severity], 0);
-  return Math.max(0, Math.min(100, Math.round(100 - Math.min(penalty, 100))));
+function firewallRiskScore(result: AnalysisResult): { score: number; grade: "A" | "B" | "C" | "D" | "F" } {
+  const { overall, grade } = computeRiskScore(result);
+  return { score: overall, grade };
 }
 
 function aggregateScoreAndGrade(
@@ -80,7 +73,7 @@ function aggregateScoreAndGrade(
   if (list.length === 0) {
     return { overall: 100, grade: "A" };
   }
-  const sum = list.reduce((s, r) => s + firewallRiskScore(r.findings), 0);
+  const sum = list.reduce((s, r) => s + firewallRiskScore(r).score, 0);
   const overall = Math.round(sum / list.length);
   const grade: "A" | "B" | "C" | "D" | "F" =
     overall >= 90 ? "A" : overall >= 75 ? "B" : overall >= 60 ? "C" : overall >= 40 ? "D" : "F";
@@ -144,9 +137,7 @@ function renderFirewallSection(
   const slug = `${index}-${slugifyFirewallId(firewallKey)}`;
   const sorted = sortFindings(result.findings);
   const rows = sorted.map((f, i) => renderFindingRow(f, index, i)).join("\n");
-  const local = firewallRiskScore(result.findings);
-  const localGrade: "A" | "B" | "C" | "D" | "F" =
-    local >= 90 ? "A" : local >= 75 ? "B" : local >= 60 ? "C" : local >= 40 ? "D" : "F";
+  const { score: local, grade: localGrade } = firewallRiskScore(result);
 
   return `
     <section class="firewall-section" id="fw-${escapeHtml(slug)}" data-fw-index="${index}">
