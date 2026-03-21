@@ -354,15 +354,13 @@ export function useReportGeneration(
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
-    if (files.length >= 2) {
-      const execId = "report-executive";
-      setReports((prev) => {
-        const without = prev.filter((r) => r.id !== execId);
-        return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
-      });
-      setActiveReportId(execId);
-      await generateExecutive(true);
-    }
+    const execId = "report-executive";
+    setReports((prev) => {
+      const without = prev.filter((r) => r.id !== execId);
+      return [...without, { id: execId, label: "📋 Executive Summary", markdown: "" }];
+    });
+    setActiveReportId(execId);
+    await generateExecutive(true);
 
     const complianceId = "report-compliance";
     const mergedSectionsCompliance: Record<string, ExtractedSections> = {};

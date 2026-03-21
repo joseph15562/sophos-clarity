@@ -213,7 +213,14 @@ export function AnalysisTabs({
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           FireComply provides automated security analysis based on firewall configuration data. Results should be validated by a qualified security professional. Compliance mappings are indicative and do not constitute a formal audit.
         </p>
-        <WidgetCustomiser tab={activeTab} prefs={widgetPrefs} onChange={setWidgetPrefs} />
+        <div className="flex items-center gap-1">
+          <WidgetCustomiser tab={activeTab} prefs={widgetPrefs} onChange={setWidgetPrefs} />
+          <TourHint
+            tourId="widget-customiser"
+            title="Customise Widgets"
+            description="Toggle optional widgets on each analysis tab — Assessment Pulse, Quick Actions, Findings by Age, Coverage Matrix, and more."
+          />
+        </div>
       </div>
 
       <div ref={panelRef} tabIndex={-1} aria-live="polite" className="outline-none">
@@ -608,13 +615,7 @@ export function AnalysisTabs({
             </Suspense>
           </div>
 
-          <div data-tour="sophos-best-practice" className="relative">
-            <TourHint
-              tourId="sophos-best-practice"
-              title="Sophos Best Practice"
-              description="Automatic checks against Sophos recommended configuration — scored by licence tier (Standard vs Xstream)."
-              className="absolute top-4 right-4 z-10"
-            />
+          <div data-tour="sophos-best-practice">
             <Suspense fallback={<CardSkeleton />}>
               <SophosBestPractice
                 analysisResults={analysisResult}
@@ -721,16 +722,6 @@ export function AnalysisTabs({
       {/* Tools */}
       <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Tools failed to load">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <TourHint
-              title="Tools & Analysis"
-              description="Risk score dashboards, score simulator, attack surface maps, baseline comparison, and what-if scenarios."
-              steps={[
-                { element: '[data-tour="score-dial"]', popover: { title: "Risk Score Dashboard", description: "Your overall risk score from 0\u2013100, based on weighted analysis across multiple security categories.", side: "right", align: "center" } },
-                { element: '[data-tour="compare-baseline"]', popover: { title: "Compare to Baseline", description: "Compare your current config against a saved baseline to detect drift.", side: "top", align: "center" } },
-              ]}
-            />
-          </div>
           <Suspense fallback={<ChartSkeleton height={220} />}>
             <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
           </Suspense>
@@ -786,16 +777,6 @@ export function AnalysisTabs({
       {/* Remediation */}
       <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Remediation view failed to load">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <TourHint
-              title="Remediation Workflow"
-              description="Step-by-step playbooks to fix each finding, with progress tracking, roadmap, bulk actions, and change approval workflows."
-              steps={[
-                { element: '[data-tour="remediation-playbooks"]', popover: { title: "Playbooks", description: "Step-by-step guides to fix each finding on a Sophos XGS firewall, with severity and impact.", side: "top", align: "center" } },
-                { element: '[data-tour="remediation-progress"]', popover: { title: "Progress Tracking", description: "Track remediation progress across all findings.", side: "top", align: "center" } },
-              ]}
-            />
-          </div>
           {w("remediation-progress") && (
             <Suspense fallback={<CardSkeleton />}>
               <RemediationProgress analysisResults={analysisResult} />

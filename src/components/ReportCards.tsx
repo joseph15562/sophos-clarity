@@ -70,7 +70,7 @@ export function ReportCards({
         {/* Executive Brief — AI, disabled in local mode */}
         <div
           className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
-            !canGenerate ? "opacity-50 pointer-events-none" : fileCount >= 2 ? "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group" : "opacity-45 pointer-events-none"
+            !canGenerate || fileCount < 1 ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group"
           }`}
           onClick={canGenerate && fileCount >= 1 ? onGenerateExecutive : undefined}
         >

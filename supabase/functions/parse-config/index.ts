@@ -129,24 +129,23 @@ Rules
 
 **API / Monitoring Service Accounts**: If the configuration shows admin accounts with "Read-Only Administrator" profile or named for API/monitoring use, document them in "## API & Service Accounts". Include account name, profile/role, OTP status, note that service accounts cannot use interactive MFA, and recommended compensating controls (IP restriction, read-only profile, strong password, audit logging). If full admin privileges, flag as 🟡 Medium.`;
 
-const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing a consolidated executive summary report for an MSP covering MULTIPLE firewall configurations. Include best-practice recommendations and a compliance-suitable level of detail.
+const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing an executive summary report for an MSP. Include best-practice recommendations and a compliance-suitable level of detail.
 
-You receive structured JSON data where each top-level key is a firewall name/label, and its value contains the extracted configuration sections for that firewall.
+You receive structured JSON data where each top-level key is a firewall name/label, and its value contains the extracted configuration sections for that firewall. There may be one or multiple firewalls.
 
 Output Format
 
 Write a comprehensive executive Markdown document with:
-- A Executive Overview summarising the entire estate: how many firewalls, their roles/purposes, overall security posture
+- An Executive Overview summarising the estate: how many firewalls, their roles/purposes, overall security posture
 - A Per-Firewall Summary section with a subsection for each firewall, including: key stats (rule count, zones, networks), **SSL/TLS settings** (what is configured), whether **DPI (Deep Packet Inspection)** is in use for web traffic, and top concerns
-- A Cross-Estate Findings section identifying: common misconfigurations, inconsistencies between firewalls, shared vulnerabilities
+- If multiple firewalls: a Cross-Estate Findings section identifying common misconfigurations, inconsistencies, and shared vulnerabilities
 - A **Best Practice Recommendations** section: for any firewall not using DPI for outbound web filtering on **WAN rules with Service HTTP/HTTPS/ANY**, include a clear recommendation to enable DPI for visibility, control, and compliance
 - A Risk Matrix as a Markdown table: Finding | Severity | Affected Firewalls | Recommendation
-- A Strategic Recommendations section with prioritised actions for the entire estate (including SSL/TLS and web inspection where relevant)
+- A Strategic Recommendations section with prioritised actions (including SSL/TLS and web inspection where relevant)
 - An Appendix briefly listing each firewall's configuration highlights (including SSL/TLS and DPI status)
 
 Rules
-- Compare and contrast configurations across firewalls
-- Identify patterns and inconsistencies
+- If multiple firewalls: compare and contrast configurations, identify patterns and inconsistencies
 - For each firewall, state whether DPI is used for web traffic; if not, recommend enabling DPI. Do not mention Web proxy — focus on DPI only.
 - Prioritise findings by risk severity
 - Use the actual data provided — never invent details
@@ -374,7 +373,9 @@ serve(async (req) => {
       } else if (compliance) {
         userMessage = `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Readiness Report:\n\n${payload}`;
       } else if (executive && firewallLabels) {
-        userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
+        userMessage = firewallLabels.length === 1
+          ? `Here is the extracted configuration for firewall "${firewallLabels[0]}". Produce an executive summary report:\n\n${payload}`
+          : `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
       } else {
         userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely. Use every column from each table except do not include Security Features in the firewall rules table; if a section has a 'details' or 'detail blocks' array, merge Web Filter and Logging into your rule table only.\n\n" + payload;
       }
