@@ -83,8 +83,8 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content h2.se-hc-
 /* Body pages (after cover + overview): typography; lockup is stamped per PDF page via jsPDF (pages 3+) */
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages {
   background: #ffffff !important;
-  /* First body page: clear ~19mm for top-left lockup (10mm + 9mm logo) at 1024px ≈ A4 width */
-  padding-top: calc(1024px * 19 / 210) !important;
+  /* Reserve ~16mm for small top-left lockup (~12mm top margin + ~4.5mm logo height) */
+  padding-top: calc(1024px * 16.5 / 210) !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages h2 {
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
@@ -118,7 +118,54 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages
   color: #0f172a !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages .table-wrapper {
-  margin: 10px 0 18px !important;
+  margin: 16px 0 22px !important;
+  padding: 14px 16px 16px !important;
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  box-shadow: none !important;
+}
+/* Central-style tables: no sticky header (fixes html2canvas glitches), light card, dark column titles */
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages .table-wrapper table {
+  min-width: 0 !important;
+  border-collapse: collapse !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages thead th {
+  position: static !important;
+  top: auto !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+  font-weight: 700 !important;
+  font-size: 10pt !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  border: none !important;
+  border-bottom: 2px solid #e5e7eb !important;
+  padding: 10px 12px 10px 0 !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages thead th:first-child {
+  border-top-left-radius: 0 !important;
+  padding-left: 0 !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages thead th:last-child {
+  border-top-right-radius: 0 !important;
+  padding-right: 0 !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages tbody td {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #f3f4f6 !important;
+  padding: 9px 12px 9px 0 !important;
+  vertical-align: top !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages tbody tr:nth-child(even) td {
+  background: #f9fafb !important;
+  color: #1f2937 !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages tbody tr:nth-child(odd) td {
+  background: #ffffff !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages ul {
   margin: 8px 0 14px !important;
