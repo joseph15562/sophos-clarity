@@ -83,8 +83,11 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content h2.se-hc-
 /* Body pages (after cover + overview): typography; lockup is stamped per PDF page via jsPDF (pages 3+) */
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages {
   background: #ffffff !important;
-  /* Reserve ~16mm for small top-left lockup (~12mm top margin + ~4.5mm logo height) */
-  padding-top: calc(1024px * 16.5 / 210) !important;
+  /* Space for stamped lockup + air before first section title (Central-style) */
+  padding-top: calc(1024px * 24 / 210) !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages > h2:first-of-type {
+  margin-top: 10px !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages h2 {
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
