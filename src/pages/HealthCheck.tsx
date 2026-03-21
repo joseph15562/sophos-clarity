@@ -22,11 +22,21 @@ import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { FileUpload, type UploadedFile } from "@/components/FileUpload";
 import { HealthCheckDashboard } from "@/components/HealthCheckDashboard";
 import { DpiExclusionBar } from "@/components/DpiExclusionBar";
+import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar";
+import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useSEAuthProvider, useSEAuth, SEAuthProvider } from "@/hooks/use-se-auth";
@@ -83,6 +93,8 @@ function HealthCheckInner() {
   const [licence, setLicence] = useState<LicenceSelection>({ tier: "xstream", modules: [] });
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
+  const [webFilterComplianceMode, setWebFilterComplianceMode] = useState<WebFilterComplianceMode>("strict");
+  const [webFilterExemptRuleNames, setWebFilterExemptRuleNames] = useState<string[]>([]);
 
   const baselineResults = useMemo(() => {
     const out: Record<string, ReturnType<typeof evaluateBaseline>> = {};
@@ -100,10 +112,16 @@ function HealthCheckInner() {
     const next: Record<string, AnalysisResult> = {};
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm|xml)$/i, "");
-      next[label] = analyseConfig(f.extractedData, { centralLinked: centralValidated, dpiExemptZones, dpiExemptNetworks });
+      next[label] = analyseConfig(f.extractedData, {
+        centralLinked: centralValidated,
+        dpiExemptZones,
+        dpiExemptNetworks,
+        webFilterComplianceMode,
+        webFilterExemptRuleNames,
+      });
     }
     setAnalysisResults(next);
-  }, [files, centralValidated, dpiExemptZones, dpiExemptNetworks]);
+  }, [files, centralValidated, dpiExemptZones, dpiExemptNetworks, webFilterComplianceMode, webFilterExemptRuleNames]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
@@ -212,6 +230,10 @@ function HealthCheckInner() {
     setTenantOptions([]);
     setFirewallOptions([]);
     setCentralCreds({ clientId: "", clientSecret: "", tenantId: "" });
+    setDpiExemptZones([]);
+    setDpiExemptNetworks([]);
+    setWebFilterComplianceMode("strict");
+    setWebFilterExemptRuleNames([]);
   }, []);
 
   const exportSummaryJson = useCallback(() => {
@@ -573,16 +595,58 @@ function HealthCheckInner() {
             {(() => {
               const allZones = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceZones))];
               const allNets = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceNetworks))];
-              return (allZones.length > 0 || allNets.length > 0) ? (
-                <DpiExclusionBar
-                  detectedZones={allZones}
-                  excludedZones={dpiExemptZones}
-                  onZonesChange={setDpiExemptZones}
-                  detectedNetworks={allNets}
-                  excludedNetworks={dpiExemptNetworks}
-                  onNetworksChange={setDpiExemptNetworks}
-                />
-              ) : null;
+              const missingWf = [
+                ...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.wanMissingWebFilterRuleNames)),
+              ];
+              const hasWanWebRules = Object.values(analysisResults).some(
+                (r) => r.inspectionPosture.wanWebServiceRuleNames.length > 0,
+              );
+              if (allZones.length === 0 && allNets.length === 0 && missingWf.length === 0 && !hasWanWebRules) {
+                return null;
+              }
+              return (
+                <div className="space-y-3">
+                  {(allZones.length > 0 || allNets.length > 0) && (
+                    <DpiExclusionBar
+                      detectedZones={allZones}
+                      excludedZones={dpiExemptZones}
+                      onZonesChange={setDpiExemptZones}
+                      detectedNetworks={allNets}
+                      excludedNetworks={dpiExemptNetworks}
+                      onNetworksChange={setDpiExemptNetworks}
+                    />
+                  )}
+                  {hasWanWebRules && (
+                    <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">
+                      <Label htmlFor="hc-web-filter-compliance" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Web filter compliance
+                      </Label>
+                      <Select
+                        value={webFilterComplianceMode}
+                        onValueChange={(v) => setWebFilterComplianceMode(v as WebFilterComplianceMode)}
+                      >
+                        <SelectTrigger id="hc-web-filter-compliance" className="max-w-xs rounded-lg h-9 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="strict">Strict</SelectItem>
+                          <SelectItem value="informational">Informational</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Strict surfaces WAN web-filter gaps as stronger findings; Informational lowers severity for scoped reviews.
+                      </p>
+                    </div>
+                  )}
+                  {missingWf.length > 0 && (
+                    <WebFilterRuleExclusionBar
+                      candidateRuleNames={missingWf}
+                      exemptRuleNames={webFilterExemptRuleNames}
+                      onChange={setWebFilterExemptRuleNames}
+                    />
+                  )}
+                </div>
+              );
             })()}
 
             <HealthCheckDashboard
