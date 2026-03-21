@@ -58,6 +58,30 @@ type EphemeralCentralCreds = {
 type GuestTenantRow = { id: string; name: string; apiHost?: string };
 type GuestFirewallRow = { id?: string; hostname?: string; name?: string; serialNumber?: string };
 
+const CENTRAL_MATCH_NONE = "__none__";
+
+/** Stable Select value for a Central firewall row (serial preferred). */
+function centralFwSelectValue(fw: GuestFirewallRow, index: number): string {
+  const s = fw.serialNumber?.trim();
+  if (s) return `sn:${s}`;
+  if (fw.id?.trim()) return `id:${fw.id}`;
+  return `idx:${index}`;
+}
+
+function findGuestFirewallBySelectValue(options: GuestFirewallRow[], value: string): GuestFirewallRow | undefined {
+  if (!value || value === CENTRAL_MATCH_NONE) return undefined;
+  return options.find((fw, i) => centralFwSelectValue(fw, i) === value);
+}
+
+/** Current Select value for linking a ParsedFile to Central (by stored serial if any). */
+function guestFirewallMatchValueForFile(file: ParsedFile, options: GuestFirewallRow[]): string {
+  const sn = file.serialNumber?.trim();
+  if (!sn) return CENTRAL_MATCH_NONE;
+  const idx = options.findIndex((fw) => (fw.serialNumber || "").trim().toLowerCase() === sn.toLowerCase());
+  if (idx < 0) return CENTRAL_MATCH_NONE;
+  return centralFwSelectValue(options[idx], idx);
+}
+
 async function callGuestCentral<T extends Record<string, unknown>>(body: Record<string, unknown>): Promise<T> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sophos-central`;
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -225,6 +249,68 @@ function HealthCheckInner() {
       setCentralBusy(false);
     }
   }, [centralCreds.clientId, centralCreds.clientSecret]);
+
+  const linkUploadToCentral = useCallback(
+    (fileId: string, optionValue: string) => {
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (f.id !== fileId) return f;
+          if (optionValue === CENTRAL_MATCH_NONE) {
+            return { ...f, serialNumber: undefined };
+          }
+          const fw = findGuestFirewallBySelectValue(firewallOptions, optionValue);
+          if (!fw) return f;
+          const newLabel = (fw.hostname || fw.name || "").trim();
+          return {
+            ...f,
+            serialNumber: fw.serialNumber,
+            label: newLabel || f.label,
+          };
+        }),
+      );
+    },
+    [firewallOptions],
+  );
+
+  const centralUploadMatcher = useMemo(() => {
+    if (!centralValidated || firewallOptions.length === 0 || files.length === 0) return null;
+    return (
+      <div
+        className="rounded-lg border border-dashed border-[#2006F7]/25 dark:border-[#00EDFF]/20 bg-muted/15 p-3 space-y-3"
+        data-tour="hc-central-match"
+      >
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          <span className="font-semibold text-foreground">Link each upload to a Central firewall.</span> Entities XML
+          usually has no serial in the file — pick the device so tabs and saved checks use the right name.
+        </p>
+        <div className="space-y-2">
+          {files.map((f) => (
+            <div key={f.id} className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground font-normal truncate block" title={f.fileName}>
+                {f.fileName}
+              </Label>
+              <Select
+                value={guestFirewallMatchValueForFile(f, firewallOptions)}
+                onValueChange={(v) => linkUploadToCentral(f.id, v)}
+              >
+                <SelectTrigger className="h-8 text-xs rounded-lg font-normal">
+                  <SelectValue placeholder="Select Central firewall…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={CENTRAL_MATCH_NONE}>Not linked</SelectItem>
+                  {firewallOptions.map((fw, i) => (
+                    <SelectItem key={centralFwSelectValue(fw, i)} value={centralFwSelectValue(fw, i)}>
+                      {[fw.hostname || fw.name || "Firewall", fw.serialNumber].filter(Boolean).join(" — ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }, [centralValidated, firewallOptions, files, linkUploadToCentral]);
 
   const resetAll = useCallback(() => {
     setFiles([]);
@@ -470,6 +556,7 @@ function HealthCheckInner() {
                       ))}
                     </div>
                   )}
+                  {centralUploadMatcher}
                 </CardContent>
               </Card>
 
@@ -602,6 +689,7 @@ function HealthCheckInner() {
                 Sophos Central connected — {firewallOptions.length} firewall(s) discovered
               </p>
             )}
+            {centralUploadMatcher}
 
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex-1 min-w-[200px] max-w-xs space-y-1">
@@ -751,6 +839,10 @@ function HealthCheckInner() {
                     Paste them into the <strong className="text-foreground">Sophos Central API</strong> fields on this
                     page, then use <strong className="text-foreground">Connect &amp; Discover Firewalls</strong> (start
                     screen) or <strong className="text-foreground">Connect</strong> (results view).
+                  </li>
+                  <li>
+                    After uploading configuration files, use <strong className="text-foreground">Link each upload to a
+                    Central firewall</strong> (entities XML often has no serial in the export — manual match is required).
                   </li>
                 </ol>
               </div>
