@@ -58,89 +58,141 @@ html, body {
 .print-content td {
   color: #334155 !important;
 }
-/* Central-style page 1 cover — navy full bleed, white type */
+/* Cover — Sophos Central PDF–style (wordmark, 4-line meta, centred shield, centred footer) */
 .se-hc-cover-fullpage {
   background: #001A47 !important;
   color: #ffffff !important;
   min-height: 1123px !important;
   box-sizing: border-box !important;
-  padding: 48px 40px 40px !important;
+  padding: 36px 48px 32px !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: space-between !important;
 }
-.se-hc-cover-fullpage h1,
-.se-hc-cover-fullpage .se-hc-cover-tagline,
-.se-hc-cover-fullpage .se-hc-cover-meta,
-.se-hc-cover-fullpage .se-hc-cover-copy,
-.se-hc-cover-fullpage .se-hc-cover-confidential {
-  color: #ffffff !important;
+.se-hc-cover-brand {
+  flex-shrink: 0 !important;
+}
+.se-hc-cover-wordmark {
+  display: block !important;
+  height: 22px !important;
+  width: auto !important;
+  max-width: 200px !important;
+}
+.se-hc-cover-body {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+.se-hc-cover-text {
+  margin-top: 56px !important;
+  flex-shrink: 0 !important;
 }
 .se-hc-cover-fullpage h1 {
-  font-size: 26pt !important;
+  font-size: 28pt !important;
+  font-weight: 700 !important;
   line-height: 1.15 !important;
-  margin: 0 0 12px !important;
-  border: none !important;
+  margin: 0 0 28px !important;
   padding: 0 !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
+  text-align: left !important;
 }
-.se-hc-cover-fullpage .se-hc-cover-tagline {
-  font-size: 11pt !important;
-  opacity: 0.92 !important;
-  margin: 0 !important;
-  font-family: 'Zalando Sans', -apple-system, sans-serif !important;
-}
-.se-hc-cover-fullpage .se-hc-cover-meta {
-  font-weight: 700 !important;
+.se-hc-cover-meta-line {
+  margin: 0 0 10px !important;
   font-size: 12pt !important;
-  line-height: 1.55 !important;
-  margin: 24px 0 !important;
+  line-height: 1.45 !important;
+  color: #ffffff !important;
   font-family: 'Zalando Sans', -apple-system, sans-serif !important;
+  font-weight: 400 !important;
 }
-.se-hc-cover-fullpage .se-hc-cover-copy {
-  font-size: 9pt !important;
-  opacity: 0.88 !important;
-  margin: 0 0 8px !important;
-}
-.se-hc-cover-fullpage .se-hc-cover-confidential {
-  font-size: 10pt !important;
+.se-hc-cover-label {
   font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
+}
+.se-hc-cover-shield-wrap {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px 0 32px !important;
+  min-height: 200px !important;
+}
+.se-hc-cover-shield-svg {
+  display: block !important;
+  max-width: 88% !important;
+  height: auto !important;
+}
+.se-hc-cover-bottom {
+  flex-shrink: 0 !important;
+  text-align: center !important;
+  padding-top: 8px !important;
+}
+.se-hc-cover-copy {
+  font-size: 8.5pt !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  margin: 0 0 6px !important;
+}
+.se-hc-cover-confidential {
+  font-size: 9pt !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  color: #ffffff !important;
   margin: 0 !important;
 }
-/* Central-style page 2 overview — serif narrative */
+/* Overview — navy top band, teal title, sans body (Central “Security Checkup Overview” layout) */
 .se-hc-overview-sheet {
   background: #ffffff !important;
-  padding: 40px 40px 48px !important;
   page-break-after: always !important;
   break-after: page !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
-.se-hc-overview-sheet h2 {
-  color: #001A47 !important;
-  font-size: 17pt !important;
-  border-bottom: 2px solid #2006F7 !important;
-  padding-bottom: 10px !important;
-  margin: 0 0 18px !important;
+.se-hc-overview-header-navy {
+  background: #001A47 !important;
+  padding: 32px 48px 40px !important;
+  min-height: 300px !important;
+  box-sizing: border-box !important;
+}
+.se-hc-overview-header-logo {
+  display: block !important;
+  height: 20px !important;
+  width: auto !important;
+  max-width: 180px !important;
+}
+.se-hc-overview-title {
+  margin: 36px 0 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-bottom: none !important;
+  font-size: 22pt !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  color: #00f2b3 !important;
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
+  text-align: left !important;
 }
-.se-hc-overview-sheet p,
-.se-hc-overview-sheet li {
-  font-family: Georgia, 'Times New Roman', Times, serif !important;
+.se-hc-overview-body {
+  padding: 32px 48px 40px !important;
+  background: #ffffff !important;
+}
+.se-hc-overview-body p {
+  font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
   font-size: 11pt !important;
-  line-height: 1.65 !important;
-  color: #1a1a1a !important;
+  line-height: 1.6 !important;
+  color: #0f172a !important;
+  margin: 0 0 14px !important;
 }
-.se-hc-overview-sheet strong {
-  color: #001A47 !important;
-}
-.se-hc-overview-sheet .se-hc-overview-list {
-  margin: 12px 0 18px !important;
-  padding-left: 22px !important;
+.se-hc-overview-body strong {
+  color: #001a47 !important;
+  font-weight: 700 !important;
 }
 .se-hc-overview-copy-footer {
   margin-top: 28px !important;
+  margin-bottom: 0 !important;
   font-size: 9pt !important;
-  color: #64748b !important;
-  font-family: Georgia, 'Times New Roman', Times, serif !important;
+  color: #94a3b8 !important;
+  text-align: left !important;
+  font-family: 'Zalando Sans', -apple-system, sans-serif !important;
 }
 .table-wrapper {
   border-color: #e2e8f0 !important;
