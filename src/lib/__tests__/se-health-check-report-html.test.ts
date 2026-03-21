@@ -6,6 +6,7 @@ import { computeSophosBPScore } from "@/lib/sophos-licence";
 import {
   buildSEHealthCheckReportHtml,
   escapeHtml,
+  SE_HEALTH_CHECK_COVER_MARK_SRC,
   SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER,
 } from "@/lib/se-health-check-report-html";
 
@@ -60,6 +61,8 @@ describe("se-health-check-report-html", () => {
     expect(html).toContain("Configuration file manifest");
     expect(html).toContain("export.html");
     expect(html).toContain("sophos-logo-white.svg");
+    expect(html).toContain(SE_HEALTH_CHECK_COVER_MARK_SRC);
+    expect(html).toContain("se-hc-cover-mark-img");
     expect(html).not.toContain("Evil<img");
     expect(html).toContain("Evil&lt;img");
     expect(html).toContain(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);

@@ -5,6 +5,10 @@
 
 import type { BrandingData } from "@/components/BrandingSetup";
 import {
+  SE_HEALTH_CHECK_PDF_LAYOUT_CSS,
+  SE_HEALTH_CHECK_PDF_PROFILE,
+} from "@/lib/se-health-check-pdf-layout";
+import {
   Document,
   Packer,
   Paragraph,
@@ -220,6 +224,8 @@ export type BuildPdfHtmlOptions = {
   tocAfterMarker?: string;
   /** Omit the navy `.report-header` bar (e.g. health-check PDF where the cover is the title page). */
   omitReportHeader?: boolean;
+  /** Enables full-bleed cover + zero PDF margins when used with `htmlDocumentStringToPdfBlob` (reads `data-pdf-profile`). */
+  pdfLayoutProfile?: typeof SE_HEALTH_CHECK_PDF_PROFILE;
 };
 
 /** Build a standalone HTML document string for PDF/print and zip export. */
@@ -236,6 +242,12 @@ export function buildPdfHtml(
   const theme = options?.theme ?? "light";
   const omitInteractiveChrome = options?.omitInteractiveChrome ?? false;
   const omitReportHeader = options?.omitReportHeader ?? false;
+  const pdfProfileAttr =
+    options?.pdfLayoutProfile === SE_HEALTH_CHECK_PDF_PROFILE
+      ? ` data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"`
+      : "";
+  const seHealthPdfLayoutCss =
+    options?.pdfLayoutProfile === SE_HEALTH_CHECK_PDF_PROFILE ? SE_HEALTH_CHECK_PDF_LAYOUT_CSS : "";
 
   const sophosLogoDark = `<svg viewBox="0 0 600 65" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M4.48,4.35v28.3c0,4.8,2.6,9.21,6.79,11.54l29.46,16.35.19.11,29.6-16.45c4.19-2.33,6.79-6.74,6.79-11.53V4.35H4.48ZM51.89,37.88c-2.2,1.22-4.67,1.86-7.18,1.86l-27.32-.08,15.32-8.54c1.48-.83,3.14-1.26,4.84-1.27l28.92-.09-14.57,8.13ZM51.47,23.9c-1.48.83-3.14,1.26-4.84,1.27l-28.92.09,14.57-8.13c2.2-1.22,4.67-1.86,7.18-1.86l27.32.08-15.32,8.54Z"/><g fill="#fff"><path d="M578.8,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4s0-12.88,0-12.88h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86,0,2.12-1.72,3.77-3.84,3.77h-60.53v12.88h60.53c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M228.84,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM228.84,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><path d="M483.22,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM483.22,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><polygon points="410.52 4.53 410.52 24.96 360.14 24.96 360.14 4.53 347.24 4.53 347.24 58.42 360.14 58.42 360.14 37.86 410.52 37.86 410.52 58.42 423.42 58.42 423.42 4.53 410.52 4.53"/><path d="M155.11,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4V4.44h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86s-1.72,3.77-3.84,3.77h-60.53v12.88s60.53,0,60.53,0c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M319.66,4.53h-43.49s-5.2,0-5.2,0h-7.7s0,53.89,0,53.89h12.9s0-14.44,0-14.44h43.49c10.88,0,19.73-8.85,19.73-19.73,0-10.88-8.85-19.73-19.73-19.73ZM319.66,31.08h-43.49s0-13.66,0-13.66h43.49c3.77,0,6.83,3.06,6.83,6.83,0,3.77-3.06,6.83-6.83,6.83Z"/></g></svg>`;
 
@@ -271,7 +283,7 @@ export function buildPdfHtml(
   }
 
   return `<!DOCTYPE html>
-<html lang="en" data-theme="${theme}">
+<html lang="en" data-theme="${theme}"${pdfProfileAttr}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -531,6 +543,8 @@ export function buildPdfHtml(
     .pdf-toc-list a { color: var(--accent); text-decoration: none; }
     .pdf-toc-list a:hover { text-decoration: underline; }
     .pdf-toc-list a::after { content: leader(dotted) target-counter(attr(href), page); }
+
+    ${seHealthPdfLayoutCss}
 
     /* ── Confidential watermark (print only) ── */
     .pdf-watermark {

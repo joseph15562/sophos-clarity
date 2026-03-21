@@ -11,6 +11,10 @@
 
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import {
+  SE_HEALTH_CHECK_PDF_LAYOUT_CSS,
+  SE_HEALTH_CHECK_PDF_PROFILE,
+} from "@/lib/se-health-check-pdf-layout";
 
 const IFRAME_WIDTH_PX = 1024;
 
@@ -64,12 +68,15 @@ html, body {
   color: #ffffff !important;
   min-height: 1123px !important;
   box-sizing: border-box !important;
-  padding: 36px 48px 32px !important;
+  padding: 44px 48px 32px !important;
   display: flex !important;
   flex-direction: column !important;
+  width: 100% !important;
+  margin: 0 !important;
 }
 .se-hc-cover-brand {
   flex-shrink: 0 !important;
+  padding-top: 4px !important;
 }
 .se-hc-cover-wordmark {
   display: block !important;
@@ -109,7 +116,7 @@ html, body {
 .se-hc-cover-label {
   font-weight: 700 !important;
 }
-.se-hc-cover-shield-wrap {
+.se-hc-cover-mark-wrap {
   flex: 1 !important;
   display: flex !important;
   align-items: center !important;
@@ -117,10 +124,12 @@ html, body {
   padding: 24px 0 32px !important;
   min-height: 200px !important;
 }
-.se-hc-cover-shield-svg {
+.se-hc-cover-mark-img {
   display: block !important;
-  max-width: 88% !important;
+  width: 200px !important;
+  max-width: min(220px, 72%) !important;
   height: auto !important;
+  object-fit: contain !important;
 }
 .se-hc-cover-bottom {
   flex-shrink: 0 !important;
@@ -238,10 +247,10 @@ code {
 }
 `;
 
-function injectHtml2CanvasFixStyles(doc: Document) {
+function injectHtml2CanvasFixStyles(doc: Document, extraCss?: string) {
   const style = doc.createElement("style");
   style.setAttribute("data-pdf-html2canvas-fix", "true");
-  style.textContent = PDF_HTML2CANVAS_FIX_CSS;
+  style.textContent = PDF_HTML2CANVAS_FIX_CSS + (extraCss ?? "");
   doc.head.appendChild(style);
 }
 
@@ -314,7 +323,11 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
     /* ignore */
   }
 
-  injectHtml2CanvasFixStyles(idoc);
+  const pdfProfile = idoc.documentElement.getAttribute("data-pdf-profile");
+  const isSeHealthPdf = pdfProfile === SE_HEALTH_CHECK_PDF_PROFILE;
+  const pageMarginMm = isSeHealthPdf ? 0 : 10;
+  injectHtml2CanvasFixStyles(idoc, isSeHealthPdf ? SE_HEALTH_CHECK_PDF_LAYOUT_CSS : "");
+
   idoc.documentElement.setAttribute("data-theme", "light");
 
   idoc.querySelectorAll("script").forEach((s) => s.remove());
@@ -356,7 +369,7 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
     }
 
     const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    addCanvasToPdf(pdf, canvas, 10);
+    addCanvasToPdf(pdf, canvas, pageMarginMm);
     return pdf.output("blob");
   } finally {
     document.body.removeChild(iframe);

@@ -5,6 +5,7 @@
 
 import type { BrandingData } from "@/components/BrandingSetup";
 import { buildPdfHtml } from "@/lib/report-export";
+import { SE_HEALTH_CHECK_PDF_PROFILE } from "@/lib/se-health-check-pdf-layout";
 import { htmlDocumentStringToPdfBlob, sanitizePdfFilenamePart } from "@/lib/html-document-to-pdf-blob";
 import {
   buildSEHealthCheckReportHtml,
@@ -26,6 +27,7 @@ export async function runHealthCheckPdfDownload(args: {
     omitInteractiveChrome: true,
     tocAfterMarker: SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER,
     omitReportHeader: true,
+    pdfLayoutProfile: SE_HEALTH_CHECK_PDF_PROFILE,
   });
   const blob = await htmlDocumentStringToPdfBlob(html);
   const part = sanitizePdfFilenamePart(args.filenameCustomerPart);

@@ -17,6 +17,9 @@ const SEVERITY_ORDER: Finding["severity"][] = ["critical", "high", "medium", "lo
  */
 export const SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER = "<!-- firecomply:se-health-check:pdf-toc -->";
 
+/** Centre mark on PDF cover (white Sophos “S” on transparent — place file in /public). */
+export const SE_HEALTH_CHECK_COVER_MARK_SRC = "/se-health-check-sophos-mark.png";
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -74,15 +77,6 @@ export interface SEHealthCheckReportParams {
 
 function fileExportType(fileName: string): string {
   return /\.xml$/i.test(fileName) ? "Entities XML" : "HTML export";
-}
-
-/** Large white shield + navy parallelogram bars (Central-style centre graphic) */
-function coverShieldSvg(): string {
-  return `<svg class="se-hc-cover-shield-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 260" width="210" height="248" aria-hidden="true">
-  <path fill="#ffffff" d="M110 12c-2 0-4 0-6 1L38 52c-5 3-8 8-8 14v84c0 48 34 88 80 102 46-14 80-54 80-102V66c0-6-3-11-8-14L116 13c-2-1-4-1-6-1z"/>
-  <path fill="#001A47" d="M52 102 158 72 168 96 62 126z"/>
-  <path fill="#001A47" d="M42 138 148 108 158 132 52 162z"/>
-</svg>`;
 }
 
 /**
@@ -145,7 +139,9 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Date:</span> ${escapeHtml(dateLocal)}</p>`,
   );
   parts.push(`</div>`);
-  parts.push(`<div class="se-hc-cover-shield-wrap">${coverShieldSvg()}</div>`);
+  parts.push(
+    `<div class="se-hc-cover-mark-wrap"><img src="${SE_HEALTH_CHECK_COVER_MARK_SRC}" alt="" class="se-hc-cover-mark-img" width="200" height="200" /></div>`,
+  );
   parts.push(`</div>`);
   parts.push(`<div class="se-hc-cover-bottom">`);
   parts.push(
