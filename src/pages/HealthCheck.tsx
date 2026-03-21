@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FileText,
   HelpCircle,
+  Loader2,
   Lock,
   Shield,
   Upload,
@@ -27,7 +28,12 @@ import { DpiExclusionBar } from "@/components/DpiExclusionBar";
 import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory";
+import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
+import { buildPdfHtml } from "@/lib/report-export";
+import { htmlDocumentStringToPdfBlob, sanitizePdfFilenamePart } from "@/lib/html-document-to-pdf-blob";
+import { buildSEHealthCheckReportHtml } from "@/lib/se-health-check-report-html";
+import { saveAs } from "file-saver";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -357,6 +363,7 @@ function HealthCheckInner() {
   }, [analysisResults, baselineResults, centralValidated, licence]);
 
   const [customerName, setCustomerName] = useState("");
+  const [pdfBusy, setPdfBusy] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useState(false);
 
@@ -382,7 +389,7 @@ function HealthCheckInner() {
       const allFindings = entries.flatMap(([, ar]) => ar.findings ?? []);
       const scores = entries.map(([label, ar]) => {
         const bp = computeSophosBPScore(ar, licence);
-        return { label, score: bp.overallScore, grade: bp.overallGrade };
+        return { label, score: bp.overall, grade: bp.grade };
       });
       const avgScore = Math.round(scores.reduce((s, e) => s + e.score, 0) / scores.length);
       const grades = ["A", "B", "C", "D", "F"];
@@ -409,6 +416,79 @@ function HealthCheckInner() {
       setSavingCheck(false);
     }
   }, [seAuth.seProfile, analysisResults, licence, customerName, files.length]);
+
+  const handleDownloadHealthCheckPdf = useCallback(async () => {
+    const labels = files
+      .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
+      .filter((l) => analysisResults[l]);
+    if (labels.length === 0) {
+      toast.error("No analysed configurations to include in the report.");
+      return;
+    }
+    const bpByLabel: Record<string, SophosBPScore> = {};
+    for (const label of labels) {
+      const ar = analysisResults[label];
+      if (ar) bpByLabel[label] = computeSophosBPScore(ar, licence);
+    }
+    const preparedBy =
+      seAuth.seProfile?.displayName?.trim() ||
+      seAuth.seProfile?.email?.trim() ||
+      "Sales Engineer";
+    const inner = buildSEHealthCheckReportHtml({
+      labels,
+      files,
+      analysisResults,
+      baselineResults,
+      bpByLabel,
+      licence,
+      customerName,
+      preparedBy,
+      dpiExemptZones,
+      dpiExemptNetworks,
+      webFilterComplianceMode,
+      webFilterExemptRuleNames,
+      centralValidated,
+      generatedAt: new Date(),
+      appVersion:
+        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
+    });
+    const branding: BrandingData = {
+      companyName: "Sophos FireComply",
+      customerName: customerName.trim(),
+      logoUrl: null,
+      environment: "",
+      country: "",
+      selectedFrameworks: [],
+      preparedBy: seAuth.seProfile?.displayName?.trim() || seAuth.seProfile?.email?.trim() || "",
+      confidential: true,
+    };
+    const html = buildPdfHtml(inner, "Sophos Firewall Health Check", branding, { theme: "light" });
+    setPdfBusy(true);
+    try {
+      const blob = await htmlDocumentStringToPdfBlob(html);
+      const part = sanitizePdfFilenamePart(customerName);
+      const date = new Date().toISOString().slice(0, 10);
+      saveAs(blob, `Sophos-Firewall-Health-Check-${part}-${date}.pdf`);
+      toast.success("PDF downloaded.");
+    } catch (e) {
+      console.warn("[health-check] pdf download failed", e);
+      toast.error(e instanceof Error ? e.message : "Could not generate PDF — try again.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [
+    files,
+    analysisResults,
+    baselineResults,
+    licence,
+    customerName,
+    seAuth.seProfile,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+    centralValidated,
+  ]);
 
   const hasParsedConfigs = files.some((f) => Object.keys(f.extractedData ?? {}).length > 0);
 
@@ -638,6 +718,17 @@ function HealthCheckInner() {
                     </Button>
                   ))}
                 </div>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
+                  disabled={pdfBusy}
+                  onClick={() => void handleDownloadHealthCheckPdf()}
+                >
+                  {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {pdfBusy ? "Generating PDF…" : "Download PDF"}
+                </Button>
                 <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" onClick={exportSummaryJson}>
                   <Download className="h-4 w-4" />
                   Summary JSON
