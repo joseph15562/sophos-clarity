@@ -342,7 +342,7 @@ export function TenantDashboard() {
       byAgentDay.set(agent.id, m);
     }
     const now = Date.now();
-    const offlineThreshold = 24 * 60 * 60 * 1000;
+    const heartbeatThreshold = 30 * 60 * 1000;
     for (const sub of agentSubmissions) {
       const day = sub.created_at.slice(0, 10);
       const agent = agentList.find((a) => a.id === sub.agent_id);
@@ -350,12 +350,18 @@ export function TenantDashboard() {
         byAgentDay.get(agent.id)!.set(day, "active");
       }
     }
+    const todayKey = dayKeys[dayKeys.length - 1];
     for (const agent of agentList) {
       const m = byAgentDay.get(agent.id)!;
       const lastSeen = agent.last_seen_at ? new Date(agent.last_seen_at).getTime() : 0;
-      const todayKey = dayKeys[dayKeys.length - 1];
-      const isCurrentlyOffline = (agent.status ?? "").toLowerCase() !== "active" || (lastSeen > 0 && now - lastSeen > offlineThreshold);
-      if (isCurrentlyOffline && m.get(todayKey) === "none") {
+      if (lastSeen > 0) {
+        const lastSeenDay = new Date(agent.last_seen_at!).toISOString().slice(0, 10);
+        if (m.has(lastSeenDay) && m.get(lastSeenDay) === "none") {
+          m.set(lastSeenDay, "active");
+        }
+      }
+      const isHeartbeatStale = !lastSeen || (now - lastSeen > heartbeatThreshold);
+      if (isHeartbeatStale && m.get(todayKey) !== "active") {
         m.set(todayKey, "offline");
       }
     }
