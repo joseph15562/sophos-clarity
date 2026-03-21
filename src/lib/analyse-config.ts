@@ -2340,7 +2340,7 @@ function analyseUserGroupRules(
   const getIdentity = (row: Record<string, string>): string => {
     if (identityCol) {
       const val = (row[identityCol] ?? "").trim();
-      if (val && !/^(enable|disable)$/i.test(val)) return val;
+      if (val && !/^(enable|disable|n\/?a|none|-+)$/i.test(val)) return val;
     }
     if (matchIdentityCol) {
       const match = (row[matchIdentityCol] ?? "").trim().toLowerCase();
