@@ -11,6 +11,12 @@ import type { ParsedFile } from "@/hooks/use-report-generation";
 
 const SEVERITY_ORDER: Finding["severity"][] = ["critical", "high", "medium", "low", "info"];
 
+/**
+ * `buildPdfHtml(..., { tocAfterMarker })` inserts the auto-generated Table of Contents after
+ * cover + overview so the PDF order is: cover → overview → TOC → body sections.
+ */
+export const SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER = "<!-- firecomply:se-health-check:pdf-toc -->";
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -190,6 +196,8 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
   );
   parts.push(`</div>`);
   parts.push(`</div>`);
+
+  parts.push(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);
 
   parts.push(`<h2 id="provenance-and-limitations">Provenance and limitations</h2>`);
   parts.push(`<p><strong>Generated:</strong> ${escapeHtml(dateUtc)} (UTC) / ${escapeHtml(dateLocal)} (local)</p>`);

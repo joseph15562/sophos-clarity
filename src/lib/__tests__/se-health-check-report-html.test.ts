@@ -3,7 +3,11 @@ import type { ExtractedSections } from "@/lib/extract-sections";
 import { analyseConfig } from "@/lib/analyse-config";
 import { evaluateBaseline, BASELINE_TEMPLATES } from "@/lib/policy-baselines";
 import { computeSophosBPScore } from "@/lib/sophos-licence";
-import { buildSEHealthCheckReportHtml, escapeHtml } from "@/lib/se-health-check-report-html";
+import {
+  buildSEHealthCheckReportHtml,
+  escapeHtml,
+  SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER,
+} from "@/lib/se-health-check-report-html";
 
 const SOPHOS_BP_TEMPLATE = BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
 
@@ -58,5 +62,12 @@ describe("se-health-check-report-html", () => {
     expect(html).toContain("sophos-logo-white.svg");
     expect(html).not.toContain("Evil<img");
     expect(html).toContain("Evil&lt;img");
+    expect(html).toContain(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);
+    const tocIdx = html.indexOf(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);
+    const coverIdx = html.indexOf("se-hc-cover-fullpage");
+    const overviewIdx = html.indexOf("se-hc-overview-sheet");
+    expect(coverIdx).toBeGreaterThanOrEqual(0);
+    expect(overviewIdx).toBeGreaterThan(coverIdx);
+    expect(tocIdx).toBeGreaterThan(overviewIdx);
   });
 });

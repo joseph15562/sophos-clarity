@@ -6,7 +6,11 @@
 import type { BrandingData } from "@/components/BrandingSetup";
 import { buildPdfHtml } from "@/lib/report-export";
 import { htmlDocumentStringToPdfBlob, sanitizePdfFilenamePart } from "@/lib/html-document-to-pdf-blob";
-import { buildSEHealthCheckReportHtml, type SEHealthCheckReportParams } from "@/lib/se-health-check-report-html";
+import {
+  buildSEHealthCheckReportHtml,
+  SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER,
+  type SEHealthCheckReportParams,
+} from "@/lib/se-health-check-report-html";
 import { saveAs } from "file-saver";
 
 export type { SEHealthCheckReportParams };
@@ -20,6 +24,8 @@ export async function runHealthCheckPdfDownload(args: {
   const html = buildPdfHtml(inner, "Sophos Firewall Health Check", args.branding, {
     theme: "light",
     omitInteractiveChrome: true,
+    tocAfterMarker: SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER,
+    omitReportHeader: true,
   });
   const blob = await htmlDocumentStringToPdfBlob(html);
   const part = sanitizePdfFilenamePart(args.filenameCustomerPart);
