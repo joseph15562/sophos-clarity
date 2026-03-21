@@ -26,6 +26,7 @@ export async function runHealthCheckPdfDownload(args: {
     theme: "light",
     omitInteractiveChrome: true,
     tocAfterMarker: SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER,
+    omitPdfToc: true,
     omitReportHeader: true,
     omitReportFooter: true,
     pdfLayoutProfile: SE_HEALTH_CHECK_PDF_PROFILE,

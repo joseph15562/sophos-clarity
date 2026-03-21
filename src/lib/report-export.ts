@@ -228,6 +228,8 @@ export type BuildPdfHtmlOptions = {
   omitReportFooter?: boolean;
   /** Enables full-bleed cover + zero PDF margins when used with `htmlDocumentStringToPdfBlob` (reads `data-pdf-profile`). */
   pdfLayoutProfile?: typeof SE_HEALTH_CHECK_PDF_PROFILE;
+  /** Skip auto-generated PDF table of contents (e.g. SE health check — overview already describes sections). */
+  omitPdfToc?: boolean;
 };
 
 /** Build a standalone HTML document string for PDF/print and zip export. */
@@ -258,15 +260,16 @@ export function buildPdfHtml(
   const footerText = branding?.footerText || "";
   const customLogo = branding?.logoUrl || "";
 
-  const tocEntries = extractTocFromHtml(innerHTML);
-  const tocHtml = tocEntries.length >= 2
-    ? `<nav class="pdf-toc" aria-label="Table of Contents">
+  const tocEntries = options?.omitPdfToc ? [] : extractTocFromHtml(innerHTML);
+  const tocHtml =
+    !options?.omitPdfToc && tocEntries.length >= 2
+      ? `<nav class="pdf-toc" aria-label="Table of Contents">
   <h2 class="pdf-toc-title">Table of Contents</h2>
   <ul class="pdf-toc-list">${tocEntries.map((e) =>
       `<li><a href="#${e.id}">${e.text}</a></li>`
     ).join("")}</ul>
 </nav>`
-    : "";
+      : "";
 
   const tocSpacer = tocHtml ? '<div class="pdf-toc-spacer"></div>' : "";
   const marker = options?.tocAfterMarker;

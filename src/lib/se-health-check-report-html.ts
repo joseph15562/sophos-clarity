@@ -166,29 +166,41 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
   parts.push(`</div>`);
   parts.push(`<div class="se-hc-overview-body">`);
   parts.push(
-    `<p>The <strong>Sophos Firewall Health Check</strong> in <strong>Sophos FireComply</strong> provides a structured review of uploaded firewall configuration exports (HTML or entities XML). Deterministic analysis and Sophos best-practice scoring highlight configuration gaps and verification items. This report is <strong>not</strong> a Sophos Central Security Checkup, a compliance framework assessment, or a substitute for validation in the live Sophos XGS / SFOS console.</p>`,
-  );
-  parts.push(`<p>Here's a breakdown of the report's sections:</p>`);
-  parts.push(
-    `<p><strong>Executive Summary:</strong> Best-practice score, baseline alignment, finding counts by severity, and priority next steps for each firewall analysed.</p>`,
+    `<p>The <strong>Sophos Firewall Health Check</strong> in <strong>Sophos FireComply</strong> provides a structured, repeatable review of uploaded Sophos XGS / SFOS configuration exports (HTML or entities XML). The tool parses exported objects and rules, runs deterministic checks aligned with Sophos hardening guidance, and scores posture against a selectable licence tier. Outputs are designed for Sales Engineers and customers to prioritise remediation conversations — not as a pass/fail certification.</p>`,
   );
   parts.push(
-    `<p><strong>Provenance and limitations:</strong> How and when the report was generated, and scope limits of file-based analysis.</p>`,
+    `<p><strong>How analysis works.</strong> Each file is normalised into structured sections (firewall rules, NAT, interfaces, security features, and related objects). Findings are produced by rule-based logic with explicit evidence references into the export. <strong>Sophos best practice</strong> scoring weights official guidance categories; <strong>baseline</strong> alignment reflects your chosen template (e.g. Sophos best-practice checklist). Where the export omits or obscures data, the tool may under-report — always corroborate on the live appliance.</p>`,
   );
   parts.push(
-    `<p><strong>Assessment scope and exclusions:</strong> DPI (SSL/TLS) and web-filter posture assumptions applied during analysis.</p>`,
+    `<p><strong>What this report is not.</strong> This is <strong>not</strong> a Sophos Central Security Checkup, a formal compliance audit, or traffic/log-driven validation. It does not observe live sessions, threat telemetry, or Central policy sync state. It is <strong>not</strong> a substitute for reviewing configuration in the live Sophos XGS / SFOS console, change windows, or your organisation&apos;s own risk acceptance process.</p>`,
   );
   parts.push(
-    `<p><strong>Configuration file manifest:</strong> Source files, labels, export types, and Central serial linkage where provided.</p>`,
+    `<p><strong>How to read the following pages.</strong> The sections below mirror how the PDF is organised after this overview. You can skim the <strong>Executive summary</strong> first for scores and top actions, then use <strong>Provenance and limitations</strong> and <strong>Assessment scope and exclusions</strong> to qualify the results. The <strong>Configuration file manifest</strong> ties each finding set to source files and optional Central serial linkage. <strong>Baseline and findings</strong> contain the detailed checklist and full finding list per firewall.</p>`,
+  );
+  parts.push(`<p><strong>Section guide</strong> — each part of the report contains the following:</p>`);
+  parts.push(
+    `<p><strong>Executive Summary:</strong> For every analysed firewall, you will see the Sophos best-practice score and letter grade, baseline template score, counts of findings by severity (critical through info), and a short list of priority next steps derived from the highest-severity items. Use this view for stakeholder conversations and workshop planning.</p>`,
   );
   parts.push(
-    `<p><strong>Baseline and findings:</strong> Per-device baseline checklist and the full findings table.</p>`,
+    `<p><strong>Provenance and limitations:</strong> Timestamps, tool identity, and explicit limits of offline file analysis. This grounds the report in time and reminds readers that exports may be incomplete, redacted, or from non-production appliances.</p>`,
   );
   parts.push(
-    `<p><strong>Licence assumption for scoring:</strong> ${escapeHtml(licenceAssumptionLabel(licence))}. <strong>Sophos Central data in this report:</strong> ${centralValidated ? "Central API was used for optional discovery only — findings are based on configuration exports, not Central Security Checkup data." : "Not used — content is derived from configuration exports only."}</p>`,
+    `<p><strong>Assessment scope and exclusions:</strong> Documents which zones or networks were excluded from DPI (SSL/TLS) gap checks, the web-filter compliance mode (informational vs strict), and any rule names excluded from missing-web-filter detection. These choices materially affect findings — keep them aligned with how the customer actually enforces policy.</p>`,
   );
   parts.push(
-    `<p>Each section is intended to help you understand and action the results. Use it alongside operational review in Sophos Central and on-appliance consoles to align posture with best practices.</p>`,
+    `<p><strong>Configuration file manifest:</strong> Lists each source file, its display label, export type (HTML vs entities XML), and Sophos Central serial number when you linked discovery to an upload. This supports audit trails and multi-firewall estates.</p>`,
+  );
+  parts.push(
+    `<p><strong>Baseline and findings:</strong> Per-device baseline requirements with pass/fail detail, followed by the complete findings table (severity, title, configuration section, and truncated detail with remediation hints where available). This is the working depth behind the executive summary.</p>`,
+  );
+  parts.push(
+    `<p><strong>Licence assumption for scoring:</strong> ${escapeHtml(licenceAssumptionLabel(licence))}. Module-level scoring uses this assumption; if the customer&apos;s entitlement differs, reinterpret scores accordingly. <strong>Sophos Central data in this report:</strong> ${centralValidated ? "The Central API was used only for optional firewall discovery in this session. All findings are derived from uploaded configuration exports — not from Central Security Checkup or live telemetry." : "Not used. All content is derived from configuration exports only."}</p>`,
+  );
+  parts.push(
+    `<p><strong>Severity labels.</strong> <strong>Critical</strong> and <strong>high</strong> items typically indicate exposure or misconfiguration that should be addressed urgently. <strong>Medium</strong> and <strong>low</strong> reflect hardening gaps or policy drift. <strong>Info</strong> highlights context or verification steps. Titles and remediation text are indicative — validate impact for the customer&apos;s topology and change controls.</p>`,
+  );
+  parts.push(
+    `<p>Use this report together with operational review in <strong>Sophos Central</strong> and on-appliance consoles, release notes, and Sophos documentation. Treat it as a structured starting point for posture improvement, not an exhaustive security assessment of the environment.</p>`,
   );
   parts.push(
     `<p class="se-hc-overview-copy-footer">Copyright © ${escapeHtml(copyYear)}, Sophos Ltd. | CONFIDENTIAL</p>`,
