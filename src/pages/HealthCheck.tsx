@@ -504,6 +504,45 @@ function HealthCheckInner() {
               </div>
             </div>
 
+            {!centralValidated && (
+              <div className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="flex items-center gap-2 text-sm font-medium shrink-0">
+                  <Wifi className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                  Sophos Central
+                </div>
+                <Input
+                  className="rounded-lg font-mono text-xs h-9 flex-1 min-w-[140px]"
+                  placeholder="Client ID"
+                  autoComplete="off"
+                  value={centralCreds.clientId}
+                  onChange={(e) => setCentralCreds((c) => ({ ...c, clientId: e.target.value }))}
+                />
+                <Input
+                  className="rounded-lg font-mono text-xs h-9 flex-1 min-w-[140px]"
+                  placeholder="Client Secret"
+                  type="password"
+                  autoComplete="off"
+                  value={centralCreds.clientSecret}
+                  onChange={(e) => setCentralCreds((c) => ({ ...c, clientSecret: e.target.value }))}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-lg shrink-0 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background dark:hover:bg-[#00EDFF]/90"
+                  disabled={centralBusy || !centralCreds.clientId.trim() || !centralCreds.clientSecret.trim()}
+                  onClick={connectCentral}
+                >
+                  {centralBusy ? "Connecting…" : "Connect"}
+                </Button>
+              </div>
+            )}
+            {centralValidated && (
+              <p className="text-[11px] flex items-center gap-1 text-[#00995a] dark:text-[#00F2B3]">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Sophos Central connected — {firewallOptions.length} firewall(s) discovered
+              </p>
+            )}
+
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex-1 min-w-[200px] max-w-xs space-y-1">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">

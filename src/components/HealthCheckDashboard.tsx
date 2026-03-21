@@ -100,6 +100,60 @@ function downloadJson(filename: string, data: unknown) {
   URL.revokeObjectURL(url);
 }
 
+function FindingRow({ finding: f }: { finding: Finding }) {
+  const [open, setOpen] = useState(false);
+  const hasExtra = !!(f.remediation || f.evidence || f.section);
+
+  return (
+    <li className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2">
+      <button
+        type="button"
+        className="flex gap-3 items-start w-full text-left"
+        onClick={() => hasExtra && setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        {severityIcon(f.severity)}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-sm">{f.title}</span>
+            <Badge variant="outline" className="text-[10px] uppercase">
+              {f.severity}
+            </Badge>
+          </div>
+          {f.detail ? <p className="text-xs text-muted-foreground mt-1">{f.detail}</p> : null}
+          {f.section ? (
+            <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+              <ChevronDown className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
+              {f.section}
+            </p>
+          ) : hasExtra ? (
+            <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+              <ChevronDown className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
+              Details
+            </p>
+          ) : null}
+        </div>
+      </button>
+      {open && (
+        <div className="ml-7 mt-2 space-y-2 border-l-2 border-border pl-3 pb-1">
+          {f.remediation && (
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Remediation</p>
+              <p className="text-xs text-foreground/80">{f.remediation}</p>
+            </div>
+          )}
+          {f.evidence && (
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Evidence</p>
+              <p className="text-xs text-foreground/80 font-mono whitespace-pre-wrap">{f.evidence}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 function findingsToCsv(rows: { firewall: string; severity: string; title: string; section: string }[]): string {
   const header = "firewall,severity,title,section";
   const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
@@ -303,27 +357,7 @@ export function HealthCheckDashboard({
           ) : (
             <ul className="space-y-3">
               {findings.map((f) => (
-                <li
-                  key={f.id}
-                  className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2 flex gap-3 items-start"
-                >
-                  {severityIcon(f.severity)}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-sm">{f.title}</span>
-                      <Badge variant="outline" className="text-[10px] uppercase">
-                        {f.severity}
-                      </Badge>
-                    </div>
-                    {f.detail ? <p className="text-xs text-muted-foreground mt-1">{f.detail}</p> : null}
-                    {f.section ? (
-                      <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-                        <ChevronDown className="h-3 w-3 -rotate-90" aria-hidden />
-                        {f.section}
-                      </p>
-                    ) : null}
-                  </div>
-                </li>
+                <FindingRow key={f.id} finding={f} />
               ))}
             </ul>
           )}
