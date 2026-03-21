@@ -50,6 +50,8 @@ export interface UploadSectionProps {
   onSaveReports: (includeReports: boolean) => void;
   totalFindings: number;
   isViewerOnly?: boolean;
+  /** Rendered above the Generate Reports section */
+  beforeReports?: React.ReactNode;
 }
 
 export function UploadSection({
@@ -82,6 +84,7 @@ export function UploadSection({
   onSaveReports,
   totalFindings,
   isViewerOnly = false,
+  beforeReports,
 }: UploadSectionProps) {
   return (
     <>
@@ -237,6 +240,8 @@ export function UploadSection({
           </div>
         </div>
       )}
+
+      {hasFiles && beforeReports}
 
       {/* Generate Reports — AI reports disabled in local mode */}
       {hasFiles && !isGuest && (

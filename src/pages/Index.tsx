@@ -737,6 +737,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onSaveReports={handleSaveReports}
               totalFindings={totalFindings}
               isViewerOnly={isViewerOnly}
+              beforeReports={
+                aggregatedPosture.allWanSourceZones.length > 0 ? (
+                  <DpiExclusionBar
+                    detectedZones={aggregatedPosture.allWanSourceZones}
+                    excludedZones={dpiExemptZones}
+                    onChange={setDpiExemptZones}
+                  />
+                ) : undefined
+              }
             />
             {hasFiles && !isGuest && org?.id && (
               <div className="grid gap-4 md:grid-cols-2">
@@ -761,13 +770,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   }
                 />
               </div>
-            )}
-            {hasFiles && aggregatedPosture.allWanSourceZones.length > 0 && (
-              <DpiExclusionBar
-                detectedZones={aggregatedPosture.allWanSourceZones}
-                excludedZones={dpiExemptZones}
-                onChange={setDpiExemptZones}
-              />
             )}
             {hasFiles && (
               <AnalysisTabs
