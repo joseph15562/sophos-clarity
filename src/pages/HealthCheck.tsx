@@ -165,61 +165,41 @@ function HealthCheckInner() {
     [files],
   );
 
-  const validateCentral = useCallback(async () => {
+  const connectCentral = useCallback(async () => {
     setCentralBusy(true);
     try {
       await callGuestCentral({ mode: "guest_health_ping", clientId: centralCreds.clientId, clientSecret: centralCreds.clientSecret });
       setCentralValidated(true);
-      toast.success("Sophos Central API credentials validated.");
-    } catch (e) {
-      setCentralValidated(false);
-      toast.error(e instanceof Error ? e.message : "Could not validate Central credentials");
-    } finally {
-      setCentralBusy(false);
-    }
-  }, [centralCreds.clientId, centralCreds.clientSecret]);
 
-  const discoverTenants = useCallback(async () => {
-    setCentralBusy(true);
-    try {
-      const res = await callGuestCentral<{ items: GuestTenantRow[] }>({
+      const tenantsRes = await callGuestCentral<{ items: GuestTenantRow[] }>({
         mode: "guest_health_tenants",
         clientId: centralCreds.clientId,
         clientSecret: centralCreds.clientSecret,
       });
-      setTenantOptions(res.items ?? []);
-      if ((res.items ?? []).length === 1) {
-        setCentralCreds((c) => ({ ...c, tenantId: res.items[0].id }));
+      const tenants = tenantsRes.items ?? [];
+      setTenantOptions(tenants);
+
+      if (tenants.length > 0) {
+        const tenantId = tenants[0].id;
+        setCentralCreds((c) => ({ ...c, tenantId }));
+        const fwRes = await callGuestCentral<{ items: GuestFirewallRow[] }>({
+          mode: "guest_health_firewalls",
+          clientId: centralCreds.clientId,
+          clientSecret: centralCreds.clientSecret,
+          tenantId,
+        });
+        setFirewallOptions(fwRes.items ?? []);
+        toast.success(`Connected — found ${(fwRes.items ?? []).length} firewall(s) across ${tenants.length} tenant(s).`);
+      } else {
+        toast.success("Credentials validated but no tenants found.");
       }
-      toast.success(`Found ${(res.items ?? []).length} tenant(s).`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not list tenants");
+      setCentralValidated(false);
+      toast.error(e instanceof Error ? e.message : "Could not connect to Sophos Central");
     } finally {
       setCentralBusy(false);
     }
   }, [centralCreds.clientId, centralCreds.clientSecret]);
-
-  const listFirewalls = useCallback(async () => {
-    if (!centralCreds.tenantId.trim()) {
-      toast.error("Enter a tenant ID first.");
-      return;
-    }
-    setCentralBusy(true);
-    try {
-      const res = await callGuestCentral<{ items: GuestFirewallRow[] }>({
-        mode: "guest_health_firewalls",
-        clientId: centralCreds.clientId,
-        clientSecret: centralCreds.clientSecret,
-        tenantId: centralCreds.tenantId.trim(),
-      });
-      setFirewallOptions(res.items ?? []);
-      toast.success(`Found ${(res.items ?? []).length} firewall(s).`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not list firewalls");
-    } finally {
-      setCentralBusy(false);
-    }
-  }, [centralCreds.clientId, centralCreds.clientSecret, centralCreds.tenantId]);
 
   const resetAll = useCallback(() => {
     setFiles([]);
@@ -390,7 +370,7 @@ function HealthCheckInner() {
                     </Badge>
                   </div>
                   <CardDescription className="text-xs">
-                    Validate OAuth access and list tenants/firewalls. Central does not expose full HTML config via API — upload the device export using the first card.
+                    Enter the customer's API credentials to discover their firewalls. Credentials are used for this session only and are never stored.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -406,7 +386,7 @@ function HealthCheckInner() {
                   />
                   <Input
                     className="rounded-lg font-mono text-xs h-9"
-                    placeholder="Client secret"
+                    placeholder="Client Secret"
                     type="password"
                     autoComplete="off"
                     value={centralCreds.clientSecret}
@@ -415,64 +395,19 @@ function HealthCheckInner() {
                       setCentralCreds((c) => ({ ...c, clientSecret: e.target.value }));
                     }}
                   />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="rounded-lg bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background dark:hover:bg-[#00EDFF]/90"
-                      disabled={centralBusy || !centralCreds.clientId.trim() || !centralCreds.clientSecret.trim()}
-                      onClick={validateCentral}
-                    >
-                      Validate credentials
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      className="rounded-lg"
-                      disabled={centralBusy || !centralCreds.clientId.trim() || !centralCreds.clientSecret.trim()}
-                      onClick={discoverTenants}
-                    >
-                      Discover tenants
-                    </Button>
-                  </div>
-                  {tenantOptions.length > 0 && (
-                    <label className="block text-[11px] text-muted-foreground space-y-1">
-                      <span>Tenant</span>
-                      <select
-                        className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs"
-                        value={centralCreds.tenantId}
-                        onChange={(e) => setCentralCreds((c) => ({ ...c, tenantId: e.target.value }))}
-                      >
-                        <option value="">Select tenant…</option>
-                        {tenantOptions.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name || t.id}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                  <Input
-                    className="rounded-lg font-mono text-xs h-9"
-                    placeholder="Tenant ID (UUID)"
-                    value={centralCreds.tenantId}
-                    onChange={(e) => setCentralCreds((c) => ({ ...c, tenantId: e.target.value }))}
-                  />
                   <Button
                     type="button"
                     size="sm"
-                    variant="outline"
-                    className="rounded-lg w-full"
-                    disabled={centralBusy || !centralCreds.tenantId.trim() || !centralCreds.clientSecret.trim()}
-                    onClick={listFirewalls}
+                    className="rounded-lg w-full bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background dark:hover:bg-[#00EDFF]/90"
+                    disabled={centralBusy || !centralCreds.clientId.trim() || !centralCreds.clientSecret.trim()}
+                    onClick={connectCentral}
                   >
-                    List firewalls for tenant
+                    {centralBusy ? "Connecting…" : "Connect & Discover Firewalls"}
                   </Button>
                   {centralValidated && (
                     <p className="text-[11px] flex items-center gap-1 text-[#00995a] dark:text-[#00F2B3]">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      API credentials validated (session only — not stored)
+                      Connected (session only — credentials not stored)
                     </p>
                   )}
                   {firewallOptions.length > 0 && (
