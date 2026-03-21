@@ -275,6 +275,8 @@ serve(async (req) => {
     const firewallLabels: string[] | undefined = body?.firewallLabels;
     const selectedFrameworks: string[] | undefined = body?.selectedFrameworks;
     const centralEnrichment: Record<string, unknown> | undefined = body?.centralEnrichment;
+    const webFilterComplianceMode: string | undefined =
+      typeof body?.webFilterComplianceMode === "string" ? body.webFilterComplianceMode : undefined;
 
     if (chat) {
       if (!chatContext || typeof chatContext !== "string") {
@@ -357,6 +359,11 @@ serve(async (req) => {
       if (centralEnrichment && Object.keys(centralEnrichment).length > 0) {
         complianceContext += "\n\n## Sophos Central Live Data\nThe following live data was retrieved from Sophos Central API. Include a brief **Sophos Central Status** (firmware, connected state; omit HA). Mention the alert count in one sentence only (e.g. \"Central reports N open alerts; see Sophos Central for details\"). Do **not** list individual alerts. Do **not** create any Finding (Critical/High/Medium/Low) based on alert count; do not cite NCSC/Cyber Essentials/KCSIE for alert count. Alert count is informational only.\n";
         complianceContext += "```json\n" + JSON.stringify(centralEnrichment) + "\n```\n";
+      }
+
+      if (compliance && webFilterComplianceMode === "informational") {
+        complianceContext +=
+          "\n\n## Assessment scope (from UI)\n**Web filter compliance mode is Informational.** The MSP selected a scoped assessment. When discussing missing or weak web filtering on WAN rules, frame gaps as observations for customer discussion — do not assert definitive regulatory or KCSIE failures unless a selected framework explicitly maps to that control. Still describe factual configuration gaps accurately.\n";
       }
 
       let basePrompt: string;

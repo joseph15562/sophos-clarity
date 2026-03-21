@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { UploadSection } from "@/components/UploadSection";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { DpiExclusionBar } from "@/components/DpiExclusionBar";
+import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar";
 import { AuthFlow } from "@/components/AuthFlow";
 import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
@@ -69,7 +70,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const { isGuest, org, isViewerOnly } = useAuth();
   const { notifications, unreadCount, addNotification, markRead, markAllRead, dismiss: dismissNotif, clearAll: clearNotifs } = useNotifications();
   const [files, setFiles] = useState<ParsedFile[]>([]);
-  const [branding, setBranding] = useState<BrandingData>({ companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [] });
+  const [branding, setBranding] = useState<BrandingData>({
+    companyName: "", logoUrl: null, customerName: "", environment: "", country: "", selectedFrameworks: [],
+    webFilterComplianceMode: "strict", webFilterExemptRuleNames: [],
+  });
   const [diffSelection, setDiffSelection] = useState<DiffSelection>(null);
   const [restoredSession, setRestoredSession] = useState(false);
   const [savingReports, setSavingReports] = useState(false);
@@ -96,10 +100,20 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
 
+  const firewallAnalysisOpts = useMemo(
+    () => ({
+      dpiExemptZones,
+      dpiExemptNetworks,
+      webFilterComplianceMode: branding.webFilterComplianceMode,
+      webFilterExemptRuleNames: branding.webFilterExemptRuleNames,
+    }),
+    [dpiExemptZones, dpiExemptNetworks, branding.webFilterComplianceMode, branding.webFilterExemptRuleNames],
+  );
+
   const {
     analysisResults: rawAnalysisResults, totalFindings: rawTotalFindings, totalRules: rawTotalRules, totalSections: rawTotalSections,
     totalPopulated: rawTotalPopulated, extractionPct: rawExtractionPct, aggregatedPosture: rawAggregatedPosture,
-  } = useFirewallAnalysis(files, dpiExemptZones, dpiExemptNetworks);
+  } = useFirewallAnalysis(files, firewallAnalysisOpts);
 
   const analysisResults = analysisOverride ?? rawAnalysisResults;
 
@@ -739,15 +753,28 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               totalFindings={totalFindings}
               isViewerOnly={isViewerOnly}
               beforeReports={
-                (aggregatedPosture.allWanSourceZones.length > 0 || aggregatedPosture.allWanSourceNetworks.length > 0) ? (
-                  <DpiExclusionBar
-                    detectedZones={aggregatedPosture.allWanSourceZones}
-                    excludedZones={dpiExemptZones}
-                    onZonesChange={setDpiExemptZones}
-                    detectedNetworks={aggregatedPosture.allWanSourceNetworks}
-                    excludedNetworks={dpiExemptNetworks}
-                    onNetworksChange={setDpiExemptNetworks}
-                  />
+                (aggregatedPosture.allWanSourceZones.length > 0 ||
+                  aggregatedPosture.allWanSourceNetworks.length > 0 ||
+                  aggregatedPosture.wanWebServiceRuleNames.length > 0) ? (
+                  <div className="space-y-3">
+                    {(aggregatedPosture.allWanSourceZones.length > 0 || aggregatedPosture.allWanSourceNetworks.length > 0) && (
+                      <DpiExclusionBar
+                        detectedZones={aggregatedPosture.allWanSourceZones}
+                        excludedZones={dpiExemptZones}
+                        onZonesChange={setDpiExemptZones}
+                        detectedNetworks={aggregatedPosture.allWanSourceNetworks}
+                        excludedNetworks={dpiExemptNetworks}
+                        onNetworksChange={setDpiExemptNetworks}
+                      />
+                    )}
+                    {aggregatedPosture.wanWebServiceRuleNames.length > 0 && (
+                      <WebFilterRuleExclusionBar
+                        candidateRuleNames={aggregatedPosture.wanWebServiceRuleNames}
+                        exemptRuleNames={branding.webFilterExemptRuleNames ?? []}
+                        onChange={(names) => setBranding((b) => ({ ...b, webFilterExemptRuleNames: names }))}
+                      />
+                    )}
+                  </div>
                 ) : undefined
               }
             />

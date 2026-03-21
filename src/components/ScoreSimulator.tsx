@@ -22,7 +22,11 @@ function cloneResult(r: AnalysisResult): AnalysisResult {
       ...r.inspectionPosture,
       sslRules: [...r.inspectionPosture.sslRules],
       sslUncoveredZones: [...r.inspectionPosture.sslUncoveredZones],
+      sslUncoveredNetworks: [...r.inspectionPosture.sslUncoveredNetworks],
+      allWanSourceZones: [...r.inspectionPosture.allWanSourceZones],
+      allWanSourceNetworks: [...r.inspectionPosture.allWanSourceNetworks],
       wanRuleNames: [...r.inspectionPosture.wanRuleNames],
+      wanWebServiceRuleNames: [...r.inspectionPosture.wanWebServiceRuleNames],
     },
     ruleColumns: r.ruleColumns ? [...r.ruleColumns] : undefined,
   };

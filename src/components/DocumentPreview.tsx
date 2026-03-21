@@ -289,7 +289,8 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
         totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0, webFilterableRules: 0,
         withWebFilter: 0, withoutWebFilter: 0, withAppControl: 0, withIps: 0,
         withSslInspection: 0, sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [],
-        sslUncoveredZones: [], wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+        sslUncoveredZones: [], sslUncoveredNetworks: [], allWanSourceZones: [], allWanSourceNetworks: [],
+        wanRuleNames: [], wanWebServiceRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
       },
     };
 

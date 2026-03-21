@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { analyseConfig, type AnalysisResult, type InspectionPosture } from "@/lib/analyse-config";
 import type { ExtractedSections } from "@/lib/extract-sections";
+import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 
 type ParsedFile = {
   id: string;
@@ -10,19 +11,28 @@ type ParsedFile = {
   centralEnrichment?: { licences?: unknown } | null;
 };
 
-export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string[], dpiExemptNetworks?: string[]) {
+export type FirewallAnalysisHookOptions = {
+  dpiExemptZones?: string[];
+  dpiExemptNetworks?: string[];
+  webFilterComplianceMode?: WebFilterComplianceMode;
+  webFilterExemptRuleNames?: string[];
+};
+
+export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnalysisHookOptions) {
   const analysisResults = useMemo<Record<string, AnalysisResult>>(() => {
     const results: Record<string, AnalysisResult> = {};
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
       results[label] = analyseConfig(f.extractedData, {
         centralLinked: !!f.centralEnrichment,
-        dpiExemptZones,
-        dpiExemptNetworks,
+        dpiExemptZones: hookOpts?.dpiExemptZones,
+        dpiExemptNetworks: hookOpts?.dpiExemptNetworks,
+        webFilterComplianceMode: hookOpts?.webFilterComplianceMode,
+        webFilterExemptRuleNames: hookOpts?.webFilterExemptRuleNames,
       });
     }
     return results;
-  }, [files, dpiExemptZones, dpiExemptNetworks]);
+  }, [files, hookOpts?.dpiExemptZones, hookOpts?.dpiExemptNetworks, hookOpts?.webFilterComplianceMode, hookOpts?.webFilterExemptRuleNames]);
 
   const totalFindings = useMemo(
     () => Object.values(analysisResults).reduce((sum, r) => sum + r.findings.length, 0),
@@ -49,7 +59,7 @@ export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string
       withAppControl: 0, withIps: 0, withSslInspection: 0,
       sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
       allWanSourceZones: [], allWanSourceNetworks: [],
-      wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+      wanRuleNames: [], wanWebServiceRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
     };
     for (const r of Object.values(analysisResults)) {
       const ip = r.inspectionPosture;
@@ -69,14 +79,16 @@ export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string
       agg.sslUncoveredNetworks.push(...ip.sslUncoveredNetworks);
       agg.allWanSourceZones.push(...ip.allWanSourceZones);
       agg.allWanSourceNetworks.push(...ip.allWanSourceNetworks);
+      agg.wanRuleNames.push(...ip.wanRuleNames);
+      agg.wanWebServiceRuleNames.push(...ip.wanWebServiceRuleNames);
       agg.totalDisabledRules += ip.totalDisabledRules;
     }
-    // DPI is active if any firewall has SSL/TLS Decrypt rules
     agg.dpiEngineEnabled = agg.sslDecryptRules > 0;
     agg.sslUncoveredZones = [...new Set(agg.sslUncoveredZones)];
     agg.sslUncoveredNetworks = [...new Set(agg.sslUncoveredNetworks)];
     agg.allWanSourceZones = [...new Set(agg.allWanSourceZones)];
     agg.allWanSourceNetworks = [...new Set(agg.allWanSourceNetworks)];
+    agg.wanWebServiceRuleNames = [...new Set(agg.wanWebServiceRuleNames)];
     return agg;
   }, [analysisResults]);
 

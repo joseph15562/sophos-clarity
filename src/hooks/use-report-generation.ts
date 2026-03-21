@@ -163,6 +163,7 @@ export function useReportGeneration(
             executive: opts?.executive,
             firewallLabels: opts?.firewallLabels,
             compliance: opts?.compliance,
+            webFilterComplianceMode: branding.webFilterComplianceMode,
             centralEnrichment: opts?.centralEnrichment,
             onDelta: (text) =>
               setReports((prev) =>

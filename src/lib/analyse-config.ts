@@ -59,13 +59,26 @@ function isWebService(row: Record<string, string>): boolean {
   return false;
 }
 
-function hasWebFilter(row: Record<string, string>): boolean {
-  const wf = (
+function getWebFilterPolicyDisplayName(row: Record<string, string>): string {
+  return (
     row["Web Filter"] ?? row["Web Filter Policy"] ?? row["WebFilter"] ??
     row["Web Policy"] ?? row["Web Filtering"] ?? row["Content Filter"] ??
     row["Web filter"] ?? ""
-  ).toLowerCase().trim();
+  ).trim();
+}
+
+function hasWebFilter(row: Record<string, string>): boolean {
+  const wf = getWebFilterPolicyDisplayName(row).toLowerCase();
   return wf !== "" && wf !== "none" && wf !== "not specified" && wf !== "-" && wf !== "n/a";
+}
+
+/** Web policy names that allow all categories — no meaningful URL/category restriction for compliance. */
+function isAllowAllWebPolicy(policyRaw: string): boolean {
+  const n = policyRaw.toLowerCase().replace(/\s+/g, " ").trim();
+  if (!n || n === "none" || n === "not specified" || n === "-" || n === "n/a") return false;
+  if (n === "allow all" || n === "permit all" || n === "allowall" || n === "permitall") return true;
+  if (/^allow all\b/.test(n) || /^permit all\b/.test(n)) return true;
+  return false;
 }
 
 function isLoggingOff(row: Record<string, string>): boolean {
@@ -425,7 +438,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     withAppControl: 0, withIps: 0, withSslInspection: 0,
     sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
     allWanSourceZones: [], allWanSourceNetworks: [],
-    wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+    wanRuleNames: [], wanWebServiceRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
   };
 
   if (!rulesTable || totalRules === 0) {
@@ -488,6 +501,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     sslUncoveredZones, sslUncoveredNetworks,
     allWanSourceZones, allWanSourceNetworks,
     wanRuleNames: wanRules.map((w) => w.name),
+    wanWebServiceRuleNames: wanRules.filter((w) => w.enabled && isWebService(w.row)).map((w) => w.name),
     totalDisabledRules,
     dpiEngineEnabled,
   };
@@ -525,20 +539,53 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   // (SSL/TLS inspection = DPI engine — covered in the SSL/TLS finding below)
 
   // --- WAN rules with no web filtering (enabled rules only) ---
+  const wfExempt = new Set(
+    (options?.webFilterExemptRuleNames ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
+  );
+  const wfMode = options?.webFilterComplianceMode ?? "strict";
+
   const wanNoFilter: string[] = [];
   for (const { name, row, enabled } of wanRules) {
-    if (enabled && isWebService(row) && !hasWebFilter(row)) wanNoFilter.push(name);
+    if (!enabled || !isWebService(row) || hasWebFilter(row)) continue;
+    if (wfExempt.has(name.toLowerCase().trim())) continue;
+    wanNoFilter.push(name);
   }
   if (wanNoFilter.length > 0) {
+    const exemptNote =
+      (options?.webFilterExemptRuleNames ?? []).filter(Boolean).length > 0
+        ? ` MSP excluded ${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).length} rule name(s) from this check: ${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).slice(0, 6).join(", ")}${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).length > 6 ? "…" : ""}.`
+        : "";
+    const baseDetail = `Active rules with Destination Zone WAN and Service HTTP/HTTPS/ANY have no Web Filter applied: ${wanNoFilter.slice(0, 8).join(", ")}${wanNoFilter.length > 8 ? ` (+${wanNoFilter.length - 8} more)` : ""}.`;
     findings.push({
       id: `f${++fid}`,
-      severity: "critical",
+      severity: wfMode === "informational" ? "info" : "critical",
       title: `${wanNoFilter.length} enabled WAN rule${wanNoFilter.length > 1 ? "s" : ""} missing web filtering`,
-      detail: `Active rules with Destination Zone WAN and Service HTTP/HTTPS/ANY have no Web Filter applied: ${wanNoFilter.slice(0, 8).join(", ")}${wanNoFilter.length > 8 ? ` (+${wanNoFilter.length - 8} more)` : ""}. This is a KCSIE/DfE compliance gap.`,
+      detail:
+        wfMode === "informational"
+          ? `${baseDetail} Web filter compliance mode is set to Informational — this is shown for visibility; it is not framed as a default regulatory failure. Review scope with the customer.${exemptNote}`
+          : `${baseDetail} This is a KCSIE/DfE compliance gap.${exemptNote}`,
       section: "Firewall Rules",
       remediation: "Go to Rules and policies > Firewall rules. Edit each affected rule → expand Web filtering → set a Web policy. Manage policies under Web > Policies. Ensure the policy blocks inappropriate content for your environment.",
       confidence: "high",
       evidence: `Rules ${wanNoFilter.slice(0, 3).join(", ")} have Web Filter=none/empty with Service=HTTP/HTTPS/ANY`,
+    });
+  }
+
+  const wanAllowAllWeb: string[] = [];
+  for (const { name, row, enabled } of wanRules) {
+    if (!enabled || !isWebService(row) || !hasWebFilter(row)) continue;
+    if (isAllowAllWebPolicy(getWebFilterPolicyDisplayName(row))) wanAllowAllWeb.push(name);
+  }
+  if (wanAllowAllWeb.length > 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: wfMode === "informational" ? "info" : "medium",
+      title: `${wanAllowAllWeb.length} WAN rule${wanAllowAllWeb.length > 1 ? "s" : ""} use an "allow all" style web policy`,
+      detail: `These enabled WAN rules have a web filter policy attached, but the policy name indicates all categories are allowed — there is no meaningful URL/category restriction for compliance purposes: ${wanAllowAllWeb.slice(0, 8).join(", ")}${wanAllowAllWeb.length > 8 ? ` (+${wanAllowAllWeb.length - 8} more)` : ""}. If you only need logging, document that; otherwise use None (no policy) for efficiency or a restrictive policy for protection.`,
+      section: "Firewall Rules",
+      remediation: "Go to Web > Policies and either use a restrictive policy on these rules, or remove the web policy from the rule if inspection is not required.",
+      confidence: "high",
+      evidence: `Rules ${wanAllowAllWeb.slice(0, 4).join(", ")} use Allow All / Permit All style web policy names`,
     });
   }
 

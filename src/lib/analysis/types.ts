@@ -44,6 +44,8 @@ export interface InspectionPosture {
   allWanSourceZones: string[];
   allWanSourceNetworks: string[];
   wanRuleNames: string[];
+  /** Enabled WAN rules with HTTP/HTTPS/ANY service — candidates for web filter checks / exemptions */
+  wanWebServiceRuleNames: string[];
   totalDisabledRules: number;
   dpiEngineEnabled: boolean;
 }
@@ -95,10 +97,16 @@ export interface AnalysisResult {
   threatStatus?: ThreatStatus;
 }
 
+export type WebFilterComplianceMode = "strict" | "informational";
+
 export interface AnalyseOptions {
   centralLinked?: boolean;
   dpiExemptZones?: string[];
   dpiExemptNetworks?: string[];
+  /** Default strict: WAN web-filter gaps are high/critical severity. Informational lowers severity for scoped assessments. */
+  webFilterComplianceMode?: WebFilterComplianceMode;
+  /** Rule names excluded from the "missing web filtering" WAN check (MSP-agreed scope). */
+  webFilterExemptRuleNames?: string[];
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {

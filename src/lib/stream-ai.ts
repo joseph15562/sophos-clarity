@@ -115,6 +115,8 @@ type StreamOptions = {
   executive?: boolean;
   firewallLabels?: string[];
   compliance?: boolean;
+  /** When informational, compliance narrative should not over-state regulatory failure for web-filter gaps */
+  webFilterComplianceMode?: "strict" | "informational";
   centralEnrichment?: CentralEnrichment;
   onDelta: (text: string) => void;
   onDone: () => void;
@@ -243,7 +245,7 @@ export async function streamChat({ chatContext, onDelta, onDone, onError, onStat
   await consumeSSEStream(resp.body, onDelta, onDone, onStatus);
 }
 
-export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, centralEnrichment, onDelta, onDone, onError, onStatus }: StreamOptions) {
+export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, webFilterComplianceMode, centralEnrichment, onDelta, onDone, onError, onStatus }: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const stripped = stripOmittedSections(sections);
@@ -271,7 +273,7 @@ export async function streamConfigParse({ sections, environment, country, custom
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance, centralEnrichment, reportType }),
+      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance, webFilterComplianceMode, centralEnrichment, reportType }),
     });
   } catch (e) {
     clearTimeout(timeoutId);

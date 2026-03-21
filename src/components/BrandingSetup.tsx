@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown } from "lucide-react";
+import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown, Filter } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,6 +15,7 @@ import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadSavedReportsCloud, loadSavedReportsLocal } from "@/lib/saved-reports";
 import { getCachedTenants, getEffectiveTenantDisplayName, type CentralTenant } from "@/lib/sophos-central";
+import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 
 export const ENVIRONMENT_TYPES = [
   "Education",
@@ -160,6 +161,10 @@ export type BrandingData = {
   accentColor?: string;
   /** When true, adds "Confidential" watermark to PDF export */
   confidential?: boolean;
+  /** WAN web-filter gap finding severity: strict (default) vs informational for scoped assessments */
+  webFilterComplianceMode?: WebFilterComplianceMode;
+  /** Firewall rule names excluded from missing-web-filter compliance check */
+  webFilterExemptRuleNames?: string[];
 };
 
 type Props = {
@@ -437,6 +442,35 @@ export function BrandingSetup({ branding, onChange }: Props) {
         </Select>
         <p className="text-xs text-muted-foreground">
           Best practice recommendations will focus on compliance requirements for this sector.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="web-filter-compliance" className="flex items-center gap-2">
+          <Filter className="h-4 w-4" /> Web filter compliance
+        </Label>
+        <Select
+          value={branding.webFilterComplianceMode ?? "strict"}
+          onValueChange={(v) =>
+            onChange({
+              ...branding,
+              webFilterComplianceMode: v as WebFilterComplianceMode,
+            })
+          }
+        >
+          <SelectTrigger id="web-filter-compliance" className="max-w-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="strict">Strict</SelectItem>
+            <SelectItem value="informational">Informational</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          <strong>Strict</strong> (default): WAN rules without web filtering surface as stronger findings.{" "}
+          <strong>Informational</strong>: same checks with lower severity for scoped assessments; compliance
+          report narrative avoids overstating regulatory failure for web-filter gaps unless a selected framework
+          clearly requires it.
         </p>
       </div>
 
