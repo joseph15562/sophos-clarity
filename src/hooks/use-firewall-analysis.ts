@@ -10,17 +10,18 @@ type ParsedFile = {
   centralEnrichment?: { licences?: unknown } | null;
 };
 
-export function useFirewallAnalysis(files: ParsedFile[]) {
+export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string[]) {
   const analysisResults = useMemo<Record<string, AnalysisResult>>(() => {
     const results: Record<string, AnalysisResult> = {};
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
       results[label] = analyseConfig(f.extractedData, {
         centralLinked: !!f.centralEnrichment,
+        dpiExemptZones,
       });
     }
     return results;
-  }, [files]);
+  }, [files, dpiExemptZones]);
 
   const totalFindings = useMemo(
     () => Object.values(analysisResults).reduce((sum, r) => sum + r.findings.length, 0),

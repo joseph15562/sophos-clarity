@@ -21,6 +21,7 @@ import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { FileUpload, type UploadedFile } from "@/components/FileUpload";
 import { HealthCheckDashboard } from "@/components/HealthCheckDashboard";
+import { DpiExclusionBar } from "@/components/DpiExclusionBar";
 import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,6 +81,7 @@ function HealthCheckInner() {
   const [tenantOptions, setTenantOptions] = useState<GuestTenantRow[]>([]);
   const [firewallOptions, setFirewallOptions] = useState<GuestFirewallRow[]>([]);
   const [licence, setLicence] = useState<LicenceSelection>({ tier: "xstream", modules: [] });
+  const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
 
   const baselineResults = useMemo(() => {
     const out: Record<string, ReturnType<typeof evaluateBaseline>> = {};
@@ -97,10 +99,10 @@ function HealthCheckInner() {
     const next: Record<string, AnalysisResult> = {};
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm|xml)$/i, "");
-      next[label] = analyseConfig(f.extractedData, { centralLinked: centralValidated });
+      next[label] = analyseConfig(f.extractedData, { centralLinked: centralValidated, dpiExemptZones });
     }
     setAnalysisResults(next);
-  }, [files, centralValidated]);
+  }, [files, centralValidated, dpiExemptZones]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
@@ -566,6 +568,8 @@ function HealthCheckInner() {
                 {savingCheck ? "Saving…" : "Save health check"}
               </Button>
             </div>
+
+            <DpiExclusionBar zones={dpiExemptZones} onChange={setDpiExemptZones} />
 
             <HealthCheckDashboard
               files={files}

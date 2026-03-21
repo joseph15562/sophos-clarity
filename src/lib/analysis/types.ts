@@ -92,6 +92,7 @@ export interface AnalysisResult {
 
 export interface AnalyseOptions {
   centralLinked?: boolean;
+  dpiExemptZones?: string[];
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {

@@ -206,19 +206,26 @@ function parseSslTlsRules(sections: ExtractedSections): SslTlsRule[] {
   return rules;
 }
 
+const DPI_EXEMPT_ZONE = /guest|iot|byod|printer|camera|cctv|voip|phone|sip|dmz|server|red/i;
+
 /**
  * Cross-reference firewall WAN rules with SSL/TLS Decrypt rules.
  * Returns source zones that have firewall rules going to WAN
  * but are NOT covered by any enabled Decrypt SSL/TLS rule.
+ * Zones where certificate deployment is impractical (guest, IoT, RED,
+ * BYOD, servers, VoIP, cameras, etc.) are excluded automatically,
+ * plus any user-specified custom exempt zones.
  */
 function findUncoveredZones(
   wanRules: Array<{ name: string; row: Record<string, string>; enabled: boolean }>,
   sslRules: SslTlsRule[],
+  customExemptZones?: string[],
 ): string[] {
   const decryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled);
   if (decryptRules.length === 0) return [];
 
-  // Build set of source zones used by enabled firewall WAN rules
+  const customSet = new Set((customExemptZones ?? []).map((z) => z.toLowerCase().trim()));
+
   const fwSourceZones = new Set<string>();
   for (const { row, enabled } of wanRules) {
     if (!enabled) continue;
@@ -235,9 +242,11 @@ function findUncoveredZones(
 
   if (fwSourceZones.size === 0) return [];
 
-  // Check which FW source zones are covered by a Decrypt rule destined for WAN
   const uncovered: string[] = [];
   for (const zone of fwSourceZones) {
+    if (DPI_EXEMPT_ZONE.test(zone)) continue;
+    if (customSet.has(zone)) continue;
+
     const isCovered = decryptRules.some((r) => {
       const srcMatch = r.sourceZones.includes("any") || r.sourceZones.includes(zone);
       const dstMatch = r.destZones.includes("any") || r.destZones.some((d) => d.includes("wan"));
@@ -399,7 +408,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const sslDecryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled).length;
   const sslExclusionRules = sslRules.filter((r) => r.action === "exclude").length;
   const dpiEngineEnabled = sslDecryptRules > 0;
-  const sslUncoveredZones = findUncoveredZones(wanRules, sslRules);
+  const sslUncoveredZones = findUncoveredZones(wanRules, sslRules, options?.dpiExemptZones);
 
   const inspectionPosture: InspectionPosture = {
     totalWanRules: wanRules.length,
@@ -636,8 +645,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     findings.push({
       id: `f${++fid}`,
       severity: "high",
-      title: `${sslUncoveredZones.length} source zone${sslUncoveredZones.length > 1 ? "s" : ""} not covered by SSL/TLS Decrypt rules`,
-      detail: `Firewall rules send traffic from ${zoneList} to WAN, but no SSL/TLS Decrypt rule covers ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}. Encrypted traffic from ${zoneList} bypasses DPI — web filtering, IPS, and app control cannot inspect it.`,
+      title: `${sslUncoveredZones.length} managed zone${sslUncoveredZones.length > 1 ? "s" : ""} not covered by SSL/TLS Decrypt rules`,
+      detail: `Firewall rules send traffic from ${zoneList} to WAN, but no SSL/TLS Decrypt rule covers ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}. Encrypted traffic from ${zoneList} bypasses DPI — web filtering, IPS, and app control cannot inspect it. Guest, IoT, RED, and other zones where certificate deployment is impractical are excluded from this check.`,
       section: "SSL/TLS Inspection",
       remediation: `Go to Rules and policies > SSL/TLS inspection rules. Add or update a Decrypt rule to include ${zoneList} as source zone${sslUncoveredZones.length > 1 ? "s" : ""}. Ensure the signing CA certificate is deployed to all endpoints in ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}.`,
       confidence: "high",
