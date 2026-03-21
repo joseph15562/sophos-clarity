@@ -470,13 +470,20 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const enabledWanRules = wanRules.filter((r) => r.enabled);
   const disabledWanRules = wanRules.filter((r) => !r.enabled);
 
+  /** Rule names MSP/SE excluded from web-filter compliance — omit from posture ratio (matches finding scope). */
+  const wfExempt = new Set(
+    (options?.webFilterExemptRuleNames ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
+  );
+
   let webFilterableRules = 0, withWebFilter = 0, withoutWebFilter = 0;
   let withAppControl = 0, withIps = 0, withSslInspection = 0;
-  for (const { row, enabled } of wanRules) {
+  for (const { name, row, enabled } of wanRules) {
     if (!enabled) continue; // only score enabled rules
     if (isWebService(row)) {
-      webFilterableRules++;
-      if (hasWebFilter(row)) withWebFilter++; else withoutWebFilter++;
+      if (!wfExempt.has(name.toLowerCase().trim())) {
+        webFilterableRules++;
+        if (hasWebFilter(row)) withWebFilter++; else withoutWebFilter++;
+      }
     }
     if (hasAppControl(row)) withAppControl++;
     if (hasIps(row)) withIps++;
@@ -492,9 +499,6 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     findUncoveredNetworks(wanRules, sslRules, options?.dpiExemptNetworks);
 
   const wfMode = options?.webFilterComplianceMode ?? "strict";
-  const wfExempt = new Set(
-    (options?.webFilterExemptRuleNames ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
-  );
 
   const wanMissingWebFilterRuleNames = wanRules
     .filter((w) => w.enabled && isWebService(w.row) && !hasWebFilter(w.row))

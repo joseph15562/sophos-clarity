@@ -78,12 +78,14 @@ const REQUIREMENTS = {
       `Web filter coverage ≥ ${minPct}%`,
       (r) => {
         const ip = r.inspectionPosture;
-        if (ip.webFilterableRules === 0) return { met: true, detail: "No web-filterable rules — N/A" };
+        if (ip.webFilterableRules === 0) {
+          return { met: true, detail: "No in-scope web-filterable rules — N/A" };
+        }
         const pct = Math.round((ip.withWebFilter / ip.webFilterableRules) * 100);
         const met = pct >= minPct;
         return {
           met,
-          detail: `${ip.withWebFilter}/${ip.webFilterableRules} rules have web filtering (${pct}%)`,
+          detail: `${ip.withWebFilter}/${ip.webFilterableRules} in-scope rules have web filtering (${pct}%)`,
         };
       },
     ),

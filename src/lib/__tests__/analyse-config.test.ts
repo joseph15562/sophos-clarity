@@ -134,6 +134,43 @@ describe("analyseConfig", () => {
       expect(finding).toBeDefined();
     });
 
+    it("omits webFilterExemptRuleNames from posture web-filter counts (baseline / BP score scope)", () => {
+      const sections = buildSections({
+        "Firewall Rules": buildFirewallRulesSection([
+          {
+            "Rule Name": "InScope",
+            "Source Zone": "LAN",
+            "Destination Zones": "WAN",
+            Service: "HTTP",
+            Log: "Enabled",
+            Status: "On",
+            "Web Filter": "Default",
+            IPS: "Default",
+            "Application Control": "Default",
+          },
+          {
+            "Rule Name": "Excluded-By-MSP",
+            "Source Zone": "LAN",
+            "Destination Zones": "WAN",
+            Service: "HTTP",
+            Log: "Enabled",
+            Status: "On",
+            "Web Filter": "",
+            IPS: "Default",
+            "Application Control": "Default",
+          },
+        ]),
+      });
+      const result = analyseConfig(sections, { webFilterExemptRuleNames: ["Excluded-By-MSP"] });
+      expect(result.inspectionPosture.webFilterableRules).toBe(1);
+      expect(result.inspectionPosture.withWebFilter).toBe(1);
+      expect(result.inspectionPosture.withoutWebFilter).toBe(0);
+      const finding = result.findings.find(
+        (f) => f.title.includes("missing web filtering") && f.section === "Firewall Rules",
+      );
+      expect(finding).toBeUndefined();
+    });
+
     it("does NOT flag LAN-to-LAN rules without web filter", () => {
       const sections = buildSections({
         "Firewall Rules": buildFirewallRulesSection([
