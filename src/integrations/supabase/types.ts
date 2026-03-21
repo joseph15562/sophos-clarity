@@ -275,9 +275,9 @@ export type Database = {
         ]
       }
       shared_reports: {
-        Row: { id: string; org_id: string; share_token: string; markdown: string; customer_name: string; created_by: string | null; expires_at: string; created_at: string; allow_download: boolean }
-        Insert: { id?: string; org_id: string; share_token: string; markdown: string; customer_name?: string; created_by?: string | null; expires_at: string; created_at?: string; allow_download?: boolean }
-        Update: { id?: string; org_id?: string; share_token?: string; markdown?: string; customer_name?: string; created_by?: string | null; expires_at?: string; created_at?: string; allow_download?: boolean }
+        Row: { id: string; org_id: string; share_token: string; markdown: string; customer_name: string; created_by: string | null; expires_at: string; created_at: string; allow_download: boolean; advisor_notes: string | null }
+        Insert: { id?: string; org_id: string; share_token: string; markdown: string; customer_name?: string; created_by?: string | null; expires_at: string; created_at?: string; allow_download?: boolean; advisor_notes?: string | null }
+        Update: { id?: string; org_id?: string; share_token?: string; markdown?: string; customer_name?: string; created_by?: string | null; expires_at?: string; created_at?: string; allow_download?: boolean; advisor_notes?: string | null }
         Relationships: [
           { foreignKeyName: "shared_reports_org_id_fkey"; columns: ["org_id"]; referencedRelation: "organisations"; referencedColumns: ["id"] },
         ]

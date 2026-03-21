@@ -405,3 +405,144 @@ export function startPowerUserTour() {
   ]);
   t.drive();
 }
+
+// ---------------------------------------------------------------------------
+// Micro-tours — short contextual spotlights per analysis tab
+// ---------------------------------------------------------------------------
+
+const MICRO_TOUR_PREFIX = "firecomply-micro-tour-tab-";
+
+function hasMicroTourRun(tab: string): boolean {
+  try {
+    return localStorage.getItem(MICRO_TOUR_PREFIX + tab) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markMicroTourRun(tab: string): void {
+  try {
+    localStorage.setItem(MICRO_TOUR_PREFIX + tab, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+const MICRO_TOUR_STEPS: Record<string, DriveStep[]> = {
+  overview: [
+    {
+      element: sel("widget-customiser"),
+      popover: {
+        title: "Customise Widgets",
+        description:
+          "Turn on more Overview widgets — Assessment Pulse, Quick Actions, Findings by Age, and more.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+    {
+      element: sel("export-buttons"),
+      popover: {
+        title: "Export Options",
+        description: "Export your risk register as CSV, Excel, or interactive HTML for offline review.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+  ],
+  security: [
+    {
+      element: sel("widget-customiser"),
+      popover: {
+        title: "Security Widgets",
+        description:
+          "Enable Category Score Bars, Coverage Matrix, Finding Heatmap, and more from the widget menu.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+  ],
+  compliance: [
+    {
+      element: sel("sophos-best-practice"),
+      popover: {
+        title: "Sophos Best Practice",
+        description:
+          "Automatic checks against Sophos recommended configuration — scored by licence tier.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  optimisation: [
+    {
+      element: sel("widget-customiser"),
+      popover: {
+        title: "Optimisation Widgets",
+        description: "Enable Config Complexity, Unused Objects, and Rule Analysis widgets.",
+        side: "bottom",
+        align: "center",
+      },
+    },
+  ],
+  tools: [
+    {
+      element: sel("compare-baseline"),
+      popover: {
+        title: "Compare to Baseline",
+        description: "Compare your current config against a saved baseline to detect drift.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+  remediation: [
+    {
+      element: sel("remediation-playbooks"),
+      popover: {
+        title: "Remediation Playbooks",
+        description: "Step-by-step guides to fix each finding, with severity and impact context.",
+        side: "top",
+        align: "center",
+      },
+    },
+  ],
+};
+
+export function startMicroTourForTab(tab: string): void {
+  if (hasMicroTourRun(tab)) return;
+  const steps = MICRO_TOUR_STEPS[tab];
+  if (!steps || steps.length === 0) return;
+
+  const visible = filterVisible(steps);
+  if (visible.length === 0) return;
+
+  const t = driver({
+    showProgress: visible.length > 1,
+    animate: true,
+    overlayColor: "rgba(0,0,0,0.5)",
+    stagePadding: 8,
+    stageRadius: 10,
+    popoverOffset: 12,
+    progressText: "{{current}} / {{total}}",
+    nextBtnText: "Next →",
+    prevBtnText: "← Back",
+    doneBtnText: "Got it",
+    steps: visible,
+    onDestroyed: () => markMicroTourRun(tab),
+  });
+  t.drive();
+}
+
+// ---------------------------------------------------------------------------
+// Health Check Tour
+// ---------------------------------------------------------------------------
+export function startHealthCheckTour(): void {
+  const t = createTour([
+    { element: sel("health-check"), popover: { title: "Sophos SE Health Check", description: "A dedicated tool for Sophos Sales Engineers to run best-practice health checks on customer firewalls.", side: "bottom", align: "center" } },
+    { element: sel("hc-upload"), popover: { title: "Upload Config", description: "Drop in a customer's HTML config viewer export — no full XML needed.", side: "bottom", align: "center" } },
+    { element: sel("hc-central"), popover: { title: "Customer Central API", description: "Enter the customer's Sophos Central API credentials to pull firewall data directly. Credentials are session-only and never stored.", side: "bottom", align: "center" } },
+    { element: sel("hc-proxy"), popover: { title: "API Proxy (Coming Soon)", description: "When Sophos ships the Central API proxy, run live health checks directly — no config export needed.", side: "bottom", align: "center" } },
+  ]);
+  t.drive();
+}

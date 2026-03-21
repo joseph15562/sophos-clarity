@@ -41,8 +41,13 @@ const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ d
 const AIChatPanel = lazy(() => import("@/components/AIChatPanel").then((m) => ({ default: m.AIChatPanel })));
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { saveFindingSnapshot } from "@/lib/finding-snapshots";
-import { saveScoreSnapshot } from "@/lib/score-history";
+import { saveScoreSnapshot, loadScoreHistoryForFleet } from "@/lib/score-history";
 import { saveConfigSnapshot, hashConfig } from "@/lib/config-snapshots";
+import { checkMilestones } from "@/lib/milestone-toasts";
+import { downloadRiskRegisterCSV } from "@/lib/risk-register";
+import { downloadInteractiveHtml } from "@/lib/analysis-interactive-html";
+import { ProgressNarrative } from "@/components/ProgressNarrative";
+import { QbrPackChecklist } from "@/components/QbrPackChecklist";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -175,6 +180,14 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         risk.categories.map((c) => ({ label: c.label, score: c.pct })),
         result.findings.length,
       );
+    }
+
+    const entries = Object.entries(analysisResults);
+    if (entries.length > 0) {
+      const firstRisk = computeRiskScore(entries[0][1]);
+      loadScoreHistoryForFleet(org.id, 100).then((history) => {
+        checkMilestones(firstRisk.overall, firstRisk.grade, history.length);
+      }).catch(() => {});
     }
   }, [analysisResults, isGuest, org?.id, branding.customerName]);
 
@@ -453,12 +466,27 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           logAudit(org.id, includeReports ? "report.saved" : "assessment.saved", "report", branding.customerName, { reportCount: reportEntries.length });
         }
         addNotification("success", includeReports ? "Reports Saved" : "Assessment Saved", `${branding.customerName || "Assessment"} saved successfully with ${reportEntries.length} report${reportEntries.length !== 1 ? "s" : ""}.`);
+
+        const hasCompliance = reportEntries.some((r) => r.id.startsWith("compliance"));
+        const hasExecutive = reportEntries.some((r) => r.id.startsWith("executive"));
+        if (!hasCompliance || !hasExecutive) {
+          const suggestions: string[] = [];
+          if (!hasExecutive && files.length >= 2) suggestions.push("Executive Brief");
+          if (!hasCompliance) suggestions.push("Compliance Report");
+          if (suggestions.length > 0) {
+            toast("More reports available", {
+              description: `Generate a ${suggestions.join(" or ")} to complete your pack.`,
+              duration: 6000,
+              action: { label: "Generate All", onClick: () => { setViewingReports(true); generateAll(); } },
+            });
+          }
+        }
       }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Save failed");
     }
     setSavingReports(false);
-  }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment]);
+  }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment, files.length, generateAll]);
 
   const handleLoadSavedReports = useCallback((args: LoadSavedReportArgs) => {
     const { reports: savedReports, customerName, environment, analysisSummary } = args;
@@ -708,6 +736,30 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               totalFindings={totalFindings}
               isViewerOnly={isViewerOnly}
             />
+            {hasFiles && !isGuest && org?.id && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <ProgressNarrative
+                  orgId={org.id}
+                  currentResults={analysisResults}
+                  customerName={branding.customerName || "Customer"}
+                />
+                <QbrPackChecklist
+                  fileCount={files.length}
+                  hasReports={reports.some((r) => r.id === "report-executive" && (r.markdown?.trim().length ?? 0) > 0)}
+                  hasCompliance={reports.some((r) => r.id === "report-compliance" && (r.markdown?.trim().length ?? 0) > 0)}
+                  onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
+                  onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
+                  onExportRiskRegister={() => downloadRiskRegisterCSV(analysisResults, branding.customerName)}
+                  onExportInteractiveHtml={() =>
+                    downloadInteractiveHtml(analysisResults, {
+                      customerName: branding.customerName,
+                      mspName: branding.companyName,
+                      logoUrl: branding.logoUrl ?? undefined,
+                    })
+                  }
+                />
+              </div>
+            )}
             {hasFiles && (
               <AnalysisTabs
                 analysisResult={analysisResults}
@@ -729,6 +781,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                 setProjectedScore={setProjectedScore}
                 isGuest={isGuest}
                 localMode={localMode}
+                orgId={org?.id ?? ""}
                 onExplainFinding={(title) => {
                   setAiChatOpen(true);
                   setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);

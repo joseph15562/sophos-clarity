@@ -4,12 +4,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { EstateOverview } from "@/components/EstateOverview";
+import { ReportUpsellStrip } from "@/components/ReportUpsellStrip";
 import { FindingsChanges } from "@/components/FindingsChanges";
 import { PriorityActions } from "@/components/PriorityActions";
 import { SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 import { WidgetCustomiser } from "@/components/WidgetCustomiser";
 import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
+import { downloadInteractiveHtml } from "@/lib/analysis-interactive-html";
 import { loadWidgetPreferences, isWidgetVisible, type WidgetPreferences } from "@/lib/widget-preferences";
+import { startMicroTourForTab } from "@/lib/guided-tours";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { InspectionPosture } from "@/lib/analyse-config";
 import type { BrandingData } from "@/components/BrandingSetup";
@@ -73,6 +76,7 @@ const RemediationProgress = lazy(() => import("@/components/RemediationProgress"
 const ThreatFeedTimeline = lazy(() => import("@/components/ThreatFeedTimeline").then((m) => ({ default: m.ThreatFeedTimeline })));
 const MdrStatus = lazy(() => import("@/components/MdrStatus").then((m) => ({ default: m.MdrStatus })));
 const FirmwareTracker = lazy(() => import("@/components/FirmwareTracker").then((m) => ({ default: m.FirmwareTracker })));
+const AssessmentPulse = lazy(() => import("@/components/AssessmentPulse").then((m) => ({ default: m.AssessmentPulse })));
 const EvidenceCollection = lazy(() => import("@/components/EvidenceCollection").then((m) => ({ default: m.EvidenceCollection })));
 const ComplianceCalendar = lazy(() => import("@/components/ComplianceCalendar").then((m) => ({ default: m.ComplianceCalendar })));
 const AttestationWorkflow = lazy(() => import("@/components/AttestationWorkflow").then((m) => ({ default: m.AttestationWorkflow })));
@@ -113,6 +117,8 @@ export interface AnalysisTabsProps {
   isGuest: boolean;
   localMode: boolean;
   onExplainFinding: (title: string) => void;
+  /** Organisation id for score-history widgets (authenticated). */
+  orgId?: string;
 }
 
 function fileLabel(f: ParsedFile) {
@@ -140,6 +146,7 @@ export function AnalysisTabs({
   isGuest,
   localMode,
   onExplainFinding,
+  orgId = "",
 }: AnalysisTabsProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
@@ -149,6 +156,12 @@ export function AnalysisTabs({
     const t = setTimeout(() => panelRef.current?.focus(), 0);
     return () => clearTimeout(t);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (Object.keys(analysisResult).length === 0) return;
+    const timer = setTimeout(() => startMicroTourForTab(activeTab), 500);
+    return () => clearTimeout(timer);
+  }, [activeTab, analysisResult]);
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -216,6 +229,24 @@ export function AnalysisTabs({
             <RiskSummaryCards analysisResults={analysisResult} />
           </Suspense>
 
+          <ReportUpsellStrip
+            fileCount={files.length}
+            averageScore={securityStats?.score}
+            hasComplianceFrameworks={branding.selectedFrameworks.length > 0}
+            isGuest={isGuest}
+          />
+
+          {w("assessment-pulse") && (
+            <Suspense fallback={<CardSkeleton />}>
+              <AssessmentPulse
+                orgId={orgId}
+                currentScore={securityStats?.score}
+                currentGrade={securityStats?.grade}
+                isGuest={isGuest}
+              />
+            </Suspense>
+          )}
+
           {w("quick-actions") && (
             <Suspense fallback={null}>
               <QuickActions onNavigate={setActiveTab} />
@@ -243,6 +274,16 @@ export function AnalysisTabs({
               >
                 <Download className="h-3.5 w-3.5" />
                 Export Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadInteractiveHtml(analysisResult, { customerName: branding.customerName, mspName: branding.companyName, logoUrl: branding.logoUrl ?? undefined })}
+                className="gap-1.5 text-xs"
+                data-tour="export-interactive-html"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export Interactive HTML
               </Button>
             </div>
           )}

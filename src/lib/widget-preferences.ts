@@ -17,6 +17,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   { id: "assessment-countdown", label: "Assessment Countdown",    tab: "overview",      isDefault: false },
   { id: "mdr-status",           label: "MDR Status",              tab: "overview",      isDefault: false },
   { id: "firmware-tracker",     label: "Firmware Tracker",        tab: "overview",      isDefault: false },
+  { id: "assessment-pulse",    label: "Assessment Pulse",        tab: "overview",      isDefault: true },
 
   // ── Security ──
   { id: "category-score-bars",  label: "Category Score Bars",     tab: "security",      isDefault: false },

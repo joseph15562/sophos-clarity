@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BrandingData } from "./BrandingSetup";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
@@ -6,6 +6,7 @@ import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { mapToFramework, type FrameworkMapping } from "@/lib/compliance-map";
 import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Share2, Copy, Bug, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -374,19 +375,22 @@ function ShareReportDialog({
   onCopy,
   onCreateLink,
   markdown,
-  customerName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shareUrl: string;
   expiresAt: string;
   onCopy: () => void;
-  onCreateLink?: (allowDownload: boolean) => Promise<void>;
+  onCreateLink?: (allowDownload: boolean, advisorNotes?: string) => Promise<void>;
   markdown?: string;
-  customerName?: string;
 }) {
   const [allowDownload, setAllowDownload] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [advisorNotes, setAdvisorNotes] = useState("");
+
+  useEffect(() => {
+    if (!open) setAdvisorNotes("");
+  }, [open]);
 
   const hasLink = shareUrl.length > 0;
 
@@ -415,13 +419,27 @@ function ShareReportDialog({
               />
               Allow recipients to download/export (Word, PDF)
             </label>
+            <div className="space-y-1.5">
+              <label htmlFor="share-advisor-notes" className="text-xs font-medium text-foreground">
+                Note for your customer (optional)
+              </label>
+              <Textarea
+                id="share-advisor-notes"
+                value={advisorNotes}
+                onChange={(e) => setAdvisorNotes(e.target.value)}
+                placeholder="Short context for the recipient — appears at the top of the shared report."
+                className="min-h-[72px] text-sm resize-y"
+                maxLength={2000}
+              />
+            </div>
             <Button
               className="w-full gap-2"
               disabled={creating}
               onClick={async () => {
                 setCreating(true);
                 try {
-                  await onCreateLink(allowDownload);
+                  const note = advisorNotes.trim();
+                  await onCreateLink(allowDownload, note || undefined);
                 } finally {
                   setCreating(false);
                 }
@@ -509,9 +527,9 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     setShareOpen(true);
   };
 
-  const handleCreateShareLink = async (allowDownload: boolean) => {
+  const handleCreateShareLink = async (allowDownload: boolean, advisorNotes?: string) => {
     const token = generateShareToken();
-    const report = await saveSharedReport(token, markdown, branding.customerName || "Customer", 7, allowDownload);
+    const report = await saveSharedReport(token, markdown, branding.customerName || "Customer", 7, allowDownload, advisorNotes);
     setShareUrl(`${window.location.origin}/shared/${token}`);
     setShareExpiresAt(report.expiresAt);
   };
@@ -562,7 +580,6 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
         onCopy={handleCopyShareUrl}
         onCreateLink={handleCreateShareLink}
         markdown={markdown}
-        customerName={branding.customerName}
       />
 
       {/* Enterprise document studio shell */}

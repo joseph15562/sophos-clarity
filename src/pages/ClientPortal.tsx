@@ -7,7 +7,7 @@
  *  - Optional viewer-role authentication for richer data access
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -23,6 +23,8 @@ import {
   Mail,
   Phone,
   Info,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +74,14 @@ interface PortalFinding {
   severity: Severity;
 }
 
+interface PortalFindingRich extends PortalFinding {
+  section?: string;
+  detail?: string;
+  remediation?: string;
+  evidence?: string;
+  confidence?: string;
+}
+
 interface FrameworkCompliance {
   framework: string;
   pass: number;
@@ -100,6 +110,7 @@ interface PortalFirewall {
   grade: string | null;
   lastSeen: string | null;
   lastAssessed: string | null;
+  findingsRich?: PortalFindingRich[];
 }
 
 const UUID_RE =
@@ -310,6 +321,9 @@ export default function ClientPortal() {
   const [orgId, setOrgId] = useState<string>("");
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [portalFirewalls, setPortalFirewalls] = useState<PortalFirewall[]>([]);
+  const [expandedFindingIds, setExpandedFindingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   // Auth state
   const [authUser, setAuthUser] = useState<{ email: string } | null>(null);
@@ -460,6 +474,38 @@ export default function ClientPortal() {
     });
   };
 
+  const toggleFindingRow = (rowKey: string) => {
+    setExpandedFindingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowKey)) next.delete(rowKey);
+      else next.add(rowKey);
+      return next;
+    });
+  };
+
+  type MergedRichFinding = PortalFindingRich & {
+    rowKey: string;
+    firewallLabel?: string;
+  };
+
+  const mergedRichFindings = useMemo((): MergedRichFinding[] | null => {
+    const rows: MergedRichFinding[] = [];
+    const showFirewall = portalFirewalls.length > 1;
+    for (const fw of portalFirewalls) {
+      const rich = fw.findingsRich;
+      if (!rich?.length) continue;
+      for (const f of rich) {
+        rows.push({
+          ...f,
+          severity: (f.severity as Severity) ?? "info",
+          rowKey: `${fw.agentId}:${f.id}`,
+          ...(showFirewall ? { firewallLabel: fw.label } : {}),
+        });
+      }
+    }
+    return rows.length > 0 ? rows : null;
+  }, [portalFirewalls]);
+
   const handleFeedbackSubmit = () => {
     toast({
       title: "Thank you",
@@ -516,6 +562,8 @@ export default function ClientPortal() {
   const latest = historyReversed[0];
   const previous = historyReversed[1];
   const filteredFindings = findings.filter((f) => severityFilter.has(f.severity));
+  const filteredRichFindings =
+    mergedRichFindings?.filter((f) => severityFilter.has(f.severity)) ?? null;
   const showBranding = branding?.showBranding !== false;
 
   return (
@@ -854,7 +902,152 @@ export default function ClientPortal() {
                   </Badge>
                 ))}
               </div>
-              {findings.length === 0 ? (
+              {findings.length === 0 && !mergedRichFindings?.length ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  No findings data available.
+                </p>
+              ) : mergedRichFindings && filteredRichFindings ? (
+                filteredRichFindings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">
+                    No findings match the selected filters.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10" aria-hidden />
+                        <TableHead>Severity</TableHead>
+                        <TableHead>Finding</TableHead>
+                        {portalFirewalls.length > 1 && (
+                          <TableHead>Firewall</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRichFindings.map((f) => {
+                        const open = expandedFindingIds.has(f.rowKey);
+                        const colSpan =
+                          portalFirewalls.length > 1 ? 4 : 3;
+                        return (
+                          <Fragment key={f.rowKey}>
+                            <TableRow
+                              className={cn(
+                                "cursor-pointer transition-colors duration-200 hover:bg-muted/40",
+                              )}
+                              onClick={() => toggleFindingRow(f.rowKey)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  toggleFindingRow(f.rowKey);
+                                }
+                              }}
+                              tabIndex={0}
+                              aria-expanded={open}
+                            >
+                              <TableCell className="w-10 align-middle">
+                                <span className="inline-flex text-muted-foreground transition-transform duration-200">
+                                  {open ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  className={cn(
+                                    "capitalize",
+                                    SEVERITY_COLORS[f.severity] ??
+                                      SEVERITY_COLORS.info,
+                                  )}
+                                >
+                                  {f.severity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-foreground">
+                                {f.title}
+                              </TableCell>
+                              {portalFirewalls.length > 1 && (
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {f.firewallLabel ?? "—"}
+                                </TableCell>
+                              )}
+                            </TableRow>
+                            <TableRow
+                              className="border-0 hover:bg-transparent"
+                              aria-hidden={!open}
+                            >
+                              <TableCell colSpan={colSpan} className="p-0">
+                                <div
+                                  className={cn(
+                                    "overflow-hidden transition-all duration-200 ease-in-out",
+                                    open
+                                      ? "max-h-[min(80vh,2400px)] opacity-100"
+                                      : "max-h-0 opacity-0",
+                                  )}
+                                >
+                                  <div className="rounded-md bg-muted/30 border border-border/60 p-3 mx-2 mb-2 space-y-3 text-sm transition-opacity duration-200">
+                                    {f.section && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-0.5">
+                                          Section
+                                        </p>
+                                        <p className="text-foreground">
+                                          {f.section}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {f.detail && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-0.5">
+                                          Detail
+                                        </p>
+                                        <p className="text-foreground whitespace-pre-wrap">
+                                          {f.detail}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {f.remediation && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-0.5">
+                                          Remediation
+                                        </p>
+                                        <p className="text-foreground whitespace-pre-wrap">
+                                          {f.remediation}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {f.evidence && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-0.5">
+                                          Evidence
+                                        </p>
+                                        <pre className="text-xs text-foreground font-mono whitespace-pre-wrap break-words">
+                                          {f.evidence}
+                                        </pre>
+                                      </div>
+                                    )}
+                                    {f.confidence && (
+                                      <div>
+                                        <p className="text-xs text-muted-foreground mb-0.5">
+                                          Confidence
+                                        </p>
+                                        <p className="text-foreground capitalize">
+                                          {f.confidence}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </Fragment>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )
+              ) : findings.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4">
                   No findings data available.
                 </p>

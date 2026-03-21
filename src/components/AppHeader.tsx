@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown, SlidersHorizontal, Cpu } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown, SlidersHorizontal, Cpu, Shield } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -264,6 +265,12 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               )}
               {org && !localMode && <CentralStatusDot orgId={org.id} />}
               {org && !localMode && <ConnectorStatus orgId={org.id} onOpenSetup={onOrgClick} />}
+              <Button variant="ghost" size="sm" className="inline-flex h-7 px-2 text-[10px] text-[#6A889B] hover:text-white hover:bg-[#10037C]/40 gap-1.5 shrink-0 max-sm:px-1.5" asChild>
+                <Link to="/health-check" data-tour="health-check-nav" title="SE Health Check">
+                  <Shield className="h-3 w-3 shrink-0" />
+                  <span className="hidden sm:inline">SE Health Check</span>
+                </Link>
+              </Button>
               {notificationSlot}
               <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
                 <User className="h-3 w-3 shrink-0" />

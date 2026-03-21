@@ -12,6 +12,8 @@ export interface SharedReport {
   createdAt: string;
   /** When false, shared link is view-only (no export/download). */
   allowDownload?: boolean;
+  /** Optional note from the advisor; shown on the shared report page. */
+  advisorNotes?: string;
 }
 
 const STORAGE_PREFIX = "sophos-shared-report:";
@@ -38,11 +40,13 @@ export async function saveSharedReport(
   reportMarkdown: string,
   customerName: string,
   expiresInDays = 7,
-  allowDownload = true
+  allowDownload = true,
+  advisorNotes?: string,
 ): Promise<SharedReport> {
   const now = new Date();
   const expiresAt = new Date(now);
   expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+  const notes = advisorNotes?.trim() || undefined;
 
   const report: SharedReport = {
     token,
@@ -51,6 +55,7 @@ export async function saveSharedReport(
     expiresAt: expiresAt.toISOString(),
     createdAt: now.toISOString(),
     allowDownload,
+    advisorNotes: notes,
   };
 
   const ctx = await getOrgAndUser();
@@ -63,6 +68,7 @@ export async function saveSharedReport(
       created_by: ctx.userId,
       expires_at: expiresAt.toISOString(),
       allow_download: allowDownload,
+      advisor_notes: notes ?? null,
     } as Record<string, unknown>);
     if (!error) return report;
     console.warn("[share-report] Supabase insert failed, falling back to localStorage", error.message);
@@ -94,6 +100,7 @@ export async function loadSharedReport(token: string): Promise<SharedReport | nu
         expiresAt: data.expires_at,
         createdAt: data.created_at,
         allowDownload: data.allow_download !== false,
+        advisorNotes: typeof data.advisor_notes === "string" && data.advisor_notes.trim() ? data.advisor_notes : undefined,
       };
     }
     // 404 or 410 — fall through to localStorage

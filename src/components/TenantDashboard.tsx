@@ -10,6 +10,8 @@ import { useAuth } from "@/hooks/use-auth";
 type SortField = "customer" | "score" | "findings" | "date";
 type SortDir = "asc" | "desc";
 
+const STALE_ASSESSMENT_MS = 60 * 24 * 60 * 60 * 1000;
+
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#00995a] dark:text-[#00F2B3] bg-[#00995a]/10 dark:bg-[#00F2B3]/10",
   B: "text-[#009CFB] bg-[#009CFB]/10",
@@ -709,6 +711,7 @@ export function TenantDashboard() {
         {filtered.map((c) => {
           const isExpanded = expanded === c.latestSnapshot.id;
           const sparkColor = c.latestSnapshot.overallScore >= 75 ? "#00995a" : c.latestSnapshot.overallScore >= 50 ? "#F29400" : "#EA0022";
+          const assessmentStale = Date.now() - c.latestSnapshot.timestamp > STALE_ASSESSMENT_MS;
           return (
             <div key={c.latestSnapshot.id} className="rounded-lg border border-border bg-card overflow-hidden">
               <button onClick={() => setExpanded(isExpanded ? null : c.latestSnapshot.id)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors">
@@ -716,8 +719,16 @@ export function TenantDashboard() {
                   <span className="text-sm font-bold" style={{ color: sparkColor }}>{c.latestSnapshot.overallScore}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
+                    {assessmentStale && (
+                      <span
+                        className="text-[8px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/35 shrink-0"
+                        title="Last assessment was more than 60 days ago"
+                      >
+                        Overdue
+                      </span>
+                    )}
                     {agentCustomers.has(c.name) && (
                       <span className="flex items-center gap-0.5 text-[8px] px-1 py-0.5 rounded bg-[#6B5BFF]/10 text-[#6B5BFF] shrink-0" title={`Agent: ${agentCustomers.get(c.name)?.status}`}>
                         <Plug className="h-2 w-2" /> Agent

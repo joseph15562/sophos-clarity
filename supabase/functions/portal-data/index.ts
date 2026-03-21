@@ -26,6 +26,37 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+type PortalFindingRich = {
+  id: string;
+  title: string;
+  severity: string;
+  section?: string;
+  detail?: string;
+  remediation?: string;
+  evidence?: string;
+  confidence?: string;
+};
+
+function extractFindingsRich(fullAnalysis: unknown): PortalFindingRich[] {
+  if (!fullAnalysis || typeof fullAnalysis !== "object") return [];
+  const findings = (fullAnalysis as Record<string, unknown>).findings;
+  if (!Array.isArray(findings)) return [];
+  return findings.map((raw) => {
+    const f = raw as Record<string, unknown>;
+    const row: PortalFindingRich = {
+      id: String(f.id ?? crypto.randomUUID()),
+      title: String(f.title ?? f.message ?? ""),
+      severity: String(f.severity ?? "info"),
+    };
+    if (f.section != null) row.section = String(f.section);
+    if (f.detail != null) row.detail = String(f.detail);
+    if (f.remediation != null) row.remediation = String(f.remediation);
+    if (f.evidence != null) row.evidence = String(f.evidence);
+    if (f.confidence != null) row.confidence = String(f.confidence);
+    return row;
+  });
+}
+
 serve(async (req: Request) => {
   const cors = getCorsHeaders(req);
 
@@ -90,6 +121,8 @@ serve(async (req: Request) => {
       "feedback",
     ];
 
+    const includeDetailedFindings = visibleSections.includes("detailed_findings");
+
     // 2. Build data from agents + agent_submissions (tenant-filtered when applicable)
     let scoreHistory: Array<Record<string, unknown>> = [];
     let findings: Array<{ id: string; title: string; severity: string }> = [];
@@ -107,9 +140,13 @@ serve(async (req: Request) => {
         const agentIds = agents.map((a: Record<string, unknown>) => a.id as string);
 
         // Fetch latest submission per agent
+        const submissionSelect = includeDetailedFindings
+          ? "id, agent_id, overall_score, overall_grade, findings_summary, created_at, full_analysis"
+          : "id, agent_id, overall_score, overall_grade, findings_summary, created_at";
+
         const { data: submissions } = await admin
           .from("agent_submissions")
-          .select("id, agent_id, overall_score, overall_grade, findings_summary, created_at")
+          .select(submissionSelect)
           .eq("org_id", orgId)
           .in("agent_id", agentIds)
           .order("created_at", { ascending: false });
@@ -154,7 +191,7 @@ serve(async (req: Request) => {
         // Per-firewall breakdown for display
         firewallBreakdown = agents.map((agent: Record<string, unknown>) => {
           const latest = latestByAgent.get(agent.id as string);
-          return {
+          const base: Record<string, unknown> = {
             agentId: agent.id,
             label: agent.name ?? "Unnamed",
             serialNumber: agent.serial_number ?? null,
@@ -164,6 +201,10 @@ serve(async (req: Request) => {
             lastSeen: agent.last_seen_at ?? null,
             lastAssessed: latest ? (latest.created_at as string) : null,
           };
+          if (includeDetailedFindings) {
+            base.findingsRich = extractFindingsRich(latest?.full_analysis);
+          }
+          return base;
         });
       }
     } else {

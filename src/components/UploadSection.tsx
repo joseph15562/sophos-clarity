@@ -12,6 +12,7 @@ import type { OrgInfo } from "@/hooks/use-auth";
 import { Save } from "lucide-react";
 import { Suspense } from "react";
 import { FirewallLinker } from "@/components/FirewallLinker";
+import { WelcomeBackCard } from "@/components/WelcomeBackCard";
 
 export interface ParsingProgress {
   current: number;
@@ -105,6 +106,18 @@ export function UploadSection({
       )}
 
       {/* Guest sign-in prompt */}
+      {!hasFiles && org && !isGuest && (
+        <WelcomeBackCard
+          orgId={org.id}
+          onUpload={() => {
+            document.querySelector<HTMLElement>('[data-tour="step-upload"]')?.click();
+          }}
+          onLoadAgent={() => {
+            document.getElementById("firecomply-agent-fleet-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      )}
+
       {!hasFiles && isGuest && onShowAuth && (
         <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] px-5 py-4 flex items-center gap-4">
           <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
@@ -159,7 +172,7 @@ export function UploadSection({
 
         {/* Connected firewalls — add from agent fleet (authenticated only) */}
         {!isGuest && org && (
-          <>
+          <div id="firecomply-agent-fleet-panel">
             {hasFiles && (
               <div className="flex items-center gap-4 py-1">
                 <div className="flex-1 border-t border-border" />
@@ -181,7 +194,7 @@ export function UploadSection({
               filterTenantName={activeTenantName}
               loadedLabels={new Set(files.map((f) => f.label))}
             />
-          </>
+          </div>
         )}
       </section>
 

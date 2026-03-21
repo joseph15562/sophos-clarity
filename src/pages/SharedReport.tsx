@@ -151,6 +151,17 @@ const SharedReport = () => {
               </div>
             </div>
 
+            {report.advisorNotes?.trim() && (
+              <div className="mb-8 rounded-xl border-l-4 border-[#2006F7]/50 dark:border-[#00EDFF]/50 bg-muted/40 dark:bg-muted/25 px-5 py-4 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#2006F7] dark:text-[#009CFB]">
+                  Note from your advisor
+                </p>
+                <blockquote className="text-sm text-foreground leading-relaxed whitespace-pre-wrap border-0 m-0 pl-0">
+                  {report.advisorNotes.trim()}
+                </blockquote>
+              </div>
+            )}
+
             {/* TOC: same as main doc — collapsed by default, same button and nav styles */}
             {headings.length >= 3 && (
               <div className="no-print mb-4">

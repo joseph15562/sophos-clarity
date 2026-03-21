@@ -194,6 +194,120 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { mode, orgId } = body as { mode: string; orgId?: string };
 
+    // ── Guest SE health check (ephemeral credentials; never stored) ──
+    // Authorization must be the Supabase anon/publishable key (same as the web client).
+    if (mode === "guest_health_ping" || mode === "guest_health_tenants" || mode === "guest_health_firewalls") {
+      const publishable = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+      const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (!publishable || bearer !== publishable) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+
+      const { clientId, clientSecret, tenantId } = body as {
+        clientId?: string;
+        clientSecret?: string;
+        tenantId?: string;
+      };
+      if (!clientId?.trim() || !clientSecret?.trim()) {
+        return json({ error: "Missing clientId or clientSecret" }, 400);
+      }
+
+      const tokenRes = await getToken(clientId.trim(), clientSecret.trim());
+      const token = tokenRes.access_token;
+      const identity = await whoami(token);
+
+      if (mode === "guest_health_ping") {
+        return json({
+          ok: true,
+          partnerType: identity.idType,
+          partnerId: identity.id,
+          apiHosts: identity.apiHosts,
+        });
+      }
+
+      if (mode === "guest_health_tenants") {
+        if (identity.idType === "tenant") {
+          const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
+          let name = "(This tenant)";
+          try {
+            const tenantList = await fetchAllPages(
+              `${apiHost}/organization/v1/tenants`,
+              token,
+              { "X-Tenant-ID": identity.id },
+              1,
+            ) as Array<{ id: string; name?: string; showAs?: string }>;
+            const self = tenantList?.find((t) => t.id === identity.id);
+            if (self && (self.showAs ?? self.name)) name = (self.showAs ?? self.name) as string;
+          } catch (_) { /* optional name */ }
+          return json({
+            items: [{
+              id: identity.id,
+              name,
+              dataRegion: "",
+              apiHost,
+              billingType: "",
+            }],
+          });
+        }
+
+        const multiHeader = identity.idType === "partner"
+          ? { "X-Partner-ID": identity.id }
+          : { "X-Organization-ID": identity.id };
+        const endpoint = identity.idType === "partner"
+          ? `${SOPHOS_GLOBAL_URL}/partner/v1/tenants`
+          : `${SOPHOS_GLOBAL_URL}/organization/v1/tenants`;
+        const items = await fetchAllPages(endpoint, token, multiHeader) as Array<{
+          id: string;
+          name?: string;
+          showAs?: string;
+          dataRegion?: string;
+          apiHost?: string;
+          billingType?: string;
+        }>;
+        return json({
+          items: items.map((t) => ({
+            id: t.id,
+            name: t.showAs ?? t.name ?? "",
+            dataRegion: t.dataRegion ?? "",
+            apiHost: t.apiHost ?? "",
+            billingType: t.billingType ?? "",
+          })),
+        });
+      }
+
+      // guest_health_firewalls
+      if (!tenantId?.trim()) return json({ error: "Missing tenantId" }, 400);
+      const tid = tenantId.trim();
+
+      let apiHost: string;
+      if (identity.idType === "tenant") {
+        if (tid !== identity.id) {
+          return json({ error: "Tenant ID does not match this API client" }, 400);
+        }
+        apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
+      } else {
+        const multiHeader = identity.idType === "partner"
+          ? { "X-Partner-ID": identity.id }
+          : { "X-Organization-ID": identity.id };
+        const endpoint = identity.idType === "partner"
+          ? `${SOPHOS_GLOBAL_URL}/partner/v1/tenants`
+          : `${SOPHOS_GLOBAL_URL}/organization/v1/tenants`;
+        const items = await fetchAllPages(endpoint, token, multiHeader) as Array<{ id: string; apiHost?: string }>;
+        const row = items.find((t) => t.id === tid);
+        apiHost = row?.apiHost ?? "";
+        if (!apiHost) {
+          return json({ error: "Tenant not found or API host missing — check tenant ID" }, 400);
+        }
+      }
+
+      const fwItems = await fetchAllPages(
+        `${apiHost}/firewall/v1/firewalls`,
+        token,
+        { "X-Tenant-ID": tid },
+      );
+      return json({ items: fwItems });
+    }
+
     // ── Mode: connect ── validate + store credentials
     if (mode === "connect") {
       const { clientId, clientSecret } = body as { clientId: string; clientSecret: string };
