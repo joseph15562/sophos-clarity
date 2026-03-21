@@ -12,7 +12,7 @@ import { WidgetCustomiser } from "@/components/WidgetCustomiser";
 import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
 import { downloadInteractiveHtml } from "@/lib/analysis-interactive-html";
 import { loadWidgetPreferences, isWidgetVisible, type WidgetPreferences } from "@/lib/widget-preferences";
-import { startMicroTourForTab } from "@/lib/guided-tours";
+import { TourHint } from "@/components/TourHint";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { InspectionPosture } from "@/lib/analyse-config";
 import type { BrandingData } from "@/components/BrandingSetup";
@@ -157,16 +157,17 @@ export function AnalysisTabs({
     return () => clearTimeout(t);
   }, [activeTab]);
 
-  useEffect(() => {
-    if (Object.keys(analysisResult).length === 0) return;
-    const timer = setTimeout(() => startMicroTourForTab(activeTab), 500);
-    return () => clearTimeout(timer);
-  }, [activeTab, analysisResult]);
-
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
       <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm">
-        <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2">Detailed Security Analysis</h2>
+        <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2 flex items-center gap-1.5">
+          Detailed Security Analysis
+          <TourHint
+            tourId="analysis-tabs"
+            title="Analysis Tabs"
+            description="Deep-dive into security analysis, compliance mapping, rule optimisation, and remediation playbooks. Click any tab to explore."
+          />
+        </h2>
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex-nowrap whitespace-nowrap w-max inline-flex" data-tour="analysis-tabs">
           <TabsTrigger value="overview" className="gap-2">
@@ -255,6 +256,11 @@ export function AnalysisTabs({
 
           {totalFindings > 0 && (
             <div className="flex flex-wrap items-center gap-2" data-tour="export-buttons">
+              <TourHint
+                tourId="export-buttons"
+                title="Export Options"
+                description="Export your risk register as CSV, Excel, or interactive HTML for offline review and sharing."
+              />
               <Button
                 variant="outline"
                 size="sm"
@@ -583,6 +589,11 @@ export function AnalysisTabs({
             <div className="flex items-center gap-2">
               <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
               <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
+              <TourHint
+                tourId="compliance-heatmap"
+                title="Compliance Heatmap"
+                description="View control coverage, gaps, and readiness across NIST 800-53, ISO 27001, CIS, PCI DSS, HIPAA, Essential Eight, Cyber Essentials, and more."
+              />
               {branding.selectedFrameworks.length > 0 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
                   {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
@@ -597,7 +608,13 @@ export function AnalysisTabs({
             </Suspense>
           </div>
 
-          <div data-tour="sophos-best-practice">
+          <div data-tour="sophos-best-practice" className="relative">
+            <TourHint
+              tourId="sophos-best-practice"
+              title="Sophos Best Practice"
+              description="Automatic checks against Sophos recommended configuration — scored by licence tier (Standard vs Xstream)."
+              className="absolute top-4 right-4 z-10"
+            />
             <Suspense fallback={<CardSkeleton />}>
               <SophosBestPractice
                 analysisResults={analysisResult}
@@ -704,6 +721,16 @@ export function AnalysisTabs({
       {/* Tools */}
       <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Tools failed to load">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <TourHint
+              title="Tools & Analysis"
+              description="Risk score dashboards, score simulator, attack surface maps, baseline comparison, and what-if scenarios."
+              steps={[
+                { element: '[data-tour="score-dial"]', popover: { title: "Risk Score Dashboard", description: "Your overall risk score from 0\u2013100, based on weighted analysis across multiple security categories.", side: "right", align: "center" } },
+                { element: '[data-tour="compare-baseline"]', popover: { title: "Compare to Baseline", description: "Compare your current config against a saved baseline to detect drift.", side: "top", align: "center" } },
+              ]}
+            />
+          </div>
           <Suspense fallback={<ChartSkeleton height={220} />}>
             <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
           </Suspense>
@@ -759,6 +786,16 @@ export function AnalysisTabs({
       {/* Remediation */}
       <TabsContent value="remediation" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Remediation view failed to load">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <TourHint
+              title="Remediation Workflow"
+              description="Step-by-step playbooks to fix each finding, with progress tracking, roadmap, bulk actions, and change approval workflows."
+              steps={[
+                { element: '[data-tour="remediation-playbooks"]', popover: { title: "Playbooks", description: "Step-by-step guides to fix each finding on a Sophos XGS firewall, with severity and impact.", side: "top", align: "center" } },
+                { element: '[data-tour="remediation-progress"]', popover: { title: "Progress Tracking", description: "Track remediation progress across all findings.", side: "top", align: "center" } },
+              ]}
+            />
+          </div>
           {w("remediation-progress") && (
             <Suspense fallback={<CardSkeleton />}>
               <RemediationProgress analysisResults={analysisResult} />
