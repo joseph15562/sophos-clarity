@@ -247,7 +247,7 @@ export function useReportGeneration(
   };
 
   const generateExecutive = async (existingReports?: boolean) => {
-    if (files.length < 2) return;
+    if (files.length === 0) return;
     if (!existingReports) setIsLoading(true);
 
     const mergedSections: Record<string, ExtractedSections> = {};

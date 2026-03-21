@@ -50,7 +50,7 @@ export function QbrPackChecklist({
   onExportRiskRegister,
   onExportInteractiveHtml,
 }: QbrPackChecklistProps) {
-  const execDisabled = fileCount < 2;
+  const noFiles = fileCount === 0;
 
   return (
     <Card className="rounded-xl border border-border shadow-sm no-print">
@@ -64,31 +64,29 @@ export function QbrPackChecklist({
           done={hasReports}
           actionLabel="Generate"
           onAction={onGenerateExecutive}
-          disabled={execDisabled}
+          disabled={noFiles}
         />
         <ChecklistRow
           title="Compliance Report"
           done={hasCompliance}
           actionLabel="Generate"
           onAction={onGenerateCompliance}
+          disabled={noFiles}
         />
         <ChecklistRow
           title="Risk Register (CSV)"
           done={false}
           actionLabel="Export"
           onAction={onExportRiskRegister}
+          disabled={noFiles}
         />
         <ChecklistRow
           title="Interactive HTML Analysis"
           done={false}
           actionLabel="Export"
           onAction={onExportInteractiveHtml}
+          disabled={noFiles}
         />
-        {execDisabled && (
-          <p className="text-[10px] text-muted-foreground pt-2">
-            Executive brief needs at least two firewall configs loaded.
-          </p>
-        )}
       </CardContent>
     </Card>
   );

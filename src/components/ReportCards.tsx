@@ -72,7 +72,7 @@ export function ReportCards({
           className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
             !canGenerate ? "opacity-50 pointer-events-none" : fileCount >= 2 ? "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group" : "opacity-45 pointer-events-none"
           }`}
-          onClick={canGenerate && fileCount >= 2 ? onGenerateExecutive : undefined}
+          onClick={canGenerate && fileCount >= 1 ? onGenerateExecutive : undefined}
         >
           <div className="h-1 bg-gradient-to-r from-[#5A00FF] to-[#B529F7]" />
           <div className="p-5 space-y-3">
@@ -83,11 +83,11 @@ export function ReportCards({
               <span className="font-display font-bold text-foreground text-[15px]">Generate Executive Brief</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {fileCount >= 2
-                ? "Consolidated estate summary comparing all firewalls. Risk matrix, cross-estate findings, strategic recommendations — designed for management and stakeholder reporting."
-                : "Upload 2+ firewall exports to unlock the consolidated executive brief across your estate."}
+              {fileCount >= 1
+                ? "Estate summary with risk matrix, key findings, and strategic recommendations — designed for management and stakeholder reporting."
+                : "Upload a firewall export to unlock the executive brief."}
             </p>
-            <Button size="sm" variant="secondary" className="w-full gap-2" disabled={fileCount < 2 || !canGenerate}>
+            <Button size="sm" variant="secondary" className="w-full gap-2" disabled={fileCount < 1 || !canGenerate}>
               <BookOpen className="h-3.5 w-3.5" /> {!canGenerate ? (isViewerOnly ? "View only" : "AI unavailable") : "Generate Executive Brief"}
             </Button>
           </div>
