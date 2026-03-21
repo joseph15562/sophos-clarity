@@ -1,6 +1,6 @@
 ---
 name: Retention and report upsell
-overview: Increase return visits and report generation by surfacing score/trend history in the Overview tab, nudging users when they are one step away from a higher-value report, and tightening the post-save flow around sharing—reusing WidgetCustomiser, Card/Button styling, Sonner toasts, and existing Supabase-backed `score_history` / saved reports / share flows.
+overview: Increase return visits and report generation via score history, contextual report nudges, post-save share CTAs, interactive HTML + portal depth, and short contextual micro-tours on first visit to each analysis tab—reusing driver.js tours, data-tour targets, and localStorage.
 todos:
   - id: next-report-strip
     content: "Add contextual upsell strip near ReportCards (rules: 1 FW, 2+ FW, frameworks, score); localStorage dismiss"
@@ -23,6 +23,9 @@ todos:
   - id: portal-rich-findings
     content: portal-data + ClientPortal + portal_config; optional full_analysis fields; expandable findings UI; gate behind visible_sections / auth
     status: pending
+  - id: micro-tours
+    content: "Contextual 1–3 step driver.js tours on first open of each Analysis tab (after analysis exists); localStorage keys; reuse data-tour + guided-tours pattern"
+    status: pending
 isProject: false
 ---
 
@@ -33,6 +36,7 @@ isProject: false
 - **Retention:** Make “come back” obvious—show progress over time and a clear next assessment action without new backend unless needed.
 - **Upsell reports:** Increase use of **Executive**, **Compliance**, and **full packs** by contextual prompts when data already supports them (multi-firewall, low score, first save).
 - **Interactive deliverable + portal depth:** Let customers and MSPs **explore findings** beyond flat tables—via a **downloadable interactive HTML** pack and a **richer Client Portal** experience (aligned with data you already store on submissions).
+- **Micro-tours (retention / discovery):** Short **1–3 step** spotlights when a user hits an analysis tab for the **first time** after results exist—reduce “what’s here?” friction and surface **Widgets** and high-value actions without rerunning the long Getting Started tour.
 
 ## Current anchors (reuse, don’t reinvent)
 
@@ -43,7 +47,8 @@ isProject: false
 - Overview personalisation: `[src/lib/widget-preferences.ts](src/lib/widget-preferences.ts)` + `[src/components/WidgetCustomiser.tsx](src/components/WidgetCustomiser.tsx)` + widget slots in `[src/components/AnalysisTabs.tsx](src/components/AnalysisTabs.tsx)`.
 - **“Detailed Security Analysis”** in the UI is the **sticky header + tabbed workspace** in `[src/components/AnalysisTabs.tsx](src/components/AnalysisTabs.tsx)` (Overview, Security, Compliance, …)—not a single markdown report.
 - Portal today: `[src/pages/ClientPortal.tsx](src/pages/ClientPortal.tsx)` loads JSON from `[supabase/functions/portal-data/index.ts](supabase/functions/portal-data/index.ts)`; findings are **title + severity + id** only, sourced from `agent_submissions.findings_summary` or legacy `assessments.firewalls[].findings`.
-- **Rich data already exists:** connector submissions store `**full_analysis`** (full `AnalysisResult`) on `agent_submissions` per `[firecomply-connector/src/api/submit.ts](firecomply-connector/src/api/submit.ts)`—portal does not expose it yet.
+- **Rich data already exists:** connector submissions store `full_analysis` (full `AnalysisResult`) on `agent_submissions` per `[firecomply-connector/src/api/submit.ts](firecomply-connector/src/api/submit.ts)`—portal does not expose it yet.
+- **Tours:** `[src/lib/guided-tours.ts](src/lib/guided-tours.ts)` uses **driver.js** and `[data-tour="..."]` selectors; `[src/components/GuidedTourButton.tsx](src/components/GuidedTourButton.tsx)` exposes full tours. Analysis tabs and widgets already expose targets e.g. `analysis-tabs`, `widget-customiser`, `export-buttons`.
 
 ```mermaid
 flowchart LR
@@ -154,8 +159,8 @@ flowchart LR
 **Data path:**
 
 - Extend `[supabase/functions/portal-data/index.ts](supabase/functions/portal-data/index.ts)` to attach `**findingsRich`** (or per-firewall arrays) when:
-  - `portal_config.visible_sections` includes a new key e.g. `**detailed_findings**` (or reuse `**findings**` with a `depth: "full"` flag in config JSON—prefer explicit section to avoid surprising MSPs), and
-  - Source is `**agent_submissions.full_analysis.findings**` (and hostname label), merging latest per agent like today.
+  - `portal_config.visible_sections` includes a new key e.g. `detailed_findings` (or reuse `findings` with a `depth: "full"` flag in config JSON—prefer explicit section to avoid surprising MSPs), and
+  - Source is `agent_submissions.full_analysis.findings` (and hostname label), merging latest per agent like today.
 - For **legacy** `assessments` path: only include rich fields if stored on `firewalls[].findings` objects; otherwise keep current shallow list.
 
 **Privacy / upsell:**
@@ -170,14 +175,40 @@ flowchart LR
 
 ---
 
+## Feature 8 — Contextual micro-tours (tab-first discovery)
+
+**Intent:** After the user has **analysis results** (not empty state), the first time they switch to a given **Detailed Security Analysis** sub-tab (Overview, Security, Compliance, Optimisation, Tools, Remediation, Compare), run a **tiny tour** (1–3 steps) so they notice power features—especially **Widgets**, exports, and tab-specific value.
+
+**Behaviour:**
+
+- **Gate:** Only if `Object.keys(analysisResults).length > 0` (or equivalent “has findings / has assessment”).
+- **Frequency:** **Once per tab per browser** (or per user+tab if you prefer sync later)—store in `localStorage`, e.g. `firecomply-micro-tour-tab-compliance: "1"`.
+- **Do not** stack: if user flips tabs quickly, queue at most one micro-tour at a time or debounce 300–500ms after `activeTab` settles.
+- **Skip** if: guest/local-only mode where tours don’t apply, or `data-tour` target missing (reuse `filterVisible` pattern from `[guided-tours.ts](src/lib/guided-tours.ts)`).
+
+**Implementation sketch:**
+
+- Add `startMicroTourForTab(tab: string, callbacks?: TourCallbacks)` (or one function with a map `Record<string, DriveStep[]>`) in `[src/lib/guided-tours.ts](src/lib/guided-tours.ts)` next to existing exports.
+- From `[src/components/AnalysisTabs.tsx](src/components/AnalysisTabs.tsx)` (or Index): `useEffect` on `[activeTab, analysisResult]` that checks storage → calls micro tour → sets storage on **Done** (driver `onDestroyed` or last step).
+- **Example steps (customise per tab):**
+  - **Overview:** (1) `widget-customiser` — “Turn on more widgets here.” (2) `export-buttons` or `export-risk-register` — “Export risk register for stakeholders.”
+  - **Compliance:** first widget in compliance grid or `data-tour` on compliance summary if present.
+  - **Tools:** `baseline-manager` / `compare-baseline` if visible in DOM.
+- **Styling:** Reuse same `createTour()` / `driver()` options as full tours for brand consistency.
+
+**Out of scope for v1:** Server-side “tour completed” sync; A/B copy testing.
+
+---
+
 ## Implementation order
 
 1. Feature 2 (strip) + Feature 4 (welcome back)—fast UX wins, mostly client-side.
-2. Feature 6 (interactive HTML)—standalone value for MSP deliverables; no portal dependency.
-3. Feature 7 (portal rich findings)—backend + UI; coordinate `portal_config` with Feature 6 messaging.
-4. Feature 1 (pulse widget)—deeper value, uses existing `score_history`.
-5. Feature 3 (post-save)—coordinate with actual save/share flow to avoid duplicate links; optionally mention “Export interactive HTML” in the same toast/card.
-6. Feature 5 (toasts)—polish last.
+2. Feature 8 (micro-tours)—high leverage vs effort; pure client; pairs with Feature 2 for “discover compliance / reports”.
+3. Feature 6 (interactive HTML)—standalone value for MSP deliverables; no portal dependency.
+4. Feature 7 (portal rich findings)—backend + UI; coordinate `portal_config` with Feature 6 messaging.
+5. Feature 1 (pulse widget)—deeper value, uses existing `score_history`.
+6. Feature 3 (post-save)—coordinate with actual save/share flow to avoid duplicate links; optionally mention “Export interactive HTML” in the same toast/card.
+7. Feature 5 (toasts)—polish last.
 
 ## Out of scope (unless you expand later)
 
