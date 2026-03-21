@@ -1,6 +1,6 @@
 ---
 name: Retention and report upsell
-overview: Increase return visits and report generation via score history, contextual report nudges, post-save share CTAs, interactive HTML + portal depth, and short contextual micro-tours on first visit to each analysis tab—reusing driver.js tours, data-tour targets, and localStorage.
+overview: Retention, upsell, and MSP–customer trust—score history, report nudges, share CTAs, interactive HTML, portal depth, micro-tours, plus a backlog of trusted-advisor patterns (narratives, QBR artefacts, portal storytelling, advisor-owned context).
 todos:
   - id: next-report-strip
     content: "Add contextual upsell strip near ReportCards (rules: 1 FW, 2+ FW, frameworks, score); localStorage dismiss"
@@ -26,6 +26,9 @@ todos:
   - id: micro-tours
     content: "Contextual 1–3 step driver.js tours on first open of each Analysis tab (after analysis exists); localStorage keys; reuse data-tour + guided-tours pattern"
     status: pending
+  - id: trusted-advisor-backlog
+    content: "Prioritise and implement items from MSP trusted advisor retention section (narrative card, portal trust layer, QBR export, advisor notes—see plan body)"
+    status: pending
 isProject: false
 ---
 
@@ -34,6 +37,7 @@ isProject: false
 ## Goals
 
 - **Retention:** Make “come back” obvious—show progress over time and a clear next assessment action without new backend unless needed.
+- **MSP trusted advisor:** Help partners **earn ongoing trust** with end customers—repeatable touchpoints, **plain-language progress stories**, and **client-safe artefacts** (portal, exports, narratives) so the MSP is the expert who “shows the work,” not just a tool vendor.
 - **Upsell reports:** Increase use of **Executive**, **Compliance**, and **full packs** by contextual prompts when data already supports them (multi-firewall, low score, first save).
 - **Interactive deliverable + portal depth:** Let customers and MSPs **explore findings** beyond flat tables—via a **downloadable interactive HTML** pack and a **richer Client Portal** experience (aligned with data you already store on submissions).
 - **Micro-tours (retention / discovery):** Short **1–3 step** spotlights when a user hits an analysis tab for the **first time** after results exist—reduce “what’s here?” friction and surface **Widgets** and high-value actions without rerunning the long Getting Started tour.
@@ -57,6 +61,13 @@ flowchart LR
     Widget[Overview widget]
     ScoreHist --> Widget
   end
+  subgraph advisor [TrustedAdvisor]
+    Portal[Client portal]
+    Narrative[Progress narrative]
+    QBR[QBR artefacts]
+    Portal --> Narrative
+    Narrative --> QBR
+  end
   subgraph upsell [Report upsell]
     Analysis[analysisResults]
     RC[ReportCards]
@@ -66,7 +77,56 @@ flowchart LR
   end
 ```
 
+---
 
+## MSP trusted advisor — retention ideas (backlog)
+
+These complement Features 1–8: they focus on **relationship rhythm** and **customer-visible value**, not only in-app frequency.
+
+### A. Progress narrative (“what changed since last time”)
+
+- **Auto blurb for MSP → client:** After each assessment, generate 3–5 sentences from **delta vs previous** `score_history` / saved snapshot: score change, top improved areas, new criticals, “still open” themes. Output as **copyable text** in a Card (MSP pastes into email/Teams).
+- **Where:** Reuse `[CompareToSavedBaseline](src/components/CompareToSavedBaseline.tsx)` / `[finding-snapshots](src/lib/finding-snapshots.ts)` logic patterns; new small widget or section under Overview.
+- **Trust angle:** Shows continuity of care—“we track you over time,” not point-in-time FUD.
+
+### B. Client portal as the “always-on advisor window”
+
+- Enrich `[ClientPortal](src/pages/ClientPortal.tsx)` + `[portal_config](src/components/PortalConfigurator.tsx)` with **MSP-authored trust fields**: short “This month’s focus”, “How to read this dashboard”, optional **contact / escalation** block (already partially there via branding).
+- **Cadence hooks:** Surface **last assessment date** and “next review suggested” copy (even static 90-day hint if no scheduler)—sets expectation of ongoing stewardship.
+- **Trust angle:** Customer sees the MSP’s **voice** and cadence, not a generic product.
+
+### C. QBR / board-ready artefacts
+
+- **One-click “QBR pack”** checklist: links or buttons to generate/download **Executive**, **Compliance** (if frameworks selected), **interactive HTML** (Feature 6), and **risk register CSV**—ordered for a quarterly review agenda.
+- Optional: **single PDF bundle** later; v0 can be a **guided checklist** with existing exports.
+- **Trust angle:** MSP shows up prepared; customer perceives structured governance.
+
+### D. Educational micro-content (reduce fear, increase literacy)
+
+- **Contextual tooltips** or expandable “Why this matters” on **top finding categories** (link to Sophos or internal help)—reuses `[ManagementDrawer](src/components/ManagementDrawer.tsx)` / docs links pattern.
+- **Micro-tours** (Feature 8) already support “show where things live”; add **copy** that sounds like advisor language (“Here’s how we prioritise fixes”) not product manual tone.
+- **Trust angle:** Transparency builds confidence; customer understands *why* the MSP recommends X.
+
+### E. Advisor-owned context on deliverables
+
+- **Optional “Advisor notes”** on saved report / share flow: 2–3 sentences stored with **saved report package** or **shared link** metadata, rendered at top of `[SharedReport](src/pages/SharedReport.tsx)` or client email body.
+- **Trust angle:** Human layer on top of automation—clearly **from the MSP**.
+
+### F. Proactive “nudge the MSP” (internal retention)
+
+- In-app reminders for **stale tenants** (no new `score_history` / submission in N days) with **suggested customer email template** (“Time for a quick posture check”).
+- **Trust angle:** Keeps the MSP showing up; customer experiences consistency.
+- **Note:** Email sending out of scope; **template + copy** in-app is enough for v1.
+
+### G. Celebrate joint wins (customer-safe)
+
+- When score **improves materially** or critical count **drops**, offer **MSP-facing** suggested message + optional **client-safe** one-liner for portal banner (“Security posture improved this period—see details below”).
+- Pairs with Feature 5 (milestone toasts) but aimed at **external** comms.
+
+### Implementation note
+
+- Triage **A + B + C** first—they reuse existing data and surfaces with limited schema work (**E** may need a column or JSON field on saved reports / `shared_reports`).
+- Track under todo **`trusted-advisor-backlog`**; split into separate implementation todos when you pick winners.
 
 ---
 
@@ -221,4 +281,10 @@ flowchart LR
 - Report type mix: executive/compliance vs individual.
 - Repeat assessments per org per month (`score_history` row counts).
 - Share link creation rate (if instrumented).
+
+### Trusted advisor (qualitative / proxy)
+
+- Portal **return visits** / session depth (if analytics added).
+- Use of **copy narrative** / **advisor notes** (clicks, field fill rate).
+- MSP feedback: “used FireComply in last QBR” (survey or interview).
 
