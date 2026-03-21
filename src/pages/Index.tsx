@@ -99,6 +99,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [backendDebugInfo, setBackendDebugInfo] = useState<Record<string, unknown> | null>(null);
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
+  const [webFilterExemptZones, setWebFilterExemptZones] = useState<string[]>([]);
+  const [webFilterExemptNetworks, setWebFilterExemptNetworks] = useState<string[]>([]);
 
   const firewallAnalysisOpts = useMemo(
     () => ({
@@ -106,8 +108,17 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       dpiExemptNetworks,
       webFilterComplianceMode: branding.webFilterComplianceMode,
       webFilterExemptRuleNames: branding.webFilterExemptRuleNames,
+      webFilterExemptZones,
+      webFilterExemptNetworks,
     }),
-    [dpiExemptZones, dpiExemptNetworks, branding.webFilterComplianceMode, branding.webFilterExemptRuleNames],
+    [
+      dpiExemptZones,
+      dpiExemptNetworks,
+      branding.webFilterComplianceMode,
+      branding.webFilterExemptRuleNames,
+      webFilterExemptZones,
+      webFilterExemptNetworks,
+    ],
   );
 
   const {
@@ -758,14 +769,26 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   aggregatedPosture.wanMissingWebFilterRuleNames.length > 0) ? (
                   <div className="space-y-3">
                     {(aggregatedPosture.allWanSourceZones.length > 0 || aggregatedPosture.allWanSourceNetworks.length > 0) && (
-                      <DpiExclusionBar
-                        detectedZones={aggregatedPosture.allWanSourceZones}
-                        excludedZones={dpiExemptZones}
-                        onZonesChange={setDpiExemptZones}
-                        detectedNetworks={aggregatedPosture.allWanSourceNetworks}
-                        excludedNetworks={dpiExemptNetworks}
-                        onNetworksChange={setDpiExemptNetworks}
-                      />
+                      <>
+                        <DpiExclusionBar
+                          variant="dpi"
+                          detectedZones={aggregatedPosture.allWanSourceZones}
+                          excludedZones={dpiExemptZones}
+                          onZonesChange={setDpiExemptZones}
+                          detectedNetworks={aggregatedPosture.allWanSourceNetworks}
+                          excludedNetworks={dpiExemptNetworks}
+                          onNetworksChange={setDpiExemptNetworks}
+                        />
+                        <DpiExclusionBar
+                          variant="webFilter"
+                          detectedZones={aggregatedPosture.allWanSourceZones}
+                          excludedZones={webFilterExemptZones}
+                          onZonesChange={setWebFilterExemptZones}
+                          detectedNetworks={aggregatedPosture.allWanSourceNetworks}
+                          excludedNetworks={webFilterExemptNetworks}
+                          onNetworksChange={setWebFilterExemptNetworks}
+                        />
+                      </>
                     )}
                     {aggregatedPosture.wanMissingWebFilterRuleNames.length > 0 && (
                       <WebFilterRuleExclusionBar

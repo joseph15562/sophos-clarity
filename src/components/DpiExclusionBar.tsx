@@ -1,6 +1,24 @@
 import { useCallback, useMemo } from "react";
-import { ShieldOff, Network } from "lucide-react";
+import { ShieldOff, Network, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+type ExclusionVariant = "dpi" | "webFilter";
+
+const VARIANT_META: Record<
+  ExclusionVariant,
+  { title: string; description: string; Icon: typeof ShieldOff }
+> = {
+  dpi: {
+    title: "DPI Exclusions",
+    description: "Exclude zones or networks where SSL/TLS certificate cannot be deployed:",
+    Icon: ShieldOff,
+  },
+  webFilter: {
+    title: "Web Filter Scope (Zones / Networks)",
+    description: "Exclude source zones or networks from the missing-web-filter check (agreed customer scope):",
+    Icon: Filter,
+  },
+};
 
 interface Props {
   detectedZones: string[];
@@ -9,6 +27,8 @@ interface Props {
   detectedNetworks?: string[];
   excludedNetworks?: string[];
   onNetworksChange?: (networks: string[]) => void;
+  /** Same toggle UI as DPI; separate excluded state for web filter compliance scope. */
+  variant?: ExclusionVariant;
 }
 
 const BUILTIN_ZONE_RE = /guest|iot|byod|printer|camera|cctv|voip|phone|sip|dmz|server|red/i;
@@ -63,7 +83,9 @@ export function DpiExclusionBar({
   detectedNetworks = [],
   excludedNetworks = [],
   onNetworksChange,
+  variant = "dpi",
 }: Props) {
+  const { title, description, Icon } = VARIANT_META[variant];
   const userZones = useMemo(
     () => detectedZones.filter((z) => !BUILTIN_ZONE_RE.test(z)),
     [detectedZones],
@@ -103,11 +125,9 @@ export function DpiExclusionBar({
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">
       <div className="flex items-center gap-2 text-sm font-medium">
-        <ShieldOff className="h-4 w-4 text-muted-foreground" />
-        DPI Exclusions
-        <span className="text-[11px] text-muted-foreground font-normal">
-          Exclude zones or networks where SSL/TLS certificate cannot be deployed:
-        </span>
+        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+        {title}
+        <span className="text-[11px] text-muted-foreground font-normal">{description}</span>
       </div>
 
       {userZones.length > 0 && (
