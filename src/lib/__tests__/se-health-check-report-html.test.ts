@@ -46,7 +46,9 @@ describe("se-health-check-report-html", () => {
       generatedAt: new Date("2024-01-15T12:00:00.000Z"),
     });
     expect(html).toContain("Sophos Firewall Health Check");
-    expect(html).toContain("Report overview");
+    expect(html).toContain("se-hc-cover-fullpage");
+    expect(html).toContain("Firewall health check overview");
+    expect(html).toContain("Sophos Ltd. All Rights Reserved");
     expect(html).toContain("Executive summary");
     expect(html).toContain("Configuration file manifest");
     expect(html).toContain("export.html");

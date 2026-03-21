@@ -53,6 +53,8 @@ export interface SEHealthCheckReportParams {
   bpByLabel: Record<string, SophosBPScore>;
   licence: LicenceSelection;
   customerName: string;
+  /** Recipient organisation or contact (defaults to customer name when omitted) */
+  preparedFor?: string;
   preparedBy: string;
   dpiExemptZones: string[];
   dpiExemptNetworks: string[];
@@ -80,6 +82,7 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     bpByLabel,
     licence,
     customerName,
+    preparedFor: preparedForParam,
     preparedBy,
     dpiExemptZones,
     dpiExemptNetworks,
@@ -98,31 +101,65 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
   const dateUtc = generatedAt.toISOString();
 
   const coverCustomer = customerName.trim() || "—";
+  const coverPreparedFor = (preparedForParam ?? customerName).trim() || "—";
   const coverPrepared = preparedBy.trim() || "—";
+  const copyYear = String(generatedAt.getFullYear());
 
   const parts: string[] = [];
 
-  parts.push(`<div class="se-hc-cover" style="margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:2px solid var(--accent,#2006F7);">`);
+  /* Page 1 — Central-style dark cover (white type, single metadata band) */
+  parts.push(`<div class="se-hc-cover-fullpage">`);
+  parts.push(`<div class="se-hc-cover-top">`);
   parts.push(`<h1 id="cover-title">Sophos Firewall Health Check</h1>`);
-  parts.push(`<p style="font-size:11pt;color:var(--text-secondary,#334155);margin-bottom:1rem;">Sales Engineer configuration assessment (Sophos FireComply)</p>`);
-  parts.push(`<table style="width:100%;max-width:420px;font-size:10pt;border-collapse:collapse;">`);
-  parts.push(`<tr><td style="padding:4px 8px 4px 0;font-weight:600;color:var(--text);">Customer name</td><td style="padding:4px 0;">${escapeHtml(coverCustomer)}</td></tr>`);
-  parts.push(`<tr><td style="padding:4px 8px 4px 0;font-weight:600;color:var(--text);">Prepared by</td><td style="padding:4px 0;">${escapeHtml(coverPrepared)}</td></tr>`);
-  parts.push(`<tr><td style="padding:4px 8px 4px 0;font-weight:600;color:var(--text);">Report date</td><td style="padding:4px 0;">${escapeHtml(dateLocal)}</td></tr>`);
-  parts.push(`</table>`);
-  parts.push(`<p style="margin-top:12px;font-size:9pt;font-weight:700;letter-spacing:0.05em;">CONFIDENTIAL</p>`);
+  parts.push(
+    `<p class="se-hc-cover-tagline">Sales Engineer configuration assessment · Sophos FireComply</p>`,
+  );
+  parts.push(`</div>`);
+  parts.push(
+    `<p class="se-hc-cover-meta">Customer name: ${escapeHtml(coverCustomer)} &nbsp;·&nbsp; Prepared for: ${escapeHtml(coverPreparedFor)} &nbsp;·&nbsp; Prepared by: ${escapeHtml(coverPrepared)} &nbsp;·&nbsp; Date: ${escapeHtml(dateLocal)}</p>`,
+  );
+  parts.push(`<div class="se-hc-cover-bottom">`);
+  parts.push(
+    `<p class="se-hc-cover-copy">© Copyright ${escapeHtml(copyYear)}, Sophos Ltd. All Rights Reserved</p>`,
+  );
+  parts.push(`<p class="se-hc-cover-confidential">CONFIDENTIAL</p>`);
+  parts.push(`</div>`);
   parts.push(`</div>`);
 
-  parts.push(`<h2 id="report-overview">Report overview</h2>`);
+  /* Page 2 — Central-style overview preamble (serif body, copyright rail) */
+  parts.push(`<div class="se-hc-overview-sheet">`);
+  parts.push(`<h2 id="firewall-health-check-overview">Firewall health check overview</h2>`);
   parts.push(
-    `<p>This report summarises a <strong>Sophos Firewall Health Check</strong> performed in <strong>Sophos FireComply</strong> using uploaded firewall configuration exports (HTML or entities XML). Deterministic analysis and Sophos best-practice scoring are applied; it is <strong>not</strong> a compliance framework assessment unless separately engaged.</p>`,
+    `<p>The <strong>Sophos Firewall Health Check</strong> in <strong>Sophos FireComply</strong> provides a structured review of uploaded firewall configuration exports (HTML or entities XML). Deterministic analysis and Sophos best-practice scoring highlight configuration gaps and verification items. This report is <strong>not</strong> a Sophos Central Security Checkup, a compliance framework assessment, or a substitute for validation in the live Sophos XGS / SFOS console.</p>`,
+  );
+  parts.push(`<p>Here's a breakdown of the report's sections:</p>`);
+  parts.push(`<ul class="se-hc-overview-list">`);
+  parts.push(
+    `<li><strong>Executive summary:</strong> Best-practice score, baseline alignment, finding counts by severity, and priority next steps for each firewall analysed.</li>`,
   );
   parts.push(
-    `<p><strong>Licence assumption for scoring:</strong> ${escapeHtml(licenceAssumptionLabel(licence))}.</p>`,
+    `<li><strong>Provenance and limitations:</strong> How and when the report was generated, and scope limits of file-based analysis.</li>`,
   );
   parts.push(
-    `<p><strong>Sophos Central data in this report:</strong> ${centralValidated ? "Central API was used for optional discovery only — findings are based on configuration exports, not Central Security Checkup data." : "Not used — report content is derived from configuration exports only."}</p>`,
+    `<li><strong>Assessment scope and exclusions:</strong> DPI (SSL/TLS) and web-filter posture assumptions applied during analysis.</li>`,
   );
+  parts.push(
+    `<li><strong>Configuration file manifest:</strong> Source files, labels, export types, and Central serial linkage where provided.</li>`,
+  );
+  parts.push(
+    `<li><strong>Baseline and findings:</strong> Per-device baseline checklist and the full findings table.</li>`,
+  );
+  parts.push(`</ul>`);
+  parts.push(
+    `<p><strong>Licence assumption for scoring:</strong> ${escapeHtml(licenceAssumptionLabel(licence))}. <strong>Sophos Central data in this report:</strong> ${centralValidated ? "Central API was used for optional discovery only — findings are based on configuration exports, not Central Security Checkup data." : "Not used — content is derived from configuration exports only."}</p>`,
+  );
+  parts.push(
+    `<p>Each section is intended to help you understand and action the results. Use it alongside operational review in Sophos Central and on-appliance consoles to align posture with best practices.</p>`,
+  );
+  parts.push(
+    `<p class="se-hc-overview-copy-footer">Copyright © ${escapeHtml(copyYear)}, Sophos Ltd. | CONFIDENTIAL</p>`,
+  );
+  parts.push(`</div>`);
 
   parts.push(`<h2 id="provenance-and-limitations">Provenance and limitations</h2>`);
   parts.push(`<p><strong>Generated:</strong> ${escapeHtml(dateUtc)} (UTC) / ${escapeHtml(dateLocal)} (local)</p>`);

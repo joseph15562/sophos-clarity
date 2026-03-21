@@ -442,6 +442,7 @@ function HealthCheckInner() {
       bpByLabel,
       licence,
       customerName,
+      preparedFor: customerName.trim() || undefined,
       preparedBy,
       dpiExemptZones,
       dpiExemptNetworks,

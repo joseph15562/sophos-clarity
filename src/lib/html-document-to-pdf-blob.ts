@@ -47,8 +47,7 @@ html, body {
 .print-content h4,
 .print-content h5,
 .print-content h6,
-.print-content strong,
-#cover-title {
+.print-content strong {
   color: #001A47 !important;
 }
 .print-content h2 {
@@ -56,18 +55,92 @@ html, body {
 }
 .print-content p,
 .print-content li,
-.print-content td,
-.se-hc-cover,
-.se-hc-cover td,
-.se-hc-cover p,
-.se-hc-cover table {
+.print-content td {
   color: #334155 !important;
 }
-.se-hc-cover h1 {
+/* Central-style page 1 cover — navy full bleed, white type */
+.se-hc-cover-fullpage {
+  background: #001A47 !important;
+  color: #ffffff !important;
+  min-height: 1123px !important;
+  box-sizing: border-box !important;
+  padding: 48px 40px 40px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+.se-hc-cover-fullpage h1,
+.se-hc-cover-fullpage .se-hc-cover-tagline,
+.se-hc-cover-fullpage .se-hc-cover-meta,
+.se-hc-cover-fullpage .se-hc-cover-copy,
+.se-hc-cover-fullpage .se-hc-cover-confidential {
+  color: #ffffff !important;
+}
+.se-hc-cover-fullpage h1 {
+  font-size: 26pt !important;
+  line-height: 1.15 !important;
+  margin: 0 0 12px !important;
+  border: none !important;
+  padding: 0 !important;
+}
+.se-hc-cover-fullpage .se-hc-cover-tagline {
+  font-size: 11pt !important;
+  opacity: 0.92 !important;
+  margin: 0 !important;
+  font-family: 'Zalando Sans', -apple-system, sans-serif !important;
+}
+.se-hc-cover-fullpage .se-hc-cover-meta {
+  font-weight: 700 !important;
+  font-size: 12pt !important;
+  line-height: 1.55 !important;
+  margin: 24px 0 !important;
+  font-family: 'Zalando Sans', -apple-system, sans-serif !important;
+}
+.se-hc-cover-fullpage .se-hc-cover-copy {
+  font-size: 9pt !important;
+  opacity: 0.88 !important;
+  margin: 0 0 8px !important;
+}
+.se-hc-cover-fullpage .se-hc-cover-confidential {
+  font-size: 10pt !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  margin: 0 !important;
+}
+/* Central-style page 2 overview — serif narrative */
+.se-hc-overview-sheet {
+  background: #ffffff !important;
+  padding: 40px 40px 48px !important;
+  page-break-after: always !important;
+  break-after: page !important;
+}
+.se-hc-overview-sheet h2 {
+  color: #001A47 !important;
+  font-size: 17pt !important;
+  border-bottom: 2px solid #2006F7 !important;
+  padding-bottom: 10px !important;
+  margin: 0 0 18px !important;
+  font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
+}
+.se-hc-overview-sheet p,
+.se-hc-overview-sheet li {
+  font-family: Georgia, 'Times New Roman', Times, serif !important;
+  font-size: 11pt !important;
+  line-height: 1.65 !important;
+  color: #1a1a1a !important;
+}
+.se-hc-overview-sheet strong {
   color: #001A47 !important;
 }
-.se-hc-cover {
-  border-bottom-color: #2006F7 !important;
+.se-hc-overview-sheet .se-hc-overview-list {
+  margin: 12px 0 18px !important;
+  padding-left: 22px !important;
+}
+.se-hc-overview-copy-footer {
+  margin-top: 28px !important;
+  font-size: 9pt !important;
+  color: #64748b !important;
+  font-family: Georgia, 'Times New Roman', Times, serif !important;
 }
 .table-wrapper {
   border-color: #e2e8f0 !important;
