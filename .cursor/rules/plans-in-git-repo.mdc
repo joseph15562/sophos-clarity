@@ -8,15 +8,27 @@ alwaysApply: true
 ## Canonical location
 
 - Store human-readable plan markdown under **[docs/plans/](docs/plans/)** in this repository (create the folder if missing).
-- Cursor may also write to editor-local paths (e.g. under `.cursor/plans/` outside the clone). Treat those as **drafts**; the **team source of truth** is **`docs/plans/*.md`**.
+- Cursor may also write to **`~/.cursor/plans/*.plan.md`** (outside the repo). That file is what the **Cursor Plans UI** often opens.
+
+## Two-way sync (same plan, two paths)
+
+- **Source of truth for the team:** `docs/plans/<name>.md` in git (GitHub).
+- **Cursor UI copy:** `~/.cursor/plans/<name>.plan.md` when the basename matches (e.g. `retention_and_report_upsell_3509d09a`).
+
+Whenever you **edit the plan in git** (`docs/plans/…`), also **copy the file contents** to the matching `~/.cursor/plans/…plan.md` so the local Plans panel stays current.
+
+Whenever Cursor **creates or updates** only under `~/.cursor/plans/`, **mirror into** `docs/plans/<same-basename>.md` and commit.
+
+Use `cp` from repo file to home path (or the reverse) after substantive edits.
 
 ## When to copy a plan
 
 Whenever you **create or materially update** a plan (feature work, architecture, migrations):
 
-1. Save the final markdown to `docs/plans/` using a **descriptive kebab-case name**, e.g. `retention-report-upsell.md`, `sophos-central-api-parity.md`.
+1. Save the final markdown to `docs/plans/` using a **descriptive kebab-case name**, e.g. `retention-report-upsell.md`, `sophos-central-api-parity.md` (backfilled plans may keep the `*_xxxxxxxx.md` suffix to match Cursor ids).
 2. If a plan for the same effort already exists in `docs/plans/`, **update that file** instead of adding duplicates.
-3. Do **not** put secrets, tokens, or customer data in plan files.
+3. Sync to `~/.cursor/plans/` as above when a paired `.plan.md` exists or should exist.
+4. Do **not** put secrets, tokens, or customer data in plan files.
 
 ## Git and GitHub
 
@@ -26,4 +38,5 @@ Whenever you **create or materially update** a plan (feature work, architecture,
 ## Quick checklist before wrapping planning work
 
 - [ ] Plan content mirrored or updated under `docs/plans/`
+- [ ] Matching `~/.cursor/plans/*.plan.md` updated if the user relies on Cursor’s Plans UI
 - [ ] Committed (and pushed when the user wants changes on GitHub)

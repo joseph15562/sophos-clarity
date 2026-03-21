@@ -218,7 +218,7 @@ These complement Features 1–8: they focus on **relationship rhythm** and **cus
 
 **Data path:**
 
-- Extend `[supabase/functions/portal-data/index.ts](supabase/functions/portal-data/index.ts)` to attach `**findingsRich`** (or per-firewall arrays) when:
+- Extend `[supabase/functions/portal-data/index.ts](supabase/functions/portal-data/index.ts)` to attach `findingsRich` (or per-firewall arrays) when:
   - `portal_config.visible_sections` includes a new key e.g. `detailed_findings` (or reuse `findings` with a `depth: "full"` flag in config JSON—prefer explicit section to avoid surprising MSPs), and
   - Source is `agent_submissions.full_analysis.findings` (and hostname label), merging latest per agent like today.
 - For **legacy** `assessments` path: only include rich fields if stored on `firewalls[].findings` objects; otherwise keep current shallow list.
