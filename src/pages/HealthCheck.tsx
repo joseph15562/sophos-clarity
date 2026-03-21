@@ -462,7 +462,10 @@ function HealthCheckInner() {
       preparedBy: seAuth.seProfile?.displayName?.trim() || seAuth.seProfile?.email?.trim() || "",
       confidential: true,
     };
-    const html = buildPdfHtml(inner, "Sophos Firewall Health Check", branding, { theme: "light" });
+    const html = buildPdfHtml(inner, "Sophos Firewall Health Check", branding, {
+      theme: "light",
+      omitInteractiveChrome: true,
+    });
     setPdfBusy(true);
     try {
       const blob = await htmlDocumentStringToPdfBlob(html);

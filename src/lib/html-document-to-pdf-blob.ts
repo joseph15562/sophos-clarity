@@ -142,7 +142,8 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
     opacity: "1",
     pointerEvents: "none",
     zIndex: "-1",
-    overflow: "hidden",
+    /* visible so iframe document can lay out full scrollHeight (hidden clips capture) */
+    overflow: "visible",
     visibility: "visible",
   });
   document.body.appendChild(iframe);
@@ -168,8 +169,19 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
 
   injectHtml2CanvasFixStyles(idoc);
   idoc.documentElement.setAttribute("data-theme", "light");
-  // Force style recalc after injection
+
+  /* Strip anything that still confuses html2canvas (fixed “Dark Mode” button, scripts) */
+  idoc.querySelectorAll("script").forEach((s) => s.remove());
+  idoc.querySelectorAll(".theme-toggle, #themeBtn").forEach((el) => el.remove());
+
+  // Force layout after DOM/CSS changes
   void idoc.body.offsetHeight;
+
+  const scrollH = Math.min(
+    Math.max(idoc.body.scrollHeight, idoc.documentElement.scrollHeight, 400),
+    50000,
+  );
+  iframe.style.height = `${scrollH}px`;
 
   const body = idoc.body;
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
@@ -180,16 +192,23 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
       y: 10,
       width: 190,
       windowWidth: IFRAME_WIDTH_PX,
-      autoPaging: "text",
+      /* slice tends to raster the full subtree more reliably than text for long reports */
+      autoPaging: "slice",
       html2canvas: {
-        scale: 0.5,
+        scale: 0.48,
         useCORS: true,
         logging: false,
         letterRendering: true,
         backgroundColor: "#ffffff",
         windowWidth: IFRAME_WIDTH_PX,
+        windowHeight: scrollH,
+        width: IFRAME_WIDTH_PX,
+        height: scrollH,
         scrollX: 0,
         scrollY: 0,
+        removeContainer: true,
+        ignoreElements: (node: Element) =>
+          (node as HTMLElement).classList?.contains?.("theme-toggle") ?? false,
       },
     });
   } finally {

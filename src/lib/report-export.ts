@@ -214,13 +214,14 @@ export function buildPdfHtml(
   innerHTML: string,
   title: string,
   branding?: BrandingData,
-  options?: { theme?: ReportExportTheme }
+  options?: { theme?: ReportExportTheme; /** Drop theme button + inline script — required for jsPDF/html2canvas raster (fixed “Dark Mode” pollutes the canvas) */ omitInteractiveChrome?: boolean }
 ): string {
   const companyName = branding?.companyName || "";
   const customerName = branding?.customerName || "";
   const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const confidential = branding?.confidential ?? false;
   const theme = options?.theme ?? "light";
+  const omitInteractiveChrome = options?.omitInteractiveChrome ?? false;
 
   const sophosLogoDark = `<svg viewBox="0 0 600 65" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M4.48,4.35v28.3c0,4.8,2.6,9.21,6.79,11.54l29.46,16.35.19.11,29.6-16.45c4.19-2.33,6.79-6.74,6.79-11.53V4.35H4.48ZM51.89,37.88c-2.2,1.22-4.67,1.86-7.18,1.86l-27.32-.08,15.32-8.54c1.48-.83,3.14-1.26,4.84-1.27l28.92-.09-14.57,8.13ZM51.47,23.9c-1.48.83-3.14,1.26-4.84,1.27l-28.92.09,14.57-8.13c2.2-1.22,4.67-1.86,7.18-1.86l27.32.08-15.32,8.54Z"/><g fill="#fff"><path d="M578.8,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4s0-12.88,0-12.88h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86,0,2.12-1.72,3.77-3.84,3.77h-60.53v12.88h60.53c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M228.84,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM228.84,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><path d="M483.22,4.47h-25.15c-14.89,0-27.01,12.12-27.01,27.01,0,14.89,12.12,27.01,27.01,27.01h25.15c14.89,0,27.01-12.12,27.01-27.01,0-14.89-12.12-27.01-27.01-27.01ZM483.22,45.6h-25.15c-7.78,0-14.11-6.33-14.11-14.11,0-7.78,6.33-14.11,14.11-14.11h25.15c7.78,0,14.11,6.33,14.11,14.11,0,7.78-6.33,14.11-14.11,14.11Z"/><polygon points="410.52 4.53 410.52 24.96 360.14 24.96 360.14 4.53 347.24 4.53 347.24 58.42 360.14 58.42 360.14 37.86 410.52 37.86 410.52 58.42 423.42 58.42 423.42 4.53 410.52 4.53"/><path d="M155.11,25h-46.42c-2.12,0-3.84-1.72-3.84-3.84,0-2.12,1.72-3.84,3.84-3.84h60.4V4.44h-60.4c-9.22,0-16.72,7.5-16.72,16.72,0,9.22,7.5,16.72,16.72,16.72h46.42c2.12,0,3.84,1.75,3.84,3.86s-1.72,3.77-3.84,3.77h-60.53v12.88s60.53,0,60.53,0c9.22,0,16.72-7.42,16.72-16.64,0-9.22-7.5-16.74-16.72-16.74Z"/><path d="M319.66,4.53h-43.49s-5.2,0-5.2,0h-7.7s0,53.89,0,53.89h12.9s0-14.44,0-14.44h43.49c10.88,0,19.73-8.85,19.73-19.73,0-10.88-8.85-19.73-19.73-19.73ZM319.66,31.08h-43.49s0-13.66,0-13.66h43.49c3.77,0,6.83,3.06,6.83,6.83,0,3.77-3.06,6.83-6.83,6.83Z"/></g></svg>`;
 
@@ -584,7 +585,10 @@ export function buildPdfHtml(
   <style>.no-print { display: none; }</style>
   <style>@media print { .no-print { display: none !important; } .print-header, .print-footer, .pdf-watermark { display: block !important; } }</style>
 
-  <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">&#9789; Dark Mode</button>
+  ${omitInteractiveChrome
+    ? ""
+    : `<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" type="button">&#9789; Dark Mode</button>`
+  }
 
   <div class="report-header">
     <div class="brand">
@@ -609,7 +613,9 @@ export function buildPdfHtml(
     <div>${dateStr}${preparedBy ? ` &mdash; ${preparedBy}` : companyName ? ` &mdash; ${companyName}` : ""}</div>
   </div>
 
-  <script>
+  ${omitInteractiveChrome
+    ? ""
+    : `<script>
     function toggleTheme() {
       var html = document.documentElement;
       var btn = document.getElementById('themeBtn');
@@ -634,7 +640,8 @@ export function buildPdfHtml(
         h2.id = text;
       }
     });
-  </script>
+  </script>`
+  }
 </body>
 </html>`;
 }
