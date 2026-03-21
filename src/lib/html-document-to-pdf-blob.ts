@@ -18,6 +18,9 @@ import {
 
 const IFRAME_WIDTH_PX = 1024;
 
+/** A4 height in CSS px at capture width (210×297 mm ⇒ one PDF page slice in html2canvas tiling). */
+const SE_HC_COVER_PAGE_HEIGHT_CSS = `calc(${IFRAME_WIDTH_PX}px * 297 / 210)`;
+
 /** Must mirror buildPdfHtml light theme; all `!important` to beat var()-based rules */
 const PDF_HTML2CANVAS_FIX_CSS = `
 html, body {
@@ -66,7 +69,10 @@ html, body {
 .se-hc-cover-fullpage {
   background: #001A47 !important;
   color: #ffffff !important;
-  min-height: 1123px !important;
+  /* Exactly one A4 page at ${IFRAME_WIDTH_PX}px width so overview starts on PDF page 2 */
+  height: ${SE_HC_COVER_PAGE_HEIGHT_CSS} !important;
+  min-height: ${SE_HC_COVER_PAGE_HEIGHT_CSS} !important;
+  max-height: ${SE_HC_COVER_PAGE_HEIGHT_CSS} !important;
   box-sizing: border-box !important;
   padding: 48px 48px 40px !important;
   display: flex !important;
@@ -122,12 +128,12 @@ html, body {
   font-weight: 700 !important;
 }
 .se-hc-cover-mark-wrap {
-  flex: 1 !important;
+  flex: 1 1 auto !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 24px 0 32px !important;
-  min-height: 200px !important;
+  padding: 16px 0 20px !important;
+  min-height: 0 !important;
   background-color: #001A47 !important;
 }
 .se-hc-cover-mark-img {
@@ -172,34 +178,48 @@ html, body {
 /* Overview — navy top band, teal title, sans body (Central “Security Checkup Overview” layout) */
 .se-hc-overview-sheet {
   background: #ffffff !important;
+  page-break-before: always !important;
+  break-before: page !important;
   page-break-after: always !important;
   break-after: page !important;
   padding: 0 !important;
   margin: 0 !important;
 }
 .se-hc-overview-header-navy {
-  background: #001A47 !important;
-  padding: 32px 48px 40px !important;
-  min-height: 300px !important;
+  background: #001b44 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  padding: 40px 48px 48px !important;
+  min-height: 280px !important;
   box-sizing: border-box !important;
 }
-.se-hc-overview-header-logo {
+.se-hc-overview-wordmark {
   display: block !important;
-  height: 20px !important;
+  height: auto !important;
   width: auto !important;
-  max-width: 180px !important;
+  max-height: 36px !important;
+  max-width: min(360px, 92%) !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  flex-shrink: 0 !important;
 }
 .print-content h2.se-hc-overview-title {
-  margin: 36px 0 0 !important;
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
   padding: 0 !important;
   border: none !important;
   border-bottom: none !important;
   font-size: 22pt !important;
   font-weight: 700 !important;
   line-height: 1.2 !important;
-  color: #00f2b3 !important;
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
   text-align: left !important;
+  background-image: linear-gradient(90deg, #00ff9d 0%, #00d1ff 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 .se-hc-overview-body {
   padding: 32px 48px 40px !important;

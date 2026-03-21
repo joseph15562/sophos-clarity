@@ -38,4 +38,46 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content > .se-hc-
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content > .se-hc-overview-sheet {
   margin-top: 0 !important;
 }
+/* One full A4 page for cover at 1024px capture width — keeps overview on PDF page 2 */
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-cover-fullpage {
+  height: calc(1024px * 297 / 210) !important;
+  min-height: calc(1024px * 297 / 210) !important;
+  max-height: calc(1024px * 297 / 210) !important;
+  overflow: hidden !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-cover-mark-wrap {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-overview-sheet {
+  page-break-before: always !important;
+  break-before: page !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-overview-header-navy {
+  background: #001b44 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  padding: 40px 48px 48px !important;
+  min-height: 280px !important;
+  box-sizing: border-box !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-overview-wordmark {
+  display: block !important;
+  max-height: 36px !important;
+  max-width: min(360px, 92%) !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content h2.se-hc-overview-title {
+  margin-top: auto !important;
+  background-image: linear-gradient(90deg, #00ff9d 0%, #00d1ff 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  border-bottom: none !important;
+}
 `;

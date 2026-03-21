@@ -158,7 +158,7 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
   parts.push(`<div class="se-hc-overview-sheet">`);
   parts.push(`<div class="se-hc-overview-header-navy">`);
   parts.push(
-    `<img src="/sophos-logo-white.svg" alt="" class="se-hc-overview-header-logo" width="180" height="20" />`,
+    `<img src="${SE_HEALTH_CHECK_WORDMARK_SRC}" alt="" class="se-hc-overview-wordmark" width="280" height="32" />`,
   );
   parts.push(
     `<h2 id="firewall-health-check-overview" class="se-hc-overview-title">Firewall health check overview</h2>`,
