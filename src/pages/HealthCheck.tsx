@@ -30,10 +30,6 @@ import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
-import { buildPdfHtml } from "@/lib/report-export";
-import { htmlDocumentStringToPdfBlob, sanitizePdfFilenamePart } from "@/lib/html-document-to-pdf-blob";
-import { buildSEHealthCheckReportHtml } from "@/lib/se-health-check-report-html";
-import { saveAs } from "file-saver";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -434,7 +430,7 @@ function HealthCheckInner() {
       seAuth.seProfile?.displayName?.trim() ||
       seAuth.seProfile?.email?.trim() ||
       "Sales Engineer";
-    const inner = buildSEHealthCheckReportHtml({
+    const reportParams = {
       labels,
       files,
       analysisResults,
@@ -452,7 +448,7 @@ function HealthCheckInner() {
       generatedAt: new Date(),
       appVersion:
         typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
-    });
+    };
     const branding: BrandingData = {
       companyName: "Sophos FireComply",
       customerName: customerName.trim(),
@@ -463,16 +459,14 @@ function HealthCheckInner() {
       preparedBy: seAuth.seProfile?.displayName?.trim() || seAuth.seProfile?.email?.trim() || "",
       confidential: true,
     };
-    const html = buildPdfHtml(inner, "Sophos Firewall Health Check", branding, {
-      theme: "light",
-      omitInteractiveChrome: true,
-    });
     setPdfBusy(true);
     try {
-      const blob = await htmlDocumentStringToPdfBlob(html);
-      const part = sanitizePdfFilenamePart(customerName);
-      const date = new Date().toISOString().slice(0, 10);
-      saveAs(blob, `Sophos-Firewall-Health-Check-${part}-${date}.pdf`);
+      const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download");
+      await runHealthCheckPdfDownload({
+        reportParams,
+        branding,
+        filenameCustomerPart: customerName,
+      });
       toast.success("PDF downloaded.");
     } catch (e) {
       console.warn("[health-check] pdf download failed", e);
