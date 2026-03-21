@@ -1,0 +1,29 @@
+---
+description: Persist Cursor plans in the git repo and GitHub, not only editor-local storage
+alwaysApply: true
+---
+
+# Plans: save in repo and ship to GitHub
+
+## Canonical location
+
+- Store human-readable plan markdown under **[docs/plans/](docs/plans/)** in this repository (create the folder if missing).
+- Cursor may also write to editor-local paths (e.g. under `.cursor/plans/` outside the clone). Treat those as **drafts**; the **team source of truth** is **`docs/plans/*.md`**.
+
+## When to copy a plan
+
+Whenever you **create or materially update** a plan (feature work, architecture, migrations):
+
+1. Save the final markdown to `docs/plans/` using a **descriptive kebab-case name**, e.g. `retention-report-upsell.md`, `sophos-central-api-parity.md`.
+2. If a plan for the same effort already exists in `docs/plans/`, **update that file** instead of adding duplicates.
+3. Do **not** put secrets, tokens, or customer data in plan files.
+
+## Git and GitHub
+
+- Include `docs/plans/` changes in **git** with the related feature commit, or as a dedicated **`docs:`** commit immediately after.
+- **Push** to the remote so the plan is on **GitHub** like the rest of the project—do not leave finalized plans only on a single machine.
+
+## Quick checklist before wrapping planning work
+
+- [ ] Plan content mirrored or updated under `docs/plans/`
+- [ ] Committed (and pushed when the user wants changes on GitHub)
