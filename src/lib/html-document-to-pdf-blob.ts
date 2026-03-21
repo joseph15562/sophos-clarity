@@ -468,14 +468,66 @@ function nudgeSeHealthHeadingsClearOfPageEnd(
   const body = idoc.body;
   const usableH_mm = 297;
   const thresholdMm = usableH_mm * clearBelowFraction;
+  const slicePxCss = (IFRAME_WIDTH_PX * 297) / 210;
   const heads = [
     ...body.querySelectorAll<HTMLElement>(".se-hc-report-body-pages h2, .se-hc-report-body-pages h3"),
   ];
+  // #region agent log
+  fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
+    body: JSON.stringify({
+      sessionId: "360061",
+      runId: "pre-fix",
+      hypothesisId: "B",
+      location: "html-document-to-pdf-blob.ts:nudgeSeHealthHeadingsClearOfPageEnd:entry",
+      message: "nudge entry",
+      data: {
+        headCount: heads.length,
+        scrollH,
+        imgH_mm,
+        thresholdMm,
+        slicePxCss,
+        previews: heads.slice(0, 12).map((h) => (h.textContent || "").trim().slice(0, 80)),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   heads.sort((a, b) => elementTopRelativeToBody(a, body) - elementTopRelativeToBody(b, body));
   for (const el of heads) {
     const yPx = elementTopRelativeToBody(el, body);
     const yMm = (yPx / scrollH) * imgH_mm;
     const posMm = yMm - Math.floor(yMm / usableH_mm) * usableH_mm;
+    const posPxInSlice = yPx % slicePxCss;
+    const fracPx = posPxInSlice / slicePxCss;
+    const wouldNudgeMm = posMm > thresholdMm + 0.5;
+    const wouldNudgePx = fracPx > clearBelowFraction + 0.002;
+    // #region agent log
+    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
+      body: JSON.stringify({
+        sessionId: "360061",
+        runId: "pre-fix",
+        hypothesisId: "A",
+        location: "html-document-to-pdf-blob.ts:nudgeSeHealthHeadingsClearOfPageEnd:heading",
+        message: "heading slice math",
+        data: {
+          tag: el.tagName,
+          text: (el.textContent || "").trim().slice(0, 100),
+          yPx,
+          yMm: Math.round(yMm * 100) / 100,
+          posMm: Math.round(posMm * 100) / 100,
+          posPxInSlice: Math.round(posPxInSlice * 100) / 100,
+          fracPx: Math.round(fracPx * 1000) / 1000,
+          wouldNudgeMm,
+          wouldNudgePx,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
     if (posMm > thresholdMm + 0.5) {
       const deltaMm = usableH_mm - posMm + 6;
       const deltaPx = (deltaMm / imgH_mm) * scrollH;
@@ -729,6 +781,30 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
     const usableW = pageW - 2 * pageMarginMm;
     const usableH = pageH - 2 * pageMarginMm;
     const imgH_pre = (canvas.height * usableW) / canvas.width;
+
+    // #region agent log
+    if (isSeHealthPdf) {
+      fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
+        body: JSON.stringify({
+          sessionId: "360061",
+          runId: "pre-fix",
+          hypothesisId: "C",
+          location: "html-document-to-pdf-blob.ts:htmlDocumentStringToPdfBlob:post-canvas",
+          message: "capture dimensions",
+          data: {
+            scrollH,
+            canvasH: canvas.height,
+            canvasW: canvas.width,
+            imgH_pre_mm: Math.round(imgH_pre * 100) / 100,
+            usableW_mm: Math.round(usableW * 100) / 100,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
 
     const seTilePlan = isSeHealthPdf
       ? buildSeHealthPdfTilePlan(imgH_pre, usableH, scrollH, tableSlices)
