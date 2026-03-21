@@ -738,8 +738,36 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               totalFindings={totalFindings}
               isViewerOnly={isViewerOnly}
             />
-            {hasFiles && (
-              <DpiExclusionBar zones={dpiExemptZones} onChange={setDpiExemptZones} />
+            {hasFiles && !isGuest && org?.id && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <ProgressNarrative
+                  orgId={org.id}
+                  currentResults={analysisResults}
+                  customerName={branding.customerName || "Customer"}
+                />
+                <QbrPackChecklist
+                  fileCount={files.length}
+                  hasReports={reports.some((r) => r.id === "report-executive" && (r.markdown?.trim().length ?? 0) > 0)}
+                  hasCompliance={reports.some((r) => r.id === "report-compliance" && (r.markdown?.trim().length ?? 0) > 0)}
+                  onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
+                  onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
+                  onExportRiskRegister={() => downloadRiskRegisterCSV(analysisResults, branding.customerName)}
+                  onExportInteractiveHtml={() =>
+                    downloadInteractiveHtml(analysisResults, {
+                      customerName: branding.customerName,
+                      mspName: branding.companyName,
+                      logoUrl: branding.logoUrl ?? undefined,
+                    })
+                  }
+                />
+              </div>
+            )}
+            {hasFiles && aggregatedPosture.allWanSourceZones.length > 0 && (
+              <DpiExclusionBar
+                detectedZones={aggregatedPosture.allWanSourceZones}
+                excludedZones={dpiExemptZones}
+                onChange={setDpiExemptZones}
+              />
             )}
             {hasFiles && (
               <AnalysisTabs
@@ -768,30 +796,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);
                 }}
               />
-            )}
-            {hasFiles && !isGuest && org?.id && (
-              <div className="grid gap-4 md:grid-cols-2">
-                <ProgressNarrative
-                  orgId={org.id}
-                  currentResults={analysisResults}
-                  customerName={branding.customerName || "Customer"}
-                />
-                <QbrPackChecklist
-                  fileCount={files.length}
-                  hasReports={reports.some((r) => r.id === "report-executive" && (r.markdown?.trim().length ?? 0) > 0)}
-                  hasCompliance={reports.some((r) => r.id === "report-compliance" && (r.markdown?.trim().length ?? 0) > 0)}
-                  onGenerateExecutive={() => { setViewingReports(true); generateExecutive(); if (org?.id) logAudit(org.id, "report.generated", "report", "executive"); }}
-                  onGenerateCompliance={() => { setViewingReports(true); generateCompliance(); if (org?.id) logAudit(org.id, "report.generated", "report", "compliance"); }}
-                  onExportRiskRegister={() => downloadRiskRegisterCSV(analysisResults, branding.customerName)}
-                  onExportInteractiveHtml={() =>
-                    downloadInteractiveHtml(analysisResults, {
-                      customerName: branding.customerName,
-                      mspName: branding.companyName,
-                      logoUrl: branding.logoUrl ?? undefined,
-                    })
-                  }
-                />
-              </div>
             )}
           </>
         )}

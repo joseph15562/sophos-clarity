@@ -1,35 +1,31 @@
-import { useState, useCallback } from "react";
-import { X, Plus, ShieldOff } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useCallback } from "react";
+import { ShieldOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
-  zones: string[];
+  /** All WAN source zones detected from the config */
+  detectedZones: string[];
+  /** Currently excluded zones */
+  excludedZones: string[];
   onChange: (zones: string[]) => void;
 }
 
-const BUILTIN = ["Guest", "IoT", "BYOD", "RED", "Server", "DMZ", "VoIP", "Camera", "Printer"];
+const BUILTIN_LABEL = "Guest, IoT, BYOD, RED, Server, DMZ, VoIP, Camera, Printer";
 
-export function DpiExclusionBar({ zones, onChange }: Props) {
-  const [input, setInput] = useState("");
-
-  const addZone = useCallback(() => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    const lower = trimmed.toLowerCase();
-    if (zones.some((z) => z.toLowerCase() === lower)) {
-      setInput("");
-      return;
-    }
-    onChange([...zones, trimmed]);
-    setInput("");
-  }, [input, zones, onChange]);
-
-  const removeZone = useCallback(
-    (zone: string) => onChange(zones.filter((z) => z !== zone)),
-    [zones, onChange],
+export function DpiExclusionBar({ detectedZones, excludedZones, onChange }: Props) {
+  const toggle = useCallback(
+    (zone: string) => {
+      const lower = zone.toLowerCase();
+      if (excludedZones.some((z) => z.toLowerCase() === lower)) {
+        onChange(excludedZones.filter((z) => z.toLowerCase() !== lower));
+      } else {
+        onChange([...excludedZones, zone]);
+      }
+    },
+    [excludedZones, onChange],
   );
+
+  if (detectedZones.length === 0) return null;
 
   return (
     <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">
@@ -37,50 +33,35 @@ export function DpiExclusionBar({ zones, onChange }: Props) {
         <ShieldOff className="h-4 w-4 text-muted-foreground" />
         DPI Zone Exclusions
         <span className="text-[11px] text-muted-foreground font-normal">
-          Zones where SSL/TLS certificate cannot be deployed (auto-excluded: {BUILTIN.join(", ")})
+          Auto-excluded: {BUILTIN_LABEL}. Toggle zones below to exclude from DPI checks:
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {zones.map((z) => (
-          <Badge
-            key={z}
-            variant="secondary"
-            className="gap-1 pl-2 pr-1 py-0.5 text-xs"
-          >
-            {z}
+        {detectedZones.map((zone) => {
+          const isExcluded = excludedZones.some(
+            (z) => z.toLowerCase() === zone.toLowerCase(),
+          );
+          return (
             <button
+              key={zone}
               type="button"
-              onClick={() => removeZone(z)}
-              className="ml-0.5 rounded-full hover:bg-muted p-0.5"
-              aria-label={`Remove ${z}`}
+              onClick={() => toggle(zone)}
+              className="focus:outline-none"
             >
-              <X className="h-3 w-3" />
+              <Badge
+                variant={isExcluded ? "default" : "outline"}
+                className={`cursor-pointer text-xs transition-colors ${
+                  isExcluded
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
+                    : "hover:bg-muted"
+                }`}
+              >
+                {zone.toUpperCase()}
+                {isExcluded && " (excluded)"}
+              </Badge>
             </button>
-          </Badge>
-        ))}
-        <form
-          className="flex items-center gap-1.5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            addZone();
-          }}
-        >
-          <Input
-            className="h-7 w-40 rounded-lg text-xs font-mono"
-            placeholder="Zone name"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <Button
-            type="submit"
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 rounded-lg"
-            disabled={!input.trim()}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-        </form>
+          );
+        })}
       </div>
     </div>
   );

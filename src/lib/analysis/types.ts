@@ -38,6 +38,7 @@ export interface InspectionPosture {
   sslExclusionRules: number;
   sslRules: SslTlsRule[];
   sslUncoveredZones: string[];
+  allWanSourceZones: string[];
   wanRuleNames: string[];
   totalDisabledRules: number;
   dpiEngineEnabled: boolean;

@@ -220,10 +220,7 @@ function findUncoveredZones(
   wanRules: Array<{ name: string; row: Record<string, string>; enabled: boolean }>,
   sslRules: SslTlsRule[],
   customExemptZones?: string[],
-): string[] {
-  const decryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled);
-  if (decryptRules.length === 0) return [];
-
+): { uncovered: string[]; allWanSourceZones: string[] } {
   const customSet = new Set((customExemptZones ?? []).map((z) => z.toLowerCase().trim()));
 
   const fwSourceZones = new Set<string>();
@@ -240,7 +237,12 @@ function findUncoveredZones(
     }
   }
 
-  if (fwSourceZones.size === 0) return [];
+  const allWanSourceZones = [...fwSourceZones];
+
+  const decryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled);
+  if (decryptRules.length === 0 || fwSourceZones.size === 0) {
+    return { uncovered: [], allWanSourceZones };
+  }
 
   const uncovered: string[] = [];
   for (const zone of fwSourceZones) {
@@ -254,7 +256,7 @@ function findUncoveredZones(
     });
     if (!isCovered) uncovered.push(zone);
   }
-  return uncovered;
+  return { uncovered, allWanSourceZones };
 }
 
 function countRows(sections: ExtractedSections, pattern: RegExp, exclude?: RegExp): number {
@@ -358,7 +360,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
     webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
     withAppControl: 0, withIps: 0, withSslInspection: 0,
-    sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [],
+    sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], allWanSourceZones: [],
     wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
   };
 
@@ -408,7 +410,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const sslDecryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled).length;
   const sslExclusionRules = sslRules.filter((r) => r.action === "exclude").length;
   const dpiEngineEnabled = sslDecryptRules > 0;
-  const sslUncoveredZones = findUncoveredZones(wanRules, sslRules, options?.dpiExemptZones);
+  const { uncovered: sslUncoveredZones, allWanSourceZones } = findUncoveredZones(wanRules, sslRules, options?.dpiExemptZones);
 
   const inspectionPosture: InspectionPosture = {
     totalWanRules: wanRules.length,
@@ -416,7 +418,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     disabledWanRules: disabledWanRules.length,
     webFilterableRules, withWebFilter, withoutWebFilter,
     withAppControl, withIps, withSslInspection,
-    sslDecryptRules, sslExclusionRules, sslRules, sslUncoveredZones,
+    sslDecryptRules, sslExclusionRules, sslRules, sslUncoveredZones, allWanSourceZones,
     wanRuleNames: wanRules.map((w) => w.name),
     totalDisabledRules,
     dpiEngineEnabled,

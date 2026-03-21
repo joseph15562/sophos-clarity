@@ -569,7 +569,12 @@ function HealthCheckInner() {
               </Button>
             </div>
 
-            <DpiExclusionBar zones={dpiExemptZones} onChange={setDpiExemptZones} />
+            {(() => {
+              const allZones = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceZones))];
+              return allZones.length > 0 ? (
+                <DpiExclusionBar detectedZones={allZones} excludedZones={dpiExemptZones} onChange={setDpiExemptZones} />
+              ) : null;
+            })()}
 
             <HealthCheckDashboard
               files={files}

@@ -46,7 +46,7 @@ export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string
       totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
       webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
       withAppControl: 0, withIps: 0, withSslInspection: 0,
-      sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [],
+      sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], allWanSourceZones: [],
       wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
     };
     for (const r of Object.values(analysisResults)) {
@@ -64,11 +64,13 @@ export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string
       agg.sslExclusionRules += ip.sslExclusionRules;
       agg.sslRules.push(...ip.sslRules);
       agg.sslUncoveredZones.push(...ip.sslUncoveredZones);
+      agg.allWanSourceZones.push(...ip.allWanSourceZones);
       agg.totalDisabledRules += ip.totalDisabledRules;
     }
     // DPI is active if any firewall has SSL/TLS Decrypt rules
     agg.dpiEngineEnabled = agg.sslDecryptRules > 0;
     agg.sslUncoveredZones = [...new Set(agg.sslUncoveredZones)];
+    agg.allWanSourceZones = [...new Set(agg.allWanSourceZones)];
     return agg;
   }, [analysisResults]);
 
