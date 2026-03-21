@@ -59,7 +59,7 @@ export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnal
       withAppControl: 0, withIps: 0, withSslInspection: 0,
       sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
       allWanSourceZones: [], allWanSourceNetworks: [],
-      wanRuleNames: [], wanWebServiceRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+      wanRuleNames: [], wanWebServiceRuleNames: [], wanMissingWebFilterRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
     };
     for (const r of Object.values(analysisResults)) {
       const ip = r.inspectionPosture;
@@ -81,6 +81,7 @@ export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnal
       agg.allWanSourceNetworks.push(...ip.allWanSourceNetworks);
       agg.wanRuleNames.push(...ip.wanRuleNames);
       agg.wanWebServiceRuleNames.push(...ip.wanWebServiceRuleNames);
+      agg.wanMissingWebFilterRuleNames.push(...ip.wanMissingWebFilterRuleNames);
       agg.totalDisabledRules += ip.totalDisabledRules;
     }
     agg.dpiEngineEnabled = agg.sslDecryptRules > 0;
@@ -89,6 +90,7 @@ export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnal
     agg.allWanSourceZones = [...new Set(agg.allWanSourceZones)];
     agg.allWanSourceNetworks = [...new Set(agg.allWanSourceNetworks)];
     agg.wanWebServiceRuleNames = [...new Set(agg.wanWebServiceRuleNames)];
+    agg.wanMissingWebFilterRuleNames = [...new Set(agg.wanMissingWebFilterRuleNames)];
     return agg;
   }, [analysisResults]);
 

@@ -3,7 +3,7 @@ import { Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
-  /** Enabled WAN rules with web-capable services (from analysis) */
+  /** Enabled WAN rules with web-capable services that have no web filter (from analysis) */
   candidateRuleNames: string[];
   /** Rule names excluded from the missing-web-filter compliance check */
   exemptRuleNames: string[];

@@ -755,7 +755,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               beforeReports={
                 (aggregatedPosture.allWanSourceZones.length > 0 ||
                   aggregatedPosture.allWanSourceNetworks.length > 0 ||
-                  aggregatedPosture.wanWebServiceRuleNames.length > 0) ? (
+                  aggregatedPosture.wanMissingWebFilterRuleNames.length > 0) ? (
                   <div className="space-y-3">
                     {(aggregatedPosture.allWanSourceZones.length > 0 || aggregatedPosture.allWanSourceNetworks.length > 0) && (
                       <DpiExclusionBar
@@ -767,9 +767,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                         onNetworksChange={setDpiExemptNetworks}
                       />
                     )}
-                    {aggregatedPosture.wanWebServiceRuleNames.length > 0 && (
+                    {aggregatedPosture.wanMissingWebFilterRuleNames.length > 0 && (
                       <WebFilterRuleExclusionBar
-                        candidateRuleNames={aggregatedPosture.wanWebServiceRuleNames}
+                        candidateRuleNames={aggregatedPosture.wanMissingWebFilterRuleNames}
                         exemptRuleNames={branding.webFilterExemptRuleNames ?? []}
                         onChange={(names) => setBranding((b) => ({ ...b, webFilterExemptRuleNames: names }))}
                       />

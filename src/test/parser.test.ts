@@ -130,6 +130,13 @@ describe("analyseConfig", () => {
     expect(finding!.detail).toContain("Open-WAN");
   });
 
+  it("exposes WAN rules missing web filter for exemption UI scope", () => {
+    expect(result.inspectionPosture.wanMissingWebFilterRuleNames).toContain("Open-WAN");
+    expect(result.inspectionPosture.wanMissingWebFilterRuleNames.length).toBe(
+      result.inspectionPosture.withoutWebFilter,
+    );
+  });
+
   it("flags disabled WAN rules", () => {
     const finding = result.findings.find((f) => f.title.includes("disabled"));
     expect(finding).toBeDefined();

@@ -46,6 +46,8 @@ export interface InspectionPosture {
   wanRuleNames: string[];
   /** Enabled WAN rules with HTTP/HTTPS/ANY service — candidates for web filter checks / exemptions */
   wanWebServiceRuleNames: string[];
+  /** Enabled WAN + web-capable service rules with no web filter applied (UI scope for exemptions) */
+  wanMissingWebFilterRuleNames: string[];
   totalDisabledRules: number;
   dpiEngineEnabled: boolean;
 }

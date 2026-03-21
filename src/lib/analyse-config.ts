@@ -438,7 +438,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     withAppControl: 0, withIps: 0, withSslInspection: 0,
     sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
     allWanSourceZones: [], allWanSourceNetworks: [],
-    wanRuleNames: [], wanWebServiceRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+    wanRuleNames: [], wanWebServiceRuleNames: [], wanMissingWebFilterRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
   };
 
   if (!rulesTable || totalRules === 0) {
@@ -491,6 +491,10 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const { uncoveredNetworks: sslUncoveredNetworks, allWanSourceNetworks } =
     findUncoveredNetworks(wanRules, sslRules, options?.dpiExemptNetworks);
 
+  const wanMissingWebFilterRuleNames = wanRules
+    .filter((w) => w.enabled && isWebService(w.row) && !hasWebFilter(w.row))
+    .map((w) => w.name);
+
   const inspectionPosture: InspectionPosture = {
     totalWanRules: wanRules.length,
     enabledWanRules: enabledWanRules.length,
@@ -502,6 +506,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     allWanSourceZones, allWanSourceNetworks,
     wanRuleNames: wanRules.map((w) => w.name),
     wanWebServiceRuleNames: wanRules.filter((w) => w.enabled && isWebService(w.row)).map((w) => w.name),
+    wanMissingWebFilterRuleNames,
     totalDisabledRules,
     dpiEngineEnabled,
   };

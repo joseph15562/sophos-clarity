@@ -22,6 +22,7 @@ function mockInspectionPosture(overrides: Partial<InspectionPosture> = {}): Insp
     allWanSourceNetworks: [],
     wanRuleNames: [],
     wanWebServiceRuleNames: [],
+    wanMissingWebFilterRuleNames: [],
     totalDisabledRules: 0,
     dpiEngineEnabled: true,
     ...overrides,

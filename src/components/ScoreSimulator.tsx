@@ -27,6 +27,7 @@ function cloneResult(r: AnalysisResult): AnalysisResult {
       allWanSourceNetworks: [...r.inspectionPosture.allWanSourceNetworks],
       wanRuleNames: [...r.inspectionPosture.wanRuleNames],
       wanWebServiceRuleNames: [...r.inspectionPosture.wanWebServiceRuleNames],
+      wanMissingWebFilterRuleNames: [...r.inspectionPosture.wanMissingWebFilterRuleNames],
     },
     ruleColumns: r.ruleColumns ? [...r.ruleColumns] : undefined,
   };
@@ -45,6 +46,7 @@ const TOGGLES: Toggle[] = [
       const c = cloneResult(r);
       c.inspectionPosture.withWebFilter = c.inspectionPosture.webFilterableRules;
       c.inspectionPosture.withoutWebFilter = 0;
+      c.inspectionPosture.wanMissingWebFilterRuleNames = [];
       c.findings = removeFindings(c.findings, /missing web filtering/i);
       return c;
     },
