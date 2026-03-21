@@ -9,9 +9,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import SharedReport from "./pages/SharedReport";
 import NotFound from "./pages/NotFound";
+import HealthCheck from "./pages/HealthCheck";
 
 const ClientPortal = lazy(() => import("./pages/ClientPortal"));
-const HealthCheck = lazy(() => import("./pages/HealthCheck"));
 
 const queryClient = new QueryClient();
 
