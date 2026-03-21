@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link2, Search, Server, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthOptional } from "@/hooks/use-auth";
 import { getCachedFirewalls, getCachedTenants, getFirewallDisplayName, type CentralTenant } from "@/lib/sophos-central";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -47,7 +47,9 @@ interface Props {
 }
 
 export function FirewallLinkPicker({ configId, configHostname, configHash, configSerialNumber, disableAutoLink, onLinked }: Props) {
-  const { org, isGuest } = useAuth();
+  const auth = useAuthOptional();
+  const org = auth?.org ?? null;
+  const isGuest = auth?.isGuest ?? true;
   const orgId = org?.id ?? "";
 
   const [tenants, setTenants] = useState<CentralTenant[]>([]);

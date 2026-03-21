@@ -194,3 +194,7 @@ export function useAuth(): AuthState {
   if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
   return ctx;
 }
+
+export function useAuthOptional(): AuthState | null {
+  return useContext(AuthContext);
+}
