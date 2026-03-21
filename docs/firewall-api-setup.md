@@ -133,3 +133,7 @@ FireComply reports automatically document this service account and its compensat
 
 - **Session timeout**: The connector creates a new session for each scan. If the firewall has very short session timeouts, increase them under System → Administration.
 - **Concurrent session limits**: If "Simultaneous sign-ins" is limited for the `firecomply-api` user, set it to "Unlimited" or at least 2.
+
+## Maintainer reference (Sophos Firewall SDK)
+
+For API shape and examples in Python (read-only reference for debugging), see [firecomply-connector-sophos-firewall-sdk.md](./firecomply-connector-sophos-firewall-sdk.md).

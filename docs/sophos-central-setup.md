@@ -125,3 +125,7 @@ Yes. The integration uses standard Supabase tables, Edge Functions, and Row Leve
 
 **Can multiple staff in my organisation use the same Central link?**
 Yes. Credentials are stored per organisation, not per user. All members of your FireComply organisation share the same Central connection.
+
+## Developer / API parity (maintainers)
+
+For a mapping of implemented Central routes to Sophos’s official Postman collection and drift watchlist items, see [sophos-central-api-notes.md](./sophos-central-api-notes.md).

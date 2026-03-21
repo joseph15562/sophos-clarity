@@ -153,6 +153,50 @@ const REQUIREMENTS = {
       return { met: false, detail: f[0].detail };
     },
   ),
+
+  /** Aligns with themes in Sophos public firewall-audit tool (threat feeds / ATP / MDR) — see docs/sophos-firewall-audit-gap-matrix.md */
+  threatIntelligenceFeedsHealthy: createRequirement(
+    "Threat Protection",
+    "X-Ops / ATP / MDR threat feeds healthy",
+    (r) => {
+      const f = hasFindings(
+        r,
+        /Sophos X-Ops Active Threat Response is disabled|ATP is in log-only mode|MDR threat feed is not active|Third-party threat feed sync failure|Sophos X-Ops \(ATP\) threat protection disabled/i,
+      );
+      if (f.length === 0) return { met: true, detail: "No critical threat-feed or ATP-mode findings" };
+      return { met: false, detail: f[0].title };
+    },
+  ),
+
+  patternAutoUpdateEnabled: createRequirement(
+    "Updates",
+    "Pattern / signature auto-update enabled",
+    (r) => {
+      const f = hasFindings(r, /Pattern auto-update disabled/i);
+      if (f.length === 0) return { met: true, detail: "Automatic pattern updates appear enabled" };
+      return { met: false, detail: f[0].detail };
+    },
+  ),
+
+  scheduledBackupsConfigured: createRequirement(
+    "Resilience",
+    "Scheduled configuration backups",
+    (r) => {
+      const f = hasFindings(r, /Automated backups not scheduled/i);
+      if (f.length === 0) return { met: true, detail: "Scheduled backup or active backup mode detected" };
+      return { met: false, detail: f[0].detail };
+    },
+  ),
+
+  adminLoginHardening: createRequirement(
+    "Access Control",
+    "Admin password policy and login lockout",
+    (r) => {
+      const f = hasFindings(r, /Password complexity not enabled|Login brute-force protection disabled/i);
+      if (f.length === 0) return { met: true, detail: "Password complexity and login lockout appear configured" };
+      return { met: false, detail: f[0].title };
+    },
+  ),
 };
 
 export const BASELINE_TEMPLATES: BaselineTemplate[] = [
@@ -195,6 +239,25 @@ export const BASELINE_TEMPLATES: BaselineTemplate[] = [
       REQUIREMENTS.loggingAllRules,
       REQUIREMENTS.noAnyServiceRules,
       REQUIREMENTS.appControlPct(80),
+    ],
+  },
+  {
+    id: "sophos-firewall-audit-inspired",
+    name: "Sophos Firewall Audit (inspired)",
+    description:
+      "Themes aligned with Sophos’s public sophos-firewall-audit YAML areas (threat protection, updates, backups, admin hardening) plus core traffic controls. Not an official Sophos certification — see docs/sophos-firewall-audit-gap-matrix.md.",
+    requirements: [
+      REQUIREMENTS.dpiActive,
+      REQUIREMENTS.ipsPct(80),
+      REQUIREMENTS.webFilterPct(80),
+      REQUIREMENTS.mfaEnabled,
+      REQUIREMENTS.noAdminOnWan,
+      REQUIREMENTS.loggingAllRules,
+      REQUIREMENTS.threatIntelligenceFeedsHealthy,
+      REQUIREMENTS.patternAutoUpdateEnabled,
+      REQUIREMENTS.scheduledBackupsConfigured,
+      REQUIREMENTS.adminLoginHardening,
+      REQUIREMENTS.appControlPct(50),
     ],
   },
 ];
