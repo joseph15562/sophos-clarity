@@ -78,21 +78,30 @@ export function useSEAuthProvider(): SEAuthState {
   }, []);
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let profileTimeout: ReturnType<typeof setTimeout> | undefined;
+    /** Never leave the UI stuck on loading if getSession or Supabase hangs */
+    const bootTimeout = setTimeout(() => setIsLoading(false), 12_000);
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        loadProfile(s.user).finally(() => {
-          clearTimeout(timeout);
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
+        clearTimeout(bootTimeout);
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          loadProfile(s.user).finally(() => {
+            clearTimeout(profileTimeout);
+            setIsLoading(false);
+          });
+          profileTimeout = setTimeout(() => setIsLoading(false), 10_000);
+        } else {
           setIsLoading(false);
-        });
-        timeout = setTimeout(() => setIsLoading(false), 10_000);
-      } else {
+        }
+      })
+      .catch(() => {
+        clearTimeout(bootTimeout);
         setIsLoading(false);
-      }
-    }).catch(() => setIsLoading(false));
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
@@ -105,7 +114,8 @@ export function useSEAuthProvider(): SEAuthState {
     });
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(bootTimeout);
+      clearTimeout(profileTimeout);
       subscription.unsubscribe();
     };
   }, [loadProfile]);
