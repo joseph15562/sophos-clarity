@@ -353,9 +353,10 @@ export function TenantDashboard() {
     for (const agent of agentList) {
       const m = byAgentDay.get(agent.id)!;
       const lastSeen = agent.last_seen_at ? new Date(agent.last_seen_at).getTime() : 0;
-      const isOffline = (agent.status ?? "").toLowerCase() !== "active" || (lastSeen > 0 && now - lastSeen > offlineThreshold);
-      for (const dk of dayKeys) {
-        if (m.get(dk) === "none" && isOffline) m.set(dk, "offline");
+      const todayKey = dayKeys[dayKeys.length - 1];
+      const isCurrentlyOffline = (agent.status ?? "").toLowerCase() !== "active" || (lastSeen > 0 && now - lastSeen > offlineThreshold);
+      if (isCurrentlyOffline && m.get(todayKey) === "none") {
+        m.set(todayKey, "offline");
       }
     }
     return { agents: agentList, dayKeys, byAgentDay };
