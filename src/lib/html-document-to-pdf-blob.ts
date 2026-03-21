@@ -287,6 +287,76 @@ code {
   background: #f1f5f9 !important;
   color: #2006F7 !important;
 }
+/* SE Health Check — body pages (mirrors se-health-check-pdf-layout for html2canvas) */
+.se-hc-report-body-pages {
+  background: #ffffff !important;
+}
+.se-hc-pdf-section-letterhead {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 44px !important;
+  margin: 0 0 14px !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+}
+.se-hc-pdf-section-letterhead-img {
+  display: block !important;
+  height: 40px !important;
+  width: auto !important;
+  max-width: min(260px, 88%) !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+}
+.se-hc-pdf-section-letterhead + h2 {
+  margin-top: 0 !important;
+}
+.se-hc-report-body-pages .se-hc-pdf-section-letterhead:not(:first-of-type) {
+  page-break-before: always !important;
+  break-before: page !important;
+  padding-top: 4px !important;
+}
+.se-hc-report-body-pages h2 {
+  font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
+  font-size: 20pt !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  color: #001A47 !important;
+  border-bottom: 2px solid #001A47 !important;
+  border-bottom-color: #001A47 !important;
+  padding-bottom: 10px !important;
+  margin: 0 0 18px !important;
+}
+.se-hc-report-body-pages h3 {
+  font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 12.5pt !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  margin: 22px 0 10px !important;
+}
+.se-hc-report-body-pages h4 {
+  font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 11pt !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+.se-hc-report-body-pages p,
+.se-hc-report-body-pages li {
+  font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 11pt !important;
+  line-height: 1.55 !important;
+  color: #0f172a !important;
+}
+.se-hc-report-body-pages .table-wrapper {
+  margin: 10px 0 18px !important;
+}
+.se-hc-report-body-pages ul {
+  margin: 8px 0 14px !important;
+  padding-left: 1.35em !important;
+}
+.se-hc-report-body-pages ul li {
+  margin: 0.35em 0 !important;
+}
 `;
 
 function injectHtml2CanvasFixStyles(doc: Document, extraCss?: string) {
