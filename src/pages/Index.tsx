@@ -94,11 +94,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [activeTenantName, setActiveTenantName] = useState<string | undefined>(undefined);
   const [backendDebugInfo, setBackendDebugInfo] = useState<Record<string, unknown> | null>(null);
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
+  const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
 
   const {
     analysisResults: rawAnalysisResults, totalFindings: rawTotalFindings, totalRules: rawTotalRules, totalSections: rawTotalSections,
     totalPopulated: rawTotalPopulated, extractionPct: rawExtractionPct, aggregatedPosture: rawAggregatedPosture,
-  } = useFirewallAnalysis(files, dpiExemptZones);
+  } = useFirewallAnalysis(files, dpiExemptZones, dpiExemptNetworks);
 
   const analysisResults = analysisOverride ?? rawAnalysisResults;
 
@@ -738,11 +739,14 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               totalFindings={totalFindings}
               isViewerOnly={isViewerOnly}
               beforeReports={
-                aggregatedPosture.allWanSourceZones.length > 0 ? (
+                (aggregatedPosture.allWanSourceZones.length > 0 || aggregatedPosture.allWanSourceNetworks.length > 0) ? (
                   <DpiExclusionBar
                     detectedZones={aggregatedPosture.allWanSourceZones}
                     excludedZones={dpiExemptZones}
-                    onChange={setDpiExemptZones}
+                    onZonesChange={setDpiExemptZones}
+                    detectedNetworks={aggregatedPosture.allWanSourceNetworks}
+                    excludedNetworks={dpiExemptNetworks}
+                    onNetworksChange={setDpiExemptNetworks}
                   />
                 ) : undefined
               }

@@ -21,6 +21,8 @@ export interface SslTlsRule {
   action: "decrypt" | "exclude";
   sourceZones: string[];
   destZones: string[];
+  sourceNetworks: string[];
+  destNetworks: string[];
   enabled: boolean;
 }
 
@@ -38,7 +40,9 @@ export interface InspectionPosture {
   sslExclusionRules: number;
   sslRules: SslTlsRule[];
   sslUncoveredZones: string[];
+  sslUncoveredNetworks: string[];
   allWanSourceZones: string[];
+  allWanSourceNetworks: string[];
   wanRuleNames: string[];
   totalDisabledRules: number;
   dpiEngineEnabled: boolean;
@@ -94,6 +98,7 @@ export interface AnalysisResult {
 export interface AnalyseOptions {
   centralLinked?: boolean;
   dpiExemptZones?: string[];
+  dpiExemptNetworks?: string[];
 }
 
 const SEVERITY_ICON: Record<Severity, string> = {

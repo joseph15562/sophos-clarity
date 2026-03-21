@@ -82,6 +82,7 @@ function HealthCheckInner() {
   const [firewallOptions, setFirewallOptions] = useState<GuestFirewallRow[]>([]);
   const [licence, setLicence] = useState<LicenceSelection>({ tier: "xstream", modules: [] });
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
+  const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
 
   const baselineResults = useMemo(() => {
     const out: Record<string, ReturnType<typeof evaluateBaseline>> = {};
@@ -99,10 +100,10 @@ function HealthCheckInner() {
     const next: Record<string, AnalysisResult> = {};
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm|xml)$/i, "");
-      next[label] = analyseConfig(f.extractedData, { centralLinked: centralValidated, dpiExemptZones });
+      next[label] = analyseConfig(f.extractedData, { centralLinked: centralValidated, dpiExemptZones, dpiExemptNetworks });
     }
     setAnalysisResults(next);
-  }, [files, centralValidated, dpiExemptZones]);
+  }, [files, centralValidated, dpiExemptZones, dpiExemptNetworks]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
@@ -571,8 +572,16 @@ function HealthCheckInner() {
 
             {(() => {
               const allZones = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceZones))];
-              return allZones.length > 0 ? (
-                <DpiExclusionBar detectedZones={allZones} excludedZones={dpiExemptZones} onChange={setDpiExemptZones} />
+              const allNets = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceNetworks))];
+              return (allZones.length > 0 || allNets.length > 0) ? (
+                <DpiExclusionBar
+                  detectedZones={allZones}
+                  excludedZones={dpiExemptZones}
+                  onZonesChange={setDpiExemptZones}
+                  detectedNetworks={allNets}
+                  excludedNetworks={dpiExemptNetworks}
+                  onNetworksChange={setDpiExemptNetworks}
+                />
               ) : null;
             })()}
 

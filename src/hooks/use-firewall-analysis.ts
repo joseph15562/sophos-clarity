@@ -10,7 +10,7 @@ type ParsedFile = {
   centralEnrichment?: { licences?: unknown } | null;
 };
 
-export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string[]) {
+export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string[], dpiExemptNetworks?: string[]) {
   const analysisResults = useMemo<Record<string, AnalysisResult>>(() => {
     const results: Record<string, AnalysisResult> = {};
     for (const f of files) {
@@ -18,10 +18,11 @@ export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string
       results[label] = analyseConfig(f.extractedData, {
         centralLinked: !!f.centralEnrichment,
         dpiExemptZones,
+        dpiExemptNetworks,
       });
     }
     return results;
-  }, [files, dpiExemptZones]);
+  }, [files, dpiExemptZones, dpiExemptNetworks]);
 
   const totalFindings = useMemo(
     () => Object.values(analysisResults).reduce((sum, r) => sum + r.findings.length, 0),
@@ -46,7 +47,8 @@ export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string
       totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
       webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
       withAppControl: 0, withIps: 0, withSslInspection: 0,
-      sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], allWanSourceZones: [],
+      sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
+      allWanSourceZones: [], allWanSourceNetworks: [],
       wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
     };
     for (const r of Object.values(analysisResults)) {
@@ -64,13 +66,17 @@ export function useFirewallAnalysis(files: ParsedFile[], dpiExemptZones?: string
       agg.sslExclusionRules += ip.sslExclusionRules;
       agg.sslRules.push(...ip.sslRules);
       agg.sslUncoveredZones.push(...ip.sslUncoveredZones);
+      agg.sslUncoveredNetworks.push(...ip.sslUncoveredNetworks);
       agg.allWanSourceZones.push(...ip.allWanSourceZones);
+      agg.allWanSourceNetworks.push(...ip.allWanSourceNetworks);
       agg.totalDisabledRules += ip.totalDisabledRules;
     }
     // DPI is active if any firewall has SSL/TLS Decrypt rules
     agg.dpiEngineEnabled = agg.sslDecryptRules > 0;
     agg.sslUncoveredZones = [...new Set(agg.sslUncoveredZones)];
+    agg.sslUncoveredNetworks = [...new Set(agg.sslUncoveredNetworks)];
     agg.allWanSourceZones = [...new Set(agg.allWanSourceZones)];
+    agg.allWanSourceNetworks = [...new Set(agg.allWanSourceNetworks)];
     return agg;
   }, [analysisResults]);
 

@@ -189,15 +189,20 @@ function parseSslTlsRules(sections: ExtractedSections): SslTlsRule[] {
         ).trim();
         const status = (row["Status"] ?? "").toLowerCase().trim();
 
+        const srcNetworks = (row["Source Networks"] ?? row["Src Networks"] ?? "").trim();
+        const dstNetworks = (row["Destination Networks"] ?? row["Dest Networks"] ?? "").trim();
+
         const isExclude = actionRaw.includes("do not") || actionRaw.includes("donot") || actionRaw.includes("don't") || actionRaw.includes("bypass");
-        const splitZones = (z: string) =>
+        const splitValues = (z: string) =>
           z.toLowerCase() === "any" ? ["any"] : z.split(/[,;]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
 
         rules.push({
           name,
           action: isExclude ? "exclude" : "decrypt",
-          sourceZones: splitZones(source),
-          destZones: splitZones(dest),
+          sourceZones: splitValues(source),
+          destZones: splitValues(dest),
+          sourceNetworks: splitValues(srcNetworks),
+          destNetworks: splitValues(dstNetworks),
           enabled: !status.includes("off") && !status.includes("disable") && !status.includes("inactive") && status !== "0",
         });
       }
@@ -257,6 +262,64 @@ function findUncoveredZones(
     if (!isCovered) uncovered.push(zone);
   }
   return { uncovered, allWanSourceZones };
+}
+
+const DPI_EXEMPT_NETWORK = /printer|camera|cctv|voip|phone|sip|iot|guest|byod/i;
+
+/**
+ * Network-level DPI coverage check for L3 switch scenarios.
+ * When multiple networks share one zone, SSL/TLS decrypt rules may specify
+ * source networks. This finds WAN rule source networks not covered by any
+ * decrypt rule's source networks.
+ */
+function findUncoveredNetworks(
+  wanRules: Array<{ name: string; row: Record<string, string>; enabled: boolean }>,
+  sslRules: SslTlsRule[],
+  customExemptNetworks?: string[],
+): { uncoveredNetworks: string[]; allWanSourceNetworks: string[] } {
+  const customSet = new Set((customExemptNetworks ?? []).map((n) => n.toLowerCase().trim()));
+
+  const fwSourceNetworks = new Set<string>();
+  for (const { row, enabled } of wanRules) {
+    if (!enabled) continue;
+    const sn = (
+      row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? ""
+    ).toLowerCase().trim();
+    if (sn && sn !== "any") {
+      sn.split(/[,;]/).forEach((n) => {
+        const trimmed = n.trim();
+        if (trimmed) fwSourceNetworks.add(trimmed);
+      });
+    }
+  }
+
+  const allWanSourceNetworks = [...fwSourceNetworks];
+
+  const decryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled);
+  if (decryptRules.length === 0 || fwSourceNetworks.size === 0) {
+    return { uncoveredNetworks: [], allWanSourceNetworks };
+  }
+
+  const allDecryptCoverAnyNetwork = decryptRules.every(
+    (r) => r.sourceNetworks.length === 0 || r.sourceNetworks.includes("any"),
+  );
+  if (allDecryptCoverAnyNetwork) {
+    return { uncoveredNetworks: [], allWanSourceNetworks };
+  }
+
+  const uncoveredNetworks: string[] = [];
+  for (const net of fwSourceNetworks) {
+    if (DPI_EXEMPT_NETWORK.test(net)) continue;
+    if (customSet.has(net)) continue;
+
+    const isCovered = decryptRules.some((r) => {
+      const netMatch = r.sourceNetworks.includes("any") || r.sourceNetworks.length === 0 || r.sourceNetworks.includes(net);
+      const dstMatch = r.destZones.includes("any") || r.destZones.some((d) => d.includes("wan"));
+      return netMatch && dstMatch;
+    });
+    if (!isCovered) uncoveredNetworks.push(net);
+  }
+  return { uncoveredNetworks, allWanSourceNetworks };
 }
 
 function countRows(sections: ExtractedSections, pattern: RegExp, exclude?: RegExp): number {
@@ -360,7 +423,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
     webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
     withAppControl: 0, withIps: 0, withSslInspection: 0,
-    sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], allWanSourceZones: [],
+    sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
+    allWanSourceZones: [], allWanSourceNetworks: [],
     wanRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
   };
 
@@ -411,6 +475,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const sslExclusionRules = sslRules.filter((r) => r.action === "exclude").length;
   const dpiEngineEnabled = sslDecryptRules > 0;
   const { uncovered: sslUncoveredZones, allWanSourceZones } = findUncoveredZones(wanRules, sslRules, options?.dpiExemptZones);
+  const { uncoveredNetworks: sslUncoveredNetworks, allWanSourceNetworks } =
+    findUncoveredNetworks(wanRules, sslRules, options?.dpiExemptNetworks);
 
   const inspectionPosture: InspectionPosture = {
     totalWanRules: wanRules.length,
@@ -418,7 +484,9 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     disabledWanRules: disabledWanRules.length,
     webFilterableRules, withWebFilter, withoutWebFilter,
     withAppControl, withIps, withSslInspection,
-    sslDecryptRules, sslExclusionRules, sslRules, sslUncoveredZones, allWanSourceZones,
+    sslDecryptRules, sslExclusionRules, sslRules,
+    sslUncoveredZones, sslUncoveredNetworks,
+    allWanSourceZones, allWanSourceNetworks,
     wanRuleNames: wanRules.map((w) => w.name),
     totalDisabledRules,
     dpiEngineEnabled,
@@ -653,6 +721,35 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       remediation: `Go to Rules and policies > SSL/TLS inspection rules. Add or update a Decrypt rule to include ${zoneList} as source zone${sslUncoveredZones.length > 1 ? "s" : ""}. Ensure the signing CA certificate is deployed to all endpoints in ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}.`,
       confidence: "high",
       evidence: `WAN rules from zones ${zoneList} have no matching SSL/TLS Decrypt rule`,
+    });
+  }
+
+  // --- SSL/TLS network coverage gaps (L3 switch scenarios) ---
+  if (sslUncoveredNetworks.length > 0 && sslDecryptRules > 0) {
+    const netList = sslUncoveredNetworks.join(", ");
+    const exemptNets = (options?.dpiExemptNetworks ?? []);
+    const exemptNote = exemptNets.length > 0
+      ? ` ${exemptNets.length} network${exemptNets.length > 1 ? "s" : ""} excluded by user (acknowledged): ${exemptNets.join(", ")}.`
+      : "";
+    findings.push({
+      id: `f${++fid}`,
+      severity: "medium",
+      title: `${sslUncoveredNetworks.length} source network${sslUncoveredNetworks.length > 1 ? "s" : ""} not covered by SSL/TLS Decrypt rules`,
+      detail: `DPI is active but SSL/TLS Decrypt rules specify source networks that do not cover: ${netList}. In L3 switch environments where multiple networks share a single zone, these networks may bypass DPI inspection.${exemptNote}`,
+      section: "SSL/TLS Inspection",
+      remediation: `Go to Rules and policies > SSL/TLS inspection rules. Update the Decrypt rule source networks to include ${netList}, or add separate Decrypt rules for these networks. If these networks contain devices that cannot have the signing CA deployed (e.g. printers, IoT), add them as DPI exclusions.`,
+      confidence: "medium",
+      evidence: `WAN rules reference source networks ${netList} with no matching SSL/TLS Decrypt rule coverage`,
+    });
+  } else if (sslDecryptRules > 0 && (options?.dpiExemptNetworks ?? []).length > 0) {
+    const exemptNets = options!.dpiExemptNetworks!;
+    findings.push({
+      id: `f${++fid}`,
+      severity: "info",
+      title: `${exemptNets.length} source network${exemptNets.length > 1 ? "s" : ""} excluded from DPI checks (acknowledged)`,
+      detail: `The following source networks have been excluded from DPI coverage checks as certificate deployment is not feasible: ${exemptNets.join(", ")}.`,
+      section: "SSL/TLS Inspection",
+      confidence: "high",
     });
   }
 
