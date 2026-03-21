@@ -7,7 +7,7 @@
  * the connector pulling via the Sophos XML API.
  */
 
-import type { ExtractedSections, SectionData, TableData, DetailBlock } from "./extract-sections";
+import type { ExtractedSections, TableData, DetailBlock } from "./extract-sections";
 
 const SECTION_MAP: Record<string, string> = {
   FirewallRule: "Firewall Rules",
@@ -161,11 +161,6 @@ function policyField(e: Record<string, unknown>, field: string): string {
   return extractNested(e, `NetworkPolicy.${field}`) ||
          extractNested(e, `UserPolicy.${field}`) ||
          extractNested(e, `SecurityPolicy.${field}`) || "";
-}
-
-function isSystemRule(e: Record<string, unknown>): boolean {
-  const name = asString(e.Name ?? "").toLowerCase();
-  return name.startsWith("#") || name.startsWith("auto added");
 }
 
 function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData {
