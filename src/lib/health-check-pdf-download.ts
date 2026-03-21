@@ -27,6 +27,7 @@ export async function runHealthCheckPdfDownload(args: {
     omitInteractiveChrome: true,
     tocAfterMarker: SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER,
     omitReportHeader: true,
+    omitReportFooter: true,
     pdfLayoutProfile: SE_HEALTH_CHECK_PDF_PROFILE,
   });
   const blob = await htmlDocumentStringToPdfBlob(html);

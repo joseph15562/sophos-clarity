@@ -20,6 +20,9 @@ export const SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER = "<!-- firecomply:se-health-c
 /** Centre mark on PDF cover (white Sophos “S” on transparent — place file in /public). */
 export const SE_HEALTH_CHECK_COVER_MARK_SRC = "/se-health-check-sophos-mark.png";
 
+/** Top-left wordmark on PDF cover (wide white artwork for navy background). */
+export const SE_HEALTH_CHECK_WORDMARK_SRC = "/se-health-check-wordmark.png";
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -120,7 +123,7 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
   parts.push(`<div class="se-hc-cover-fullpage">`);
   parts.push(`<div class="se-hc-cover-brand">`);
   parts.push(
-    `<img src="/sophos-logo-white.svg" alt="" class="se-hc-cover-wordmark" width="200" height="22" />`,
+    `<img src="${SE_HEALTH_CHECK_WORDMARK_SRC}" alt="" class="se-hc-cover-wordmark" width="280" height="32" />`,
   );
   parts.push(`</div>`);
   parts.push(`<div class="se-hc-cover-body">`);

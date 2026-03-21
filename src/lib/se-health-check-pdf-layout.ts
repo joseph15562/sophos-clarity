@@ -22,4 +22,20 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .report-footer {
   padding-left: clamp(16px, 4vw, 48px) !important;
   padding-right: clamp(16px, 4vw, 48px) !important;
 }
+/* Cover: beat generic .print-content typography (all copy white on navy) */
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content .se-hc-cover-fullpage,
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content .se-hc-cover-fullpage h1,
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content .se-hc-cover-fullpage p,
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content .se-hc-cover-fullpage span {
+  color: #ffffff !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content .se-hc-cover-fullpage .se-hc-cover-copy {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content > .se-hc-cover-fullpage:first-child {
+  margin-bottom: 0 !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content > .se-hc-overview-sheet {
+  margin-top: 0 !important;
+}
 `;

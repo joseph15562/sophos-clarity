@@ -62,33 +62,38 @@ html, body {
 .print-content td {
   color: #334155 !important;
 }
-/* Cover — Sophos Central PDF–style (wordmark, 4-line meta, centred shield, centred footer) */
+/* Cover — Sophos Central PDF–style (wordmark, 4-line meta, centre mark, centred footer) */
 .se-hc-cover-fullpage {
   background: #001A47 !important;
   color: #ffffff !important;
   min-height: 1123px !important;
   box-sizing: border-box !important;
-  padding: 44px 48px 32px !important;
+  padding: 48px 48px 40px !important;
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
   margin: 0 !important;
+  overflow: hidden !important;
 }
 .se-hc-cover-brand {
   flex-shrink: 0 !important;
-  padding-top: 4px !important;
+  padding-top: 8px !important;
 }
 .se-hc-cover-wordmark {
   display: block !important;
-  height: 22px !important;
+  height: auto !important;
   width: auto !important;
-  max-width: 200px !important;
+  max-height: 36px !important;
+  max-width: min(360px, 92%) !important;
+  object-fit: contain !important;
+  object-position: left center !important;
 }
 .se-hc-cover-body {
   flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
   min-height: 0 !important;
+  background-color: #001A47 !important;
 }
 .se-hc-cover-text {
   margin-top: 56px !important;
@@ -123,6 +128,7 @@ html, body {
   justify-content: center !important;
   padding: 24px 0 32px !important;
   min-height: 200px !important;
+  background-color: #001A47 !important;
 }
 .se-hc-cover-mark-img {
   display: block !important;
@@ -148,6 +154,21 @@ html, body {
   color: #ffffff !important;
   margin: 0 !important;
 }
+/* Win over .print-content h1 / p (same specificity + order was losing before) */
+.print-content .se-hc-cover-fullpage h1,
+.print-content .se-hc-cover-fullpage p,
+.print-content .se-hc-cover-fullpage span.se-hc-cover-label {
+  color: #ffffff !important;
+}
+.print-content .se-hc-cover-fullpage .se-hc-cover-copy {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+.print-content .se-hc-cover-fullpage .se-hc-cover-confidential {
+  color: #ffffff !important;
+}
+.print-content .se-hc-cover-fullpage strong {
+  color: #ffffff !important;
+}
 /* Overview — navy top band, teal title, sans body (Central “Security Checkup Overview” layout) */
 .se-hc-overview-sheet {
   background: #ffffff !important;
@@ -168,7 +189,7 @@ html, body {
   width: auto !important;
   max-width: 180px !important;
 }
-.se-hc-overview-title {
+.print-content h2.se-hc-overview-title {
   margin: 36px 0 0 !important;
   padding: 0 !important;
   border: none !important;
