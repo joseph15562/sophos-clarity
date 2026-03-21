@@ -1,13 +1,15 @@
 /**
- * Client-side: render a full HTML document string (e.g. from buildPdfHtml) into a PDF Blob
- * using jsPDF + html2canvas. Intended for one-click downloads (no print dialog).
+ * Client-side: render a full HTML document string (e.g. from buildPdfHtml) into a PDF Blob.
  *
- * html2canvas does not reliably resolve CSS custom properties (`var(--text)`, etc.) from
- * :root — colors/backgrounds can become invalid and the raster looks like a solid header bar.
- * We inject literal hex overrides before capture and avoid `opacity:0` on the iframe (which
- * can also break painting in some browsers).
+ * jsPDF's `html()` + `autoPaging` is unreliable (blank pages, wrong slices). We use
+ * html2canvas on the iframe `body`, then tile the bitmap across A4 pages with `addImage`.
+ *
+ * html2canvas does not reliably resolve CSS variables — we inject hex overrides first.
+ * The iframe stays in-viewport at near-zero opacity so Chromium still paints (far off-screen
+ * iframes often rasterize empty).
  */
 
+import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
 const IFRAME_WIDTH_PX = 1024;
@@ -125,26 +127,47 @@ export function sanitizePdfFilenamePart(raw: string): string {
 }
 
 /**
+ * Tile one tall image across A4 portrait pages (mm units).
+ */
+function addCanvasToPdf(pdf: jsPDF, canvas: HTMLCanvasElement, marginMm: number): void {
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const usableW = pageW - 2 * marginMm;
+  const usableH = pageH - 2 * marginMm;
+
+  const imgW = usableW;
+  const imgH = (canvas.height * imgW) / canvas.width;
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+
+  let consumed = 0;
+  let first = true;
+  while (consumed < imgH - 0.01) {
+    if (!first) pdf.addPage();
+    first = false;
+    pdf.addImage(dataUrl, "JPEG", marginMm, marginMm - consumed, imgW, imgH);
+    consumed += usableH;
+  }
+}
+
+/**
  * @param fullHtml - Complete HTML document (`<!DOCTYPE html>...`) from buildPdfHtml or similar
  */
 export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blob> {
   const iframe = document.createElement("iframe");
   iframe.setAttribute("title", "pdf-generation");
   iframe.setAttribute("aria-hidden", "true");
+  /* In-viewport but invisible — off-screen / opacity-0 parent iframes often capture blank in Chromium */
   Object.assign(iframe.style, {
     position: "fixed",
-    left: "-10000px",
+    left: "0",
     top: "0",
     width: `${IFRAME_WIDTH_PX}px`,
-    /* Tall enough for full report layout (html2canvas reads content size) */
-    height: "14000px",
+    height: "100px",
     border: "0",
-    opacity: "1",
+    opacity: "0.02",
     pointerEvents: "none",
-    zIndex: "-1",
-    /* visible so iframe document can lay out full scrollHeight (hidden clips capture) */
-    overflow: "visible",
-    visibility: "visible",
+    zIndex: "2147483646",
+    overflow: "hidden",
   });
   document.body.appendChild(iframe);
 
@@ -159,8 +182,7 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
   idoc.write(fullHtml);
   idoc.close();
 
-  // Layout + remote fonts (@import in buildPdfHtml) — best-effort wait
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((r) => setTimeout(r, 700));
   try {
     await idoc.fonts?.ready;
   } catch {
@@ -170,50 +192,48 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
   injectHtml2CanvasFixStyles(idoc);
   idoc.documentElement.setAttribute("data-theme", "light");
 
-  /* Strip anything that still confuses html2canvas (fixed “Dark Mode” button, scripts) */
   idoc.querySelectorAll("script").forEach((s) => s.remove());
   idoc.querySelectorAll(".theme-toggle, #themeBtn").forEach((el) => el.remove());
 
-  // Force layout after DOM/CSS changes
   void idoc.body.offsetHeight;
 
   const scrollH = Math.min(
     Math.max(idoc.body.scrollHeight, idoc.documentElement.scrollHeight, 400),
-    50000,
+    32000,
   );
-  iframe.style.height = `${scrollH}px`;
+  iframe.style.height = `${Math.min(scrollH + 32, 32000)}px`;
+
+  void idoc.body.offsetHeight;
 
   const body = idoc.body;
-  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const scale = scrollH > 9000 ? 1.15 : scrollH > 6000 ? 1.35 : 1.65;
 
   try {
-    await pdf.html(body, {
-      x: 10,
-      y: 10,
-      width: 190,
+    const canvas = await html2canvas(body, {
+      scale,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+      width: IFRAME_WIDTH_PX,
+      height: scrollH,
       windowWidth: IFRAME_WIDTH_PX,
-      /* slice tends to raster the full subtree more reliably than text for long reports */
-      autoPaging: "slice",
-      html2canvas: {
-        scale: 0.48,
-        useCORS: true,
-        logging: false,
-        letterRendering: true,
-        backgroundColor: "#ffffff",
-        windowWidth: IFRAME_WIDTH_PX,
-        windowHeight: scrollH,
-        width: IFRAME_WIDTH_PX,
-        height: scrollH,
-        scrollX: 0,
-        scrollY: 0,
-        removeContainer: true,
-        ignoreElements: (node: Element) =>
-          (node as HTMLElement).classList?.contains?.("theme-toggle") ?? false,
+      windowHeight: scrollH,
+      scrollX: 0,
+      scrollY: 0,
+      foreignObjectRendering: false,
+      onclone: (_clonedDoc, clonedBody) => {
+        clonedBody.style.overflow = "visible";
       },
     });
+
+    if (canvas.width < 2 || canvas.height < 2) {
+      throw new Error("PDF capture produced an empty image — try again.");
+    }
+
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    addCanvasToPdf(pdf, canvas, 10);
+    return pdf.output("blob");
   } finally {
     document.body.removeChild(iframe);
   }
-
-  return pdf.output("blob");
 }
