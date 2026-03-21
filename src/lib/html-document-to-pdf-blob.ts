@@ -204,6 +204,7 @@ html, body {
   object-position: left center !important;
   flex-shrink: 0 !important;
 }
+/* Solid teal — html2canvas does not paint background-clip: text (shows as a bar) */
 .print-content h2.se-hc-overview-title {
   margin-top: auto !important;
   margin-bottom: 0 !important;
@@ -215,11 +216,11 @@ html, body {
   line-height: 1.2 !important;
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
   text-align: left !important;
-  background-image: linear-gradient(90deg, #00ff9d 0%, #00d1ff 100%) !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
+  background-image: none !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  color: #00d094 !important;
+  -webkit-text-fill-color: #00d094 !important;
 }
 .se-hc-overview-body {
   padding: 32px 48px 40px !important;

@@ -73,11 +73,11 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-overview-wordmark
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content h2.se-hc-overview-title {
   margin-top: auto !important;
-  background-image: linear-gradient(90deg, #00ff9d 0%, #00d1ff 100%) !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
+  background-image: none !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  color: #00d094 !important;
+  -webkit-text-fill-color: #00d094 !important;
   border-bottom: none !important;
 }
 `;
