@@ -23,12 +23,8 @@ export const SE_HEALTH_CHECK_COVER_MARK_SRC = "/se-health-check-sophos-mark.png"
 /** Top-left wordmark on PDF cover (wide white artwork for navy background). */
 export const SE_HEALTH_CHECK_WORDMARK_SRC = "/se-health-check-wordmark.png";
 
-/** Sophos lockup (blue shield + navy wordmark) — letterhead on body pages after cover + overview. */
+/** Sophos lockup (blue shield + navy wordmark) — stamped on PDF pages after cover + overview via jsPDF. */
 export const SE_PDF_SOPHOS_LOCKUP_SRC = "/se-pdf-sophos-lockup.png";
-
-function sePdfBodySectionLetterhead(): string {
-  return `<div class="se-hc-pdf-section-letterhead" aria-hidden="true"><img src="${SE_PDF_SOPHOS_LOCKUP_SRC}" alt="" class="se-hc-pdf-section-letterhead-img" width="240" height="48" /></div>`;
-}
 
 export function escapeHtml(s: string): string {
   return s
@@ -219,7 +215,6 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
 
   parts.push(`<div class="se-hc-report-body-pages">`);
 
-  parts.push(sePdfBodySectionLetterhead());
   parts.push(`<h2 id="provenance-and-limitations">Provenance and limitations</h2>`);
   parts.push(`<p><strong>Generated:</strong> ${escapeHtml(dateUtc)} (UTC) / ${escapeHtml(dateLocal)} (local)</p>`);
   parts.push(
@@ -229,7 +224,6 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     `<p>This assessment is <strong>point in time</strong> and based solely on the configuration files supplied. It is not a penetration test. Completeness depends on export quality and parser coverage. Validate critical items in the live Sophos XGS / SFOS console before making architectural or contractual commitments.</p>`,
   );
 
-  parts.push(sePdfBodySectionLetterhead());
   parts.push(`<h2 id="scope-and-exclusions">Assessment scope and exclusions</h2>`);
   parts.push(`<h3>DPI (SSL/TLS inspection) exclusions</h3>`);
   if (dpiExemptZones.length === 0 && dpiExemptNetworks.length === 0) {
@@ -252,7 +246,6 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     );
   }
 
-  parts.push(sePdfBodySectionLetterhead());
   parts.push(`<h2 id="file-manifest">Configuration file manifest</h2>`);
   parts.push(`<div class="table-wrapper"><table><thead><tr><th>File name</th><th>Display label</th><th>Export type</th><th>Serial (if linked)</th></tr></thead><tbody>`);
   for (const f of files) {
@@ -263,7 +256,6 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
   }
   parts.push(`</tbody></table></div>`);
 
-  parts.push(sePdfBodySectionLetterhead());
   parts.push(`<h2 id="executive-summary">Executive Summary</h2>`);
   for (const label of labels) {
     const ar = analysisResults[label];
@@ -305,7 +297,6 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     const bl = baselineResults[label];
     if (!ar || !bl) return;
 
-    parts.push(sePdfBodySectionLetterhead());
     parts.push(`<h2 id="firewall-${fwIndex}">${escapeHtml(label)} — Baseline and findings</h2>`);
 
     parts.push(`<h3>Baseline checklist</h3>`);

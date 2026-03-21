@@ -15,6 +15,7 @@ import {
   SE_HEALTH_CHECK_PDF_LAYOUT_CSS,
   SE_HEALTH_CHECK_PDF_PROFILE,
 } from "@/lib/se-health-check-pdf-layout";
+import { SE_PDF_SOPHOS_LOCKUP_SRC } from "@/lib/se-health-check-report-html";
 
 const IFRAME_WIDTH_PX = 1024;
 
@@ -290,31 +291,7 @@ code {
 /* SE Health Check — body pages (mirrors se-health-check-pdf-layout for html2canvas) */
 .se-hc-report-body-pages {
   background: #ffffff !important;
-}
-.se-hc-pdf-section-letterhead {
-  display: flex !important;
-  align-items: center !important;
-  min-height: 44px !important;
-  margin: 0 0 14px !important;
-  padding: 0 0 14px !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  background: #ffffff !important;
-}
-.se-hc-pdf-section-letterhead-img {
-  display: block !important;
-  height: 40px !important;
-  width: auto !important;
-  max-width: min(260px, 88%) !important;
-  object-fit: contain !important;
-  object-position: left center !important;
-}
-.se-hc-pdf-section-letterhead + h2 {
-  margin-top: 0 !important;
-}
-.se-hc-report-body-pages .se-hc-pdf-section-letterhead:not(:first-of-type) {
-  page-break-before: always !important;
-  break-before: page !important;
-  padding-top: 4px !important;
+  padding-top: calc(1024px * 19 / 210) !important;
 }
 .se-hc-report-body-pages h2 {
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
@@ -370,6 +347,63 @@ function injectHtml2CanvasFixStyles(doc: Document, extraCss?: string) {
 export function sanitizePdfFilenamePart(raw: string): string {
   const t = raw.trim().replace(/[^\w\s-]+/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
   return t.replace(/^-|-$/g, "").slice(0, 48) || "report";
+}
+
+/** First PDF page (1-based) that gets the Sophos body lockup — after cover (1) and overview (2). */
+const SE_HEALTH_CHECK_LOCKUP_FIRST_PAGE_1_BASED = 3;
+
+async function fetchPathAsDataUrl(path: string): Promise<string | null> {
+  try {
+    const href =
+      path.startsWith("http:") || path.startsWith("https:")
+        ? path
+        : new URL(path, window.location.origin).href;
+    const res = await fetch(href);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result as string);
+      fr.onerror = reject;
+      fr.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function naturalSizeFromDataUrl(dataUrl: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => reject(new Error("Could not decode PDF lockup image"));
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Overlay Sophos lockup on every PDF page from page 3 onward (not on cover or overview).
+ */
+async function stampSeHealthCheckLockupOnPdf(pdf: jsPDF): Promise<void> {
+  const dataUrl = await fetchPathAsDataUrl(SE_PDF_SOPHOS_LOCKUP_SRC);
+  if (!dataUrl) return;
+  let dims: { w: number; h: number };
+  try {
+    dims = await naturalSizeFromDataUrl(dataUrl);
+  } catch {
+    return;
+  }
+  if (dims.w < 1 || dims.h < 1) return;
+
+  const marginLeftMm = 14;
+  const marginTopMm = 10;
+  const heightMm = 9;
+  const widthMm = heightMm * (dims.w / dims.h);
+  const total = pdf.getNumberOfPages();
+  for (let p = SE_HEALTH_CHECK_LOCKUP_FIRST_PAGE_1_BASED; p <= total; p++) {
+    pdf.setPage(p);
+    pdf.addImage(dataUrl, "PNG", marginLeftMm, marginTopMm, widthMm, heightMm);
+  }
 }
 
 /**
@@ -482,6 +516,9 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
 
     const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
     addCanvasToPdf(pdf, canvas, pageMarginMm);
+    if (isSeHealthPdf) {
+      await stampSeHealthCheckLockupOnPdf(pdf);
+    }
     return pdf.output("blob");
   } finally {
     document.body.removeChild(iframe);

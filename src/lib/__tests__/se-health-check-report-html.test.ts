@@ -65,8 +65,7 @@ describe("se-health-check-report-html", () => {
     expect(html).toContain("se-hc-overview-wordmark");
     expect(html).toContain(SE_HEALTH_CHECK_WORDMARK_SRC);
     expect(html).toContain(SE_HEALTH_CHECK_COVER_MARK_SRC);
-    expect(html).toContain(SE_PDF_SOPHOS_LOCKUP_SRC);
-    expect(html).toContain("se-hc-pdf-section-letterhead");
+    expect(SE_PDF_SOPHOS_LOCKUP_SRC).toBe("/se-pdf-sophos-lockup.png");
     expect(html).toContain("se-hc-report-body-pages");
     expect(html).toContain("se-hc-cover-mark-img");
     expect(html).not.toContain("Evil<img");

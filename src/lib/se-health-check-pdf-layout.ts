@@ -80,35 +80,11 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content h2.se-hc-
   -webkit-text-fill-color: #00d094 !important;
   border-bottom: none !important;
 }
-/* Body pages (after cover + overview): Sophos Central Executive Summary–style letterhead + typography */
+/* Body pages (after cover + overview): typography; lockup is stamped per PDF page via jsPDF (pages 3+) */
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages {
   background: #ffffff !important;
-}
-html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-pdf-section-letterhead {
-  display: flex !important;
-  align-items: center !important;
-  min-height: 44px !important;
-  margin: 0 0 14px !important;
-  padding: 0 0 14px !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  background: #ffffff !important;
-}
-html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-pdf-section-letterhead-img {
-  display: block !important;
-  height: 40px !important;
-  width: auto !important;
-  max-width: min(260px, 88%) !important;
-  object-fit: contain !important;
-  object-position: left center !important;
-}
-html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-pdf-section-letterhead + h2 {
-  margin-top: 0 !important;
-}
-/* Each major chapter starts on a new page (lockup repeats at top) */
-html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages .se-hc-pdf-section-letterhead:not(:first-of-type) {
-  page-break-before: always !important;
-  break-before: page !important;
-  padding-top: 4px !important;
+  /* First body page: clear ~19mm for top-left lockup (10mm + 9mm logo) at 1024px ≈ A4 width */
+  padding-top: calc(1024px * 19 / 210) !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages h2 {
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
