@@ -12,7 +12,6 @@ import {
   Loader2,
   Lock,
   PanelRight,
-  Shield,
   Upload,
   Wifi,
   Link2,
@@ -1539,50 +1538,45 @@ function HealthCheckInner() {
       className="min-h-screen flex flex-col bg-background text-foreground"
     >
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="mx-auto max-w-5xl px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
-              <img src="/icons/sophos-shield.svg" alt="" className="h-7 w-7 sophos-icon" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-display font-bold tracking-tight flex items-center gap-2">
-                <Shield className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF] sm:hidden" aria-hidden />
-                Sophos Firewall Health Check
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Sales Engineer quick check — Sophos best practices (not compliance frameworks)
-              </p>
-            </div>
+        <div className="mx-auto max-w-5xl px-4 py-3 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
+            <img src="/icons/sophos-shield.svg" alt="" className="h-6 w-6 sophos-icon" />
           </div>
-          <div className="flex items-center gap-3">
-            {seAuth.seProfile && teams.length > 0 && <TeamSwitcher />}
-            {seAuth.seProfile && (
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                {seAuth.seProfile.email}
-              </span>
-            )}
-            {seAuth.seProfile && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-lg gap-2 w-fit"
-                onClick={() => setSeManagementOpen(true)}
-              >
-                <PanelRight className="h-4 w-4" />
-                Management
-              </Button>
-            )}
-            <Button variant="outline" size="sm" className="rounded-lg gap-2 w-fit" onClick={seAuth.signOut}>
-              Sign out
-            </Button>
-            <Button variant="outline" size="sm" className="rounded-lg gap-2 w-fit" asChild>
-              <Link to="/">
-                <ArrowLeft className="h-4 w-4" />
-                FireComply app
-              </Link>
-            </Button>
+          <div className="min-w-0 mr-auto">
+            <h1 className="text-base sm:text-lg font-display font-bold tracking-tight truncate">
+              Sophos Firewall Health Check
+            </h1>
+            <p className="text-[10px] text-muted-foreground hidden sm:block">
+              Sales Engineer quick check — Sophos best practices (not compliance frameworks)
+            </p>
           </div>
+          {seAuth.seProfile && teams.length > 0 && <TeamSwitcher />}
+          {seAuth.seProfile && (
+            <span className="text-xs text-muted-foreground hidden lg:inline shrink-0">
+              {seAuth.seProfile.email}
+            </span>
+          )}
+          {seAuth.seProfile && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-lg gap-1.5 shrink-0"
+              onClick={() => setSeManagementOpen(true)}
+            >
+              <PanelRight className="h-4 w-4" />
+              <span className="hidden sm:inline">Management</span>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="rounded-lg shrink-0" onClick={seAuth.signOut}>
+            Sign out
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-lg gap-1.5 shrink-0" asChild>
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">FireComply app</span>
+            </Link>
+          </Button>
         </div>
       </header>
 
