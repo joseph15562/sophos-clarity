@@ -45,12 +45,12 @@ exports[`analyseConfig > snapshot of findings 1`] = `
   {
     "section": "Intrusion Prevention",
     "severity": "high",
-    "title": "2 enabled WAN rules without IPS (67%)",
+    "title": "2 enabled WAN rules without IPS",
   },
   {
     "section": "Application Control",
     "severity": "low",
-    "title": "2 enabled WAN rules without Application Control (67%)",
+    "title": "2 enabled WAN rules without Application Control",
   },
   {
     "section": "SSL/TLS Inspection",
@@ -61,6 +61,11 @@ exports[`analyseConfig > snapshot of findings 1`] = `
     "section": "Logging & Monitoring",
     "severity": "medium",
     "title": "No external log forwarding configured",
+  },
+  {
+    "section": "DoS & Spoof Protection",
+    "severity": "medium",
+    "title": "No DoS & Spoof Protection configuration found",
   },
   {
     "section": "Application Filter",
