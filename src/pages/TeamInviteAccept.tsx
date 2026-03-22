@@ -94,7 +94,7 @@ export default function TeamInviteAccept() {
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-[#2006F7] to-[#4A20F7] shadow-lg mb-4">
             <Users className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Sophos Clarity</h1>
+          <h1 className="text-2xl font-bold text-foreground">Sophos FireComply</h1>
           <p className="text-sm text-muted-foreground mt-1">Team Invite</p>
         </div>
 

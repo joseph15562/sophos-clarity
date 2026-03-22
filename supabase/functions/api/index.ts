@@ -164,12 +164,12 @@ function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: str
 </td></tr>${ctaBlock}
 <tr><td style="padding:20px 40px 36px 40px;">
   <p style="margin:0;font-size:15px;color:#ffffff;line-height:1.6;">
-    Best Regards,<br><strong>Your Sophos Clarity Team</strong>
+    Best Regards,<br><strong>Your Sophos FireComply Team</strong>
   </p>
 </td></tr>
 <tr><td style="padding:20px 40px;border-top:1px solid #333;text-align:center;">
   <p style="margin:0 0 8px;font-size:11px;color:#888;line-height:1.5;">&copy; ${new Date().getFullYear()} Sophos Ltd. All rights reserved.</p>
-  <p style="margin:0;font-size:11px;color:#666;line-height:1.5;">Sophos Clarity &bull; Sales Engineering Tools</p>
+  <p style="margin:0;font-size:11px;color:#666;line-height:1.5;">Sophos FireComply &bull; Sales Engineering Tools</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -192,9 +192,9 @@ function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string):
     "Configuration Uploaded",
     `<p style="margin:0 0 20px;">Hi,</p>
 <p style="margin:0 0 20px;"><strong>${label}</strong> has uploaded their firewall configuration.</p>
-<p style="margin:0 0 20px;">Open Sophos Clarity to run the health check.</p>`,
+<p style="margin:0 0 20px;">Open Sophos FireComply to run the health check.</p>`,
     clarityUrl,
-    "Open Clarity",
+    "Open FireComply",
   );
 }
 
@@ -1246,7 +1246,7 @@ serve(async (req: Request) => {
             await sendConfigUploadEmail(
               ap.email,
               `${joinerName} joined your team "${teamInfo?.name ?? "your team"}"`,
-              buildSophosEmailHtml("New Team Member", `<p><strong>${joinerName}</strong> has joined your team <strong>${teamInfo?.name ?? "your team"}</strong> on Sophos Clarity.</p>`),
+              buildSophosEmailHtml("New Team Member", `<p><strong>${joinerName}</strong> has joined your team <strong>${teamInfo?.name ?? "your team"}</strong> on Sophos FireComply.</p>`),
             );
           }
         }
@@ -1355,7 +1355,7 @@ serve(async (req: Request) => {
         const emailHtml = buildSophosEmailHtml(
           "Team Invite",
           `<p style="margin:0 0 20px;">Hi,</p>
-<p style="margin:0 0 20px;"><strong>${inviterName}</strong> has invited you to join the <strong>${teamName}</strong> team on Sophos Clarity.</p>
+<p style="margin:0 0 20px;"><strong>${inviterName}</strong> has invited you to join the <strong>${teamName}</strong> team on Sophos FireComply.</p>
 <p style="margin:0 0 20px;">Simply click on the link below to accept the invitation and join the team.</p>`,
           joinLink,
           "Join Team",
@@ -1364,7 +1364,7 @@ serve(async (req: Request) => {
 
         await sendConfigUploadEmail(
           email,
-          `You've been invited to join "${teamName}" on Sophos Clarity`,
+          `You've been invited to join "${teamName}" on Sophos FireComply`,
           emailHtml,
         );
 

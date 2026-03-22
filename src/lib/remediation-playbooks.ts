@@ -40,7 +40,7 @@ export function generatePlaybook(finding: Finding): Playbook | null {
         { step: 3 + Math.min(ruleNames.length, 5), action: "Click Save on each modified rule" },
         { step: 4 + Math.min(ruleNames.length, 5), action: "Repeat for any remaining rules listed in the finding" },
       ],
-      verifyStep: "Run a new Sophos Clarity assessment — WAN rules without web filtering count should drop to 0.",
+      verifyStep: "Run a new Sophos FireComply assessment — WAN rules without web filtering count should drop to 0.",
       notes: "Web policies are managed under Web > Policies. For education environments (DfE/KCSIE), ensure the policy blocks inappropriate content categories. Ensure matching SSL/TLS inspection rules are in place for HTTPS decryption — without them, the firewall cannot inspect encrypted web traffic.",
     };
   }

@@ -365,7 +365,7 @@ const ConfigUpload = () => {
 
       {/* Footer */}
       <div className="text-center py-6 text-[10px] text-white/25">
-        Sophos Firewall Health Check · Powered by Sophos Clarity
+        Sophos Firewall Health Check · Powered by Sophos FireComply
       </div>
     </div>
   );
