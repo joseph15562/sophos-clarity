@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Copy, Crown, Loader2, LogOut, PanelRight, Plus, RefreshCw, Star, Trash2, UserMinus, Users, X } from "lucide-react";
+import { Crown, Loader2, LogOut, Mail, PanelRight, Plus, Send, Star, Trash2, UserMinus, Users, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,14 @@ interface TeamMember {
   role: string;
   email?: string;
   display_name?: string;
+}
+
+interface PendingInvite {
+  id: string;
+  email: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
 }
 
 async function apiCall(path: string, method: string, body?: unknown) {
@@ -53,10 +61,6 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
   const [newTeamName, setNewTeamName] = useState("");
   const [creatingTeam, setCreatingTeam] = useState(false);
 
-  // Join team
-  const [joinCode, setJoinCode] = useState("");
-  const [joiningTeam, setJoiningTeam] = useState(false);
-
   // Team detail
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -64,6 +68,12 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
   const [renameDraft, setRenameDraft] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // Email invites
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [loadingInvites, setLoadingInvites] = useState(false);
 
   useEffect(() => {
     if (!open || !seProfile) return;
@@ -94,7 +104,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     setCreatingTeam(true);
     try {
       const result = await apiCall("se-teams", "POST", { name: newTeamName.trim() });
-      toast.success(`Team "${result.name}" created. Invite code: ${result.invite_code}`);
+      toast.success(`Team "${result.name}" created.`);
       setNewTeamName("");
       await reloadTeams();
     } catch (e) {
@@ -103,21 +113,6 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
       setCreatingTeam(false);
     }
   }, [newTeamName, reloadTeams]);
-
-  const handleJoinTeam = useCallback(async () => {
-    if (!joinCode.trim()) return;
-    setJoiningTeam(true);
-    try {
-      const result = await apiCall("se-teams/join", "POST", { invite_code: joinCode.trim() });
-      toast.success(`Joined team "${result.team_name}".`);
-      setJoinCode("");
-      await reloadTeams();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not join team.");
-    } finally {
-      setJoiningTeam(false);
-    }
-  }, [joinCode, reloadTeams]);
 
   const fetchMembers = useCallback(async (teamId: string) => {
     setLoadingMembers(true);
@@ -131,15 +126,29 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     }
   }, []);
 
+  const fetchPendingInvites = useCallback(async (teamId: string) => {
+    setLoadingInvites(true);
+    try {
+      const result = await apiCall(`se-teams/${teamId}/invites`, "GET");
+      setPendingInvites(result.data ?? []);
+    } catch {
+      setPendingInvites([]);
+    } finally {
+      setLoadingInvites(false);
+    }
+  }, []);
+
   const toggleExpand = useCallback((team: SETeam) => {
     if (expandedTeamId === team.id) {
       setExpandedTeamId(null);
     } else {
       setExpandedTeamId(team.id);
       setRenameDraft(team.name);
+      setInviteEmail("");
       void fetchMembers(team.id);
+      if (team.role === "admin") void fetchPendingInvites(team.id);
     }
-  }, [expandedTeamId, fetchMembers]);
+  }, [expandedTeamId, fetchMembers, fetchPendingInvites]);
 
   const handleSetPrimary = useCallback(async (teamId: string) => {
     setBusy(true);
@@ -182,18 +191,33 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     }
   }, [renameDraft, reloadTeams]);
 
-  const handleRegenerateInvite = useCallback(async (teamId: string) => {
+  const handleSendInvite = useCallback(async (teamId: string) => {
+    if (!inviteEmail.trim()) return;
+    setSendingInvite(true);
+    try {
+      await apiCall(`se-teams/${teamId}/invite`, "POST", { email: inviteEmail.trim() });
+      toast.success(`Invite sent to ${inviteEmail.trim()}`);
+      setInviteEmail("");
+      void fetchPendingInvites(teamId);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send invite.");
+    } finally {
+      setSendingInvite(false);
+    }
+  }, [inviteEmail, fetchPendingInvites]);
+
+  const handleRevokeInvite = useCallback(async (teamId: string, inviteId: string) => {
     setBusy(true);
     try {
-      const result = await apiCall(`se-teams/${teamId}/regenerate-invite`, "POST");
-      toast.success(`New invite code: ${result.invite_code}`);
-      await reloadTeams();
+      await apiCall(`se-teams/${teamId}/invites/${inviteId}`, "DELETE");
+      toast.success("Invite revoked.");
+      void fetchPendingInvites(teamId);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed.");
+      toast.error(e instanceof Error ? e.message : "Failed to revoke.");
     } finally {
       setBusy(false);
     }
-  }, [reloadTeams]);
+  }, [fetchPendingInvites]);
 
   const handleTransferAdmin = useCallback(async (teamId: string, targetProfileId: string) => {
     setBusy(true);
@@ -331,18 +355,6 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
 
                           {expanded && (
                             <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
-                              {/* Invite code */}
-                              <div className="flex items-center gap-2">
-                                <Label className="text-[10px] text-muted-foreground shrink-0">Invite code:</Label>
-                                <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{team.invite_code}</code>
-                                <Button
-                                  type="button" variant="ghost" size="sm" className="h-6 w-6 p-0"
-                                  onClick={() => { navigator.clipboard.writeText(team.invite_code); toast.success("Copied"); }}
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-
                               {/* Set primary */}
                               {!team.is_primary && (
                                 <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={busy} onClick={() => void handleSetPrimary(team.id)}>
@@ -352,7 +364,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
 
                               {/* Admin actions */}
                               {team.role === "admin" && (
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                   <div className="flex items-center gap-2">
                                     <Input className="h-8 text-xs flex-1" value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)} />
                                     <Button type="button" size="sm" className="h-8 text-xs" disabled={renaming || !renameDraft.trim() || renameDraft.trim() === team.name}
@@ -360,16 +372,53 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                                       {renaming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Rename"}
                                     </Button>
                                   </div>
-                                  <div className="flex gap-2 flex-wrap">
-                                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1" disabled={busy}
-                                      onClick={() => void handleRegenerateInvite(team.id)}>
-                                      <RefreshCw className="h-3 w-3" /> New invite code
-                                    </Button>
-                                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1 text-destructive hover:text-destructive" disabled={busy}
-                                      onClick={() => void handleDeleteTeam(team.id)}>
-                                      <Trash2 className="h-3 w-3" /> Delete team
-                                    </Button>
+
+                                  {/* Invite member by email */}
+                                  <div className="space-y-1.5">
+                                    <Label className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1">
+                                      <Mail className="h-3 w-3" /> Invite member
+                                    </Label>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        className="h-8 text-xs flex-1"
+                                        placeholder="colleague@sophos.com"
+                                        type="email"
+                                        value={inviteEmail}
+                                        onChange={(e) => setInviteEmail(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && void handleSendInvite(team.id)}
+                                      />
+                                      <Button type="button" size="sm" className="h-8 text-xs gap-1" disabled={sendingInvite || !inviteEmail.trim()}
+                                        onClick={() => void handleSendInvite(team.id)}>
+                                        {sendingInvite ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                        Send
+                                      </Button>
+                                    </div>
                                   </div>
+
+                                  {/* Pending invites */}
+                                  {loadingInvites ? (
+                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                  ) : pendingInvites.length > 0 && (
+                                    <div className="space-y-1">
+                                      <Label className="text-[10px] text-muted-foreground">Pending invites</Label>
+                                      {pendingInvites.map((inv) => (
+                                        <div key={inv.id} className="flex items-center gap-2 text-xs py-1">
+                                          <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                                          <span className="flex-1 truncate">{inv.email}</span>
+                                          <Button type="button" variant="ghost" size="sm" className="h-6 px-1 text-destructive" disabled={busy}
+                                            title="Revoke invite"
+                                            onClick={() => void handleRevokeInvite(team.id, inv.id)}>
+                                            <XCircle className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1 text-destructive hover:text-destructive" disabled={busy}
+                                    onClick={() => void handleDeleteTeam(team.id)}>
+                                    <Trash2 className="h-3 w-3" /> Delete team
+                                  </Button>
                                 </div>
                               )}
 
@@ -418,7 +467,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                     })}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground">You are not in any teams yet. Create one or join with an invite code.</p>
+                  <p className="text-[11px] text-muted-foreground">You are not in any teams yet. Create one or ask a team admin to invite you.</p>
                 )}
 
                 {/* Create team */}
@@ -435,24 +484,6 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                     <Button type="button" size="sm" className="h-8 text-xs gap-1" disabled={creatingTeam || !newTeamName.trim()} onClick={() => void handleCreateTeam()}>
                       {creatingTeam ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
                       Create
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Join team */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] text-muted-foreground font-semibold">Join team</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      className="h-8 text-xs flex-1 font-mono"
-                      placeholder="Invite code"
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && void handleJoinTeam()}
-                    />
-                    <Button type="button" size="sm" className="h-8 text-xs gap-1" disabled={joiningTeam || !joinCode.trim()} onClick={() => void handleJoinTeam()}>
-                      {joiningTeam ? <Loader2 className="h-3 w-3 animate-spin" /> : <Users className="h-3 w-3" />}
-                      Join
                     </Button>
                   </div>
                 </div>

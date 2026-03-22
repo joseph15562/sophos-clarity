@@ -1126,7 +1126,7 @@ serve(async (req: Request) => {
       const teamIds = memberships.map((m: any) => m.team_id);
       const { data: teams } = await db
         .from("se_teams")
-        .select("id, name, invite_code, created_by, created_at")
+        .select("id, name, created_by, created_at")
         .in("id", teamIds);
 
       const { data: counts } = await db
@@ -1144,7 +1144,6 @@ serve(async (req: Request) => {
         return {
           id: t.id,
           name: t.name,
-          invite_code: t.invite_code,
           created_by: t.created_by,
           created_at: t.created_at,
           role: m?.role ?? "member",
@@ -1164,7 +1163,7 @@ serve(async (req: Request) => {
       const { data: team, error } = await db
         .from("se_teams")
         .insert({ name, created_by: se.seProfile.id })
-        .select("id, name, invite_code, created_at")
+        .select("id, name, created_at")
         .single();
       if (error) return json({ error: error.message }, 500);
 
@@ -1186,26 +1185,36 @@ serve(async (req: Request) => {
       return json({ ...team, role: "admin", is_primary: shouldBePrimary, member_count: 1 }, 201);
     }
 
-    // POST /api/se-teams/join — join by invite code
-    if (req.method === "POST" && segments[1] === "join" && segments.length === 2) {
-      const body = await req.json();
-      const code = body.invite_code?.trim();
-      if (!code) return json({ error: "Invite code is required" }, 400);
-
-      const { data: team } = await db
-        .from("se_teams")
-        .select("id, name, created_by")
-        .eq("invite_code", code)
+    // POST /api/se-teams/accept-invite/:token — accept an email invite (SE must be signed in)
+    if (req.method === "POST" && segments[1] === "accept-invite" && segments[2]) {
+      const token = segments[2];
+      const { data: invite } = await db
+        .from("se_team_invites")
+        .select("id, team_id, email, status, expires_at")
+        .eq("token", token)
         .maybeSingle();
-      if (!team) return json({ error: "Invalid invite code" }, 404);
+      if (!invite) return json({ error: "Invalid invite link" }, 404);
+      if (invite.status !== "pending") return json({ error: "This invite has already been used" }, 400);
+      if (new Date(invite.expires_at) < new Date()) {
+        await db.from("se_team_invites").update({ status: "expired" }).eq("id", invite.id);
+        return json({ error: "This invite has expired" }, 410);
+      }
+
+      const seEmail = (se.seProfile.email || se.user.email || "").toLowerCase();
+      if (seEmail !== invite.email.toLowerCase()) {
+        return json({ error: `This invite is for ${invite.email}` }, 403);
+      }
 
       const { data: existingMember } = await db
         .from("se_team_members")
         .select("id")
-        .eq("team_id", team.id)
+        .eq("team_id", invite.team_id)
         .eq("se_profile_id", se.seProfile.id)
         .maybeSingle();
-      if (existingMember) return json({ error: "You are already a member of this team" }, 409);
+      if (existingMember) {
+        await db.from("se_team_invites").update({ status: "accepted" }).eq("id", invite.id);
+        return json({ error: "You are already a member of this team" }, 409);
+      }
 
       const { data: existing } = await db
         .from("se_team_members")
@@ -1216,17 +1225,21 @@ serve(async (req: Request) => {
       const shouldBePrimary = !existing?.length;
 
       await db.from("se_team_members").insert({
-        team_id: team.id,
+        team_id: invite.team_id,
         se_profile_id: se.seProfile.id,
         role: "member",
         is_primary: shouldBePrimary,
       });
 
+      await db.from("se_team_invites").update({ status: "accepted" }).eq("id", invite.id);
+
+      const { data: teamInfo } = await db.from("se_teams").select("name").eq("id", invite.team_id).single();
+
       // Notify team admins
       const { data: admins } = await db
         .from("se_team_members")
         .select("se_profile_id")
-        .eq("team_id", team.id)
+        .eq("team_id", invite.team_id)
         .eq("role", "admin");
       if (admins?.length) {
         const adminIds = admins.map((a: any) => a.se_profile_id);
@@ -1239,18 +1252,18 @@ serve(async (req: Request) => {
           if (ap.email) {
             await sendConfigUploadEmail(
               ap.email,
-              `${joinerName} joined your team "${team.name}"`,
-              `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;"><p><strong>${joinerName}</strong> has joined your team <strong>${team.name}</strong> in Sophos Clarity.</p></body></html>`,
+              `${joinerName} joined your team "${teamInfo?.name ?? "your team"}"`,
+              `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;"><p><strong>${joinerName}</strong> has joined your team <strong>${teamInfo?.name ?? "your team"}</strong> in Sophos Clarity.</p></body></html>`,
             );
           }
         }
       }
 
-      return json({ team_id: team.id, team_name: team.name, role: "member", is_primary: shouldBePrimary }, 201);
+      return json({ team_id: invite.team_id, team_name: teamInfo?.name ?? "", role: "member", is_primary: shouldBePrimary }, 201);
     }
 
     // Routes with team ID: /api/se-teams/:id/...
-    if (segments.length >= 2 && segments[1] !== "join") {
+    if (segments.length >= 2 && segments[1] !== "accept-invite") {
       const teamId = segments[1];
       const subRoute = segments[2] ?? null;
 
@@ -1316,13 +1329,95 @@ serve(async (req: Request) => {
         return json({ ok: true, name });
       }
 
-      // POST /api/se-teams/:id/regenerate-invite (admin only)
-      if (req.method === "POST" && subRoute === "regenerate-invite") {
+      // POST /api/se-teams/:id/invite — send an email invite (admin only)
+      if (req.method === "POST" && subRoute === "invite") {
         if (!isAdmin) return json({ error: "Admin access required" }, 403);
-        const newCode = crypto.randomUUID().slice(0, 8);
-        const { error } = await db.from("se_teams").update({ invite_code: newCode }).eq("id", teamId);
+        const body = await req.json();
+        const email = body.email?.trim()?.toLowerCase();
+        if (!email) return json({ error: "Email is required" }, 400);
+
+        const { data: teamInfo } = await db.from("se_teams").select("name").eq("id", teamId).single();
+        const inviterName = se.seProfile.display_name || se.user.email || "A team admin";
+
+        const { data: existingPending } = await db
+          .from("se_team_invites")
+          .select("id")
+          .eq("team_id", teamId)
+          .eq("email", email)
+          .eq("status", "pending")
+          .maybeSingle();
+        if (existingPending) return json({ error: "An invite is already pending for this email" }, 409);
+
+        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: invite, error } = await db
+          .from("se_team_invites")
+          .insert({ team_id: teamId, invited_by: se.seProfile.id, email, expires_at: expiresAt })
+          .select("id, token")
+          .single();
         if (error) return json({ error: error.message }, 500);
-        return json({ ok: true, invite_code: newCode });
+
+        const joinLink = `${APP_URL}/team-invite/${invite.token}`;
+        const teamName = teamInfo?.name ?? "a team";
+
+        const emailHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Roboto,sans-serif;background:#f4f5f7;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:32px 0;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);">
+<tr><td style="background:linear-gradient(135deg,#2006F7,#4A20F7);padding:24px 32px;text-align:center;">
+  <h1 style="margin:0;font-size:22px;color:#ffffff;font-weight:700;">Sophos Clarity</h1>
+</td></tr>
+<tr><td style="padding:32px;">
+  <h2 style="margin:0 0 16px;font-size:18px;color:#1a1a2e;">You&rsquo;ve been invited to join a team</h2>
+  <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.6;">
+    <strong>${inviterName}</strong> has invited you to join the <strong>${teamName}</strong> team on Sophos Clarity.
+  </p>
+  <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
+    Click the button below to accept the invitation and join the team.
+  </p>
+  <table cellpadding="0" cellspacing="0" width="100%"><tr><td align="center">
+    <a href="${joinLink}" style="display:inline-block;background:#2006F7;color:#ffffff;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">Join Team</a>
+  </td></tr></table>
+  <p style="margin:24px 0 0;font-size:12px;color:#999;line-height:1.5;">
+    This invite expires in 14 days. If you didn&rsquo;t expect this, you can safely ignore this email.
+  </p>
+</td></tr>
+<tr><td style="padding:16px 32px;background:#f9f9fb;text-align:center;border-top:1px solid #eee;">
+  <p style="margin:0;font-size:11px;color:#aaa;">Sophos Clarity &bull; Sales Engineering Tools</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+        await sendConfigUploadEmail(
+          email,
+          `You've been invited to join "${teamName}" on Sophos Clarity`,
+          emailHtml,
+        );
+
+        return json({ ok: true, invite_id: invite.id });
+      }
+
+      // GET /api/se-teams/:id/invites — list pending invites (admin only)
+      if (req.method === "GET" && subRoute === "invites") {
+        if (!isAdmin) return json({ error: "Admin access required" }, 403);
+        const { data: invites } = await db
+          .from("se_team_invites")
+          .select("id, email, status, created_at, expires_at")
+          .eq("team_id", teamId)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false });
+        return json({ data: invites ?? [] });
+      }
+
+      // DELETE /api/se-teams/:id/invites/:inviteId — revoke a pending invite (admin only)
+      if (req.method === "DELETE" && subRoute === "invites" && segments[3]) {
+        if (!isAdmin) return json({ error: "Admin access required" }, 403);
+        const inviteId = segments[3];
+        const { error } = await db.from("se_team_invites").delete().eq("id", inviteId).eq("team_id", teamId);
+        if (error) return json({ error: error.message }, 500);
+        return json({ ok: true });
       }
 
       // POST /api/se-teams/:id/transfer-admin (admin only)

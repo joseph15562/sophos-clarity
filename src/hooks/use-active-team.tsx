@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 export interface SETeam {
   id: string;
   name: string;
-  invite_code: string;
   created_by: string;
   created_at: string;
   role: "admin" | "member";

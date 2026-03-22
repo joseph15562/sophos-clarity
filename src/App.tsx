@@ -15,6 +15,7 @@ import HealthCheck2 from "./pages/HealthCheck2";
 const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const SharedHealthCheck = lazy(() => import("./pages/SharedHealthCheck"));
 const ConfigUpload = lazy(() => import("./pages/ConfigUpload"));
+const TeamInviteAccept = lazy(() => import("./pages/TeamInviteAccept"));
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/health-check-2" element={<HealthCheck2 />} />
                 <Route path="/health-check/shared/:token" element={<SharedHealthCheck />} />
                 <Route path="/upload/:token" element={<ConfigUpload />} />
+                <Route path="/team-invite/:token" element={<TeamInviteAccept />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
