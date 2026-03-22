@@ -1424,8 +1424,8 @@ function HealthCheckInner() {
           <div className="h-10 w-10 rounded-xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
             <img src="/icons/sophos-shield.svg" alt="" className="h-6 w-6 sophos-icon" />
           </div>
-          <div className="min-w-0 mr-auto">
-            <h1 className="text-base sm:text-lg font-display font-bold tracking-tight truncate">
+          <div className="mr-auto shrink-0">
+            <h1 className="text-base sm:text-lg font-display font-bold tracking-tight">
               Sophos Firewall Health Check
             </h1>
             <p className="text-[10px] text-muted-foreground hidden sm:block">
