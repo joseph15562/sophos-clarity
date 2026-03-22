@@ -455,9 +455,9 @@ export function buildSEHealthCheckReportHtml(
     }
   }
 
-  if (params.seNotes?.trim()) {
+  if (p.seNotes?.trim()) {
     parts.push(`<h2 id="se-notes">SE Engineer Notes</h2>`);
-    parts.push(`<p>${escapeHtml(params.seNotes.trim()).replace(/\n/g, "<br>")}</p>`);
+    parts.push(`<p>${escapeHtml(p.seNotes.trim()).replace(/\n/g, "<br>")}</p>`);
   }
 
   labels.forEach((label, fwIndex) => {
