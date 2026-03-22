@@ -422,9 +422,14 @@ function overviewHeaderBand(assets: SeHealthCheckPdfImageAssets, title: string):
   };
 }
 
-/** Section heading starting a new page (body sections). */
-function h2Section(text: string): Content {
-  return { text, style: "bodyH2", margin: [0, 14, 0, 10], pageBreak: "before" };
+/** Section heading starting a new page, with optional wordmark above. */
+function h2Section(text: string, wordmarkDark?: string): Content {
+  const items: Content[] = [];
+  if (wordmarkDark) {
+    items.push({ image: wordmarkDark, width: 80, margin: [0, 0, 0, 14] });
+  }
+  items.push({ text, style: "bodyH2", margin: [0, 0, 0, 10] });
+  return { stack: items, pageBreak: "before", margin: [0, 0, 0, 0] };
 }
 
 /** Section heading that continues on the same page (no page break). */
@@ -781,7 +786,7 @@ export function buildSeHealthCheckPdfDocDefinition(
   ];
 
   const provenance: Content[] = [
-    h2Section("Provenance and limitations"),
+    h2Section("Provenance and limitations", assets.wordmarkDark),
     p(`Generated: ${dateUtc} (UTC) / ${dateLocal} (local)`),
     p(
       `Tool: Sophos FireComply — SE Firewall Health Check${appVersion ? ` (${appVersion})` : ""}.`,
@@ -823,7 +828,7 @@ export function buildSeHealthCheckPdfDocDefinition(
     ),
   ];
 
-  const executive: Content[] = [h2Section("Executive Summary")];
+  const executive: Content[] = [h2Section("Executive Summary", assets.wordmarkDark)];
   for (const label of labels) {
     const ar = analysisResults[label];
     const bp = bpByLabel[label];
@@ -880,7 +885,7 @@ export function buildSeHealthCheckPdfDocDefinition(
     if (!ar || !bl) return;
 
     baselineFindingsBlocks.push(
-      h2Section(`${label} — Baseline and findings`),
+      h2Section(`${label} — Baseline and findings`, assets.wordmarkDark),
       h3("Baseline checklist"),
       {
         table: {
@@ -1005,23 +1010,8 @@ export function buildSeHealthCheckPdfDocDefinition(
         },
       ];
     },
-    header(currentPage) {
-      if (currentPage <= 2) return { text: "", margin: [0, 0, 0, 0] };
-      if (assets.wordmarkDark) {
-        return {
-          image: assets.wordmarkDark,
-          width: 80,
-          margin: [30, 20, 0, 0],
-        };
-      }
-      return {
-        text: "SOPHOS",
-        font: "ZalandoSansExpanded",
-        fontSize: 10,
-        bold: true,
-        color: "#001a47",
-        margin: [30, 20, 0, 0],
-      };
+    header() {
+      return { text: "", margin: [0, 0, 0, 0] };
     },
     footer(currentPage) {
       if (currentPage !== 1) return { text: "", margin: [0, 0, 0, 0] };
