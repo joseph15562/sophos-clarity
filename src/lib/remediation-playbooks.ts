@@ -512,6 +512,58 @@ export function generatePlaybook(finding: Finding): Playbook | null {
     };
   }
 
+  if (title.includes("syn flood protection disabled")) {
+    return {
+      findingId: finding.id,
+      title: "Enable SYN Flood Protection",
+      severity: finding.severity,
+      estimatedMinutes: 5,
+      steps: [
+        { step: 1, action: "Log in to Sophos Firewall web admin console", path: "https://<firewall-ip>:4444" },
+        { step: 2, action: "Navigate to Intrusion prevention > DoS & spoof protection", path: "Intrusion prevention > DoS & spoof protection", docUrl: `${DOCS_BASE}/ProtectPolicies/IntrusionPrevention/DoSSpoof/` },
+        { step: 3, action: "Under DoS Settings, enable SYN flood protection" },
+        { step: 4, action: "Set Source and Destination thresholds — Sophos recommends starting with defaults and tuning based on traffic patterns" },
+        { step: 5, action: "Click Apply to save changes" },
+      ],
+      verifyStep: "Re-run assessment — SYN flood protection finding should no longer appear.",
+    };
+  }
+
+  if (title.includes("spoof prevention disabled")) {
+    return {
+      findingId: finding.id,
+      title: "Enable IP Spoof Prevention",
+      severity: finding.severity,
+      estimatedMinutes: 5,
+      steps: [
+        { step: 1, action: "Log in to Sophos Firewall web admin console", path: "https://<firewall-ip>:4444" },
+        { step: 2, action: "Navigate to Intrusion prevention > DoS & spoof protection", path: "Intrusion prevention > DoS & spoof protection", docUrl: `${DOCS_BASE}/ProtectPolicies/IntrusionPrevention/DoSSpoof/` },
+        { step: 3, action: "Under Spoof Prevention, enable IP spoof prevention" },
+        { step: 4, action: "Click Apply to save changes" },
+      ],
+      verifyStep: "Re-run assessment — IP spoof prevention finding should no longer appear.",
+    };
+  }
+
+  if (title.includes("no dos") && title.includes("protection") && title.includes("found")) {
+    return {
+      findingId: finding.id,
+      title: "Configure DoS & Spoof Protection",
+      severity: finding.severity,
+      estimatedMinutes: 10,
+      steps: [
+        { step: 1, action: "Log in to Sophos Firewall web admin console", path: "https://<firewall-ip>:4444" },
+        { step: 2, action: "Navigate to Intrusion prevention > DoS & spoof protection", path: "Intrusion prevention > DoS & spoof protection", docUrl: `${DOCS_BASE}/ProtectPolicies/IntrusionPrevention/DoSSpoof/` },
+        { step: 3, action: "Enable SYN flood protection with recommended thresholds" },
+        { step: 4, action: "Enable IP spoof prevention" },
+        { step: 5, action: "Review UDP and ICMP flood settings and enable as appropriate" },
+        { step: 6, action: "Click Apply to save changes" },
+      ],
+      verifyStep: "Re-run assessment — DoS & spoof protection findings should no longer appear.",
+      notes: "The DoS & spoof protection section was not found in the export. Ensure the firewall export includes all configuration sections.",
+    };
+  }
+
   return null;
 }
 

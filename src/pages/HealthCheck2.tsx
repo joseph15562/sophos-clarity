@@ -30,18 +30,18 @@ import { evaluateBaseline, BASELINE_TEMPLATES } from "@/lib/policy-baselines";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { FileUpload, type UploadedFile } from "@/components/FileUpload";
-import { HealthCheckDashboard } from "@/components/HealthCheckDashboard";
+import { HealthCheckDashboard } from "@/components/HealthCheckDashboard2";
 
 const SophosBestPractice = lazy(() =>
-  import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })),
+  import("@/components/SophosBestPractice2").then((m) => ({ default: m.SophosBestPractice })),
 );
-import { DpiExclusionBar } from "@/components/DpiExclusionBar";
-import { SeHeartbeatScopeBar } from "@/components/SeHeartbeatScopeBar";
-import { SeThreatResponseAckBar, SeDnsProtectionAckBar } from "@/components/SeThreatResponseAckBar";
-import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar";
+import { DpiExclusionBar } from "@/components/DpiExclusionBar2";
+import { SeHeartbeatScopeBar } from "@/components/SeHeartbeatScopeBar2";
+import { SeThreatResponseAckBar, SeDnsProtectionAckBar } from "@/components/SeThreatResponseAckBar2";
+import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar2";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
-import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory";
-import { SeHealthCheckManagementDrawer } from "@/components/SeHealthCheckManagementDrawer";
+import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory2";
+import { SeHealthCheckManagementDrawer } from "@/components/SeHealthCheckManagementDrawer2";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,14 +79,14 @@ import {
   loadSeHealthCheckBpOverrides,
   SE_HEALTH_CHECK_BP_OVERRIDES_KEY,
   seCentralAutoForLabel,
-} from "@/lib/se-health-check-bp";
-import { loadSeHealthCheckPreparedBy, SE_HEALTH_CHECK_PREPARED_BY_KEY } from "@/lib/se-health-check-preferences";
+} from "@/lib/se-health-check-bp-v2";
+import { loadSeHealthCheckPreparedBy, SE_HEALTH_CHECK_PREPARED_BY_KEY } from "@/lib/se-health-check-preferences-v2";
 import {
   buildSeHealthCheckSnapshotV1,
   parseSeHealthCheckSnapshotFromSummaryJson,
   snapshotFilesToParsedFiles,
   type SeHealthCheckSnapshotV1,
-} from "@/lib/se-health-check-snapshot";
+} from "@/lib/se-health-check-snapshot-v2";
 
 type ActiveStep = "landing" | "analyzing" | "results";
 
@@ -958,7 +958,7 @@ function HealthCheckInner() {
     };
     setPdfBusy(true);
     try {
-      const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download");
+      const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download-v2");
       const pdfFilename = await runHealthCheckPdfDownload({
         reportParams,
         branding,
@@ -1047,7 +1047,7 @@ function HealthCheckInner() {
       confidential: true,
     };
     try {
-      const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download");
+      const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download-v2");
       const htmlFilename = await runHealthCheckHtmlDownload({
         reportParams,
         branding,
@@ -1134,7 +1134,7 @@ function HealthCheckInner() {
     };
     setPdfBusy(true);
     try {
-      const { runHealthCheckZipDownload } = await import("@/lib/health-check-pdf-download");
+      const { runHealthCheckZipDownload } = await import("@/lib/health-check-pdf-download-v2");
       const zipFilename = await runHealthCheckZipDownload({ reportParams, branding, filenameCustomerPart: customerName });
       toast.success(`Downloaded ${zipFilename}`);
     } catch (e) {

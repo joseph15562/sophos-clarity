@@ -739,4 +739,79 @@ describe("analyseConfig", () => {
       expect(finding).toBeDefined();
     });
   });
+
+  describe("DoS & spoof protection analysis", () => {
+    const minRules = buildFirewallRulesSection([
+      { "Rule Name": "R1", "Source Zone": "LAN", "Destination Zones": "WAN", Service: "HTTP", Log: "Enabled", Status: "On" },
+    ]);
+
+    it("produces finding when DoS sections are missing", () => {
+      const sections = buildSections({ "Firewall Rules": minRules });
+      const result = analyseConfig(sections);
+      const finding = result.findings.find((f) => f.section === "DoS & Spoof Protection");
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe("medium");
+    });
+
+    it("flags SYN flood protection disabled", () => {
+      const sections = buildSections({
+        "Firewall Rules": minRules,
+        "DoS Protection": {
+          tables: [],
+          text: "",
+          details: [{ title: "DoS Settings", fields: { SYNFloodProtection: "Disable" } }],
+        },
+        "Spoof Prevention": {
+          tables: [],
+          text: "",
+          details: [{ title: "Spoof Settings", fields: { Status: "Enable" } }],
+        },
+      });
+      const result = analyseConfig(sections);
+      const finding = result.findings.find((f) => f.title.toLowerCase().includes("syn flood"));
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe("high");
+    });
+
+    it("flags IP spoof prevention disabled", () => {
+      const sections = buildSections({
+        "Firewall Rules": minRules,
+        "DoS Protection": {
+          tables: [],
+          text: "",
+          details: [{ title: "DoS Settings", fields: { SYNFloodProtection: "Enable" } }],
+        },
+        "Spoof Prevention": {
+          tables: [],
+          text: "",
+          details: [{ title: "Spoof Settings", fields: { Status: "Disable" } }],
+        },
+      });
+      const result = analyseConfig(sections);
+      const finding = result.findings.find((f) => f.title.toLowerCase().includes("spoof prevention"));
+      expect(finding).toBeDefined();
+      expect(finding!.severity).toBe("high");
+    });
+
+    it("produces no DoS finding when protections are enabled", () => {
+      const sections = buildSections({
+        "Firewall Rules": minRules,
+        "DoS Protection": {
+          tables: [],
+          text: "",
+          details: [{ title: "DoS Settings", fields: { SYNFloodProtection: "Enable" } }],
+        },
+        "Spoof Prevention": {
+          tables: [],
+          text: "",
+          details: [{ title: "Spoof Settings", fields: { Status: "Enable" } }],
+        },
+      });
+      const result = analyseConfig(sections);
+      const synFinding = result.findings.find((f) => f.title.toLowerCase().includes("syn flood"));
+      const spoofFinding = result.findings.find((f) => f.title.toLowerCase().includes("spoof prevention"));
+      expect(synFinding).toBeUndefined();
+      expect(spoofFinding).toBeUndefined();
+    });
+  });
 });

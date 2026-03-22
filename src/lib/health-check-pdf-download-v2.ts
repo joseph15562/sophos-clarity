@@ -4,9 +4,9 @@
  */
 
 import type { BrandingData } from "@/components/BrandingSetup";
-import { buildSeHealthCheckBrowserHtmlDocument } from "@/lib/se-health-check-browser-html";
-import { buildSeHealthCheckPdfBlob } from "@/lib/se-health-check-pdfmake";
-import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html";
+import { buildSeHealthCheckBrowserHtmlDocument } from "@/lib/se-health-check-browser-html-v2";
+import { buildSeHealthCheckPdfBlob } from "@/lib/se-health-check-pdfmake-v2";
+import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html-v2";
 import { sanitizePdfFilenamePart } from "@/lib/html-document-to-pdf-blob";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";

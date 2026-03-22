@@ -15,7 +15,7 @@ import {
   buildSeHealthCheckExportBundle,
   parseSeHealthCheckSnapshotFromSummaryJson,
   type SeHealthCheckSnapshotV1,
-} from "@/lib/se-health-check-snapshot";
+} from "@/lib/se-health-check-snapshot-v2";
 import { toast } from "sonner";
 
 interface HealthCheckRow {
@@ -94,11 +94,11 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
         const { reportParams, branding } = buildSeHealthCheckExportBundle(snapshot, preparedBy, generatedAt);
         const customerPart = row.customer_name?.trim() || snapshot.customerName.trim() || "health-check";
         if (kind === "pdf") {
-          const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download");
+          const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download-v2");
           await runHealthCheckPdfDownload({ reportParams, branding, filenameCustomerPart: customerPart });
           toast.success("PDF downloaded.");
         } else {
-          const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download");
+          const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download-v2");
           await runHealthCheckHtmlDownload({ reportParams, branding, filenameCustomerPart: customerPart });
           toast.success("HTML downloaded.");
         }

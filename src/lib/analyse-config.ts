@@ -712,7 +712,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     findings.push({
       id: `f${++fid}`,
       severity: pct > 50 ? "high" : "low",
-      title: `${wanNoIps.length} enabled WAN rule${wanNoIps.length > 1 ? "s" : ""} without IPS (${pct}%)`,
+      title: `${wanNoIps.length} enabled WAN rule${wanNoIps.length > 1 ? "s" : ""} without IPS`,
       detail: `Intrusion Prevention is not applied on active rules: ${wanNoIps.slice(0, 6).join(", ")}${wanNoIps.length > 6 ? ` (+${wanNoIps.length - 6} more)` : ""}. WAN-facing traffic should have IPS enabled to detect exploit attempts.`,
       section: "Intrusion Prevention",
       remediation: "Go to Intrusion prevention > IPS policies and ensure IPS protection is turned on. Create or select a policy. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Detect and prevent exploits (IPS)'.",
@@ -731,7 +731,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     findings.push({
       id: `f${++fid}`,
       severity: pct > 75 ? "medium" : "low",
-      title: `${wanNoApp.length} enabled WAN rule${wanNoApp.length > 1 ? "s" : ""} without Application Control (${pct}%)`,
+      title: `${wanNoApp.length} enabled WAN rule${wanNoApp.length > 1 ? "s" : ""} without Application Control`,
       detail: `Application Control is not enabled on active rules: ${wanNoApp.slice(0, 6).join(", ")}${wanNoApp.length > 6 ? ` (+${wanNoApp.length - 6} more)` : ""}. Application-layer visibility is limited without this feature.`,
       section: "Application Control",
       remediation: "Create an application filter policy under Applications > Application filter. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Identify and control applications (App control)'.",
@@ -845,6 +845,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   analyseSnmpCommunity(sections, findings, () => ++fid);
   analyseDnsSecurity(sections, findings, () => ++fid);
   analyseRedSecurity(sections, findings, () => ++fid);
+  analyseDoSProtection(sections, findings, () => ++fid);
 
   // --- L2/L6/L7/L8: Certificates, Hotspots, App Filter, Interface Security ---
   analyseCertificates(sections, findings, () => ++fid);

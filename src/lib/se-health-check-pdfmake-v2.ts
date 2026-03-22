@@ -7,7 +7,7 @@ import pdfMake from "pdfmake/build/pdfmake";
 import pdfVfs from "pdfmake/build/vfs_fonts";
 import type { Content, CustomTableLayout, TableCell, TDocumentDefinitions } from "pdfmake/interfaces";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html";
+import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html-v2";
 import { getActiveModules, MODULES } from "@/lib/sophos-licence";
 import type { LicenceSelection, SophosBPScore } from "@/lib/sophos-licence";
 

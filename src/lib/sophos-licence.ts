@@ -278,6 +278,88 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     },
   },
   {
+    id: "bp-dos-syn-flood",
+    category: "DoS & Spoof Protection",
+    title: "SYN flood protection enabled",
+    recommendation: "Enable SYN flood protection under Intrusion prevention > DoS & spoof protection with recommended thresholds to mitigate volumetric attacks.",
+    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ProtectPolicies/IntrusionPrevention/DoSSpoof/",
+    requiredModule: null,
+    weight: 8,
+    evaluate: (r) => {
+      const hits = findingMatches(r.findings, /syn.*flood.*disabled/i);
+      const noConfig = findingMatches(r.findings, /no dos.*spoof.*protection.*config/i);
+      if (noConfig.length > 0) return { status: "warn", detail: "DoS & spoof protection configuration not found in export" };
+      return hits.length === 0
+        ? { status: "pass", detail: "SYN flood protection is enabled" }
+        : { status: "fail", detail: "SYN flood protection is disabled — enable under Intrusion prevention > DoS & spoof protection" };
+    },
+  },
+  {
+    id: "bp-dos-spoof-prevention",
+    category: "DoS & Spoof Protection",
+    title: "IP spoof prevention enabled",
+    recommendation: "Enable IP spoof prevention under Intrusion prevention > DoS & spoof protection to block packets with forged source addresses.",
+    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ProtectPolicies/IntrusionPrevention/DoSSpoof/",
+    requiredModule: null,
+    weight: 8,
+    evaluate: (r) => {
+      const hits = findingMatches(r.findings, /spoof.*prevention.*disabled/i);
+      const noConfig = findingMatches(r.findings, /no dos.*spoof.*protection.*config/i);
+      if (noConfig.length > 0) return { status: "warn", detail: "DoS & spoof protection configuration not found in export" };
+      return hits.length === 0
+        ? { status: "pass", detail: "IP spoof prevention is enabled" }
+        : { status: "fail", detail: "IP spoof prevention is disabled — enable under Intrusion prevention > DoS & spoof protection" };
+    },
+  },
+
+  /* ---------- VPN Security ---------- */
+  {
+    id: "bp-vpn-weak-crypto",
+    category: "VPN Security",
+    title: "No active VPN profiles with weak encryption",
+    recommendation: "Update all active IPSec VPN profiles to use AES-128/256 with SHA-256+ and DH Group 14+. Remove DES, 3DES, MD5, SHA-1, and weak DH groups.",
+    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecProfiles/",
+    requiredModule: null,
+    weight: 9,
+    evaluate: (r) => {
+      const hits = findingMatches(r.findings, /vpn profile.*weak encryption/i);
+      return hits.length === 0
+        ? { status: "pass", detail: "All active VPN profiles use strong encryption" }
+        : { status: "fail", detail: "Active VPN profiles are using weak ciphers, auth, or DH groups — update under VPN > IPsec profiles" };
+    },
+  },
+  {
+    id: "bp-vpn-pfs",
+    category: "VPN Security",
+    title: "Perfect Forward Secrecy enabled on active VPN profiles",
+    recommendation: "Enable PFS (DH Group 14+) on Phase 2 of all active IPSec VPN profiles to prevent retroactive decryption if a key is compromised.",
+    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecProfiles/",
+    requiredModule: null,
+    weight: 7,
+    evaluate: (r) => {
+      const hits = findingMatches(r.findings, /vpn profile.*without perfect forward secrecy/i);
+      return hits.length === 0
+        ? { status: "pass", detail: "All active VPN profiles have PFS enabled" }
+        : { status: "fail", detail: "Active VPN profiles lack PFS — enable in Phase 2 settings under VPN > IPsec profiles" };
+    },
+  },
+  {
+    id: "bp-vpn-cert-auth",
+    category: "VPN Security",
+    title: "IPSec connections use certificate authentication",
+    recommendation: "Migrate IPSec connections from pre-shared key (PSK) to digital certificate (X.509) authentication for stronger identity verification.",
+    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecConnections/",
+    requiredModule: null,
+    weight: 6,
+    evaluate: (r) => {
+      const hits = findingMatches(r.findings, /ipsec connection.*pre-shared key/i);
+      return hits.length === 0
+        ? { status: "pass", detail: "All IPSec connections use certificate or RSA key authentication" }
+        : { status: "warn", detail: "IPSec connections are using pre-shared key auth — consider migrating to certificate-based authentication" };
+    },
+  },
+
+  {
     id: "bp-xops-feeds",
     category: "Active Threat Response",
     title: "Sophos X-Ops (ATP) enabled with Log & Drop",

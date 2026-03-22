@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import SharedReport from "./pages/SharedReport";
 import NotFound from "./pages/NotFound";
 import HealthCheck from "./pages/HealthCheck";
+import HealthCheck2 from "./pages/HealthCheck2";
 
 const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/shared/:token" element={<SharedReport />} />
                 <Route path="/portal/:tenantId" element={<ClientPortal />} />
                 <Route path="/health-check" element={<HealthCheck />} />
+                <Route path="/health-check-2" element={<HealthCheck2 />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
