@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const HASH_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const CONFIG_UPLOAD_FROM_EMAIL = Deno.env.get("REPORT_FROM_EMAIL") ?? "reports@firecomply.io";
+const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-clarity.vercel.app";
 
 async function hmacHash(data: string): Promise<string> {
   const enc = new TextEncoder();
@@ -92,6 +95,154 @@ async function getOrgMembership(userId: string) {
     .limit(1)
     .single();
   return data;
+}
+
+// ── Config upload email helpers ──
+
+const MAX_CONFIG_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const SOPHOS_ENTITY_TAGS = [
+  "Response", "FirewallRule", "NATRule", "IPHost", "IPHostGroup",
+  "Zone", "ServiceObject", "Interface", "DNSRequestRoute",
+  "LocalServiceACL", "DoSRule", "AntiVirus", "IPS", "WebFilter",
+  "ApplicationFilter", "SSLVPNPolicy", "IPSecConnection",
+];
+
+function isValidSophosXml(xml: string): boolean {
+  const trimmed = xml.trimStart();
+  if (!trimmed.startsWith("<?xml") && !trimmed.startsWith("<Response")) return false;
+  return SOPHOS_ENTITY_TAGS.some((tag) => xml.includes(`<${tag}`));
+}
+
+async function sendConfigUploadEmail(
+  to: string,
+  subject: string,
+  bodyHtml: string,
+): Promise<{ success: boolean; error?: string }> {
+  if (!RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
+  try {
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from: CONFIG_UPLOAD_FROM_EMAIL, to: [to], subject, html: bodyHtml }),
+    });
+    if (!resp.ok) {
+      const body = await resp.text();
+      return { success: false, error: `Resend ${resp.status}: ${body}` };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expiresDate: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <div style="background:#001A47;padding:24px 32px;text-align:center;">
+      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff;letter-spacing:1px;">SOPHOS</p>
+      <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.6);">Firewall Health Check</p>
+    </div>
+    <div style="padding:32px;color:#333;font-size:14px;line-height:1.7;">
+      <p style="margin:0 0 16px;"><strong>${seName}</strong> from Sophos has requested your firewall configuration for a health check.</p>
+      <p style="margin:0 0 16px;">Please click the button below to securely upload your <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:13px;">entities.xml</code> file.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${uploadUrl}" style="display:inline-block;background:#00995a;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Upload Configuration</a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#888;">This link expires on <strong>${expiresDate}</strong>.</p>
+    </div>
+    <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+      Sophos Firewall Health Check &middot; Powered by Sophos Clarity
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string): string {
+  const label = customerName || "A customer";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <div style="background:#001A47;padding:24px 32px;text-align:center;">
+      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff;letter-spacing:1px;">SOPHOS</p>
+      <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.6);">Firewall Health Check</p>
+    </div>
+    <div style="padding:32px;color:#333;font-size:14px;line-height:1.7;">
+      <p style="margin:0 0 16px;"><strong>${label}</strong> has uploaded their firewall configuration.</p>
+      <p style="margin:0 0 16px;">Open Clarity to run the health check.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${clarityUrl}" style="display:inline-block;background:#00995a;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Open Clarity</a>
+      </div>
+    </div>
+    <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+      Sophos Firewall Health Check &middot; Powered by Sophos Clarity
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function buildReminderEmailHtml(uploadUrl: string, expiresDate: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <div style="background:#001A47;padding:24px 32px;text-align:center;">
+      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff;letter-spacing:1px;">SOPHOS</p>
+      <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.6);">Firewall Health Check</p>
+    </div>
+    <div style="padding:32px;color:#333;font-size:14px;line-height:1.7;">
+      <p style="margin:0 0 16px;"><strong>Reminder:</strong> Your Sophos SE is still waiting for your firewall configuration.</p>
+      <p style="margin:0 0 16px;">Please upload your <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:13px;">entities.xml</code> before this link expires.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${uploadUrl}" style="display:inline-block;background:#00995a;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Upload Configuration</a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#888;">This link expires on <strong>${expiresDate}</strong>.</p>
+    </div>
+    <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+      Sophos Firewall Health Check &middot; Powered by Sophos Clarity
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+async function authenticateSE(req: Request) {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return null;
+  const uc = userClient(authHeader);
+  const { data: { user } } = await uc.auth.getUser();
+  if (!user) return null;
+  const db = adminClient();
+  const { data: seProfile } = await db
+    .from("se_profiles")
+    .select("id, email, display_name")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!seProfile) return null;
+  return { user, seProfile };
+}
+
+async function runConfigUploadCleanup() {
+  const db = adminClient();
+  const now = new Date().toISOString();
+  await db.from("config_upload_requests").delete()
+    .lt("expires_at", now)
+    .in("status", ["pending", "uploaded"]);
+  const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+  await db.from("config_upload_requests").delete()
+    .lt("downloaded_at", fiveDaysAgo)
+    .eq("status", "downloaded");
 }
 
 // ── Agent registration (web app auth via Supabase JWT) ──
@@ -926,6 +1077,270 @@ serve(async (req: Request) => {
       allow_download: (data as { allow_download?: boolean }).allow_download !== false,
       advisor_notes: (data as { advisor_notes?: string | null }).advisor_notes ?? null,
     });
+  }
+
+  // ── Shared SE health check (public, no auth) ──
+  if (req.method === "GET" && segments[0] === "shared-health-check" && segments.length === 2) {
+    const token = segments[1];
+    const db = adminClient();
+    const { data, error } = await db
+      .from("se_health_checks")
+      .select("share_token, shared_html, customer_name, share_expires_at, checked_at")
+      .eq("share_token", token)
+      .maybeSingle();
+
+    if (error) return json({ error: error.message }, 500);
+    if (!data) return json({ error: "Health check not found" }, 404);
+
+    const expiresAt = new Date(data.share_expires_at);
+    if (expiresAt <= new Date()) {
+      return json({ error: "This shared health check has expired" }, 410);
+    }
+
+    return json({
+      share_token: data.share_token,
+      html: data.shared_html,
+      customer_name: data.customer_name,
+      expires_at: data.share_expires_at,
+      checked_at: data.checked_at,
+    });
+  }
+
+  // ── Config upload routes ──
+
+  // POST /api/config-upload-request — SE creates an upload link (JWT required)
+  if (req.method === "POST" && segments[0] === "config-upload-request" && segments.length === 1) {
+    const se = await authenticateSE(req);
+    if (!se) return json({ error: "Unauthorized — SE login required" }, 401);
+
+    const body = await req.json();
+    const expiresInDays = [1, 3, 7, 14, 30].includes(body.expires_in_days) ? body.expires_in_days : 7;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+    const token = crypto.randomUUID();
+    const db = adminClient();
+    const { data: row, error } = await db
+      .from("config_upload_requests")
+      .insert({
+        se_user_id: se.seProfile.id,
+        token,
+        customer_name: body.customer_name?.trim() || null,
+        customer_email: body.customer_email?.trim() || null,
+        se_email: se.user.email,
+        expires_at: expiresAt.toISOString(),
+      })
+      .select("id, token, expires_at")
+      .single();
+
+    if (error) return json({ error: error.message }, 500);
+
+    const uploadUrl = `${APP_URL}/upload/${token}`;
+    let emailSent = false;
+
+    if (body.customer_email?.trim()) {
+      const seName = se.seProfile.display_name || se.user.email || "Your Sophos SE";
+      const expiresFormatted = expiresAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      const emailHtml = buildCustomerUploadEmailHtml(uploadUrl, seName, expiresFormatted);
+      const result = await sendConfigUploadEmail(
+        body.customer_email.trim(),
+        "Sophos Firewall Health Check — Configuration Upload",
+        emailHtml,
+      );
+      emailSent = result.success;
+      if (emailSent) {
+        await db.from("config_upload_requests").update({ email_sent: true }).eq("id", row.id);
+      }
+    }
+
+    return json({ id: row.id, token, url: uploadUrl, expires_at: row.expires_at, email_sent: emailSent }, 201);
+  }
+
+  // GET /api/config-upload-requests — list SE's own requests (JWT required)
+  if (req.method === "GET" && segments[0] === "config-upload-requests" && segments.length === 1) {
+    const se = await authenticateSE(req);
+    if (!se) return json({ error: "Unauthorized" }, 401);
+
+    await runConfigUploadCleanup();
+
+    const db = adminClient();
+    const { data, error } = await db
+      .from("config_upload_requests")
+      .select("id, token, customer_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at")
+      .eq("se_user_id", se.seProfile.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) return json({ error: error.message }, 500);
+    return json({ data: data ?? [] });
+  }
+
+  // Config upload token routes (config-upload/:token/...)
+  if (segments[0] === "config-upload" && segments.length >= 2) {
+    const token = segments[1];
+    const subRoute = segments[2] ?? null;
+    const db = adminClient();
+
+    // GET /api/config-upload/:token — public status check
+    if (req.method === "GET" && !subRoute) {
+      await runConfigUploadCleanup();
+
+      const { data, error } = await db
+        .from("config_upload_requests")
+        .select("status, customer_name, expires_at, file_name")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (error) return json({ error: error.message }, 500);
+      if (!data) return json({ error: "Upload link not found" }, 404);
+      if (new Date(data.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
+
+      return json({
+        status: data.status,
+        customer_name: data.customer_name,
+        expires_at: data.expires_at,
+        file_name: data.file_name,
+      });
+    }
+
+    // POST /api/config-upload/:token — customer uploads XML (public)
+    if (req.method === "POST" && !subRoute) {
+      const { data: existing, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, status, expires_at, se_email, customer_name")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!existing) return json({ error: "Upload link not found" }, 404);
+      if (new Date(existing.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
+      if (existing.status === "downloaded") return json({ error: "This configuration has already been downloaded by the SE. Please request a new upload link." }, 409);
+
+      const contentType = req.headers.get("content-type") ?? "";
+      let xmlContent = "";
+      let fileName = "entities.xml";
+
+      if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        const file = formData.get("file");
+        if (!file || !(file instanceof File)) return json({ error: "No file provided" }, 400);
+        if (file.size > MAX_CONFIG_SIZE) return json({ error: "File exceeds 10 MB limit" }, 413);
+        fileName = file.name || "entities.xml";
+        xmlContent = await file.text();
+      } else {
+        const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+        if (contentLength > MAX_CONFIG_SIZE) return json({ error: "File exceeds 10 MB limit" }, 413);
+        xmlContent = await req.text();
+      }
+
+      if (!xmlContent.trim()) return json({ error: "Empty file" }, 400);
+
+      if (!isValidSophosXml(xmlContent)) {
+        return json({
+          error: "This doesn't appear to be a Sophos firewall configuration export. Please export your entities.xml from Sophos Firewall and try again.",
+        }, 422);
+      }
+
+      const { error: updateErr } = await db
+        .from("config_upload_requests")
+        .update({
+          config_xml: xmlContent,
+          file_name: fileName,
+          status: "uploaded",
+          uploaded_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      if (updateErr) return json({ error: updateErr.message }, 500);
+
+      if (existing.se_email) {
+        const notifHtml = buildSeNotificationEmailHtml(existing.customer_name ?? "", `${APP_URL}/health-check-2`);
+        await sendConfigUploadEmail(
+          existing.se_email,
+          `Config received${existing.customer_name ? ` from ${existing.customer_name}` : ""}`,
+          notifHtml,
+        );
+      }
+
+      return json({ ok: true, message: "Configuration uploaded successfully" });
+    }
+
+    // POST /api/config-upload/:token/resend — SE re-sends email (JWT required)
+    if (req.method === "POST" && subRoute === "resend") {
+      const se = await authenticateSE(req);
+      if (!se) return json({ error: "Unauthorized" }, 401);
+
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, customer_email, expires_at, se_user_id")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
+      if (!row.customer_email) return json({ error: "No customer email on file" }, 400);
+      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
+
+      const uploadUrl = `${APP_URL}/upload/${token}`;
+      const seName = se.seProfile.display_name || se.user.email || "Your Sophos SE";
+      const expiresFormatted = new Date(row.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      const emailHtml = buildCustomerUploadEmailHtml(uploadUrl, seName, expiresFormatted);
+      const result = await sendConfigUploadEmail(
+        row.customer_email,
+        "Sophos Firewall Health Check — Configuration Upload",
+        emailHtml,
+      );
+
+      if (result.success) {
+        await db.from("config_upload_requests").update({ email_sent: true }).eq("id", row.id);
+      }
+
+      return json({ email_sent: result.success, error: result.error ?? undefined });
+    }
+
+    // GET /api/config-upload/:token/download — SE downloads the XML (JWT required)
+    if (req.method === "GET" && subRoute === "download") {
+      const se = await authenticateSE(req);
+      if (!se) return json({ error: "Unauthorized" }, 401);
+
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, config_xml, file_name, status, se_user_id")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
+      if (!row.config_xml) return json({ error: "No configuration has been uploaded yet" }, 404);
+
+      await db
+        .from("config_upload_requests")
+        .update({ downloaded_at: new Date().toISOString(), status: "downloaded" })
+        .eq("id", row.id);
+
+      return json({ config_xml: row.config_xml, file_name: row.file_name });
+    }
+
+    // DELETE /api/config-upload/:token — SE revokes the request (JWT required)
+    if (req.method === "DELETE" && !subRoute) {
+      const se = await authenticateSE(req);
+      if (!se) return json({ error: "Unauthorized" }, 401);
+
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, se_user_id")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
+
+      await db.from("config_upload_requests").delete().eq("id", row.id);
+      return json({ ok: true });
+    }
   }
 
   // ── Firewalls route (JWT auth) ──
