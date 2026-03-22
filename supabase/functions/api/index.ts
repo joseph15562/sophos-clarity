@@ -175,81 +175,39 @@ function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: str
 }
 
 function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expiresDate: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-    <div style="background:#001A47;padding:24px 32px;text-align:center;">
-      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff;letter-spacing:1px;">SOPHOS</p>
-      <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.6);">Firewall Health Check</p>
-    </div>
-    <div style="padding:32px;color:#333;font-size:14px;line-height:1.7;">
-      <p style="margin:0 0 16px;"><strong>${seName}</strong> from Sophos has requested your firewall configuration for a health check.</p>
-      <p style="margin:0 0 16px;">Please click the button below to securely upload your <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:13px;">entities.xml</code> file.</p>
-      <div style="text-align:center;margin:24px 0;">
-        <a href="${uploadUrl}" style="display:inline-block;background:#00995a;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Upload Configuration</a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#888;">This link expires on <strong>${expiresDate}</strong>.</p>
-    </div>
-    <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
-      Sophos Firewall Health Check &middot; Powered by Sophos Clarity
-    </div>
-  </div>
-</body>
-</html>`;
+  return buildSophosEmailHtml(
+    "Firewall Health Check",
+    `<p style="margin:0 0 20px;">Hi,</p>
+<p style="margin:0 0 20px;"><strong>${seName}</strong> from Sophos has requested your firewall configuration for a health check.</p>
+<p style="margin:0 0 20px;">Please click the button below to securely upload your <code style="background:#333;padding:2px 6px;border-radius:3px;font-size:13px;color:#fff;">entities.xml</code> file.</p>`,
+    uploadUrl,
+    "Upload Configuration",
+    `This link expires on <strong>${expiresDate}</strong>.`,
+  );
 }
 
 function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string): string {
   const label = customerName || "A customer";
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-    <div style="background:#001A47;padding:24px 32px;text-align:center;">
-      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff;letter-spacing:1px;">SOPHOS</p>
-      <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.6);">Firewall Health Check</p>
-    </div>
-    <div style="padding:32px;color:#333;font-size:14px;line-height:1.7;">
-      <p style="margin:0 0 16px;"><strong>${label}</strong> has uploaded their firewall configuration.</p>
-      <p style="margin:0 0 16px;">Open Clarity to run the health check.</p>
-      <div style="text-align:center;margin:24px 0;">
-        <a href="${clarityUrl}" style="display:inline-block;background:#00995a;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Open Clarity</a>
-      </div>
-    </div>
-    <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
-      Sophos Firewall Health Check &middot; Powered by Sophos Clarity
-    </div>
-  </div>
-</body>
-</html>`;
+  return buildSophosEmailHtml(
+    "Configuration Uploaded",
+    `<p style="margin:0 0 20px;">Hi,</p>
+<p style="margin:0 0 20px;"><strong>${label}</strong> has uploaded their firewall configuration.</p>
+<p style="margin:0 0 20px;">Open Sophos Clarity to run the health check.</p>`,
+    clarityUrl,
+    "Open Clarity",
+  );
 }
 
 function buildReminderEmailHtml(uploadUrl: string, expiresDate: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-    <div style="background:#001A47;padding:24px 32px;text-align:center;">
-      <p style="margin:0;font-size:14px;font-weight:600;color:#ffffff;letter-spacing:1px;">SOPHOS</p>
-      <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.6);">Firewall Health Check</p>
-    </div>
-    <div style="padding:32px;color:#333;font-size:14px;line-height:1.7;">
-      <p style="margin:0 0 16px;"><strong>Reminder:</strong> Your Sophos SE is still waiting for your firewall configuration.</p>
-      <p style="margin:0 0 16px;">Please upload your <code style="background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:13px;">entities.xml</code> before this link expires.</p>
-      <div style="text-align:center;margin:24px 0;">
-        <a href="${uploadUrl}" style="display:inline-block;background:#00995a;color:#fff;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Upload Configuration</a>
-      </div>
-      <p style="margin:0;font-size:12px;color:#888;">This link expires on <strong>${expiresDate}</strong>.</p>
-    </div>
-    <div style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
-      Sophos Firewall Health Check &middot; Powered by Sophos Clarity
-    </div>
-  </div>
-</body>
-</html>`;
+  return buildSophosEmailHtml(
+    "Reminder: Upload Pending",
+    `<p style="margin:0 0 20px;">Hi,</p>
+<p style="margin:0 0 20px;"><strong>Reminder:</strong> Your Sophos SE is still waiting for your firewall configuration.</p>
+<p style="margin:0 0 20px;">Please upload your <code style="background:#333;padding:2px 6px;border-radius:3px;font-size:13px;color:#fff;">entities.xml</code> before this link expires.</p>`,
+    uploadUrl,
+    "Upload Configuration",
+    `This link expires on <strong>${expiresDate}</strong>.`,
+  );
 }
 
 async function authenticateSE(req: Request) {
