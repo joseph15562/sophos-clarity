@@ -291,10 +291,10 @@ code {
 /* SE Health Check — body pages (mirrors se-health-check-pdf-layout for html2canvas) */
 .se-hc-report-body-pages {
   background: #ffffff !important;
-  padding-top: calc(1024px * 24 / 210) !important;
+  padding-top: calc(1024px * 5 / 210) !important;
 }
 .se-hc-report-body-pages > h2:first-of-type {
-  margin-top: 10px !important;
+  margin-top: 0 !important;
 }
 .se-hc-report-body-pages h2 {
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
@@ -302,7 +302,8 @@ code {
   font-weight: 700 !important;
   line-height: 1.2 !important;
   color: #001A47 !important;
-  border-bottom: 2px solid #001A47 !important;
+  /* 1px: a 2px rule reads as a thick “black bar” when html2canvas slices across a page break */
+  border-bottom: 1px solid #001A47 !important;
   border-bottom-color: #001A47 !important;
   padding-bottom: 10px !important;
   margin: 0 0 18px !important;
@@ -326,6 +327,8 @@ code {
   font-size: 11pt !important;
   line-height: 1.55 !important;
   color: #0f172a !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 .se-hc-report-body-pages .table-wrapper {
   margin: 16px 0 22px !important;
@@ -358,6 +361,8 @@ code {
   border-color: #f3f4f6 !important;
   padding: 9px 12px 9px 0 !important;
   vertical-align: top !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 .se-hc-report-body-pages tbody tr:nth-child(even) td {
   background: #f9fafb !important;
@@ -370,8 +375,17 @@ code {
   margin: 8px 0 14px !important;
   padding-left: 1.35em !important;
 }
+.se-hc-report-body-pages ul.se-hc-priority-steps {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
 .se-hc-report-body-pages ul li {
   margin: 0.35em 0 !important;
+}
+.se-hc-pdf-baseline-spacer {
+  display: block !important;
+  flex: none !important;
+  box-sizing: border-box !important;
 }
 `;
 
@@ -392,10 +406,32 @@ export function sanitizePdfFilenamePart(raw: string): string {
 const SE_HEALTH_CHECK_LOCKUP_FIRST_PAGE_1_BASED = 3;
 
 /** Headings that would start below this fraction of a PDF slice are nudged to the next slice (global SE rule). */
-const SE_HEALTH_HEADING_CLEAR_PAGE_FRACTION = 0.75;
+const SE_HEALTH_HEADING_CLEAR_PAGE_FRACTION = 0.65;
+
+/** If less than this many px remain in the slice below the heading bottom, nudge (avoid orphan h2 + tiny tail). */
+const SE_HEALTH_MIN_SLICE_TAIL_BELOW_HEADING_PX = 130;
+
+/**
+ * Entire heading box must fit between its top and the slice end (incl. h2 border). Otherwise html2canvas
+ * splits it across PDF tiles (“Entities.xml — Baseline…” half on each page).
+ */
+const SE_HEALTH_HEADING_SLICE_FIT_MARGIN_PX = 10;
+
+/**
+ * Per-firewall “… — Baseline and findings” h2: insert a non-collapsing spacer if it starts past this
+ * fraction of the slice. (margin-top on h2 can collapse with the preceding `ul` and fail to move the paint.)
+ */
+const SE_HEALTH_BASELINE_H2_SLICE_FRAC_SPACER = 0.35;
 
 /** White band at top of PDF slices that start mid-table (continuation pages). */
 const SE_HEALTH_TABLE_CONTINUATION_TOP_PAD_MM = 8;
+
+/**
+ * Top padding on body PDF slices that get the Sophos lockup stamp, so the first line of content
+ * clears the stamped logo. Mid-table slices skip the stamp and use only
+ * {@link SE_HEALTH_TABLE_CONTINUATION_TOP_PAD_MM}.
+ */
+const SE_HEALTH_LOCKUP_TOP_CLEARANCE_MM = 10;
 
 type SeHealthTilePagePlan = {
   consumedStartMm: number;
@@ -417,10 +453,14 @@ function buildSeHealthPdfTilePlan(
 
   while (consumedMm < imgH_mm - 0.01) {
     const sliceTopPx = (consumedMm / imgH_mm) * scrollH;
+    const midTable =
+      pageIdx >= firstBodyPage0 && pdfSliceTopStartsInsideTable(sliceTopPx, tableSlices);
     const topPadMm =
-      pageIdx >= firstBodyPage0 && pdfSliceTopStartsInsideTable(sliceTopPx, tableSlices)
-        ? SE_HEALTH_TABLE_CONTINUATION_TOP_PAD_MM
-        : 0;
+      pageIdx < firstBodyPage0
+        ? 0
+        : midTable
+          ? SE_HEALTH_TABLE_CONTINUATION_TOP_PAD_MM
+          : SE_HEALTH_LOCKUP_TOP_CLEARANCE_MM;
     const remaining = imgH_mm - consumedMm;
     const contentMm = Math.min(usableH_mm - topPadMm, remaining);
     if (contentMm <= 0.01) break;
@@ -455,20 +495,56 @@ function collectSeHealthBodyTableSlices(body: HTMLElement): { topPx: number; bot
   return slices;
 }
 
+/** Map SE tile plan to document-Y bounds (must match addCanvasToPdf variable slice heights). */
+function seHealthSliceBoundsPxFromPlan(
+  plan: SeHealthTilePagePlan[],
+  scrollH: number,
+  imgH_mm: number,
+): { startPx: number; heightPx: number }[] {
+  return plan.map((row) => ({
+    startPx: (row.consumedStartMm / imgH_mm) * scrollH,
+    heightPx: (row.contentMm / imgH_mm) * scrollH,
+  }));
+}
+
+function locateHeadingInSeSlices(
+  yPx: number,
+  bounds: { startPx: number; heightPx: number }[],
+  fallbackSlicePx: number,
+): { posInSlicePx: number; sliceHeightPx: number; sliceIndex: number } {
+  let bestIdx = -1;
+  for (let i = 0; i < bounds.length; i++) {
+    const { startPx, heightPx } = bounds[i];
+    const endPx = startPx + heightPx;
+    /* Loose bounds fix subpixel drops to sliceIndex −1; if two slices match (boundary), take the later slice. */
+    if (yPx >= startPx - 1.5 && yPx < endPx + 1.5) {
+      bestIdx = i;
+    }
+  }
+  if (bestIdx >= 0) {
+    const { startPx, heightPx } = bounds[bestIdx];
+    const posInSlicePx = Math.max(0, Math.min(yPx - startPx, heightPx));
+    return { posInSlicePx, sliceHeightPx: heightPx, sliceIndex: bestIdx };
+  }
+  const posInSlicePx = ((yPx % fallbackSlicePx) + fallbackSlicePx) % fallbackSlicePx;
+  return { posInSlicePx, sliceHeightPx: fallbackSlicePx, sliceIndex: -1 };
+}
+
 /**
- * If a heading would start in the bottom (1 − fraction) of a PDF slice, add margin-top so it moves
- * to the next slice (html2canvas tiling). SE Health Check uses 3/4 — keep titles out of the last quarter.
+ * Nudge h2/h3 when they fall in the bottom (1 − fraction) of their **actual** PDF slice.
+ * Uses the same variable-height tile plan as PDF tiling — `yMm % 297` is wrong after 8mm table pads.
  */
 function nudgeSeHealthHeadingsClearOfPageEnd(
   idoc: Document,
   scrollH: number,
   imgH_mm: number,
   clearBelowFraction: number,
+  tilePlan: SeHealthTilePagePlan[] | null,
 ): void {
   const body = idoc.body;
-  const usableH_mm = 297;
-  const thresholdMm = usableH_mm * clearBelowFraction;
-  const slicePxCss = (IFRAME_WIDTH_PX * 297) / 210;
+  const fallbackSlicePx = (IFRAME_WIDTH_PX * 297) / 210;
+  const bounds =
+    tilePlan && tilePlan.length > 0 ? seHealthSliceBoundsPxFromPlan(tilePlan, scrollH, imgH_mm) : null;
   const heads = [
     ...body.querySelectorAll<HTMLElement>(".se-hc-report-body-pages h2, .se-hc-report-body-pages h3"),
   ];
@@ -478,7 +554,7 @@ function nudgeSeHealthHeadingsClearOfPageEnd(
     headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
     body: JSON.stringify({
       sessionId: "360061",
-      runId: "pre-fix",
+      runId: "post-fix",
       hypothesisId: "B",
       location: "html-document-to-pdf-blob.ts:nudgeSeHealthHeadingsClearOfPageEnd:entry",
       message: "nudge entry",
@@ -486,8 +562,8 @@ function nudgeSeHealthHeadingsClearOfPageEnd(
         headCount: heads.length,
         scrollH,
         imgH_mm,
-        thresholdMm,
-        slicePxCss,
+        planPages: tilePlan?.length ?? 0,
+        usingPlanBounds: !!bounds?.length,
         previews: heads.slice(0, 12).map((h) => (h.textContent || "").trim().slice(0, 80)),
       },
       timestamp: Date.now(),
@@ -496,46 +572,128 @@ function nudgeSeHealthHeadingsClearOfPageEnd(
   // #endregion
   heads.sort((a, b) => elementTopRelativeToBody(a, body) - elementTopRelativeToBody(b, body));
   for (const el of heads) {
+    const isBaselineFindingsH2 =
+      el.tagName === "H2" &&
+      (el.classList.contains("se-hc-h2-baseline-findings") || /^firewall-\d+$/.test(el.id || ""));
     const yPx = elementTopRelativeToBody(el, body);
-    const yMm = (yPx / scrollH) * imgH_mm;
-    const posMm = yMm - Math.floor(yMm / usableH_mm) * usableH_mm;
-    const posPxInSlice = yPx % slicePxCss;
-    const fracPx = posPxInSlice / slicePxCss;
-    const wouldNudgeMm = posMm > thresholdMm + 0.5;
-    const wouldNudgePx = fracPx > clearBelowFraction + 0.002;
+    const elH = Math.ceil(
+      Math.max(el.getBoundingClientRect().height, (el as HTMLElement).offsetHeight || 0),
+    );
+    const yBot = yPx + elH;
+    const { posInSlicePx, sliceHeightPx, sliceIndex } = bounds?.length
+      ? locateHeadingInSeSlices(yPx, bounds, fallbackSlicePx)
+      : {
+          posInSlicePx: ((yPx % fallbackSlicePx) + fallbackSlicePx) % fallbackSlicePx,
+          sliceHeightPx: fallbackSlicePx,
+          sliceIndex: -1,
+        };
+    const sh = Math.max(sliceHeightPx, 1);
+    const frac = posInSlicePx / sh;
+    /** Heading bottom extends into bottom (1 − fraction) band, or crosses slice → border/h2 splits across pages. */
+    let needNudge = frac > clearBelowFraction + 0.002;
+    if (bounds?.length && sliceIndex >= 0) {
+      const sliceStart = bounds[sliceIndex].startPx;
+      const sliceEnd = sliceStart + sh;
+      const safeEnd = sliceStart + clearBelowFraction * sh;
+      const edgeEps = 3;
+      if (yBot > safeEnd - edgeEps || yBot > sliceEnd - edgeEps) {
+        needNudge = true;
+      }
+      const tailBelow = sliceEnd - yBot;
+      if (tailBelow >= -edgeEps && tailBelow < SE_HEALTH_MIN_SLICE_TAIL_BELOW_HEADING_PX) {
+        needNudge = true;
+      }
+      /* Must fit whole heading in this slice (multi-line h2 + border was straddling tiles). */
+      const roomFromTopInSlice = sh - posInSlicePx;
+      if (elH > roomFromTopInSlice - SE_HEALTH_HEADING_SLICE_FIT_MARGIN_PX) {
+        needNudge = true;
+      }
+      /* Top and bottom edge land in different PDF slices (rounding / subpixel). */
+      const sliceForBottom = locateHeadingInSeSlices(yBot - 2, bounds, fallbackSlicePx).sliceIndex;
+      if (sliceForBottom >= 0 && sliceForBottom !== sliceIndex) {
+        needNudge = true;
+      }
+    }
     // #region agent log
     fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
       body: JSON.stringify({
         sessionId: "360061",
-        runId: "pre-fix",
+        runId: "post-fix",
         hypothesisId: "A",
         location: "html-document-to-pdf-blob.ts:nudgeSeHealthHeadingsClearOfPageEnd:heading",
-        message: "heading slice math",
+        message: "heading slice math (plan-aware)",
         data: {
           tag: el.tagName,
           text: (el.textContent || "").trim().slice(0, 100),
           yPx,
-          yMm: Math.round(yMm * 100) / 100,
-          posMm: Math.round(posMm * 100) / 100,
-          posPxInSlice: Math.round(posPxInSlice * 100) / 100,
-          fracPx: Math.round(fracPx * 1000) / 1000,
-          wouldNudgeMm,
-          wouldNudgePx,
+          sliceIndex,
+          posInSlicePx: Math.round(posInSlicePx * 10) / 10,
+          sliceHeightPx: Math.round(sliceHeightPx * 10) / 10,
+          frac: Math.round(frac * 1000) / 1000,
+          needNudge,
         },
         timestamp: Date.now(),
       }),
     }).catch(() => {});
     // #endregion
-    if (posMm > thresholdMm + 0.5) {
-      const deltaMm = usableH_mm - posMm + 6;
-      const deltaPx = (deltaMm / imgH_mm) * scrollH;
+    /* Baseline/findings h2 uses block spacers (see applySeHealthBaselineH2SliceSpacers) — not margin-top (collapses with ul). */
+    if (needNudge && !isBaselineFindingsH2) {
+      const deltaPx = sh - posInSlicePx + 20;
       const cur = parseFloat(idoc.defaultView?.getComputedStyle(el).marginTop || "0") || 0;
       el.style.marginTop = `${cur + deltaPx}px`;
     }
     void body.offsetHeight;
   }
+}
+
+/**
+ * `margin-top` on h2 after a list often **collapses** with the `ul`’s margin, so PDF slice nudges don’t move the
+ * painted heading. Insert a real block before `.se-hc-h2-baseline-findings` to force the next tile.
+ */
+function applySeHealthBaselineH2SliceSpacers(
+  idoc: Document,
+  body: HTMLElement,
+  scrollH: number,
+  imgH_mm: number,
+  tilePlan: SeHealthTilePagePlan[] | null,
+): void {
+  if (!tilePlan?.length) return;
+  body.querySelectorAll(".se-hc-pdf-baseline-spacer").forEach((n) => n.remove());
+
+  const bounds = seHealthSliceBoundsPxFromPlan(tilePlan, scrollH, imgH_mm);
+  const fallbackSlicePx = (IFRAME_WIDTH_PX * 297) / 210;
+  const h2s = body.querySelectorAll<HTMLElement>(".se-hc-h2-baseline-findings");
+
+  for (const h2 of h2s) {
+    h2.style.marginTop = "";
+    const yPx = elementTopRelativeToBody(h2, body);
+    const elH = Math.ceil(Math.max(h2.getBoundingClientRect().height, h2.offsetHeight || 0));
+    const { posInSlicePx, sliceHeightPx, sliceIndex } = locateHeadingInSeSlices(yPx, bounds, fallbackSlicePx);
+    if (sliceIndex < 0) continue;
+    const sh = Math.max(sliceHeightPx, 1);
+    const frac = posInSlicePx / sh;
+    const room = sh - posInSlicePx;
+    const sliceEnd = bounds[sliceIndex].startPx + sh;
+    const sliceForBottom = locateHeadingInSeSlices(yPx + Math.max(0, elH - 3), bounds, fallbackSlicePx).sliceIndex;
+
+    const needsSpacer =
+      frac > SE_HEALTH_BASELINE_H2_SLICE_FRAC_SPACER ||
+      elH > room - SE_HEALTH_HEADING_SLICE_FIT_MARGIN_PX ||
+      yPx + elH > sliceEnd - 6 ||
+      (sliceForBottom >= 0 && sliceForBottom !== sliceIndex);
+
+    if (!needsSpacer) continue;
+
+    const pushPx = Math.ceil(Math.max(sh - posInSlicePx + 36, elH + 64));
+    const spacer = idoc.createElement("div");
+    spacer.className = "se-hc-pdf-baseline-spacer";
+    spacer.setAttribute("aria-hidden", "true");
+    spacer.style.cssText = `display:block;height:${pushPx}px;width:100%;margin:0;padding:0;border:0;clear:both;overflow:hidden;line-height:0;`;
+    h2.parentNode?.insertBefore(spacer, h2);
+  }
+  void body.offsetHeight;
 }
 
 /** True when the top of a PDF slice is inside table content (continuation) — skip lockup. Slice aligned with table top still gets a stamp. */
@@ -604,10 +762,9 @@ async function stampSeHealthCheckLockupOnPdf(
   if (dims.w < 1 || dims.h < 1) return;
 
   const marginLeftMm = 14;
-  const marginTopMm = 11;
-  /* ~2 lines of body text — match Central Executive Summary reference */
-  const heightMm = 4.5;
-  const widthMm = Math.min(heightMm * (dims.w / dims.h), 38);
+  const marginTopMm = 3;
+  const heightMm = 3;
+  const widthMm = Math.min(heightMm * (dims.w / dims.h), 24);
   const total = pdf.getNumberOfPages();
   for (let p = SE_HEALTH_CHECK_LOCKUP_FIRST_PAGE_1_BASED; p <= total; p++) {
     const idx = p - 1;
@@ -640,13 +797,27 @@ function addCanvasToPdf(
 
   const imgW = usableW;
   const imgH = (canvas.height * imgW) / canvas.width;
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+  /* Max quality for SE: reduces JPEG block edges that read as dark lines between tiles */
+  const jpegQuality = seHealthTilePlan && seHealthTilePlan.length > 0 ? 1 : 0.92;
+  const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
 
   if (seHealthTilePlan && seHealthTilePlan.length > 0) {
     for (let i = 0; i < seHealthTilePlan.length; i++) {
       if (i > 0) pdf.addPage();
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, pageW, pageH, "F");
       const { consumedStartMm, topPadMm } = seHealthTilePlan[i];
+      /*
+       * Image is placed at y = margin + topPad - consumedStart so that document mm `consumedStart`
+       * aligns with y = margin + topPad. That also paints document [consumedStart - topPad, consumedStart)
+       * into PDF y ∈ [margin, margin + topPad) — a repeat of the previous page’s tail. Mask it white;
+       * Sophos lockup is stamped afterward in that band.
+       */
       pdf.addImage(dataUrl, "JPEG", marginMm, marginMm + topPadMm - consumedStartMm, imgW, imgH);
+      if (topPadMm > 0.01) {
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pageW, marginMm + topPadMm, "F");
+      }
     }
     return {
       imgH_mm: imgH,
@@ -731,25 +902,50 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
 
   const body = idoc.body;
 
+  let tableSlices: { topPx: number; bottomPx: number }[] = [];
+
   if (isSeHealthPdf) {
     const usableW_mm = 210 - 2 * pageMarginMm;
-    const imgH_mm_est = (scrollH * usableW_mm) / IFRAME_WIDTH_PX;
-    nudgeSeHealthHeadingsClearOfPageEnd(
-      idoc,
-      scrollH,
-      imgH_mm_est,
-      SE_HEALTH_HEADING_CLEAR_PAGE_FRACTION,
-    );
-    void body.offsetHeight;
+    /* Two passes: nudge changes scrollHeight; rebuild tile plan + bounds each pass or slice math lags → orphan headings. */
+    for (let pass = 0; pass < 3; pass++) {
+      scrollH = Math.min(
+        Math.max(idoc.body.scrollHeight, idoc.documentElement.scrollHeight, 400),
+        32000,
+      );
+      iframe.style.height = `${Math.min(scrollH + 32, 32000)}px`;
+      void body.offsetHeight;
+      tableSlices = collectSeHealthBodyTableSlices(body);
+      const imgH_mm_est = (scrollH * usableW_mm) / IFRAME_WIDTH_PX;
+      const nudgeTilePlan = buildSeHealthPdfTilePlan(imgH_mm_est, 297, scrollH, tableSlices);
+      nudgeSeHealthHeadingsClearOfPageEnd(
+        idoc,
+        scrollH,
+        imgH_mm_est,
+        SE_HEALTH_HEADING_CLEAR_PAGE_FRACTION,
+        nudgeTilePlan,
+      );
+      void body.offsetHeight;
+    }
+    for (let spPass = 0; spPass < 2; spPass++) {
+      scrollH = Math.min(
+        Math.max(idoc.body.scrollHeight, idoc.documentElement.scrollHeight, 400),
+        32000,
+      );
+      iframe.style.height = `${Math.min(scrollH + 32, 32000)}px`;
+      void body.offsetHeight;
+      tableSlices = collectSeHealthBodyTableSlices(body);
+      const imgH_mm_est = (scrollH * usableW_mm) / IFRAME_WIDTH_PX;
+      const spacerPlan = buildSeHealthPdfTilePlan(imgH_mm_est, 297, scrollH, tableSlices);
+      applySeHealthBaselineH2SliceSpacers(idoc, body, scrollH, imgH_mm_est, spacerPlan);
+    }
     scrollH = Math.min(
       Math.max(idoc.body.scrollHeight, idoc.documentElement.scrollHeight, 400),
       32000,
     );
     iframe.style.height = `${Math.min(scrollH + 32, 32000)}px`;
     void body.offsetHeight;
+    tableSlices = collectSeHealthBodyTableSlices(body);
   }
-
-  const tableSlices = isSeHealthPdf ? collectSeHealthBodyTableSlices(body) : [];
 
   const scale = scrollH > 9000 ? 1.15 : scrollH > 6000 ? 1.35 : 1.65;
 

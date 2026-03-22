@@ -284,9 +284,13 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
 
     const top = sortedFindings(ar).filter((f) => f.severity === "critical" || f.severity === "high").slice(0, 5);
     if (top.length > 0) {
-      parts.push(`<p><strong>Priority next steps (top ${top.length} critical/high):</strong></p><ul>`);
+      parts.push(
+        `<p><strong>Priority next steps (top ${top.length} critical/high):</strong></p><ul class="se-hc-priority-steps">`,
+      );
       for (const f of top) {
-        parts.push(`<li>${escapeHtml(f.title)}${f.remediation ? ` — ${escapeHtml(f.remediation.slice(0, 200))}${f.remediation.length > 200 ? "…" : ""}` : ""}</li>`);
+        parts.push(
+          `<li>${escapeHtml(f.title)}${f.remediation ? ` — ${escapeHtml(f.remediation)}` : ""}</li>`,
+        );
       }
       parts.push(`</ul>`);
     }
@@ -297,7 +301,9 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     const bl = baselineResults[label];
     if (!ar || !bl) return;
 
-    parts.push(`<h2 id="firewall-${fwIndex}">${escapeHtml(label)} — Baseline and findings</h2>`);
+    parts.push(
+      `<h2 id="firewall-${fwIndex}" class="se-hc-h2-baseline-findings">${escapeHtml(label)} — Baseline and findings</h2>`,
+    );
 
     parts.push(`<h3>Baseline checklist</h3>`);
     parts.push(`<div class="table-wrapper"><table><thead><tr><th>Met</th><th>Requirement</th><th>Detail</th></tr></thead><tbody>`);
@@ -314,9 +320,8 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     } else {
       parts.push(`<div class="table-wrapper"><table><thead><tr><th>Severity</th><th>Title</th><th>Section</th><th>Detail</th></tr></thead><tbody>`);
       for (const f of sortedFindings(ar)) {
-        const detail = f.detail.length > 400 ? `${f.detail.slice(0, 400)}…` : f.detail;
         parts.push(
-          `<tr><td>${escapeHtml(f.severity)}</td><td>${escapeHtml(f.title)}</td><td>${escapeHtml(f.section)}</td><td>${escapeHtml(detail)}</td></tr>`,
+          `<tr><td>${escapeHtml(f.severity)}</td><td>${escapeHtml(f.title)}</td><td>${escapeHtml(f.section)}</td><td>${escapeHtml(f.detail)}</td></tr>`,
         );
       }
       parts.push(`</tbody></table></div>`);

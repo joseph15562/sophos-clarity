@@ -9,9 +9,12 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content {
   padding: 0 !important;
   max-width: none !important;
 }
-/* Side padding for everything after the cover + overview sheet */
+/*
+ * After cover + overview: same inset for TOC, body, footer. +14mm clears left-stamped Sophos lockup
+ * (~14mm + mark width) while keeping one column vs overview’s 48px body text.
+ */
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content > *:not(.se-hc-cover-fullpage):not(.se-hc-overview-sheet) {
-  padding-left: clamp(16px, 4vw, 48px) !important;
+  padding-left: calc(clamp(16px, 4vw, 48px) + 14mm) !important;
   padding-right: clamp(16px, 4vw, 48px) !important;
   box-sizing: border-box !important;
 }
@@ -80,14 +83,18 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content h2.se-hc-
   -webkit-text-fill-color: #00d094 !important;
   border-bottom: none !important;
 }
-/* Body pages (after cover + overview): typography; lockup is stamped per PDF page via jsPDF (pages 3+) */
-html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages {
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content > .se-hc-report-body-pages {
   background: #ffffff !important;
-  /* Space for stamped lockup + air before first section title (Central-style) */
-  padding-top: calc(1024px * 24 / 210) !important;
+  padding-top: calc(1024px * 5 / 210) !important;
 }
-html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages > h2:first-of-type {
-  margin-top: 10px !important;
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .print-content > .se-hc-report-body-pages > h2:first-of-type {
+  margin-top: 0 !important;
+}
+/* PDF raster only: block spacer before baseline h2 (margin collapse bypass) */
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-pdf-baseline-spacer {
+  display: block !important;
+  flex: none !important;
+  box-sizing: border-box !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages h2 {
   font-family: 'Zalando Sans Expanded', 'Zalando Sans', sans-serif !important;
@@ -95,10 +102,12 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages
   font-weight: 700 !important;
   line-height: 1.2 !important;
   color: #001A47 !important;
-  border-bottom: 2px solid #001A47 !important;
+  border-bottom: 1px solid #001A47 !important;
   border-bottom-color: #001A47 !important;
   padding-bottom: 10px !important;
   margin: 0 0 18px !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages h3 {
   font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
@@ -106,6 +115,8 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages
   font-weight: 700 !important;
   color: #111827 !important;
   margin: 22px 0 10px !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages h4 {
   font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
@@ -119,6 +130,8 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages
   font-size: 11pt !important;
   line-height: 1.55 !important;
   color: #0f172a !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages .table-wrapper {
   margin: 16px 0 22px !important;
@@ -162,6 +175,8 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages
   border-color: #f3f4f6 !important;
   padding: 9px 12px 9px 0 !important;
   vertical-align: top !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages tbody tr:nth-child(even) td {
   background: #f9fafb !important;
@@ -173,6 +188,10 @@ html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages ul {
   margin: 8px 0 14px !important;
   padding-left: 1.35em !important;
+}
+html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages ul.se-hc-priority-steps {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }
 html[data-pdf-profile="${SE_HEALTH_CHECK_PDF_PROFILE}"] .se-hc-report-body-pages ul li {
   margin: 0.35em 0 !important;
