@@ -94,11 +94,12 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
   tasks.push(
     (async () => {
       try {
-        const url = `${base}/se-health-check-sophos-mark.png`.replace(/([^:])\/{2,}/g, "$1/");
+        const url = `${base}/sophos-icon-white.svg`.replace(/([^:])\/{2,}/g, "$1/");
         const res = await fetch(url);
         if (!res.ok) return;
-        const buf = await res.arrayBuffer();
-        out.shield = `data:image/png;base64,${arrayBufferToBase64(buf)}`;
+        const svgText = await res.text();
+        const dataUrl = await svgToHighResPng(svgText, 65, 65);
+        if (dataUrl) out.shield = dataUrl;
       } catch { /* ignore */ }
     })(),
   );
