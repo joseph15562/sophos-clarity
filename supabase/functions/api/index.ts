@@ -32,7 +32,7 @@ function getCorsHeaders(req: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, PATCH, OPTIONS",
     "Vary": "Origin",
   };
 }
@@ -1106,6 +1106,352 @@ serve(async (req: Request) => {
     });
   }
 
+  // ── SE Teams routes ──
+
+  if (segments[0] === "se-teams") {
+    const se = await authenticateSE(req);
+    if (!se) return json({ error: "Unauthorized — SE login required" }, 401);
+    const db = adminClient();
+
+    // GET /api/se-teams — list teams the SE belongs to
+    if (req.method === "GET" && segments.length === 1) {
+      const { data: memberships, error } = await db
+        .from("se_team_members")
+        .select("id, team_id, role, is_primary, joined_at")
+        .eq("se_profile_id", se.seProfile.id);
+      if (error) return json({ error: error.message }, 500);
+
+      if (!memberships?.length) return json({ data: [] });
+
+      const teamIds = memberships.map((m: any) => m.team_id);
+      const { data: teams } = await db
+        .from("se_teams")
+        .select("id, name, invite_code, created_by, created_at")
+        .in("id", teamIds);
+
+      const { data: counts } = await db
+        .from("se_team_members")
+        .select("team_id")
+        .in("team_id", teamIds);
+
+      const countMap: Record<string, number> = {};
+      for (const c of counts ?? []) {
+        countMap[c.team_id] = (countMap[c.team_id] || 0) + 1;
+      }
+
+      const result = (teams ?? []).map((t: any) => {
+        const m = memberships.find((m: any) => m.team_id === t.id);
+        return {
+          id: t.id,
+          name: t.name,
+          invite_code: t.invite_code,
+          created_by: t.created_by,
+          created_at: t.created_at,
+          role: m?.role ?? "member",
+          is_primary: m?.is_primary ?? false,
+          member_count: countMap[t.id] || 0,
+        };
+      });
+      return json({ data: result });
+    }
+
+    // POST /api/se-teams — create a new team
+    if (req.method === "POST" && segments.length === 1) {
+      const body = await req.json();
+      const name = body.name?.trim();
+      if (!name) return json({ error: "Team name is required" }, 400);
+
+      const { data: team, error } = await db
+        .from("se_teams")
+        .insert({ name, created_by: se.seProfile.id })
+        .select("id, name, invite_code, created_at")
+        .single();
+      if (error) return json({ error: error.message }, 500);
+
+      const { data: existing } = await db
+        .from("se_team_members")
+        .select("id")
+        .eq("se_profile_id", se.seProfile.id)
+        .eq("is_primary", true)
+        .limit(1);
+      const shouldBePrimary = !existing?.length;
+
+      await db.from("se_team_members").insert({
+        team_id: team.id,
+        se_profile_id: se.seProfile.id,
+        role: "admin",
+        is_primary: shouldBePrimary,
+      });
+
+      return json({ ...team, role: "admin", is_primary: shouldBePrimary, member_count: 1 }, 201);
+    }
+
+    // POST /api/se-teams/join — join by invite code
+    if (req.method === "POST" && segments[1] === "join" && segments.length === 2) {
+      const body = await req.json();
+      const code = body.invite_code?.trim();
+      if (!code) return json({ error: "Invite code is required" }, 400);
+
+      const { data: team } = await db
+        .from("se_teams")
+        .select("id, name, created_by")
+        .eq("invite_code", code)
+        .maybeSingle();
+      if (!team) return json({ error: "Invalid invite code" }, 404);
+
+      const { data: existingMember } = await db
+        .from("se_team_members")
+        .select("id")
+        .eq("team_id", team.id)
+        .eq("se_profile_id", se.seProfile.id)
+        .maybeSingle();
+      if (existingMember) return json({ error: "You are already a member of this team" }, 409);
+
+      const { data: existing } = await db
+        .from("se_team_members")
+        .select("id")
+        .eq("se_profile_id", se.seProfile.id)
+        .eq("is_primary", true)
+        .limit(1);
+      const shouldBePrimary = !existing?.length;
+
+      await db.from("se_team_members").insert({
+        team_id: team.id,
+        se_profile_id: se.seProfile.id,
+        role: "member",
+        is_primary: shouldBePrimary,
+      });
+
+      // Notify team admins
+      const { data: admins } = await db
+        .from("se_team_members")
+        .select("se_profile_id")
+        .eq("team_id", team.id)
+        .eq("role", "admin");
+      if (admins?.length) {
+        const adminIds = admins.map((a: any) => a.se_profile_id);
+        const { data: adminProfiles } = await db
+          .from("se_profiles")
+          .select("email")
+          .in("id", adminIds);
+        const joinerName = se.seProfile.display_name || se.user.email || "An SE";
+        for (const ap of adminProfiles ?? []) {
+          if (ap.email) {
+            await sendConfigUploadEmail(
+              ap.email,
+              `${joinerName} joined your team "${team.name}"`,
+              `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;"><p><strong>${joinerName}</strong> has joined your team <strong>${team.name}</strong> in Sophos Clarity.</p></body></html>`,
+            );
+          }
+        }
+      }
+
+      return json({ team_id: team.id, team_name: team.name, role: "member", is_primary: shouldBePrimary }, 201);
+    }
+
+    // Routes with team ID: /api/se-teams/:id/...
+    if (segments.length >= 2 && segments[1] !== "join") {
+      const teamId = segments[1];
+      const subRoute = segments[2] ?? null;
+
+      // Verify membership
+      const { data: membership } = await db
+        .from("se_team_members")
+        .select("id, role")
+        .eq("team_id", teamId)
+        .eq("se_profile_id", se.seProfile.id)
+        .maybeSingle();
+      if (!membership) return json({ error: "Team not found or you are not a member" }, 404);
+
+      const isAdmin = membership.role === "admin";
+
+      // GET /api/se-teams/:id/members
+      if (req.method === "GET" && subRoute === "members") {
+        const { data: members } = await db
+          .from("se_team_members")
+          .select("id, se_profile_id, role, is_primary, joined_at")
+          .eq("team_id", teamId);
+
+        const profileIds = (members ?? []).map((m: any) => m.se_profile_id);
+        const { data: profiles } = await db
+          .from("se_profiles")
+          .select("id, email, display_name")
+          .in("id", profileIds);
+
+        const profileMap: Record<string, any> = {};
+        for (const p of profiles ?? []) profileMap[p.id] = p;
+
+        const result = (members ?? []).map((m: any) => ({
+          ...m,
+          email: profileMap[m.se_profile_id]?.email,
+          display_name: profileMap[m.se_profile_id]?.display_name,
+        }));
+        return json({ data: result });
+      }
+
+      // POST /api/se-teams/:id/leave
+      if (req.method === "POST" && subRoute === "leave") {
+        if (isAdmin) {
+          const { data: adminCount } = await db
+            .from("se_team_members")
+            .select("id")
+            .eq("team_id", teamId)
+            .eq("role", "admin");
+          if ((adminCount?.length ?? 0) <= 1) {
+            return json({ error: "You are the only admin. Transfer admin role to another member before leaving." }, 400);
+          }
+        }
+        await db.from("se_team_members").delete().eq("id", membership.id);
+        return json({ ok: true });
+      }
+
+      // PATCH /api/se-teams/:id — rename (admin only)
+      if (req.method === "PATCH" && !subRoute) {
+        if (!isAdmin) return json({ error: "Admin access required" }, 403);
+        const body = await req.json();
+        const name = body.name?.trim();
+        if (!name) return json({ error: "Team name is required" }, 400);
+        const { error } = await db.from("se_teams").update({ name }).eq("id", teamId);
+        if (error) return json({ error: error.message }, 500);
+        return json({ ok: true, name });
+      }
+
+      // POST /api/se-teams/:id/regenerate-invite (admin only)
+      if (req.method === "POST" && subRoute === "regenerate-invite") {
+        if (!isAdmin) return json({ error: "Admin access required" }, 403);
+        const newCode = crypto.randomUUID().slice(0, 8);
+        const { error } = await db.from("se_teams").update({ invite_code: newCode }).eq("id", teamId);
+        if (error) return json({ error: error.message }, 500);
+        return json({ ok: true, invite_code: newCode });
+      }
+
+      // POST /api/se-teams/:id/transfer-admin (admin only)
+      if (req.method === "POST" && subRoute === "transfer-admin") {
+        if (!isAdmin) return json({ error: "Admin access required" }, 403);
+        const body = await req.json();
+        const targetProfileId = body.target_se_profile_id;
+        if (!targetProfileId) return json({ error: "target_se_profile_id is required" }, 400);
+
+        const { data: targetMember } = await db
+          .from("se_team_members")
+          .select("id")
+          .eq("team_id", teamId)
+          .eq("se_profile_id", targetProfileId)
+          .maybeSingle();
+        if (!targetMember) return json({ error: "Target is not a member of this team" }, 404);
+
+        await db.from("se_team_members").update({ role: "admin" }).eq("id", targetMember.id);
+        await db.from("se_team_members").update({ role: "member" }).eq("id", membership.id);
+        return json({ ok: true });
+      }
+
+      // POST /api/se-teams/:id/set-primary — mark this team as primary
+      if (req.method === "POST" && subRoute === "set-primary") {
+        await db
+          .from("se_team_members")
+          .update({ is_primary: false })
+          .eq("se_profile_id", se.seProfile.id);
+        await db
+          .from("se_team_members")
+          .update({ is_primary: true })
+          .eq("team_id", teamId)
+          .eq("se_profile_id", se.seProfile.id);
+        return json({ ok: true });
+      }
+
+      // DELETE /api/se-teams/:id/members/:memberId — remove a member (admin only)
+      if (req.method === "DELETE" && subRoute === "members" && segments[3]) {
+        if (!isAdmin) return json({ error: "Admin access required" }, 403);
+        const memberId = segments[3];
+        const { data: target } = await db
+          .from("se_team_members")
+          .select("id, se_profile_id")
+          .eq("id", memberId)
+          .eq("team_id", teamId)
+          .maybeSingle();
+        if (!target) return json({ error: "Member not found" }, 404);
+        if (target.se_profile_id === se.seProfile.id) return json({ error: "Cannot remove yourself — use leave instead" }, 400);
+        await db.from("se_team_members").delete().eq("id", memberId);
+        return json({ ok: true });
+      }
+
+      // DELETE /api/se-teams/:id — delete team (admin only)
+      if (req.method === "DELETE" && !subRoute) {
+        if (!isAdmin) return json({ error: "Admin access required" }, 403);
+        await db.from("se_teams").delete().eq("id", teamId);
+        return json({ ok: true });
+      }
+    }
+
+    return json({ error: "Not found" }, 404);
+  }
+
+  // ── Health check team reassignment ──
+
+  if (segments[0] === "health-checks") {
+    const se = await authenticateSE(req);
+    if (!se) return json({ error: "Unauthorized" }, 401);
+    const db = adminClient();
+
+    // PATCH /api/health-checks/:id/team — reassign single check
+    if (req.method === "PATCH" && segments.length === 3 && segments[2] === "team") {
+      const checkId = segments[1];
+      const body = await req.json();
+      const newTeamId = body.team_id ?? null;
+
+      const { data: row } = await db
+        .from("se_health_checks")
+        .select("id, se_user_id")
+        .eq("id", checkId)
+        .maybeSingle();
+      if (!row) return json({ error: "Health check not found" }, 404);
+      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden — you can only move your own health checks" }, 403);
+
+      if (newTeamId) {
+        const { data: mem } = await db
+          .from("se_team_members")
+          .select("id")
+          .eq("team_id", newTeamId)
+          .eq("se_profile_id", se.seProfile.id)
+          .maybeSingle();
+        if (!mem) return json({ error: "You are not a member of that team" }, 403);
+      }
+
+      await db.from("se_health_checks").update({ team_id: newTeamId }).eq("id", checkId);
+      return json({ ok: true });
+    }
+
+    // PATCH /api/health-checks/bulk-team — bulk reassign
+    if (req.method === "PATCH" && segments.length === 2 && segments[1] === "bulk-team") {
+      const body = await req.json();
+      const ids: string[] = body.ids;
+      const newTeamId = body.team_id ?? null;
+      if (!ids?.length) return json({ error: "ids array is required" }, 400);
+
+      if (newTeamId) {
+        const { data: mem } = await db
+          .from("se_team_members")
+          .select("id")
+          .eq("team_id", newTeamId)
+          .eq("se_profile_id", se.seProfile.id)
+          .maybeSingle();
+        if (!mem) return json({ error: "You are not a member of that team" }, 403);
+      }
+
+      const { data: rows } = await db
+        .from("se_health_checks")
+        .select("id")
+        .in("id", ids)
+        .eq("se_user_id", se.seProfile.id);
+
+      const ownedIds = (rows ?? []).map((r: any) => r.id);
+      if (ownedIds.length === 0) return json({ error: "No matching health checks found" }, 404);
+
+      await db.from("se_health_checks").update({ team_id: newTeamId }).in("id", ownedIds);
+      return json({ ok: true, updated: ownedIds.length });
+    }
+  }
+
   // ── Config upload routes ──
 
   // POST /api/config-upload-request — SE creates an upload link (JWT required)
@@ -1120,16 +1466,19 @@ serve(async (req: Request) => {
 
     const token = crypto.randomUUID();
     const db = adminClient();
+    const insertPayload: Record<string, unknown> = {
+      se_user_id: se.seProfile.id,
+      token,
+      customer_name: body.customer_name?.trim() || null,
+      customer_email: body.customer_email?.trim() || null,
+      se_email: se.user.email,
+      expires_at: expiresAt.toISOString(),
+    };
+    if (body.team_id) insertPayload.team_id = body.team_id;
+
     const { data: row, error } = await db
       .from("config_upload_requests")
-      .insert({
-        se_user_id: se.seProfile.id,
-        token,
-        customer_name: body.customer_name?.trim() || null,
-        customer_email: body.customer_email?.trim() || null,
-        se_email: se.user.email,
-        expires_at: expiresAt.toISOString(),
-      })
+      .insert(insertPayload)
       .select("id, token, expires_at")
       .single();
 
@@ -1156,7 +1505,7 @@ serve(async (req: Request) => {
     return json({ id: row.id, token, url: uploadUrl, expires_at: row.expires_at, email_sent: emailSent }, 201);
   }
 
-  // GET /api/config-upload-requests — list SE's own requests (JWT required)
+  // GET /api/config-upload-requests — list requests (JWT required). ?team_id= to filter by team.
   if (req.method === "GET" && segments[0] === "config-upload-requests" && segments.length === 1) {
     const se = await authenticateSE(req);
     if (!se) return json({ error: "Unauthorized" }, 401);
@@ -1164,13 +1513,29 @@ serve(async (req: Request) => {
     await runConfigUploadCleanup();
 
     const db = adminClient();
-    const { data, error } = await db
+    const urlObj = new URL(req.url);
+    const teamIdFilter = urlObj.searchParams.get("team_id");
+
+    let query = db
       .from("config_upload_requests")
-      .select("id, token, customer_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at")
-      .eq("se_user_id", se.seProfile.id)
+      .select("id, token, customer_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at, se_user_id, team_id")
       .order("created_at", { ascending: false })
       .limit(50);
 
+    if (teamIdFilter) {
+      const { data: mem } = await db
+        .from("se_team_members")
+        .select("id")
+        .eq("team_id", teamIdFilter)
+        .eq("se_profile_id", se.seProfile.id)
+        .maybeSingle();
+      if (!mem) return json({ error: "Not a member of that team" }, 403);
+      query = query.eq("team_id", teamIdFilter);
+    } else {
+      query = query.eq("se_user_id", se.seProfile.id).is("team_id", null);
+    }
+
+    const { data, error } = await query;
     if (error) return json({ error: error.message }, 500);
     return json({ data: data ?? [] });
   }
@@ -1299,20 +1664,31 @@ serve(async (req: Request) => {
       return json({ email_sent: result.success, error: result.error ?? undefined });
     }
 
-    // GET /api/config-upload/:token/download — SE downloads the XML (JWT required)
+    // GET /api/config-upload/:token/download — SE downloads the XML (JWT required, owner or teammate)
     if (req.method === "GET" && subRoute === "download") {
       const se = await authenticateSE(req);
       if (!se) return json({ error: "Unauthorized" }, 401);
 
       const { data: row, error: fetchErr } = await db
         .from("config_upload_requests")
-        .select("id, config_xml, file_name, status, se_user_id")
+        .select("id, config_xml, file_name, status, se_user_id, team_id")
         .eq("token", token)
         .maybeSingle();
 
       if (fetchErr) return json({ error: fetchErr.message }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
-      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
+
+      let hasAccess = row.se_user_id === se.seProfile.id;
+      if (!hasAccess && row.team_id) {
+        const { data: mem } = await db
+          .from("se_team_members")
+          .select("id")
+          .eq("team_id", row.team_id)
+          .eq("se_profile_id", se.seProfile.id)
+          .maybeSingle();
+        hasAccess = !!mem;
+      }
+      if (!hasAccess) return json({ error: "Forbidden" }, 403);
       if (!row.config_xml) return json({ error: "No configuration has been uploaded yet" }, 404);
 
       await db

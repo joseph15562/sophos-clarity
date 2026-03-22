@@ -97,6 +97,8 @@ import {
   snapshotFilesToParsedFiles,
   type SeHealthCheckSnapshotV1,
 } from "@/lib/se-health-check-snapshot-v2";
+import { ActiveTeamProvider, useActiveTeam } from "@/hooks/use-active-team";
+import { TeamSwitcher } from "@/components/TeamSwitcher";
 
 type ActiveStep = "landing" | "analyzing" | "results";
 
@@ -266,6 +268,7 @@ const SOPHOS_BP_TEMPLATE = BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-
 
 function HealthCheckInner() {
   const seAuth = useSEAuth();
+  const { activeTeam, activeTeamId, teams } = useActiveTeam();
 
   const [files, setFiles] = useState<ParsedFile[]>([]);
   const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisResult>>({});
@@ -300,14 +303,14 @@ function HealthCheckInner() {
   const [seNotesManual, setSeNotesManual] = useState("");
   const [seManagementOpen, setSeManagementOpen] = useState(false);
 
-  const effectivePreparedBy = useMemo(
-    () =>
+  const effectivePreparedBy = useMemo(() => {
+    const name =
       seAuth.seProfile?.healthCheckPreparedBy?.trim() ||
       seAuth.seProfile?.displayName?.trim() ||
       seAuth.seProfile?.email?.trim() ||
-      "Sales Engineer",
-    [seAuth.seProfile],
-  );
+      "Sales Engineer";
+    return activeTeam ? `${name} — ${activeTeam.name}` : name;
+  }, [seAuth.seProfile, activeTeam]);
 
   /** One-time: copy legacy localStorage "Prepared by" into `se_profiles.health_check_prepared_by`. */
   useEffect(() => {
@@ -843,7 +846,7 @@ function HealthCheckInner() {
   const [configUploadRequests, setConfigUploadRequests] = useState<Array<{
     id: string; token: string; customer_name: string | null; customer_email: string | null;
     status: string; expires_at: string; email_sent: boolean; uploaded_at: string | null;
-    downloaded_at: string | null; created_at: string;
+    downloaded_at: string | null; created_at: string; se_user_id?: string; team_id?: string | null;
   }>>([]);
   const [configUploadRequestsOpen, setConfigUploadRequestsOpen] = useState(false);
   const [configUploadListLoading, setConfigUploadListLoading] = useState(false);
@@ -905,6 +908,7 @@ function HealthCheckInner() {
           overall_grade: avgGrade,
           findings_count: allFindings.length,
           firewall_count: files.length,
+          team_id: activeTeamId ?? null,
           summary_json: {
             scores,
             topFindings: allFindings.slice(0, 10).map((f) => f.title ?? f.id),
@@ -945,6 +949,7 @@ function HealthCheckInner() {
     seThreatResponseAck,
     seExcludedBpChecks,
     centralLinkedForAnalysis,
+    activeTeamId,
   ]);
 
   const handleShareHealthCheck = useCallback(async () => {
@@ -1060,7 +1065,8 @@ function HealthCheckInner() {
     if (!seAuth.seProfile) return;
     setConfigUploadListLoading(true);
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-requests`;
+      const params = activeTeamId ? `?team_id=${activeTeamId}` : "";
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-requests${params}`;
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(url, {
         headers: {
@@ -1077,7 +1083,7 @@ function HealthCheckInner() {
     } finally {
       setConfigUploadListLoading(false);
     }
-  }, [seAuth.seProfile]);
+  }, [seAuth.seProfile, activeTeamId]);
 
   const handleCreateConfigUploadRequest = useCallback(async () => {
     if (!seAuth.seProfile) return;
@@ -1096,6 +1102,7 @@ function HealthCheckInner() {
           customer_name: configUploadCustomerName.trim() || undefined,
           customer_email: configUploadCustomerEmail.trim() || undefined,
           expires_in_days: configUploadDays,
+          team_id: activeTeamId ?? undefined,
         }),
       });
       const json = await res.json();
@@ -1120,7 +1127,7 @@ function HealthCheckInner() {
     } finally {
       setConfigUploadCreating(false);
     }
-  }, [seAuth.seProfile, configUploadCustomerName, configUploadCustomerEmail, configUploadDays, fetchConfigUploadRequests]);
+  }, [seAuth.seProfile, configUploadCustomerName, configUploadCustomerEmail, configUploadDays, fetchConfigUploadRequests, activeTeamId]);
 
   const handleResendConfigUploadEmail = useCallback(async () => {
     if (!configUploadToken) return;
@@ -1548,6 +1555,7 @@ function HealthCheckInner() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {seAuth.seProfile && teams.length > 0 && <TeamSwitcher />}
             {seAuth.seProfile && (
               <span className="text-xs text-muted-foreground hidden sm:inline">
                 {seAuth.seProfile.email}
@@ -2215,6 +2223,8 @@ function HealthCheckInner() {
             refreshTrigger={historyRefreshKey}
             preparedBy={effectivePreparedBy}
             onRestoreSnapshot={restoreFromSavedSnapshot}
+            activeTeamId={activeTeamId}
+            teams={teams}
           />
         )}
 
@@ -2492,10 +2502,10 @@ function HealthCheckInner() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5" />
-              My Upload Requests
+              {activeTeam ? `${activeTeam.name} Upload Requests` : "My Upload Requests"}
             </DialogTitle>
             <DialogDescription>
-              Manage config upload requests you&apos;ve sent to customers.
+              {activeTeam ? "Team config upload requests — yours and your teammates'." : "Manage config upload requests you've sent to customers."}
             </DialogDescription>
           </DialogHeader>
 
@@ -2511,12 +2521,14 @@ function HealthCheckInner() {
                 const isExpired = new Date(req.expires_at) <= new Date();
                 const statusLabel = isExpired ? "Expired" : req.status === "uploaded" ? "Config Ready" : req.status === "downloaded" ? "Downloaded" : "Pending";
                 const statusColor = isExpired ? "text-muted-foreground" : req.status === "uploaded" ? "text-[#00995a]" : req.status === "downloaded" ? "text-blue-500" : "text-amber-500";
+                const isTeammate = activeTeam && req.se_user_id && req.se_user_id !== seAuth.seProfile?.id;
                 return (
-                  <div key={req.id} className="rounded-lg border p-3 space-y-2">
+                  <div key={req.id} className={cn("rounded-lg border p-3 space-y-2", isTeammate && "border-[#2006F7]/30 dark:border-[#00EDFF]/20")}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{req.customer_name || "Unnamed"}</span>
                         <span className={cn("text-xs font-medium", statusColor)}>{statusLabel}</span>
+                        {isTeammate && <Badge variant="secondary" className="text-[9px]">Teammate</Badge>}
                       </div>
                       <span className="text-[10px] text-muted-foreground">
                         {new Date(req.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
@@ -2648,7 +2660,9 @@ export default function HealthCheck() {
 
   return (
     <SEAuthProvider value={seAuth}>
-      <HealthCheckInner />
+      <ActiveTeamProvider seProfileId={seAuth.seProfile?.id ?? null}>
+        <HealthCheckInner />
+      </ActiveTeamProvider>
     </SEAuthProvider>
   );
 }

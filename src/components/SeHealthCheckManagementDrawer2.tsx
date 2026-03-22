@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { Loader2, PanelRight, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Copy, Crown, Loader2, LogOut, PanelRight, Plus, RefreshCw, Star, Trash2, UserMinus, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEAuth, type SEProfile } from "@/hooks/use-se-auth";
+import { useActiveTeam, type SETeam } from "@/hooks/use-active-team";
 import { toast } from "sonner";
 
 type Props = {
@@ -16,17 +18,57 @@ function defaultDraftFromProfile(p: SEProfile): string {
   return p.healthCheckPreparedBy?.trim() || p.displayName?.trim() || p.email?.trim() || "";
 }
 
+interface TeamMember {
+  id: string;
+  se_profile_id: string;
+  role: string;
+  email?: string;
+  display_name?: string;
+}
+
+async function apiCall(path: string, method: string, body?: unknown) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || "Request failed");
+  return json;
+}
+
 export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
   const { seProfile, reloadSeProfile } = useSEAuth();
+  const { teams, reload: reloadTeams } = useActiveTeam();
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Team creation
+  const [newTeamName, setNewTeamName] = useState("");
+  const [creatingTeam, setCreatingTeam] = useState(false);
+
+  // Join team
+  const [joinCode, setJoinCode] = useState("");
+  const [joiningTeam, setJoiningTeam] = useState(false);
+
+  // Team detail
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open || !seProfile) return;
     setDraft(defaultDraftFromProfile(seProfile));
   }, [open, seProfile?.id, seProfile?.healthCheckPreparedBy, seProfile?.displayName, seProfile?.email]);
-
-  if (!open) return null;
 
   const handleSave = async () => {
     if (!seProfile) return;
@@ -40,14 +82,163 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
       if (error) throw error;
       await reloadSeProfile();
       toast.success("Report settings saved.");
-      onClose();
     } catch (e) {
-      console.warn("[SeHealthCheckManagementDrawer] save failed", e);
       toast.error(e instanceof Error ? e.message : "Could not save settings.");
     } finally {
       setSaving(false);
     }
   };
+
+  const handleCreateTeam = useCallback(async () => {
+    if (!newTeamName.trim()) return;
+    setCreatingTeam(true);
+    try {
+      const result = await apiCall("se-teams", "POST", { name: newTeamName.trim() });
+      toast.success(`Team "${result.name}" created. Invite code: ${result.invite_code}`);
+      setNewTeamName("");
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create team.");
+    } finally {
+      setCreatingTeam(false);
+    }
+  }, [newTeamName, reloadTeams]);
+
+  const handleJoinTeam = useCallback(async () => {
+    if (!joinCode.trim()) return;
+    setJoiningTeam(true);
+    try {
+      const result = await apiCall("se-teams/join", "POST", { invite_code: joinCode.trim() });
+      toast.success(`Joined team "${result.team_name}".`);
+      setJoinCode("");
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not join team.");
+    } finally {
+      setJoiningTeam(false);
+    }
+  }, [joinCode, reloadTeams]);
+
+  const fetchMembers = useCallback(async (teamId: string) => {
+    setLoadingMembers(true);
+    try {
+      const result = await apiCall(`se-teams/${teamId}/members`, "GET");
+      setTeamMembers(result.data ?? []);
+    } catch {
+      setTeamMembers([]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, []);
+
+  const toggleExpand = useCallback((team: SETeam) => {
+    if (expandedTeamId === team.id) {
+      setExpandedTeamId(null);
+    } else {
+      setExpandedTeamId(team.id);
+      setRenameDraft(team.name);
+      void fetchMembers(team.id);
+    }
+  }, [expandedTeamId, fetchMembers]);
+
+  const handleSetPrimary = useCallback(async (teamId: string) => {
+    setBusy(true);
+    try {
+      await apiCall(`se-teams/${teamId}/set-primary`, "POST");
+      toast.success("Primary team updated.");
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed.");
+    } finally {
+      setBusy(false);
+    }
+  }, [reloadTeams]);
+
+  const handleLeaveTeam = useCallback(async (teamId: string) => {
+    setBusy(true);
+    try {
+      await apiCall(`se-teams/${teamId}/leave`, "POST");
+      toast.success("Left team.");
+      setExpandedTeamId(null);
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not leave team.");
+    } finally {
+      setBusy(false);
+    }
+  }, [reloadTeams]);
+
+  const handleRenameTeam = useCallback(async (teamId: string) => {
+    if (!renameDraft.trim()) return;
+    setRenaming(true);
+    try {
+      await apiCall(`se-teams/${teamId}`, "PATCH", { name: renameDraft.trim() });
+      toast.success("Team renamed.");
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Rename failed.");
+    } finally {
+      setRenaming(false);
+    }
+  }, [renameDraft, reloadTeams]);
+
+  const handleRegenerateInvite = useCallback(async (teamId: string) => {
+    setBusy(true);
+    try {
+      const result = await apiCall(`se-teams/${teamId}/regenerate-invite`, "POST");
+      toast.success(`New invite code: ${result.invite_code}`);
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed.");
+    } finally {
+      setBusy(false);
+    }
+  }, [reloadTeams]);
+
+  const handleTransferAdmin = useCallback(async (teamId: string, targetProfileId: string) => {
+    setBusy(true);
+    try {
+      await apiCall(`se-teams/${teamId}/transfer-admin`, "POST", { target_se_profile_id: targetProfileId });
+      toast.success("Admin role transferred.");
+      await reloadTeams();
+      void fetchMembers(teamId);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Transfer failed.");
+    } finally {
+      setBusy(false);
+    }
+  }, [reloadTeams, fetchMembers]);
+
+  const handleRemoveMember = useCallback(async (teamId: string, memberId: string) => {
+    setBusy(true);
+    try {
+      await apiCall(`se-teams/${teamId}/members/${memberId}`, "DELETE");
+      toast.success("Member removed.");
+      void fetchMembers(teamId);
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Remove failed.");
+    } finally {
+      setBusy(false);
+    }
+  }, [fetchMembers, reloadTeams]);
+
+  const handleDeleteTeam = useCallback(async (teamId: string) => {
+    if (!confirm("Delete this team? Health checks will move to Personal.")) return;
+    setBusy(true);
+    try {
+      await apiCall(`se-teams/${teamId}`, "DELETE");
+      toast.success("Team deleted.");
+      setExpandedTeamId(null);
+      await reloadTeams();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed.");
+    } finally {
+      setBusy(false);
+    }
+  }, [reloadTeams]);
+
+  if (!open) return null;
 
   return (
     <>
@@ -63,7 +254,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-display font-bold text-foreground truncate">Management</h2>
-            <p className="text-[10px] text-muted-foreground">Report defaults for SE health checks</p>
+            <p className="text-[10px] text-muted-foreground">Report defaults &amp; team management</p>
           </div>
           <button
             type="button"
@@ -75,11 +266,12 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 space-y-6">
           {!seProfile ? (
             <p className="text-sm text-muted-foreground">Sign in to manage report settings.</p>
           ) : (
             <>
+              {/* Prepared by */}
               <div className="space-y-2">
                 <Label htmlFor="se-mgmt-prepared-by" className="text-xs font-semibold">
                   Prepared by
@@ -96,16 +288,175 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                   Stored in your FireComply profile and used for PDF, HTML, and history exports. Leave blank to fall back to
                   your account display name or email.
                 </p>
+                <Button
+                  type="button"
+                  className="rounded-lg bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
+                  disabled={saving}
+                  onClick={() => void handleSave()}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {saving ? "Saving…" : "Save"}
+                </Button>
               </div>
-              <Button
-                type="button"
-                className="rounded-lg bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
-                disabled={saving}
-                onClick={() => void handleSave()}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {saving ? "Saving…" : "Save"}
-              </Button>
+
+              <hr className="border-border" />
+
+              {/* Teams section */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-semibold flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                  Teams
+                </h3>
+
+                {/* My teams list */}
+                {teams.length > 0 ? (
+                  <div className="space-y-2">
+                    {teams.map((team) => {
+                      const expanded = expandedTeamId === team.id;
+                      return (
+                        <div key={team.id} className="rounded-lg border border-border bg-card overflow-hidden">
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
+                            onClick={() => toggleExpand(team)}
+                          >
+                            <Users className="h-3.5 w-3.5 shrink-0 text-[#2006F7] dark:text-[#00EDFF]" />
+                            <span className="flex-1 text-sm font-medium truncate">{team.name}</span>
+                            <Badge variant="secondary" className="text-[10px] shrink-0">
+                              {team.role === "admin" ? "Admin" : "Member"}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{team.member_count} member{team.member_count !== 1 ? "s" : ""}</span>
+                            {team.is_primary && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
+                          </button>
+
+                          {expanded && (
+                            <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+                              {/* Invite code */}
+                              <div className="flex items-center gap-2">
+                                <Label className="text-[10px] text-muted-foreground shrink-0">Invite code:</Label>
+                                <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{team.invite_code}</code>
+                                <Button
+                                  type="button" variant="ghost" size="sm" className="h-6 w-6 p-0"
+                                  onClick={() => { navigator.clipboard.writeText(team.invite_code); toast.success("Copied"); }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+
+                              {/* Set primary */}
+                              {!team.is_primary && (
+                                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={busy} onClick={() => void handleSetPrimary(team.id)}>
+                                  <Star className="h-3 w-3" /> Set as default
+                                </Button>
+                              )}
+
+                              {/* Admin actions */}
+                              {team.role === "admin" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Input className="h-8 text-xs flex-1" value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)} />
+                                    <Button type="button" size="sm" className="h-8 text-xs" disabled={renaming || !renameDraft.trim() || renameDraft.trim() === team.name}
+                                      onClick={() => void handleRenameTeam(team.id)}>
+                                      {renaming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Rename"}
+                                    </Button>
+                                  </div>
+                                  <div className="flex gap-2 flex-wrap">
+                                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1" disabled={busy}
+                                      onClick={() => void handleRegenerateInvite(team.id)}>
+                                      <RefreshCw className="h-3 w-3" /> New invite code
+                                    </Button>
+                                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1 text-destructive hover:text-destructive" disabled={busy}
+                                      onClick={() => void handleDeleteTeam(team.id)}>
+                                      <Trash2 className="h-3 w-3" /> Delete team
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Members list */}
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-muted-foreground">Members</Label>
+                                {loadingMembers ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                ) : (
+                                  <div className="space-y-1">
+                                    {teamMembers.map((m) => (
+                                      <div key={m.id} className="flex items-center gap-2 text-xs py-1">
+                                        <span className="flex-1 truncate">{m.display_name || m.email || m.se_profile_id}</span>
+                                        <Badge variant="secondary" className="text-[9px]">{m.role}</Badge>
+                                        {team.role === "admin" && m.se_profile_id !== seProfile?.id && (
+                                          <div className="flex gap-1">
+                                            {m.role !== "admin" && (
+                                              <Button type="button" variant="ghost" size="sm" className="h-6 px-1" disabled={busy}
+                                                title="Transfer admin"
+                                                onClick={() => void handleTransferAdmin(team.id, m.se_profile_id)}>
+                                                <Crown className="h-3 w-3" />
+                                              </Button>
+                                            )}
+                                            <Button type="button" variant="ghost" size="sm" className="h-6 px-1 text-destructive" disabled={busy}
+                                              title="Remove member"
+                                              onClick={() => void handleRemoveMember(team.id, m.id)}>
+                                              <UserMinus className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Leave */}
+                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={busy}
+                                onClick={() => void handleLeaveTeam(team.id)}>
+                                <LogOut className="h-3 w-3" /> Leave team
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">You are not in any teams yet. Create one or join with an invite code.</p>
+                )}
+
+                {/* Create team */}
+                <div className="space-y-2">
+                  <Label className="text-[10px] text-muted-foreground font-semibold">Create team</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className="h-8 text-xs flex-1"
+                      placeholder="Team name (e.g. Enterprise)"
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && void handleCreateTeam()}
+                    />
+                    <Button type="button" size="sm" className="h-8 text-xs gap-1" disabled={creatingTeam || !newTeamName.trim()} onClick={() => void handleCreateTeam()}>
+                      {creatingTeam ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                      Create
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Join team */}
+                <div className="space-y-2">
+                  <Label className="text-[10px] text-muted-foreground font-semibold">Join team</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className="h-8 text-xs flex-1 font-mono"
+                      placeholder="Invite code"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && void handleJoinTeam()}
+                    />
+                    <Button type="button" size="sm" className="h-8 text-xs gap-1" disabled={joiningTeam || !joinCode.trim()} onClick={() => void handleJoinTeam()}>
+                      {joiningTeam ? <Loader2 className="h-3 w-3 animate-spin" /> : <Users className="h-3 w-3" />}
+                      Join
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </div>
