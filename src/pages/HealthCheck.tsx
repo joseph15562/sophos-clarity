@@ -723,8 +723,8 @@ function HealthCheckInner() {
         return { label, score: bp.overall, grade: bp.grade };
       });
       const avgScore = Math.round(scores.reduce((s, e) => s + e.score, 0) / scores.length);
-      const grades = ["A", "B", "C", "D", "F"];
-      const avgGrade = grades[Math.min(Math.floor((100 - avgScore) / 20), 4)];
+      const avgGrade: string =
+        avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
 
       const snapshot = buildSeHealthCheckSnapshotV1({
         customerName: customerName.trim(),

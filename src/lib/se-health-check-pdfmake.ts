@@ -27,28 +27,68 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 /**
+ * Render an SVG string to a high-resolution PNG data URL via offscreen canvas.
+ * Scale factor 3x ensures crisp rendering in PDF viewers.
+ */
+function svgToHighResPng(svgText: string, width: number, height: number, scale = 3): Promise<string | null> {
+  if (typeof document === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { resolve(null); return; }
+    const img = new Image();
+    const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+/**
  * Load Sophos artwork for the PDF cover + overview header.
- * Uses `import.meta.env.BASE_URL` so subpath deployments still resolve assets.
+ * Wordmark is rendered from SVG at 3x resolution for crisp PDF output.
+ * Shield is loaded from a pre-rendered PNG.
  */
 export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPdfImageAssets> {
   if (typeof fetch === "undefined") return {};
   const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") || "";
-  const paths = ["se-health-check-wordmark.png", "se-health-check-sophos-mark.png"] as const;
   const out: SeHealthCheckPdfImageAssets = {};
-  await Promise.all(
-    paths.map(async (name) => {
+
+  const tasks: Promise<void>[] = [];
+
+  tasks.push(
+    (async () => {
       try {
-        const url = `${base}/${name}`.replace(/([^:])\/{2,}/g, "$1/");
+        const url = `${base}/sophos-logo-white.svg`.replace(/([^:])\/{2,}/g, "$1/");
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const svgText = await res.text();
+        const dataUrl = await svgToHighResPng(svgText, 600, 65);
+        if (dataUrl) out.wordmark = dataUrl;
+      } catch { /* ignore */ }
+    })(),
+  );
+
+  tasks.push(
+    (async () => {
+      try {
+        const url = `${base}/se-health-check-sophos-mark.png`.replace(/([^:])\/{2,}/g, "$1/");
         const res = await fetch(url);
         if (!res.ok) return;
         const buf = await res.arrayBuffer();
-        const key = name.includes("wordmark") ? "wordmark" : "shield";
-        out[key] = `data:image/png;base64,${arrayBufferToBase64(buf)}`;
-      } catch {
-        /* ignore missing artwork */
-      }
-    }),
+        out.shield = `data:image/png;base64,${arrayBufferToBase64(buf)}`;
+      } catch { /* ignore */ }
+    })(),
   );
+
+  await Promise.all(tasks);
   return out;
 }
 
