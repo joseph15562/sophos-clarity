@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, UserCheck, Undo2, Lock, HelpCircle } from "lucide-react";
 import { ScoringMethodology } from "./ScoringMethodology";
 import type { AnalysisResult } from "@/lib/analyse-config";
@@ -10,14 +10,42 @@ import {
   MODULES,
   getActiveModules,
   computeSophosBPScore,
+  detectBpLicenceTierFromCentral,
 } from "@/lib/sophos-licence";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthOptional } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { getCentralStatus } from "@/lib/sophos-central";
+import {
+  SE_HEALTH_CHECK_BP_NO_MANUAL_COMPLY_IDS,
+  SE_HEALTH_CHECK_BP_OVERRIDES_KEY,
+  seCentralAutoForLabel,
+  seCentralAutoForOverall,
+} from "@/lib/se-health-check-bp";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
   centralLicences?: Array<{ product: string; endDate: string; type: string }>;
+  /** Defaults to MSP localStorage key; SE Health Check uses its own key so overrides do not clash. */
+  overridesStorageKey?: string;
+  /** When true (e.g. SE session connected to Central), treat Central management check as satisfied without org DB link. */
+  centralEnrichmentActive?: boolean;
+  /** Notified when manual overrides change (e.g. SE page refreshes linked dashboard scores). */
+  onManualOverridesChange?: () => void;
+  /**
+   * When both are set (e.g. SE Health Check), licence tier/modules are owned by the parent so the page header
+   * toggle and this card stay in sync.
+   */
+  licence?: LicenceSelection;
+  onLicenceChange?: (next: LicenceSelection) => void;
+  /**
+   * SE Health Check: `analysisResults` keys (firewall labels) whose upload serial matches a Central HA group.
+   * Auto-passes `bp-ha-configured` when the XML has no HA section (same as picking the HA dropdown row).
+   */
+  centralHaConfirmedLabels?: Set<string>;
+  /** SE Health Check: MDR/NDR export-gap acknowledgement from the results header panel. */
+  seThreatResponseAck?: Set<string>;
+  /** SE Health Check: BP checks omitted from scoring (e.g. Heartbeat without endpoints). */
+  seExcludedBpChecks?: Set<string>;
 }
 
 const TIER_INFO: Record<LicenceTier, { label: string; description: string }> = {
@@ -71,11 +99,12 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
   );
 }
 
-const OVERRIDES_KEY = "sophos-bp-manual-overrides";
+const OVERRIDES_KEY_DEFAULT = "sophos-bp-manual-overrides";
+const NO_CENTRAL_HA_LABELS = new Set<string>();
 
-function loadOverrides(): Set<string> {
+function loadOverrides(storageKey: string): Set<string> {
   try {
-    const raw = localStorage.getItem(OVERRIDES_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (raw) return new Set(JSON.parse(raw) as string[]);
   } catch (err) {
     console.warn("[loadOverrides]", err);
@@ -83,41 +112,75 @@ function loadOverrides(): Set<string> {
   return new Set();
 }
 
-function saveOverrides(overrides: Set<string>) {
-  localStorage.setItem(OVERRIDES_KEY, JSON.stringify([...overrides]));
+function saveOverrides(storageKey: string, overrides: Set<string>) {
+  localStorage.setItem(storageKey, JSON.stringify([...overrides]));
 }
 
-function detectTierFromCentral(licences: Array<{ product: string; endDate: string; type: string }> | undefined): LicenceTier | null {
-  if (!licences || licences.length === 0) return null;
-  const names = licences.map((l) => l.product.toLowerCase());
-  if (names.some((n) => n.includes("xstream"))) return "xstream";
-  if (names.some((n) => n.includes("standard"))) return "standard";
-  return null;
-}
+export function SophosBestPractice({
+  analysisResults,
+  centralLicences,
+  overridesStorageKey,
+  centralEnrichmentActive = false,
+  onManualOverridesChange,
+  licence: licenceFromParent,
+  onLicenceChange,
+  centralHaConfirmedLabels,
+  seThreatResponseAck,
+  seExcludedBpChecks,
+}: Props) {
+  const isSeHealthCheckBp = overridesStorageKey === SE_HEALTH_CHECK_BP_OVERRIDES_KEY;
+  // SE Health Check route has no AuthProvider — optional auth skips org DB Central link; use centralEnrichmentActive instead.
+  const auth = useAuthOptional();
+  const orgId = auth?.org?.id ?? "";
+  const isGuest = auth?.isGuest ?? true;
 
-export function SophosBestPractice({ analysisResults, centralLicences }: Props) {
-  const { org, isGuest } = useAuth();
-  const orgId = org?.id ?? "";
+  const storageKey = overridesStorageKey ?? OVERRIDES_KEY_DEFAULT;
 
-  const detectedTier = useMemo(() => detectTierFromCentral(centralLicences), [centralLicences]);
+  const detectedTier = useMemo(() => detectBpLicenceTierFromCentral(centralLicences), [centralLicences]);
   const isLocked = detectedTier !== null;
 
-  const [tier, setTier] = useState<LicenceTier>("xstream");
-  const [individualModules, setIndividualModules] = useState<ModuleId[]>([
+  const isControlled = licenceFromParent !== undefined;
+
+  const [internalTier, setInternalTier] = useState<LicenceTier>("xstream");
+  const [internalIndividualModules, setInternalIndividualModules] = useState<ModuleId[]>([
     "networkProtection",
     "webProtection",
   ]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [manualOverrides, setManualOverrides] = useState<Set<string>>(loadOverrides);
+  const [manualOverrides, setManualOverrides] = useState<Set<string>>(() => loadOverrides(storageKey));
+  const manualOverridesHydrated = useRef(false);
   const [centralLinked, setCentralLinked] = useState(false);
   const [activeTab, setActiveTab] = useState("overall");
   const [showHelp, setShowHelp] = useState(false);
 
-  useEffect(() => {
-    if (detectedTier) setTier(detectedTier);
-  }, [detectedTier]);
+  const tier = isControlled ? licenceFromParent!.tier : internalTier;
+  const individualModules = isControlled ? licenceFromParent!.modules : internalIndividualModules;
 
-  useEffect(() => { saveOverrides(manualOverrides); }, [manualOverrides]);
+  const setLicenceSelection = useCallback(
+    (next: LicenceSelection) => {
+      if (isControlled) onLicenceChange?.(next);
+      else {
+        setInternalTier(next.tier);
+        setInternalIndividualModules(next.modules);
+      }
+    },
+    [isControlled, onLicenceChange],
+  );
+
+  useEffect(() => {
+    if (isControlled || !detectedTier) return;
+    setInternalTier(detectedTier);
+    if (detectedTier !== "individual") setInternalIndividualModules([]);
+  }, [detectedTier, isControlled]);
+
+  useEffect(() => {
+    saveOverrides(storageKey, manualOverrides);
+    if (!manualOverridesHydrated.current) {
+      manualOverridesHydrated.current = true;
+      return;
+    }
+    onManualOverridesChange?.();
+  }, [storageKey, manualOverrides, onManualOverridesChange]);
 
   useEffect(() => {
     if (!orgId || isGuest) return;
@@ -146,11 +209,14 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
 
   const activeModules = useMemo(() => getActiveModules(licence), [licence]);
 
-  const toggleModule = useCallback((mod: ModuleId) => {
-    setIndividualModules((prev) =>
-      prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod],
-    );
-  }, []);
+  const toggleModule = useCallback(
+    (mod: ModuleId) => {
+      const prev = individualModules;
+      const nextMods = prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod];
+      setLicenceSelection({ tier: "individual", modules: nextMods });
+    },
+    [individualModules, setLicenceSelection],
+  );
 
   const toggleCategory = useCallback((cat: string) => {
     setExpandedCategories((prev) => {
@@ -183,24 +249,37 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
     return merged;
   }, [analysisResults]);
 
-  const centralAutoChecks = useMemo(() => {
-    if (!centralLinked) return undefined;
-    return new Set(["bp-central-mgmt"]);
-  }, [centralLinked]);
+  const centralSessionActive = centralEnrichmentActive || centralLinked;
+  const haLabels = centralHaConfirmedLabels ?? NO_CENTRAL_HA_LABELS;
+
+  const centralAutoOverall = useMemo(
+    () => seCentralAutoForOverall(centralSessionActive, haLabels),
+    [centralSessionActive, haLabels],
+  );
 
   const bpScore = useMemo(() => {
     if (!aggregateResult) return null;
-    return computeSophosBPScore(aggregateResult, licence, manualOverrides, centralAutoChecks);
-  }, [aggregateResult, licence, manualOverrides, centralAutoChecks]);
+    const auto = hasMultiple
+      ? centralAutoOverall
+      : seCentralAutoForLabel(centralSessionActive, firewallLabels[0] ?? "", haLabels);
+    return computeSophosBPScore(aggregateResult, licence, manualOverrides, auto, seThreatResponseAck, seExcludedBpChecks);
+  }, [aggregateResult, licence, manualOverrides, centralAutoOverall, hasMultiple, centralSessionActive, firewallLabels, haLabels, seThreatResponseAck, seExcludedBpChecks]);
 
   const perFirewallScores = useMemo(() => {
     if (!hasMultiple) return {};
     const result: Record<string, ReturnType<typeof computeSophosBPScore>> = {};
     for (const [label, ar] of Object.entries(analysisResults)) {
-      result[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAutoChecks);
+      result[label] = computeSophosBPScore(
+        ar,
+        licence,
+        manualOverrides,
+        seCentralAutoForLabel(centralSessionActive, label, haLabels),
+        seThreatResponseAck,
+        seExcludedBpChecks,
+      );
     }
     return result;
-  }, [hasMultiple, analysisResults, licence, manualOverrides, centralAutoChecks]);
+  }, [hasMultiple, analysisResults, licence, manualOverrides, centralSessionActive, haLabels, seThreatResponseAck, seExcludedBpChecks]);
 
   const perFwCheckStatus = useMemo(() => {
     if (!hasMultiple) return new Map<string, string[]>();
@@ -252,7 +331,10 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
             return (
               <button
                 key={key}
-                onClick={() => !isLocked && setTier(key)}
+                onClick={() =>
+                  !isLocked &&
+                  setLicenceSelection({ tier: key, modules: key === "individual" ? individualModules : [] })
+                }
                 disabled={isLocked}
                 className={`rounded-lg border p-3 text-left transition-all ${
                   isSelected
@@ -424,6 +506,10 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
                   {checks.map((result) => {
                     const isOverridden = result.manualOverride === true;
                     const isWarnAndOverrideable = result.status === "warn" && result.applicable;
+                    const skipManualComply =
+                      isSeHealthCheckBp && SE_HEALTH_CHECK_BP_NO_MANUAL_COMPLY_IDS.has(result.check.id);
+                    const showManualOverrideButton =
+                      (!skipManualComply && isWarnAndOverrideable) || isOverridden;
                     const cfg = STATUS_CONFIG[result.status];
                     const Icon = cfg.icon;
                     return (
@@ -452,7 +538,7 @@ export function SophosBestPractice({ analysisResults, centralLicences }: Props) 
                             </p>
                           )}
                           {/* Manual comply toggle for checks not verifiable from export */}
-                          {(isWarnAndOverrideable || isOverridden) && (
+                          {showManualOverrideButton && (
                             <button
                               onClick={() => toggleOverride(result.check.id)}
                               className={`mt-2 flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-md transition-colors ${

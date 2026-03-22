@@ -130,4 +130,31 @@ describe("computeSophosBPScore", () => {
       expect(overriddenResult?.manualOverride).toBe(true);
     }
   });
+
+  it("SE exclusion marks Security Heartbeat as N/A and drops it from scored weight", () => {
+    const result = mockAnalysisResult();
+    const licence = { tier: "xstream" as const, modules: [] as ModuleId[] };
+    const withHb = computeSophosBPScore(result, licence);
+    const hbBefore = withHb.results.find((r) => r.check.id === "bp-heartbeat");
+    expect(hbBefore?.applicable).toBe(true);
+    const excluded = computeSophosBPScore(result, licence, undefined, undefined, undefined, new Set(["bp-heartbeat"]));
+    const hbAfter = excluded.results.find((r) => r.check.id === "bp-heartbeat");
+    expect(hbAfter?.status).toBe("na");
+    expect(hbAfter?.applicable).toBe(false);
+    expect(hbAfter?.detail).toContain("Excluded");
+    expect(excluded.overall).toBeGreaterThanOrEqual(withHb.overall);
+  });
+
+  it("SE acknowledgement passes MDR export-gap check without manualOverride flag", () => {
+    const result = mockAnalysisResult();
+    const licence = { tier: "xstream" as const, modules: [] as ModuleId[] };
+    const without = computeSophosBPScore(result, licence);
+    const mdr = without.results.find((r) => r.check.id === "bp-mdr-feeds");
+    expect(mdr?.status).toBe("warn");
+    const withAck = computeSophosBPScore(result, licence, undefined, undefined, new Set(["bp-mdr-feeds"]));
+    const mdr2 = withAck.results.find((r) => r.check.id === "bp-mdr-feeds");
+    expect(mdr2?.status).toBe("pass");
+    expect(mdr2?.manualOverride).toBeUndefined();
+    expect(mdr2?.detail).toContain("SE confirmed");
+  });
 });

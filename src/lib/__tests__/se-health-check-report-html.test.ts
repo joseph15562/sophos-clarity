@@ -60,6 +60,8 @@ describe("se-health-check-report-html", () => {
     expect(html).toContain("Firewall health check overview");
     expect(html).toContain("Sophos Ltd. All Rights Reserved");
     expect(html).toContain("Executive Summary");
+    expect(html).toContain("Active threat response (SE acknowledgement)");
+    expect(html).toContain("Synchronized Security scope");
     expect(html).toContain("Configuration file manifest");
     expect(html).toContain("export.html");
     expect(html).toContain("se-hc-overview-wordmark");
@@ -77,5 +79,46 @@ describe("se-health-check-report-html", () => {
     expect(coverIdx).toBeGreaterThanOrEqual(0);
     expect(overviewIdx).toBeGreaterThan(coverIdx);
     expect(tocIdx).toBeGreaterThan(overviewIdx);
+  });
+
+  it("browser variant includes licence and best-practice dashboard without PDF cover", () => {
+    const ar = analyseConfig({});
+    const label = "TestFW";
+    const bl = evaluateBaseline(SOPHOS_BP_TEMPLATE, ar);
+    const licence = { tier: "xstream" as const, modules: [] as const };
+    const bp = computeSophosBPScore(ar, licence);
+    const html = buildSEHealthCheckReportHtml(
+      {
+        labels: [label],
+        files: [
+          {
+            id: "1",
+            fileName: "export.html",
+            label,
+            content: "",
+            extractedData: {} as ExtractedSections,
+            source: "upload",
+          },
+        ],
+        analysisResults: { [label]: ar },
+        baselineResults: { [label]: bl },
+        bpByLabel: { [label]: bp },
+        licence,
+        customerName: "Acme",
+        preparedBy: "SE",
+        dpiExemptZones: [],
+        dpiExemptNetworks: [],
+        webFilterComplianceMode: "strict",
+        webFilterExemptRuleNames: [],
+        centralValidated: false,
+        generatedAt: new Date("2024-01-15T12:00:00.000Z"),
+      },
+      { variant: "browser" },
+    );
+    expect(html).toContain("Sophos Licence Selection");
+    expect(html).toContain("Sophos Best Practice Score");
+    expect(html).toContain("Xstream Protection");
+    expect(html).not.toContain("se-hc-cover-fullpage");
+    expect(html).not.toContain(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);
   });
 });

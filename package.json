@@ -18,6 +18,8 @@
     "favicon": "node -e \"require('sharp')(require('path').join('public','favicon.svg')).resize(32,32).png().toBuffer().then(p=>require('to-ico')([p]).then(ico=>require('fs').writeFileSync(require('path').join('public','favicon.ico'),ico))).then(()=>console.log('favicon.ico updated')).catch(e=>console.error(e))\""
   },
   "dependencies": {
+    "@fontsource/zalando-sans": "^5.2.1",
+    "@fontsource/zalando-sans-expanded": "^5.2.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -66,6 +68,7 @@
     "lucide-react": "^0.462.0",
     "marked": "^17.0.3",
     "next-themes": "^0.3.0",
+    "pdfmake": "^0.3.7",
     "pptxgenjs": "^4.0.1",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
@@ -89,6 +92,7 @@
     "@types/dompurify": "^3.0.5",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^22.16.5",
+    "@types/pdfmake": "^0.3.2",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",

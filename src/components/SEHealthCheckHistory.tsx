@@ -1,8 +1,22 @@
 import { useEffect, useState, useCallback } from "react";
-import { ChevronDown, ChevronUp, Clock, FileText, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  FileText,
+  FolderOpen,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  buildSeHealthCheckExportBundle,
+  parseSeHealthCheckSnapshotFromSummaryJson,
+  type SeHealthCheckSnapshotV1,
+} from "@/lib/se-health-check-snapshot";
+import { toast } from "sonner";
 
 interface HealthCheckRow {
   id: string;
@@ -17,19 +31,34 @@ interface HealthCheckRow {
 
 function gradeColor(grade: string | null): string {
   switch (grade) {
-    case "A": return "bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
-    case "B": return "bg-[#2006F7]/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
-    case "C": return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
-    case "D": return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
-    case "F": return "bg-[#EA0022]/15 text-[#EA0022]";
-    default: return "bg-muted text-muted-foreground";
+    case "A":
+      return "bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
+    case "B":
+      return "bg-[#2006F7]/15 text-[#2006F7] dark:text-[#00EDFF]/10 dark:text-[#00EDFF]";
+    case "C":
+      return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
+    case "D":
+      return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
+    case "F":
+      return "bg-[#EA0022]/15 text-[#EA0022]";
+    default:
+      return "bg-muted text-muted-foreground";
   }
 }
 
-export function SEHealthCheckHistory({ seProfileId }: { seProfileId: string }) {
+type Props = {
+  seProfileId: string;
+  refreshTrigger?: number;
+  preparedBy: string;
+  onRestoreSnapshot?: (snapshot: SeHealthCheckSnapshotV1) => void;
+};
+
+export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, preparedBy, onRestoreSnapshot }: Props) {
   const [rows, setRows] = useState<HealthCheckRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportingKind, setExportingKind] = useState<"pdf" | "html" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,7 +75,43 @@ export function SEHealthCheckHistory({ seProfileId }: { seProfileId: string }) {
     setLoading(false);
   }, [seProfileId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load, refreshTrigger]);
+
+  const runExport = useCallback(
+    async (row: HealthCheckRow, kind: "pdf" | "html") => {
+      const snapshot = parseSeHealthCheckSnapshotFromSummaryJson(row.summary_json);
+      if (!snapshot) {
+        toast.error("This save has no full snapshot — save the health check again from a current session to enable reopen and export.");
+        return;
+      }
+      const id = row.id;
+      setExportingId(id);
+      setExportingKind(kind);
+      try {
+        const generatedAt = new Date(row.checked_at);
+        const { reportParams, branding } = buildSeHealthCheckExportBundle(snapshot, preparedBy, generatedAt);
+        const customerPart = row.customer_name?.trim() || snapshot.customerName.trim() || "health-check";
+        if (kind === "pdf") {
+          const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download");
+          await runHealthCheckPdfDownload({ reportParams, branding, filenameCustomerPart: customerPart });
+          toast.success("PDF downloaded.");
+        } else {
+          const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download");
+          await runHealthCheckHtmlDownload({ reportParams, branding, filenameCustomerPart: customerPart });
+          toast.success("HTML downloaded.");
+        }
+      } catch (e) {
+        console.warn("[SEHealthCheckHistory] export failed", e);
+        toast.error(e instanceof Error ? e.message : "Export failed.");
+      } finally {
+        setExportingId(null);
+        setExportingKind(null);
+      }
+    },
+    [preparedBy],
+  );
 
   if (loading && rows.length === 0) return null;
 
@@ -65,7 +130,7 @@ export function SEHealthCheckHistory({ seProfileId }: { seProfileId: string }) {
       {open && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="flex justify-end p-2 border-b border-border">
-            <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={load} disabled={loading}>
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
@@ -74,7 +139,7 @@ export function SEHealthCheckHistory({ seProfileId }: { seProfileId: string }) {
           {rows.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              No health checks saved yet. Run a check and click "Save health check" to start building your history.
+              No health checks saved yet. Run a check and click &quot;Save health check&quot; to start building your history.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -87,32 +152,82 @@ export function SEHealthCheckHistory({ seProfileId }: { seProfileId: string }) {
                     <th className="px-4 py-2">Findings</th>
                     <th className="px-4 py-2">Firewalls</th>
                     <th className="px-4 py-2">Date</th>
+                    <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-2.5 font-medium truncate max-w-[200px]">
-                        {row.customer_name || <span className="text-muted-foreground italic">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 font-mono text-xs">
-                        {row.overall_score ?? "—"}%
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <Badge className={`${gradeColor(row.overall_grade)} border-0 text-xs font-bold`}>
-                          {row.overall_grade ?? "—"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{row.findings_count ?? 0}</td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{row.firewall_count ?? 0}</td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(row.checked_at).toLocaleDateString(undefined, {
-                          year: "numeric", month: "short", day: "numeric",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </td>
-                    </tr>
-                  ))}
+                  {rows.map((row) => {
+                    const hasSnapshot = parseSeHealthCheckSnapshotFromSummaryJson(row.summary_json) !== null;
+                    const busyPdf = exportingId === row.id && exportingKind === "pdf";
+                    const busyHtml = exportingId === row.id && exportingKind === "html";
+                    return (
+                      <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-2.5 font-medium truncate max-w-[160px]">
+                          {row.customer_name || <span className="text-muted-foreground italic">—</span>}
+                        </td>
+                        <td className="px-4 py-2.5 font-mono text-xs">{row.overall_score ?? "—"}%</td>
+                        <td className="px-4 py-2.5">
+                          <Badge className={`${gradeColor(row.overall_grade)} border-0 text-xs font-bold`}>
+                            {row.overall_grade ?? "—"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{row.findings_count ?? 0}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{row.firewall_count ?? 0}</td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(row.checked_at).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <div className="flex flex-wrap justify-end gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs gap-1"
+                              disabled={!hasSnapshot || !onRestoreSnapshot}
+                              title={!hasSnapshot ? "Re-save from a current session to enable" : "Open in editor"}
+                              onClick={() => {
+                                const snap = parseSeHealthCheckSnapshotFromSummaryJson(row.summary_json);
+                                if (snap && onRestoreSnapshot) onRestoreSnapshot(snap);
+                              }}
+                            >
+                              <FolderOpen className="h-3.5 w-3.5" />
+                              Open
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs gap-1"
+                              disabled={!hasSnapshot || busyPdf || busyHtml}
+                              title="Download PDF"
+                              onClick={() => void runExport(row, "pdf")}
+                            >
+                              {busyPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                              PDF
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs gap-1"
+                              disabled={!hasSnapshot || busyPdf || busyHtml}
+                              title="Download HTML"
+                              onClick={() => void runExport(row, "html")}
+                            >
+                              {busyHtml ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                              HTML
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

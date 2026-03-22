@@ -7,6 +7,17 @@ const rawKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
 const PLACEHOLDER_URL = "https://dev-placeholder.supabase.co";
 const PLACEHOLDER_KEY = "dev-placeholder-anon-key";
 
+/** URL + anon key actually passed to createClient (after dev placeholder resolution). */
+let resolvedPublicUrl = "";
+let resolvedPublicKey = "";
+
+/**
+ * Use for Edge Function calls that must send the same anon key as the Supabase client (e.g. SE guest Central).
+ */
+export function getSupabasePublicEdgeAuth(): { url: string; anonKey: string } {
+  return { url: resolvedPublicUrl, anonKey: resolvedPublicKey };
+}
+
 /**
  * Missing/invalid Supabase env used to make `createClient` throw at import time — React never mounted
  * (blank dark `body` only). Allow dev placeholders for Vite dev, localhost, and Vite’s alternate loopback
@@ -96,6 +107,8 @@ function buildClient(): ReturnType<typeof createClient<Database>> {
 
   try {
     const c = createClient<Database>(supabaseUrl, supabaseKey, options);
+    resolvedPublicUrl = supabaseUrl;
+    resolvedPublicKey = supabaseKey;
     // #region agent log
     fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
       method: "POST",
@@ -118,6 +131,8 @@ function buildClient(): ReturnType<typeof createClient<Database>> {
         "[supabase] createClient failed with your env (invalid URL/key?). Using dev placeholders.",
         err,
       );
+      resolvedPublicUrl = PLACEHOLDER_URL;
+      resolvedPublicKey = PLACEHOLDER_KEY;
       return createClient<Database>(PLACEHOLDER_URL, PLACEHOLDER_KEY, options);
     }
     throw err;

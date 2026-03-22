@@ -1,17 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { jwtVerify } from "https://esm.sh/jose@4.15.4?target=deno";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost:8080",
+  "http://localhost:8081",
+  "http://localhost:4173",
   "https://sophos-clarity.vercel.app",
   Deno.env.get("ALLOWED_ORIGIN") ?? "",
 ].filter(Boolean);
 
+/** Any http port on loopback — Vite may use 8081+ when 8080 is busy; missing CORS → browser "Failed to fetch". */
+function isLocalHttpLoopbackOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "http:") return false;
+    return u.hostname === "localhost" || u.hostname === "127.0.0.1" || u.hostname === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "";
+  const allowed = ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : isLocalHttpLoopbackOrigin(origin)
+    ? origin
+    : ALLOWED_ORIGINS[0] ?? "";
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -29,6 +47,83 @@ const SOPHOS_GLOBAL_URL = "https://api.central.sophos.com";
 const ENCRYPTION_KEY = Deno.env.get("CENTRAL_ENCRYPTION_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+/** Project ref from https://<ref>.supabase.co */
+function projectRefFromSupabaseUrl(su: string): string {
+  try {
+    const host = new URL(su.trim()).hostname;
+    const m = host.match(/^([a-z0-9-]+)\.supabase\.co$/i);
+    return m?.[1] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** When SUPABASE_ANON_KEY is missing or out of sync, still accept a valid anon JWT for this project. */
+async function verifyGuestAnonJwt(
+  token: string,
+  jwtSecret: string,
+  supabaseUrl: string,
+): Promise<boolean> {
+  try {
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(jwtSecret),
+      { algorithms: ["HS256"] },
+    );
+    const role = payload["role"];
+    const ref = payload["ref"];
+    const expectedRef = projectRefFromSupabaseUrl(supabaseUrl);
+    return role === "anon" && typeof ref === "string" && ref === expectedRef && expectedRef.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Decode JWT payload only (no sig check). Used with gateway check below — invalid sig → PostgREST returns 401. */
+function decodeJwtPayloadUnsafe(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const rem = b64.length % 4;
+    if (rem) b64 += "=".repeat(4 - rem);
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Hosted Edge does not expose SUPABASE_JWT_SECRET by default (see Supabase “Default secrets”).
+ * If string compare to SUPABASE_ANON_KEY fails (drift), ask the API gateway to validate the JWT
+ * and require claims role=anon + ref matching this project (reject service_role).
+ */
+async function verifyGuestAnonViaSupabaseGateway(supabaseUrl: string, incoming: string): Promise<boolean> {
+  const payload = decodeJwtPayloadUnsafe(incoming);
+  if (!payload || payload["role"] !== "anon") return false;
+  const ref = payload["ref"];
+  const expectedRef = projectRefFromSupabaseUrl(supabaseUrl);
+  if (typeof ref !== "string" || ref !== expectedRef || !expectedRef) return false;
+
+  const base = supabaseUrl.replace(/\/$/, "");
+  try {
+    const res = await fetch(`${base}/rest/v1/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${incoming}`,
+        apikey: incoming,
+      },
+    });
+    return res.status !== 401 && res.status !== 403;
+  } catch {
+    return false;
+  }
+}
 
 // ── AES-256-GCM encryption helpers ──
 
@@ -196,10 +291,44 @@ serve(async (req) => {
 
     // ── Guest SE health check (ephemeral credentials; never stored) ──
     // Authorization must be the Supabase anon/publishable key (same as the web client).
-    if (mode === "guest_health_ping" || mode === "guest_health_tenants" || mode === "guest_health_firewalls") {
-      const publishable = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    if (
+      mode === "guest_health_ping" ||
+      mode === "guest_health_tenants" ||
+      mode === "guest_health_firewalls" ||
+      mode === "guest_health_firewall_licenses"
+    ) {
+      const publishable = (Deno.env.get("SUPABASE_ANON_KEY") ?? "").trim();
+      const jwtSecret = (Deno.env.get("SUPABASE_JWT_SECRET") ?? Deno.env.get("JWT_SECRET") ?? "").trim();
+      const supabaseUrl = SUPABASE_URL.trim();
       const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
-      if (!publishable || bearer !== publishable) {
+      const apikeyHeader = (req.headers.get("apikey") ?? req.headers.get("x-api-key") ?? "").trim();
+      const incoming = bearer || apikeyHeader;
+
+      if (!incoming) {
+        return json({ error: "Unauthorized" }, 401);
+      }
+
+      let guestAuthOk = publishable.length > 0 && incoming === publishable;
+      if (!guestAuthOk && jwtSecret.length > 0 && supabaseUrl.length > 0) {
+        guestAuthOk = await verifyGuestAnonJwt(incoming, jwtSecret, supabaseUrl);
+      }
+      if (!guestAuthOk && supabaseUrl.length > 0) {
+        guestAuthOk = await verifyGuestAnonViaSupabaseGateway(supabaseUrl, incoming);
+      }
+
+      if (!guestAuthOk) {
+        console.warn(
+          "[sophos-central] guest auth failed (lengths only)",
+          JSON.stringify({
+            publishableLen: publishable.length,
+            incomingLen: incoming.length,
+            hadJwtSecret: jwtSecret.length > 0,
+            hadSupabaseUrl: supabaseUrl.length > 0,
+            hadBearer: bearer.length > 0,
+            hadApikeyHeader: apikeyHeader.length > 0,
+            stringMatch: publishable.length > 0 && incoming === publishable,
+          }),
+        );
         return json({ error: "Unauthorized" }, 401);
       }
 
@@ -273,6 +402,32 @@ serve(async (req) => {
             billingType: t.billingType ?? "",
           })),
         });
+      }
+
+      // guest_health_firewall_licenses — same Licensing API as MSP firewall-licenses mode
+      if (mode === "guest_health_firewall_licenses") {
+        if (!tenantId?.trim()) return json({ error: "Missing tenantId" }, 400);
+        const tidLic = tenantId.trim();
+        if (identity.idType === "tenant" && tidLic !== identity.id) {
+          return json({ error: "Tenant ID does not match this API client" }, 400);
+        }
+        const licHeaders: Record<string, string> = {};
+        if (identity.idType === "partner") {
+          licHeaders["X-Partner-ID"] = identity.id;
+        } else if (identity.idType === "organization") {
+          licHeaders["X-Organization-ID"] = identity.id;
+        } else if (identity.idType === "tenant") {
+          licHeaders["X-Tenant-ID"] = identity.id;
+        }
+        if (tidLic && !licHeaders["X-Tenant-ID"]) {
+          licHeaders["X-Tenant-ID"] = tidLic;
+        }
+        const licenseItems = await fetchAllPages(
+          `${SOPHOS_GLOBAL_URL}/licenses/v1/licenses/firewalls`,
+          token,
+          licHeaders,
+        );
+        return json({ items: licenseItems });
       }
 
       // guest_health_firewalls

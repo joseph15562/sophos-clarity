@@ -97,6 +97,19 @@ export function getActiveModules(sel: LicenceSelection): ModuleId[] {
   return sel.modules;
 }
 
+/**
+ * Infer Standard vs Xstream from Central firewall licensing product names (MSP + SE Health Check).
+ */
+export function detectBpLicenceTierFromCentral(
+  licences: Array<{ product: string; endDate: string; type: string }> | undefined | null,
+): LicenceTier | null {
+  if (!licences || licences.length === 0) return null;
+  const names = licences.map((l) => l.product.toLowerCase());
+  if (names.some((n) => n.includes("xstream"))) return "xstream";
+  if (names.some((n) => n.includes("standard"))) return "standard";
+  return null;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Best-practice check definitions                                   */
 /* ------------------------------------------------------------------ */
@@ -666,6 +679,10 @@ export function computeSophosBPScore(
   licence: LicenceSelection,
   manualOverrides?: Set<string>,
   centralAutoChecks?: Set<string>,
+  /** SE Health Check: pass selected export-gap checks when SE confirms on the appliance. */
+  seAcknowledgedChecks?: Set<string>,
+  /** SE Health Check: omit checks from scoring (e.g. Security Heartbeat when no Sophos endpoint estate). */
+  seExcludedBpCheckIds?: Set<string>,
 ): SophosBPScore {
   const activeModules = getActiveModules(licence);
 
@@ -674,11 +691,36 @@ export function computeSophosBPScore(
     if (!applicable) {
       return { check, status: "na" as CheckStatus, detail: `Requires ${MODULES[check.requiredModule!].label} module`, applicable: false };
     }
+    if (seExcludedBpCheckIds?.has(check.id)) {
+      const scopeDetail =
+        check.id === "bp-heartbeat"
+          ? "Excluded for this assessment — no Sophos endpoint deployment (Security Heartbeat not applicable)"
+          : `Excluded for this assessment — ${check.title}`;
+      return {
+        check,
+        status: "na" as CheckStatus,
+        detail: scopeDetail,
+        applicable: false,
+      };
+    }
     let { status, detail } = check.evaluate(analysisResult);
     if (status === ("unknown" as CheckStatus)) status = "warn";
 
     if (centralAutoChecks?.has(check.id) && (status === "warn" || status === ("unknown" as CheckStatus))) {
-      return { check, status: "pass" as CheckStatus, detail: `Verified by Sophos Central API`, applicable: true };
+      const detailMsg =
+        check.id === "bp-ha-configured"
+          ? "HA cluster confirmed in Sophos Central for the linked firewall (export did not include HA details)"
+          : "Verified by Sophos Central API";
+      return { check, status: "pass" as CheckStatus, detail: detailMsg, applicable: true };
+    }
+
+    if (seAcknowledgedChecks?.has(check.id) && status === "warn") {
+      return {
+        check,
+        status: "pass" as CheckStatus,
+        detail: "SE confirmed on appliance — not visible in this export",
+        applicable: true,
+      };
     }
 
     const overridden = manualOverrides?.has(check.id) && status === "warn";

@@ -6,6 +6,8 @@ export interface SEProfile {
   id: string;
   email: string;
   displayName: string | null;
+  /** Optional report cover line; null = fall back to display name / email. */
+  healthCheckPreparedBy: string | null;
 }
 
 export interface SEAuthState {
@@ -17,6 +19,8 @@ export interface SEAuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  /** Re-fetch `se_profiles` row for the signed-in user (e.g. after updating preferences). */
+  reloadSeProfile: () => Promise<void>;
 }
 
 const SOPHOS_DOMAIN_RE = /@sophos\.com$/i;
@@ -28,7 +32,7 @@ function isSophosDomain(email: string): boolean {
 async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
   const { data, error } = await supabase
     .from("se_profiles")
-    .select("id, email, display_name")
+    .select("id, email, display_name, health_check_prepared_by")
     .eq("user_id", userId)
     .limit(1)
     .single();
@@ -38,6 +42,7 @@ async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
     id: data.id as string,
     email: data.email as string,
     displayName: (data.display_name as string) ?? null,
+    healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
   };
 }
 
@@ -45,7 +50,7 @@ async function createSEProfile(userId: string, email: string): Promise<SEProfile
   const { data, error } = await supabase
     .from("se_profiles")
     .insert({ user_id: userId, email } as Record<string, unknown>)
-    .select("id, email, display_name")
+    .select("id, email, display_name, health_check_prepared_by")
     .single();
 
   if (error || !data) {
@@ -56,6 +61,7 @@ async function createSEProfile(userId: string, email: string): Promise<SEProfile
     id: data.id as string,
     email: data.email as string,
     displayName: (data.display_name as string) ?? null,
+    healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
   };
 }
 
@@ -76,6 +82,12 @@ export function useSEAuthProvider(): SEAuthState {
     }
     setSEProfile(profile);
   }, []);
+
+  const reloadSeProfile = useCallback(async () => {
+    if (!user?.id || !user.email || !isSophosDomain(user.email)) return;
+    const profile = await fetchSEProfile(user.id);
+    if (profile) setSEProfile(profile);
+  }, [user]);
 
   useEffect(() => {
     let profileTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -146,8 +158,8 @@ export function useSEAuthProvider(): SEAuthState {
 
   return useMemo(() => ({
     user, session, seProfile, isLoading, isAuthenticated,
-    signIn, signUp, signOut,
-  }), [user, session, seProfile, isLoading, isAuthenticated, signIn, signUp, signOut]);
+    signIn, signUp, signOut, reloadSeProfile,
+  }), [user, session, seProfile, isLoading, isAuthenticated, signIn, signUp, signOut, reloadSeProfile]);
 }
 
 const SEAuthContext = createContext<SEAuthState | null>(null);

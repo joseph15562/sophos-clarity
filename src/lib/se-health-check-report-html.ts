@@ -5,7 +5,12 @@
 
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import type { BaselineResult } from "@/lib/policy-baselines";
-import type { SophosBPScore, LicenceSelection } from "@/lib/sophos-licence";
+import {
+  getActiveModules,
+  MODULES,
+  type SophosBPScore,
+  type LicenceSelection,
+} from "@/lib/sophos-licence";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 
@@ -60,6 +65,121 @@ function licenceAssumptionLabel(licence: LicenceSelection): string {
   return "Individual modules";
 }
 
+export type SEHealthCheckReportHtmlVariant = "pdf" | "browser";
+
+const TIER_CARD_COPY: Record<LicenceSelection["tier"], { title: string; blurb: string }> = {
+  standard: {
+    title: "Standard Protection",
+    blurb: "Network Protection + Web Protection + Enhanced Support",
+  },
+  xstream: {
+    title: "Xstream Protection",
+    blurb: "Everything in Standard + Zero-Day + Central Orchestration + DNS Protection",
+  },
+  individual: {
+    title: "Individual Modules",
+    blurb: "Select specific modules licensed for this firewall",
+  },
+};
+
+const BP_GRADE_HEX: Record<string, string> = {
+  A: "#00F2B3",
+  B: "#00F2B3",
+  C: "#F8E300",
+  D: "#F29400",
+  F: "#EA0022",
+};
+
+function slugForHtmlId(s: string): string {
+  return s.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "fw";
+}
+
+function buildBrowserReportLeadHtml(customerName: string, preparedBy: string, dateLocal: string): string {
+  return `<div class="se-hc-browser-hero">
+  <h1 class="se-hc-browser-h1">Sophos Firewall Health Check</h1>
+  <p class="se-hc-browser-meta">${escapeHtml(customerName.trim() || "—")} · ${escapeHtml(dateLocal)} · Prepared by ${escapeHtml(preparedBy.trim() || "—")}</p>
+</div>`;
+}
+
+function buildLicenceSelectionHtml(licence: LicenceSelection): string {
+  const tiers: LicenceSelection["tier"][] = ["standard", "xstream", "individual"];
+  const cards = tiers
+    .map((tier) => {
+      const sel = tier === licence.tier;
+      const c = TIER_CARD_COPY[tier];
+      return `<div class="se-hc-lic-card${sel ? " se-hc-lic-card-selected" : ""}"><h3 class="se-hc-lic-card-title">${escapeHtml(c.title)}</h3><p class="se-hc-lic-card-blurb">${escapeHtml(c.blurb)}</p></div>`;
+    })
+    .join("");
+  const mods = getActiveModules(licence)
+    .map((id) => `<span class="se-hc-mod-pill">${escapeHtml(MODULES[id].label)}</span>`)
+    .join("");
+  return `<section class="se-hc-browser-section" aria-labelledby="se-hc-lic-heading">
+  <h2 id="se-hc-lic-heading" class="se-hc-browser-h2"><span class="se-hc-browser-h2-mark" aria-hidden="true"></span> Sophos Licence Selection</h2>
+  <p class="se-hc-browser-sub">Licence used for best-practice module applicability and scoring (matches the in-app picker).</p>
+  <div class="se-hc-lic-grid">${cards}</div>
+  <p class="se-hc-mod-label">Active modules</p>
+  <div class="se-hc-mod-row">${mods}</div>
+</section>`;
+}
+
+function bpStatusLabel(status: string): string {
+  if (status === "pass") return "Pass";
+  if (status === "fail") return "Fail";
+  if (status === "warn") return "Verify";
+  if (status === "na") return "N/A";
+  return status;
+}
+
+function buildBpScoreDashboardHtml(firewallLabel: string, bp: SophosBPScore): string {
+  const { overall, grade, passed, failed, warnings, notApplicable, results } = bp;
+  const r = 48;
+  const c = 2 * Math.PI * r;
+  const offset = c - (overall / 100) * c;
+  const col = BP_GRADE_HEX[grade] ?? BP_GRADE_HEX.C;
+  const gauge = `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true" class="se-hc-bp-gauge-svg">
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="rgba(148,163,184,0.2)" stroke-width="6" />
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="${col}" stroke-width="6" stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 60 60)" />
+    <text x="60" y="54" text-anchor="middle" fill="${col}" font-size="28" font-weight="700">${overall}</text>
+    <text x="60" y="72" text-anchor="middle" fill="${col}" font-size="12" font-weight="600">Grade ${grade}</text>
+  </svg>`;
+  const stats = `<div class="se-hc-bp-stats">
+    <div class="se-hc-bp-stat"><span class="se-hc-bp-stat-n se-hc-n-pass">${passed}</span><span class="se-hc-bp-stat-l">Passed</span></div>
+    <div class="se-hc-bp-stat"><span class="se-hc-bp-stat-n se-hc-n-fail">${failed}</span><span class="se-hc-bp-stat-l">Failed</span></div>
+    <div class="se-hc-bp-stat"><span class="se-hc-bp-stat-n se-hc-n-warn">${warnings}</span><span class="se-hc-bp-stat-l">Verify</span></div>
+    <div class="se-hc-bp-stat"><span class="se-hc-bp-stat-n se-hc-n-na">${notApplicable}</span><span class="se-hc-bp-stat-l">N/A</span></div>
+  </div>`;
+  const byCat = new Map<string, typeof results>();
+  for (const row of results) {
+    const cat = row.check.category;
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat)!.push(row);
+  }
+  let categoriesHtml = "";
+  for (const [cat, rows] of byCat) {
+    categoriesHtml += `<div class="se-hc-bp-cat"><h4 class="se-hc-bp-cat-title">${escapeHtml(cat)}</h4><ul class="se-hc-bp-checklist">`;
+    for (const row of rows) {
+      const st = row.status;
+      const badgeClass =
+        st === "pass"
+          ? "se-hc-bp-badge-pass"
+          : st === "fail"
+            ? "se-hc-bp-badge-fail"
+            : st === "warn"
+              ? "se-hc-bp-badge-warn"
+              : "se-hc-bp-badge-na";
+      categoriesHtml += `<li class="se-hc-bp-check-li"><span class="se-hc-bp-badge ${badgeClass}">${escapeHtml(bpStatusLabel(st))}</span><div class="se-hc-bp-check-body"><span class="se-hc-bp-check-title">${escapeHtml(row.check.title)}</span><span class="se-hc-bp-check-detail">${escapeHtml(row.detail)}</span></div></li>`;
+    }
+    categoriesHtml += `</ul></div>`;
+  }
+  const sid = slugForHtmlId(firewallLabel);
+  return `<section class="se-hc-browser-section se-hc-bp-dash" aria-labelledby="se-hc-bp-h-${sid}">
+    <h2 id="se-hc-bp-h-${sid}" class="se-hc-browser-h2">Sophos Best Practice Score <span class="se-hc-bp-fw-label">${escapeHtml(firewallLabel)}</span></h2>
+    <p class="se-hc-browser-sub">Based on Sophos documentation — same weighting as the live health check.</p>
+    <div class="se-hc-bp-dash-row">${gauge}${stats}</div>
+    <div class="se-hc-bp-categories">${categoriesHtml}</div>
+  </section>`;
+}
+
 export interface SEHealthCheckReportParams {
   labels: string[];
   files: ParsedFile[];
@@ -75,6 +195,12 @@ export interface SEHealthCheckReportParams {
   dpiExemptNetworks: string[];
   webFilterComplianceMode: WebFilterComplianceMode;
   webFilterExemptRuleNames: string[];
+  /** SE confirmed MDR threat feeds / NDR Essentials / DNS Protection on appliance when absent from export */
+  seAckMdrThreatFeeds?: boolean;
+  seAckNdrEssentials?: boolean;
+  seAckDnsProtection?: boolean;
+  /** Omit Security Heartbeat BP row when customer has no Sophos endpoints */
+  seExcludeSecurityHeartbeat?: boolean;
   centralValidated: boolean;
   generatedAt: Date;
   /** Optional build/version string for provenance */
@@ -86,9 +212,13 @@ function fileExportType(fileName: string): string {
 }
 
 /**
- * Build inner HTML only (no html/head). Consumed by buildPdfHtml().
+ * Build inner HTML only (no html/head). Consumed by buildPdfHtml() or the browser HTML document wrapper.
  */
-export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): string {
+export function buildSEHealthCheckReportHtml(
+  p: SEHealthCheckReportParams,
+  options?: { variant?: SEHealthCheckReportHtmlVariant },
+): string {
+  const variant = options?.variant ?? "pdf";
   const {
     labels,
     files,
@@ -103,6 +233,9 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     dpiExemptNetworks,
     webFilterComplianceMode,
     webFilterExemptRuleNames,
+    seAckMdrThreatFeeds = false,
+    seAckNdrEssentials = false,
+    seExcludeSecurityHeartbeat = false,
     centralValidated,
     generatedAt,
     appVersion,
@@ -122,6 +255,7 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
 
   const parts: string[] = [];
 
+  if (variant === "pdf") {
   /* Page 1 — Sophos Central Security Checkup–style cover (wordmark, 4-line meta, shield, centred footer) */
   parts.push(`<div class="se-hc-cover-fullpage">`);
   parts.push(`<div class="se-hc-cover-brand">`);
@@ -188,7 +322,7 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
     `<p><strong>Provenance and limitations:</strong> Timestamps, tool identity, and explicit limits of offline file analysis. This grounds the report in time and reminds readers that exports may be incomplete, redacted, or from non-production appliances.</p>`,
   );
   parts.push(
-    `<p><strong>Assessment scope and exclusions:</strong> Documents which zones or networks were excluded from DPI (SSL/TLS) gap checks, the web-filter compliance mode (informational vs strict), and any rule names excluded from missing-web-filter detection. These choices materially affect findings — keep them aligned with how the customer actually enforces policy.</p>`,
+    `<p><strong>Assessment scope and exclusions:</strong> Documents which zones or networks were excluded from DPI (SSL/TLS) gap checks, the web-filter compliance mode (informational vs strict), rule names excluded from missing-web-filter detection, SE acknowledgements for MDR threat feeds or NDR Essentials when those sections are missing from the export, and whether the Security Heartbeat best-practice check was excluded when the customer has no Sophos endpoint estate. These choices materially affect findings — keep them aligned with how the customer actually enforces policy.</p>`,
   );
   parts.push(
     `<p><strong>Configuration file manifest:</strong> Lists each source file, its display label, export type (HTML vs entities XML), and Sophos Central serial number when you linked discovery to an upload. This supports audit trails and multi-firewall estates.</p>`,
@@ -212,8 +346,18 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
   parts.push(`</div>`);
 
   parts.push(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);
+  }
 
   parts.push(`<div class="se-hc-report-body-pages">`);
+
+  if (variant === "browser") {
+    parts.push(buildBrowserReportLeadHtml(customerName, preparedBy, dateLocal));
+    parts.push(buildLicenceSelectionHtml(licence));
+    for (const label of labels) {
+      const bp = bpByLabel[label];
+      if (bp) parts.push(buildBpScoreDashboardHtml(label, bp));
+    }
+  }
 
   parts.push(`<h2 id="provenance-and-limitations">Provenance and limitations</h2>`);
   parts.push(`<p><strong>Generated:</strong> ${escapeHtml(dateUtc)} (UTC) / ${escapeHtml(dateLocal)} (local)</p>`);
@@ -236,6 +380,19 @@ export function buildSEHealthCheckReportHtml(p: SEHealthCheckReportParams): stri
       parts.push(`<p><strong>Source networks:</strong> ${escapeHtml(dpiExemptNetworks.join(", "))}</p>`);
     }
   }
+  parts.push(`<h3>Active threat response (SE acknowledgement)</h3>`);
+  parts.push(
+    `<p><strong>MDR threat feeds configured (export gap):</strong> ${seAckMdrThreatFeeds ? "Yes — SE confirmed on appliance" : "No"}</p>`,
+  );
+  parts.push(
+    `<p><strong>NDR Essentials enabled (export gap):</strong> ${seAckNdrEssentials ? "Yes — SE confirmed on appliance" : "No"}</p>`,
+  );
+
+  parts.push(`<h3>Synchronized Security scope</h3>`);
+  parts.push(
+    `<p><strong>Security Heartbeat check excluded (no Sophos endpoints):</strong> ${seExcludeSecurityHeartbeat ? "Yes" : "No"}</p>`,
+  );
+
   parts.push(`<h3>Web filter compliance</h3>`);
   parts.push(`<p><strong>Mode:</strong> ${escapeHtml(webFilterComplianceMode === "informational" ? "Informational" : "Strict")}</p>`);
   if (webFilterExemptRuleNames.length === 0) {

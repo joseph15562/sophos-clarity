@@ -5,7 +5,6 @@ import {
   ChevronDown,
   Download,
   ExternalLink,
-  FileText,
   MinusCircle,
   Shield,
   XCircle,
@@ -20,7 +19,10 @@ import {
   type LicenceSelection,
   type SophosBPScore,
 } from "@/lib/sophos-licence";
+import { loadSeHealthCheckBpOverrides, seCentralAutoForLabel } from "@/lib/se-health-check-bp";
 import { evaluateBaseline, type BaselineResult } from "@/lib/policy-baselines";
+
+const NO_SE_CENTRAL_HA_LABELS = new Set<string>();
 
 const GRADE_COLORS: Record<string, string> = {
   A: "#00F2B3",
@@ -166,6 +168,18 @@ export interface HealthCheckDashboardProps {
   analysisResults: Record<string, AnalysisResult>;
   licence: LicenceSelection;
   baselineResults: Record<string, BaselineResult>;
+  /** When true, omit the Sophos BP gauge card (shown by SophosBestPractice above). */
+  hideSophosBpCard?: boolean;
+  /** SE Health Check: Central API session active → include bp-central-mgmt auto-check in exports. */
+  seCentralSession?: boolean;
+  /** SE: labels linked to a Central HA group → include bp-ha-configured auto-pass. */
+  seCentralHaLabels?: Set<string>;
+  /** Bumps when SE manual BP overrides change so scores stay in sync. */
+  bpOverrideRevision?: number;
+  /** SE Health Check: MDR/NDR acknowledgement from the results header (export gaps). */
+  seThreatResponseAck?: Set<string>;
+  /** SE Health Check: BP checks omitted from scoring (e.g. Security Heartbeat). */
+  seExcludedBpChecks?: Set<string>;
 }
 
 export function HealthCheckDashboard({
@@ -173,7 +187,14 @@ export function HealthCheckDashboard({
   analysisResults,
   licence,
   baselineResults,
+  hideSophosBpCard = false,
+  seCentralSession = false,
+  seCentralHaLabels,
+  bpOverrideRevision = 0,
+  seThreatResponseAck,
+  seExcludedBpChecks,
 }: HealthCheckDashboardProps) {
+  const haLabelsForBp = seCentralHaLabels ?? NO_SE_CENTRAL_HA_LABELS;
   const labels = useMemo(
     () => files.map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, "")),
     [files],
@@ -187,12 +208,19 @@ export function HealthCheckDashboard({
 
   const bpByLabel = useMemo(() => {
     const m: Record<string, SophosBPScore> = {};
+    const manualOverrides = hideSophosBpCard ? loadSeHealthCheckBpOverrides() : undefined;
     for (const label of labels) {
       const ar = analysisResults[label];
-      if (ar) m[label] = computeSophosBPScore(ar, licence);
+      if (ar) {
+        const centralAuto =
+          hideSophosBpCard && seCentralSession
+            ? seCentralAutoForLabel(seCentralSession, label, haLabelsForBp)
+            : undefined;
+        m[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      }
     }
     return m;
-  }, [analysisResults, labels, licence]);
+  }, [analysisResults, labels, licence, hideSophosBpCard, seCentralSession, haLabelsForBp, bpOverrideRevision, seThreatResponseAck, seExcludedBpChecks]);
 
   const activeResult = analysisResults[activeLabel];
   const activeBp = bpByLabel[activeLabel];
@@ -233,64 +261,32 @@ export function HealthCheckDashboard({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="rounded-xl border border-border bg-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Shield className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-              Sophos best practices
-            </CardTitle>
-            <CardDescription>Weighted checks from official Sophos hardening guidance (not a compliance framework).</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col sm:flex-row gap-6 items-center">
-            <GaugeRing score={activeBp.overall} grade={activeBp.grade} />
-            <div className="flex-1 space-y-2 text-sm">
-              <p className="text-muted-foreground">
-                <span className="text-[#00995a] dark:text-[#00F2B3] font-semibold">{activeBp.passed}</span> pass ·{" "}
-                <span className="text-red-500 font-semibold">{activeBp.failed}</span> fail ·{" "}
-                <span className="text-amber-500 font-semibold">{activeBp.warnings}</span> verify
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Licence assumption: {licence.tier === "xstream" ? "Xstream Protection" : licence.tier === "standard" ? "Standard Protection" : "Individual modules"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {activeBaseline && (
+      <div className={`grid gap-4 ${hideSophosBpCard ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
+        {!hideSophosBpCard && (
           <Card className="rounded-xl border border-border bg-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-                {activeBaseline.template.name}
+                <Shield className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+                Sophos best practices
               </CardTitle>
-              <CardDescription>{activeBaseline.template.description}</CardDescription>
+              <CardDescription>Weighted checks from official Sophos hardening guidance (not a compliance framework).</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-3">
-                <span className="text-3xl font-bold tabular-nums text-[#2006F7] dark:text-[#00EDFF]">
-                  {activeBaseline.score}%
-                </span>
-                <span className="text-sm text-muted-foreground">baseline alignment</span>
+            <CardContent className="flex flex-col sm:flex-row gap-6 items-center">
+              <GaugeRing score={activeBp.overall} grade={activeBp.grade} />
+              <div className="flex-1 space-y-2 text-sm">
+                <p className="text-muted-foreground">
+                  <span className="text-[#00995a] dark:text-[#00F2B3] font-semibold">{activeBp.passed}</span> pass ·{" "}
+                  <span className="text-red-500 font-semibold">{activeBp.failed}</span> fail ·{" "}
+                  <span className="text-amber-500 font-semibold">{activeBp.warnings}</span> verify
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Licence assumption: {licence.tier === "xstream" ? "Xstream Protection" : licence.tier === "standard" ? "Standard Protection" : "Individual modules"}
+                </p>
               </div>
-              <ul className="space-y-2 max-h-48 overflow-y-auto text-sm">
-                {activeBaseline.requirements.map((req) => (
-                  <li key={req.label} className="flex gap-2 items-start">
-                    {req.met ? (
-                      <CheckCircle2 className="h-4 w-4 text-[#00995a] dark:text-[#00F2B3] shrink-0 mt-0.5" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                    )}
-                    <span>
-                      <span className="font-medium">{req.label}</span>
-                      <span className="text-muted-foreground block text-xs">{req.detail}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
             </CardContent>
           </Card>
         )}
+
       </div>
 
       <Card className="rounded-xl border border-border bg-card">

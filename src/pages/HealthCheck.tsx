@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Loader2,
   Lock,
+  PanelRight,
   Shield,
   Upload,
   Wifi,
@@ -19,16 +20,28 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { analyseConfig } from "@/lib/analyse-config";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { extractSections } from "@/lib/extract-sections";
-import { computeSophosBPScore, type LicenceSelection, type SophosBPScore } from "@/lib/sophos-licence";
+import {
+  computeSophosBPScore,
+  detectBpLicenceTierFromCentral,
+  type LicenceSelection,
+  type SophosBPScore,
+} from "@/lib/sophos-licence";
 import { evaluateBaseline, BASELINE_TEMPLATES } from "@/lib/policy-baselines";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { FileUpload, type UploadedFile } from "@/components/FileUpload";
 import { HealthCheckDashboard } from "@/components/HealthCheckDashboard";
+
+const SophosBestPractice = lazy(() =>
+  import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })),
+);
 import { DpiExclusionBar } from "@/components/DpiExclusionBar";
+import { SeHeartbeatScopeBar } from "@/components/SeHeartbeatScopeBar";
+import { SeThreatResponseAckBar, SeDnsProtectionAckBar } from "@/components/SeThreatResponseAckBar";
 import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory";
+import { SeHealthCheckManagementDrawer } from "@/components/SeHealthCheckManagementDrawer";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +61,31 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSEAuthProvider, useSEAuth, SEAuthProvider } from "@/hooks/use-se-auth";
 import { SEAuthGate } from "@/components/SEAuthGate";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabasePublicEdgeAuth, supabase } from "@/integrations/supabase/client";
+import { readJwtPayloadClaim } from "@/lib/jwt-payload";
+import { getFirewallDisplayName } from "@/lib/sophos-central";
+import {
+  buildGuestCentralHaGroups,
+  findGuestHaGroupBySelectValue,
+  guestHaGroupSelectValue,
+  type GuestFirewallRow,
+  type GuestHaGroup,
+} from "@/lib/guest-central-ha-groups";
+import {
+  buildSeCentralHaLabels,
+  buildSeHeartbeatExclusionSet,
+  buildSeThreatResponseAckSet,
+  loadSeHealthCheckBpOverrides,
+  SE_HEALTH_CHECK_BP_OVERRIDES_KEY,
+  seCentralAutoForLabel,
+} from "@/lib/se-health-check-bp";
+import { loadSeHealthCheckPreparedBy, SE_HEALTH_CHECK_PREPARED_BY_KEY } from "@/lib/se-health-check-preferences";
+import {
+  buildSeHealthCheckSnapshotV1,
+  parseSeHealthCheckSnapshotFromSummaryJson,
+  snapshotFilesToParsedFiles,
+  type SeHealthCheckSnapshotV1,
+} from "@/lib/se-health-check-snapshot";
 
 type ActiveStep = "landing" | "analyzing" | "results";
 
@@ -59,45 +96,155 @@ type EphemeralCentralCreds = {
 };
 
 type GuestTenantRow = { id: string; name: string; apiHost?: string };
-type GuestFirewallRow = { id?: string; hostname?: string; name?: string; serialNumber?: string };
+
+/** Sophos Licensing API row (guest_health_firewall_licenses / firewall-licenses). */
+type GuestFirewallLicenseApiRow = {
+  serialNumber?: string;
+  licenses?: Array<{
+    licenseIdentifier?: string;
+    product?: { code?: string; name?: string };
+    endDate?: string;
+    type?: string;
+  }>;
+};
+
+function mapGuestFirewallLicencesToBpRows(
+  rows: GuestFirewallLicenseApiRow[],
+): Array<{ product: string; endDate: string; type: string }> {
+  const out: Array<{ product: string; endDate: string; type: string }> = [];
+  for (const row of rows) {
+    for (const lic of row.licenses ?? []) {
+      const product = lic.product?.name ?? lic.product?.code ?? lic.licenseIdentifier ?? "";
+      out.push({
+        product,
+        endDate: typeof lic.endDate === "string" ? lic.endDate : "",
+        type: typeof lic.type === "string" ? lic.type : "",
+      });
+    }
+  }
+  return out;
+}
 
 const CENTRAL_MATCH_NONE = "__none__";
 
-/** Stable Select value for a Central firewall row (serial preferred). */
-function centralFwSelectValue(fw: GuestFirewallRow, index: number): string {
-  const s = fw.serialNumber?.trim();
-  if (s) return `sn:${s}`;
-  if (fw.id?.trim()) return `id:${fw.id}`;
-  return `idx:${index}`;
-}
-
-function findGuestFirewallBySelectValue(options: GuestFirewallRow[], value: string): GuestFirewallRow | undefined {
-  if (!value || value === CENTRAL_MATCH_NONE) return undefined;
-  return options.find((fw, i) => centralFwSelectValue(fw, i) === value);
-}
-
-/** Current Select value for linking a ParsedFile to Central (by stored serial if any). */
-function guestFirewallMatchValueForFile(file: ParsedFile, options: GuestFirewallRow[]): string {
+/** Match file serial to any node in an HA group (same as MSP serial search across HA). */
+function guestFirewallMatchValueForFile(file: ParsedFile, groups: GuestHaGroup[]): string {
   const sn = file.serialNumber?.trim();
   if (!sn) return CENTRAL_MATCH_NONE;
-  const idx = options.findIndex((fw) => (fw.serialNumber || "").trim().toLowerCase() === sn.toLowerCase());
-  if (idx < 0) return CENTRAL_MATCH_NONE;
-  return centralFwSelectValue(options[idx], idx);
+  for (const g of groups) {
+    const all = [g.primary, ...g.peers];
+    if (all.some((fw) => (fw.serialNumber || "").trim().toLowerCase() === sn.toLowerCase())) {
+      return guestHaGroupSelectValue(g);
+    }
+  }
+  return CENTRAL_MATCH_NONE;
 }
 
 async function callGuestCentral<T extends Record<string, unknown>>(body: Record<string, unknown>): Promise<T> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sophos-central`;
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
-  const res = await fetch(url, {
+  const rawUrl = import.meta.env.VITE_SUPABASE_URL ?? "";
+  const rawKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+  const resolved = getSupabasePublicEdgeAuth();
+  // #region agent log
+  fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-      apikey: key,
-    },
-    body: JSON.stringify(body),
-  });
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
+    body: JSON.stringify({
+      sessionId: "360061",
+      runId: "post-fix",
+      hypothesisId: "H2",
+      location: "HealthCheck.tsx:callGuestCentral:pre",
+      message: "guest central auth: raw env vs resolved client",
+      data: {
+        mode: (body as { mode?: string }).mode,
+        rawUrlLen: rawUrl.length,
+        rawKeyLen: rawKey.length,
+        resolvedUrlLen: resolved.url.length,
+        resolvedKeyLen: resolved.anonKey.length,
+        urlsDiffer: rawUrl !== resolved.url,
+        keysDiffer: rawKey !== resolved.anonKey,
+        bearerWouldBeEmpty: rawKey.length === 0,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+  const url = `${resolved.url.replace(/\/$/, "")}/functions/v1/sophos-central`;
+  const key = resolved.anonKey.trim();
+  const jwtRole = readJwtPayloadClaim(key, "role");
+  if (jwtRole === "service_role") {
+    // #region agent log
+    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
+      body: JSON.stringify({
+        sessionId: "360061",
+        runId: "post-fix",
+        hypothesisId: "H6",
+        location: "HealthCheck.tsx:callGuestCentral:wrong-key-type",
+        message: "VITE key is service_role JWT; Edge expects anon",
+        data: { mode: (body as { mode?: string }).mode },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    throw new Error(
+      "Wrong Supabase key: use the anon (publishable) key in VITE_SUPABASE_PUBLISHABLE_KEY, not the service_role secret.",
+    );
+  }
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+        apikey: key,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    // #region agent log
+    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
+      body: JSON.stringify({
+        sessionId: "360061",
+        runId: "post-fix",
+        hypothesisId: "H-CORS",
+        location: "HealthCheck.tsx:callGuestCentral:fetch-threw",
+        message: "fetch network/CORS failure",
+        data: {
+          mode: (body as { mode?: string }).mode,
+          errName: err instanceof Error ? err.name : "unknown",
+          errMsg: err instanceof Error ? err.message.slice(0, 120) : String(err).slice(0, 120),
+          pageOrigin: typeof window !== "undefined" ? window.location.origin : "",
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    throw err;
+  }
   const data = (await res.json()) as { error?: string } & T;
+  // #region agent log
+  fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
+    body: JSON.stringify({
+      sessionId: "360061",
+      runId: "post-fix",
+      hypothesisId: "H2",
+      location: "HealthCheck.tsx:callGuestCentral:response",
+      message: "guest central response",
+      data: {
+        mode: (body as { mode?: string }).mode,
+        status: res.status,
+        errorShape: typeof data.error,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   if (!res.ok || data.error) {
     throw new Error(typeof data.error === "string" ? data.error : `Request failed (${res.status})`);
   }
@@ -118,6 +265,8 @@ function HealthCheckInner() {
     tenantId: "",
   });
   const [centralValidated, setCentralValidated] = useState(false);
+  /** True when a saved check is open without live Central — keeps BP Central auto-checks aligned with the save. */
+  const [replayCentralLinked, setReplayCentralLinked] = useState(false);
   const [centralBusy, setCentralBusy] = useState(false);
   const [tenantOptions, setTenantOptions] = useState<GuestTenantRow[]>([]);
   const [firewallOptions, setFirewallOptions] = useState<GuestFirewallRow[]>([]);
@@ -126,6 +275,138 @@ function HealthCheckInner() {
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
   const [webFilterComplianceMode, setWebFilterComplianceMode] = useState<WebFilterComplianceMode>("strict");
   const [webFilterExemptRuleNames, setWebFilterExemptRuleNames] = useState<string[]>([]);
+  const [seMdrThreatFeedsAck, setSeMdrThreatFeedsAck] = useState(false);
+  const [seNdrEssentialsAck, setSeNdrEssentialsAck] = useState(false);
+  const [seDnsProtectionAck, setSeDnsProtectionAck] = useState(false);
+  const [seExcludeSecurityHeartbeat, setSeExcludeSecurityHeartbeat] = useState(false);
+  const [guestFirewallLicenseItems, setGuestFirewallLicenseItems] = useState<GuestFirewallLicenseApiRow[]>([]);
+  const [bpOverrideRevision, setBpOverrideRevision] = useState(0);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  /** When non-null, HA BP auto-pass labels come from a reopened save (no live Central groups). */
+  const [restoredHaLabels, setRestoredHaLabels] = useState<Set<string> | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [seManagementOpen, setSeManagementOpen] = useState(false);
+
+  const effectivePreparedBy = useMemo(
+    () =>
+      seAuth.seProfile?.healthCheckPreparedBy?.trim() ||
+      seAuth.seProfile?.displayName?.trim() ||
+      seAuth.seProfile?.email?.trim() ||
+      "Sales Engineer",
+    [seAuth.seProfile],
+  );
+
+  /** One-time: copy legacy localStorage "Prepared by" into `se_profiles.health_check_prepared_by`. */
+  useEffect(() => {
+    const p = seAuth.seProfile;
+    if (!p) return;
+    const legacy = loadSeHealthCheckPreparedBy().trim();
+    if (!legacy) return;
+    if (p.healthCheckPreparedBy?.trim()) {
+      try {
+        localStorage.removeItem(SE_HEALTH_CHECK_PREPARED_BY_KEY);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { error } = await supabase
+        .from("se_profiles")
+        .update({ health_check_prepared_by: legacy } as Record<string, unknown>)
+        .eq("id", p.id);
+      if (cancelled || error) return;
+      try {
+        localStorage.removeItem(SE_HEALTH_CHECK_PREPARED_BY_KEY);
+      } catch {
+        /* ignore */
+      }
+      await seAuth.reloadSeProfile();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [seAuth.seProfile, seAuth.reloadSeProfile]);
+
+  const centralLinkedForAnalysis = centralValidated || replayCentralLinked;
+
+  /** HA grouping aligned with MSP `FirewallLinker` (same hostname → one row, primary from cluster). */
+  const guestFirewallGroups = useMemo(
+    () => buildGuestCentralHaGroups(firewallOptions),
+    [firewallOptions],
+  );
+
+  /** Licensing API rows for uploads linked by serial → same tier detection as MSP SophosBestPractice. */
+  const seCentralHaLabels = useMemo(() => {
+    if (restoredHaLabels) return restoredHaLabels;
+    return buildSeCentralHaLabels(files, guestFirewallGroups);
+  }, [restoredHaLabels, files, guestFirewallGroups]);
+
+  const seThreatResponseAck = useMemo(
+    () => buildSeThreatResponseAckSet(seMdrThreatFeedsAck, seNdrEssentialsAck, seDnsProtectionAck),
+    [seMdrThreatFeedsAck, seNdrEssentialsAck, seDnsProtectionAck],
+  );
+
+  const seExcludedBpChecks = useMemo(
+    () => buildSeHeartbeatExclusionSet(seExcludeSecurityHeartbeat),
+    [seExcludeSecurityHeartbeat],
+  );
+
+  const centralBpLicenceFlat = useMemo(() => {
+    const serials = new Set(
+      files.map((f) => f.serialNumber?.trim().toLowerCase()).filter((s): s is string => Boolean(s)),
+    );
+    const rows =
+      serials.size > 0
+        ? guestFirewallLicenseItems.filter((r) => serials.has((r.serialNumber ?? "").trim().toLowerCase()))
+        : [];
+    return mapGuestFirewallLicencesToBpRows(rows);
+  }, [files, guestFirewallLicenseItems]);
+
+  const detectedTierFromCentralLicences = useMemo(
+    () => detectBpLicenceTierFromCentral(centralBpLicenceFlat.length > 0 ? centralBpLicenceFlat : null),
+    [centralBpLicenceFlat],
+  );
+
+  const licenceLockedByCentral = detectedTierFromCentralLicences !== null;
+
+  useEffect(() => {
+    if (!detectedTierFromCentralLicences) return;
+    setLicence((prev) => ({
+      tier: detectedTierFromCentralLicences,
+      modules: detectedTierFromCentralLicences === "individual" ? prev.modules : [],
+    }));
+  }, [detectedTierFromCentralLicences]);
+
+  useEffect(() => {
+    if (
+      !centralValidated ||
+      !centralCreds.tenantId?.trim() ||
+      !centralCreds.clientId.trim() ||
+      !centralCreds.clientSecret.trim()
+    ) {
+      setGuestFirewallLicenseItems([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await callGuestCentral<{ items: GuestFirewallLicenseApiRow[] }>({
+          mode: "guest_health_firewall_licenses",
+          clientId: centralCreds.clientId,
+          clientSecret: centralCreds.clientSecret,
+          tenantId: centralCreds.tenantId,
+        });
+        if (!cancelled) setGuestFirewallLicenseItems(res.items ?? []);
+      } catch {
+        if (!cancelled) setGuestFirewallLicenseItems([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [centralValidated, centralCreds.tenantId, centralCreds.clientId, centralCreds.clientSecret]);
 
   const baselineResults = useMemo(() => {
     const out: Record<string, ReturnType<typeof evaluateBaseline>> = {};
@@ -144,7 +425,7 @@ function HealthCheckInner() {
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm|xml)$/i, "");
       next[label] = analyseConfig(f.extractedData, {
-        centralLinked: centralValidated,
+        centralLinked: centralLinkedForAnalysis,
         dpiExemptZones,
         dpiExemptNetworks,
         webFilterComplianceMode,
@@ -152,7 +433,7 @@ function HealthCheckInner() {
       });
     }
     setAnalysisResults(next);
-  }, [files, centralValidated, dpiExemptZones, dpiExemptNetworks, webFilterComplianceMode, webFilterExemptRuleNames]);
+  }, [files, centralLinkedForAnalysis, dpiExemptZones, dpiExemptNetworks, webFilterComplianceMode, webFilterExemptRuleNames]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
@@ -222,6 +503,8 @@ function HealthCheckInner() {
     try {
       await callGuestCentral({ mode: "guest_health_ping", clientId: centralCreds.clientId, clientSecret: centralCreds.clientSecret });
       setCentralValidated(true);
+      setReplayCentralLinked(false);
+      setRestoredHaLabels(null);
 
       const tenantsRes = await callGuestCentral<{ items: GuestTenantRow[] }>({
         mode: "guest_health_tenants",
@@ -240,8 +523,11 @@ function HealthCheckInner() {
           clientSecret: centralCreds.clientSecret,
           tenantId,
         });
-        setFirewallOptions(fwRes.items ?? []);
-        toast.success(`Connected — found ${(fwRes.items ?? []).length} firewall(s) across ${tenants.length} tenant(s).`);
+        const items = fwRes.items ?? [];
+        setFirewallOptions(items);
+        const groups = buildGuestCentralHaGroups(items);
+        const haNote = groups.length < items.length ? ` (${groups.length} link targets, HA merged)` : "";
+        toast.success(`Connected — found ${items.length} device(s) from Central${haNote} across ${tenants.length} tenant(s).`);
       } else {
         toast.success("Credentials validated but no tenants found.");
       }
@@ -261,8 +547,9 @@ function HealthCheckInner() {
           if (optionValue === CENTRAL_MATCH_NONE) {
             return { ...f, serialNumber: undefined };
           }
-          const fw = findGuestFirewallBySelectValue(firewallOptions, optionValue);
-          if (!fw) return f;
+          const g = findGuestHaGroupBySelectValue(guestFirewallGroups, optionValue);
+          if (!g) return f;
+          const fw = g.primary;
           const newLabel = (fw.hostname || fw.name || "").trim();
           return {
             ...f,
@@ -272,19 +559,22 @@ function HealthCheckInner() {
         }),
       );
     },
-    [firewallOptions],
+    [guestFirewallGroups],
   );
 
   const centralUploadMatcher = useMemo(() => {
-    if (!centralValidated || firewallOptions.length === 0 || files.length === 0) return null;
+    if (!centralValidated || guestFirewallGroups.length === 0 || files.length === 0) return null;
     return (
       <div
         className="rounded-lg border border-dashed border-[#2006F7]/25 dark:border-[#00EDFF]/20 bg-muted/15 p-3 space-y-3"
         data-tour="hc-central-match"
       >
         <p className="text-[11px] leading-snug text-muted-foreground">
-          <span className="font-semibold text-foreground">Link each upload to a Central firewall.</span> Entities XML
-          usually has no serial in the file — pick the device so tabs and saved checks use the right name.
+          <span className="font-semibold text-foreground">Link each upload to a Central firewall.</span> HA pairs with the
+          same hostname are grouped like the MSP dashboard. Entities XML usually has no serial — pick the row so tabs and
+          saved checks use the right name. If you choose an <span className="text-foreground font-medium">HA</span> row,
+          the <span className="text-foreground font-medium">Resilience › High Availability</span> best-practice check
+          can be satisfied from Central when the export has no HA section.
         </p>
         <div className="space-y-2">
           {files.map((f) => (
@@ -293,7 +583,7 @@ function HealthCheckInner() {
                 {f.fileName}
               </Label>
               <Select
-                value={guestFirewallMatchValueForFile(f, firewallOptions)}
+                value={guestFirewallMatchValueForFile(f, guestFirewallGroups)}
                 onValueChange={(v) => linkUploadToCentral(f.id, v)}
               >
                 <SelectTrigger className="h-8 text-xs rounded-lg font-normal">
@@ -301,11 +591,26 @@ function HealthCheckInner() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={CENTRAL_MATCH_NONE}>Not linked</SelectItem>
-                  {firewallOptions.map((fw, i) => (
-                    <SelectItem key={centralFwSelectValue(fw, i)} value={centralFwSelectValue(fw, i)}>
-                      {[fw.hostname || fw.name || "Firewall", fw.serialNumber].filter(Boolean).join(" — ")}
-                    </SelectItem>
-                  ))}
+                  {guestFirewallGroups.map((g) => {
+                    const all = [g.primary, ...g.peers];
+                    const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
+                    const line = [getFirewallDisplayName(g.primary), serials || undefined].filter(Boolean).join(" — ");
+                    return (
+                      <SelectItem key={guestHaGroupSelectValue(g)} value={guestHaGroupSelectValue(g)}>
+                        <span className="flex items-center gap-2 flex-wrap">
+                          <span>{line}</span>
+                          {g.isHA && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[8px] h-5 px-1.5 font-bold bg-[#5A00FF]/15 text-[#5A00FF] dark:text-[#B529F7] border-0"
+                            >
+                              HA{g.peers.length > 0 ? ` (${1 + g.peers.length} nodes)` : ""}
+                            </Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -313,7 +618,7 @@ function HealthCheckInner() {
         </div>
       </div>
     );
-  }, [centralValidated, firewallOptions, files, linkUploadToCentral]);
+  }, [centralValidated, guestFirewallGroups, files, linkUploadToCentral]);
 
   const resetAll = useCallback(() => {
     setFiles([]);
@@ -322,17 +627,27 @@ function HealthCheckInner() {
     setCentralValidated(false);
     setTenantOptions([]);
     setFirewallOptions([]);
+    setGuestFirewallLicenseItems([]);
     setCentralCreds({ clientId: "", clientSecret: "", tenantId: "" });
     setDpiExemptZones([]);
     setDpiExemptNetworks([]);
     setWebFilterComplianceMode("strict");
     setWebFilterExemptRuleNames([]);
+    setSeMdrThreatFeedsAck(false);
+    setSeNdrEssentialsAck(false);
+    setSeExcludeSecurityHeartbeat(false);
+    setReplayCentralLinked(false);
+    setRestoredHaLabels(null);
+    setCustomerName("");
+    setLicence({ tier: "xstream", modules: [] });
   }, []);
 
   const exportSummaryJson = useCallback(() => {
+    const manualOverrides = loadSeHealthCheckBpOverrides();
     const bp: Record<string, SophosBPScore> = {};
     for (const [label, ar] of Object.entries(analysisResults)) {
-      bp[label] = computeSophosBPScore(ar, licence);
+      const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+      bp[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
     }
     const blob = new Blob(
       [
@@ -340,7 +655,11 @@ function HealthCheckInner() {
           {
             exportedAt: new Date().toISOString(),
             licence,
-            centralValidated,
+            centralValidated: centralLinkedForAnalysis,
+            seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+            seAckNdrEssentials: seNdrEssentialsAck,
+            seAckDnsProtection: seDnsProtectionAck,
+            seExcludeSecurityHeartbeat,
             analysisResults,
             bestPracticeScores: bp,
             baseline: baselineResults,
@@ -357,9 +676,21 @@ function HealthCheckInner() {
     a.download = "sophos-firewall-health-check-summary.json";
     a.click();
     URL.revokeObjectURL(url);
-  }, [analysisResults, baselineResults, centralValidated, licence]);
+  }, [
+    analysisResults,
+    baselineResults,
+    licence,
+    bpOverrideRevision,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludedBpChecks,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+  ]);
 
-  const [customerName, setCustomerName] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useState(false);
@@ -384,13 +715,32 @@ function HealthCheckInner() {
     setSavingCheck(true);
     try {
       const allFindings = entries.flatMap(([, ar]) => ar.findings ?? []);
+      const manualOverrides = loadSeHealthCheckBpOverrides();
       const scores = entries.map(([label, ar]) => {
-        const bp = computeSophosBPScore(ar, licence);
+        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+        const bp = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
         return { label, score: bp.overall, grade: bp.grade };
       });
       const avgScore = Math.round(scores.reduce((s, e) => s + e.score, 0) / scores.length);
       const grades = ["A", "B", "C", "D", "F"];
       const avgGrade = grades[Math.min(Math.floor((100 - avgScore) / 20), 4)];
+
+      const snapshot = buildSeHealthCheckSnapshotV1({
+        customerName: customerName.trim(),
+        files,
+        licence,
+        dpiExemptZones,
+        dpiExemptNetworks,
+        webFilterComplianceMode,
+        webFilterExemptRuleNames,
+        seMdrThreatFeedsAck,
+        seNdrEssentialsAck,
+        seDnsProtectionAck,
+        seExcludeSecurityHeartbeat,
+        replayCentralLinked: centralLinkedForAnalysis,
+        seCentralHaLabels,
+        manualBpOverrideIds: [...manualOverrides],
+      });
 
       const { error } = await supabase
         .from("se_health_checks")
@@ -401,10 +751,15 @@ function HealthCheckInner() {
           overall_grade: avgGrade,
           findings_count: allFindings.length,
           firewall_count: files.length,
-          summary_json: { scores, topFindings: allFindings.slice(0, 10).map((f) => f.title ?? f.id) },
+          summary_json: {
+            scores,
+            topFindings: allFindings.slice(0, 10).map((f) => f.title ?? f.id),
+            snapshot,
+          },
         } as Record<string, unknown>);
 
       if (error) throw error;
+      setHistoryRefreshKey((k) => k + 1);
       toast.success("Health check saved to your history.");
     } catch (err) {
       console.warn("[health-check] save failed", err);
@@ -412,7 +767,26 @@ function HealthCheckInner() {
     } finally {
       setSavingCheck(false);
     }
-  }, [seAuth.seProfile, analysisResults, licence, customerName, files.length]);
+  }, [
+    seAuth.seProfile,
+    analysisResults,
+    licence,
+    customerName,
+    files,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludeSecurityHeartbeat,
+    bpOverrideRevision,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+    centralLinkedForAnalysis,
+  ]);
 
   const handleDownloadHealthCheckPdf = useCallback(async () => {
     const labels = files
@@ -422,15 +796,15 @@ function HealthCheckInner() {
       toast.error("No analysed configurations to include in the report.");
       return;
     }
+    const manualOverrides = loadSeHealthCheckBpOverrides();
     const bpByLabel: Record<string, SophosBPScore> = {};
     for (const label of labels) {
       const ar = analysisResults[label];
-      if (ar) bpByLabel[label] = computeSophosBPScore(ar, licence);
+      if (ar) {
+        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      }
     }
-    const preparedBy =
-      seAuth.seProfile?.displayName?.trim() ||
-      seAuth.seProfile?.email?.trim() ||
-      "Sales Engineer";
     const reportParams = {
       labels,
       files,
@@ -440,12 +814,16 @@ function HealthCheckInner() {
       licence,
       customerName,
       preparedFor: customerName.trim() || undefined,
-      preparedBy,
+      preparedBy: effectivePreparedBy,
       dpiExemptZones,
       dpiExemptNetworks,
       webFilterComplianceMode,
       webFilterExemptRuleNames,
-      centralValidated,
+      seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+      seAckNdrEssentials: seNdrEssentialsAck,
+      seAckDnsProtection: seDnsProtectionAck,
+      seExcludeSecurityHeartbeat,
+      centralValidated: centralLinkedForAnalysis,
       generatedAt: new Date(),
       appVersion:
         typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
@@ -457,7 +835,7 @@ function HealthCheckInner() {
       environment: "",
       country: "",
       selectedFrameworks: [],
-      preparedBy: seAuth.seProfile?.displayName?.trim() || seAuth.seProfile?.email?.trim() || "",
+      preparedBy: effectivePreparedBy,
       confidential: true,
     };
     setPdfBusy(true);
@@ -481,13 +859,131 @@ function HealthCheckInner() {
     baselineResults,
     licence,
     customerName,
-    seAuth.seProfile,
+    effectivePreparedBy,
     dpiExemptZones,
     dpiExemptNetworks,
     webFilterComplianceMode,
     webFilterExemptRuleNames,
-    centralValidated,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+    bpOverrideRevision,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
   ]);
+
+  const handleDownloadHealthCheckHtml = useCallback(async () => {
+    const labels = files
+      .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
+      .filter((l) => analysisResults[l]);
+    if (labels.length === 0) {
+      toast.error("No analysed configurations to include in the report.");
+      return;
+    }
+    const manualOverrides = loadSeHealthCheckBpOverrides();
+    const bpByLabel: Record<string, SophosBPScore> = {};
+    for (const label of labels) {
+      const ar = analysisResults[label];
+      if (ar) {
+        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      }
+    }
+    const reportParams = {
+      labels,
+      files,
+      analysisResults,
+      baselineResults,
+      bpByLabel,
+      licence,
+      customerName,
+      preparedFor: customerName.trim() || undefined,
+      preparedBy: effectivePreparedBy,
+      dpiExemptZones,
+      dpiExemptNetworks,
+      webFilterComplianceMode,
+      webFilterExemptRuleNames,
+      seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+      seAckNdrEssentials: seNdrEssentialsAck,
+      seAckDnsProtection: seDnsProtectionAck,
+      seExcludeSecurityHeartbeat,
+      centralValidated: centralLinkedForAnalysis,
+      generatedAt: new Date(),
+      appVersion:
+        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
+    };
+    const branding: BrandingData = {
+      companyName: "Sophos FireComply",
+      customerName: customerName.trim(),
+      logoUrl: null,
+      environment: "",
+      country: "",
+      selectedFrameworks: [],
+      preparedBy: effectivePreparedBy,
+      confidential: true,
+    };
+    try {
+      const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download");
+      await runHealthCheckHtmlDownload({
+        reportParams,
+        branding,
+        filenameCustomerPart: customerName,
+      });
+      toast.success("HTML downloaded.");
+    } catch (e) {
+      console.warn("[health-check] html download failed", e);
+      toast.error(e instanceof Error ? e.message : "Could not generate HTML — try again.");
+    }
+  }, [
+    files,
+    analysisResults,
+    baselineResults,
+    licence,
+    customerName,
+    effectivePreparedBy,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+  ]);
+
+  const restoreFromSavedSnapshot = useCallback(
+    (snapshot: SeHealthCheckSnapshotV1) => {
+      try {
+        localStorage.setItem(SE_HEALTH_CHECK_BP_OVERRIDES_KEY, JSON.stringify(snapshot.manualBpOverrideIds));
+      } catch {
+        /* ignore */
+      }
+      setCustomerName(snapshot.customerName);
+      setLicence(snapshot.licence);
+      setDpiExemptZones(snapshot.dpiExemptZones);
+      setDpiExemptNetworks(snapshot.dpiExemptNetworks);
+      setWebFilterComplianceMode(snapshot.webFilterComplianceMode);
+      setWebFilterExemptRuleNames(snapshot.webFilterExemptRuleNames);
+      setSeMdrThreatFeedsAck(snapshot.seMdrThreatFeedsAck);
+      setSeNdrEssentialsAck(snapshot.seNdrEssentialsAck);
+      setSeExcludeSecurityHeartbeat(snapshot.seExcludeSecurityHeartbeat);
+      setReplayCentralLinked(snapshot.replayCentralLinked);
+      setRestoredHaLabels(new Set(snapshot.seCentralHaLabels));
+      setCentralValidated(false);
+      setFiles(snapshotFilesToParsedFiles(snapshot.files));
+      setActiveStep("results");
+      setBpOverrideRevision((n) => n + 1);
+      toast.success("Opened saved health check.");
+    },
+    [],
+  );
 
   const hasParsedConfigs = files.some((f) => Object.keys(f.extractedData ?? {}).length > 0);
 
@@ -517,6 +1013,18 @@ function HealthCheckInner() {
               <span className="text-xs text-muted-foreground hidden sm:inline">
                 {seAuth.seProfile.email}
               </span>
+            )}
+            {seAuth.seProfile && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-lg gap-2 w-fit"
+                onClick={() => setSeManagementOpen(true)}
+              >
+                <PanelRight className="h-4 w-4" />
+                Management
+              </Button>
             )}
             <Button variant="outline" size="sm" className="rounded-lg gap-2 w-fit" onClick={seAuth.signOut}>
               Sign out
@@ -625,14 +1133,25 @@ function HealthCheckInner() {
                       Connected (session only — credentials not stored)
                     </p>
                   )}
-                  {firewallOptions.length > 0 && (
+                  {guestFirewallGroups.length > 0 && (
                     <div className="rounded-lg border border-border bg-muted/20 p-2 max-h-32 overflow-y-auto text-[11px] space-y-1">
-                      {firewallOptions.map((fw, i) => (
-                        <div key={fw.id ?? String(i)} className="flex justify-between gap-2">
-                          <span className="font-medium truncate">{fw.hostname || fw.name || "Firewall"}</span>
-                          <span className="text-muted-foreground font-mono shrink-0">{fw.serialNumber}</span>
-                        </div>
-                      ))}
+                      {guestFirewallGroups.map((g) => {
+                        const all = [g.primary, ...g.peers];
+                        const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
+                        return (
+                          <div key={guestHaGroupSelectValue(g)} className="flex justify-between gap-2 items-center">
+                            <span className="font-medium truncate flex items-center gap-1.5 min-w-0">
+                              {getFirewallDisplayName(g.primary)}
+                              {g.isHA && (
+                                <span className="text-[8px] px-1 py-0.5 rounded font-bold bg-[#5A00FF]/15 text-[#5A00FF] dark:text-[#B529F7] shrink-0">
+                                  HA
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-muted-foreground font-mono shrink-0 text-right">{serials || "—"}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   {centralUploadMatcher}
@@ -702,8 +1221,15 @@ function HealthCheckInner() {
                   {files.length} firewall file{files.length === 1 ? "" : "s"} analysed
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <div className="flex rounded-lg border border-border overflow-hidden">
+              <div className="flex flex-wrap gap-2 items-center">
+                <div
+                  className="flex rounded-lg border border-border overflow-hidden"
+                  title={
+                    licenceLockedByCentral
+                      ? "Licence tier is auto-detected from Sophos Central (matched firewall serial)."
+                      : "Licence tier for Sophos best practice scoring (same as Sophos Licence Selection below)."
+                  }
+                >
                   {(["standard", "xstream"] as const).map((tier) => (
                     <Button
                       key={tier}
@@ -711,27 +1237,19 @@ function HealthCheckInner() {
                       variant={licence.tier === tier ? "default" : "ghost"}
                       size="sm"
                       className="rounded-none px-3 text-xs capitalize"
+                      disabled={licenceLockedByCentral}
                       onClick={() => setLicence({ tier, modules: [] })}
                     >
                       {tier}
                     </Button>
                   ))}
                 </div>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
-                  disabled={pdfBusy}
-                  onClick={() => void handleDownloadHealthCheckPdf()}
-                >
-                  {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  {pdfBusy ? "Generating PDF…" : "Download PDF"}
-                </Button>
-                <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" onClick={exportSummaryJson}>
-                  <Download className="h-4 w-4" />
-                  Summary JSON
-                </Button>
+                {licenceLockedByCentral && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-[#00995a] dark:text-[#00F2B3] whitespace-nowrap">
+                    <Lock className="h-3 w-3 shrink-0" aria-hidden />
+                    From Central
+                  </span>
+                )}
                 <Button type="button" variant="outline" size="sm" className="rounded-lg" onClick={() => setActiveStep("landing")}>
                   Add configurations
                 </Button>
@@ -740,6 +1258,32 @@ function HealthCheckInner() {
                 </Button>
               </div>
             </div>
+
+            <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-1">
+              <Label
+                htmlFor="hc-customer-top"
+                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+              >
+                Customer name
+              </Label>
+              <Input
+                id="hc-customer-top"
+                className="rounded-lg text-sm h-10"
+                placeholder="Organisation or site (optional)"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground pt-0.5">
+                Shown on the report cover, PDF, HTML, and saved health checks.
+              </p>
+            </div>
+
+            {replayCentralLinked && !centralValidated && (
+              <p className="rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/5 dark:bg-[#00EDFF]/10 px-3 py-2 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Opened from saved history.</span> Best-practice scoring uses the
+                saved Central-linked state. Connect to Sophos Central again if you need live discovery or licensing API data.
+              </p>
+            )}
 
             {!centralValidated && (
               <div className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
@@ -776,34 +1320,30 @@ function HealthCheckInner() {
             {centralValidated && (
               <p className="text-[11px] flex items-center gap-1 text-[#00995a] dark:text-[#00F2B3]">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Sophos Central connected — {firewallOptions.length} firewall(s) discovered
+                Sophos Central connected — {firewallOptions.length} device(s) from Central
+                {guestFirewallGroups.length < firewallOptions.length
+                  ? ` — ${guestFirewallGroups.length} link targets (HA merged by hostname)`
+                  : ""}
               </p>
             )}
             {centralUploadMatcher}
 
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex-1 min-w-[200px] max-w-xs space-y-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Customer name (optional)
-                </label>
-                <Input
-                  className="rounded-lg text-sm h-9"
-                  placeholder="Acme Corp"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="rounded-lg bg-[#00995a] hover:bg-[#00995a]/90 text-white gap-1.5"
-                disabled={savingCheck}
-                onClick={saveHealthCheck}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {savingCheck ? "Saving…" : "Save health check"}
-              </Button>
-            </div>
+            <SeHeartbeatScopeBar
+              excludeHeartbeatCheck={seExcludeSecurityHeartbeat}
+              onExcludeChange={setSeExcludeSecurityHeartbeat}
+            />
+
+            <SeThreatResponseAckBar
+              mdrAcknowledged={seMdrThreatFeedsAck}
+              ndrAcknowledged={seNdrEssentialsAck}
+              onMdrChange={setSeMdrThreatFeedsAck}
+              onNdrChange={setSeNdrEssentialsAck}
+            />
+
+            <SeDnsProtectionAckBar
+              acknowledged={seDnsProtectionAck}
+              onChange={setSeDnsProtectionAck}
+            />
 
             {(() => {
               const allZones = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceZones))];
@@ -862,17 +1402,107 @@ function HealthCheckInner() {
               );
             })()}
 
+            <div className="rounded-xl border border-border bg-card px-4 py-4 space-y-3">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Save &amp; export</p>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-lg bg-[#00995a] hover:bg-[#00995a]/90 text-white gap-1.5 w-fit"
+                  disabled={savingCheck}
+                  onClick={saveHealthCheck}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {savingCheck ? "Saving…" : "Save health check"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
+                  disabled={pdfBusy}
+                  onClick={() => {
+                    void handleDownloadHealthCheckPdf();
+                    void handleDownloadHealthCheckHtml();
+                  }}
+                >
+                  {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {pdfBusy ? "Generating…" : "Download PDF + HTML"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg gap-1.5"
+                  disabled={pdfBusy}
+                  onClick={() => void handleDownloadHealthCheckPdf()}
+                >
+                  {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  PDF only
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg gap-1.5"
+                  disabled={pdfBusy}
+                  onClick={() => void handleDownloadHealthCheckHtml()}
+                >
+                  <FileText className="h-4 w-4" />
+                  HTML only
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" onClick={exportSummaryJson}>
+                  <Download className="h-4 w-4" />
+                  Summary JSON
+                </Button>
+              </div>
+            </div>
+
+            <Suspense
+              fallback={
+                <div className="rounded-xl border border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+                  Loading Sophos best practice…
+                </div>
+              }
+            >
+              <SophosBestPractice
+                analysisResults={analysisResults}
+                centralLicences={centralBpLicenceFlat}
+                overridesStorageKey={SE_HEALTH_CHECK_BP_OVERRIDES_KEY}
+                centralEnrichmentActive={centralLinkedForAnalysis}
+                onManualOverridesChange={() => setBpOverrideRevision((n) => n + 1)}
+                licence={licence}
+                onLicenceChange={setLicence}
+                centralHaConfirmedLabels={seCentralHaLabels}
+                seThreatResponseAck={seThreatResponseAck}
+                seExcludedBpChecks={seExcludedBpChecks}
+              />
+            </Suspense>
+
             <HealthCheckDashboard
               files={files}
               analysisResults={analysisResults}
               licence={licence}
               baselineResults={baselineResults}
+              hideSophosBpCard
+              seCentralSession={centralLinkedForAnalysis}
+              seCentralHaLabels={seCentralHaLabels}
+              bpOverrideRevision={bpOverrideRevision}
+              seThreatResponseAck={seThreatResponseAck}
+              seExcludedBpChecks={seExcludedBpChecks}
             />
           </section>
         )}
 
         {seAuth.seProfile && (
-          <SEHealthCheckHistory seProfileId={seAuth.seProfile.id} />
+          <SEHealthCheckHistory
+            seProfileId={seAuth.seProfile.id}
+            refreshTrigger={historyRefreshKey}
+            preparedBy={effectivePreparedBy}
+            onRestoreSnapshot={restoreFromSavedSnapshot}
+          />
         )}
 
         <Collapsible
@@ -970,6 +1600,8 @@ function HealthCheckInner() {
           Return to main app
         </Link>
       </footer>
+
+      <SeHealthCheckManagementDrawer open={seManagementOpen} onClose={() => setSeManagementOpen(false)} />
     </div>
   );
 }
