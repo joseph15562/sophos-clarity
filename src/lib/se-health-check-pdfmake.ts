@@ -14,6 +14,8 @@ import type { LicenceSelection, SophosBPScore } from "@/lib/sophos-licence";
 /** Data URLs for PNGs (fetched from `/public` at PDF generation time). */
 export type SeHealthCheckPdfImageAssets = {
   wordmark?: string;
+  /** Dark wordmark for white-background page headers. */
+  wordmarkDark?: string;
   shield?: string;
 };
 
@@ -72,6 +74,19 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const svgText = await res.text();
         const dataUrl = await svgToHighResPng(svgText, 600, 65);
         if (dataUrl) out.wordmark = dataUrl;
+      } catch { /* ignore */ }
+    })(),
+  );
+
+  tasks.push(
+    (async () => {
+      try {
+        const url = `${base}/sophos-logo.svg`.replace(/([^:])\/{2,}/g, "$1/");
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const svgText = await res.text();
+        const dataUrl = await svgToHighResPng(svgText, 600, 65);
+        if (dataUrl) out.wordmarkDark = dataUrl;
       } catch { /* ignore */ }
     })(),
   );
@@ -990,8 +1005,23 @@ export function buildSeHealthCheckPdfDocDefinition(
         },
       ];
     },
-    header() {
-      return { text: "", margin: [0, 0, 0, 0] };
+    header(currentPage) {
+      if (currentPage <= 2) return { text: "", margin: [0, 0, 0, 0] };
+      if (assets.wordmarkDark) {
+        return {
+          image: assets.wordmarkDark,
+          width: 80,
+          margin: [30, 20, 0, 0],
+        };
+      }
+      return {
+        text: "SOPHOS",
+        font: "ZalandoSansExpanded",
+        fontSize: 10,
+        bold: true,
+        color: "#001a47",
+        margin: [30, 20, 0, 0],
+      };
     },
     footer(currentPage) {
       if (currentPage !== 1) return { text: "", margin: [0, 0, 0, 0] };
