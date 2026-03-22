@@ -285,6 +285,7 @@ function HealthCheckInner() {
   /** When non-null, HA BP auto-pass labels come from a reopened save (no live Central groups). */
   const [restoredHaLabels, setRestoredHaLabels] = useState<Set<string> | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [preparedFor, setPreparedFor] = useState("");
   const [seManagementOpen, setSeManagementOpen] = useState(false);
 
   const effectivePreparedBy = useMemo(
@@ -813,7 +814,7 @@ function HealthCheckInner() {
       bpByLabel,
       licence,
       customerName,
-      preparedFor: customerName.trim() || undefined,
+      preparedFor: preparedFor.trim() || customerName.trim() || undefined,
       preparedBy: effectivePreparedBy,
       dpiExemptZones,
       dpiExemptNetworks,
@@ -859,6 +860,7 @@ function HealthCheckInner() {
     baselineResults,
     licence,
     customerName,
+    preparedFor,
     effectivePreparedBy,
     dpiExemptZones,
     dpiExemptNetworks,
@@ -900,7 +902,7 @@ function HealthCheckInner() {
       bpByLabel,
       licence,
       customerName,
-      preparedFor: customerName.trim() || undefined,
+      preparedFor: preparedFor.trim() || customerName.trim() || undefined,
       preparedBy: effectivePreparedBy,
       dpiExemptZones,
       dpiExemptNetworks,
@@ -943,6 +945,7 @@ function HealthCheckInner() {
     baselineResults,
     licence,
     customerName,
+    preparedFor,
     effectivePreparedBy,
     dpiExemptZones,
     dpiExemptNetworks,
@@ -1259,21 +1262,38 @@ function HealthCheckInner() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-1">
-              <Label
-                htmlFor="hc-customer-top"
-                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
-              >
-                Customer name
-              </Label>
-              <Input
-                id="hc-customer-top"
-                className="rounded-lg text-sm h-10"
-                placeholder="Organisation or site (optional)"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-              <p className="text-[11px] text-muted-foreground pt-0.5">
+            <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3">
+              <div className="space-y-1">
+                <Label
+                  htmlFor="hc-customer-top"
+                  className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+                >
+                  Customer name
+                </Label>
+                <Input
+                  id="hc-customer-top"
+                  className="rounded-lg text-sm h-10"
+                  placeholder="Organisation or site (optional)"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label
+                  htmlFor="hc-prepared-for"
+                  className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+                >
+                  Prepared for
+                </Label>
+                <Input
+                  id="hc-prepared-for"
+                  className="rounded-lg text-sm h-10"
+                  placeholder="Stakeholder name or team (optional)"
+                  value={preparedFor}
+                  onChange={(e) => setPreparedFor(e.target.value)}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
                 Shown on the report cover, PDF, HTML, and saved health checks.
               </p>
             </div>
