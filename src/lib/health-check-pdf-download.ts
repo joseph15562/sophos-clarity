@@ -9,6 +9,7 @@ import { buildSeHealthCheckPdfBlob } from "@/lib/se-health-check-pdfmake";
 import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html";
 import { sanitizePdfFilenamePart } from "@/lib/html-document-to-pdf-blob";
 import { saveAs } from "file-saver";
+import JSZip from "jszip";
 
 export type { SEHealthCheckReportParams };
 
@@ -35,4 +36,27 @@ export async function runHealthCheckHtmlDownload(args: {
   const part = sanitizePdfFilenamePart(args.filenameCustomerPart);
   const date = new Date().toISOString().slice(0, 10);
   saveAs(blob, `Sophos-Firewall-Health-Check-${part}-${date}.html`);
+}
+
+/** Bundle PDF + HTML into a single zip and trigger download. */
+export async function runHealthCheckZipDownload(args: {
+  reportParams: SEHealthCheckReportParams;
+  branding: BrandingData;
+  filenameCustomerPart: string;
+}): Promise<void> {
+  const { reportParams, filenameCustomerPart } = args;
+  const part = sanitizePdfFilenamePart(filenameCustomerPart);
+  const date = new Date().toISOString().slice(0, 10);
+  const baseName = `Sophos-Firewall-Health-Check-${part}-${date}`;
+
+  const [pdfBlob, html] = await Promise.all([
+    buildSeHealthCheckPdfBlob(reportParams),
+    Promise.resolve(buildSeHealthCheckBrowserHtmlDocument(reportParams)),
+  ]);
+
+  const zip = new JSZip();
+  zip.file(`${baseName}.pdf`, pdfBlob);
+  zip.file(`${baseName}.html`, html);
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  saveAs(zipBlob, `${baseName}.zip`);
 }

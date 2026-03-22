@@ -961,6 +961,90 @@ function HealthCheckInner() {
     seExcludedBpChecks,
   ]);
 
+  const handleDownloadHealthCheckZip = useCallback(async () => {
+    const labels = files
+      .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
+      .filter((l) => analysisResults[l]);
+    if (labels.length === 0) {
+      toast.error("No analysed configurations to include in the report.");
+      return;
+    }
+    const manualOverrides = loadSeHealthCheckBpOverrides();
+    const bpByLabel: Record<string, SophosBPScore> = {};
+    for (const label of labels) {
+      const ar = analysisResults[label];
+      if (ar) {
+        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      }
+    }
+    const reportParams = {
+      labels,
+      files,
+      analysisResults,
+      baselineResults,
+      bpByLabel,
+      licence,
+      customerName,
+      preparedFor: preparedFor.trim() || customerName.trim() || undefined,
+      preparedBy: effectivePreparedBy,
+      dpiExemptZones,
+      dpiExemptNetworks,
+      webFilterComplianceMode,
+      webFilterExemptRuleNames,
+      seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+      seAckNdrEssentials: seNdrEssentialsAck,
+      seAckDnsProtection: seDnsProtectionAck,
+      seExcludeSecurityHeartbeat,
+      centralValidated: centralLinkedForAnalysis,
+      generatedAt: new Date(),
+      appVersion:
+        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
+    };
+    const branding: BrandingData = {
+      companyName: "Sophos FireComply",
+      customerName: customerName.trim(),
+      logoUrl: null,
+      environment: "",
+      country: "",
+      selectedFrameworks: [],
+      preparedBy: effectivePreparedBy,
+      confidential: true,
+    };
+    setPdfBusy(true);
+    try {
+      const { runHealthCheckZipDownload } = await import("@/lib/health-check-pdf-download");
+      await runHealthCheckZipDownload({ reportParams, branding, filenameCustomerPart: customerName });
+      toast.success("ZIP downloaded.");
+    } catch (e) {
+      console.warn("[health-check] zip download failed", e);
+      toast.error(e instanceof Error ? e.message : "Could not generate ZIP — try again.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [
+    files,
+    analysisResults,
+    baselineResults,
+    licence,
+    customerName,
+    preparedFor,
+    effectivePreparedBy,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+    bpOverrideRevision,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+  ]);
+
   const restoreFromSavedSnapshot = useCallback(
     (snapshot: SeHealthCheckSnapshotV1) => {
       try {
@@ -1443,10 +1527,7 @@ function HealthCheckInner() {
                   size="sm"
                   className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
                   disabled={pdfBusy}
-                  onClick={() => {
-                    void handleDownloadHealthCheckPdf();
-                    void handleDownloadHealthCheckHtml();
-                  }}
+                  onClick={() => void handleDownloadHealthCheckZip()}
                 >
                   {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                   {pdfBusy ? "Generating…" : "Download PDF + HTML"}
