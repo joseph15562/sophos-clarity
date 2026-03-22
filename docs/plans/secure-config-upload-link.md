@@ -4,40 +4,40 @@ overview: Build a secure, token-based upload link that an SE can send to a custo
 todos:
   - id: migration
     content: Create migration for config_upload_requests table (with customer_email column) and RLS policies
-    status: pending
+    status: completed
   - id: edge-routes
     content: Add config-upload CRUD routes to supabase/functions/api/index.ts
-    status: pending
+    status: completed
   - id: email-send
     content: Add Resend email sending to the config-upload-request route (reuse pattern from send-scheduled-reports)
-    status: pending
+    status: completed
   - id: cleanup
     content: Add cleanup logic for expired and retention-exceeded rows
-    status: pending
+    status: completed
   - id: xml-validate
     content: Add server-side XML validation (check for valid Sophos entity structure) on upload
-    status: pending
+    status: completed
   - id: upload-page
     content: Build customer-facing ConfigUpload.tsx page with drag-and-drop, re-upload support, and privacy message
-    status: pending
+    status: completed
   - id: se-dialog
     content: Add Request Config Upload dialog (email + quick link), resend email, and polling to HealthCheck2.tsx
-    status: pending
+    status: completed
   - id: se-request-list
     content: Add My Upload Requests panel so SE can return to pending/uploaded requests after closing browser
-    status: pending
+    status: completed
   - id: expiry-reminder
     content: Add scheduled/cron logic to send reminder email 24h before link expiry if customer hasn't uploaded
     status: pending
   - id: audit-log
     content: Log config upload events (request created, uploaded, downloaded, revoked) to audit_log table
-    status: pending
+    status: cancelled
   - id: routing
     content: Add /upload/:token route to App.tsx
-    status: pending
+    status: completed
   - id: deploy
     content: Add migration to deploy pipeline, test end-to-end
-    status: pending
+    status: in_progress
 isProject: false
 ---
 
