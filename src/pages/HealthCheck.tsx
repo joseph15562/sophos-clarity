@@ -15,6 +15,9 @@ import {
   Shield,
   Upload,
   Wifi,
+  Link2,
+  Copy,
+  XCircle,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { analyseConfig } from "@/lib/analyse-config";
@@ -58,6 +61,13 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSEAuthProvider, useSEAuth, SEAuthProvider } from "@/hooks/use-se-auth";
@@ -812,6 +822,27 @@ function HealthCheckInner() {
   const [savingCheck, setSavingCheck] = useState(false);
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useState(false);
 
+  // Config upload request state
+  const [configUploadDialogOpen, setConfigUploadDialogOpen] = useState(false);
+  const [configUploadCustomerName, setConfigUploadCustomerName] = useState("");
+  const [configUploadCustomerEmail, setConfigUploadCustomerEmail] = useState("");
+  const [configUploadDays, setConfigUploadDays] = useState(7);
+  const [configUploadCreating, setConfigUploadCreating] = useState(false);
+  const [configUploadToken, setConfigUploadToken] = useState<string | null>(null);
+  const [configUploadUrl, setConfigUploadUrl] = useState<string | null>(null);
+  const [configUploadEmailSent, setConfigUploadEmailSent] = useState(false);
+  const [configUploadStatus, setConfigUploadStatus] = useState<string | null>(null);
+  const [configUploadResending, setConfigUploadResending] = useState(false);
+  const [configUploadLoading, setConfigUploadLoading] = useState(false);
+  const [configUploadRequests, setConfigUploadRequests] = useState<Array<{
+    id: string; token: string; customer_name: string | null; customer_email: string | null;
+    status: string; expires_at: string; email_sent: boolean; uploaded_at: string | null;
+    downloaded_at: string | null; created_at: string;
+  }>>([]);
+  const [configUploadRequestsOpen, setConfigUploadRequestsOpen] = useState(false);
+  const [configUploadListLoading, setConfigUploadListLoading] = useState(false);
+  const configUploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     const syncHash = () => {
       if (typeof window === "undefined") return;
@@ -904,6 +935,187 @@ function HealthCheckInner() {
     seExcludedBpChecks,
     centralLinkedForAnalysis,
   ]);
+
+  // ── Config upload request handlers ──
+
+  const fetchConfigUploadRequests = useCallback(async () => {
+    if (!seAuth.seProfile) return;
+    setConfigUploadListLoading(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-requests`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(url, {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setConfigUploadRequests(json.data ?? []);
+      }
+    } catch {
+      /* silent */
+    } finally {
+      setConfigUploadListLoading(false);
+    }
+  }, [seAuth.seProfile]);
+
+  const handleCreateConfigUploadRequest = useCallback(async () => {
+    if (!seAuth.seProfile) return;
+    setConfigUploadCreating(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-request`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customer_name: configUploadCustomerName.trim() || undefined,
+          customer_email: configUploadCustomerEmail.trim() || undefined,
+          expires_in_days: configUploadDays,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to create upload request");
+
+      setConfigUploadToken(json.token);
+      setConfigUploadUrl(json.url);
+      setConfigUploadEmailSent(json.email_sent);
+      setConfigUploadStatus("pending");
+
+      if (json.email_sent) {
+        toast.success(`Upload link sent to ${configUploadCustomerEmail.trim()}`);
+      } else if (configUploadCustomerEmail.trim()) {
+        toast.warning("Upload link created but email could not be sent — share the link manually.");
+      } else {
+        toast.success("Upload link created — copy and share it with the customer.");
+      }
+
+      void fetchConfigUploadRequests();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create upload request.");
+    } finally {
+      setConfigUploadCreating(false);
+    }
+  }, [seAuth.seProfile, configUploadCustomerName, configUploadCustomerEmail, configUploadDays, fetchConfigUploadRequests]);
+
+  const handleResendConfigUploadEmail = useCallback(async () => {
+    if (!configUploadToken) return;
+    setConfigUploadResending(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${configUploadToken}/resend`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      const json = await res.json();
+      if (json.email_sent) {
+        toast.success("Email resent to customer.");
+      } else {
+        toast.error(json.error || "Could not resend email.");
+      }
+    } catch {
+      toast.error("Could not resend email.");
+    } finally {
+      setConfigUploadResending(false);
+    }
+  }, [configUploadToken]);
+
+  const handleLoadConfigFromUpload = useCallback(async (token: string) => {
+    setConfigUploadLoading(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/download`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(url, {
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Download failed");
+      }
+      const json = await res.json();
+      const fileName = json.file_name || "entities.xml";
+      const uploaded: UploadedFile = {
+        id: crypto.randomUUID(),
+        fileName,
+        content: json.config_xml,
+        label: fileName.replace(/\.(xml|html|htm)$/i, ""),
+      };
+      await handleFilesChange([...uploadedForPicker, uploaded]);
+      toast.success(`Config loaded: ${fileName}`);
+      setConfigUploadDialogOpen(false);
+      setConfigUploadRequestsOpen(false);
+      void fetchConfigUploadRequests();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not load config.");
+    } finally {
+      setConfigUploadLoading(false);
+    }
+  }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests]);
+
+  const handleRevokeConfigUpload = useCallback(async (token: string) => {
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}`;
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch(url, {
+        method: "DELETE",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      toast.success("Upload request revoked.");
+      if (configUploadToken === token) {
+        setConfigUploadToken(null);
+        setConfigUploadUrl(null);
+        setConfigUploadStatus(null);
+      }
+      void fetchConfigUploadRequests();
+    } catch {
+      toast.error("Could not revoke upload request.");
+    }
+  }, [configUploadToken, fetchConfigUploadRequests]);
+
+  // Poll for upload status when a request is pending
+  useEffect(() => {
+    if (!configUploadToken || configUploadStatus !== "pending") {
+      if (configUploadPollRef.current) clearInterval(configUploadPollRef.current);
+      return;
+    }
+    const poll = async () => {
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${configUploadToken}`;
+        const res = await fetch(url, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === "uploaded") {
+            setConfigUploadStatus("uploaded");
+            toast.success("Customer has uploaded their configuration!");
+            void fetchConfigUploadRequests();
+          }
+        }
+      } catch { /* silent */ }
+    };
+    configUploadPollRef.current = setInterval(poll, 10_000);
+    return () => { if (configUploadPollRef.current) clearInterval(configUploadPollRef.current); };
+  }, [configUploadToken, configUploadStatus, fetchConfigUploadRequests]);
+
+  // Fetch upload requests on mount when SE is authenticated
+  useEffect(() => {
+    if (seAuth.seProfile) void fetchConfigUploadRequests();
+  }, [seAuth.seProfile, fetchConfigUploadRequests]);
 
   const handleDownloadHealthCheckPdf = useCallback(async () => {
     const labels = files
@@ -1279,6 +1491,36 @@ function HealthCheckInner() {
                 </CardHeader>
                 <CardContent>
                   <FileUpload files={uploadedForPicker} onFilesChange={handleFilesChange} />
+                  <div className="mt-3 flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2 text-xs"
+                      onClick={() => setConfigUploadDialogOpen(true)}
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      Request Config Upload from Customer
+                    </Button>
+                    {configUploadRequests.filter((r) => r.status === "uploaded").length > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2 text-xs border-[#00995a]/30 text-[#00995a] hover:bg-[#00995a]/5"
+                        onClick={() => setConfigUploadRequestsOpen(true)}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {configUploadRequests.filter((r) => r.status === "uploaded").length} config{configUploadRequests.filter((r) => r.status === "uploaded").length !== 1 ? "s" : ""} ready to load
+                      </Button>
+                    )}
+                    {configUploadRequests.filter((r) => r.status === "pending").length > 0 && (
+                      <p className="text-[10px] text-muted-foreground text-center">
+                        {configUploadRequests.filter((r) => r.status === "pending").length} pending upload{configUploadRequests.filter((r) => r.status === "pending").length !== 1 ? "s" : ""}{" "}
+                        <button type="button" className="underline hover:text-foreground" onClick={() => setConfigUploadRequestsOpen(true)}>View all</button>
+                      </p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -1856,6 +2098,278 @@ function HealthCheckInner() {
       </footer>
 
       <SeHealthCheckManagementDrawer open={seManagementOpen} onClose={() => setSeManagementOpen(false)} />
+
+      {/* Config Upload Request Dialog */}
+      <Dialog open={configUploadDialogOpen} onOpenChange={setConfigUploadDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              {configUploadToken ? "Upload Link Created" : "Request Config Upload"}
+            </DialogTitle>
+            <DialogDescription>
+              {configUploadToken
+                ? "Share this link with your customer to receive their firewall configuration."
+                : "Generate a secure link for your customer to upload their entities.xml file."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!configUploadToken ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cu-customer-name">Customer name</Label>
+                <Input
+                  id="cu-customer-name"
+                  placeholder="e.g. Acme Corp"
+                  value={configUploadCustomerName}
+                  onChange={(e) => setConfigUploadCustomerName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cu-customer-email">Customer email (optional)</Label>
+                <Input
+                  id="cu-customer-email"
+                  type="email"
+                  placeholder="customer@example.com"
+                  value={configUploadCustomerEmail}
+                  onChange={(e) => setConfigUploadCustomerEmail(e.target.value)}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  If provided, the upload link will be emailed automatically.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Link expires in</Label>
+                <Select value={String(configUploadDays)} onValueChange={(v) => setConfigUploadDays(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 day</SelectItem>
+                    <SelectItem value="3">3 days</SelectItem>
+                    <SelectItem value="7">7 days</SelectItem>
+                    <SelectItem value="14">14 days</SelectItem>
+                    <SelectItem value="30">30 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                className="w-full gap-2"
+                disabled={configUploadCreating}
+                onClick={handleCreateConfigUploadRequest}
+              >
+                {configUploadCreating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : configUploadCustomerEmail.trim() ? (
+                  <>
+                    <ExternalLink className="h-4 w-4" />
+                    Send Upload Request
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="h-4 w-4" />
+                    Create Upload Link
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {configUploadEmailSent && (
+                <div className="rounded-lg bg-[#00995a]/10 border border-[#00995a]/30 p-3 text-sm text-[#00995a] flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  Email sent to {configUploadCustomerEmail}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Upload link</Label>
+                <div className="flex items-center gap-2">
+                  <Input value={configUploadUrl ?? ""} readOnly className="text-xs font-mono" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => {
+                      if (configUploadUrl) {
+                        navigator.clipboard.writeText(configUploadUrl);
+                        toast.success("Link copied to clipboard");
+                      }
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge variant={configUploadStatus === "uploaded" ? "default" : "secondary"} className={cn(
+                  configUploadStatus === "uploaded" && "bg-[#00995a] text-white",
+                )}>
+                  {configUploadStatus === "uploaded" ? "Config Uploaded" : "Waiting for customer…"}
+                </Badge>
+              </div>
+
+              <div className="flex gap-2">
+                {configUploadStatus === "uploaded" && (
+                  <Button
+                    type="button"
+                    className="flex-1 gap-2 bg-[#00995a] hover:bg-[#00995a]/90"
+                    disabled={configUploadLoading}
+                    onClick={() => configUploadToken && handleLoadConfigFromUpload(configUploadToken)}
+                  >
+                    {configUploadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    Load Config
+                  </Button>
+                )}
+                {configUploadCustomerEmail.trim() && configUploadStatus === "pending" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={configUploadResending}
+                    onClick={handleResendConfigUploadEmail}
+                  >
+                    {configUploadResending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
+                    Resend Email
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                  onClick={() => configUploadToken && handleRevokeConfigUpload(configUploadToken)}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Revoke
+                </Button>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setConfigUploadToken(null);
+                  setConfigUploadUrl(null);
+                  setConfigUploadStatus(null);
+                  setConfigUploadEmailSent(false);
+                  setConfigUploadCustomerName("");
+                  setConfigUploadCustomerEmail("");
+                }}
+              >
+                Create another upload link
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* My Upload Requests Dialog */}
+      <Dialog open={configUploadRequestsOpen} onOpenChange={setConfigUploadRequestsOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              My Upload Requests
+            </DialogTitle>
+            <DialogDescription>
+              Manage config upload requests you&apos;ve sent to customers.
+            </DialogDescription>
+          </DialogHeader>
+
+          {configUploadListLoading && configUploadRequests.length === 0 ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : configUploadRequests.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-8">No upload requests yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {configUploadRequests.map((req) => {
+                const isExpired = new Date(req.expires_at) <= new Date();
+                const statusLabel = isExpired ? "Expired" : req.status === "uploaded" ? "Config Ready" : req.status === "downloaded" ? "Downloaded" : "Pending";
+                const statusColor = isExpired ? "text-muted-foreground" : req.status === "uploaded" ? "text-[#00995a]" : req.status === "downloaded" ? "text-blue-500" : "text-amber-500";
+                return (
+                  <div key={req.id} className="rounded-lg border p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{req.customer_name || "Unnamed"}</span>
+                        <span className={cn("text-xs font-medium", statusColor)}>{statusLabel}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(req.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                      </span>
+                    </div>
+                    {req.customer_email && (
+                      <p className="text-xs text-muted-foreground">{req.customer_email}</p>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      {req.status === "uploaded" && !isExpired && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5 bg-[#00995a] hover:bg-[#00995a]/90"
+                          disabled={configUploadLoading}
+                          onClick={() => handleLoadConfigFromUpload(req.token)}
+                        >
+                          {configUploadLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                          Load Config
+                        </Button>
+                      )}
+                      {req.status === "downloaded" && !isExpired && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1.5"
+                          disabled={configUploadLoading}
+                          onClick={() => handleLoadConfigFromUpload(req.token)}
+                        >
+                          {configUploadLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                          Re-download
+                        </Button>
+                      )}
+                      {!isExpired && req.status === "pending" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => {
+                            const url = `${window.location.origin}/upload/${req.token}`;
+                            navigator.clipboard.writeText(url);
+                            toast.success("Link copied");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                          Copy Link
+                        </Button>
+                      )}
+                      {!isExpired && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs gap-1.5 text-destructive hover:text-destructive"
+                          onClick={() => handleRevokeConfigUpload(req.token)}
+                        >
+                          <XCircle className="h-3 w-3" />
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
