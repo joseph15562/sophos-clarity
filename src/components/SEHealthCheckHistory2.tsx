@@ -205,14 +205,11 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
   }, [selectedIds, rows, seProfileId]);
 
   const moveTargets = useMemo(() => {
-    const targets: Array<{ id: string | null; label: string }> = [{ id: null, label: "Personal" }];
+    const targets: Array<{ id: string; label: string }> = [];
     for (const t of teams ?? []) {
       if (t.id !== activeTeamId) targets.push({ id: t.id, label: t.name });
     }
-    if (activeTeamId) {
-      return targets;
-    }
-    return targets.filter((t) => t.id !== null);
+    return targets;
   }, [teams, activeTeamId]);
 
   if (loading && rows.length === 0) return null;
@@ -238,7 +235,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                   <span className="text-[10px] text-muted-foreground">{selectedIds.size} selected</span>
                   {moveTargets.map((t) => (
                     <Button
-                      key={t.id ?? "__personal__"}
+                      key={t.id}
                       type="button"
                       variant="outline"
                       size="sm"

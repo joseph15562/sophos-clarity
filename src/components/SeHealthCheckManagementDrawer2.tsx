@@ -248,7 +248,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
   }, [fetchMembers, reloadTeams]);
 
   const handleDeleteTeam = useCallback(async (teamId: string) => {
-    if (!confirm("Delete this team? Health checks will move to Personal.")) return;
+    if (!confirm("Delete this team? This cannot be undone.")) return;
     setBusy(true);
     try {
       await apiCall(`se-teams/${teamId}`, "DELETE");

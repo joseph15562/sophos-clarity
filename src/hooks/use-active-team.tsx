@@ -65,9 +65,12 @@ export function ActiveTeamProvider({ seProfileId, children }: { seProfileId: str
       setTeams(fetched);
 
       if (!initialized) {
-        const primary = fetched.find((t) => t.is_primary);
+        const primary = fetched.find((t) => t.is_primary) ?? fetched[0];
         setActiveTeamId(primary?.id ?? null);
         setInitialized(true);
+      } else if (fetched.length > 0 && !fetched.some((t) => t.id === activeTeamId)) {
+        const primary = fetched.find((t) => t.is_primary) ?? fetched[0];
+        setActiveTeamId(primary?.id ?? null);
       }
     } finally {
       setLoading(false);
