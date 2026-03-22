@@ -139,6 +139,41 @@ async function sendConfigUploadEmail(
   }
 }
 
+function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: string, ctaLabel?: string, footNote?: string): string {
+  const ctaBlock = ctaUrl ? `
+<tr><td align="center" style="padding:8px 40px 16px 40px;">
+  <table cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#2563eb;border-radius:25px;">
+    <a href="${ctaUrl}" style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;font-family:'Segoe UI',Roboto,sans-serif;">${ctaLabel ?? "Open"}</a>
+  </td></tr></table>
+</td></tr>
+<tr><td align="center" style="padding:8px 40px 8px 40px;">
+  <p style="margin:0;font-size:12px;color:#888;line-height:1.5;">Do not share this link or forward this email.</p>
+</td></tr>` : "";
+  const footNoteBlock = footNote ? `<p style="margin:16px 0 0;font-size:13px;color:#aaa;line-height:1.5;">${footNote}</p>` : "";
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#3a3a3a;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#3a3a3a;padding:32px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#1a1a1a;max-width:600px;width:100%;">
+<tr><td style="background:#0050e0;padding:36px 40px;">
+  <h1 style="margin:0;font-size:24px;color:#ffffff;font-weight:800;font-family:'Segoe UI',Roboto,sans-serif;">${heading}</h1>
+</td></tr>
+<tr><td style="padding:36px 40px 24px 40px;font-size:15px;color:#ffffff;line-height:1.6;">
+  ${bodyContent}${footNoteBlock}
+</td></tr>${ctaBlock}
+<tr><td style="padding:20px 40px 36px 40px;">
+  <p style="margin:0;font-size:15px;color:#ffffff;line-height:1.6;">
+    Best Regards,<br><strong>Your Sophos Clarity Team</strong>
+  </p>
+</td></tr>
+<tr><td style="padding:20px 40px;border-top:1px solid #333;text-align:center;">
+  <p style="margin:0 0 8px;font-size:11px;color:#888;line-height:1.5;">&copy; ${new Date().getFullYear()} Sophos Ltd. All rights reserved.</p>
+  <p style="margin:0;font-size:11px;color:#666;line-height:1.5;">Sophos Clarity &bull; Sales Engineering Tools</p>
+</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
 function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expiresDate: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1253,7 +1288,7 @@ serve(async (req: Request) => {
             await sendConfigUploadEmail(
               ap.email,
               `${joinerName} joined your team "${teamInfo?.name ?? "your team"}"`,
-              `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;"><p><strong>${joinerName}</strong> has joined your team <strong>${teamInfo?.name ?? "your team"}</strong> in Sophos Clarity.</p></body></html>`,
+              buildSophosEmailHtml("New Team Member", `<p><strong>${joinerName}</strong> has joined your team <strong>${teamInfo?.name ?? "your team"}</strong> on Sophos Clarity.</p>`),
             );
           }
         }
@@ -1359,36 +1394,15 @@ serve(async (req: Request) => {
         const joinLink = `${APP_URL}/team-invite/${invite.token}`;
         const teamName = teamInfo?.name ?? "a team";
 
-        const emailHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;font-family:'Segoe UI',Roboto,sans-serif;background:#f4f5f7;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:32px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);">
-<tr><td style="background:linear-gradient(135deg,#2006F7,#4A20F7);padding:24px 32px;text-align:center;">
-  <h1 style="margin:0;font-size:22px;color:#ffffff;font-weight:700;">Sophos Clarity</h1>
-</td></tr>
-<tr><td style="padding:32px;">
-  <h2 style="margin:0 0 16px;font-size:18px;color:#1a1a2e;">You&rsquo;ve been invited to join a team</h2>
-  <p style="margin:0 0 16px;font-size:14px;color:#555;line-height:1.6;">
-    <strong>${inviterName}</strong> has invited you to join the <strong>${teamName}</strong> team on Sophos Clarity.
-  </p>
-  <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
-    Click the button below to accept the invitation and join the team.
-  </p>
-  <table cellpadding="0" cellspacing="0" width="100%"><tr><td align="center">
-    <a href="${joinLink}" style="display:inline-block;background:#2006F7;color:#ffffff;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">Join Team</a>
-  </td></tr></table>
-  <p style="margin:24px 0 0;font-size:12px;color:#999;line-height:1.5;">
-    This invite expires in 14 days. If you didn&rsquo;t expect this, you can safely ignore this email.
-  </p>
-</td></tr>
-<tr><td style="padding:16px 32px;background:#f9f9fb;text-align:center;border-top:1px solid #eee;">
-  <p style="margin:0;font-size:11px;color:#aaa;">Sophos Clarity &bull; Sales Engineering Tools</p>
-</td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+        const emailHtml = buildSophosEmailHtml(
+          "Team Invite",
+          `<p style="margin:0 0 20px;">Hi,</p>
+<p style="margin:0 0 20px;"><strong>${inviterName}</strong> has invited you to join the <strong>${teamName}</strong> team on Sophos Clarity.</p>
+<p style="margin:0 0 20px;">Simply click on the link below to accept the invitation and join the team.</p>`,
+          joinLink,
+          "Join Team",
+          "This invite expires in 14 days.",
+        );
 
         await sendConfigUploadEmail(
           email,
