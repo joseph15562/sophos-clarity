@@ -98,7 +98,7 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const res = await fetch(url);
         if (!res.ok) return;
         const svgText = await res.text();
-        const dataUrl = await svgToHighResPng(svgText, 65, 65);
+        const dataUrl = await svgToHighResPng(svgText, 65, 65, 12);
         if (dataUrl) out.shield = dataUrl;
       } catch { /* ignore */ }
     })(),
