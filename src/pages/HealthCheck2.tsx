@@ -924,9 +924,10 @@ function HealthCheckInner() {
       setShareExpiry(null);
       setHistoryRefreshKey((k) => k + 1);
       toast.success("Health check saved to your history.");
-    } catch (err) {
-      console.warn("[health-check] save failed", err);
-      toast.error("Could not save health check — " + (err instanceof Error ? err.message : "unknown error"));
+    } catch (err: any) {
+      console.error("[health-check] save failed", err);
+      const msg = err?.message || err?.error || (typeof err === "string" ? err : JSON.stringify(err));
+      toast.error("Could not save health check — " + msg);
     } finally {
       setSavingCheck(false);
     }
