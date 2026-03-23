@@ -1096,6 +1096,9 @@ function HealthCheckInner() {
             if (cd.licenses && Array.isArray(cd.licenses)) {
               setGuestFirewallLicenseItems(cd.licenses as GuestFirewallLicenseApiRow[]);
             }
+            if (cd.firewalls && Array.isArray(cd.firewalls)) {
+              setFirewallOptions(cd.firewalls as GuestFirewallRow[]);
+            }
             if (cd.tenants && Array.isArray(cd.tenants)) {
               setTenantOptions(cd.tenants as GuestTenantRow[]);
               if ((cd.tenants as GuestTenantRow[]).length > 0) {
