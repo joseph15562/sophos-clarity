@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Upload, CheckCircle2, Shield, AlertTriangle, ChevronDown, Lock, RefreshCw, Loader2, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface CentralFirewall {
@@ -422,16 +423,16 @@ const ConfigUpload = () => {
               {centralTenants.length > 1 && (
                 <div className="space-y-2">
                   <label className="text-white/50 text-xs font-medium block">Select tenant</label>
-                  <select
-                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
-                    value={selectedTenantId ?? ""}
-                    onChange={(e) => void handleTenantSelect(e.target.value)}
-                  >
-                    <option value="" disabled>Choose a tenant…</option>
-                    {centralTenants.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name || t.id}</option>
-                    ))}
-                  </select>
+                  <Select value={selectedTenantId ?? ""} onValueChange={(v) => void handleTenantSelect(v)}>
+                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-white text-sm h-10 rounded-lg">
+                      <SelectValue placeholder="Choose a tenant…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {centralTenants.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name || t.id}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               {loadingFirewalls && (
@@ -445,24 +446,31 @@ const ConfigUpload = () => {
                   <label className="text-white/50 text-xs font-medium block">
                     Which firewall does the <code className="bg-white/10 px-1 rounded text-[10px]">entities.xml</code> belong to?
                   </label>
-                  <select
-                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
-                    value={selectedFirewallId ?? "__none__"}
-                    onChange={(e) => handleFirewallSelect(e.target.value)}
-                  >
-                    <option value="__none__">Not linked</option>
-                    {firewallGroups.map((g) => {
-                      const all = [g.primary, ...g.peers];
-                      const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
-                      const displayName = g.primary.hostname || g.primary.name || g.primary.serialNumber || "Unknown";
-                      const ha = g.isHA ? ` [HA${g.peers.length > 0 ? ` — ${1 + g.peers.length} nodes` : ""}]` : "";
-                      return (
-                        <option key={g.primary.id} value={g.primary.id}>
-                          {displayName} — {serials}{ha}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  <Select value={selectedFirewallId ?? "__none__"} onValueChange={handleFirewallSelect}>
+                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-white text-sm h-10 rounded-lg">
+                      <SelectValue placeholder="Select firewall…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Not linked</SelectItem>
+                      {firewallGroups.map((g) => {
+                        const all = [g.primary, ...g.peers];
+                        const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
+                        const displayName = g.primary.hostname || g.primary.name || g.primary.serialNumber || "Unknown";
+                        return (
+                          <SelectItem key={g.primary.id} value={g.primary.id}>
+                            <span className="flex items-center gap-2">
+                              {displayName} — {serials}
+                              {g.isHA && (
+                                <span className="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#5A00FF]/15 text-[#B529F7]">
+                                  HA{g.peers.length > 0 ? ` (${1 + g.peers.length} nodes)` : ""}
+                                </span>
+                              )}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                   {selectedFirewallId && (
                     <div className="flex items-center gap-1.5 text-[#00995a] text-xs">
                       <CheckCircle2 className="h-3 w-3" />
