@@ -776,6 +776,7 @@ function HealthCheckInner() {
   }, []);
 
   const exportSummaryJson = useCallback(() => {
+    void saveHealthCheck();
     const manualOverrides = loadSeHealthCheckBpOverrides();
     const bp: Record<string, SophosBPScore> = {};
     for (const [label, ar] of Object.entries(analysisResults)) {
@@ -1334,6 +1335,7 @@ function HealthCheckInner() {
   }, [seAuth.seProfile, fetchConfigUploadRequests]);
 
   const handleDownloadHealthCheckPdf = useCallback(async () => {
+    void saveHealthCheck();
     const labels = files
       .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
       .filter((l) => analysisResults[l]);
@@ -1424,6 +1426,7 @@ function HealthCheckInner() {
   ]);
 
   const handleDownloadHealthCheckHtml = useCallback(async () => {
+    void saveHealthCheck();
     const labels = files
       .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
       .filter((l) => analysisResults[l]);
@@ -1510,6 +1513,7 @@ function HealthCheckInner() {
   ]);
 
   const handleDownloadHealthCheckZip = useCallback(async () => {
+    void saveHealthCheck();
     const labels = files
       .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
       .filter((l) => analysisResults[l]);
@@ -1596,6 +1600,7 @@ function HealthCheckInner() {
   ]);
 
   const handleSendReportToCustomer = useCallback(async () => {
+    void saveHealthCheck();
     if (!customerEmail.trim()) {
       toast.error("Enter a customer email address first.");
       return;
