@@ -60,6 +60,13 @@
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   border: none !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-footer button::before,
+.driver-popover-footer button::after {
+  content: none !important;
+  display: none !important;
 }
 
 .driver-popover-prev-btn {
