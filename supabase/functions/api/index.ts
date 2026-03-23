@@ -338,10 +338,11 @@ function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: str
 </table></td></tr></table></body></html>`;
 }
 
-function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expiresDate: string): string {
+function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expiresDate: string, contactName?: string): string {
+  const greeting = contactName ? `Hi ${contactName},` : "Hi,";
   return buildSophosEmailHtml(
     "Firewall Health Check",
-    `<p style="margin:0 0 20px;">Hi,</p>
+    `<p style="margin:0 0 20px;">${greeting}</p>
 <p style="margin:0 0 20px;"><strong>${seName}</strong> from Sophos has requested your firewall configuration for a health check.</p>
 <p style="margin:0 0 20px;">Please click the button below to securely upload your <code style="background:#333;padding:2px 6px;border-radius:3px;font-size:13px;color:#fff;">entities.xml</code> file.</p>
 <p style="margin:0 0 10px;font-size:14px;color:#aaa;"><strong style="color:#ccc;">Optional:</strong> You can also connect your <strong style="color:#ccc;">Sophos Central</strong> account on the upload page. This allows your SE to enrich the health check with licence expiry dates, firmware versions, and HA status — giving you a more comprehensive report.</p>
@@ -1797,7 +1798,8 @@ serve(async (req: Request) => {
     if (body.customer_email?.trim()) {
       const seName = se.seProfile.display_name || se.user.email || "Your Sophos SE";
       const expiresFormatted = expiresAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-      const emailHtml = buildCustomerUploadEmailHtml(uploadUrl, seName, expiresFormatted);
+      const contactName = body.contact_name?.trim() || null;
+      const emailHtml = buildCustomerUploadEmailHtml(uploadUrl, seName, expiresFormatted, contactName ?? undefined);
       const result = await sendConfigUploadEmail(
         body.customer_email.trim(),
         "Sophos Firewall Health Check — Configuration Upload",

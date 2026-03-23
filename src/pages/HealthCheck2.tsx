@@ -812,6 +812,7 @@ function HealthCheckInner() {
   // Config upload request state
   const [configUploadDialogOpen, setConfigUploadDialogOpen] = useState(false);
   const [configUploadCustomerName, setConfigUploadCustomerName] = useState("");
+  const [configUploadContactName, setConfigUploadContactName] = useState("");
   const [configUploadCustomerEmail, setConfigUploadCustomerEmail] = useState("");
   const [configUploadDays, setConfigUploadDays] = useState(7);
   const [configUploadCreating, setConfigUploadCreating] = useState(false);
@@ -1361,6 +1362,7 @@ function HealthCheckInner() {
         },
         body: JSON.stringify({
           customer_name: configUploadCustomerName.trim() || undefined,
+          contact_name: configUploadContactName.trim() || undefined,
           customer_email: configUploadCustomerEmail.trim() || undefined,
           expires_in_days: configUploadDays,
           team_id: activeTeamId ?? undefined,
@@ -1388,7 +1390,7 @@ function HealthCheckInner() {
     } finally {
       setConfigUploadCreating(false);
     }
-  }, [seAuth.seProfile, configUploadCustomerName, configUploadCustomerEmail, configUploadDays, fetchConfigUploadRequests, activeTeamId]);
+  }, [seAuth.seProfile, configUploadCustomerName, configUploadContactName, configUploadCustomerEmail, configUploadDays, fetchConfigUploadRequests, activeTeamId]);
 
   const handleResendConfigUploadEmail = useCallback(async () => {
     if (!configUploadToken) return;
@@ -2952,7 +2954,19 @@ function HealthCheckInner() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cu-customer-email">Customer email (optional)</Label>
+                <Label htmlFor="cu-contact-name">Contact name</Label>
+                <Input
+                  id="cu-contact-name"
+                  placeholder="e.g. John Smith"
+                  value={configUploadContactName}
+                  onChange={(e) => setConfigUploadContactName(e.target.value)}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  The person receiving the email — used in the greeting.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cu-customer-email">Customer email</Label>
                 <Input
                   id="cu-customer-email"
                   type="email"
