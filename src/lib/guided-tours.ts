@@ -76,7 +76,7 @@ export function startRiskScoreTour(cb?: TourCallbacks) {
       { element: sel("score-dial"), popover: { title: "Risk Score", description: "Your overall risk score from 0–100, based on weighted analysis across multiple security categories.", side: "right", align: "center" } },
       { element: sel("score-grade"), popover: { title: "Grade", description: "Letter grade for quick assessment. <strong>A</strong> = 90+, <strong>B</strong> = 75+, <strong>C</strong> = 60+, <strong>D</strong> = 40+, <strong>F</strong> = below 40.", side: "bottom", align: "center" } },
       { element: sel("score-categories"), popover: { title: "Category Breakdown", description: "Scores split across: Rule Hygiene, Inspection Coverage, Access Control, Network Segmentation, Logging & Visibility, and Authentication.", side: "top", align: "center" } },
-      { element: sel("score-simulator"), popover: { title: "Score Simulator", description: "Simulate the impact of fixing specific findings to see how your score would improve.", side: "top", align: "center" } },
+      { element: sel("score-simulator"), popover: { title: "Remediation Impact Simulator", description: "Select recommended remediation actions and instantly see how they would improve your score, grade, and coverage.", side: "top", align: "center" } },
     ]);
     t.drive();
   }, 300);
@@ -131,7 +131,7 @@ export function startRemediationTour(cb?: TourCallbacks) {
 }
 
 // ---------------------------------------------------------------------------
-// 7. Baselines & What-If
+// 7. Baselines & Remediation Simulator
 // ---------------------------------------------------------------------------
 export function startBaselineTour(cb?: TourCallbacks) {
   if (cb?.setAnalysisTab) cb.setAnalysisTab("tools");
@@ -139,11 +139,11 @@ export function startBaselineTour(cb?: TourCallbacks) {
     const steps: DriveStep[] = [
       { element: sel("compare-baseline"), popover: { title: "Compare to Baseline", description: "Compare your current analysis against a saved baseline to detect config drift.", side: "top", align: "center" } },
       { element: sel("baseline-manager"), popover: { title: "Baseline Manager", description: "Save a snapshot of your current config as a baseline for future comparison.", side: "top", align: "center" } },
-      { element: sel("what-if"), popover: { title: "What-If Comparison", description: "Model what-if scenarios to evaluate different configuration approaches.", side: "top", align: "center" } },
+      { element: sel("score-simulator"), popover: { title: "Remediation Impact Simulator", description: "Select recommended actions and instantly see projected risk reduction, grade improvement, and coverage gains.", side: "top", align: "center" } },
     ];
     const visible = filterVisible(steps);
     if (visible.length < steps.length) {
-      visible.push({ element: sel("widget-customiser"), popover: { title: "Enable More Widgets", description: "Some tools are hidden. Click the <strong>Widgets</strong> button to enable <strong>Baseline Manager</strong> and <strong>What-If Comparison</strong> on the Tools tab.", side: "bottom", align: "center" } });
+      visible.push({ element: sel("widget-customiser"), popover: { title: "Enable More Widgets", description: "Some tools are hidden. Click the <strong>Widgets</strong> button to enable <strong>Baseline Manager</strong> and other tools on the Tools tab.", side: "bottom", align: "center" } });
     }
     const t = driver({
       showProgress: true, animate: true, overlayColor: "rgba(0,0,0,0.6)",
@@ -398,7 +398,7 @@ export function startPowerUserTour() {
   const t = createTour([
     { element: sel("shortcuts-button"), popover: { title: "Keyboard Shortcuts", description: "Press <strong>?</strong> to see all keyboard shortcuts.", side: "top", align: "end" } },
     { popover: { title: "Key Shortcuts", description: "<strong>Ctrl+G</strong> — Generate all reports<br/><strong>Ctrl+S</strong> — Save reports<br/><strong>1-9</strong> — Switch between reports<br/><strong>Ctrl+D</strong> — Toggle management drawer<br/><strong>Ctrl+/</strong> — Open AI chat" } },
-    { element: sel("score-simulator"), popover: { title: "Score Simulator", description: "Simulate fixing findings to see projected score improvements.", side: "top", align: "center" } },
+    { element: sel("score-simulator"), popover: { title: "Remediation Impact Simulator", description: "Select recommended remediation actions and see projected score, grade, and coverage improvements.", side: "top", align: "center" } },
     { element: sel("attack-surface"), popover: { title: "Attack Surface Map", description: "Visualise your network's attack surface based on firewall rules.", side: "top", align: "center" } },
     { element: sel("rule-optimiser"), popover: { title: "Rule Optimiser", description: "Find redundant, shadowed, and overlapping firewall rules.", side: "top", align: "center" } },
     { element: sel("remediation-playbooks"), popover: { title: "Remediation Playbooks", description: "Step-by-step guides to fix every finding on a Sophos XGS firewall.", side: "top", align: "center" } },

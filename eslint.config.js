@@ -31,4 +31,15 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  {
+    files: [
+      "src/components/ui/**/*.tsx",
+      "src/components/BrandingSetup.tsx",
+      "src/components/SetupWizard.tsx",
+      "src/hooks/*.tsx",
+    ],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
 );

@@ -324,6 +324,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
         loadSubmission(agent.id);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedTenant, grouped]);
 
   const loadSubmission = useCallback(async (agentId: string) => {

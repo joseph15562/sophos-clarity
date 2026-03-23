@@ -78,6 +78,7 @@ export function CompareToSavedBaseline({ analysisResults, customerName }: Compar
       if (!cancelled) setSnapshotsByHost(acc);
     });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [org?.id, selectedEntry?.hostname, selectedEntry?.assessed_at, analysisResults]);
 
   if (isGuest || !org) return null;

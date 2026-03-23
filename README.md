@@ -118,7 +118,7 @@ The AI never sees real customer network data.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/sophos-firecomply.git
+git clone https://github.com/joseph15562/sophos-firecomply.git
 cd sophos-firecomply
 
 # Install dependencies
@@ -132,7 +132,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`.
+The app will be available at `http://localhost:8080`.
 
 ### Environment Variables
 
@@ -241,7 +241,7 @@ supabase secrets set ALLOWED_ORIGIN=https://your-domain.com
 - [x] Extraction coverage reporting and unsupported section visibility
 - [x] Backend abuse protection and rate limiting
 - [x] XSS-hardened markdown rendering (DOMPurify)
-- [ ] Code splitting for improved initial load performance
+- [x] Code splitting for improved initial load performance
 - [ ] Model fallback / graceful degraded mode when AI backend is unavailable
 
 ---

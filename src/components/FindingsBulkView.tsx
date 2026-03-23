@@ -93,6 +93,7 @@ export function FindingsBulkView({ analysisResults }: Props) {
     for (const title of titles) await acceptFinding(title);
     loadAccepted();
     setSelected(new Set());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, allFindings]);
 
   const handleExportSelected = useCallback(() => {

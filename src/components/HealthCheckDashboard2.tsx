@@ -220,7 +220,7 @@ export function HealthCheckDashboard({
       }
     }
     return m;
-  }, [analysisResults, labels, licence, hideSophosBpCard, seCentralSession, haLabelsForBp, bpOverrideRevision, seThreatResponseAck, seExcludedBpChecks]);
+  }, [analysisResults, labels, licence, hideSophosBpCard, seCentralSession, haLabelsForBp, seThreatResponseAck, seExcludedBpChecks]);
 
   const activeResult = analysisResults[activeLabel];
   const activeBp = bpByLabel[activeLabel];

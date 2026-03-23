@@ -565,7 +565,7 @@ export function AgentManager() {
                                 <div><span className="text-muted-foreground">Tenant:</span> <span className="font-medium text-foreground">{agent.tenant_name || "Unassigned"}</span></div>
                                 <div>
                                   <span className="text-muted-foreground">Central:</span>{" "}
-                                  {(agent as any).central_firewall_id ? (
+                                  {(agent as Record<string, unknown>).central_firewall_id ? (
                                     <span className="font-medium text-[#00F2B3] dark:text-[#00F2B3]">Linked</span>
                                   ) : (
                                     <span className="font-medium text-muted-foreground">Not linked</span>

@@ -61,7 +61,7 @@ export function PasskeyManager() {
             ...options.user,
             id: Uint8Array.from(atob(options.user.id), (c) => c.charCodeAt(0)),
           },
-          excludeCredentials: (options.excludeCredentials ?? []).map((c: any) => ({
+          excludeCredentials: (options.excludeCredentials ?? []).map((c: Record<string, string>) => ({
             ...c,
             id: Uint8Array.from(atob(c.id), (ch) => ch.charCodeAt(0)),
           })),

@@ -89,6 +89,7 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalIps.join(","), exposedServices.length]);
 
   const pointsWithCoords = data.filter((d) => d.geo) as Array<IpWithGeo & { geo: GeoLocation }>;

@@ -69,7 +69,7 @@ const CompliancePostureRing = lazy(() => import("@/components/CompliancePostureR
 const FrameworkCoverageBars = lazy(() => import("@/components/FrameworkCoverageBars").then((m) => ({ default: m.FrameworkCoverageBars })));
 const GeographicFleetMap = lazy(() => import("@/components/GeographicFleetMap").then((m) => ({ default: m.GeographicFleetMap })));
 const ExportCentre = lazy(() => import("@/components/ExportCentre").then((m) => ({ default: m.ExportCentre })));
-const WhatIfComparison = lazy(() => import("@/components/WhatIfComparison").then((m) => ({ default: m.WhatIfComparison })));
+// WhatIfComparison removed — functionality consolidated into ScoreSimulator (Remediation Impact Simulator)
 const RemediationRoadmap = lazy(() => import("@/components/RemediationRoadmap").then((m) => ({ default: m.RemediationRoadmap })));
 const FixEffortBreakdown = lazy(() => import("@/components/FixEffortBreakdown").then((m) => ({ default: m.FixEffortBreakdown })));
 const ImpactEffortBubble = lazy(() => import("@/components/ImpactEffortBubble").then((m) => ({ default: m.ImpactEffortBubble })));
@@ -239,6 +239,23 @@ export function AnalysisTabs({
           </Suspense>
 
           <SecurityPostureScorecard analysisResults={analysisResult} />
+
+          {totalFindings > 0 && (
+            <button
+              onClick={() => setActiveTab("tools")}
+              className="w-full rounded-xl border border-dashed border-[#5A00FF]/30 dark:border-[#00EDFF]/30 bg-gradient-to-r from-[#5A00FF]/[0.03] to-[#00EDFF]/[0.03] hover:from-[#5A00FF]/[0.06] hover:to-[#00EDFF]/[0.06] transition-colors px-5 py-3.5 text-left flex items-center gap-3 group"
+              data-tour="remediation-simulator-cta"
+            >
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#5A00FF]/20 to-[#00EDFF]/20 flex items-center justify-center shrink-0">
+                <Zap className="h-4 w-4 text-[#5A00FF] dark:text-[#00EDFF]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-foreground">Remediation Impact Simulator</p>
+                <p className="text-[10px] text-muted-foreground">See how recommended security actions would improve your score, grade, and coverage →</p>
+              </div>
+              <span className="text-muted-foreground text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+            </button>
+          )}
 
           <ReportUpsellStrip
             fileCount={files.length}
@@ -725,25 +742,19 @@ export function AnalysisTabs({
       {/* Tools */}
       <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Tools failed to load">
+          {totalFindings > 0 && (
+            <Suspense fallback={<CardSkeleton />}>
+              <ScoreSimulator analysisResults={analysisResult} onProjectedChange={setProjectedScore} defaultOpen />
+            </Suspense>
+          )}
+
           <Suspense fallback={<ChartSkeleton height={220} />}>
             <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
           </Suspense>
 
-          {totalFindings > 0 && (
-            <Suspense fallback={<CardSkeleton />}>
-              <ScoreSimulator analysisResults={analysisResult} onProjectedChange={setProjectedScore} />
-            </Suspense>
-          )}
-
           <Suspense fallback={<CardSkeleton />}>
             <AttackSurfaceMap files={files} />
           </Suspense>
-
-          {totalFindings > 0 && w("what-if-comparison") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <WhatIfComparison analysisResults={analysisResult} />
-            </Suspense>
-          )}
 
           {totalFindings > 0 && w("risk-roi") && (
             <Suspense fallback={<CardSkeleton />}>

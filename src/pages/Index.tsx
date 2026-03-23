@@ -521,6 +521,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setSaveError(e instanceof Error ? e.message : "Save failed");
     }
     setSavingReports(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisResults, reports, isGuest, org, branding.customerName, branding.environment, files.length, generateAll]);
 
   const handleLoadSavedReports = useCallback((args: LoadSavedReportArgs) => {

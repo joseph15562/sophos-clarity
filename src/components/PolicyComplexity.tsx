@@ -111,7 +111,7 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
       label,
       recommendations: recs.slice(0, 3),
     };
-  }, [analysisResults, files]);
+  }, [analysisResults]);
 
   const color = score < 40 ? GREEN : score <= 70 ? AMBER : RED;
   const size = 140;

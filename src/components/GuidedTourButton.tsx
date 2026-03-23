@@ -84,7 +84,7 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
                 <Wrench className="h-3.5 w-3.5 mr-2 shrink-0" /> Remediation Workflow
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => startBaselineTour(cb)}>
-                <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Baselines & What-If
+                <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Baselines & Remediation Simulator
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => startMapsTour(cb)}>
                 <Map className="h-3.5 w-3.5 mr-2 shrink-0" /> Geographic & Network Maps

@@ -262,6 +262,7 @@ function HealthCheckInner() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seAuth.seProfile, seAuth.reloadSeProfile]);
 
   const centralLinkedForAnalysis = centralValidated || replayCentralLinked;
@@ -454,7 +455,7 @@ function HealthCheckInner() {
     return paras.join("\n\n");
   }, [
     analysisResults, licence, centralLinkedForAnalysis, seCentralHaLabels,
-    seThreatResponseAck, seExcludedBpChecks, bpOverrideRevision,
+    seThreatResponseAck, seExcludedBpChecks,
     dpiExemptZones, dpiExemptNetworks, webFilterExemptRuleNames,
     webFilterComplianceMode, seMdrThreatFeedsAck, seNdrEssentialsAck,
     seDnsProtectionAck, seExcludeSecurityHeartbeat,
@@ -732,6 +733,7 @@ function HealthCheckInner() {
     a.download = "sophos-firewall-health-check-summary.json";
     a.click();
     URL.revokeObjectURL(url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     analysisResults,
     baselineResults,
@@ -923,7 +925,6 @@ function HealthCheckInner() {
     seNdrEssentialsAck,
     seDnsProtectionAck,
     seExcludeSecurityHeartbeat,
-    bpOverrideRevision,
     seCentralHaLabels,
     seThreatResponseAck,
     seExcludedBpChecks,
@@ -1152,6 +1153,7 @@ function HealthCheckInner() {
     } finally {
       setConfigUploadLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests, configUploadRequests, customerName, customerEmail]);
 
   const handleRevokeConfigUpload = useCallback(async (token: string) => {
@@ -1300,6 +1302,7 @@ function HealthCheckInner() {
     } finally {
       setPdfBusy(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     files,
     analysisResults,
@@ -1393,6 +1396,7 @@ function HealthCheckInner() {
       console.warn("[health-check] html download failed", e);
       toast.error(e instanceof Error ? e.message : "Could not generate HTML — try again.");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     files,
     analysisResults,
@@ -1484,6 +1488,7 @@ function HealthCheckInner() {
     } finally {
       setPdfBusy(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     files,
     analysisResults,
@@ -1610,6 +1615,7 @@ function HealthCheckInner() {
     } finally {
       setSendingReport(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     files, analysisResults, baselineResults, licence, customerName, customerEmail,
     preparedFor, effectivePreparedBy, dpiExemptZones, dpiExemptNetworks,

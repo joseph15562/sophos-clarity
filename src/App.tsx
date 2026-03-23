@@ -6,11 +6,11 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import Index from "./pages/Index";
-import SharedReport from "./pages/SharedReport";
 import NotFound from "./pages/NotFound";
-import HealthCheck from "./pages/HealthCheck2";
 
+const Index = lazy(() => import("./pages/Index"));
+const SharedReport = lazy(() => import("./pages/SharedReport"));
+const HealthCheck = lazy(() => import("./pages/HealthCheck2"));
 const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const SharedHealthCheck = lazy(() => import("./pages/SharedHealthCheck"));
 const ConfigUpload = lazy(() => import("./pages/ConfigUpload"));

@@ -1579,10 +1579,10 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
             {step.id === "guide-tools" && (
               <div className="space-y-5 relative">
                 {activeOverlay === "score-simulator" && (
-                  <FeatureOverlay title="Score Simulator" subtitle="Model what-if scenarios for your risk score" onClose={() => setActiveOverlay(null)}>
+                  <FeatureOverlay title="Remediation Impact Simulator" subtitle="See the projected impact of recommended security actions" onClose={() => setActiveOverlay(null)}>
                     <MockScoreSimulator />
                     <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Select findings you plan to fix and instantly see how your risk score would change. Great for prioritising remediation work and showing customers the impact of proposed changes.</p>
+                      <p className="text-[10px] text-muted-foreground"><strong className="text-foreground">How it works:</strong> Select recommended remediation actions and instantly see how your risk score, grade, and security coverage would improve. Great for prioritising remediation work and demonstrating ROI to customers.</p>
                     </div>
                   </FeatureOverlay>
                 )}
@@ -1637,7 +1637,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <FeatureButton icon={<Zap className="h-4 w-4" />} title="Score Simulator" desc="Model what-if scenarios to see how fixes impact your score" color="text-[#F29400]" onClick={() => setActiveOverlay("score-simulator")} />
+                  <FeatureButton icon={<Zap className="h-4 w-4" />} title="Remediation Simulator" desc="See projected risk reduction from recommended actions" color="text-[#F29400]" onClick={() => setActiveOverlay("score-simulator")} />
                   <FeatureButton icon={<Target className="h-4 w-4" />} title="Attack Surface" desc="Map internet-facing services, ports, and access paths" color="text-[#EA0022]" onClick={() => setActiveOverlay("attack-surface")} />
                   <FeatureButton icon={<GitCompare className="h-4 w-4" />} title="Config Compare" desc="Side-by-side diff between before and after configs" color="text-[#2006F7]" onClick={() => setActiveOverlay("config-compare")} />
                   <FeatureButton icon={<Package className="h-4 w-4" />} title="Export Centre" desc="Export reports, risk registers, and evidence in PDF, Word, PPTX" color="text-[#00F2B3]" onClick={() => setActiveOverlay("export-centre")} />
@@ -1645,7 +1645,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
 
                 <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Tip:</strong> Upload two configs to enable the Compare tab. The Score Simulator and Attack Surface Map are in the Tools tab after uploading any config.
+                    <strong className="text-foreground">Tip:</strong> Upload two configs to enable the Compare tab. The Remediation Impact Simulator and Attack Surface Map are in the Tools tab after uploading any config.
                   </p>
                 </div>
               </div>

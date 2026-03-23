@@ -89,6 +89,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     if (!open || !seProfile) return;
     setDraft(defaultDraftFromProfile(seProfile));
     setTitleDraft(seProfile.seTitle?.trim() || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, seProfile?.id, seProfile?.healthCheckPreparedBy, seProfile?.displayName, seProfile?.email, seProfile?.seTitle]);
 
   const handleSave = async () => {

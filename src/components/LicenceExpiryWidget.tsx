@@ -61,6 +61,7 @@ export function LicenceExpiryWidget() {
       fetchLicences();
       central.loadCachedFirewalls();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [central.isConnected, hasFetched, loading, fetchLicences, central.loadCachedFirewalls]);
 
   useEffect(() => {

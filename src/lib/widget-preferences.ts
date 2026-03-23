@@ -47,7 +47,6 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   { id: "rule-analysis",        label: "Rule Consolidation & Overlap", tab: "optimisation", isDefault: false },
 
   // ── Tools ──
-  { id: "what-if-comparison",     label: "What-If Comparison",       tab: "tools",     isDefault: false },
   { id: "risk-roi",               label: "Risk & ROI Analysis",      tab: "tools",     isDefault: false },
   { id: "export-centre",          label: "Export Centre",             tab: "tools",     isDefault: false },
   { id: "geographic-fleet-map",   label: "Geographic Fleet Map",     tab: "tools",     isDefault: false },

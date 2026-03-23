@@ -277,6 +277,7 @@ function HealthCheckInner() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seAuth.seProfile, seAuth.reloadSeProfile]);
 
   const centralLinkedForAnalysis = centralValidated || replayCentralLinked;
@@ -469,7 +470,7 @@ function HealthCheckInner() {
     return paras.join("\n\n");
   }, [
     analysisResults, licence, centralLinkedForAnalysis, seCentralHaLabels,
-    seThreatResponseAck, seExcludedBpChecks, bpOverrideRevision,
+    seThreatResponseAck, seExcludedBpChecks,
     dpiExemptZones, dpiExemptNetworks, webFilterExemptRuleNames,
     webFilterComplianceMode, seMdrThreatFeedsAck, seNdrEssentialsAck,
     seDnsProtectionAck, seExcludeSecurityHeartbeat,
@@ -891,6 +892,7 @@ function HealthCheckInner() {
     } finally {
       setSavingCheck(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     seAuth.seProfile,
     analysisResults,
@@ -960,7 +962,6 @@ function HealthCheckInner() {
     analysisResults,
     baselineResults,
     licence,
-    bpOverrideRevision,
     seCentralHaLabels,
     seThreatResponseAck,
     seMdrThreatFeedsAck,
@@ -1024,7 +1025,7 @@ function HealthCheckInner() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Findings CSV downloaded.");
-  }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes, bpOverrideRevision]);
+  }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes]);
 
   const recheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recheckVersionRef = useRef(0);
@@ -1209,7 +1210,7 @@ function HealthCheckInner() {
     webFilterComplianceMode, webFilterExemptRuleNames, seMdrThreatFeedsAck,
     seNdrEssentialsAck, seDnsProtectionAck, seExcludeSecurityHeartbeat,
     centralLinkedForAnalysis, seCentralHaLabels, seThreatResponseAck,
-    seExcludedBpChecks, bpOverrideRevision, seNotes, shareDays,
+    seExcludedBpChecks, seNotes, shareDays,
   ]);
 
   const handleRevokeShare = useCallback(async () => {
@@ -1456,6 +1457,7 @@ function HealthCheckInner() {
     } finally {
       setConfigUploadLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests, configUploadRequests, customerName, customerEmail]);
 
   const handleRevokeConfigUpload = useCallback(async (token: string) => {
@@ -1621,7 +1623,6 @@ function HealthCheckInner() {
     seDnsProtectionAck,
     seExcludeSecurityHeartbeat,
     centralLinkedForAnalysis,
-    bpOverrideRevision,
     seCentralHaLabels,
     seThreatResponseAck,
     seExcludedBpChecks,
@@ -1809,7 +1810,6 @@ function HealthCheckInner() {
     seDnsProtectionAck,
     seExcludeSecurityHeartbeat,
     centralLinkedForAnalysis,
-    bpOverrideRevision,
     seCentralHaLabels,
     seThreatResponseAck,
     seExcludedBpChecks,
@@ -1925,8 +1925,8 @@ function HealthCheckInner() {
     preparedFor, effectivePreparedBy, dpiExemptZones, dpiExemptNetworks,
     webFilterComplianceMode, webFilterExemptRuleNames, seMdrThreatFeedsAck,
     seNdrEssentialsAck, seDnsProtectionAck, seExcludeSecurityHeartbeat,
-    centralLinkedForAnalysis, bpOverrideRevision, seCentralHaLabels,
-    seThreatResponseAck, seExcludedBpChecks, seNotes, restoredHaLabels,
+    centralLinkedForAnalysis, seCentralHaLabels,
+    seThreatResponseAck, seExcludedBpChecks, seNotes,
     saveHealthCheck, seAuth.seProfile,
   ]);
 

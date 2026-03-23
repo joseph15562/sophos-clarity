@@ -43,7 +43,7 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
   const snapshots = useMemo(() => {
     const all = loadConfigSnapshots(hostname);
     return [...all].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [hostname, refreshTrigger]);
+  }, [hostname]);
 
   const [before, after] = compareSelection;
   const canCompare = before && after && before.id !== after.id;

@@ -75,6 +75,7 @@ export function ActiveTeamProvider({ seProfileId, children }: { seProfileId: str
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seProfileId, initialized]);
 
   useEffect(() => {

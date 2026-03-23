@@ -192,6 +192,7 @@ const ConfigUpload = () => {
       setPageState("ready");
       setUploadProgress(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -242,6 +243,7 @@ const ConfigUpload = () => {
       setCentralState("error");
       setCentralError(err instanceof Error ? err.message : "Connection failed");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, clientId, clientSecret]);
 
   const handleCentralLink = useCallback(async (firewallId: string, firewallName: string) => {

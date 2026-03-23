@@ -53,7 +53,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
         publicKey: {
           ...options,
           challenge: Uint8Array.from(atob(options.challenge), (c) => c.charCodeAt(0)),
-          allowCredentials: (options.allowCredentials ?? []).map((c: any) => ({
+          allowCredentials: (options.allowCredentials ?? []).map((c: Record<string, string>) => ({
             ...c,
             id: Uint8Array.from(atob(c.id), (ch) => ch.charCodeAt(0)),
           })),

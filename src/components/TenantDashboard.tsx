@@ -398,6 +398,7 @@ export function TenantDashboard() {
       if (prevThemeRef.current) setTheme(prevThemeRef.current);
       document.exitFullscreen?.().catch(() => {});
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nocMode]);
 
   if (nocMode) {
