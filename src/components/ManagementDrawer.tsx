@@ -4,6 +4,8 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { computeRiskScore } from "@/lib/risk-score";
+import { ScoreTrendChart } from "@/components/ScoreTrendChart";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +31,6 @@ const ScheduledReportSettings = lazy(() => import("@/components/ScheduledReportS
 const AgentManager = lazy(() => import("@/components/AgentManager").then((m) => ({ default: m.AgentManager })));
 const MfaEnrollment = lazy(() => import("@/components/MfaEnrollment").then((m) => ({ default: m.MfaEnrollment })));
 const PasskeyManager = lazy(() => import("@/components/PasskeyManager").then((m) => ({ default: m.PasskeyManager })));
-const ScoreTrendChart = lazy(() => import("@/components/ScoreTrendChart").then((m) => ({ default: m.ScoreTrendChart })));
 const CustomFrameworkBuilder = lazy(() => import("@/components/CustomFrameworkBuilder").then((m) => ({ default: m.CustomFrameworkBuilder })));
 const PortalConfigurator = lazy(() => import("@/components/PortalConfigurator").then((m) => ({ default: m.PortalConfigurator })));
 const WebhookSettings = lazy(() => import("@/components/WebhookSettings").then((m) => ({ default: m.WebhookSettings })));
@@ -254,7 +255,6 @@ export function ManagementDrawer({
           label: s.environment,
         }));
       if (Object.keys(analysisResults).length > 0) {
-        const { computeRiskScore } = await import("@/lib/risk-score");
         const scores = Object.values(analysisResults).map((r) => computeRiskScore(r).overall);
         const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
         const grade = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";

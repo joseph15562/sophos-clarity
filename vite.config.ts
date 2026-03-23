@@ -18,6 +18,7 @@ export default defineConfig(() => ({
     },
   },
   build: {
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -33,7 +34,10 @@ export default defineConfig(() => ({
           ],
           "vendor-recharts": ["recharts"],
           "vendor-supabase": ["@supabase/supabase-js"],
-          "vendor-export": ["docx", "jszip", "pptxgenjs", "file-saver"],
+          "vendor-docx": ["docx", "file-saver"],
+          "vendor-archive": ["jszip", "pptxgenjs"],
+          "vendor-pdfmake": ["pdfmake"],
+          "vendor-pdf-render": ["jspdf", "html-to-image", "html2canvas"],
         },
       },
     },
