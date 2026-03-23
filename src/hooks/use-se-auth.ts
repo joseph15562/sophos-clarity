@@ -175,7 +175,11 @@ export function useSEAuthProvider(): SEAuthState {
     if (fullName?.trim()) {
       opts.data = { full_name: fullName.trim() };
     }
-    const { error } = await supabase.auth.signUp({ email, password, options: opts });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { ...opts, emailRedirectTo: `${window.location.origin}/health-check` },
+    });
     return { error: error?.message ?? null };
   }, []);
 
