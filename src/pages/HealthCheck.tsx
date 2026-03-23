@@ -2818,7 +2818,7 @@ export default function HealthCheck() {
     return <SEAuthGate onSignIn={seAuth.signIn} onSignUp={seAuth.signUp} />;
   }
 
-  if (seAuth.seProfile && !seAuth.seProfile.displayName) {
+  if (seAuth.seProfile && !seAuth.seProfile.profileCompleted) {
     return <CompleteProfileGate seAuth={seAuth} />;
   }
 
@@ -2847,7 +2847,7 @@ function CompleteProfileGate({ seAuth }: { seAuth: ReturnType<typeof import("@/h
       if (metaErr) throw metaErr;
       const { error: dbErr } = await supabase
         .from("se_profiles")
-        .update({ display_name: trimmed } as Record<string, unknown>)
+        .update({ display_name: trimmed, profile_completed: true } as Record<string, unknown>)
         .eq("id", seAuth.seProfile!.id);
       if (dbErr) throw dbErr;
       await seAuth.reloadSeProfile();

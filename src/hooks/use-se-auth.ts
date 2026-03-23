@@ -10,6 +10,8 @@ export interface SEProfile {
   healthCheckPreparedBy: string | null;
   /** Job title shown on report emails (e.g. "Sophos Sales Engineer"). */
   seTitle: string | null;
+  /** Whether the SE has explicitly confirmed their profile name. */
+  profileCompleted: boolean;
 }
 
 export interface SEAuthState {
@@ -34,7 +36,7 @@ function isSophosDomain(email: string): boolean {
 async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
   const { data, error } = await supabase
     .from("se_profiles")
-    .select("id, email, display_name, health_check_prepared_by, se_title")
+    .select("id, email, display_name, health_check_prepared_by, se_title, profile_completed")
     .eq("user_id", userId)
     .limit(1)
     .single();
@@ -46,6 +48,7 @@ async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
     displayName: (data.display_name as string) ?? null,
     healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
     seTitle: (data.se_title as string) ?? null,
+    profileCompleted: !!(data.profile_completed),
   };
 }
 
@@ -56,12 +59,15 @@ async function createSEProfile(userId: string, email: string, user?: User): Prom
     null;
 
   const insert: Record<string, unknown> = { user_id: userId, email };
-  if (metaName) insert.display_name = metaName;
+  if (metaName) {
+    insert.display_name = metaName;
+    insert.profile_completed = true;
+  }
 
   const { data, error } = await supabase
     .from("se_profiles")
     .insert(insert)
-    .select("id, email, display_name, health_check_prepared_by, se_title")
+    .select("id, email, display_name, health_check_prepared_by, se_title, profile_completed")
     .single();
 
   if (error || !data) {
@@ -74,6 +80,7 @@ async function createSEProfile(userId: string, email: string, user?: User): Prom
     displayName: (data.display_name as string) ?? null,
     healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
     seTitle: (data.se_title as string) ?? null,
+    profileCompleted: !!(data.profile_completed),
   };
 }
 
