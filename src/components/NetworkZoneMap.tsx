@@ -63,13 +63,13 @@ function getZoneSecurityLevel(flows: ZoneFlow[], zone: string): SecurityLevel {
 }
 
 const FLOW_COLORS: Record<SecurityLevel, string> = {
-  full: "#00995a",
+  full: "#00F2B3",
   partial: "#F29400",
   none: "#EA0022",
 };
 
 const LEVEL_BG: Record<SecurityLevel, string> = {
-  full: "bg-[#00995a]/10 border-[#00995a]/30",
+  full: "bg-[#00F2B3]/10 border-[#00F2B3]/30",
   partial: "bg-[#F29400]/10 border-[#F29400]/30",
   none: "bg-[#EA0022]/10 border-[#EA0022]/30",
 };

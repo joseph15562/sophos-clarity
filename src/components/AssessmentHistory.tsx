@@ -26,7 +26,7 @@ interface Props {
 }
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00995a] dark:text-[#00F2B3]",
+  A: "text-[#00F2B3] dark:text-[#00F2B3]",
   B: "text-[#00774a] dark:text-[#00F2B3]",
   C: "text-[#b8a200] dark:text-[#F8E300]",
   D: "text-[#c47800] dark:text-[#F29400]",
@@ -178,7 +178,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
               disabled={saving}
               className={`flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
                 justSaved
-                  ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                  ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
                   : "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
               }`}
             >
@@ -239,7 +239,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                         />
                         <button
                           onClick={(e) => { e.stopPropagation(); confirmRename(); }}
-                          className="p-1 rounded-md text-[#00995a] hover:bg-[#00995a]/10 transition-colors"
+                          className="p-1 rounded-md text-[#00F2B3] hover:bg-[#00F2B3]/10 transition-colors"
                           title="Save"
                         >
                           <Check className="h-3.5 w-3.5" />
@@ -265,7 +265,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                       <span className="text-[9px] text-muted-foreground">{snap.firewalls.length} fw{snap.firewalls.length !== 1 ? "s" : ""}</span>
                       {drift && (
                         <span className={`flex items-center gap-0.5 text-[9px] font-bold ${
-                          drift.scoreDelta > 0 ? "text-[#00995a] dark:text-[#00F2B3]" :
+                          drift.scoreDelta > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                           drift.scoreDelta < 0 ? "text-[#EA0022]" : "text-muted-foreground"
                         }`}>
                           {drift.scoreDelta > 0 ? <TrendingUp className="h-3 w-3" /> :
@@ -310,7 +310,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                             {fw.riskScore.categories.map((c) => (
                               <div key={c.label} className="text-center">
                                 <div className={`text-[9px] font-bold tabular-nums ${
-                                  c.pct >= 80 ? "text-[#00995a] dark:text-[#00F2B3]" :
+                                  c.pct >= 80 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                                   c.pct >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
                                 }`}>{c.pct}%</div>
                                 <div className="text-[8px] text-muted-foreground leading-tight">{c.label}</div>
@@ -326,7 +326,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                       <div className="space-y-1.5">
                         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Changes from Previous</p>
                         {drift.improved.map((item) => (
-                          <div key={item} className="flex items-center gap-1.5 text-[10px] text-[#00995a] dark:text-[#00F2B3]">
+                          <div key={item} className="flex items-center gap-1.5 text-[10px] text-[#00F2B3] dark:text-[#00F2B3]">
                             <TrendingUp className="h-3 w-3 shrink-0" />
                             <span>{item}</span>
                           </div>

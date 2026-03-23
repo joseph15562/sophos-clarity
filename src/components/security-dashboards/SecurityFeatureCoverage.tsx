@@ -66,7 +66,7 @@ export function SecurityFeatureCoverage({ analysisResults }: { analysisResults: 
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-foreground">Feature Coverage</h3>
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${overallPct >= 75 ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" : overallPct >= 40 ? "bg-[#F29400]/10 text-[#F29400]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${overallPct >= 75 ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : overallPct >= 40 ? "bg-[#F29400]/10 text-[#F29400]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
             {overallPct}% avg
           </span>
           <span className="text-[10px] text-muted-foreground">{features.total} WAN rules</span>

@@ -10,7 +10,7 @@ interface ScoreDialGaugeProps {
 
 const RED = "#EA0022";
 const AMBER = "#F29400";
-const GREEN = "#00995a";
+const GREEN = "#00F2B3";
 const GREEN_DARK = "#00F2B3";
 
 function arcPath(

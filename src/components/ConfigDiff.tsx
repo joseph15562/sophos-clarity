@@ -21,14 +21,14 @@ const SEV_BADGE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
   medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-  low: "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]",
+  low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
   info: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]",
 };
 
 const STATUS_STYLES: Record<ChangeType, { bg: string; text: string; icon: React.ReactNode }> = {
   added: {
-    bg: "bg-[#00995a]/[0.06] dark:bg-[#00F2B3]/[0.08]",
-    text: "text-[#00995a] dark:text-[#00F2B3]",
+    bg: "bg-[#00F2B3]/[0.06] dark:bg-[#00F2B3]/[0.08]",
+    text: "text-[#00F2B3] dark:text-[#00F2B3]",
     icon: <Plus className="h-3.5 w-3.5" />,
   },
   removed: {
@@ -108,7 +108,7 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-xl border border-border bg-card p-4 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Before</p>
-            <p className={`text-3xl font-extrabold ${beforeScore.overall >= 70 ? "text-[#00995a] dark:text-[#00F2B3]" : beforeScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
+            <p className={`text-3xl font-extrabold ${beforeScore.overall >= 70 ? "text-[#00F2B3] dark:text-[#00F2B3]" : beforeScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
               {beforeScore.overall}
             </p>
             <p className="text-xs font-bold text-muted-foreground mt-0.5">{beforeScore.grade}</p>
@@ -116,7 +116,7 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
           </div>
           <div className="rounded-xl border border-border bg-card p-4 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">After</p>
-            <p className={`text-3xl font-extrabold ${afterScore.overall >= 70 ? "text-[#00995a] dark:text-[#00F2B3]" : afterScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
+            <p className={`text-3xl font-extrabold ${afterScore.overall >= 70 ? "text-[#00F2B3] dark:text-[#00F2B3]" : afterScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
               {afterScore.overall}
             </p>
             <p className="text-xs font-bold text-muted-foreground mt-0.5">{afterScore.grade}</p>
@@ -126,8 +126,8 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
             <div className="col-span-2 flex items-center justify-center gap-2 text-xs">
               {afterScore.overall > beforeScore.overall ? (
                 <>
-                  <ArrowUp className="h-4 w-4 text-[#00995a] dark:text-[#00F2B3]" />
-                  <span className="font-semibold text-[#00995a] dark:text-[#00F2B3]">+{afterScore.overall - beforeScore.overall} points improvement</span>
+                  <ArrowUp className="h-4 w-4 text-[#00F2B3] dark:text-[#00F2B3]" />
+                  <span className="font-semibold text-[#00F2B3] dark:text-[#00F2B3]">+{afterScore.overall - beforeScore.overall} points improvement</span>
                 </>
               ) : (
                 <>
@@ -170,9 +170,9 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
 
       {/* Section list */}
       {visibleSections.length === 0 ? (
-        <div className="rounded-xl border border-[#00995a]/30 dark:border-[#00F2B3]/30 bg-[#00995a]/5 dark:bg-[#00F2B3]/5 p-6 text-center">
-          <Check className="h-8 w-8 text-[#00995a] dark:text-[#00F2B3] mx-auto mb-2" />
-          <p className="text-sm font-semibold text-[#00995a] dark:text-[#00F2B3]">Configurations are identical</p>
+        <div className="rounded-xl border border-[#00F2B3]/30 dark:border-[#00F2B3]/30 bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 p-6 text-center">
+          <Check className="h-8 w-8 text-[#00F2B3] dark:text-[#00F2B3] mx-auto mb-2" />
+          <p className="text-sm font-semibold text-[#00F2B3] dark:text-[#00F2B3]">Configurations are identical</p>
           <p className="text-xs text-muted-foreground mt-1">No differences detected between the two configurations.</p>
         </div>
       ) : (
@@ -224,13 +224,13 @@ function FindingsDeltaSection({ newFindings, fixedFindings }: { newFindings: Fin
         </div>
 
         {/* Fixed findings */}
-        <div className="rounded-xl border border-[#00995a]/30 dark:border-[#00F2B3]/40 bg-[#00995a]/5 dark:bg-[#00F2B3]/5 overflow-hidden">
+        <div className="rounded-xl border border-[#00F2B3]/30 dark:border-[#00F2B3]/40 bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 overflow-hidden">
           <button
             onClick={() => setExpandedFixed(!expandedFixed)}
             className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
           >
             <span className="text-sm font-medium text-foreground">Fixed findings</span>
-            <span className="text-xs font-semibold text-[#00995a] dark:text-[#00F2B3]">{fixedFindings.length}</span>
+            <span className="text-xs font-semibold text-[#00F2B3] dark:text-[#00F2B3]">{fixedFindings.length}</span>
             {expandedFixed ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
           </button>
           {expandedFixed && fixedFindings.length > 0 && (
@@ -255,9 +255,9 @@ function DiffSummary({ diff }: { diff: ConfigDiffResult }) {
   const { summary } = diff;
   const chips: Array<{ label: string; count: number; color: string }> = [
     { label: "Sections Modified", count: summary.sectionsModified, color: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" },
-    { label: "Sections Added", count: summary.sectionsAdded, color: "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" },
+    { label: "Sections Added", count: summary.sectionsAdded, color: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" },
     { label: "Sections Removed", count: summary.sectionsRemoved, color: "bg-[#EA0022]/10 text-[#EA0022]" },
-    { label: "Rows Added", count: summary.totalRowsAdded, color: "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" },
+    { label: "Rows Added", count: summary.totalRowsAdded, color: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" },
     { label: "Rows Removed", count: summary.totalRowsRemoved, color: "bg-[#EA0022]/10 text-[#EA0022]" },
     { label: "Rows Modified", count: summary.totalRowsModified, color: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" },
   ];
@@ -371,7 +371,7 @@ function DiffRow({ row, headers }: { row: RowDiff; headers: string[] }) {
             {isChanged && prevData ? (
               <span>
                 <span className="line-through text-[#EA0022]/60 dark:text-[#EA0022]/80 mr-1">{prevData[h] ?? ""}</span>
-                <span className="text-[#00995a] dark:text-[#00F2B3]">{data[h] ?? ""}</span>
+                <span className="text-[#00F2B3] dark:text-[#00F2B3]">{data[h] ?? ""}</span>
               </span>
             ) : (
               <span className={row.status === "removed" ? "text-[#EA0022]/70" : ""}>{data[h] ?? ""}</span>

@@ -275,7 +275,7 @@ export function HealthCheckDashboard({
               <GaugeRing score={activeBp.overall} grade={activeBp.grade} />
               <div className="flex-1 space-y-2 text-sm">
                 <p className="text-muted-foreground">
-                  <span className="text-[#00995a] dark:text-[#00F2B3] font-semibold">{activeBp.passed}</span> pass ·{" "}
+                  <span className="text-[#00F2B3] dark:text-[#00F2B3] font-semibold">{activeBp.passed}</span> pass ·{" "}
                   <span className="text-red-500 font-semibold">{activeBp.failed}</span> fail ·{" "}
                   <span className="text-amber-500 font-semibold">{activeBp.warnings}</span> verify
                 </p>

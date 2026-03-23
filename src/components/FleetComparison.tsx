@@ -7,18 +7,18 @@ const SEV_BADGE: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
   medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-  low: "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]",
+  low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
   info: "bg-[#009CFB]/10 text-[#009CFB]",
 };
 
 function barColorClass(pct: number): string {
   if (pct < 40) return "bg-[#EA0022]";
   if (pct <= 75) return "bg-[#F29400]";
-  return "bg-[#00995a] dark:bg-[#00F2B3]";
+  return "bg-[#00F2B3] dark:bg-[#00F2B3]";
 }
 
 function gradeColorClass(grade: string): string {
-  if (grade === "A" || grade === "B") return "text-[#00995a] dark:text-[#00F2B3]";
+  if (grade === "A" || grade === "B") return "text-[#00F2B3] dark:text-[#00F2B3]";
   if (grade === "C" || grade === "D") return "text-[#F29400]";
   return "text-[#EA0022]";
 }
@@ -139,7 +139,7 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
           const pctB = getCategoryScore(categoriesB, label);
           const delta = pctA - pctB;
           const deltaIcon =
-            delta > 0 ? <ArrowUp className="h-3 w-3 text-[#00995a] dark:text-[#00F2B3]" /> : delta < 0 ? <ArrowDown className="h-3 w-3 text-[#EA0022]" /> : <Minus className="h-3 w-3 text-muted-foreground" />;
+            delta > 0 ? <ArrowUp className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" /> : delta < 0 ? <ArrowDown className="h-3 w-3 text-[#EA0022]" /> : <Minus className="h-3 w-3 text-muted-foreground" />;
           return (
             <div key={label} className="flex items-center gap-2">
               <span className="text-xs text-foreground w-32 shrink-0">{label}</span>

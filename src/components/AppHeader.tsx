@@ -89,7 +89,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     : false;
 
   const dotColor = status.connected
-    ? isStale ? "bg-[#F29400]" : "bg-[#00995a]"
+    ? isStale ? "bg-[#F29400]" : "bg-[#00F2B3]"
     : "bg-[#6A889B]";
 
   const label = status.connected
@@ -326,7 +326,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
             )}
             {hasFiles && (
               <span className="flex items-center gap-1 shrink-0">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00995a] dark:bg-[#00F2B3]" />
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00F2B3] dark:bg-[#00F2B3]" />
                 {fileCount} firewall{fileCount !== 1 ? "s" : ""} loaded
               </span>
             )}

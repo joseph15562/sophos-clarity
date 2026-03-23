@@ -21,7 +21,7 @@ interface Props {
 }
 
 const COLORS = {
-  Accept: "#00995a",
+  Accept: "#00F2B3",
   Drop: "#EA0022",
   Reject: "#F29400",
   Other: "#6B7280",

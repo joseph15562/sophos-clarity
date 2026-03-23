@@ -54,7 +54,7 @@ const SharedHealthCheck = () => {
   if (state === "loading") {
     return (
       <div className="min-h-screen bg-[#001A47] flex flex-col items-center justify-center p-6">
-        <Shield className="h-8 w-8 text-[#00995a] animate-pulse mb-3" />
+        <Shield className="h-8 w-8 text-[#00F2B3] animate-pulse mb-3" />
         <p className="text-white/60 text-sm">Loading health check report…</p>
       </div>
     );
@@ -157,7 +157,7 @@ const SharedHealthCheck = () => {
           <Button
             type="button"
             size="sm"
-            className="gap-1.5 h-8 bg-[#00995a] hover:bg-[#00995a]/90 text-white text-xs"
+            className="gap-1.5 h-8 bg-[#00F2B3] hover:bg-[#00F2B3]/90 text-white text-xs"
             onClick={handlePrint}
           >
             <FileText className="h-3.5 w-3.5" />

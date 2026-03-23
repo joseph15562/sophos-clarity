@@ -100,7 +100,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
             {!firstOnly && delta !== null && delta !== 0 && (
               <span
                 className={`inline-flex items-center gap-1 text-xs font-semibold tabular-nums ${
-                  delta > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"
+                  delta > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"
                 }`}
               >
                 {delta > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}

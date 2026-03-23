@@ -139,8 +139,8 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
   if (signupSuccess) {
     return (
       <div className="max-w-md mx-auto mt-16 rounded-xl border border-border bg-card p-8 text-center space-y-4">
-        <div className="h-12 w-12 rounded-full bg-[#00995a]/10 flex items-center justify-center mx-auto">
-          <UserPlus className="h-6 w-6 text-[#00995a] dark:text-[#00F2B3]" />
+        <div className="h-12 w-12 rounded-full bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
+          <UserPlus className="h-6 w-6 text-[#00F2B3] dark:text-[#00F2B3]" />
         </div>
         <h2 className="text-lg font-display font-bold text-foreground">Check your email</h2>
         <p className="text-sm text-muted-foreground">

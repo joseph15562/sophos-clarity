@@ -259,8 +259,8 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
 
   if (linked) {
     return (
-      <div className="flex items-center gap-2 mt-1 py-1 px-2 rounded bg-[#00995a]/5 dark:bg-[#00F2B3]/5 border border-[#00995a]/20 dark:border-[#00F2B3]/20">
-        <CheckCircle2 className="h-3 w-3 text-[#00995a] dark:text-[#00F2B3] shrink-0" />
+      <div className="flex items-center gap-2 mt-1 py-1 px-2 rounded bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 border border-[#00F2B3]/20 dark:border-[#00F2B3]/20">
+        <CheckCircle2 className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3] shrink-0" />
         <span className="text-[10px] text-foreground font-medium truncate">{linked.hostname || linked.serialNumber}</span>
         <span className="text-[9px] text-muted-foreground">{linked.model} · {linked.firmwareVersion}</span>
         <button onClick={handleUnlink} className="ml-auto text-[9px] text-muted-foreground hover:text-[#EA0022] transition-colors">Unlink</button>
@@ -356,7 +356,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                       }`}
                     >
                       <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                        (haGroup.primary.status as { connected?: boolean })?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"
+                        (haGroup.primary.status as { connected?: boolean })?.connected ? "bg-[#00F2B3]" : "bg-[#EA0022]"
                       }`} />
                       <Server className="h-3 w-3 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -374,7 +374,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                         <CheckCircle2 className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
                       )}
                       {autoMatch && (
-                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-semibold shrink-0">AUTO</span>
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold shrink-0">AUTO</span>
                       )}
                     </button>
                   );

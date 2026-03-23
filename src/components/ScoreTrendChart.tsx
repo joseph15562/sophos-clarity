@@ -4,7 +4,7 @@ import { toPng } from "html-to-image";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "stroke-[#00995a] dark:stroke-[#00F2B3] fill-[#00995a] dark:fill-[#00F2B3]",
+  A: "stroke-[#00F2B3] dark:stroke-[#00F2B3] fill-[#00F2B3] dark:fill-[#00F2B3]",
   B: "stroke-[#009CFB] fill-[#009CFB]",
   C: "stroke-[#F8E300] fill-[#F8E300]",
   D: "stroke-[#F29400] fill-[#F29400]",
@@ -173,11 +173,11 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
         </span>
         <span className="text-muted-foreground">→</span>
         <span className="text-muted-foreground">
-          Current: <span className={`font-semibold ${diff >= 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+          Current: <span className={`font-semibold ${diff >= 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
             {currentScore}
           </span> ({getGrade(current)})
           {diff !== 0 && (
-            <span className={diff > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
+            <span className={diff > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
               {" "}({diff > 0 ? "+" : ""}{diff})
             </span>
           )}

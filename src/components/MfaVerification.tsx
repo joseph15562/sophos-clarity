@@ -82,8 +82,8 @@ export function MfaVerification({ onVerified, onCancel, showPasskeyOption = true
   if (showRecoveryInfo) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-6 space-y-6 max-w-sm mx-auto">
-        <div className="h-16 w-16 rounded-2xl bg-[#00995a]/10 flex items-center justify-center">
-          <Mail className="h-8 w-8 text-[#00995a]" />
+        <div className="h-16 w-16 rounded-2xl bg-[#00F2B3]/10 flex items-center justify-center">
+          <Mail className="h-8 w-8 text-[#00F2B3]" />
         </div>
         <div className="text-center">
           <h2 className="text-lg font-bold text-foreground">Lost access to authenticator?</h2>

@@ -95,7 +95,7 @@ export function PeerBenchmark({ analysisResults, environment }: Props) {
       )}
 
       {vsPrevious !== null && vsPrevious !== 0 && (
-        <p className={`text-[10px] ${vsPrevious > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+        <p className={`text-[10px] ${vsPrevious > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
           {vsPrevious > 0 ? "+" : ""}{vsPrevious} vs previous assessment
         </p>
       )}
@@ -107,7 +107,7 @@ export function PeerBenchmark({ analysisResults, environment }: Props) {
           <p className={`text-2xl font-extrabold ${gradeColor(score.grade)}`}>{score.overall}</p>
         </div>
         <div className="flex flex-col items-center justify-center">
-          <span className={`text-lg font-bold ${delta >= 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+          <span className={`text-lg font-bold ${delta >= 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
             {delta >= 0 ? "+" : ""}{delta}
           </span>
           <span className="text-[9px] text-muted-foreground">
@@ -133,7 +133,7 @@ export function PeerBenchmark({ analysisResults, environment }: Props) {
                   <span className="font-bold text-foreground">{cat.pct}%</span>
                   <span className="text-muted-foreground">vs {benchVal}%</span>
                   {d !== 0 && (
-                    <span className={`font-bold ${d > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+                    <span className={`font-bold ${d > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
                       {d > 0 ? "+" : ""}{d}
                     </span>
                   )}
@@ -142,7 +142,7 @@ export function PeerBenchmark({ analysisResults, environment }: Props) {
               <div className="relative h-2 rounded-full bg-muted overflow-hidden">
                 <div
                   className={`absolute h-full rounded-full transition-all ${
-                    cat.pct >= 80 ? "bg-[#00995a] dark:bg-[#00F2B3]" : cat.pct >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]"
+                    cat.pct >= 80 ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : cat.pct >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]"
                   }`}
                   style={{ width: `${cat.pct}%` }}
                 />
@@ -166,7 +166,7 @@ export function PeerBenchmark({ analysisResults, environment }: Props) {
 
 function gradeColor(grade: string): string {
   switch (grade) {
-    case "A": case "B": return "text-[#00995a] dark:text-[#00F2B3]";
+    case "A": case "B": return "text-[#00F2B3] dark:text-[#00F2B3]";
     case "C": return "text-[#b8a200] dark:text-[#F8E300]";
     case "D": return "text-[#c47800] dark:text-[#F29400]";
     default: return "text-[#EA0022]";

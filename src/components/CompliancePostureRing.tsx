@@ -9,7 +9,7 @@ interface Props {
 }
 
 const STATUS_COLORS = {
-  pass: "#00995a",
+  pass: "#00F2B3",
   partial: "#F29400",
   fail: "#EA0022",
   na: "#6B7280",
@@ -103,7 +103,7 @@ export function CompliancePostureRing({ analysisResults, selectedFrameworks }: P
       </div>
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
         <div className="flex items-center gap-1.5 text-xs">
-          <span className="w-2 h-2 rounded-full shrink-0 bg-[#00995a]" />
+          <span className="w-2 h-2 rounded-full shrink-0 bg-[#00F2B3]" />
           <span className="text-muted-foreground">Pass</span>
           <span className="font-bold tabular-nums text-foreground">{pass}</span>
         </div>

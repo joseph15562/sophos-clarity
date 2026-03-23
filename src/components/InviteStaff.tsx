@@ -217,7 +217,7 @@ export function InviteStaff() {
       )}
 
       {success && (
-        <div className="flex items-center gap-2 text-xs text-[#00995a] dark:text-[#00F2B3] bg-[#00995a]/5 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-[#00F2B3] dark:text-[#00F2B3] bg-[#00F2B3]/5 rounded-lg px-3 py-2">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
           <span>{success}</span>
         </div>

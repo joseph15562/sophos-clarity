@@ -132,7 +132,7 @@ const SEV_BADGE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022] ring-[#EA0022]/20",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400] ring-[#F29400]/20",
   medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300] ring-[#F8E300]/20",
-  low: "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3] ring-[#00F2B3]/20",
+  low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] ring-[#00F2B3]/20",
   info: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB] ring-[#009CFB]/20",
 };
 
@@ -328,7 +328,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
     const slaDays = slaConfig[sev] ?? 90;
     const { status, daysOverdue, daysUntilDue } = computeSlaStatus(firstAt, slaDays, isDone);
     if (status === "resolved") {
-      return <span className="text-[10px] font-medium text-[#00995a] dark:text-[#00F2B3]">Resolved within SLA</span>;
+      return <span className="text-[10px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">Resolved within SLA</span>;
     }
     if (status === "breached" && daysOverdue != null) {
       return <span className="text-[10px] font-medium text-[#EA0022]">SLA Breached ({daysOverdue} overdue)</span>;
@@ -389,7 +389,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           <Clock className="h-3.5 w-3.5" />
           <span>~{totalMinutes} min remaining</span>
           {completed.size > 0 && (
-            <span className="ml-1 text-[#00995a] dark:text-[#00F2B3] font-bold">{completed.size}/{playbooks.length} done</span>
+            <span className="ml-1 text-[#00F2B3] dark:text-[#00F2B3] font-bold">{completed.size}/{playbooks.length} done</span>
           )}
         </div>
       </div>
@@ -402,7 +402,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           </div>
           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-[#00995a] dark:bg-[#00F2B3] transition-all"
+              className="h-full rounded-full bg-[#00F2B3] dark:bg-[#00F2B3] transition-all"
               style={{ width: `${slaStats.totalWithSla > 0 ? (100 * slaStats.resolvedWithinSla / slaStats.totalWithSla) : 0}%` }}
             />
           </div>
@@ -438,7 +438,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           const consolePath = getSophosConsoleLink(pb.findingSection);
 
           return (
-            <div key={pb.findingId} className={`rounded-lg border ${accepted ? "border-muted-foreground/20 bg-muted/[0.04] opacity-60" : isDone ? "border-[#00995a]/20 dark:border-[#00F2B3]/20 bg-[#00995a]/[0.02] dark:bg-[#00F2B3]/[0.02]" : "border-border bg-card"} transition-colors`}>
+            <div key={pb.findingId} className={`rounded-lg border ${accepted ? "border-muted-foreground/20 bg-muted/[0.04] opacity-60" : isDone ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.02] dark:bg-[#00F2B3]/[0.02]" : "border-border bg-card"} transition-colors`}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <label
                   className="shrink-0 cursor-pointer"
@@ -494,7 +494,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                     if (proj && proj.projected > proj.current) {
                       const diff = proj.projected - proj.current;
                       return (
-                        <span className="text-[10px] font-medium text-[#00995a] dark:text-[#00F2B3]">
+                        <span className="text-[10px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">
                           Score: {proj.current} → {proj.projected} (+{diff})
                         </span>
                       );
@@ -571,7 +571,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                     {!accepted && (
                       <button
                         onClick={(e) => { e.stopPropagation(); markComplete(pb.findingId); }}
-                        className={`flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-md transition-colors ${isDone ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                        className={`flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-md transition-colors ${isDone ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground hover:text-foreground"}`}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         {isDone ? "Completed" : "Mark as done"}
@@ -616,7 +616,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                 setCheckedIds(new Set());
                 toast.success(`Marked ${idsToMark.length} as done`);
               }}
-              className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-md bg-[#00995a]/10 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] hover:bg-[#00995a]/20 dark:hover:bg-[#00F2B3]/20 transition-colors"
+              className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-md bg-[#00F2B3]/10 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] hover:bg-[#00F2B3]/20 dark:hover:bg-[#00F2B3]/20 transition-colors"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               Mark {checkedIds.size} as Done

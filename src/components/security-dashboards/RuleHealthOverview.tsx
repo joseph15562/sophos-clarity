@@ -38,10 +38,10 @@ export function RuleHealthOverview({ analysisResults }: { analysisResults: Recor
   const cards: { key: CardKey; label: string; value: number; color: string; tooltip: string }[] = [
     { key: "totalRules", label: "Total Rules", value: stats.totalRules, color: "#2006F7", tooltip: "Total firewall rules across all configs" },
     { key: "wanRules", label: "WAN Rules", value: stats.wanRules, color: "#EA0022", tooltip: "Rules with WAN source/destination zones — the internet-facing attack surface" },
-    { key: "disabledRules", label: "Disabled", value: stats.disabledRules, color: stats.disabledRules > 0 ? "#F29400" : "#00995a", tooltip: stats.disabledRules > 0 ? "Disabled rules add no security value and may indicate abandoned policy" : "No disabled rules — clean configuration" },
+    { key: "disabledRules", label: "Disabled", value: stats.disabledRules, color: stats.disabledRules > 0 ? "#F29400" : "#00F2B3", tooltip: stats.disabledRules > 0 ? "Disabled rules add no security value and may indicate abandoned policy" : "No disabled rules — clean configuration" },
     { key: "natRules", label: "NAT Rules", value: stats.natRules, color: "#5A00FF", tooltip: "Network Address Translation rules — port forwarding and masquerading" },
     { key: "hosts", label: "Hosts", value: stats.hosts, color: "#009CFB", tooltip: "IP hosts/networks defined in the firewall configuration" },
-    { key: "interfaces", label: "Interfaces", value: stats.interfaces, color: "#00995a", tooltip: "Physical and virtual network interfaces configured" },
+    { key: "interfaces", label: "Interfaces", value: stats.interfaces, color: "#00F2B3", tooltip: "Physical and virtual network interfaces configured" },
   ];
 
   return (

@@ -215,7 +215,7 @@ export function SlaManagement() {
                     {p.breachCount > 0 ? (
                       <AlertTriangle className="h-3.5 w-3.5 text-[#EA0022]" />
                     ) : (
-                      <CheckCircle className="h-3.5 w-3.5 text-[#00995a]" />
+                      <CheckCircle className="h-3.5 w-3.5 text-[#00F2B3]" />
                     )}
                     <span>Breaches: {p.breachCount}</span>
                   </div>

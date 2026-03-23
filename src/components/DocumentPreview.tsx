@@ -108,7 +108,7 @@ const SEVERITY_COLORS: Record<Severity, { bg: string; text: string; border: stri
 function GradeRing({ grade, score }: { grade: string; score: number }) {
   const r = 36, c = 2 * Math.PI * r;
   const offset = c - (score / 100) * c;
-  const color = score >= 90 ? "#00995a" : score >= 75 ? "#2006F7" : score >= 60 ? "#F29400" : "#e53e3e";
+  const color = score >= 90 ? "#00F2B3" : score >= 75 ? "#2006F7" : score >= 60 ? "#F29400" : "#e53e3e";
   return (
     <div className="relative flex items-center justify-center shrink-0">
       <svg width="88" height="88" viewBox="0 0 88 88">
@@ -187,7 +187,7 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
                   <div className="w-14 h-1.5 rounded-full bg-border overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500" style={{
                       width: `${cat.pct}%`,
-                      backgroundColor: cat.pct >= 80 ? "#00995a" : cat.pct >= 50 ? "#F29400" : "#e53e3e"
+                      backgroundColor: cat.pct >= 80 ? "#00F2B3" : cat.pct >= 50 ? "#F29400" : "#e53e3e"
                     }} />
                   </div>
                   <span className="text-[10px] text-muted-foreground">{cat.label} <span className="font-semibold text-foreground">{cat.pct}%</span></span>
@@ -256,7 +256,7 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
             {scores.length >= 2 && worstFw && bestFw && (
               <div className="flex gap-4 text-[11px]">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <TrendingUp className="h-3 w-3 text-[#00995a]" />
+                  <TrendingUp className="h-3 w-3 text-[#00F2B3]" />
                   Best: <span className="font-semibold text-foreground">{Object.keys(analysisResults)[bestFw.idx]}</span> ({bestFw.score}%)
                 </span>
                 <span className="flex items-center gap-1.5 text-muted-foreground">
@@ -316,19 +316,19 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
           <div className="relative flex items-center justify-center shrink-0">
             <svg width="88" height="88" viewBox="0 0 88 88">
               <circle cx="44" cy="44" r="36" fill="none" stroke="currentColor" strokeWidth="5" className="text-border" />
-              <circle cx="44" cy="44" r="36" fill="none" stroke="#00995a" strokeWidth="5" strokeLinecap="round"
+              <circle cx="44" cy="44" r="36" fill="none" stroke="#00F2B3" strokeWidth="5" strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 36} strokeDashoffset={2 * Math.PI * 36 - (compliancePct / 100) * 2 * Math.PI * 36}
                 transform="rotate(-90 44 44)" className="transition-all duration-700" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl font-black text-[#00995a]">{compliancePct}%</span>
+              <span className="text-xl font-black text-[#00F2B3]">{compliancePct}%</span>
               <span className="text-[10px] text-muted-foreground font-medium">compliant</span>
             </div>
           </div>
           <div className="flex-1 min-w-[200px] space-y-3">
             <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg border border-[#00995a]/20 bg-[#00995a]/5 px-3 py-2 text-center">
-                <p className="text-lg font-bold text-[#00995a]">{totalPass}</p>
+              <div className="rounded-lg border border-[#00F2B3]/20 bg-[#00F2B3]/5 px-3 py-2 text-center">
+                <p className="text-lg font-bold text-[#00F2B3]">{totalPass}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">Pass</p>
               </div>
               <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2 text-center">
@@ -349,7 +349,7 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
                     <span className="text-[11px] text-muted-foreground w-32 truncate shrink-0">{fm.framework}</span>
                     <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
                       <div className="h-full rounded-full flex">
-                        {fm.summary.pass > 0 && <div className="bg-[#00995a] h-full" style={{ width: `${(fm.summary.pass / (fwTotal || 1)) * 100}%` }} />}
+                        {fm.summary.pass > 0 && <div className="bg-[#00F2B3] h-full" style={{ width: `${(fm.summary.pass / (fwTotal || 1)) * 100}%` }} />}
                         {fm.summary.partial > 0 && <div className="bg-yellow-500 h-full" style={{ width: `${(fm.summary.partial / (fwTotal || 1)) * 100}%` }} />}
                         {fm.summary.fail > 0 && <div className="bg-red-500 h-full" style={{ width: `${(fm.summary.fail / (fwTotal || 1)) * 100}%` }} />}
                       </div>
@@ -622,11 +622,11 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
                 const isDone = i < currentIdx;
                 return (
                   <span key={step} className="flex items-center gap-1.5">
-                    {i > 0 && <span className={`w-6 h-px ${isDone ? "bg-[#00995a] dark:bg-[#00F2B3]" : "bg-border"}`} />}
-                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${isDone ? "bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/15 dark:text-[#00F2B3]" : isActive ? "bg-primary/15 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"}`}>
+                    {i > 0 && <span className={`w-6 h-px ${isDone ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : "bg-border"}`} />}
+                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${isDone ? "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/15 dark:text-[#00F2B3]" : isActive ? "bg-primary/15 text-primary ring-2 ring-primary/30" : "bg-muted text-muted-foreground"}`}>
                       {isDone ? "✓" : i + 1}
                     </span>
-                    <span className={`${isActive ? "font-semibold text-foreground" : isDone ? "text-[#00995a] dark:text-[#00F2B3]" : "text-muted-foreground"}`}>{step}</span>
+                    <span className={`${isActive ? "font-semibold text-foreground" : isDone ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-muted-foreground"}`}>{step}</span>
                   </span>
                 );
               })}
@@ -754,7 +754,7 @@ function EvidenceVerification({
     critical: "bg-[#EA0022]/10 text-[#EA0022]",
     high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
     medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-    low: "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]",
+    low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
     info: "bg-[#009CFB]/10 text-[#009CFB]",
   };
   return (
@@ -978,7 +978,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
                 {r.label}
                 {loadingReportIds.has(r.id) && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                 {failedReportIds.has(r.id) && <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-destructive/10 text-destructive text-[10px]">✕</span>}
-                {done && <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/15 dark:text-[#00F2B3] text-[10px]">✓</span>}
+                {done && <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/15 dark:text-[#00F2B3] text-[10px]">✓</span>}
               </button>
             );
           })}

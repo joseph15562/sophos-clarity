@@ -77,9 +77,9 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
 
   const cellClass = (count: number): string => {
     if (count === 0) return "bg-muted/30";
-    if (count <= 2) return "bg-[#00995a]/20";
-    if (count <= 5) return "bg-[#00995a]/40";
-    return "bg-[#00995a]/70";
+    if (count <= 2) return "bg-[#00F2B3]/20";
+    if (count <= 5) return "bg-[#00F2B3]/40";
+    return "bg-[#00F2B3]/70";
   };
 
   const getDateForCell = (col: number, row: number): string => {

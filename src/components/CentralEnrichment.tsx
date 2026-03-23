@@ -178,7 +178,7 @@ export function CentralEnrichment({ configMetas, customerName: _customerName }: 
           Sophos Central Live Data
         </span>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${allConnected ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${allConnected ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
             {allConnected ? "All Online" : "Offline Detected"}
           </span>
           {totalAlerts > 0 && (
@@ -207,7 +207,7 @@ export function CentralEnrichment({ configMetas, customerName: _customerName }: 
                 {data.firewall && (
                   <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium ${
                     data.firewall.status?.connected
-                      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                      ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
                       : "bg-[#EA0022]/10 text-[#EA0022]"
                   }`}>
                     {data.firewall.status?.connected ? <Wifi className="h-2.5 w-2.5" /> : <WifiOff className="h-2.5 w-2.5" />}
@@ -258,10 +258,10 @@ export function CentralEnrichment({ configMetas, customerName: _customerName }: 
                             </span>
                           </div>
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                            lic.perpetual ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                            lic.perpetual ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" :
                             isExpired ? "bg-[#EA0022]/10 text-[#EA0022]" :
                             isExpiring ? "bg-[#F29400]/10 text-[#F29400]" :
-                            "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                            "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
                           }`}>
                             {lic.perpetual ? "Active" : isExpired ? "EXPIRED" : `${lic.daysRemaining}d`}
                           </span>

@@ -85,7 +85,7 @@ export function AssessmentCountdown() {
             const isRed = days < 3 || overdue;
 
             let Icon = CheckCircle;
-            let statusClass = "text-[#00995a] dark:text-[#00F2B3]";
+            let statusClass = "text-[#00F2B3] dark:text-[#00F2B3]";
             if (isRed) {
               Icon = AlertCircle;
               statusClass = "text-[#EA0022]";

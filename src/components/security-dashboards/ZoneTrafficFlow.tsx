@@ -36,7 +36,7 @@ type ZoneCategory = "WAN" | "LAN" | "DMZ" | "VPN" | "Guest" | "Other";
 
 const ZONE_CAT_CONFIG: Record<ZoneCategory, { color: string; match: (z: string) => boolean }> = {
   WAN:   { color: "#EA0022", match: (z) => z.includes("wan") },
-  LAN:   { color: "#00995a", match: (z) => z.includes("lan") || z.includes("server") },
+  LAN:   { color: "#00F2B3", match: (z) => z.includes("lan") || z.includes("server") },
   DMZ:   { color: "#F29400", match: (z) => z.includes("dmz") },
   VPN:   { color: "#2006F7", match: (z) => z.includes("vpn") },
   Guest: { color: "#B529F7", match: (z) => z.includes("guest") || z.includes("wifi") },
@@ -68,7 +68,7 @@ function ProtectionDot({ covered, total, label }: { covered: number; total: numb
     );
   }
   const ratio = covered / total;
-  const color = ratio >= 1 ? "#00995a" : ratio > 0 ? "#F29400" : "#EA0022";
+  const color = ratio >= 1 ? "#00F2B3" : ratio > 0 ? "#F29400" : "#EA0022";
   return (
     <span
       title={`${label}: ${covered}/${total} rules`}
@@ -264,7 +264,7 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
       <div className="max-h-72 overflow-y-auto overflow-x-auto rounded-lg border border-border">
         {filteredFlows.length === 0 && problemsOnly ? (
           <div className="flex items-center justify-center py-12 px-4">
-            <span className="inline-flex items-center gap-2 text-[11px] font-medium text-[#00995a] dark:text-[#00F2B3] border border-[#00995a]/20 bg-[#00995a]/5 rounded-lg px-4 py-2">
+            <span className="inline-flex items-center gap-2 text-[11px] font-medium text-[#00F2B3] dark:text-[#00F2B3] border border-[#00F2B3]/20 bg-[#00F2B3]/5 rounded-lg px-4 py-2">
               ✓ No problems found — all flows have web filtering and IPS where applicable
             </span>
           </div>
@@ -314,7 +314,7 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                           <ProtectionDot covered={f.hasAppControl} total={f.count} label="App" />
                         </span>
                         <span className={`font-bold tabular-nums w-8 text-right ${
-                          coveragePct >= 75 ? "text-[#00995a]" : coveragePct >= 40 ? "text-[#F29400]" : "text-[#EA0022]"
+                          coveragePct >= 75 ? "text-[#00F2B3]" : coveragePct >= 40 ? "text-[#F29400]" : "text-[#EA0022]"
                         }`}>
                           {coveragePct}%
                         </span>
@@ -330,14 +330,14 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                             <span className="ml-auto flex items-center gap-1.5 shrink-0 text-[8px]">
                               {r.needsWf ? (
                                 r.hasWf
-                                  ? <span className="px-1 rounded bg-[#00995a]/15 text-[#00995a] font-bold">WF</span>
+                                  ? <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">WF</span>
                                   : <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">WF</span>
                               ) : (
                                 <span className="px-1 rounded bg-muted/40 text-muted-foreground/50" title="Non-web service — web filter not applicable">WF n/a</span>
                               )}
-                              {r.hasIps && <span className="px-1 rounded bg-[#00995a]/15 text-[#00995a] font-bold">IPS</span>}
+                              {r.hasIps && <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">IPS</span>}
                               {!r.hasIps && <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">IPS</span>}
-                              {r.hasApp && <span className="px-1 rounded bg-[#00995a]/15 text-[#00995a] font-bold">APP</span>}
+                              {r.hasApp && <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">APP</span>}
                               {!r.hasApp && <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">APP</span>}
                             </span>
                           </div>
@@ -363,7 +363,7 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                 ins.type === "warn"
                   ? "border-[#F29400]/20 bg-[#F29400]/5 text-[#F29400]"
                   : ins.type === "good"
-                    ? "border-[#00995a]/20 bg-[#00995a]/5 text-[#00995a] dark:text-[#00F2B3]"
+                    ? "border-[#00F2B3]/20 bg-[#00F2B3]/5 text-[#00F2B3] dark:text-[#00F2B3]"
                     : "border-border bg-muted/30 text-muted-foreground"
               }`}
             >

@@ -317,12 +317,12 @@ const ConfigUpload = () => {
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Wifi className={cn("h-4 w-4", centralState === "connected" ? "text-[#00995a]" : "text-white/40")} />
+          <Wifi className={cn("h-4 w-4", centralState === "connected" ? "text-[#00F2B3]" : "text-white/40")} />
           <span className="text-white/60 text-sm font-medium">
             {centralState === "connected" ? "Sophos Central connected" : "Optional: Connect Sophos Central"}
           </span>
           {centralState === "connected" && (
-            <span className="text-[10px] bg-[#00995a]/20 text-[#00995a] px-2 py-0.5 rounded-full font-medium">Connected</span>
+            <span className="text-[10px] bg-[#00F2B3]/20 text-[#00F2B3] px-2 py-0.5 rounded-full font-medium">Connected</span>
           )}
         </div>
         <ChevronDown className={cn("h-4 w-4 text-white/40 transition-transform", centralOpen && "rotate-180")} />
@@ -352,7 +352,7 @@ const ConfigUpload = () => {
                 />
                 <Button
                   type="button"
-                  className="w-full bg-[#2563eb] hover:bg-[#2563eb]/90 text-white gap-2"
+                  className="w-full bg-[#2006F7] hover:bg-[#2006F7]/90 text-white gap-2"
                   disabled={!clientId.trim() || !clientSecret.trim()}
                   onClick={handleCentralConnect}
                 >
@@ -409,13 +409,13 @@ const ConfigUpload = () => {
             </>
           ) : centralState === "connecting" ? (
             <div className="text-center py-4 space-y-3">
-              <Loader2 className="h-6 w-6 text-[#2563eb] mx-auto animate-spin" />
+              <Loader2 className="h-6 w-6 text-[#2006F7] mx-auto animate-spin" />
               <p className="text-white/60 text-sm">Connecting to Sophos Central…</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-[#00995a]" />
+                <CheckCircle2 className="h-4 w-4 text-[#00F2B3]" />
                 <span className="text-white/70 text-sm">
                   Connected as {centralAccountType === "tenant" ? "Tenant" : centralAccountType === "partner" ? "Partner" : "Organization"}
                 </span>
@@ -472,7 +472,7 @@ const ConfigUpload = () => {
                     </SelectContent>
                   </Select>
                   {selectedFirewallId && (
-                    <div className="flex items-center gap-1.5 text-[#00995a] text-xs">
+                    <div className="flex items-center gap-1.5 text-[#00F2B3] text-xs">
                       <CheckCircle2 className="h-3 w-3" />
                       Firewall linked
                     </div>
@@ -494,7 +494,7 @@ const ConfigUpload = () => {
   if (pageState === "loading") {
     return (
       <div className="min-h-screen bg-[#001A47] flex flex-col items-center justify-center p-6">
-        <Shield className="h-8 w-8 text-[#00995a] animate-pulse mb-3" />
+        <Shield className="h-8 w-8 text-[#00F2B3] animate-pulse mb-3" />
         <p className="text-white/60 text-sm">Loading…</p>
       </div>
     );
@@ -541,8 +541,8 @@ const ConfigUpload = () => {
       <div className="min-h-screen bg-[#001A47] flex flex-col items-center justify-center p-6">
         <div className="max-w-xl w-full flex flex-col items-center space-y-6">
           <div className="text-center space-y-5">
-            <div className="mx-auto w-16 h-16 rounded-full bg-[#00995a]/20 flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-[#00995a]" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-[#00F2B3]/20 flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-[#00F2B3]" />
             </div>
             <h1 className="text-xl font-bold text-white">Configuration uploaded</h1>
             <p className="text-white/60 text-sm leading-relaxed">
@@ -563,8 +563,8 @@ const ConfigUpload = () => {
       <div className="min-h-screen bg-[#001A47] flex flex-col items-center justify-center p-6">
         <div className="max-w-xl w-full flex flex-col items-center space-y-6">
           <div className="text-center space-y-5">
-            <div className="mx-auto w-16 h-16 rounded-full bg-[#00995a]/20 flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-[#00995a]" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-[#00F2B3]/20 flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-[#00F2B3]" />
             </div>
             <h1 className="text-xl font-bold text-white">Configuration already uploaded</h1>
             <p className="text-white/60 text-sm leading-relaxed">
@@ -621,9 +621,9 @@ const ConfigUpload = () => {
             className={cn(
               "relative rounded-xl border-2 border-dashed transition-all duration-200 p-8",
               pageState === "uploading"
-                ? "border-[#00995a]/50 bg-[#00995a]/5"
+                ? "border-[#00F2B3]/50 bg-[#00F2B3]/5"
                 : dragOver
-                  ? "border-[#00995a] bg-[#00995a]/10"
+                  ? "border-[#00F2B3] bg-[#00F2B3]/10"
                   : "border-white/20 hover:border-white/40 bg-white/5",
             )}
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -632,11 +632,11 @@ const ConfigUpload = () => {
           >
             {pageState === "uploading" ? (
               <div className="text-center space-y-4">
-                <Upload className="h-8 w-8 text-[#00995a] mx-auto animate-pulse" />
+                <Upload className="h-8 w-8 text-[#00F2B3] mx-auto animate-pulse" />
                 <p className="text-white/80 text-sm font-medium">Uploading…</p>
                 <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-[#00995a] h-full rounded-full transition-all duration-300"
+                    className="bg-[#00F2B3] h-full rounded-full transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
@@ -654,7 +654,7 @@ const ConfigUpload = () => {
                 <Button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="bg-[#00995a] hover:bg-[#00995a]/90 text-white gap-2"
+                  className="bg-[#00F2B3] hover:bg-[#00F2B3]/90 text-white gap-2"
                 >
                   <Upload className="h-4 w-4" />
                   Browse Files
@@ -712,24 +712,24 @@ const ConfigUpload = () => {
           {/* Privacy section */}
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-[#00995a]" />
+              <Lock className="h-4 w-4 text-[#00F2B3]" />
               <span className="text-white/70 text-sm font-medium">Your data is secure</span>
             </div>
             <ul className="space-y-1.5 text-white/40 text-xs leading-relaxed">
               <li className="flex items-start gap-2">
-                <span className="text-[#00995a] mt-0.5">•</span>
+                <span className="text-[#00F2B3] mt-0.5">•</span>
                 Your configuration file is encrypted in transit (TLS) and at rest
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#00995a] mt-0.5">•</span>
+                <span className="text-[#00F2B3] mt-0.5">•</span>
                 Files are automatically deleted 5 days after your Sophos SE downloads them
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#00995a] mt-0.5">•</span>
+                <span className="text-[#00F2B3] mt-0.5">•</span>
                 API credentials are encrypted and automatically deleted with this request
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#00995a] mt-0.5">•</span>
+                <span className="text-[#00F2B3] mt-0.5">•</span>
                 Your data is used solely for firewall health check analysis
               </li>
             </ul>

@@ -26,7 +26,7 @@ function ChecklistRow({ title, done, actionLabel, onAction, disabled }: RowProps
     <div className="flex items-center gap-3 py-2 border-b border-border last:border-0">
       <div className="shrink-0">
         {done ? (
-          <CheckCircle2 className="h-5 w-5 text-[#00995a] dark:text-[#00F2B3]" aria-hidden />
+          <CheckCircle2 className="h-5 w-5 text-[#00F2B3] dark:text-[#00F2B3]" aria-hidden />
         ) : (
           <Circle className="h-5 w-5 text-muted-foreground/60" aria-hidden />
         )}

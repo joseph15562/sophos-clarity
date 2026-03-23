@@ -8,7 +8,7 @@ interface Props {
 }
 
 function barColor(pct: number): string {
-  if (pct >= 75) return "#00995a";
+  if (pct >= 75) return "#00F2B3";
   if (pct >= 50) return "#F29400";
   return "#EA0022";
 }

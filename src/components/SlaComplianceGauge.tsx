@@ -6,7 +6,7 @@ import type { Severity } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 import { getFirstDetectedAtBatch } from "@/lib/finding-snapshots";
 
-const GREEN = "#00995a";
+const GREEN = "#00F2B3";
 const RED = "#EA0022";
 
 const DEFAULT_SLA: Record<string, number> = {

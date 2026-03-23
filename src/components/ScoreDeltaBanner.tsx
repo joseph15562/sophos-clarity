@@ -48,13 +48,13 @@ export function ScoreDeltaBanner({ analysisResults }: Props) {
 
   if (delta > 0) {
     return (
-      <div className="w-full rounded-xl border p-4 flex items-center gap-3 bg-[#00995a]/10 border-[#00995a]/30">
-        <TrendingUp className="h-5 w-5 text-[#00995a] shrink-0" />
+      <div className="w-full rounded-xl border p-4 flex items-center gap-3 bg-[#00F2B3]/10 border-[#00F2B3]/30">
+        <TrendingUp className="h-5 w-5 text-[#00F2B3] shrink-0" />
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-[#00995a]">
+          <span className="text-sm font-semibold text-[#00F2B3]">
             Score improved by +{delta} points since last assessment{gradeChange}
           </span>
-          <span className="text-xs font-mono text-[#00995a]/80">
+          <span className="text-xs font-mono text-[#00F2B3]/80">
             {previous.score} → {currentScore}
           </span>
         </div>

@@ -10,7 +10,7 @@ type CellStatus = "green" | "amber" | "red";
 function statusClass(status: CellStatus): string {
   switch (status) {
     case "green":
-      return "bg-[#00995a]/20 text-[#00995a]";
+      return "bg-[#00F2B3]/20 text-[#00F2B3]";
     case "amber":
       return "bg-[#F29400]/20 text-[#F29400]";
     case "red":

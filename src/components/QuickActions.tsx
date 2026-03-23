@@ -19,7 +19,7 @@ const ACTIONS = [
     title: "Export Risk Register",
     description: "Download findings as CSV/Excel",
     icon: Download,
-    color: "#00995a",
+    color: "#00F2B3",
   },
   {
     id: "compare",

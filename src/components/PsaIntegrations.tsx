@@ -119,7 +119,7 @@ export function PsaIntegrations() {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-medium">Status</span>
               {config[key].connected ? (
-                <span className="flex items-center gap-1 text-[10px] text-[#00995a]">
+                <span className="flex items-center gap-1 text-[10px] text-[#00F2B3]">
                   <CheckCircle className="h-3.5 w-3.5" />
                   Connected
                 </span>

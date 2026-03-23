@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 const STATUS_STYLE: Record<RemediationPlan["status"], { label: string; bg: string; text: string }> = {
   draft: { label: "Draft", bg: "bg-muted", text: "text-muted-foreground" },
   pending_approval: { label: "Pending Approval", bg: "bg-[#F29400]/10", text: "text-[#F29400]" },
-  approved: { label: "Approved", bg: "bg-[#00995a]/10", text: "text-[#00995a] dark:text-[#00F2B3]" },
+  approved: { label: "Approved", bg: "bg-[#00F2B3]/10", text: "text-[#00F2B3] dark:text-[#00F2B3]" },
   rejected: { label: "Rejected", bg: "bg-[#EA0022]/10", text: "text-[#EA0022]" },
 };
 
@@ -135,7 +135,7 @@ export function ChangeApproval() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-1 text-[10px] h-7 border-[#00995a]/30 text-[#00995a] hover:bg-[#00995a]/5"
+                      className="gap-1 text-[10px] h-7 border-[#00F2B3]/30 text-[#00F2B3] hover:bg-[#00F2B3]/5"
                       onClick={() => updatePlan(plan.id, {
                         status: "approved",
                         approvedBy: "current_user",
@@ -155,7 +155,7 @@ export function ChangeApproval() {
                   </>
                 )}
                 {plan.status === "approved" && (
-                  <span className="text-[10px] text-[#00995a] font-medium">Ready for execution</span>
+                  <span className="text-[10px] text-[#00F2B3] font-medium">Ready for execution</span>
                 )}
                 <Button
                   variant="ghost"

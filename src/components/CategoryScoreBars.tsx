@@ -17,7 +17,7 @@ function gradeFromPct(pct: number): "A" | "B" | "C" | "D" | "F" {
 function barColorClass(pct: number): string {
   if (pct < 40) return "bg-[#EA0022]";
   if (pct <= 75) return "bg-[#F29400]";
-  return "bg-[#00995a] dark:bg-[#00F2B3]";
+  return "bg-[#00F2B3] dark:bg-[#00F2B3]";
 }
 
 export function CategoryScoreBars({ analysisResults }: Props) {
@@ -61,7 +61,7 @@ export function CategoryScoreBars({ analysisResults }: Props) {
               <span
                 className={`text-xs font-bold w-6 shrink-0 ${
                   grade === "A" || grade === "B"
-                    ? "text-[#00995a] dark:text-[#00F2B3]"
+                    ? "text-[#00F2B3] dark:text-[#00F2B3]"
                     : grade === "C"
                       ? "text-[#F29400]"
                       : grade === "D"

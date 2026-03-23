@@ -159,7 +159,7 @@ function StatusBadge({ status }: { status: LifecycleStatus }) {
     case "eos":
       return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0 text-[9px] gap-1"><Info className="h-3 w-3" />End of Sale</Badge>;
     case "current":
-      return <Badge className="bg-[#00995a]/15 text-[#00995a] dark:text-[#00F2B3] border-0 text-[9px] gap-1"><CheckCircle2 className="h-3 w-3" />Current</Badge>;
+      return <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:text-[#00F2B3] border-0 text-[9px] gap-1"><CheckCircle2 className="h-3 w-3" />Current</Badge>;
     default:
       return <Badge className="bg-muted text-muted-foreground border-0 text-[9px]">Unknown</Badge>;
   }

@@ -234,7 +234,7 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
               Progress narrative
             </CardTitle>
             <CardDescription className="text-xs flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[#00995a] dark:text-[#00F2B3] shrink-0" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-[#00F2B3] dark:text-[#00F2B3] shrink-0" />
               Share with your customer — paste into email or Teams
             </CardDescription>
           </div>

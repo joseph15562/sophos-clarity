@@ -23,7 +23,7 @@ const SEVERITY_COLOR: Record<Severity, string> = {
   critical: "text-[#EA0022]",
   high: "text-[#c47800] dark:text-[#F29400]",
   medium: "text-[#b8a200] dark:text-[#F8E300]",
-  low: "text-[#00995a] dark:text-[#00F2B3]",
+  low: "text-[#00F2B3] dark:text-[#00F2B3]",
   info: "text-[#0077cc] dark:text-[#009CFB]",
 };
 
@@ -31,7 +31,7 @@ const SEVERITY_BORDER: Record<Severity, string> = {
   critical: "border-l-[#EA0022]",
   high: "border-l-[#c47800] dark:border-l-[#F29400]",
   medium: "border-l-[#b8a200] dark:border-l-[#F8E300]",
-  low: "border-l-[#00995a] dark:border-l-[#00F2B3]",
+  low: "border-l-[#00F2B3] dark:border-l-[#00F2B3]",
   info: "border-l-[#0077cc] dark:border-l-[#009CFB]",
 };
 
@@ -91,10 +91,10 @@ export function EstateOverview({
           icon="/icons/sophos-alert.svg"
           value={totalFindings}
           label="Issues"
-          border={totalFindings > 0 ? "border-[#EA0022]/20 dark:border-[#F29400]/25" : "border-[#00995a]/20 dark:border-[#00F2B3]/20"}
-          bg={totalFindings > 0 ? "bg-[#EA0022]/[0.04] dark:bg-[#F29400]/[0.06]" : "bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"}
-          iconBg={totalFindings > 0 ? "bg-[#EA0022]/10 dark:bg-[#F29400]/10" : "bg-[#00995a]/10 dark:bg-[#00F2B3]/10"}
-          valueColor={totalFindings > 0 ? "text-[#EA0022] dark:text-[#F29400]" : "text-[#00995a] dark:text-[#00F2B3]"}
+          border={totalFindings > 0 ? "border-[#EA0022]/20 dark:border-[#F29400]/25" : "border-[#00F2B3]/20 dark:border-[#00F2B3]/20"}
+          bg={totalFindings > 0 ? "bg-[#EA0022]/[0.04] dark:bg-[#F29400]/[0.06]" : "bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"}
+          iconBg={totalFindings > 0 ? "bg-[#EA0022]/10 dark:bg-[#F29400]/10" : "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10"}
+          valueColor={totalFindings > 0 ? "text-[#EA0022] dark:text-[#F29400]" : "text-[#00F2B3] dark:text-[#00F2B3]"}
           onClick={totalFindings > 0 ? scrollToFindings : undefined}
         />
       </section>
@@ -128,7 +128,7 @@ export function EstateOverview({
 
       {/* No-findings banner */}
       {totalFindings === 0 && (
-        <div className="rounded-md border border-[#00995a]/30 dark:border-[#00F2B3]/30 bg-[#00995a]/5 dark:bg-[#00F2B3]/5 px-4 py-3 flex items-center gap-3 text-sm">
+        <div className="rounded-md border border-[#00F2B3]/30 dark:border-[#00F2B3]/30 bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 px-4 py-3 flex items-center gap-3 text-sm">
           <CheckCircle2 className="h-4 w-4 text-[#00774a] dark:text-[#00F2B3] shrink-0" />
           <span className="text-[#00774a] dark:text-[#00F2B3] font-medium">No issues detected in deterministic analysis.</span>
           <span className="text-muted-foreground">AI-driven assessment will provide deeper coverage.</span>
@@ -201,13 +201,13 @@ function ExtractionCoverage({ extractionPct, totalPopulated, totalSections, tota
   totalRules: number; totalNatRules: number; totalInterfaces: number;
 }) {
   const barColor = extractionPct >= 80
-    ? "bg-[#00995a] dark:bg-[#00F2B3]"
+    ? "bg-[#00F2B3] dark:bg-[#00F2B3]"
     : extractionPct >= 50
     ? "bg-[#b8a200] dark:bg-[#F8E300]"
     : "bg-[#EA0022]";
 
   const pctColor = extractionPct >= 80
-    ? "text-[#00995a] dark:text-[#00F2B3]"
+    ? "text-[#00F2B3] dark:text-[#00F2B3]"
     : extractionPct >= 50
     ? "text-[#b8a200] dark:text-[#F8E300]"
     : "text-[#EA0022]";
@@ -226,7 +226,7 @@ function ExtractionCoverage({ extractionPct, totalPopulated, totalSections, tota
           {totalPopulated} of {totalSections} sections contain parseable data &middot; {totalRules} rules &middot; {totalNatRules} NAT rules &middot; {totalInterfaces} interfaces
         </p>
         {extractionPct >= 80 && totalRules > 0 && (
-          <p className="text-[10px] text-[#00995a] dark:text-[#00F2B3] font-medium mt-1" role="status">
+          <p className="text-[10px] text-[#00F2B3] dark:text-[#00F2B3] font-medium mt-1" role="status">
             Parsed {totalSections} sections, {totalRules} firewall rules successfully.
           </p>
         )}
@@ -256,7 +256,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   );
 
   const barColor = (value: number) =>
-    pct(value) >= 80 ? "bg-[#00995a] dark:bg-[#00F2B3]" : pct(value) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]";
+    pct(value) >= 80 ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : pct(value) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]";
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-3">
@@ -404,7 +404,7 @@ const SEV_BADGE: Record<Severity, { bg: string; text: string; label: string }> =
   critical: { bg: "bg-[#EA0022]/10", text: "text-[#EA0022]", label: "C" },
   high: { bg: "bg-[#F29400]/10", text: "text-[#c47800] dark:text-[#F29400]", label: "H" },
   medium: { bg: "bg-[#F8E300]/10", text: "text-[#b8a200] dark:text-[#F8E300]", label: "M" },
-  low: { bg: "bg-[#00995a]/10", text: "text-[#00995a] dark:text-[#00F2B3]", label: "L" },
+  low: { bg: "bg-[#00F2B3]/10", text: "text-[#00F2B3] dark:text-[#00F2B3]", label: "L" },
   info: { bg: "bg-[#009CFB]/10", text: "text-[#0077cc] dark:text-[#009CFB]", label: "I" },
 };
 
@@ -573,7 +573,7 @@ function EstateRiskComparison({ analysisResults }: { analysisResults: Record<str
                     </div>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-500 ${score === 0 ? "bg-[#00995a] dark:bg-[#00F2B3]" : score <= 5 ? "bg-[#F8E300]" : score <= 15 ? "bg-[#F29400]" : "bg-[#EA0022]"}`} style={{ width: `${Math.max(3, Math.round((score / maxScore) * 100))}%` }} />
+                    <div className={`h-full rounded-full transition-all duration-500 ${score === 0 ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : score <= 5 ? "bg-[#F8E300]" : score <= 15 ? "bg-[#F29400]" : "bg-[#EA0022]"}`} style={{ width: `${Math.max(3, Math.round((score / maxScore) * 100))}%` }} />
                   </div>
                 </div>
               </div>

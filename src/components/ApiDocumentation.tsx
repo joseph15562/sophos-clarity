@@ -140,7 +140,7 @@ export function ApiDocumentation() {
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                     ep.method === "GET"
-                      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                      ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >

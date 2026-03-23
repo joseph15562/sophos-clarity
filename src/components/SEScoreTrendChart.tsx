@@ -29,7 +29,7 @@ const GRADE_COLORS: Record<string, string> = {
 
 function gradeColorClass(grade: string): string {
   switch (grade) {
-    case "A": return "bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
+    case "A": return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
     case "B": return "bg-[#2006F7]/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
     case "C": return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
     case "D": return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
@@ -112,7 +112,7 @@ export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, s
   const delta = last.score - first.score;
 
   const DeltaIcon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
-  const deltaColor = delta > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : delta < 0 ? "text-[#EA0022]" : "text-muted-foreground";
+  const deltaColor = delta > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : delta < 0 ? "text-[#EA0022]" : "text-muted-foreground";
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
@@ -229,7 +229,7 @@ export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, s
                   </td>
                   <td className="px-2 py-1.5 font-mono">
                     {d === null ? "—" : (
-                      <span className={d > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : d < 0 ? "text-[#EA0022]" : "text-muted-foreground"}>
+                      <span className={d > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : d < 0 ? "text-[#EA0022]" : "text-muted-foreground"}>
                         {d > 0 ? "+" : ""}{d}
                       </span>
                     )}

@@ -18,7 +18,7 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   critical: "#EA0022",
   high: "#F29400",
   medium: "#F8E300",
-  low: "#00995a",
+  low: "#00F2B3",
   info: "#009CFB",
 };
 
@@ -97,8 +97,8 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
             <defs>
               <linearGradient id="quadQuick" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#00995a" stopOpacity={0.15} />
-                <stop offset="100%" stopColor="#00995a" stopOpacity={0.05} />
+                <stop offset="0%" stopColor="#00F2B3" stopOpacity={0.15} />
+                <stop offset="100%" stopColor="#00F2B3" stopOpacity={0.05} />
               </linearGradient>
               <linearGradient id="quadStrategic" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor="#F29400" stopOpacity={0.15} />
@@ -183,7 +183,7 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
             />
           </ScatterChart>
         </ResponsiveContainer>
-        <div className="absolute top-6 left-4 text-[9px] font-medium text-[#00995a]">
+        <div className="absolute top-6 left-4 text-[9px] font-medium text-[#00F2B3]">
           Quick Wins
         </div>
         <div className="absolute top-6 right-4 text-[9px] font-medium text-[#F29400]">

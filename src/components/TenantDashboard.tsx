@@ -13,7 +13,7 @@ type SortDir = "asc" | "desc";
 const STALE_ASSESSMENT_MS = 60 * 24 * 60 * 60 * 1000;
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00995a] dark:text-[#00F2B3] bg-[#00995a]/10 dark:bg-[#00F2B3]/10",
+  A: "text-[#00F2B3] dark:text-[#00F2B3] bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10",
   B: "text-[#009CFB] bg-[#009CFB]/10",
   C: "text-[#F8E300] bg-[#F8E300]/10",
   D: "text-[#F29400] bg-[#F29400]/10",
@@ -510,8 +510,8 @@ export function TenantDashboard() {
           <p className="text-lg font-bold text-foreground">{avgScore}/100</p>
           <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Avg Score</p>
         </div>
-        <div className={`rounded-lg px-3 py-2.5 text-center ${atRisk > 0 ? "bg-[#EA0022]/5" : "bg-[#00995a]/5"}`}>
-          <p className={`text-lg font-bold ${atRisk > 0 ? "text-[#EA0022]" : "text-[#00995a] dark:text-[#00F2B3]"}`}>{atRisk}</p>
+        <div className={`rounded-lg px-3 py-2.5 text-center ${atRisk > 0 ? "bg-[#EA0022]/5" : "bg-[#00F2B3]/5"}`}>
+          <p className={`text-lg font-bold ${atRisk > 0 ? "text-[#EA0022]" : "text-[#00F2B3] dark:text-[#00F2B3]"}`}>{atRisk}</p>
           <p className="text-[9px] text-muted-foreground uppercase tracking-wider">At Risk (&lt;60)</p>
         </div>
         <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
@@ -556,7 +556,7 @@ export function TenantDashboard() {
                     <div className="flex flex-wrap gap-2">
                       {fws.map((fw) => {
                         const g = fw.grade;
-                        const color = g === "A" || g === "B" ? "bg-[#00995a]/70 dark:bg-[#00F2B3]/60" :
+                        const color = g === "A" || g === "B" ? "bg-[#00F2B3]/70 dark:bg-[#00F2B3]/60" :
                           g === "C" ? "bg-[#F8E300]/50" :
                           g === "D" ? "bg-[#F29400]/60" : "bg-[#EA0022]/60";
                         const key = `${fw.customer}-${fw.label}`;
@@ -665,7 +665,7 @@ export function TenantDashboard() {
                     </td>
                     {agentTimelineData.dayKeys.map((day) => {
                       const status = agentTimelineData.byAgentDay.get(agent.id)?.get(day) ?? "none";
-                      const dotColor = status === "active" ? "bg-[#00995a]" : status === "offline" ? "bg-[#EA0022]" : "bg-muted";
+                      const dotColor = status === "active" ? "bg-[#00F2B3]" : status === "offline" ? "bg-[#EA0022]" : "bg-muted";
                       return (
                         <td key={day} className="py-1 px-0.5 text-center">
                           <span
@@ -717,7 +717,7 @@ export function TenantDashboard() {
       <div className="space-y-1.5">
         {filtered.map((c) => {
           const isExpanded = expanded === c.latestSnapshot.id;
-          const sparkColor = c.latestSnapshot.overallScore >= 75 ? "#00995a" : c.latestSnapshot.overallScore >= 50 ? "#F29400" : "#EA0022";
+          const sparkColor = c.latestSnapshot.overallScore >= 75 ? "#00F2B3" : c.latestSnapshot.overallScore >= 50 ? "#F29400" : "#EA0022";
           const assessmentStale = Date.now() - c.latestSnapshot.timestamp > STALE_ASSESSMENT_MS;
           return (
             <div key={c.latestSnapshot.id} className="rounded-lg border border-border bg-card overflow-hidden">
@@ -745,7 +745,7 @@ export function TenantDashboard() {
                   <p className="text-[9px] text-muted-foreground truncate">
                     {c.latestSnapshot.firewalls.length} firewall{c.latestSnapshot.firewalls.length !== 1 ? "s" : ""} · Grade {c.latestSnapshot.overallGrade}
                     {c.scoreTrend !== 0 && (
-                      <span className={c.scoreTrend > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
+                      <span className={c.scoreTrend > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
                         {" "}({c.scoreTrend > 0 ? "+" : ""}{c.scoreTrend})
                       </span>
                     )}

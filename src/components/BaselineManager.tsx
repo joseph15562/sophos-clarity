@@ -10,7 +10,7 @@ const SEV_BADGE: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
   medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-  low: "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]",
+  low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
   info: "bg-[#009CFB]/10 text-[#009CFB]",
 };
 
@@ -137,7 +137,7 @@ function BaselineComparison({
     <div className="space-y-2 text-xs">
       <p className="text-foreground">
         <span className="font-semibold">{firewallLabel}</span> is{" "}
-        <span className="font-bold text-[#00995a] dark:text-[#00F2B3]">{comparison.alignmentPct}%</span> aligned with
+        <span className="font-bold text-[#00F2B3] dark:text-[#00F2B3]">{comparison.alignmentPct}%</span> aligned with
         baseline
       </p>
       <div className="grid gap-3 sm:grid-cols-2">

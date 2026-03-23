@@ -191,7 +191,7 @@ function extractTunnels(files: Props["files"]): VpnTunnel[] {
 }
 
 const COLORS = {
-  strong: "#00995a",
+  strong: "#00F2B3",
   acceptable: "#F29400",
   weak: "#EA0022",
 };

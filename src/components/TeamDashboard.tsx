@@ -33,7 +33,7 @@ interface Props {
 
 function gradeColor(grade: string | null): string {
   switch (grade) {
-    case "A": return "bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
+    case "A": return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
     case "B": return "bg-[#2006F7]/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
     case "C": return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
     case "D": return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
@@ -43,7 +43,7 @@ function gradeColor(grade: string | null): string {
 }
 
 const GRADE_BAR_COLORS: Record<string, string> = {
-  A: "#00995a",
+  A: "#00F2B3",
   B: "#2006F7",
   C: "#F8E300",
   D: "#F29400",

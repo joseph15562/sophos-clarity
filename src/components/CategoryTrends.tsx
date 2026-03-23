@@ -20,7 +20,7 @@ async function getOrgId(): Promise<string | null> {
 }
 
 function scoreColorClass(score: number): string {
-  if (score >= 75) return "text-[#00995a] dark:text-[#00F2B3]";
+  if (score >= 75) return "text-[#00F2B3] dark:text-[#00F2B3]";
   if (score >= 40) return "text-[#F29400]";
   return "text-[#EA0022]";
 }
@@ -140,7 +140,7 @@ export function CategoryTrends({ analysisResults }: CategoryTrendsProps) {
                         />
                       </svg>
                       {trend === "up" && (
-                        <ArrowUp className="h-3 w-3 text-[#00995a] dark:text-[#00F2B3]" aria-hidden />
+                        <ArrowUp className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" aria-hidden />
                       )}
                       {trend === "down" && (
                         <ArrowDown className="h-3 w-3 text-[#EA0022]" aria-hidden />

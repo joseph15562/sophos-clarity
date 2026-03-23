@@ -16,7 +16,7 @@ interface Props {
   }>;
 }
 
-const GREEN = "#00995a";
+const GREEN = "#00F2B3";
 const AMBER = "#F29400";
 const RED = "#EA0022";
 

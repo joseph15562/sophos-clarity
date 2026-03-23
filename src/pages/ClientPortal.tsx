@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00995a] dark:text-[#00F2B3]",
+  A: "text-[#00F2B3] dark:text-[#00F2B3]",
   B: "text-[#009CFB]",
   C: "text-[#F8E300] dark:text-[#F8E300]",
   D: "text-[#F29400]",
@@ -156,7 +156,7 @@ function ScoreGauge({
   const trackPath = arcPath(cx, cy, r, 150, 390);
   const filledPath = arcPath(cx, cy, r, 150, filledEnd);
   const defaultColor =
-    score <= 40 ? "#EA0022" : score <= 75 ? "#F29400" : "#00995a";
+    score <= 40 ? "#EA0022" : score <= 75 ? "#F29400" : "#00F2B3";
   const fillColor = accentColor && score > 75 ? accentColor : defaultColor;
 
   return (

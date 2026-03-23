@@ -23,7 +23,7 @@ interface EncryptionOverviewProps {
   }>;
 }
 
-const STRONG = "#00995a";
+const STRONG = "#00F2B3";
 const ACCEPTABLE = "#F29400";
 const WEAK = "#EA0022";
 
@@ -215,11 +215,11 @@ export function EncryptionOverview({
           <div className="grid grid-cols-3 gap-2">
             <div className={`rounded-lg p-3 text-center ${
               sslStatus.dpiEngineEnabled
-                ? "bg-[#00995a]/10 border border-[#00995a]/20"
+                ? "bg-[#00F2B3]/10 border border-[#00F2B3]/20"
                 : "bg-[#EA0022]/10 border border-[#EA0022]/20"
             }`}>
               <p className={`text-lg font-bold ${
-                sslStatus.dpiEngineEnabled ? "text-[#00995a]" : "text-[#EA0022]"
+                sslStatus.dpiEngineEnabled ? "text-[#00F2B3]" : "text-[#EA0022]"
               }`}>
                 {sslStatus.dpiEngineEnabled ? "ON" : "OFF"}
               </p>

@@ -324,7 +324,7 @@ export function LicenceExpiryWidget() {
           {expiringCritical > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#EA0022]/10 text-[#EA0022]">{expiringCritical} &lt;7d</span>}
           {expiringSoon > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#F29400]/10 text-[#F29400]">{expiringSoon} &lt;30d</span>}
           {expiringMedium > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#F29400]/10 text-[#F29400]">{expiringMedium} &lt;90d</span>}
-          {healthy > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]">{healthy} ok</span>}
+          {healthy > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">{healthy} ok</span>}
         </div>
         <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
@@ -345,8 +345,8 @@ export function LicenceExpiryWidget() {
               <p className={`text-sm font-bold ${(expiringCritical + expiringSoon + expiringMedium) > 0 ? "text-[#F29400]" : "text-foreground"}`}>{expiringCritical + expiringSoon + expiringMedium}</p>
               <p className="text-[8px] text-muted-foreground uppercase tracking-wider">&lt;90 Days</p>
             </div>
-            <div className="rounded-lg px-2.5 py-2 text-center bg-[#00995a]/5">
-              <p className="text-sm font-bold text-[#00995a] dark:text-[#00F2B3]">{healthy}</p>
+            <div className="rounded-lg px-2.5 py-2 text-center bg-[#00F2B3]/5">
+              <p className="text-sm font-bold text-[#00F2B3] dark:text-[#00F2B3]">{healthy}</p>
               <p className="text-[8px] text-muted-foreground uppercase tracking-wider">Healthy</p>
             </div>
           </div>
@@ -371,7 +371,7 @@ export function LicenceExpiryWidget() {
                   const worstDays = Math.min(...group.items.map((l) => l.daysRemaining));
                   const hasExpired = group.items.some((l) => l.daysRemaining <= 0);
                   const hasExpiring = group.items.some((l) => l.daysRemaining > 0 && l.daysRemaining <= 90);
-                  const statusColor = hasExpired ? "text-[#EA0022]" : hasExpiring ? "text-[#F29400]" : "text-[#00995a] dark:text-[#00F2B3]";
+                  const statusColor = hasExpired ? "text-[#EA0022]" : hasExpiring ? "text-[#F29400]" : "text-[#00F2B3] dark:text-[#00F2B3]";
                   const statusLabel = hasExpired ? "EXPIRED" : worstDays <= 90 ? `${worstDays}d` : "OK";
                   const ringColor = hasExpired ? "border-[#EA0022]/30" : hasExpiring ? "border-[#F29400]/30" : "border-border";
                   const dedupedItems = group.items;
@@ -441,7 +441,7 @@ export function LicenceExpiryWidget() {
                                 </span>
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium truncate text-center ${
                                   item.subscription.type === "trial" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" :
-                                  item.subscription.perpetual ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                                  item.subscription.perpetual ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" :
                                   "bg-muted text-muted-foreground"
                                 }`}>
                                   {item.subscription.perpetual ? "Perpetual" : item.subscription.type}
@@ -451,11 +451,11 @@ export function LicenceExpiryWidget() {
                                    item.subscription.endDate ? new Date(item.subscription.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" }) : "—"}
                                 </span>
                                 <span className={`text-[10px] font-bold text-right ${
-                                  item.subscription.perpetual ? "text-[#00995a] dark:text-[#00F2B3]" :
+                                  item.subscription.perpetual ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                                   item.daysRemaining <= 0 ? "text-[#EA0022]" :
                                   item.daysRemaining <= 30 ? "text-[#EA0022]" :
                                   item.daysRemaining <= 90 ? "text-[#F29400]" :
-                                  "text-[#00995a] dark:text-[#00F2B3]"
+                                  "text-[#00F2B3] dark:text-[#00F2B3]"
                                 }`}>
                                   {item.subscription.perpetual ? "OK" :
                                    item.daysRemaining <= 0 ? "EXPIRED" : `${item.daysRemaining}d`}

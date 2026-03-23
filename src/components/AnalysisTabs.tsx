@@ -387,7 +387,7 @@ export function AnalysisTabs({
               <div
                 className={`rounded-xl border bg-card p-4 ${
                   securityStats.score >= 75
-                    ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                    ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
                     : securityStats.score >= 50
                       ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
                       : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
@@ -398,7 +398,7 @@ export function AnalysisTabs({
                   <span
                     className={`text-2xl font-extrabold tabular-nums ${
                       securityStats.score >= 75
-                        ? "text-[#00995a] dark:text-[#00F2B3]"
+                        ? "text-[#00F2B3] dark:text-[#00F2B3]"
                         : securityStats.score >= 50
                           ? "text-[#F29400]"
                           : "text-[#EA0022]"
@@ -409,7 +409,7 @@ export function AnalysisTabs({
                   <span
                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                       securityStats.score >= 75
-                        ? "bg-[#00995a]/10 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
+                        ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
                         : securityStats.score >= 50
                           ? "bg-[#F29400]/10 text-[#F29400]"
                           : "bg-[#EA0022]/10 text-[#EA0022]"
@@ -422,14 +422,14 @@ export function AnalysisTabs({
               <div
                 className={`rounded-xl border border-border bg-card p-4 ${
                   securityStats.criticalHigh === 0
-                    ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                    ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
                     : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
                 }`}
               >
                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Critical Issues</div>
                 <div
                   className={`text-2xl font-extrabold tabular-nums mt-1 ${
-                    securityStats.criticalHigh === 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"
+                    securityStats.criticalHigh === 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"
                   }`}
                 >
                   {securityStats.criticalHigh}
@@ -438,7 +438,7 @@ export function AnalysisTabs({
               <div
                 className={`rounded-xl border border-border bg-card p-4 ${
                   securityStats.coverage >= 75
-                    ? "border-[#00995a]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.06]"
+                    ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
                     : securityStats.coverage >= 40
                       ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
                       : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
@@ -448,7 +448,7 @@ export function AnalysisTabs({
                 <div
                   className={`text-2xl font-extrabold tabular-nums mt-1 ${
                     securityStats.coverage >= 75
-                      ? "text-[#00995a] dark:text-[#00F2B3]"
+                      ? "text-[#00F2B3] dark:text-[#00F2B3]"
                       : securityStats.coverage >= 40
                         ? "text-[#F29400]"
                         : "text-[#EA0022]"

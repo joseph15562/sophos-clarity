@@ -11,17 +11,17 @@ import {
 const BROWSER_BASE_CSS = `
   /* ── Dark theme (default) ── */
   :root {
-    --bg: #0b1120;
-    --card: #111827;
-    --border: #1e293b;
-    --text: #f1f5f9;
-    --muted: #94a3b8;
-    --accent: #00edff;
-    --accent-dim: #2006f7;
-    --pass: #00f2b3;
-    --fail: #f87171;
-    --warn: #fbbf24;
-    --na: #64748b;
+    --bg: #001A47;
+    --card: #10037C;
+    --border: #223E4C;
+    --text: #EDF2F9;
+    --muted: #6A889B;
+    --accent: #00EDFF;
+    --accent-dim: #2006F7;
+    --pass: #00F2B3;
+    --fail: #EA0022;
+    --warn: #F29400;
+    --na: #6A889B;
     --th-bg: rgba(30, 41, 59, 0.8);
     --lic-card-bg: rgba(15, 23, 42, 0.6);
     --lic-sel-border: rgba(0, 237, 255, 0.45);
@@ -39,13 +39,13 @@ const BROWSER_BASE_CSS = `
     --card: #f9fafb;
     --border: #e5e7eb;
     --text: #0f172a;
-    --muted: #64748b;
-    --accent: #001b44;
-    --accent-dim: #003380;
+    --muted: #6A889B;
+    --accent: #001A47;
+    --accent-dim: #2006F7;
     --pass: #047857;
-    --fail: #dc2626;
-    --warn: #b45309;
-    --na: #6b7280;
+    --fail: #EA0022;
+    --warn: #F29400;
+    --na: #6A889B;
     --th-bg: #f3f4f6;
     --lic-card-bg: #f3f4f6;
     --lic-sel-border: rgba(0, 27, 68, 0.4);
@@ -64,13 +64,13 @@ const BROWSER_BASE_CSS = `
       --card: #f9fafb;
       --border: #e5e7eb;
       --text: #0f172a;
-      --muted: #64748b;
-      --accent: #001b44;
-      --accent-dim: #003380;
+      --muted: #6A889B;
+      --accent: #001A47;
+      --accent-dim: #2006F7;
       --pass: #047857;
-      --fail: #dc2626;
-      --warn: #b45309;
-      --na: #6b7280;
+      --fail: #EA0022;
+      --warn: #F29400;
+      --na: #6A889B;
       --th-bg: #f3f4f6;
       --lic-card-bg: #f3f4f6;
       --lic-sel-border: rgba(0, 27, 68, 0.4);

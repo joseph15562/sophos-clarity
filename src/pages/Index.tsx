@@ -656,10 +656,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
         {/* Loaded from saved Pre-AI assessment */}
         {loadedSavedSummary && (
-          <div className="no-print rounded-xl border border-[#00995a]/20 dark:border-[#00F2B3]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 space-y-3">
+          <div className="no-print rounded-xl border border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-[#00995a]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center">
                   <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />
                 </div>
                 <div>
@@ -677,7 +677,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
             </div>
             <div className="flex flex-wrap gap-2">
               <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
-                loadedSavedSummary.summary.overallScore >= 75 ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                loadedSavedSummary.summary.overallScore >= 75 ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" :
                 loadedSavedSummary.summary.overallScore >= 50 ? "bg-[#F29400]/10 text-[#F29400]" :
                 "bg-[#EA0022]/10 text-[#EA0022]"
               }`}>
@@ -691,7 +691,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               </span>
               {loadedSavedSummary.summary.categories.map((c) => (
                 <span key={c.label} className={`text-[10px] px-2 py-1 rounded-md ${
-                  c.pct >= 80 ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                  c.pct >= 80 ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" :
                   c.pct >= 50 ? "bg-[#F29400]/10 text-[#F29400]" :
                   "bg-[#EA0022]/10 text-[#EA0022]"
                 }`}>
@@ -878,7 +878,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                         r.findings.forEach((f) => { counts[f.severity] = (counts[f.severity] || 0) + 1; })
                       );
                       return Object.entries(counts).map(([sev, count]) => (
-                        <span key={sev} className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
+                        <span key={sev} className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
                           {count} {sev}
                         </span>
                       ));
@@ -918,7 +918,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   disabled={savingReports}
                   className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
                     reportsSaved
-                      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                      ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
                       : "bg-[#2006F7] text-white hover:bg-[#10037C]"
                   }`}
                 >

@@ -105,7 +105,7 @@ export function RuleOptimiser({ files }: Props) {
             {totalIssues} issue{totalIssues !== 1 ? "s" : ""}
           </span>
         ) : (
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]">
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
             Clean
           </span>
         )}

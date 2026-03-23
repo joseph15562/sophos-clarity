@@ -218,7 +218,7 @@ export function AdminExposureMap({
                     const state = row.services[s] ?? "disabled";
                     const bg =
                       state === "enabled"
-                        ? "bg-[#00995a]/30"
+                        ? "bg-[#00F2B3]/30"
                         : state === "risky"
                           ? "bg-[#EA0022]/30"
                           : "bg-muted/30";

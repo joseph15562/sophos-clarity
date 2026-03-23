@@ -153,8 +153,8 @@ export function RemediationVelocity({ analysisResults }: Props) {
           <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="remediationGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#00995a" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="#00995a" stopOpacity={0.02} />
+                <stop offset="0%" stopColor="#00F2B3" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#00F2B3" stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <XAxis
@@ -183,7 +183,7 @@ export function RemediationVelocity({ analysisResults }: Props) {
             <Area
               type="monotone"
               dataKey="count"
-              stroke="#00995a"
+              stroke="#00F2B3"
               strokeWidth={2}
               fill="url(#remediationGradient)"
             />
@@ -197,7 +197,7 @@ export function RemediationVelocity({ analysisResults }: Props) {
         <span
           className={
             improving
-              ? "font-medium text-[#00995a]"
+              ? "font-medium text-[#00F2B3]"
               : "font-medium text-amber-600 dark:text-amber-500"
           }
         >

@@ -197,7 +197,7 @@ function MockSeverityBar() {
     { label: "Critical", count: 3, color: "#EA0022", pct: 10 },
     { label: "High", count: 8, color: "#F29400", pct: 25 },
     { label: "Medium", count: 14, color: "#F8E300", pct: 44 },
-    { label: "Low", count: 7, color: "#00995a", pct: 21 },
+    { label: "Low", count: 7, color: "#00F2B3", pct: 21 },
   ];
   return (
     <div className="space-y-2">
@@ -277,7 +277,7 @@ function MockComplianceGrid() {
                 return (
                   <td key={c} className="px-1.5 py-1.5 text-center">
                     <span className={`inline-block w-4 h-4 rounded text-[8px] font-bold leading-4 ${
-                      status === "pass" ? "bg-[#00995a]/15 text-[#00995a]" :
+                      status === "pass" ? "bg-[#00F2B3]/15 text-[#00F2B3]" :
                       status === "fail" ? "bg-[#EA0022]/15 text-[#EA0022]" :
                       "bg-[#F29400]/15 text-[#F29400]"
                     }`}>
@@ -333,7 +333,7 @@ function MockReportViewer({ type }: { type: "individual" | "executive" | "compli
                 <p className="text-[8px] text-muted-foreground">Findings</p>
               </div>
               <div className="rounded border border-border bg-card p-2 text-center">
-                <p className="text-lg font-bold text-[#00995a]">8</p>
+                <p className="text-lg font-bold text-[#00F2B3]">8</p>
                 <p className="text-[8px] text-muted-foreground">Recommendations</p>
               </div>
             </div>
@@ -347,9 +347,9 @@ function MockReportViewer({ type }: { type: "individual" | "executive" | "compli
             <div className="space-y-1.5 mt-2">
               {["A.9 Access Control", "A.10 Cryptography", "A.12 Operations Security", "A.13 Communications Security"].map((c) => (
                 <div key={c} className="flex items-center gap-2 text-[9px]">
-                  <span className={`w-1.5 h-1.5 rounded-full ${c.includes("Crypto") ? "bg-[#EA0022]" : "bg-[#00995a]"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${c.includes("Crypto") ? "bg-[#EA0022]" : "bg-[#00F2B3]"}`} />
                   <span className="text-foreground flex-1">{c}</span>
-                  <span className={`font-bold ${c.includes("Crypto") ? "text-[#EA0022]" : "text-[#00995a]"}`}>{c.includes("Crypto") ? "FAIL" : "PASS"}</span>
+                  <span className={`font-bold ${c.includes("Crypto") ? "text-[#EA0022]" : "text-[#00F2B3]"}`}>{c.includes("Crypto") ? "FAIL" : "PASS"}</span>
                 </div>
               ))}
             </div>
@@ -368,9 +368,9 @@ function MockReportViewer({ type }: { type: "individual" | "executive" | "compli
 
 function MockTenantDashboard() {
   const customers = [
-    { name: "Acme Corp", score: 78, grade: "B", firewalls: 2, color: "#00995a" },
+    { name: "Acme Corp", score: 78, grade: "B", firewalls: 2, color: "#00F2B3" },
     { name: "Global Bank Ltd", score: 54, grade: "D", firewalls: 4, color: "#F29400" },
-    { name: "MediHealth", score: 91, grade: "A", firewalls: 1, color: "#00995a" },
+    { name: "MediHealth", score: 91, grade: "A", firewalls: 1, color: "#00F2B3" },
   ];
   return (
     <div className="space-y-2">
@@ -410,7 +410,7 @@ function MockSavedReports() {
           <span className="text-[10px] font-medium text-foreground">{r.customer}</span>
           <span className="text-[9px] text-muted-foreground">{r.type}</span>
           <span className="text-[9px] text-muted-foreground">{r.date}</span>
-          <span className="text-[10px] font-bold" style={{ color: r.score >= 75 ? "#00995a" : r.score >= 50 ? "#F29400" : "#EA0022" }}>{r.score}</span>
+          <span className="text-[10px] font-bold" style={{ color: r.score >= 75 ? "#00F2B3" : r.score >= 50 ? "#F29400" : "#EA0022" }}>{r.score}</span>
         </div>
       ))}
     </div>
@@ -447,10 +447,10 @@ function MockSettingsPanel() {
     <div className="space-y-2">
       {[
         { icon: <Wifi className="h-3.5 w-3.5 text-[#005BC8]" />, title: "Sophos Central API", desc: "Connected · Partner account · Last synced 3m ago" },
-        { icon: <Plug className="h-3.5 w-3.5 text-[#00995a]" />, title: "Connector Agents", desc: "2 agents online · 1 drift alert" },
+        { icon: <Plug className="h-3.5 w-3.5 text-[#00F2B3]" />, title: "Connector Agents", desc: "2 agents online · 1 drift alert" },
         { icon: <Users className="h-3.5 w-3.5 text-[#2006F7]" />, title: "Team Management", desc: "3 members · 1 pending invite" },
         { icon: <Globe className="h-3.5 w-3.5 text-[#005BC8]" />, title: "Client Portal", desc: "Branded customer access" },
-        { icon: <Lock className="h-3.5 w-3.5 text-[#00995a]" />, title: "Security", desc: "MFA enabled · 1 passkey registered" },
+        { icon: <Lock className="h-3.5 w-3.5 text-[#00F2B3]" />, title: "Security", desc: "MFA enabled · 1 passkey registered" },
         { icon: <Bell className="h-3.5 w-3.5 text-[#F29400]" />, title: "Alerts & Webhooks", desc: "3 alert rules · 2 webhooks active" },
         { icon: <Calendar className="h-3.5 w-3.5 text-[#2006F7]" />, title: "Scheduled Reports", desc: "2 schedules active · Next: 24 Mar" },
         { icon: <FileText className="h-3.5 w-3.5 text-[#6B5BFF]" />, title: "Report Template", desc: "Custom sections and headings" },
@@ -505,14 +505,14 @@ function MockSecurityPanel() {
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-[#00995a]/10 flex items-center justify-center shrink-0">
-          <ShieldCheck className="h-4 w-4 text-[#00995a]" />
+        <div className="h-9 w-9 rounded-lg bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
+          <ShieldCheck className="h-4 w-4 text-[#00F2B3]" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-semibold text-foreground">Multi-Factor Authentication</p>
           <p className="text-[9px] text-muted-foreground">TOTP-based authenticator app verification</p>
         </div>
-        <div className="px-2 py-1 rounded text-[9px] font-semibold bg-[#00995a]/10 text-[#00995a]">Enabled</div>
+        <div className="px-2 py-1 rounded text-[9px] font-semibold bg-[#00F2B3]/10 text-[#00F2B3]">Enabled</div>
       </div>
       <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-[#6B5BFF]/10 flex items-center justify-center shrink-0">
@@ -545,7 +545,7 @@ function MockAlertPanel() {
             <p className="text-[10px] font-semibold text-foreground">{r.name}</p>
             <p className="text-[9px] text-muted-foreground">{r.channel}</p>
           </div>
-          <div className="h-4 w-7 rounded-full bg-[#00995a] flex items-center justify-end px-0.5">
+          <div className="h-4 w-7 rounded-full bg-[#00F2B3] flex items-center justify-end px-0.5">
             <div className="h-3 w-3 rounded-full bg-white" />
           </div>
         </div>
@@ -570,7 +570,7 @@ function MockClientPortalPanel() {
         <div className="p-3 space-y-2 bg-card">
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "Risk Score", value: "78", color: "#00995a" },
+              { label: "Risk Score", value: "78", color: "#00F2B3" },
               { label: "Findings", value: "14", color: "#F29400" },
               { label: "Reports", value: "3", color: "#2006F7" },
             ].map((s) => (
@@ -595,7 +595,7 @@ function MockRuleOptimiser() {
   const rules = [
     { id: "R-14", name: "Allow HTTPS outbound", status: "shadowed", detail: "Shadowed by R-02 (any → any HTTPS)", color: "#F29400" },
     { id: "R-23", name: "Legacy VPN rule", status: "redundant", detail: "Duplicate of R-08 with identical match criteria", color: "#EA0022" },
-    { id: "R-31", name: "DNS allow internal", status: "ok", detail: "Unique rule, no overlaps detected", color: "#00995a" },
+    { id: "R-31", name: "DNS allow internal", status: "ok", detail: "Unique rule, no overlaps detected", color: "#00F2B3" },
     { id: "R-07", name: "Block telnet WAN", status: "consolidate", detail: "Can merge with R-09 and R-11 (same action, adjacent networks)", color: "#2006F7" },
   ];
   return (
@@ -660,7 +660,7 @@ function MockUnusedObjects() {
           <p className="text-[8px] text-muted-foreground">Unused Objects</p>
         </div>
         <div className="flex-1 rounded border border-border bg-card p-2">
-          <p className="text-lg font-bold text-[#00995a]">89</p>
+          <p className="text-lg font-bold text-[#00F2B3]">89</p>
           <p className="text-[8px] text-muted-foreground">Active Objects</p>
         </div>
       </div>
@@ -683,13 +683,13 @@ function MockRemediationProgress() {
     { label: "Critical", total: 3, fixed: 2, color: "#EA0022" },
     { label: "High", total: 8, fixed: 5, color: "#F29400" },
     { label: "Medium", total: 14, fixed: 8, color: "#F8E300" },
-    { label: "Low", total: 7, fixed: 6, color: "#00995a" },
+    { label: "Low", total: 7, fixed: 6, color: "#00F2B3" },
   ];
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded border border-border bg-card p-2">
-          <p className="text-lg font-bold text-[#00995a]">21</p>
+          <p className="text-lg font-bold text-[#00F2B3]">21</p>
           <p className="text-[8px] text-muted-foreground">Fixed</p>
         </div>
         <div className="rounded border border-border bg-card p-2">
@@ -792,8 +792,8 @@ function MockScoreSimulator() {
   const scenarios = [
     { label: "Current Score", score: 54, color: "#F29400" },
     { label: "Fix critical findings", score: 68, color: "#F29400" },
-    { label: "Fix critical + high", score: 82, color: "#00995a" },
-    { label: "All findings fixed", score: 96, color: "#00995a" },
+    { label: "Fix critical + high", score: 82, color: "#00F2B3" },
+    { label: "All findings fixed", score: 96, color: "#00F2B3" },
   ];
   return (
     <div className="space-y-3">
@@ -804,7 +804,7 @@ function MockScoreSimulator() {
         </div>
         <ArrowRight className="h-4 w-4 text-muted-foreground" />
         <div className="text-center">
-          <p className="text-2xl font-bold text-[#00995a]">82</p>
+          <p className="text-2xl font-bold text-[#00F2B3]">82</p>
           <p className="text-[8px] text-muted-foreground">Projected</p>
         </div>
       </div>
@@ -828,8 +828,8 @@ function MockAttackSurface() {
     { port: "443", service: "HTTPS (Admin UI)", zone: "WAN", risk: "high", color: "#EA0022" },
     { port: "22", service: "SSH (Management)", zone: "WAN", risk: "high", color: "#EA0022" },
     { port: "500", service: "IKE (IPsec VPN)", zone: "WAN", risk: "medium", color: "#F29400" },
-    { port: "4444", service: "User Portal", zone: "WAN", risk: "low", color: "#00995a" },
-    { port: "8443", service: "Captive Portal", zone: "DMZ", risk: "low", color: "#00995a" },
+    { port: "4444", service: "User Portal", zone: "WAN", risk: "low", color: "#00F2B3" },
+    { port: "8443", service: "Captive Portal", zone: "DMZ", risk: "low", color: "#00F2B3" },
   ];
   return (
     <div className="space-y-3">
@@ -882,7 +882,7 @@ function MockConfigCompare() {
         <ArrowLeftRight className="h-4 w-4 text-muted-foreground shrink-0" />
         <div className="flex-1 rounded border border-border bg-card p-2 text-center">
           <p className="text-[9px] text-muted-foreground">After</p>
-          <p className="text-sm font-bold text-[#00995a]">Score 78</p>
+          <p className="text-sm font-bold text-[#00F2B3]">Score 78</p>
         </div>
       </div>
       <div className="rounded-lg border border-border overflow-hidden">
@@ -891,7 +891,7 @@ function MockConfigCompare() {
             <span className="font-medium text-foreground flex-1">{d.field}</span>
             <span className="text-muted-foreground line-through">{d.before}</span>
             <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40" />
-            <span className={d.change === "fixed" ? "text-[#00995a] font-medium" : d.change === "improved" ? "text-[#2006F7] font-medium" : "text-muted-foreground"}>{d.after}</span>
+            <span className={d.change === "fixed" ? "text-[#00F2B3] font-medium" : d.change === "improved" ? "text-[#2006F7] font-medium" : "text-muted-foreground"}>{d.after}</span>
           </div>
         ))}
       </div>
@@ -916,7 +916,7 @@ function MockScheduledReports() {
             <p className="text-[10px] font-semibold text-foreground">{s.customer}</p>
             <p className="text-[9px] text-muted-foreground">{s.frequency} · {s.type} · Next: {s.next}</p>
           </div>
-          <div className={`h-4 w-7 rounded-full flex items-center px-0.5 ${s.active ? "bg-[#00995a] justify-end" : "bg-muted justify-start"}`}>
+          <div className={`h-4 w-7 rounded-full flex items-center px-0.5 ${s.active ? "bg-[#00F2B3] justify-end" : "bg-muted justify-start"}`}>
             <div className="h-3 w-3 rounded-full bg-white" />
           </div>
         </div>
@@ -937,7 +937,7 @@ function MockWebhookPanel() {
           <div className="flex items-center gap-2 mb-1.5">
             <Webhook className="h-3.5 w-3.5 text-[#6B5BFF]" />
             <p className="text-[10px] font-semibold text-foreground flex-1">{h.name}</p>
-            <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-[#00995a]/10 text-[#00995a]">Active</span>
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-[#00F2B3]/10 text-[#00F2B3]">Active</span>
           </div>
           <p className="text-[9px] text-muted-foreground font-mono truncate">{h.url}</p>
           <p className="text-[8px] text-muted-foreground mt-1">Events: {h.events}</p>
@@ -971,7 +971,7 @@ function MockCustomFrameworkPanel() {
                 <span className="text-muted-foreground ml-1">— {c.desc}</span>
               </div>
               <span className={`font-bold ${
-                c.status === "pass" ? "text-[#00995a]" : c.status === "fail" ? "text-[#EA0022]" : "text-[#F29400]"
+                c.status === "pass" ? "text-[#00F2B3]" : c.status === "fail" ? "text-[#EA0022]" : "text-[#F29400]"
               }`}>{c.status === "pass" ? "\u2713" : c.status === "fail" ? "\u2717" : "~"}</span>
             </div>
           ))}
@@ -1046,7 +1046,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
               {steps.map((s, i) => (
                 <div key={s.id} className="flex-1 flex items-center gap-1">
                   <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                    i < currentStep ? "bg-[#00995a] dark:bg-[#00F2B3]" :
+                    i < currentStep ? "bg-[#00F2B3] dark:bg-[#00F2B3]" :
                     i === currentStep ? "bg-[#2006F7]" :
                     "bg-muted"
                   }`} />
@@ -1084,7 +1084,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     <p className="text-[9px] text-muted-foreground">Company details & API</p>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3 text-center">
-                    <Shield className="h-5 w-5 mx-auto text-[#00995a] dark:text-[#00F2B3] mb-1.5" />
+                    <Shield className="h-5 w-5 mx-auto text-[#00F2B3] dark:text-[#00F2B3] mb-1.5" />
                     <p className="text-[10px] font-medium text-foreground">Analysis & Reports</p>
                     <p className="text-[9px] text-muted-foreground">AI, optimisation, tools</p>
                   </div>
@@ -1202,7 +1202,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     title="Automated assessments"
                     description="The agent pulls configs via the Sophos XML API, runs the same deterministic analysis, and submits scores, findings, and drift detection to your dashboard."
                     icon={<RefreshCw className="h-4 w-4" />}
-                    color="text-[#00995a]"
+                    color="text-[#00F2B3]"
                   />
                 </div>
 
@@ -1210,13 +1210,13 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 <div className="rounded-lg border border-border bg-card p-3 space-y-2">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">What you'll see in the dashboard</p>
                   <div className="rounded-lg border border-border bg-muted/20 p-2.5 flex items-center gap-3">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#00995a]" />
+                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#00F2B3]" />
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-medium text-foreground">HQ Primary Agent</p>
                       <p className="text-[9px] text-muted-foreground">Acme Corp · 192.168.1.1:4444</p>
                     </div>
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-semibold">v22.0</span>
-                    <span className="text-[10px] font-bold text-[#00995a]">82/B</span>
+                    <span className="text-[10px] font-bold text-[#00F2B3]">82/B</span>
                     <span className="text-[9px] text-muted-foreground">2h ago</span>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/20 p-2.5 flex items-center gap-3">
@@ -1268,7 +1268,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     title="Instant analysis"
                     description="FireComply automatically parses the config and shows findings, risk scores, compliance mapping, and best practice checks."
                     icon={<Shield className="h-4 w-4" />}
-                    color="text-[#00995a]"
+                    color="text-[#00F2B3]"
                   />
                   <GuideStep
                     number={4}
@@ -1319,7 +1319,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         { severity: "CRITICAL", title: "Default admin password unchanged", color: "#EA0022" },
                         { severity: "HIGH", title: "WAN admin services exposed", color: "#F29400" },
                         { severity: "MEDIUM", title: "DNS rebinding protection disabled", color: "#F8E300" },
-                        { severity: "LOW", title: "SNMP community string is 'public'", color: "#00995a" },
+                        { severity: "LOW", title: "SNMP community string is 'public'", color: "#00F2B3" },
                       ].map((f) => (
                         <div key={f.title} className="flex items-center gap-2 rounded border border-border bg-card p-2">
                           <span className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ backgroundColor: f.color + "15", color: f.color }}>{f.severity}</span>
@@ -1357,13 +1357,13 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <FeatureButton icon={<Shield className="h-4 w-4" />} title="Risk Score & Grade" desc="A-F rating with radar chart and category scores" color="text-[#00995a]" onClick={() => setActiveOverlay("risk-score")} />
+                  <FeatureButton icon={<Shield className="h-4 w-4" />} title="Risk Score & Grade" desc="A-F rating with radar chart and category scores" color="text-[#00F2B3]" onClick={() => setActiveOverlay("risk-score")} />
                   <FeatureButton icon={<BarChart3 className="h-4 w-4" />} title="Findings & Severity" desc="Critical, high, medium, low categorised issues" color="text-[#EA0022]" onClick={() => setActiveOverlay("findings")} />
                   <FeatureButton icon={<Eye className="h-4 w-4" />} title="Inspection Posture" desc="IPS, web filter, app control, SSL/TLS coverage" color="text-[#2006F7]" onClick={() => setActiveOverlay("inspection")} />
                   <FeatureButton icon={<FileText className="h-4 w-4" />} title="Compliance Mapping" desc="ISO 27001, NIST, PCI DSS, Cyber Essentials" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("compliance")} />
                 </div>
 
-                <div className="rounded-lg bg-[#00995a]/5 border border-[#00995a]/15 p-3">
+                <div className="rounded-lg bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Why Pre-AI?</strong> The deterministic analysis is repeatable and consistent — same config always gives the same score. It's the baseline before AI adds narrative reporting.
                   </p>
@@ -1454,7 +1454,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-2 text-center">
                         <div className="rounded border border-border bg-card p-2">
-                          <p className="text-lg font-bold text-[#00995a]">87%</p>
+                          <p className="text-lg font-bold text-[#00F2B3]">87%</p>
                           <p className="text-[8px] text-muted-foreground">Consistency Score</p>
                         </div>
                         <div className="rounded border border-border bg-card p-2">
@@ -1469,7 +1469,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         { rule: "SSL Inspection", fw1: "38%", fw2: "42%", status: "match" },
                       ].map((r) => (
                         <div key={r.rule} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-[9px]">
-                          <span className={`h-2 w-2 rounded-full shrink-0 ${r.status === "match" ? "bg-[#00995a]" : "bg-[#EA0022]"}`} />
+                          <span className={`h-2 w-2 rounded-full shrink-0 ${r.status === "match" ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`} />
                           <span className="font-medium text-foreground flex-1">{r.rule}</span>
                           <span className="text-muted-foreground">FW1: {r.fw1}</span>
                           <span className="text-muted-foreground">FW2: {r.fw2}</span>
@@ -1493,7 +1493,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureButton icon={<Wrench className="h-4 w-4" />} title="Rule Optimiser" desc="Identifies redundant, shadowed, and overlapping rules that can be consolidated" color="text-[#2006F7]" onClick={() => setActiveOverlay("rule-optimiser")} />
                   <FeatureButton icon={<Layers className="h-4 w-4" />} title="Policy Complexity" desc="Measures rule complexity and suggests simplification opportunities" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("policy-complexity")} />
                   <FeatureButton icon={<Trash2 className="h-4 w-4" />} title="Unused Objects" desc="Finds hosts, services, and groups no longer referenced by any rule" color="text-[#F29400]" onClick={() => setActiveOverlay("unused-objects")} />
-                  <FeatureButton icon={<Scale className="h-4 w-4" />} title="Consistency Checker" desc="Cross-firewall rule consistency analysis when multiple configs are loaded" color="text-[#00995a]" onClick={() => setActiveOverlay("consistency-checker")} />
+                  <FeatureButton icon={<Scale className="h-4 w-4" />} title="Consistency Checker" desc="Cross-firewall rule consistency analysis when multiple configs are loaded" color="text-[#00F2B3]" onClick={() => setActiveOverlay("consistency-checker")} />
                 </div>
 
                 <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
@@ -1526,7 +1526,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureOverlay title="Change Approval" subtitle="Create, approve, and track change requests" onClose={() => setActiveOverlay(null)}>
                     <div className="space-y-2">
                       {[
-                        { id: "CR-001", title: "Disable WAN admin services", status: "Approved", statusColor: "#00995a", by: "Sarah Chen", date: "14 Mar 2026" },
+                        { id: "CR-001", title: "Disable WAN admin services", status: "Approved", statusColor: "#00F2B3", by: "Sarah Chen", date: "14 Mar 2026" },
                         { id: "CR-002", title: "Enable IPS on all WAN rules", status: "Pending", statusColor: "#F29400", by: "Joseph McDonald", date: "16 Mar 2026" },
                         { id: "CR-003", title: "Enforce TLS 1.2+ on VPNs", status: "Draft", statusColor: "#6B5BFF", by: "Alex Rivera", date: "18 Mar 2026" },
                       ].map((cr) => (
@@ -1562,13 +1562,13 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 </div>
 
                 <div className="space-y-2.5">
-                  <FeatureButton icon={<TrendingUp className="h-4 w-4" />} title="Progress Tracking" desc="Track fix progress across all findings with completion metrics by severity" color="text-[#00995a]" onClick={() => setActiveOverlay("remediation-progress")} />
+                  <FeatureButton icon={<TrendingUp className="h-4 w-4" />} title="Progress Tracking" desc="Track fix progress across all findings with completion metrics by severity" color="text-[#00F2B3]" onClick={() => setActiveOverlay("remediation-progress")} />
                   <FeatureButton icon={<Map className="h-4 w-4" />} title="Remediation Roadmap" desc="Prioritised timeline of recommended fixes with effort estimates" color="text-[#2006F7]" onClick={() => setActiveOverlay("remediation-roadmap")} />
                   <FeatureButton icon={<ClipboardList className="h-4 w-4" />} title="Playbooks" desc="Step-by-step remediation guides with exact navigation paths and commands" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("playbooks")} />
                   <FeatureButton icon={<ShieldCheck className="h-4 w-4" />} title="Change Approval" desc="Create change requests, track approvals, and verify remediation results" color="text-[#005BC8]" onClick={() => setActiveOverlay("change-approval")} />
                 </div>
 
-                <div className="rounded-lg bg-[#00995a]/5 border border-[#00995a]/15 p-3">
+                <div className="rounded-lg bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Tip:</strong> The Remediation tab appears when findings are detected. Use it to demonstrate ongoing security improvements to your customers.
                   </p>
@@ -1601,7 +1601,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         { format: "PDF", desc: "Branded report ready for client delivery", icon: <FileText className="h-3.5 w-3.5 text-[#EA0022]" />, types: "Individual, Executive, Compliance" },
                         { format: "Word (DOCX)", desc: "Editable document for custom modifications", icon: <FileText className="h-3.5 w-3.5 text-[#2006F7]" />, types: "Individual, Executive, Compliance" },
                         { format: "PowerPoint (PPTX)", desc: "Presentation-ready slides with charts", icon: <FileText className="h-3.5 w-3.5 text-[#F29400]" />, types: "Executive Summary" },
-                        { format: "CSV / Excel", desc: "Raw data for analysis and risk registers", icon: <FileText className="h-3.5 w-3.5 text-[#00995a]" />, types: "Findings, Risk Register, Evidence" },
+                        { format: "CSV / Excel", desc: "Raw data for analysis and risk registers", icon: <FileText className="h-3.5 w-3.5 text-[#00F2B3]" />, types: "Findings, Risk Register, Evidence" },
                         { format: "ZIP Bundle", desc: "All reports and evidence in a single download", icon: <Package className="h-3.5 w-3.5 text-[#6B5BFF]" />, types: "Full assessment package" },
                       ].map((f) => (
                         <div key={f.format} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
@@ -1640,7 +1640,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureButton icon={<Zap className="h-4 w-4" />} title="Score Simulator" desc="Model what-if scenarios to see how fixes impact your score" color="text-[#F29400]" onClick={() => setActiveOverlay("score-simulator")} />
                   <FeatureButton icon={<Target className="h-4 w-4" />} title="Attack Surface" desc="Map internet-facing services, ports, and access paths" color="text-[#EA0022]" onClick={() => setActiveOverlay("attack-surface")} />
                   <FeatureButton icon={<GitCompare className="h-4 w-4" />} title="Config Compare" desc="Side-by-side diff between before and after configs" color="text-[#2006F7]" onClick={() => setActiveOverlay("config-compare")} />
-                  <FeatureButton icon={<Package className="h-4 w-4" />} title="Export Centre" desc="Export reports, risk registers, and evidence in PDF, Word, PPTX" color="text-[#00995a]" onClick={() => setActiveOverlay("export-centre")} />
+                  <FeatureButton icon={<Package className="h-4 w-4" />} title="Export Centre" desc="Export reports, risk registers, and evidence in PDF, Word, PPTX" color="text-[#00F2B3]" onClick={() => setActiveOverlay("export-centre")} />
                 </div>
 
                 <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
@@ -1739,7 +1739,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                             { step: "3", text: "Enter the 6-digit code to verify and activate" },
                           ].map((s) => (
                             <div key={s.step} className="flex items-start gap-2 text-[9px]">
-                              <span className="flex items-center justify-center h-4 w-4 rounded-full bg-[#00995a] text-white text-[8px] font-bold shrink-0 mt-0.5">{s.step}</span>
+                              <span className="flex items-center justify-center h-4 w-4 rounded-full bg-[#00F2B3] text-white text-[8px] font-bold shrink-0 mt-0.5">{s.step}</span>
                               <span className="text-muted-foreground">{s.text}</span>
                             </div>
                           ))}
@@ -1771,7 +1771,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                             <p className="text-[10px] font-medium text-foreground">MacBook Pro Touch ID</p>
                             <p className="text-[9px] text-muted-foreground">Added 12 Mar 2026</p>
                           </div>
-                          <span className="text-[9px] text-[#00995a] font-medium">Active</span>
+                          <span className="text-[9px] text-[#00F2B3] font-medium">Active</span>
                         </div>
                       </div>
                     </div>
@@ -1790,11 +1790,11 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
 
                 <div className="space-y-2.5">
                   <FeatureButton icon={<UserPlus className="h-4 w-4" />} title="Team Management" desc="Invite colleagues by email and assign Owner, Engineer, or Viewer roles" color="text-[#2006F7]" onClick={() => setActiveOverlay("team-mgmt")} />
-                  <FeatureButton icon={<Lock className="h-4 w-4" />} title="Multi-Factor Authentication" desc="Add TOTP-based verification via authenticator app for all logins" color="text-[#00995a]" onClick={() => setActiveOverlay("mfa")} />
+                  <FeatureButton icon={<Lock className="h-4 w-4" />} title="Multi-Factor Authentication" desc="Add TOTP-based verification via authenticator app for all logins" color="text-[#00F2B3]" onClick={() => setActiveOverlay("mfa")} />
                   <FeatureButton icon={<Fingerprint className="h-4 w-4" />} title="Passkeys" desc="Passwordless sign-in with Face ID, Touch ID, or hardware security keys" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("passkeys")} />
                 </div>
 
-                <div className="rounded-lg bg-[#00995a]/5 border border-[#00995a]/15 p-3">
+                <div className="rounded-lg bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Recommendation:</strong> Enable MFA or register a passkey for your account as soon as possible. You can set these up in Settings &gt; Security.
                   </p>
@@ -1857,7 +1857,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureButton icon={<Bell className="h-4 w-4" />} title="Alerts" desc="Email and webhook alerts for critical findings and drift" color="text-[#F29400]" onClick={() => setActiveOverlay("alerts")} />
                   <FeatureButton icon={<Calendar className="h-4 w-4" />} title="Scheduled Reports" desc="Auto-email compliance reports on a weekly, monthly, or quarterly basis" color="text-[#2006F7]" onClick={() => setActiveOverlay("scheduled-reports")} />
                   <FeatureButton icon={<Webhook className="h-4 w-4" />} title="Webhooks" desc="POST assessment data to your PSA, RMM, or ticketing system" color="text-[#6B5BFF]" onClick={() => setActiveOverlay("webhooks")} />
-                  <FeatureButton icon={<BookOpen className="h-4 w-4" />} title="Custom Frameworks" desc="Create your own compliance standards with custom controls" color="text-[#00995a]" onClick={() => setActiveOverlay("custom-frameworks")} />
+                  <FeatureButton icon={<BookOpen className="h-4 w-4" />} title="Custom Frameworks" desc="Create your own compliance standards with custom controls" color="text-[#00F2B3]" onClick={() => setActiveOverlay("custom-frameworks")} />
                 </div>
 
                 <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
@@ -1870,7 +1870,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
 
             {step.id === "done" && (
               <div className="text-center space-y-5 py-4">
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#00995a] to-[#00F2B3] flex items-center justify-center mx-auto shadow-lg shadow-[#00995a]/20">
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#00F2B3] to-[#00F2B3] flex items-center justify-center mx-auto shadow-lg shadow-[#00F2B3]/20">
                   <Check className="h-8 w-8 text-white" />
                 </div>
                 <div className="space-y-2">

@@ -83,9 +83,9 @@ export function CentralIntegration() {
     <div className="p-5 space-y-5">
       {/* Connection Status Banner */}
       {central.isConnected ? (
-        <div className="rounded-lg border border-[#00995a]/20 dark:border-[#00F2B3]/20 bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-4 py-3 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-[#00995a]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
-            <Wifi className="h-4 w-4 text-[#00995a] dark:text-[#00F2B3]" />
+        <div className="rounded-lg border border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.04] px-4 py-3 flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
+            <Wifi className="h-4 w-4 text-[#00F2B3] dark:text-[#00F2B3]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">Sophos Central Connected</p>
@@ -136,10 +136,10 @@ export function CentralIntegration() {
               <SetupStep step={3} title='Add a new credential named "FireComply"'>
                 <p>Click <span className="font-medium text-foreground">Add Credential</span>, enter the name <span className="font-mono bg-muted px-1 rounded">FireComply</span>, and select the role:</p>
                 <div className="mt-2 rounded border border-border overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#00995a]/5">
-                    <Shield className="h-3 w-3 text-[#00995a]" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#00F2B3]/5">
+                    <Shield className="h-3 w-3 text-[#00F2B3]" />
                     <span className="font-medium text-foreground">Service Principal Read-Only</span>
-                    <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] font-bold">RECOMMENDED</span>
+                    <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] font-bold">RECOMMENDED</span>
                   </div>
                   <p className="px-3 py-1.5 text-[10px]">View-only access. FireComply never modifies your Sophos Central configuration.</p>
                 </div>
@@ -244,7 +244,7 @@ export function CentralIntegration() {
           <div className="max-h-48 overflow-y-auto rounded-lg border border-border divide-y divide-border">
             {central.firewalls.map((fw) => (
               <div key={fw.id} className="flex items-center gap-3 px-3 py-2 text-xs hover:bg-muted/30 transition-colors">
-                <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"}`} />
+                <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`} />
                 <span className="font-medium text-foreground truncate">{fw.hostname || fw.name}</span>
                 <span className="text-[10px] text-muted-foreground font-mono shrink-0">{fw.serialNumber}</span>
                 <span className="text-[10px] text-muted-foreground shrink-0">{fw.firmwareVersion}</span>

@@ -338,7 +338,7 @@ export function ScheduledReportSettings() {
             <button
               onClick={handleCreate}
               disabled={!formName.trim() || !formRecipients.trim()}
-              className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-md bg-[#00995a] text-white hover:bg-[#00995a]/90 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-md bg-[#00F2B3] text-white hover:bg-[#00F2B3]/90 transition-colors disabled:opacity-50"
             >
               <Calendar className="h-3 w-3" />
               Create Schedule
@@ -434,7 +434,7 @@ export function ScheduledReportSettings() {
                     title={report.enabled ? "Disable" : "Enable"}
                   >
                     {report.enabled ? (
-                      <ToggleRight className="h-3.5 w-3.5 text-[#00995a]" />
+                      <ToggleRight className="h-3.5 w-3.5 text-[#00F2B3]" />
                     ) : (
                       <ToggleLeft className="h-3.5 w-3.5" />
                     )}

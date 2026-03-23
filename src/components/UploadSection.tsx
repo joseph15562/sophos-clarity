@@ -151,7 +151,7 @@ export function UploadSection({
             {hasFiles ? "Firewall Configs" : "Upload Firewall Exports"}
           </h2>
           {hasFiles && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]">
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
               {files.length} loaded
             </span>
           )}
@@ -231,8 +231,8 @@ export function UploadSection({
 
       {/* Privacy banner */}
       {hasFiles && (
-        <div className="rounded-xl border border-[#00995a]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00995a] dark:border-l-[#00F2B3] bg-[#00995a]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
-          <div className="h-10 w-10 rounded-lg bg-[#00995a]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0 mt-0.5">
+        <div className="rounded-xl border border-[#00F2B3]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00F2B3] dark:border-l-[#00F2B3] bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
+          <div className="h-10 w-10 rounded-lg bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0 mt-0.5">
             <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
           </div>
           <div className="text-sm text-muted-foreground leading-relaxed">
@@ -318,7 +318,7 @@ export function UploadSection({
             disabled={savingReports}
             className={`no-print flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
               reportsSaved
-                ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+                ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
                 : "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
             }`}
           >

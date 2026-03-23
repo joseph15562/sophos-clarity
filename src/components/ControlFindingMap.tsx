@@ -9,7 +9,7 @@ interface Props {
 }
 
 const STATUS_STYLES: Record<ControlStatus, string> = {
-  pass: "bg-[#00995a]/20 text-[#00995a]",
+  pass: "bg-[#00F2B3]/20 text-[#00F2B3]",
   partial: "bg-[#F29400]/20 text-[#F29400]",
   fail: "bg-[#EA0022]/20 text-[#EA0022]",
   na: "bg-[#6B7280]/20 text-[#6B7280]",
@@ -19,7 +19,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   critical: "bg-[#EA0022]/20 text-[#EA0022]",
   high: "bg-[#F29400]/20 text-[#F29400]",
   medium: "bg-[#6B7280]/20 text-[#6B7280]",
-  low: "bg-[#00995a]/20 text-[#00995a]",
+  low: "bg-[#00F2B3]/20 text-[#00F2B3]",
   info: "bg-muted/40 text-muted-foreground",
 };
 

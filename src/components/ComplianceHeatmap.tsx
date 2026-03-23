@@ -10,11 +10,11 @@ interface Props {
 
 const STATUS_STYLES: Record<ControlStatus, { cell: string; label: string; dot: string; icon: string; iconColor: string }> = {
   pass: {
-    cell: "bg-[#00995a]/15 dark:bg-[#00F2B3]/15 hover:bg-[#00995a]/25 dark:hover:bg-[#00F2B3]/25",
+    cell: "bg-[#00F2B3]/15 dark:bg-[#00F2B3]/15 hover:bg-[#00F2B3]/25 dark:hover:bg-[#00F2B3]/25",
     label: "Pass",
-    dot: "bg-[#00995a] dark:bg-[#00F2B3]",
+    dot: "bg-[#00F2B3] dark:bg-[#00F2B3]",
     icon: "\u2713",
-    iconColor: "text-[#00995a] dark:text-[#00F2B3]",
+    iconColor: "text-[#00F2B3] dark:text-[#00F2B3]",
   },
   partial: {
     cell: "bg-[#F29400]/15 hover:bg-[#F29400]/25",
@@ -215,7 +215,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                     </span>
                     {scorable > 0 && (
                       <span className={`block text-[9px] font-bold tabular-nums mt-0.5 ${
-                        pct >= 80 ? "text-[#00995a] dark:text-[#00F2B3]" :
+                        pct >= 80 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                         pct >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
                       }`}>{pct}%</span>
                     )}
@@ -269,7 +269,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             <p className="text-muted-foreground mt-0.5 text-[10px]">{tooltip.evidence || "No evidence gathered"}</p>
             <p className="mt-1">
               <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                tooltip.status === "pass" ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" :
+                tooltip.status === "pass" ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" :
                 tooltip.status === "partial" ? "bg-[#F29400]/10 text-[#F29400]" :
                 tooltip.status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022]" :
                 "bg-muted text-muted-foreground"
@@ -328,7 +328,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden flex">
                   {m.summary.pass > 0 && (
-                    <div className="h-full bg-[#00995a] dark:bg-[#00F2B3]" style={{ width: `${(m.summary.pass / total) * 100}%` }} />
+                    <div className="h-full bg-[#00F2B3] dark:bg-[#00F2B3]" style={{ width: `${(m.summary.pass / total) * 100}%` }} />
                   )}
                   {m.summary.partial > 0 && (
                     <div className="h-full bg-[#F29400]" style={{ width: `${(m.summary.partial / total) * 100}%` }} />
@@ -338,7 +338,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   )}
                 </div>
                 <span className={`text-[10px] font-bold tabular-nums ${
-                  passPct >= 80 ? "text-[#00995a] dark:text-[#00F2B3]" :
+                  passPct >= 80 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                   passPct >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
                 }`}>{passPct}%</span>
               </div>

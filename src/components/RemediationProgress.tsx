@@ -151,7 +151,7 @@ export function RemediationProgress({ analysisResults }: Props) {
             className="h-full rounded-full transition-all"
             style={{
               width: `${pct}%`,
-              backgroundColor: pct >= 100 ? "#00995a" : pct > 0 ? "#F29400" : "#EA0022",
+              backgroundColor: pct >= 100 ? "#00F2B3" : pct > 0 ? "#F29400" : "#EA0022",
             }}
           />
         </div>
@@ -160,7 +160,7 @@ export function RemediationProgress({ analysisResults }: Props) {
       <div className="space-y-3 mb-4">
         {bySection.map((cat) => {
           const catPct = cat.total > 0 ? Math.round((100 * cat.completed) / cat.total) : 0;
-          const fillColor = catPct >= 100 ? "#00995a" : catPct > 0 ? "#F29400" : "#EA0022";
+          const fillColor = catPct >= 100 ? "#00F2B3" : catPct > 0 ? "#F29400" : "#EA0022";
           return (
             <div key={cat.section}>
               <div className="flex items-center justify-between text-xs mb-1">

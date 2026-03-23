@@ -33,7 +33,7 @@ interface AgentFleetPanelProps {
 function StatusDot({ status, lastSeenAt }: { status: string; lastSeenAt: string | null }) {
   const isRecent = lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < 30 * 60 * 1000;
   const color =
-    status === "online" && isRecent ? "bg-[#00995a]" :
+    status === "online" && isRecent ? "bg-[#00F2B3]" :
     status === "error" ? "bg-[#EA0022]" :
     status === "online" ? "bg-[#F29400]" :
     "bg-muted-foreground/40";
@@ -55,7 +55,7 @@ const SEV_COLORS: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#F29400]",
   medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-  low: "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]",
+  low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
   info: "bg-[#009CFB]/10 text-[#009CFB]",
 };
 
@@ -68,7 +68,7 @@ function SeverityBadge({ severity }: { severity: string }) {
 }
 
 function ScoreGauge({ score, grade }: { score: number; grade: string }) {
-  const color = score >= 75 ? "#00995a" : score >= 50 ? "#F29400" : "#EA0022";
+  const color = score >= 75 ? "#00F2B3" : score >= 50 ? "#F29400" : "#EA0022";
   const r = 28;
   const c = 2 * Math.PI * r;
   const offset = c - (score / 100) * c;
@@ -192,7 +192,7 @@ function AgentSummaryCard({
                 </span>
               )}
               {drift.fixed && drift.fixed.length > 0 && (
-                <span className="flex items-center gap-0.5 text-[9px] font-medium text-[#00995a] dark:text-[#00F2B3]">
+                <span className="flex items-center gap-0.5 text-[9px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">
                   <TrendingDown className="h-2.5 w-2.5" /> -{drift.fixed.length} fixed
                 </span>
               )}
@@ -207,12 +207,12 @@ function AgentSummaryCard({
           {threatStatus && (
             <div className="flex flex-wrap gap-1.5">
               {threatStatus.atp != null && (
-                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.atp as { enabled: boolean }).enabled ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
+                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.atp as { enabled: boolean }).enabled ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
                   ATP {(threatStatus.atp as { enabled: boolean }).enabled ? "ON" : "OFF"}
                 </span>
               )}
               {threatStatus.mdr != null && (
-                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.mdr as { enabled: boolean }).enabled ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"}`}>
+                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.mdr as { enabled: boolean }).enabled ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"}`}>
                   MDR {(threatStatus.mdr as { enabled: boolean }).enabled ? "ON" : "OFF"}
                 </span>
               )}
@@ -484,7 +484,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
                   {tenantAgents.length} firewall{tenantAgents.length !== 1 ? "s" : ""}
                 </span>
                 {onlineCount > 0 && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-medium">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-medium">
                     {onlineCount} online
                   </span>
                 )}
@@ -512,7 +512,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
                             <p className="text-[9px] text-muted-foreground truncate">{agent.firewall_host}:{agent.firewall_port}</p>
                           </div>
                           {isLoaded && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-bold shrink-0">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-bold shrink-0">
                               ✓ Loaded
                             </span>
                           )}
@@ -526,7 +526,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
                           )}
                           {headerScore != null && (
                             <span className={`text-[10px] font-bold shrink-0 ${
-                              headerScore >= 75 ? "text-[#00995a] dark:text-[#00F2B3]" :
+                              headerScore >= 75 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                               headerScore >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
                             }`}>
                               {headerScore}/{headerGrade}

@@ -125,9 +125,9 @@ export function AlertFeed({ analysisResults }: AlertFeedProps) {
       case "new":
         return <AlertTriangle className={base} style={{ color: "#EA0022" }} />;
       case "fixed":
-        return <CheckCircle className={base} style={{ color: "#00995a" }} />;
+        return <CheckCircle className={base} style={{ color: "#00F2B3" }} />;
       case "score_up":
-        return <TrendingUp className={base} style={{ color: "#00995a" }} />;
+        return <TrendingUp className={base} style={{ color: "#00F2B3" }} />;
       case "score_down":
         return <TrendingDown className={base} style={{ color: "#EA0022" }} />;
       default:

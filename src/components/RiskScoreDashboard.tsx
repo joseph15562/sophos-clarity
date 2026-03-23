@@ -18,8 +18,8 @@ interface Props {
 }
 
 const GRADE_COLORS: Record<string, { ring: string; text: string; bg: string }> = {
-  A: { ring: "ring-[#00995a]/30 dark:ring-[#00F2B3]/30", text: "text-[#00995a] dark:text-[#00F2B3]", bg: "bg-[#00995a]/10 dark:bg-[#00F2B3]/10" },
-  B: { ring: "ring-[#00995a]/20 dark:ring-[#00F2B3]/20", text: "text-[#00774a] dark:text-[#00F2B3]", bg: "bg-[#00995a]/5 dark:bg-[#00F2B3]/5" },
+  A: { ring: "ring-[#00F2B3]/30 dark:ring-[#00F2B3]/30", text: "text-[#00F2B3] dark:text-[#00F2B3]", bg: "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10" },
+  B: { ring: "ring-[#00F2B3]/20 dark:ring-[#00F2B3]/20", text: "text-[#00774a] dark:text-[#00F2B3]", bg: "bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5" },
   C: { ring: "ring-[#F8E300]/30", text: "text-[#b8a200] dark:text-[#F8E300]", bg: "bg-[#F8E300]/10" },
   D: { ring: "ring-[#F29400]/30", text: "text-[#c47800] dark:text-[#F29400]", bg: "bg-[#F29400]/10" },
   F: { ring: "ring-[#EA0022]/30", text: "text-[#EA0022]", bg: "bg-[#EA0022]/10" },
@@ -35,7 +35,7 @@ function GaugeRing({ score, grade, projectedScore, projectedGrade }: {
   const hasProjection = projectedScore != null && projectedScore !== score;
 
   const strokeColor =
-    grade === "A" || grade === "B" ? "#00995a" : grade === "C" ? "#F8E300" : grade === "D" ? "#F29400" : "#EA0022";
+    grade === "A" || grade === "B" ? "#00F2B3" : grade === "C" ? "#F8E300" : grade === "D" ? "#F29400" : "#EA0022";
 
   const projOffset = hasProjection ? circumference - (projectedScore / 100) * circumference : circumference;
   const delta = hasProjection ? projectedScore - score : 0;
@@ -156,7 +156,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
               const projCat = projected?.categories.find((p) => p.label === c.label);
               const delta = projCat ? projCat.pct - c.pct : 0;
               const color =
-                c.pct >= 80 ? "text-[#00995a] dark:text-[#00F2B3]" :
+                c.pct >= 80 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                 c.pct >= 50 ? "text-[#b8a200] dark:text-[#F8E300]" :
                 "text-[#EA0022]";
               return (

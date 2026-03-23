@@ -2102,7 +2102,7 @@ function HealthCheckInner() {
                       <Upload className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
                       HTML config upload
                     </CardTitle>
-                    <Badge className="bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] border-0">
+                    <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] border-0">
                       Active
                     </Badge>
                   </div>
@@ -2134,7 +2134,7 @@ function HealthCheckInner() {
                       <Upload className="h-3.5 w-3.5" />
                       Upload Requests
                       {configUploadRequests.filter((r) => r.status === "uploaded").length > 0 && (
-                        <span className="ml-auto text-[10px] font-semibold text-[#00995a]">
+                        <span className="ml-auto text-[10px] font-semibold text-[#00F2B3]">
                           {configUploadRequests.filter((r) => r.status === "uploaded").length} ready
                         </span>
                       )}
@@ -2165,7 +2165,7 @@ function HealthCheckInner() {
                       <Wifi className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
                       Sophos Central API
                     </CardTitle>
-                    <Badge className="bg-[#00995a]/15 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] border-0">
+                    <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] border-0">
                       Active
                     </Badge>
                   </div>
@@ -2213,7 +2213,7 @@ function HealthCheckInner() {
                     {centralBusy ? "Connecting…" : "Connect & Discover Firewalls"}
                   </Button>
                   {centralValidated && (
-                    <p className="text-[11px] flex items-center gap-1 text-[#00995a] dark:text-[#00F2B3]">
+                    <p className="text-[11px] flex items-center gap-1 text-[#00F2B3] dark:text-[#00F2B3]">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Connected (session only — credentials not stored)
                     </p>
@@ -2331,7 +2331,7 @@ function HealthCheckInner() {
                   ))}
                 </div>
                 {licenceLockedByCentral && (
-                  <span className="flex items-center gap-1 text-[10px] font-medium text-[#00995a] dark:text-[#00F2B3] whitespace-nowrap">
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-[#00F2B3] dark:text-[#00F2B3] whitespace-nowrap">
                     <Lock className="h-3 w-3 shrink-0" aria-hidden />
                     From Central
                   </span>
@@ -2437,7 +2437,7 @@ function HealthCheckInner() {
               </div>
             )}
             {centralValidated && (
-              <p className="text-[11px] flex items-center gap-1 text-[#00995a] dark:text-[#00F2B3]">
+              <p className="text-[11px] flex items-center gap-1 text-[#00F2B3] dark:text-[#00F2B3]">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Sophos Central connected — {firewallOptions.length} device(s) from Central
                 {guestFirewallGroups.length < firewallOptions.length
@@ -2558,7 +2558,7 @@ function HealthCheckInner() {
                 <Button
                   type="button"
                   size="sm"
-                  className="rounded-lg bg-[#00995a] hover:bg-[#00995a]/90 text-white gap-1.5 w-fit"
+                  className="rounded-lg bg-[#00F2B3] hover:bg-[#00F2B3]/90 text-white gap-1.5 w-fit"
                   disabled={savingCheck}
                   onClick={saveHealthCheck}
                 >
@@ -2693,7 +2693,7 @@ function HealthCheckInner() {
                       </div>
                       <Button
                         type="button"
-                        className="w-full rounded-lg bg-[#00995a] hover:bg-[#00995a]/90 text-white gap-1.5"
+                        className="w-full rounded-lg bg-[#00F2B3] hover:bg-[#00F2B3]/90 text-white gap-1.5"
                         disabled={sharing}
                         onClick={() => void handleShareHealthCheck()}
                       >
@@ -3017,7 +3017,7 @@ function HealthCheckInner() {
           ) : (
             <div className="space-y-4">
               {configUploadEmailSent && (
-                <div className="rounded-lg bg-[#00995a]/10 border border-[#00995a]/30 p-3 text-sm text-[#00995a] flex items-center gap-2">
+                <div className="rounded-lg bg-[#00F2B3]/10 border border-[#00F2B3]/30 p-3 text-sm text-[#00F2B3] flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0" />
                   Email sent to {configUploadCustomerEmail}
                 </div>
@@ -3046,7 +3046,7 @@ function HealthCheckInner() {
 
               <div className="flex items-center gap-2">
                 <Badge variant={configUploadStatus === "uploaded" ? "default" : "secondary"} className={cn(
-                  configUploadStatus === "uploaded" && "bg-[#00995a] text-white",
+                  configUploadStatus === "uploaded" && "bg-[#00F2B3] text-white",
                 )}>
                   {configUploadStatus === "uploaded" ? "Config Uploaded" : "Waiting for customer…"}
                 </Badge>
@@ -3056,7 +3056,7 @@ function HealthCheckInner() {
                 {configUploadStatus === "uploaded" && (
                   <Button
                     type="button"
-                    className="flex-1 gap-2 bg-[#00995a] hover:bg-[#00995a]/90"
+                    className="flex-1 gap-2 bg-[#00F2B3] hover:bg-[#00F2B3]/90"
                     disabled={configUploadLoading}
                     onClick={() => configUploadToken && handleLoadConfigFromUpload(configUploadToken)}
                   >
@@ -3133,7 +3133,7 @@ function HealthCheckInner() {
               {configUploadRequests.map((req) => {
                 const isExpired = new Date(req.expires_at) <= new Date();
                 const statusLabel = isExpired ? "Expired" : req.status === "uploaded" ? "Config Ready" : req.status === "downloaded" ? "Downloaded" : "Pending";
-                const statusColor = isExpired ? "text-muted-foreground" : req.status === "uploaded" ? "text-[#00995a]" : req.status === "downloaded" ? "text-blue-500" : "text-amber-500";
+                const statusColor = isExpired ? "text-muted-foreground" : req.status === "uploaded" ? "text-[#00F2B3]" : req.status === "downloaded" ? "text-blue-500" : "text-amber-500";
                 const isTeammate = activeTeam && req.se_user_id && req.se_user_id !== seAuth.seProfile?.id;
                 return (
                   <div key={req.id} className={cn("rounded-lg border p-3 space-y-2", isTeammate && "border-[#2006F7]/30 dark:border-[#00EDFF]/20")}>
@@ -3156,7 +3156,7 @@ function HealthCheckInner() {
                         <Button
                           type="button"
                           size="sm"
-                          className="h-7 text-xs gap-1.5 bg-[#00995a] hover:bg-[#00995a]/90"
+                          className="h-7 text-xs gap-1.5 bg-[#00F2B3] hover:bg-[#00F2B3]/90"
                           disabled={configUploadLoading}
                           onClick={() => handleLoadConfigFromUpload(req.token)}
                         >
@@ -3275,7 +3275,7 @@ function HealthCheckInner() {
                         <p className="text-[9px] font-mono text-muted-foreground truncate">{r.serialNumbers.join(", ")}</p>
                       )}
                     </div>
-                    <Badge className={`${r.overall_grade === "A" ? "bg-[#00995a]/15 text-[#00995a]" : r.overall_grade === "F" ? "bg-[#EA0022]/15 text-[#EA0022]" : "bg-muted text-muted-foreground"} border-0 text-[9px] shrink-0`}>
+                    <Badge className={`${r.overall_grade === "A" ? "bg-[#00F2B3]/15 text-[#00F2B3]" : r.overall_grade === "F" ? "bg-[#EA0022]/15 text-[#EA0022]" : "bg-muted text-muted-foreground"} border-0 text-[9px] shrink-0`}>
                       {r.overall_grade ?? "—"}
                     </Badge>
                   </button>

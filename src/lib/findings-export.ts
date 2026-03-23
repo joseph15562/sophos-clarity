@@ -51,7 +51,7 @@ export function downloadFindingsPdf(analysisResults: Record<string, AnalysisResu
       case "critical": return "#EA0022";
       case "high": return "#F29400";
       case "medium": return "#F8E300";
-      case "low": return "#00995a";
+      case "low": return "#00F2B3";
       default: return "#009CFB";
     }
   };

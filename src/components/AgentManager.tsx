@@ -34,7 +34,7 @@ function StatusDot({ status, lastSeenAt }: { status: string; lastSeenAt: string 
     lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < 30 * 60 * 1000;
   const color =
     status === "online" && isRecent
-      ? "bg-[#00995a]"
+      ? "bg-[#00F2B3]"
       : status === "error"
         ? "bg-[#EA0022]"
         : status === "online"
@@ -48,7 +48,7 @@ function FirmwareBadge({ version }: { version: string | null }) {
   const major = parseFloat(version.replace(/^v/i, ""));
   const color =
     major >= 21.5
-      ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+      ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
       : major >= 21
         ? "bg-[#009CFB]/10 text-[#009CFB]"
         : major >= 19
@@ -180,8 +180,8 @@ function RegisterDialog({
 
           {generatedKey ? (
             <div className="space-y-3">
-              <div className="rounded-lg bg-[#00995a]/10 border border-[#00995a]/20 p-3">
-                <p className="text-[11px] font-semibold text-[#00995a] dark:text-[#00F2B3] mb-2">
+              <div className="rounded-lg bg-[#00F2B3]/10 border border-[#00F2B3]/20 p-3">
+                <p className="text-[11px] font-semibold text-[#00F2B3] dark:text-[#00F2B3] mb-2">
                   API Key Generated
                 </p>
                 <p className="text-[10px] text-muted-foreground mb-2">
@@ -192,7 +192,7 @@ function RegisterDialog({
                     {generatedKey}
                   </code>
                   <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
-                    {copied ? <Check className="h-3.5 w-3.5 text-[#00995a]" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? <Check className="h-3.5 w-3.5 text-[#00F2B3]" /> : <Copy className="h-3.5 w-3.5" />}
                   </Button>
                 </div>
               </div>
@@ -497,7 +497,7 @@ export function AgentManager() {
                     <Server className="h-3 w-3 text-muted-foreground shrink-0" />
                     <span className="text-[10px] font-semibold text-foreground flex-1">{tenantName}</span>
                     {isLinked ? (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-medium flex items-center gap-1">
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-medium flex items-center gap-1">
                         <Link2 className="h-2.5 w-2.5" /> Central Linked
                       </span>
                     ) : (
@@ -509,7 +509,7 @@ export function AgentManager() {
                       {tenantAgents.length} agent{tenantAgents.length !== 1 ? "s" : ""}
                     </span>
                     {onlineCount > 0 && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] font-medium">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-medium">
                         {onlineCount} online
                       </span>
                     )}
@@ -566,7 +566,7 @@ export function AgentManager() {
                                 <div>
                                   <span className="text-muted-foreground">Central:</span>{" "}
                                   {(agent as any).central_firewall_id ? (
-                                    <span className="font-medium text-[#00995a] dark:text-[#00F2B3]">Linked</span>
+                                    <span className="font-medium text-[#00F2B3] dark:text-[#00F2B3]">Linked</span>
                                   ) : (
                                     <span className="font-medium text-muted-foreground">Not linked</span>
                                   )}
@@ -591,7 +591,7 @@ export function AgentManager() {
                                               <span className="text-[#EA0022]">+{(sub.drift as { new: string[] }).new.length}</span>
                                             ) : null}
                                             {(sub.drift as { fixed?: string[] }).fixed?.length ? (
-                                              <span className="text-[#00995a] ml-1">-{(sub.drift as { fixed: string[] }).fixed.length}</span>
+                                              <span className="text-[#00F2B3] ml-1">-{(sub.drift as { fixed: string[] }).fixed.length}</span>
                                             ) : null}
                                           </span>
                                         )}

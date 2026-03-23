@@ -21,7 +21,7 @@ interface MdrStatusProps {
 
 function StatusCircle({ status }: { status: "green" | "amber" | "red" }) {
   const colors = {
-    green: "bg-[#00995a]",
+    green: "bg-[#00F2B3]",
     amber: "bg-[#F29400]",
     red: "bg-[#EA0022]",
   };

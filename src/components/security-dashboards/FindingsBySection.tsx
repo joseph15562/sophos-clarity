@@ -62,7 +62,7 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
             { key: "critical", count: d.critical, color: "#EA0022" },
             { key: "high", count: d.high, color: "#F29400" },
             { key: "medium", count: d.medium, color: "#F8E300" },
-            { key: "low", count: d.low, color: "#00995a" },
+            { key: "low", count: d.low, color: "#00F2B3" },
             { key: "info", count: d.info, color: "#009CFB" },
           ].filter((s) => s.count > 0);
 
@@ -104,7 +104,7 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
           { label: "Critical", color: "#EA0022" },
           { label: "High", color: "#F29400" },
           { label: "Medium", color: "#F8E300" },
-          { label: "Low", color: "#00995a" },
+          { label: "Low", color: "#00F2B3" },
           { label: "Info", color: "#009CFB" },
         ].map((s) => (
           <span key={s.label} className="flex items-center gap-1 text-[9px] text-muted-foreground">

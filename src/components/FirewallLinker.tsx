@@ -222,7 +222,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
             </span>
           )}
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-            allLinked ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"
+            allLinked ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"
           }`}>
             {linkedCount}/{configs.length} linked
           </span>
@@ -260,7 +260,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
           const isExpanded = expandedConfig === config.configHash;
 
           return (
-            <div key={config.configHash} className={`rounded-lg border ${link ? "border-[#00995a]/20 dark:border-[#00F2B3]/20" : "border-border"} overflow-hidden`}>
+            <div key={config.configHash} className={`rounded-lg border ${link ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20" : "border-border"} overflow-hidden`}>
               {/* Config Header Row */}
               <div className="flex items-center gap-3 px-3 py-2.5">
                 <Server className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -274,7 +274,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                 {link ? (
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[#00995a] dark:text-[#00F2B3]" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-[#00F2B3] dark:text-[#00F2B3]" />
                       <div className="text-right">
                         <span className="text-[10px] font-medium text-foreground block">{link.firewall ? getFirewallDisplayName(link.firewall) : link.firewallId}</span>
                         <span className="text-[9px] text-muted-foreground block">
@@ -283,7 +283,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                           {link.method === "auto" && " · auto-matched"}
                         </span>
                       </div>
-                      <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${link.firewall?.status?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"}`} />
+                      <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${link.firewall?.status?.connected ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`} />
                     </div>
                     <button
                       onClick={() => handleUnlink(config.configHash)}
@@ -344,7 +344,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                               isLinkedElsewhere ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
                             }`}
                           >
-                            <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00995a]" : "bg-[#EA0022]"}`} />
+                            <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`} />
                             <span className="font-medium text-foreground truncate">{getFirewallDisplayName(fw)}</span>
                             <span className="font-mono text-[10px] text-muted-foreground shrink-0">{fw.serialNumber}</span>
                             <span className="text-[10px] text-muted-foreground shrink-0">{fw.firmwareVersion}</span>

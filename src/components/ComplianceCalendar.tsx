@@ -206,7 +206,7 @@ export function ComplianceCalendar({ files = [] }: Props) {
                 <li key={i} className="flex items-center gap-2 text-xs">
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 ${
-                      e.type === "assessment" ? "bg-[#F29400]" : "bg-[#00995a] dark:bg-[#00F2B3]"
+                      e.type === "assessment" ? "bg-[#F29400]" : "bg-[#00F2B3] dark:bg-[#00F2B3]"
                     }`}
                   />
                   <span className="font-medium text-foreground">{e.label}</span>

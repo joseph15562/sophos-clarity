@@ -27,7 +27,7 @@ type SortField = "customer" | "type" | "score" | "date";
 type SortDir = "asc" | "desc";
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00995a] dark:text-[#00F2B3] bg-[#00995a]/10 dark:bg-[#00F2B3]/10",
+  A: "text-[#00F2B3] dark:text-[#00F2B3] bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10",
   B: "text-[#009CFB] bg-[#009CFB]/10",
   C: "text-[#F8E300] bg-[#F8E300]/10",
   D: "text-[#F29400] bg-[#F29400]/10",
@@ -202,7 +202,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
                       {pkg.analysisSummary.totalRules} rules
                     </span>
                     {pkg.analysisSummary.categories.map((c) => (
-                      <span key={c.label} className={`text-[10px] px-2 py-1 rounded-md ${c.pct >= 80 ? "bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]" : c.pct >= 50 ? "bg-[#F29400]/10 text-[#F29400]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
+                      <span key={c.label} className={`text-[10px] px-2 py-1 rounded-md ${c.pct >= 80 ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : c.pct >= 50 ? "bg-[#F29400]/10 text-[#F29400]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}>
                         {c.label}: {c.pct}%
                       </span>
                     ))}

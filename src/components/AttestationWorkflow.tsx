@@ -141,7 +141,7 @@ export function AttestationWorkflow({ frameworks = DEFAULT_FRAMEWORKS }: Props) 
             <ul className="mt-2 space-y-1.5">
               {history.map((a, i) => (
                 <li key={i} className="flex items-center gap-2 text-[10px]">
-                  <CheckCircle2 className="h-3 w-3 text-[#00995a] dark:text-[#00F2B3] shrink-0" />
+                  <CheckCircle2 className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3] shrink-0" />
                   <span className="text-foreground">{a.framework}</span>
                   <span className="text-muted-foreground">
                     by {a.attestedBy} on {new Date(a.attestedAt).toLocaleDateString()}

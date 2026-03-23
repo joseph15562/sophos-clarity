@@ -12,7 +12,7 @@ const SEV_COLORS: Record<string, string> = {
   critical: "#EA0022",
   high: "#F29400",
   medium: "#F8E300",
-  low: "#00995a",
+  low: "#00F2B3",
   info: "#009CFB",
 };
 
@@ -177,7 +177,7 @@ export function FindingsChanges({ analysisResults }: Props) {
         <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#EA0022]/10 text-[#EA0022]">
           {diff.newFindings.length} new
         </span>
-        <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]">
+        <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
           {diff.fixedFindings.length} fixed
         </span>
         <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#F29400]/10 text-[#F29400]">
@@ -194,7 +194,7 @@ export function FindingsChanges({ analysisResults }: Props) {
         <ExpandableList
           title="Fixed findings"
           items={diff.fixedFindings}
-          colorClass="bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3]"
+          colorClass="bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
           titleToSeverity={titleToSeverity}
         />
         <ExpandableList

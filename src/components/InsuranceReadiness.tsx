@@ -10,8 +10,8 @@ interface Props {
 
 const ANSWER_STYLES: Record<InsuranceAnswer, { color: string; bg: string; symbol: string }> = {
   yes: {
-    color: "text-[#00995a] dark:text-[#00F2B3]",
-    bg: "bg-[#00995a]/10 dark:bg-[#00F2B3]/10",
+    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+    bg: "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10",
     symbol: "\u2713",
   },
   no: {
@@ -70,7 +70,7 @@ export function InsuranceReadiness({ analysisResults }: Props) {
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold tabular-nums ${
               result.readinessScore >= 75
-                ? "bg-[#00995a]/10 text-[#00995a] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
+                ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
                 : result.readinessScore >= 50
                   ? "bg-[#F29400]/10 text-[#F29400]"
                   : "bg-[#EA0022]/10 text-[#EA0022]"

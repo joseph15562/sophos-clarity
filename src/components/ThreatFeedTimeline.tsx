@@ -5,7 +5,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   critical: "#EA0022",
   high: "#F29400",
   medium: "#F8E300",
-  low: "#00995a",
+  low: "#00F2B3",
 };
 
 interface Alert {

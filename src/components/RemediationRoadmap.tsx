@@ -9,7 +9,7 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   critical: "#EA0022",
   high: "#F29400",
   medium: "#F8E300",
-  low: "#00995a",
+  low: "#00F2B3",
   info: "#009CFB",
 };
 

@@ -257,7 +257,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange }: Props) {
                 <div className="flex flex-col items-center justify-center">
                   <span className="text-xl text-muted-foreground">→</span>
                   {delta !== 0 && (
-                    <span className={`text-sm font-bold ${delta > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+                    <span className={`text-sm font-bold ${delta > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
                       {delta > 0 ? "+" : ""}{delta}
                     </span>
                   )}
@@ -270,7 +270,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange }: Props) {
               </div>
 
               {findingsResolved > 0 && (
-                <p className="text-center text-[10px] text-[#00995a] dark:text-[#00F2B3] mt-3 font-medium">
+                <p className="text-center text-[10px] text-[#00F2B3] dark:text-[#00F2B3] mt-3 font-medium">
                   {findingsResolved} finding{findingsResolved !== 1 ? "s" : ""} would be resolved
                 </p>
               )}
@@ -285,14 +285,14 @@ export function ScoreSimulator({ analysisResults, onProjectedChange }: Props) {
                       <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${
-                            pc.pct >= 80 ? "bg-[#00995a] dark:bg-[#00F2B3]" : pc.pct >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]"
+                            pc.pct >= 80 ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : pc.pct >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]"
                           }`}
                           style={{ width: `${pc.pct}%` }}
                         />
                       </div>
                       <span className="font-bold text-foreground w-8 text-right">{pc.pct}%</span>
                       {d !== 0 && (
-                        <span className={`w-8 text-right font-bold ${d > 0 ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+                        <span className={`w-8 text-right font-bold ${d > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
                           {d > 0 ? "+" : ""}{d}
                         </span>
                       )}
@@ -310,7 +310,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange }: Props) {
 
 function gradeColor(grade: string): string {
   switch (grade) {
-    case "A": case "B": return "text-[#00995a] dark:text-[#00F2B3]";
+    case "A": case "B": return "text-[#00F2B3] dark:text-[#00F2B3]";
     case "C": return "text-[#b8a200] dark:text-[#F8E300]";
     case "D": return "text-[#c47800] dark:text-[#F29400]";
     default: return "text-[#EA0022]";

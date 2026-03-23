@@ -68,7 +68,7 @@ export function FirmwareTracker({ files }: FirmwareTrackerProps) {
                   {updateAvailable ? (
                     <AlertTriangle className="h-4 w-4 text-[#F29400]" title="Update available" />
                   ) : isLatest ? (
-                    <CheckCircle className="h-4 w-4 text-[#00995a]" title="Latest" />
+                    <CheckCircle className="h-4 w-4 text-[#00F2B3]" title="Latest" />
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}

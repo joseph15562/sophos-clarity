@@ -39,7 +39,7 @@ export function SecurityRoiCalculator({ analysisResults }: Props) {
       roi: roiMultiplier,
       chartData: [
         { name: "Investment", value: investment, fill: "#F29400" },
-        { name: "Risk Reduction", value: riskReductionValue, fill: "#00995a" },
+        { name: "Risk Reduction", value: riskReductionValue, fill: "#00F2B3" },
       ],
     };
   }, [analysisResults, hourlyRate]);

@@ -18,7 +18,7 @@ const SEVERITY_STYLE: Record<Severity, { bg: string; text: string }> = {
   critical: { bg: "bg-[#EA0022]/10", text: "text-[#EA0022]" },
   high: { bg: "bg-[#F29400]/10", text: "text-[#c47800] dark:text-[#F29400]" },
   medium: { bg: "bg-[#F8E300]/10", text: "text-[#b8a200] dark:text-[#F8E300]" },
-  low: { bg: "bg-[#00995a]/10", text: "text-[#00995a] dark:text-[#00F2B3]" },
+  low: { bg: "bg-[#00F2B3]/10", text: "text-[#00F2B3] dark:text-[#00F2B3]" },
   info: { bg: "bg-[#009CFB]/10", text: "text-[#0077cc] dark:text-[#009CFB]" },
 };
 

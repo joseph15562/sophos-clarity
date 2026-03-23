@@ -317,7 +317,7 @@ export function SophosBestPractice({
           <Shield className="h-4 w-4 text-[#2006F7]" />
           <h3 className="text-sm font-display font-bold text-foreground">Sophos Licence Selection</h3>
           {isLocked && (
-            <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#00995a]/10 text-[#00995a] dark:text-[#00F2B3] ml-auto">
+            <span className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] ml-auto">
               <Lock className="h-2.5 w-2.5" />
               Auto-detected from Sophos Central
             </span>
@@ -339,7 +339,7 @@ export function SophosBestPractice({
                 className={`rounded-lg border p-3 text-left transition-all ${
                   isSelected
                     ? isLocked
-                      ? "border-[#00995a] bg-[#00995a]/10 ring-1 ring-[#00995a]/30"
+                      ? "border-[#00F2B3] bg-[#00F2B3]/10 ring-1 ring-[#00F2B3]/30"
                       : "border-[#2006F7] bg-[#2006F7]/10 ring-1 ring-[#2006F7]/30"
                     : isDisabled
                       ? "border-border opacity-40 cursor-not-allowed"
@@ -349,12 +349,12 @@ export function SophosBestPractice({
                 <div className="flex items-center gap-1.5">
                   <p className={`text-xs font-semibold ${
                     isSelected
-                      ? isLocked ? "text-[#00995a] dark:text-[#00F2B3]" : "text-[#2006F7] dark:text-[#6B5BFF]"
+                      ? isLocked ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#2006F7] dark:text-[#6B5BFF]"
                       : "text-foreground"
                   }`}>
                     {info.label}
                   </p>
-                  {isSelected && isLocked && <Lock className="h-3 w-3 text-[#00995a] dark:text-[#00F2B3]" />}
+                  {isSelected && isLocked && <Lock className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" />}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{info.description}</p>
               </button>

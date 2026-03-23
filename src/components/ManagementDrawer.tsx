@@ -176,7 +176,7 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
           <p className="font-semibold text-foreground text-[11px]">Delete All Data</p>
           <p>Permanently remove all cloud-stored data for this workspace: assessments, saved reports, finding snapshots, remediation status, alert rules, shared reports, audit logs, Central credentials, and cached firewall data.</p>
           {deleted ? (
-            <p className="text-[#00995a] font-semibold">All data deleted successfully.</p>
+            <p className="text-[#00F2B3] font-semibold">All data deleted successfully.</p>
           ) : showConfirm ? (
             <div className="space-y-2">
               <p className="text-[#EA0022] font-semibold">This action cannot be undone. Type "DELETE" to confirm.</p>
@@ -503,7 +503,7 @@ export function ManagementDrawer({
                 </SettingsSection>
               </div>
               )}
-              <SettingsSection title="Security" icon={<Fingerprint className="h-3.5 w-3.5 text-[#00995a]" />} subtitle="MFA and passkey settings">
+              <SettingsSection title="Security" icon={<Fingerprint className="h-3.5 w-3.5 text-[#00F2B3]" />} subtitle="MFA and passkey settings">
                 <div className="p-4 space-y-6">
                   <div data-tour="drawer-mfa">
                     <Suspense fallback={<Skeleton />}>
@@ -586,7 +586,7 @@ export function ManagementDrawer({
                   </Dialog>
                 </div>
               </SettingsSection>
-              <SettingsSection title="How We Handle Your Data" icon={<Shield className="h-3.5 w-3.5 text-[#00995a]" />} subtitle="Data privacy and governance">
+              <SettingsSection title="How We Handle Your Data" icon={<Shield className="h-3.5 w-3.5 text-[#00F2B3]" />} subtitle="Data privacy and governance">
                 <DataGovernanceSection orgId={orgName} />
               </SettingsSection>
             </div>

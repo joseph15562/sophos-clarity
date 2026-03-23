@@ -11,7 +11,7 @@ const RISK_COLORS: Record<string, { bg: string; border: string; text: string; fi
   critical: { bg: "bg-[#EA0022]/10", border: "border-[#EA0022]/40", text: "text-[#EA0022]", fill: "#EA0022" },
   high: { bg: "bg-[#F29400]/10", border: "border-[#F29400]/40", text: "text-[#c47800] dark:text-[#F29400]", fill: "#F29400" },
   medium: { bg: "bg-[#F8E300]/10", border: "border-[#b8a200]/30", text: "text-[#b8a200] dark:text-[#F8E300]", fill: "#F8E300" },
-  low: { bg: "bg-[#00995a]/10", border: "border-[#00995a]/30", text: "text-[#00995a] dark:text-[#00F2B3]", fill: "#00995a" },
+  low: { bg: "bg-[#00F2B3]/10", border: "border-[#00F2B3]/30", text: "text-[#00F2B3] dark:text-[#00F2B3]", fill: "#00F2B3" },
 };
 
 function exposureKey(s: ExposedService): string {
@@ -88,7 +88,7 @@ export function AttackSurfaceMap({ files }: Props) {
           {counts.critical > 0 && <span className="text-[10px] font-bold text-[#EA0022] bg-[#EA0022]/10 px-1.5 py-0.5 rounded">{counts.critical}C</span>}
           {counts.high > 0 && <span className="text-[10px] font-bold text-[#c47800] dark:text-[#F29400] bg-[#F29400]/10 px-1.5 py-0.5 rounded">{counts.high}H</span>}
           {counts.medium > 0 && <span className="text-[10px] font-bold text-[#b8a200] dark:text-[#F8E300] bg-[#F8E300]/10 px-1.5 py-0.5 rounded">{counts.medium}M</span>}
-          {counts.low > 0 && <span className="text-[10px] font-bold text-[#00995a] dark:text-[#00F2B3] bg-[#00995a]/10 px-1.5 py-0.5 rounded">{counts.low}L</span>}
+          {counts.low > 0 && <span className="text-[10px] font-bold text-[#00F2B3] dark:text-[#00F2B3] bg-[#00F2B3]/10 px-1.5 py-0.5 rounded">{counts.low}L</span>}
         </div>
         <span className="text-muted-foreground text-xs">{open ? "▼" : "▶"}</span>
       </button>
@@ -144,7 +144,7 @@ export function AttackSurfaceMap({ files }: Props) {
                       <p className={`text-[10px] font-bold ${c.text} truncate`}>{s.ruleName.length > 20 ? s.ruleName.slice(0, 20) + "…" : s.ruleName}</p>
                       <p className="text-[9px] text-muted-foreground truncate">{s.service !== "Any" && s.service !== "Unknown" ? s.service : s.destination}</p>
                       <div className="flex items-center justify-center gap-1 mt-1">
-                        {s.hasIps && <span className="text-[8px] bg-[#00995a]/20 text-[#00995a] dark:text-[#00F2B3] px-1 rounded">IPS</span>}
+                        {s.hasIps && <span className="text-[8px] bg-[#00F2B3]/20 text-[#00F2B3] dark:text-[#00F2B3] px-1 rounded">IPS</span>}
                         {s.hasWebFilter && <span className="text-[8px] bg-[#2006F7]/20 text-[#2006F7] dark:text-[#00EDFF] px-1 rounded">WF</span>}
                         {!s.hasIps && !s.hasWebFilter && <span className="text-[8px] bg-[#EA0022]/20 text-[#EA0022] px-1 rounded">Unprotected</span>}
                       </div>

@@ -39,7 +39,7 @@ function getQuadrant(impact: number, effort: number): Quadrant {
 }
 
 const QUADRANT_CONFIG: Record<Quadrant, { label: string; color: string; bg: string; description: string }> = {
-  "quick-win": { label: "Quick Wins", color: "text-[#00995a] dark:text-[#00F2B3]", bg: "bg-[#00995a]/10 dark:bg-[#00F2B3]/10", description: "High impact, low effort — do these first" },
+  "quick-win": { label: "Quick Wins", color: "text-[#00F2B3] dark:text-[#00F2B3]", bg: "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10", description: "High impact, low effort — do these first" },
   strategic: { label: "Strategic Projects", color: "text-[#F29400]", bg: "bg-[#F29400]/10", description: "High impact, high effort — plan and schedule" },
   "low-priority": { label: "Low Priority", color: "text-[#009CFB]", bg: "bg-[#009CFB]/10", description: "Low impact, low effort — do when convenient" },
   thankless: { label: "Reconsider", color: "text-muted-foreground", bg: "bg-muted", description: "Low impact, high effort — evaluate if worth doing" },
@@ -169,7 +169,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
           {/* Quadrant backgrounds — highlight active */}
           <rect x={PAD} y={PAD} width={(W - 2 * PAD) / 2} height={(H - 2 * PAD) / 2} fill="currentColor" className="text-[#F29400]/[0.04]" opacity={!activeQuadrant || activeQuadrant === "strategic" ? 1 : 0.3} />
           <rect x={PAD + (W - 2 * PAD) / 2} y={PAD} width={(W - 2 * PAD) / 2} height={(H - 2 * PAD) / 2} fill="currentColor" className="text-muted/30" opacity={!activeQuadrant || activeQuadrant === "thankless" ? 1 : 0.3} />
-          <rect x={PAD} y={PAD + (H - 2 * PAD) / 2} width={(W - 2 * PAD) / 2} height={(H - 2 * PAD) / 2} fill="currentColor" className="text-[#00995a]/[0.06]" opacity={!activeQuadrant || activeQuadrant === "quick-win" ? 1 : 0.3} />
+          <rect x={PAD} y={PAD + (H - 2 * PAD) / 2} width={(W - 2 * PAD) / 2} height={(H - 2 * PAD) / 2} fill="currentColor" className="text-[#00F2B3]/[0.06]" opacity={!activeQuadrant || activeQuadrant === "quick-win" ? 1 : 0.3} />
           <rect x={PAD + (W - 2 * PAD) / 2} y={PAD + (H - 2 * PAD) / 2} width={(W - 2 * PAD) / 2} height={(H - 2 * PAD) / 2} fill="currentColor" className="text-[#009CFB]/[0.04]" opacity={!activeQuadrant || activeQuadrant === "low-priority" ? 1 : 0.3} />
 
           {/* Axis lines */}
@@ -179,7 +179,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
           <line x1={PAD + (W - 2 * PAD) / 2} y1={PAD} x2={PAD + (W - 2 * PAD) / 2} y2={H - PAD} stroke="currentColor" className="text-border" strokeWidth="0.2" strokeDasharray="2 2" />
 
           {/* Quadrant labels */}
-          <text x={PAD + 2} y={H - PAD - 2} fontSize="2.5" fill="currentColor" className="text-[#00995a]/60 dark:text-[#00F2B3]/60" fontWeight="600">QUICK WINS</text>
+          <text x={PAD + 2} y={H - PAD - 2} fontSize="2.5" fill="currentColor" className="text-[#00F2B3]/60 dark:text-[#00F2B3]/60" fontWeight="600">QUICK WINS</text>
           <text x={PAD + (W - 2 * PAD) / 2 + 2} y={PAD + 4} fontSize="2.5" fill="currentColor" className="text-muted-foreground/40" fontWeight="600">RECONSIDER</text>
           <text x={PAD + 2} y={PAD + 4} fontSize="2.5" fill="currentColor" className="text-[#F29400]/60" fontWeight="600">STRATEGIC</text>
           <text x={PAD + (W - 2 * PAD) / 2 + 2} y={H - PAD - 2} fontSize="2.5" fill="currentColor" className="text-[#009CFB]/60" fontWeight="600">LOW PRIORITY</text>
@@ -263,8 +263,8 @@ export function PriorityMatrix({ analysisResults }: Props) {
           <p className="text-xs font-medium text-foreground">{selected.finding.title}</p>
           <p className="text-[10px] text-muted-foreground leading-relaxed">{selected.finding.detail}</p>
           {selected.finding.remediation && (
-            <div className="rounded-md bg-[#00995a]/5 border border-[#00995a]/10 p-2 mt-1">
-              <p className="text-[10px] text-[#00995a] dark:text-[#00F2B3]"><strong>Remediation:</strong> {selected.finding.remediation}</p>
+            <div className="rounded-md bg-[#00F2B3]/5 border border-[#00F2B3]/10 p-2 mt-1">
+              <p className="text-[10px] text-[#00F2B3] dark:text-[#00F2B3]"><strong>Remediation:</strong> {selected.finding.remediation}</p>
             </div>
           )}
         </div>

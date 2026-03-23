@@ -17,7 +17,7 @@ interface Props {
 }
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00995a] dark:text-[#00F2B3]",
+  A: "text-[#00F2B3] dark:text-[#00F2B3]",
   B: "text-[#009CFB]",
   C: "text-[#F8E300] dark:text-[#F8E300]",
   D: "text-[#F29400]",

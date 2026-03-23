@@ -7,15 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; color: string }> = {
   "report.generated": { label: "Report generated", icon: FileText, color: "text-[#2006F7] dark:text-[#00EDFF]" },
-  "report.saved": { label: "Report saved", icon: FileText, color: "text-[#00995a] dark:text-[#00F2B3]" },
+  "report.saved": { label: "Report saved", icon: FileText, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
   "report.deleted": { label: "Report deleted", icon: Trash2, color: "text-[#EA0022]" },
   "config.uploaded": { label: "Config uploaded", icon: Upload, color: "text-[#2006F7] dark:text-[#00EDFF]" },
-  "assessment.saved": { label: "Assessment saved", icon: Shield, color: "text-[#00995a] dark:text-[#00F2B3]" },
+  "assessment.saved": { label: "Assessment saved", icon: Shield, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
   "central.linked": { label: "Central API linked", icon: Wifi, color: "text-[#005BC8]" },
   "central.synced": { label: "Central synced", icon: Wifi, color: "text-[#009CFB]" },
   "team.invited": { label: "Team member invited", icon: Users, color: "text-[#2006F7] dark:text-[#00EDFF]" },
   "team.removed": { label: "Team member removed", icon: Users, color: "text-[#EA0022]" },
-  "auth.login": { label: "User signed in", icon: Shield, color: "text-[#00995a] dark:text-[#00F2B3]" },
+  "auth.login": { label: "User signed in", icon: Shield, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
   "auth.logout": { label: "User signed out", icon: Shield, color: "text-muted-foreground" },
 };
 

@@ -30,7 +30,7 @@ function saveEvidence(items: EvidenceItem[]): void {
 }
 
 const STATUS_STYLES: Record<ControlStatus, string> = {
-  pass: "text-[#00995a] dark:text-[#00F2B3]",
+  pass: "text-[#00F2B3] dark:text-[#00F2B3]",
   partial: "text-[#F29400]",
   fail: "text-[#EA0022]",
   na: "text-muted-foreground/60",

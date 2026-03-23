@@ -22,9 +22,9 @@ type ColorScheme = "green" | "amber" | "red" | "neutral";
 
 const COLOR_CLASSES: Record<ColorScheme, { text: string; border: string; bg: string }> = {
   green: {
-    text: "text-[#00995a] dark:text-[#00F2B3]",
-    border: "border-[#00995a]/20",
-    bg: "bg-[#00995a]/[0.04]",
+    text: "text-[#00F2B3] dark:text-[#00F2B3]",
+    border: "border-[#00F2B3]/20",
+    bg: "bg-[#00F2B3]/[0.04]",
   },
   amber: {
     text: "text-[#F29400]",
@@ -128,7 +128,7 @@ export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
   const trendIcon =
     previousScore != null ? (
       stats.overallScore > previousScore ? (
-        <TrendingUp className="h-3.5 w-3.5 text-[#00995a] dark:text-[#00F2B3]" />
+        <TrendingUp className="h-3.5 w-3.5 text-[#00F2B3] dark:text-[#00F2B3]" />
       ) : stats.overallScore < previousScore ? (
         <TrendingDown className="h-3.5 w-3.5 text-[#EA0022]" />
       ) : (

@@ -20,7 +20,7 @@ const BINS = [
   { range: "21-40", min: 21, max: 40, color: "#EA6A00" },
   { range: "41-60", min: 41, max: 60, color: "#F29400" },
   { range: "61-80", min: 61, max: 80, color: "#F8E300" },
-  { range: "81-100", min: 81, max: 100, color: "#00995a" },
+  { range: "81-100", min: 81, max: 100, color: "#00F2B3" },
 ];
 
 export function RiskDistribution({ analysisResults }: Props) {
