@@ -86,6 +86,7 @@ export type ParsedFile = {
   fileName: string;
   content: string;
   extractedData: ExtractedSections;
+  extractionMeta?: import("@/lib/extract-sections").ExtractionMeta;
   centralEnrichment?: CentralEnrichment;
   serialNumber?: string;
   agentHostname?: string;

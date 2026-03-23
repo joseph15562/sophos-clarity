@@ -83,13 +83,10 @@ exports[`analyseConfig > snapshot of findings 1`] = `
 exports[`extractSections > snapshot of all section keys 1`] = `
 [
   "Firewall Rules",
-  "I P S Policy",
   "IPS Policies",
   "NAT Rule",
   "OTP Settings",
   "Web Filter Policies",
-  "Web Filter Policy",
-  "Zone",
   "Zones",
 ]
 `;

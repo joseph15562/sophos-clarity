@@ -8,7 +8,7 @@ import { UploadSection } from "@/components/UploadSection";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 
 import { AuthFlow } from "@/components/AuthFlow";
-import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
+import { extractSections, extractSectionsWithMeta, buildMetaFromSections, type ExtractedSections, type ExtractionMeta } from "@/lib/extract-sections";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
@@ -49,6 +49,7 @@ import { downloadRiskRegisterCSV } from "@/lib/risk-register";
 import { downloadInteractiveHtml } from "@/lib/analysis-interactive-html";
 import { ProgressNarrative } from "@/components/ProgressNarrative";
 import { QbrPackChecklist } from "@/components/QbrPackChecklist";
+import { ExtractionSummary } from "@/components/ExtractionSummary";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -278,19 +279,23 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       const file = toProcess[i];
       const isXml = file.fileName.endsWith(".xml") || file.content.trimStart().startsWith("<?xml");
       let extractedData: ExtractedSections;
+      let extractionMeta: ExtractionMeta | undefined;
       try {
         if (isXml) {
           const rawConfig = parseEntitiesXml(file.content);
           extractedData = rawConfigToSections(rawConfig);
+          extractionMeta = buildMetaFromSections(extractedData);
         } else {
-          extractedData = await extractSections(file.content);
+          const result = await extractSectionsWithMeta(file.content);
+          extractedData = result.sections;
+          extractionMeta = result.meta;
         }
       } catch (err) {
         console.warn(`[parser] Failed to parse ${file.fileName}`, err);
         toast.error(`Could not parse ${file.fileName} — it may not be a valid Sophos config export`);
         extractedData = {} as ExtractedSections;
       }
-      parsed.push({ ...file, extractedData, source: "upload" });
+      parsed.push({ ...file, extractedData, extractionMeta, source: "upload" });
     }
     setParsingProgress({ current: toProcess.length, total: toProcess.length, phase: "analysing" });
     await new Promise((r) => setTimeout(r, 0));
@@ -319,6 +324,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       label,
       content: "",
       extractedData,
+      extractionMeta: hasRealSections ? buildMetaFromSections(extractedData) : undefined,
       serialNumber: agentMeta?.serialNumber,
       agentHostname: agentMeta?.hostname,
       hardwareModel: agentMeta?.model,
@@ -584,6 +590,16 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setBackendDebugInfo(info);
   }, [activeReportId, files, branding]);
 
+  const extractionSummaryFiles = useMemo(
+    () => files
+      .filter((f) => f.extractionMeta)
+      .map((f) => ({
+        fileName: f.label || f.fileName.replace(/\.(html|htm)$/i, ""),
+        meta: f.extractionMeta!,
+      })),
+    [files],
+  );
+
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
   const inDiffMode = diffSelection !== null;
@@ -751,7 +767,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onSaveReports={handleSaveReports}
               totalFindings={totalFindings}
               isViewerOnly={isViewerOnly}
-              beforeReports={undefined}
+              beforeReports={
+                extractionSummaryFiles.length > 0
+                  ? <ExtractionSummary files={extractionSummaryFiles} />
+                  : undefined
+              }
             />
             {hasFiles && !isGuest && org?.id && (
               <div className="grid gap-4 md:grid-cols-2">

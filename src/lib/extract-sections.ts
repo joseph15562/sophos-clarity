@@ -46,6 +46,30 @@ export interface DetailBlock {
   fields: Record<string, string>;
 }
 
+// ── Extraction metadata types ──
+
+export interface SectionMeta {
+  key: string;
+  displayName: string;
+  status: "extracted" | "empty";
+  rowCount: number;
+  tableCount: number;
+  detailCount: number;
+}
+
+export interface ExtractionMeta {
+  sections: SectionMeta[];
+  totalDetected: number;
+  totalExtracted: number;
+  totalEmpty: number;
+  coveragePct: number;
+}
+
+export interface ExtractionResult {
+  sections: ExtractedSections;
+  meta: ExtractionMeta;
+}
+
 function extractTable(tableEl: Element): TableData {
   const headerCells = tableEl.querySelectorAll("thead tr th, tr:first-child th");
   const headers: string[] = [];
@@ -497,15 +521,31 @@ function isSophosConfigHtml(html: string): boolean {
 
 const yieldToMain = () => new Promise<void>((r) => setTimeout(r, 0));
 
-export async function extractSections(html: string): Promise<ExtractedSections> {
+function sectionDataCounts(data: SectionData) {
+  return {
+    rowCount: data.tables.reduce((sum, t) => sum + t.rows.length, 0),
+    tableCount: data.tables.length,
+    detailCount: data.details.length,
+  };
+}
+
+const EMPTY_META: ExtractionMeta = {
+  sections: [],
+  totalDetected: 0,
+  totalExtracted: 0,
+  totalEmpty: 0,
+  coveragePct: 0,
+};
+
+export async function extractSectionsWithMeta(html: string): Promise<ExtractionResult> {
   if (!html || typeof html !== "string" || html.length < 50) {
     console.warn("[extractSections] Input too short or invalid, returning empty");
-    return {};
+    return { sections: {}, meta: EMPTY_META };
   }
 
   if (!isSophosConfigHtml(html)) {
     console.warn("[extractSections] Input does not appear to be a Sophos config export");
-    return {};
+    return { sections: {}, meta: EMPTY_META };
   }
 
   try {
@@ -513,6 +553,8 @@ export async function extractSections(html: string): Promise<ExtractedSections> 
     const doc = parser.parseFromString(html, "text/html");
 
     const sections: ExtractedSections = {};
+    const sectionMetas: SectionMeta[] = [];
+    const processedKeys = new Set<string>();
 
     const checkboxes = Array.from(doc.querySelectorAll("input[data-section-key]"));
 
@@ -523,6 +565,9 @@ export async function extractSections(html: string): Promise<ExtractedSections> 
 
       const parent = cb.closest("[data-section-name]");
       const displayName = parent?.getAttribute("data-section-name") ?? sectionKey;
+      const readableName = displayName === sectionKey
+        ? sectionKey.replace(/([A-Z])/g, " $1").trim()
+        : displayName;
 
       const mappedId = SECTION_ID_MAP[sectionKey];
       let data: SectionData | null = null;
@@ -541,20 +586,22 @@ export async function extractSections(html: string): Promise<ExtractedSections> 
         console.warn(`[extractSections] Failed to extract section "${sectionKey}":`, err);
       }
 
+      processedKeys.add(sectionKey);
+
       if (data) {
-        const readableName = displayName === sectionKey
-          ? sectionKey.replace(/([A-Z])/g, " $1").trim()
-          : displayName;
         sections[readableName] = data;
+        sectionMetas.push({ key: sectionKey, displayName: readableName, status: "extracted", ...sectionDataCounts(data) });
+      } else {
+        sectionMetas.push({ key: sectionKey, displayName: readableName, status: "empty", rowCount: 0, tableCount: 0, detailCount: 0 });
       }
 
-      // Yield to the main thread every few sections so the UI stays responsive
       if (ci % 3 === 2) await yieldToMain();
     }
 
     const mapEntries = Object.entries(SECTION_ID_MAP);
     for (let ei = 0; ei < mapEntries.length; ei++) {
       const [key, htmlId] = mapEntries[ei];
+      if (processedKeys.has(key)) continue;
       const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       const alreadyFound = Object.keys(sections).some(
         (name) => normalise(name) === normalise(key)
@@ -566,6 +613,7 @@ export async function extractSections(html: string): Promise<ExtractedSections> 
         if (data) {
           const name = key.replace(/([A-Z])/g, " $1").trim();
           sections[name] = data;
+          sectionMetas.push({ key, displayName: name, status: "extracted", ...sectionDataCounts(data) });
         }
       } catch (err) {
         console.warn(`[extractSections] Failed fallback extraction for "${key}":`, err);
@@ -582,15 +630,55 @@ export async function extractSections(html: string): Promise<ExtractedSections> 
         const otpData = extractSectionContent(doc, "additional-OTPSettings");
         if (otpData) {
           sections["Authentication & OTP Settings"] = otpData;
+          sectionMetas.push({ key: "OTPSettings", displayName: "Authentication & OTP Settings", status: "extracted", ...sectionDataCounts(otpData) });
         }
       } catch (err) {
         console.warn("[extractSections] OTP extraction failed:", err);
       }
     }
 
-    return sections;
+    const totalDetected = sectionMetas.length;
+    const totalExtracted = sectionMetas.filter((s) => s.status === "extracted").length;
+    const totalEmpty = totalDetected - totalExtracted;
+
+    return {
+      sections,
+      meta: {
+        sections: sectionMetas,
+        totalDetected,
+        totalExtracted,
+        totalEmpty,
+        coveragePct: totalDetected > 0 ? Math.round((totalExtracted / totalDetected) * 100) : 0,
+      },
+    };
   } catch (err) {
     console.error("[extractSections] Fatal parsing error:", err);
-    return {};
+    return { sections: {}, meta: EMPTY_META };
   }
+}
+
+export async function extractSections(html: string): Promise<ExtractedSections> {
+  const result = await extractSectionsWithMeta(html);
+  return result.sections;
+}
+
+/**
+ * Build extraction metadata from already-extracted sections (for XML/agent paths
+ * where no HTML sidebar is available). All sections are treated as "extracted".
+ */
+export function buildMetaFromSections(sections: ExtractedSections): ExtractionMeta {
+  const metas: SectionMeta[] = Object.entries(sections).map(([name, data]) => ({
+    key: name,
+    displayName: name,
+    status: "extracted" as const,
+    ...sectionDataCounts(data),
+  }));
+  const total = metas.length;
+  return {
+    sections: metas,
+    totalDetected: total,
+    totalExtracted: total,
+    totalEmpty: 0,
+    coveragePct: 100,
+  };
 }

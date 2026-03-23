@@ -1,0 +1,167 @@
+import { useState } from "react";
+import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, Table2, FileText } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import type { ExtractionMeta, SectionMeta } from "@/lib/extract-sections";
+
+interface FileExtractionInfo {
+  fileName: string;
+  meta: ExtractionMeta;
+}
+
+export interface ExtractionSummaryProps {
+  files: FileExtractionInfo[];
+}
+
+function SectionRow({ section }: { section: SectionMeta }) {
+  const isExtracted = section.status === "extracted";
+  const itemCount = section.rowCount + section.detailCount;
+
+  return (
+    <div className="flex items-center gap-2 py-1 text-xs">
+      {isExtracted ? (
+        <CheckCircle2 className="h-3.5 w-3.5 text-[#00F2B3] shrink-0" />
+      ) : (
+        <AlertTriangle className="h-3.5 w-3.5 text-[#F29400] shrink-0" />
+      )}
+      <span className={`flex-1 truncate ${isExtracted ? "text-foreground" : "text-muted-foreground"}`}>
+        {section.displayName}
+      </span>
+      {isExtracted && itemCount > 0 && (
+        <span className="text-[10px] text-muted-foreground tabular-nums">
+          {itemCount} {itemCount === 1 ? "item" : "items"}
+        </span>
+      )}
+      {isExtracted && section.tableCount > 0 && (
+        <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+          <Table2 className="h-2.5 w-2.5" />
+          {section.tableCount}
+        </span>
+      )}
+      {!isExtracted && (
+        <span className="text-[10px] text-[#F29400] font-medium">empty</span>
+      )}
+    </div>
+  );
+}
+
+function FileBlock({ file, defaultExpanded }: { file: FileExtractionInfo; defaultExpanded: boolean }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const { meta } = file;
+  const extracted = meta.sections.filter((s) => s.status === "extracted");
+  const empty = meta.sections.filter((s) => s.status === "empty");
+  const totalRows = meta.sections.reduce((sum, s) => sum + s.rowCount + s.detailCount, 0);
+
+  return (
+    <div className="rounded-lg border border-border bg-card/50 overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+      >
+        {expanded ? (
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        )}
+        <FileText className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
+        <span className="text-xs font-medium text-foreground truncate flex-1">
+          {file.fileName}
+        </span>
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+          meta.coveragePct === 100
+            ? "bg-[#00F2B3]/10 text-[#00F2B3]"
+            : meta.coveragePct >= 70
+              ? "bg-[#F29400]/10 text-[#F29400]"
+              : "bg-[#EA0022]/10 text-[#EA0022]"
+        }`}>
+          {meta.coveragePct}%
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 border-t border-border/50">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground mb-2">
+            <span>{meta.totalDetected} detected</span>
+            <span>{meta.totalExtracted} extracted</span>
+            {meta.totalEmpty > 0 && <span className="text-[#F29400]">{meta.totalEmpty} empty</span>}
+            <span>{totalRows.toLocaleString()} total items</span>
+          </div>
+          <div className="space-y-0.5">
+            {extracted.map((s) => <SectionRow key={s.key} section={s} />)}
+            {empty.map((s) => <SectionRow key={s.key} section={s} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ExtractionSummary({ files }: ExtractionSummaryProps) {
+  if (files.length === 0) return null;
+
+  const allMetas = files.map((f) => f.meta);
+  const totalDetected = allMetas.reduce((s, m) => s + m.totalDetected, 0);
+  const totalExtracted = allMetas.reduce((s, m) => s + m.totalExtracted, 0);
+  const totalEmpty = allMetas.reduce((s, m) => s + m.totalEmpty, 0);
+  const overallCoverage = totalDetected > 0 ? Math.round((totalExtracted / totalDetected) * 100) : 0;
+  const totalRows = allMetas.reduce(
+    (s, m) => s + m.sections.reduce((rs, sec) => rs + sec.rowCount + sec.detailCount, 0),
+    0,
+  );
+  const hasWarning = totalEmpty > 0;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="h-7 w-7 rounded-full bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center">
+          <img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" />
+        </div>
+        <h3 className="text-sm font-display font-bold text-foreground">Extraction Summary</h3>
+        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+          overallCoverage === 100
+            ? "bg-[#00F2B3]/10 text-[#00F2B3]"
+            : overallCoverage >= 70
+              ? "bg-[#F29400]/10 text-[#F29400]"
+              : "bg-[#EA0022]/10 text-[#EA0022]"
+        }`}>
+          {overallCoverage}% coverage
+        </span>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3">
+        {/* Overall stats */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span><strong className="text-foreground">{totalDetected}</strong> sections detected</span>
+          <span><strong className="text-foreground">{totalExtracted}</strong> extracted</span>
+          {totalEmpty > 0 && <span className="text-[#F29400]"><strong>{totalEmpty}</strong> empty</span>}
+          <span><strong className="text-foreground">{totalRows.toLocaleString()}</strong> items parsed</span>
+        </div>
+
+        {/* Coverage bar */}
+        <Progress value={overallCoverage} className="h-1.5" />
+
+        {/* Warning banner */}
+        {hasWarning && (
+          <div className="flex items-start gap-2 rounded-lg bg-[#F29400]/[0.06] border border-[#F29400]/20 px-3 py-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-[#F29400] mt-0.5 shrink-0" />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <strong className="text-[#F29400]">{totalEmpty} section{totalEmpty !== 1 ? "s" : ""}</strong> detected in the config export but contained no parseable data.
+              These may be empty in the firewall configuration or use an unsupported layout.
+              The AI report will note any gaps.
+            </p>
+          </div>
+        )}
+
+        {/* Per-file detail */}
+        <div className="space-y-2">
+          {files.map((file) => (
+            <FileBlock
+              key={file.fileName}
+              file={file}
+              defaultExpanded={files.length === 1}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
