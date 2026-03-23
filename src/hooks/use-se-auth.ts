@@ -19,7 +19,7 @@ export interface SEAuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   /** Re-fetch `se_profiles` row for the signed-in user (e.g. after updating preferences). */
   reloadSeProfile: () => Promise<void>;
@@ -167,11 +167,15 @@ export function useSEAuthProvider(): SEAuthState {
     return { error: null };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string, fullName?: string) => {
     if (!isSophosDomain(email)) {
       return { error: "Only @sophos.com email addresses can register for the SE Health Check tool." };
     }
-    const { error } = await supabase.auth.signUp({ email, password });
+    const opts: Record<string, unknown> = {};
+    if (fullName?.trim()) {
+      opts.data = { full_name: fullName.trim() };
+    }
+    const { error } = await supabase.auth.signUp({ email, password, options: opts });
     return { error: error?.message ?? null };
   }, []);
 

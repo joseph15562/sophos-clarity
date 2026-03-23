@@ -3,7 +3,7 @@ import { LogIn, UserPlus, ArrowRight, AlertCircle, Shield } from "lucide-react";
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  onSignUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  onSignUp: (email: string, password: string, fullName?: string) => Promise<{ error: string | null }>;
 }
 
 const SOPHOS_DOMAIN_RE = /@sophos\.com$/i;
@@ -11,6 +11,7 @@ const SOPHOS_DOMAIN_RE = /@sophos\.com$/i;
 export function SEAuthGate({ onSignIn, onSignUp }: Props) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,14 +39,20 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
       return;
     }
 
+    if (mode === "signup" && !fullName.trim()) {
+      setError("Full name is required");
+      return;
+    }
+
     if (mode === "signup" && password.length < 8) {
       setError("Password must be at least 8 characters");
       return;
     }
 
     setLoading(true);
-    const fn = mode === "signin" ? onSignIn : onSignUp;
-    const result = await fn(trimmedEmail, password);
+    const result = mode === "signin"
+      ? await onSignIn(trimmedEmail, password)
+      : await onSignUp(trimmedEmail, password, fullName.trim());
     setLoading(false);
 
     if (result.error) {
@@ -53,7 +60,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
     } else if (mode === "signup") {
       setSignupSuccess(true);
     }
-  }, [email, password, confirmPassword, mode, onSignIn, onSignUp]);
+  }, [email, fullName, password, confirmPassword, mode, onSignIn, onSignUp]);
 
   if (signupSuccess) {
     return (
@@ -127,6 +134,22 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {mode === "signup" && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="e.g. Joseph McDonald"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    autoComplete="name"
+                  />
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Sophos Email
