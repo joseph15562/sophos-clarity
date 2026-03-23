@@ -47,6 +47,7 @@ export type SeHealthCheckSnapshotV1 = {
   replayCentralLinked: boolean;
   seCentralHaLabels: string[];
   manualBpOverrideIds: string[];
+  findingNotes?: Record<string, string>;
 };
 
 const SOPHOS_BP_TEMPLATE = BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
@@ -181,6 +182,7 @@ export function buildSeHealthCheckSnapshotV1(args: {
   replayCentralLinked: boolean;
   seCentralHaLabels: Set<string>;
   manualBpOverrideIds: string[];
+  findingNotes?: Record<string, string>;
 }): SeHealthCheckSnapshotV1 {
   return {
     version: SE_HEALTH_CHECK_SNAPSHOT_VERSION,
@@ -207,5 +209,6 @@ export function buildSeHealthCheckSnapshotV1(args: {
     replayCentralLinked: args.replayCentralLinked,
     seCentralHaLabels: [...args.seCentralHaLabels],
     manualBpOverrideIds: [...args.manualBpOverrideIds],
+    findingNotes: args.findingNotes && Object.keys(args.findingNotes).length > 0 ? { ...args.findingNotes } : undefined,
   };
 }

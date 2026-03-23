@@ -1683,6 +1683,80 @@ serve(async (req: Request) => {
       await db.from("se_health_checks").update({ team_id: newTeamId }).in("id", ownedIds);
       return json({ ok: true, updated: ownedIds.length });
     }
+
+    // PATCH /api/health-checks/:id/followup — set or clear follow-up reminder
+    if (req.method === "PATCH" && segments.length === 3 && segments[2] === "followup") {
+      const checkId = segments[1];
+      const body = await req.json();
+      const followupAt: string | null = body.followup_at ?? null;
+
+      const { data: row } = await db
+        .from("se_health_checks")
+        .select("id, se_user_id")
+        .eq("id", checkId)
+        .maybeSingle();
+      if (!row) return json({ error: "Health check not found" }, 404);
+      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
+
+      await db.from("se_health_checks").update({ followup_at: followupAt, followup_sent: false }).eq("id", checkId);
+      return json({ ok: true, followup_at: followupAt });
+    }
+
+    // POST /api/health-checks/process-followups — cron endpoint (service role key required)
+    if (req.method === "POST" && segments.length === 2 && segments[1] === "process-followups") {
+      const authHeader = req.headers.get("authorization") ?? "";
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      if (!authHeader.includes(serviceKey) && !authHeader.includes("Bearer " + serviceKey)) {
+        return json({ error: "Unauthorized — service role required" }, 401);
+      }
+      const { data: due } = await db
+        .from("se_health_checks")
+        .select("id, customer_name, overall_score, overall_grade, checked_at, se_user_id")
+        .lte("followup_at", new Date().toISOString())
+        .eq("followup_sent", false)
+        .limit(50);
+
+      let sent = 0;
+      for (const row of due ?? []) {
+        const { data: profile } = await db
+          .from("se_profiles")
+          .select("email, display_name")
+          .eq("id", row.se_user_id)
+          .maybeSingle();
+        if (!profile?.email) continue;
+
+        const checkedDate = new Date(row.checked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+        const emailHtml = buildSophosEmailHtml(
+          "Health Check Follow-Up Reminder",
+          `<p>Hi ${profile.display_name || "there"},</p>
+<p>It's time to follow up on the health check for <strong>${row.customer_name || "your customer"}</strong>.</p>
+<p>Last check was on <strong>${checkedDate}</strong> with a score of <strong>${row.overall_score ?? "—"}% (Grade ${row.overall_grade ?? "—"})</strong>.</p>
+<p>Schedule a follow-up session to review their progress and run a new health check.</p>`,
+          `${APP_URL}/health-check-2`,
+          "Open FireComply",
+          "This is an automated follow-up reminder from Sophos FireComply.",
+        );
+
+        try {
+          const emailRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: CONFIG_UPLOAD_FROM_EMAIL,
+              to: [profile.email],
+              subject: `Health Check Follow-Up — ${row.customer_name || "Customer"}`,
+              html: emailHtml,
+            }),
+          });
+          if (emailRes.ok) {
+            await db.from("se_health_checks").update({ followup_sent: true }).eq("id", row.id);
+            sent++;
+          }
+        } catch { /* swallow per-row errors */ }
+      }
+
+      return json({ ok: true, processed: (due ?? []).length, sent });
+    }
   }
 
   // ── Config upload routes ──

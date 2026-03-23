@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
+  CalendarClock,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -32,6 +33,7 @@ interface HealthCheckRow {
   summary_json: Record<string, unknown> | null;
   se_user_id?: string;
   team_id?: string | null;
+  followup_at?: string | null;
   se_profiles?: { display_name: string | null } | null;
 }
 
@@ -56,7 +58,7 @@ type Props = {
   seProfileId: string;
   refreshTrigger?: number;
   preparedBy: string;
-  onRestoreSnapshot?: (snapshot: SeHealthCheckSnapshotV1) => void;
+  onRestoreSnapshot?: (snapshot: SeHealthCheckSnapshotV1, meta?: { checkId: string; followupAt?: string | null }) => void;
   activeTeamId?: string | null;
   teams?: SETeam[];
 };
@@ -75,7 +77,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     setLoading(true);
     let query = supabase
       .from("se_health_checks")
-      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, summary_json, se_user_id, team_id, se_profiles(display_name)")
+      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, summary_json, se_user_id, team_id, followup_at, se_profiles(display_name)")
       .order("checked_at", { ascending: false })
       .limit(50);
 
@@ -384,13 +386,18 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                         <td className="px-4 py-2.5 text-muted-foreground">{row.findings_count ?? 0}</td>
                         <td className="px-4 py-2.5 text-muted-foreground">{row.firewall_count ?? 0}</td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(row.checked_at).toLocaleDateString(undefined, {
+                          <span>{new Date(row.checked_at).toLocaleDateString(undefined, {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
                             hour: "2-digit",
                             minute: "2-digit",
-                          })}
+                          })}</span>
+                          {row.followup_at && new Date(row.followup_at) > new Date() && (
+                            <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-primary" title={`Follow-up: ${new Date(row.followup_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}>
+                              <CalendarClock className="h-3 w-3" />
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-2 text-right">
                           <div className="flex flex-wrap justify-end gap-1">
@@ -402,7 +409,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                               disabled={!hasSnapshot || !onRestoreSnapshot}
                               title={!hasSnapshot ? "Re-save from a current session to enable" : "Open in editor"}
                               onClick={() => {
-                                if (snapshot && onRestoreSnapshot) onRestoreSnapshot(snapshot);
+                                if (snapshot && onRestoreSnapshot) onRestoreSnapshot(snapshot, { checkId: row.id, followupAt: row.followup_at });
                               }}
                             >
                               <FolderOpen className="h-3.5 w-3.5" />

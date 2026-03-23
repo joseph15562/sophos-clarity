@@ -1,0 +1,185 @@
+{
+  "_comment": "Maps best practice check IDs to Sophos KB articles and remediation steps. Last updated: 2026-03.",
+  "checks": {
+    "bp-admin-wan": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035853",
+      "consolePath": "Administration > Device access",
+      "howToFix": "Disable WAN admin access. Navigate to Administration > Device access and uncheck HTTPS and SSH for the WAN zone."
+    },
+    "bp-mfa": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000038714",
+      "consolePath": "Authentication > Multi-factor authentication",
+      "howToFix": "Enable MFA (OTP) for admin accounts under Authentication > Multi-factor authentication. Distribute tokens to all admins."
+    },
+    "bp-logging": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036382",
+      "consolePath": "System services > Log settings",
+      "howToFix": "Configure syslog or Central reporting under System services > Log settings. Ensure firewall log and IPS log are enabled."
+    },
+    "bp-ssl-tls": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035881",
+      "consolePath": "Rules and policies > SSL/TLS inspection rules",
+      "howToFix": "Enable SSL/TLS inspection. Create a rule under Rules and policies > SSL/TLS inspection rules covering web traffic zones."
+    },
+    "bp-snmp": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036033",
+      "consolePath": "Administration > SNMP",
+      "howToFix": "If SNMP is enabled, ensure it uses SNMPv3 with authentication and encryption. Disable if not required."
+    },
+    "bp-any-service": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000039040",
+      "consolePath": "Rules and policies > Firewall rules",
+      "howToFix": "Review firewall rules using 'Any' service. Replace with specific service objects to reduce attack surface."
+    },
+    "bp-disabled-rules": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000039040",
+      "consolePath": "Rules and policies > Firewall rules",
+      "howToFix": "Remove or review disabled firewall rules. Disabled rules indicate potential misconfigurations or leftover policies."
+    },
+    "bp-broad-rules": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000039040",
+      "consolePath": "Rules and policies > Firewall rules",
+      "howToFix": "Tighten broad 'Any-to-Any' rules. Use specific source/destination zones and networks instead."
+    },
+    "bp-ips": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035852",
+      "consolePath": "Protect > Intrusion prevention",
+      "howToFix": "Enable IPS policies on LAN-to-WAN and WAN-to-LAN traffic. Apply recommended IPS policy or custom policy."
+    },
+    "bp-dos-syn-flood": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036471",
+      "consolePath": "Protect > Intrusion prevention > DoS & spoof protection",
+      "howToFix": "Enable SYN flood protection under Intrusion prevention > DoS & spoof protection. Apply to all applicable interfaces."
+    },
+    "bp-dos-spoof-prevention": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036471",
+      "consolePath": "Protect > Intrusion prevention > DoS & spoof protection",
+      "howToFix": "Enable IP spoof prevention. This validates source IPs against routing tables to prevent spoofed packets."
+    },
+    "bp-vpn-weak-crypto": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035680",
+      "consolePath": "Configure > VPN > IPsec profiles",
+      "howToFix": "Remove DES, 3DES, and MD5 from IPsec profiles. Use AES-256 with SHA-256 or stronger."
+    },
+    "bp-vpn-pfs": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035680",
+      "consolePath": "Configure > VPN > IPsec profiles",
+      "howToFix": "Enable Perfect Forward Secrecy (PFS) in all IPsec profiles using DH Group 14 or higher."
+    },
+    "bp-vpn-cert-auth": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035680",
+      "consolePath": "Configure > VPN > IPsec connections",
+      "howToFix": "Switch VPN authentication from pre-shared key (PSK) to digital certificates for stronger security."
+    },
+    "bp-xops-feeds": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000043273",
+      "consolePath": "Active threat response > Sophos X-Ops threat feeds",
+      "howToFix": "Enable Sophos X-Ops threat intelligence feeds under Active threat response. Requires compatible licence."
+    },
+    "bp-heartbeat": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036392",
+      "consolePath": "System services > Heartbeat",
+      "howToFix": "Enable Security Heartbeat and create heartbeat-based firewall rules. Requires Sophos endpoint protection on clients."
+    },
+    "bp-mdr-feeds": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000043273",
+      "consolePath": "Active threat response > MDR threat feeds",
+      "howToFix": "Enable MDR threat feeds to receive threat intelligence from Sophos MDR team. Requires MDR subscription."
+    },
+    "bp-ndr": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000045123",
+      "consolePath": "Active threat response > NDR Essentials",
+      "howToFix": "Enable NDR Essentials integration for network detection and response capabilities."
+    },
+    "bp-webfilter": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035879",
+      "consolePath": "Protect > Web > General settings / Policies",
+      "howToFix": "Enable web filtering with appropriate URL category policies. Block high-risk categories at minimum."
+    },
+    "bp-appcontrol": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035839",
+      "consolePath": "Protect > Application > Application filter policies",
+      "howToFix": "Enable application control and create policies to manage high-risk applications (P2P, anonymizers)."
+    },
+    "bp-highrisk-categories": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035879",
+      "consolePath": "Protect > Web > Policies > URL category groups",
+      "howToFix": "Block high-risk web categories (malware, phishing, botnets, spam URLs) in web filter policies."
+    },
+    "bp-sandboxing": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035849",
+      "consolePath": "Protect > Advanced threat > Sandstorm",
+      "howToFix": "Enable Sophos Sandstorm (Zero-Day Protection) for web and email traffic. Requires appropriate licence."
+    },
+    "bp-av-scanning": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035849",
+      "consolePath": "Protect > Advanced threat > Content scanning",
+      "howToFix": "Enable dual AV engine scanning for HTTP/S and SMTP traffic under Advanced threat protection."
+    },
+    "bp-central-mgmt": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000038340",
+      "consolePath": "Sophos Central > Firewall Management",
+      "howToFix": "Register the firewall with Sophos Central for cloud management, monitoring, and group policy. Navigate to Sophos Central > Firewall Management."
+    },
+    "bp-dns-protection": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000044571",
+      "consolePath": "Protect > Web > DNS protection",
+      "howToFix": "Enable DNS Protection under Web protection. This filters DNS queries against Sophos threat intelligence."
+    },
+    "bp-password-complexity": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000038714",
+      "consolePath": "Administration > Admin settings > Password complexity",
+      "howToFix": "Enable password complexity requirements under Admin settings. Set minimum length to 12+ characters."
+    },
+    "bp-login-lockout": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000038714",
+      "consolePath": "Administration > Admin settings > Login security",
+      "howToFix": "Enable login lockout after failed attempts. Set to lock after 3-5 failed attempts for 15+ minutes."
+    },
+    "bp-login-disclaimer": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000038714",
+      "consolePath": "Administration > Admin settings > Login disclaimer",
+      "howToFix": "Enable a login disclaimer/banner that warns unauthorized users. This is a compliance requirement in many frameworks."
+    },
+    "bp-hotfix": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036120",
+      "consolePath": "Backup & firmware > Firmware",
+      "howToFix": "Enable automatic hotfix installation under Backup & firmware > Firmware to receive critical security patches."
+    },
+    "bp-pattern-update": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036120",
+      "consolePath": "Backup & firmware > Pattern updates",
+      "howToFix": "Ensure automatic pattern updates are enabled for AV, IPS, and application signatures."
+    },
+    "bp-backup": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036118",
+      "consolePath": "Backup & firmware > Backup / Restore",
+      "howToFix": "Configure scheduled automated backups. Use FTP/SFTP or email delivery. Test restore procedures periodically."
+    },
+    "bp-notification": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036124",
+      "consolePath": "Administration > Notification settings",
+      "howToFix": "Configure email notifications for critical events (system alerts, IPS events, authentication failures)."
+    },
+    "bp-ntp": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036033",
+      "consolePath": "Administration > Time",
+      "howToFix": "Configure NTP time synchronization under Administration > Time. Use reliable NTP servers for accurate logging."
+    },
+    "bp-auth-encryption": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000038714",
+      "consolePath": "Authentication > Services / LDAP/AD settings",
+      "howToFix": "Use LDAPS or STARTTLS for Active Directory/LDAP authentication. Avoid plaintext LDAP binds."
+    },
+    "bp-sync-app-control": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000036392",
+      "consolePath": "Protect > Application > Synchronized app control",
+      "howToFix": "Enable Synchronized Application Control to automatically detect and classify applications via endpoint heartbeat."
+    },
+    "bp-ha-configured": {
+      "kbUrl": "https://support.sophos.com/support/s/article/KB-000035848",
+      "consolePath": "System services > High availability",
+      "howToFix": "Configure HA (Active-Passive or Active-Active) for redundancy. Requires a second firewall of the same model."
+    }
+  }
+}

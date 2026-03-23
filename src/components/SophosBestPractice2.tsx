@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, UserCheck, Undo2, Lock, HelpCircle } from "lucide-react";
+import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, ChevronRight, UserCheck, Undo2, Lock, HelpCircle, StickyNote, Wrench } from "lucide-react";
+import kbLinksData from "@/data/sophos-bp-kb-links.json";
 import { ScoringMethodology } from "./ScoringMethodology";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import {
@@ -46,6 +47,10 @@ interface Props {
   seThreatResponseAck?: Set<string>;
   /** SE Health Check: BP checks omitted from scoring (e.g. Heartbeat without endpoints). */
   seExcludedBpChecks?: Set<string>;
+  /** Per-finding SE notes keyed by check.id. */
+  findingNotes?: Record<string, string>;
+  /** Callback when a note changes. */
+  onFindingNoteChange?: (checkId: string, note: string) => void;
 }
 
 const TIER_INFO: Record<LicenceTier, { label: string; description: string }> = {
@@ -127,6 +132,8 @@ export function SophosBestPractice({
   centralHaConfirmedLabels,
   seThreatResponseAck,
   seExcludedBpChecks,
+  findingNotes,
+  onFindingNoteChange,
 }: Props) {
   const isSeHealthCheckBp = overridesStorageKey === SE_HEALTH_CHECK_BP_OVERRIDES_KEY;
   // SE Health Check route has no AuthProvider — optional auth skips org DB Central link; use centralEnrichmentActive instead.
@@ -152,6 +159,9 @@ export function SophosBestPractice({
   const [centralLinked, setCentralLinked] = useState(false);
   const [activeTab, setActiveTab] = useState("overall");
   const [showHelp, setShowHelp] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [expandedKb, setExpandedKb] = useState<Set<string>>(new Set());
 
   const tier = isControlled ? licenceFromParent!.tier : internalTier;
   const individualModules = isControlled ? licenceFromParent!.modules : internalIndividualModules;
@@ -537,6 +547,48 @@ export function SophosBestPractice({
                               <span className="font-medium">Sophos recommendation:</span> {result.check.recommendation}
                             </p>
                           )}
+
+                          {/* KB / remediation guide */}
+                          {(() => {
+                            const kb = (kbLinksData.checks as Record<string, { kbUrl: string; consolePath: string; howToFix: string }>)[result.check.id];
+                            if (!kb) return null;
+                            const isKbOpen = expandedKb.has(result.check.id);
+                            return (
+                              <div className="mt-1.5">
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1 text-[10px] font-medium text-[#2006F7] dark:text-[#00EDFF] hover:underline"
+                                  onClick={() => setExpandedKb((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(result.check.id)) next.delete(result.check.id); else next.add(result.check.id);
+                                    return next;
+                                  })}
+                                >
+                                  {isKbOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                  <Wrench className="h-3 w-3" />
+                                  How to fix
+                                </button>
+                                {isKbOpen && (
+                                  <div className="mt-1 ml-5 rounded-md bg-muted/40 border border-border px-3 py-2 space-y-1.5 text-[10px]">
+                                    <p className="text-foreground">{kb.howToFix}</p>
+                                    <p className="text-muted-foreground">
+                                      <span className="font-medium">Console path:</span> {kb.consolePath}
+                                    </p>
+                                    <a
+                                      href={kb.kbUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[#2006F7] dark:text-[#00EDFF] hover:underline"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                      Sophos KB article
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+
                           {/* Manual comply toggle for checks not verifiable from export */}
                           {showManualOverrideButton && (
                             <button
@@ -559,6 +611,52 @@ export function SophosBestPractice({
                                 </>
                               )}
                             </button>
+                          )}
+
+                          {/* SE note / annotation */}
+                          {onFindingNoteChange && (
+                            <div className="mt-1.5">
+                              {editingNoteId === result.check.id ? (
+                                <div className="flex gap-1.5 items-start">
+                                  <textarea
+                                    className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-[10px] text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                                    rows={2}
+                                    placeholder="Add a note (e.g. customer context, reason for exception)…"
+                                    value={noteDraft}
+                                    onChange={(e) => setNoteDraft(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <button
+                                    type="button"
+                                    className="text-[10px] font-medium text-primary hover:underline shrink-0"
+                                    onClick={() => { onFindingNoteChange(result.check.id, noteDraft.trim()); setEditingNoteId(null); }}
+                                  >Save</button>
+                                  <button
+                                    type="button"
+                                    className="text-[10px] text-muted-foreground hover:underline shrink-0"
+                                    onClick={() => setEditingNoteId(null)}
+                                  >Cancel</button>
+                                </div>
+                              ) : findingNotes?.[result.check.id] ? (
+                                <button
+                                  type="button"
+                                  className="flex items-start gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                                  onClick={() => { setNoteDraft(findingNotes[result.check.id]); setEditingNoteId(result.check.id); }}
+                                >
+                                  <StickyNote className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+                                  <span className="text-left italic">{findingNotes[result.check.id]}</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                                  onClick={() => { setNoteDraft(""); setEditingNoteId(result.check.id); }}
+                                >
+                                  <StickyNote className="h-3 w-3" />
+                                  Add note
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
                         <a

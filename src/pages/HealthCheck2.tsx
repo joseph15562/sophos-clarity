@@ -19,6 +19,10 @@ import {
   XCircle,
   UserCheck,
   Send,
+  CalendarClock,
+  RotateCcw,
+  Search,
+  FileSpreadsheet,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { analyseConfig } from "@/lib/analyse-config";
@@ -35,6 +39,9 @@ import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { FileUpload, type UploadedFile } from "@/components/FileUpload";
 import { HealthCheckDashboard } from "@/components/HealthCheckDashboard2";
+import { SEScoreTrendChart } from "@/components/SEScoreTrendChart";
+import { FirmwareEolWarnings } from "@/components/FirmwareEolWarnings";
+import { TeamDashboard } from "@/components/TeamDashboard";
 
 const SophosBestPractice = lazy(() =>
   import("@/components/SophosBestPractice2").then((m) => ({ default: m.SophosBestPractice })),
@@ -303,6 +310,7 @@ function HealthCheckInner() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [preparedFor, setPreparedFor] = useState("");
   const [seNotesManual, setSeNotesManual] = useState("");
+  const [findingNotes, setFindingNotes] = useState<Record<string, string>>({});
   const [seManagementOpen, setSeManagementOpen] = useState(false);
 
   const effectivePreparedBy = useMemo(() => {
@@ -836,6 +844,57 @@ function HealthCheckInner() {
     saveHealthCheck,
   ]);
 
+  const exportFindingsCsv = useCallback(() => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    void saveHealthCheck();
+
+    const manualOverrides = loadSeHealthCheckBpOverrides();
+    const csvRows: string[][] = [["Finding", "Category", "Severity", "Status", "Recommendation", "SE Note"]];
+
+    for (const [label, ar] of Object.entries(analysisResults)) {
+      const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+      const bp = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      for (const r of bp.results) {
+        csvRows.push([
+          r.check.title,
+          r.check.category,
+          r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A",
+          r.manualOverride ? "Manual Pass" : (r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A"),
+          r.check.recommendation ?? "",
+          findingNotes[r.check.id] ?? "",
+        ]);
+      }
+
+      for (const f of ar.findings ?? []) {
+        csvRows.push([
+          f.title,
+          f.section,
+          f.severity,
+          f.severity,
+          f.remediation ?? "",
+          "",
+        ]);
+      }
+    }
+
+    const csvContent = csvRows
+      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sophos-health-check-findings-${customerName.trim().replace(/\s+/g, "-").toLowerCase() || "export"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Findings CSV downloaded.");
+  }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes, bpOverrideRevision]);
+
   const [pdfBusy, setPdfBusy] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
@@ -846,6 +905,12 @@ function HealthCheckInner() {
   const [sharing, setSharing] = useState(false);
   const [shareDays, setShareDays] = useState(7);
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useState(false);
+  const [followupAt, setFollowupAt] = useState<string | null>(null);
+  const [settingFollowup, setSettingFollowup] = useState(false);
+  const [recheckSearchOpen, setRecheckSearchOpen] = useState(false);
+  const [recheckQuery, setRecheckQuery] = useState("");
+  const [recheckResults, setRecheckResults] = useState<Array<{ id: string; customer_name: string; overall_score: number | null; overall_grade: string | null; checked_at: string; customer_email?: string; serialNumbers: string[] }>>([]);
+  const [recheckSearching, setRecheckSearching] = useState(false);
 
   // Config upload request state
   const [configUploadDialogOpen, setConfigUploadDialogOpen] = useState(false);
@@ -915,6 +980,7 @@ function HealthCheckInner() {
         replayCentralLinked: centralLinkedForAnalysis,
         seCentralHaLabels,
         manualBpOverrideIds: [...manualOverrides],
+        findingNotes: Object.keys(findingNotes).length > 0 ? findingNotes : undefined,
       });
 
       const payload = {
@@ -1022,6 +1088,87 @@ function HealthCheckInner() {
     activeTeamId,
     savedCheckId,
   ]);
+
+  const handleRecheckSearch = useCallback(async (query: string) => {
+    setRecheckQuery(query);
+    if (!query.trim() || !seAuth.seProfile) { setRecheckResults([]); return; }
+    setRecheckSearching(true);
+    try {
+      let q = supabase
+        .from("se_health_checks")
+        .select("id, customer_name, overall_score, overall_grade, checked_at, summary_json")
+        .ilike("customer_name", `%${query.trim()}%`)
+        .order("checked_at", { ascending: false })
+        .limit(10);
+      if (activeTeamId) q = q.eq("team_id", activeTeamId);
+      else q = q.eq("se_user_id", seAuth.seProfile.id);
+      const { data } = await q;
+      const results = (data ?? []).map((row: any) => {
+        const sj = row.summary_json as Record<string, unknown> | null;
+        const snap = sj?.snapshot as Record<string, unknown> | undefined;
+        const files = (snap?.files as Array<{ serialNumber?: string }>) ?? [];
+        const serialNumbers = files.map((f) => f.serialNumber).filter(Boolean) as string[];
+        return {
+          id: row.id,
+          customer_name: row.customer_name ?? "",
+          overall_score: row.overall_score,
+          overall_grade: row.overall_grade,
+          checked_at: row.checked_at,
+          customer_email: (snap as any)?.customerEmail ?? undefined,
+          serialNumbers,
+        };
+      });
+      setRecheckResults(results);
+    } catch {
+      setRecheckResults([]);
+    } finally {
+      setRecheckSearching(false);
+    }
+  }, [seAuth.seProfile, activeTeamId]);
+
+  const handleRecheckSelect = useCallback((result: typeof recheckResults[0]) => {
+    setConfigUploadCustomerName(result.customer_name);
+    setConfigUploadCustomerEmail(result.customer_email ?? "");
+    setRecheckSearchOpen(false);
+    setConfigUploadDialogOpen(true);
+  }, []);
+
+  const handleSetFollowup = useCallback(async (months: number | null) => {
+    if (!savedCheckId) {
+      toast.error("Save the health check first.");
+      return;
+    }
+    setSettingFollowup(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+      let followupDate: string | null = null;
+      if (months) {
+        const d = new Date();
+        d.setMonth(d.getMonth() + months);
+        followupDate = d.toISOString();
+      }
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/${savedCheckId}/followup`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ followup_at: followupDate }),
+        },
+      );
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      setFollowupAt(followupDate);
+      toast.success(months ? `Follow-up reminder set for ${months} months from now.` : "Follow-up reminder cancelled.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not set follow-up.");
+    } finally {
+      setSettingFollowup(false);
+    }
+  }, [savedCheckId]);
 
   const handleShareHealthCheck = useCallback(async () => {
     if (!savedCheckId) {
@@ -1780,7 +1927,7 @@ function HealthCheckInner() {
   ]);
 
   const restoreFromSavedSnapshot = useCallback(
-    (snapshot: SeHealthCheckSnapshotV1) => {
+    (snapshot: SeHealthCheckSnapshotV1, meta?: { checkId: string; followupAt?: string | null }) => {
       try {
         localStorage.setItem(SE_HEALTH_CHECK_BP_OVERRIDES_KEY, JSON.stringify(snapshot.manualBpOverrideIds));
       } catch {
@@ -1801,6 +1948,11 @@ function HealthCheckInner() {
       setFiles(snapshotFilesToParsedFiles(snapshot.files));
       setActiveStep("results");
       setBpOverrideRevision((n) => n + 1);
+      setFindingNotes(snapshot.findingNotes ?? {});
+      if (meta?.checkId) {
+        setSavedCheckId(meta.checkId);
+        setFollowupAt(meta.followupAt ?? null);
+      }
       toast.success("Opened saved health check.");
     },
     [],
@@ -1917,6 +2069,16 @@ function HealthCheckInner() {
                           {configUploadRequests.filter((r) => r.status === "pending").length} pending
                         </span>
                       )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2 text-xs"
+                      onClick={() => { setRecheckQuery(""); setRecheckResults([]); setRecheckSearchOpen(true); }}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Request Re-Check
                     </Button>
                   </div>
                 </CardContent>
@@ -2381,6 +2543,10 @@ function HealthCheckInner() {
                   <Download className="h-4 w-4" />
                   Summary JSON
                 </Button>
+                <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" disabled={!exportFieldsReady} onClick={exportFindingsCsv}>
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Findings CSV
+                </Button>
                 <Button
                   type="button"
                   size="sm"
@@ -2392,6 +2558,35 @@ function HealthCheckInner() {
                   {sendingReport ? "Sending…" : customerEmail.trim() ? `Send to ${customerEmail.trim()}` : "Send to customer"}
                 </Button>
               </div>
+
+              {savedCheckId && (
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <CalendarClock className="h-3 w-3" />
+                    Follow-up reminder
+                  </p>
+                  {followupAt ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] gap-1">
+                        <CalendarClock className="h-3 w-3" />
+                        {new Date(followupAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </Badge>
+                      <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px] text-muted-foreground" disabled={settingFollowup} onClick={() => void handleSetFollowup(null)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1" disabled={settingFollowup} onClick={() => void handleSetFollowup(3)}>
+                        3 months
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1" disabled={settingFollowup} onClick={() => void handleSetFollowup(6)}>
+                        6 months
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
@@ -2500,6 +2695,12 @@ function HealthCheckInner() {
                 centralHaConfirmedLabels={seCentralHaLabels}
                 seThreatResponseAck={seThreatResponseAck}
                 seExcludedBpChecks={seExcludedBpChecks}
+                findingNotes={findingNotes}
+                onFindingNoteChange={(checkId, note) => setFindingNotes((prev) => {
+                  const next = { ...prev };
+                  if (note) next[checkId] = note; else delete next[checkId];
+                  return next;
+                })}
               />
             </Suspense>
 
@@ -2518,6 +2719,18 @@ function HealthCheckInner() {
           </section>
         )}
 
+        {firewallOptions.length > 0 && (
+          <FirmwareEolWarnings firewalls={firewallOptions} />
+        )}
+
+        {seAuth.seProfile && files.length > 0 && files.some((f) => f.serialNumber) && (
+          <SEScoreTrendChart
+            serialNumbers={files.map((f) => f.serialNumber).filter(Boolean) as string[]}
+            seProfileId={seAuth.seProfile.id}
+            activeTeamId={activeTeamId}
+          />
+        )}
+
         {seAuth.seProfile && (
           <SEHealthCheckHistory
             seProfileId={seAuth.seProfile.id}
@@ -2527,6 +2740,10 @@ function HealthCheckInner() {
             activeTeamId={activeTeamId}
             teams={teams}
           />
+        )}
+
+        {seAuth.seProfile && activeTeamId && (
+          <TeamDashboard activeTeamId={activeTeamId} seProfileId={seAuth.seProfile.id} />
         )}
 
         <Collapsible
@@ -2911,6 +3128,66 @@ function HealthCheckInner() {
               })}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Re-check search dialog */}
+      <Dialog open={recheckSearchOpen} onOpenChange={setRecheckSearchOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Request Re-Check
+            </DialogTitle>
+            <DialogDescription>
+              Search for a previous customer to pre-fill a new upload request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9 rounded-lg"
+                placeholder="Search by customer name…"
+                value={recheckQuery}
+                onChange={(e) => void handleRecheckSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+            {recheckSearching && (
+              <div className="text-center py-3"><Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" /></div>
+            )}
+            {!recheckSearching && recheckResults.length === 0 && recheckQuery.trim().length > 0 && (
+              <p className="text-xs text-muted-foreground text-center py-3">No matching customers found.</p>
+            )}
+            {recheckResults.length > 0 && (
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {recheckResults.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className="w-full flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 hover:bg-muted/40 transition-colors text-left"
+                    onClick={() => handleRecheckSelect(r)}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{r.customer_name}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Last checked: {new Date(r.checked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        {r.overall_grade && ` — Grade ${r.overall_grade}`}
+                        {r.overall_score != null && ` (${r.overall_score}%)`}
+                      </p>
+                      {r.serialNumbers.length > 0 && (
+                        <p className="text-[9px] font-mono text-muted-foreground truncate">{r.serialNumbers.join(", ")}</p>
+                      )}
+                    </div>
+                    <Badge className={`${r.overall_grade === "A" ? "bg-[#00995a]/15 text-[#00995a]" : r.overall_grade === "F" ? "bg-[#EA0022]/15 text-[#EA0022]" : "bg-muted text-muted-foreground"} border-0 text-[9px] shrink-0`}>
+                      {r.overall_grade ?? "—"}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

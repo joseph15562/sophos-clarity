@@ -7,6 +7,8 @@ export type GuestFirewallRow = {
   hostname?: string;
   name?: string;
   serialNumber?: string;
+  firmwareVersion?: string;
+  model?: string;
   cluster?: { id?: string; mode?: string; status?: string } | null;
 };
 

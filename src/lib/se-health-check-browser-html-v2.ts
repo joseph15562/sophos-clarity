@@ -1,5 +1,6 @@
 /**
- * Standalone dark-themed HTML document for SE Health Check (not the PDF/print pipeline).
+ * Standalone HTML document for SE Health Check with dark/light mode toggle
+ * (not the PDF/print pipeline).
  */
 
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/lib/se-health-check-report-html-v2";
 
 const BROWSER_BASE_CSS = `
+  /* ── Dark theme (default) ── */
   :root {
     --bg: #0b1120;
     --card: #111827;
@@ -20,7 +22,68 @@ const BROWSER_BASE_CSS = `
     --fail: #f87171;
     --warn: #fbbf24;
     --na: #64748b;
+    --th-bg: rgba(30, 41, 59, 0.8);
+    --lic-card-bg: rgba(15, 23, 42, 0.6);
+    --lic-sel-border: rgba(0, 237, 255, 0.45);
+    --lic-sel-shadow: rgba(0, 237, 255, 0.2);
+    --mod-pill-border: rgba(0, 237, 255, 0.25);
+    --badge-pass-bg: rgba(0, 242, 179, 0.12);
+    --badge-fail-bg: rgba(248, 113, 113, 0.12);
+    --badge-warn-bg: rgba(251, 191, 36, 0.12);
+    --badge-na-bg: rgba(100, 116, 139, 0.15);
   }
+
+  /* ── Light theme ── */
+  :root[data-theme="light"] {
+    --bg: #ffffff;
+    --card: #f9fafb;
+    --border: #e5e7eb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #001b44;
+    --accent-dim: #003380;
+    --pass: #047857;
+    --fail: #dc2626;
+    --warn: #b45309;
+    --na: #6b7280;
+    --th-bg: #f3f4f6;
+    --lic-card-bg: #f3f4f6;
+    --lic-sel-border: rgba(0, 27, 68, 0.4);
+    --lic-sel-shadow: rgba(0, 27, 68, 0.12);
+    --mod-pill-border: rgba(0, 27, 68, 0.2);
+    --badge-pass-bg: rgba(4, 120, 87, 0.08);
+    --badge-fail-bg: rgba(220, 38, 38, 0.08);
+    --badge-warn-bg: rgba(180, 83, 9, 0.08);
+    --badge-na-bg: rgba(107, 114, 128, 0.1);
+  }
+
+  /* ── Print always uses light ── */
+  @media print {
+    :root, :root[data-theme="dark"] {
+      --bg: #ffffff;
+      --card: #f9fafb;
+      --border: #e5e7eb;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #001b44;
+      --accent-dim: #003380;
+      --pass: #047857;
+      --fail: #dc2626;
+      --warn: #b45309;
+      --na: #6b7280;
+      --th-bg: #f3f4f6;
+      --lic-card-bg: #f3f4f6;
+      --lic-sel-border: rgba(0, 27, 68, 0.4);
+      --lic-sel-shadow: rgba(0, 27, 68, 0.12);
+      --mod-pill-border: rgba(0, 27, 68, 0.2);
+      --badge-pass-bg: rgba(4, 120, 87, 0.08);
+      --badge-fail-bg: rgba(220, 38, 38, 0.08);
+      --badge-warn-bg: rgba(180, 83, 9, 0.08);
+      --badge-na-bg: rgba(107, 114, 128, 0.1);
+    }
+    #theme-toggle { display: none !important; }
+  }
+
   * { box-sizing: border-box; }
   body {
     margin: 0;
@@ -30,12 +93,39 @@ const BROWSER_BASE_CSS = `
     color: var(--text);
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
+    transition: background 0.25s, color 0.25s;
   }
   .se-hc-browser-root {
     max-width: 56rem;
     margin: 0 auto;
     padding: 1.5rem 1.25rem 3rem;
   }
+
+  /* ── Theme toggle button ── */
+  #theme-toggle {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    line-height: 1;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  #theme-toggle:hover {
+    border-color: var(--accent);
+  }
+
   .se-hc-browser-hero {
     margin-bottom: 2rem;
     padding-bottom: 1.25rem;
@@ -58,6 +148,7 @@ const BROWSER_BASE_CSS = `
     border-radius: 0.75rem;
     padding: 1.25rem 1.25rem 1.5rem;
     margin-bottom: 1.25rem;
+    transition: background 0.25s, border-color 0.25s;
   }
   .se-hc-browser-h2 {
     margin: 0 0 0.35rem;
@@ -89,11 +180,11 @@ const BROWSER_BASE_CSS = `
     border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 0.75rem 0.85rem;
-    background: rgba(15, 23, 42, 0.6);
+    background: var(--lic-card-bg);
   }
   .se-hc-lic-card-selected {
-    border-color: rgba(0, 237, 255, 0.45);
-    box-shadow: 0 0 0 1px rgba(0, 237, 255, 0.2);
+    border-color: var(--lic-sel-border);
+    box-shadow: 0 0 0 1px var(--lic-sel-shadow);
   }
   .se-hc-lic-card-title {
     margin: 0 0 0.35rem;
@@ -123,7 +214,7 @@ const BROWSER_BASE_CSS = `
     font-size: 0.6875rem;
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
-    border: 1px solid rgba(0, 237, 255, 0.25);
+    border: 1px solid var(--mod-pill-border);
     color: var(--accent);
   }
   .se-hc-bp-dash-row {
@@ -195,10 +286,10 @@ const BROWSER_BASE_CSS = `
     padding: 0.15rem 0.4rem;
     border-radius: 0.25rem;
   }
-  .se-hc-bp-badge-pass { background: rgba(0, 242, 179, 0.12); color: var(--pass); }
-  .se-hc-bp-badge-fail { background: rgba(248, 113, 113, 0.12); color: var(--fail); }
-  .se-hc-bp-badge-warn { background: rgba(251, 191, 36, 0.12); color: var(--warn); }
-  .se-hc-bp-badge-na { background: rgba(100, 116, 139, 0.15); color: var(--na); }
+  .se-hc-bp-badge-pass { background: var(--badge-pass-bg); color: var(--pass); }
+  .se-hc-bp-badge-fail { background: var(--badge-fail-bg); color: var(--fail); }
+  .se-hc-bp-badge-warn { background: var(--badge-warn-bg); color: var(--warn); }
+  .se-hc-bp-badge-na { background: var(--badge-na-bg); color: var(--na); }
   .se-hc-bp-check-body { min-width: 0; }
   .se-hc-bp-check-title { display: block; font-weight: 600; margin-bottom: 0.15rem; }
   .se-hc-bp-check-detail { display: block; color: var(--muted); font-size: 0.75rem; line-height: 1.4; }
@@ -238,7 +329,7 @@ const BROWSER_BASE_CSS = `
     vertical-align: top;
   }
   .se-hc-report-body-pages th {
-    background: rgba(30, 41, 59, 0.8);
+    background: var(--th-bg);
     font-weight: 600;
     font-size: 0.6875rem;
     text-transform: uppercase;
@@ -250,23 +341,42 @@ const BROWSER_BASE_CSS = `
   .se-hc-priority-steps li { margin: 0.25rem 0; }
 `;
 
+const THEME_TOGGLE_SCRIPT = `
+<script>
+(function(){
+  var btn = document.getElementById('theme-toggle');
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    btn.textContent = t === 'dark' ? '\\u2600' : '\\u263E';
+    btn.title = t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  }
+  btn.addEventListener('click', function() {
+    var cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    setTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  setTheme('dark');
+})();
+</script>`;
+
 export function buildSeHealthCheckBrowserHtmlDocument(p: SEHealthCheckReportParams): string {
   const inner = buildSEHealthCheckReportHtml(p, { variant: "browser" });
   const title = "Sophos Firewall Health Check";
   const company = "Sophos FireComply";
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
   <title>${title} — ${company}</title>
   <style>${BROWSER_BASE_CSS}</style>
 </head>
 <body>
+  <button id="theme-toggle" type="button" aria-label="Toggle theme">&#9728;</button>
   <div class="se-hc-browser-root">
     ${inner}
   </div>
+  ${THEME_TOGGLE_SCRIPT}
 </body>
 </html>`;
 }
