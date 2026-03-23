@@ -157,12 +157,12 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
         onDragLeave={() => setDragActive(false)}
         onDrop={onDrop}
         onClick={onBrowse}
-        className={`cursor-pointer rounded-xl border-2 border-dashed text-center transition-all duration-200 ${
-          files.length > 0 ? "p-5" : "p-10"
+        className={`cursor-pointer rounded-[28px] border-2 border-dashed text-center transition-all duration-200 shadow-[0_12px_35px_rgba(32,6,247,0.05)] ${
+          files.length > 0 ? "p-5" : "p-10 sm:p-12"
         } ${
           dragActive
             ? "border-[#2006F7] bg-[#2006F7]/5 scale-[1.01]"
-            : "border-border/60 dark:border-border hover:border-[#2006F7]/40 hover:bg-[#2006F7]/[0.02] dark:hover:bg-[#2006F7]/[0.04]"
+            : "border-border/60 dark:border-border bg-card/60 hover:border-[#2006F7]/40 hover:bg-[#2006F7]/[0.02] dark:hover:bg-[#2006F7]/[0.04]"
         }`}
       >
         {files.length > 0 ? (
@@ -172,15 +172,20 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
           </div>
         ) : (
           <>
-            <div className="mx-auto h-16 w-16 rounded-2xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center mb-4">
-              <img src="/icons/sophos-network.svg" alt="" className="h-8 w-8 sophos-icon" />
+            <div className="mx-auto h-20 w-20 rounded-[24px] bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_40%),linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.10))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.28),transparent_40%),linear-gradient(135deg,rgba(32,6,247,0.16),rgba(0,242,179,0.10))] flex items-center justify-center mb-5 shadow-sm">
+              <img src="/icons/sophos-network.svg" alt="" className="h-9 w-9 sophos-icon" />
             </div>
-            <p className="text-base font-display font-bold text-foreground mb-1">
-              Drop your Sophos Config HTML file(s) here
+            <p className="text-xl font-display font-black text-foreground mb-1 tracking-tight">
+              Drop your Sophos firewall export here
             </p>
-            <p className="text-sm text-muted-foreground">
-              or click to browse &middot; Accepts .html / .htm / .xml &middot; Multiple files supported
+            <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              Upload HTML, HTM, or XML exports to generate deterministic findings, posture scoring, compliance mapping, and client-ready reports.
             </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2 text-[11px] text-muted-foreground">
+              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">HTML / HTM / XML</span>
+              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">Multiple files supported</span>
+              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">Estate comparison ready</span>
+            </div>
           </>
         )}
       </div>

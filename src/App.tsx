@@ -15,6 +15,7 @@ const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const SharedHealthCheck = lazy(() => import("./pages/SharedHealthCheck"));
 const ConfigUpload = lazy(() => import("./pages/ConfigUpload"));
 const TeamInviteAccept = lazy(() => import("./pages/TeamInviteAccept"));
+const ThemePreview = lazy(() => import("./pages/ThemePreview"));
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/health-check/shared/:token" element={<SharedHealthCheck />} />
                 <Route path="/upload/:token" element={<ConfigUpload />} />
                 <Route path="/team-invite/:token" element={<TeamInviteAccept />} />
+                <Route path="/preview" element={<ThemePreview />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

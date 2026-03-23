@@ -443,25 +443,53 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
     );
   }
 
+  const onlineAgents = agents.filter((a) =>
+    a.status === "online" && a.last_seen_at && Date.now() - new Date(a.last_seen_at).getTime() < 30 * 60 * 1000
+  ).length;
+
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden" data-tour="agent-fleet">
-      <div className="px-4 py-3 flex items-center gap-2 border-b border-border bg-card">
-        <div className="h-6 w-6 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-          <Activity className="h-3 w-3 text-[#2006F7] dark:text-[#00EDFF]" />
+    <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(12,18,34,0.98),rgba(10,14,26,0.98))] overflow-hidden shadow-[0_16px_45px_rgba(32,6,247,0.08)]" data-tour="agent-fleet">
+      <div className="px-5 py-4 border-b border-border/70 bg-card/70">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-2xl bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
+              <Activity className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF] mb-1">
+                Live managed estate
+              </p>
+              <h4 className="text-base font-display font-black text-foreground tracking-tight">
+                Connected Firewalls
+              </h4>
+              <p className="text-[11px] text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+                Load fresh assessments from connected agents, compare customer sites side-by-side, and refresh posture without waiting for manual exports.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <span className="text-[10px] px-2 py-1 rounded-full font-bold bg-muted text-muted-foreground">
+              {agents.length} agent{agents.length !== 1 ? "s" : ""}
+            </span>
+            <span className="text-[10px] px-2 py-1 rounded-full font-bold bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
+              {onlineAgents} online
+            </span>
+          </div>
         </div>
-        <span className="text-xs font-semibold text-foreground flex-1">Connected Firewalls</span>
-        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-muted text-muted-foreground">
-          {agents.length} agent{agents.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
       {agents.length === 0 && (
-        <div className="px-5 py-6 text-center space-y-2">
-          <Server className="h-6 w-6 mx-auto text-muted-foreground/40" />
-          <p className="text-xs text-muted-foreground">
-            No agents connected yet. Register one in the{" "}
-            <span className="font-semibold text-foreground">Management Panel</span> to see your firewalls here.
-          </p>
+        <div className="px-6 py-8 text-center space-y-3">
+          <div className="mx-auto h-12 w-12 rounded-2xl bg-muted/40 flex items-center justify-center">
+            <Server className="h-6 w-6 text-muted-foreground/50" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">No connected firewalls yet</p>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+              Register an agent in the <span className="font-semibold text-foreground">Management Panel</span> to turn one-off reviews into a continuous managed assessment workflow.
+            </p>
+          </div>
         </div>
       )}
 
