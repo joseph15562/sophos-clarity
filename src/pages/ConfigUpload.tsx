@@ -102,9 +102,12 @@ const ConfigUpload = () => {
           if (d.central_linked_firewall_id) setSelectedFirewallId(d.central_linked_firewall_id);
           if (d.central_tenants?.length === 1) setSelectedTenantId(d.central_tenants[0].id);
         }
-        if (d.status === "uploaded") setPageState("already-uploaded");
-        else if (d.status === "downloaded") setPageState("already-uploaded");
-        else setPageState("ready");
+        if (d.status === "uploaded" || d.status === "downloaded") {
+          setPageState("already-uploaded");
+          if (!d.central_connected) setCentralOpen(true);
+        } else {
+          setPageState("ready");
+        }
       })
       .catch((e) => {
         if (cancelled) return;
@@ -142,7 +145,10 @@ const ConfigUpload = () => {
         setUploadProgress(0);
       } else {
         setUploadProgress(100);
-        setTimeout(() => setPageState("success"), 500);
+        setTimeout(() => {
+          setPageState("success");
+          if (centralState !== "connected") setCentralOpen(true);
+        }, 500);
       }
     } catch {
       clearInterval(progressInterval);
