@@ -1831,8 +1831,20 @@ function HealthCheckInner() {
       const { buildSeHealthCheckBrowserHtmlDocument } = await import("@/lib/se-health-check-browser-html-v2");
       const { sanitizePdfFilenamePart } = await import("@/lib/html-document-to-pdf-blob");
 
-      const bpByLabel = buildBpByLabel(analysisResults, baselineResults);
-      const reportParams = buildReportParams({
+      const labels = files
+        .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
+        .filter((l) => analysisResults[l]);
+      const manualOverrides = loadSeHealthCheckBpOverrides();
+      const bpByLabel: Record<string, SophosBPScore> = {};
+      for (const label of labels) {
+        const ar = analysisResults[label];
+        if (ar) {
+          const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+          bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+        }
+      }
+      const reportParams = {
+        labels,
         files,
         analysisResults,
         baselineResults,
@@ -1845,17 +1857,16 @@ function HealthCheckInner() {
         dpiExemptNetworks,
         webFilterComplianceMode,
         webFilterExemptRuleNames,
-        seMdrThreatFeedsAck,
-        seNdrEssentialsAck,
-        seDnsProtectionAck,
+        seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+        seAckNdrEssentials: seNdrEssentialsAck,
+        seAckDnsProtection: seDnsProtectionAck,
         seExcludeSecurityHeartbeat,
-        centralLinkedForAnalysis,
-        seCentralHaLabels,
-        restoredHaLabels,
-        seThreatResponseAck,
-        seExcludedBpChecks,
-        seNotes,
-      });
+        centralValidated: centralLinkedForAnalysis,
+        generatedAt: new Date(),
+        appVersion:
+          typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
+        seNotes: seNotes.trim() || undefined,
+      };
 
       const [pdfBlob, html] = await Promise.all([
         buildSeHealthCheckPdfBlob(reportParams),
