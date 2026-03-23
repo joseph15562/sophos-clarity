@@ -32,6 +32,7 @@ interface HealthCheckRow {
   summary_json: Record<string, unknown> | null;
   se_user_id?: string;
   team_id?: string | null;
+  se_profiles?: { display_name: string | null } | null;
 }
 
 function gradeColor(grade: string | null): string {
@@ -68,17 +69,19 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
   const [exportingKind, setExportingKind] = useState<"pdf" | "html" | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [movingBulk, setMovingBulk] = useState(false);
-  const [viewMode, setViewMode] = useState<"mine" | "team">("mine");
+  const [viewMode, setViewMode] = useState<"mine" | "team" | "all">("mine");
 
   const load = useCallback(async () => {
     setLoading(true);
     let query = supabase
       .from("se_health_checks")
-      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, summary_json, se_user_id, team_id")
+      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, summary_json, se_user_id, team_id, se_profiles(display_name)")
       .order("checked_at", { ascending: false })
       .limit(50);
 
-    if (activeTeamId) {
+    if (viewMode === "all" && teams && teams.length > 0) {
+      query = query.in("team_id", teams.map((t) => t.id));
+    } else if (activeTeamId) {
       query = query.eq("team_id", activeTeamId);
       if (viewMode === "mine") {
         query = query.eq("se_user_id", seProfileId);
@@ -93,7 +96,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     }
     setSelectedIds(new Set());
     setLoading(false);
-  }, [seProfileId, activeTeamId, viewMode]);
+  }, [seProfileId, activeTeamId, viewMode, teams]);
 
   useEffect(() => {
     void load();
@@ -216,6 +219,12 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     return targets;
   }, [teams, activeTeamId]);
 
+  const teamNameMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of teams ?? []) m.set(t.id, t.name);
+    return m;
+  }, [teams]);
+
   if (loading && rows.length === 0) return null;
 
   return (
@@ -271,6 +280,15 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                   >
                     <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Team</span>
                   </button>
+                  {(teams?.length ?? 0) > 1 && (
+                    <button
+                      type="button"
+                      className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${viewMode === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      onClick={() => setViewMode("all")}
+                    >
+                      All teams
+                    </button>
+                  )}
                 </div>
               )}
               <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
@@ -301,6 +319,8 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                       </th>
                     )}
                     <th className="px-4 py-2">Customer</th>
+                    {viewMode !== "mine" && <th className="px-4 py-2">Created by</th>}
+                    {viewMode === "all" && <th className="px-4 py-2">Team</th>}
                     <th className="px-4 py-2">Score</th>
                     <th className="px-4 py-2">Grade</th>
                     <th className="px-4 py-2">Findings</th>
@@ -345,6 +365,16 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                             </span>
                           )}
                         </td>
+                        {viewMode !== "mine" && (
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                            {isOwn ? "You" : (row.se_profiles?.display_name || "—")}
+                          </td>
+                        )}
+                        {viewMode === "all" && (
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                            {(row.team_id && teamNameMap.get(row.team_id)) || "—"}
+                          </td>
+                        )}
                         <td className="px-4 py-2.5 font-mono text-xs">{row.overall_score ?? "—"}%</td>
                         <td className="px-4 py-2.5">
                           <Badge className={`${gradeColor(row.overall_grade)} border-0 text-xs font-bold`}>
