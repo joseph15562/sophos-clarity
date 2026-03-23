@@ -1116,7 +1116,7 @@ function HealthCheckInner() {
         const { data, error } = await q;
         if (version !== recheckVersionRef.current) return;
         if (error) { console.error("[recheck-search]", error); setRecheckResults([]); return; }
-        const results = (data ?? []).map((row: any) => {
+        const allRows = (data ?? []).map((row: any) => {
           const sj = row.summary_json as Record<string, unknown> | null;
           const snap = sj?.snapshot as Record<string, unknown> | undefined;
           const snapFiles = (snap?.files as Array<{ serialNumber?: string }>) ?? [];
@@ -1130,6 +1130,13 @@ function HealthCheckInner() {
             customer_email: (snap as any)?.customerEmail ?? undefined,
             serialNumbers,
           };
+        });
+        const seen = new Set<string>();
+        const results = allRows.filter((r) => {
+          const key = `${r.customer_name.toLowerCase()}|${[...r.serialNumbers].sort().join(",")}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
         });
         setRecheckResults(results);
       } catch (err) {
