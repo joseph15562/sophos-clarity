@@ -238,7 +238,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
       <header className="border-b border-[#10037C]/20 bg-[#001A47] sticky top-0 z-40 no-print">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
-          <div className="flex-1 min-w-0">
+          <div className="mr-auto shrink-0">
             <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">
               Sophos FireComply
             </h1>
