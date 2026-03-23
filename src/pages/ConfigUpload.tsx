@@ -698,8 +698,9 @@ const ConfigUpload = () => {
                   <li>Log in to your Sophos Firewall web admin console</li>
                   <li>Navigate to <strong className="text-white/70">Backup &amp; firmware</strong></li>
                   <li>Click <strong className="text-white/70">Export</strong> to download the configuration</li>
-                  <li>The downloaded file will be named <code className="bg-white/10 px-1 rounded text-xs">entities.xml</code></li>
-                  <li>Upload that file using the drop zone above</li>
+                  <li>The downloaded file will be a <code className="bg-white/10 px-1 rounded text-xs">.tar</code> archive (e.g. <code className="bg-white/10 px-1 rounded text-xs">API-XXXXX.tar</code>)</li>
+                  <li>Extract the <code className="bg-white/10 px-1 rounded text-xs">.tar</code> file to find <code className="bg-white/10 px-1 rounded text-xs">entities.xml</code> inside</li>
+                  <li>Upload the <code className="bg-white/10 px-1 rounded text-xs">entities.xml</code> file using the drop zone above</li>
                 </ol>
                 <p className="text-white/30 text-xs mt-3">
                   If you&apos;re using Sophos Firewall OS v20+, go to <strong className="text-white/50">System &gt; Backup &amp; firmware &gt; Export config</strong>.
