@@ -785,116 +785,6 @@ function HealthCheckInner() {
     setLicence({ tier: "xstream", modules: [] });
   }, []);
 
-  const exportSummaryJson = useCallback(() => {
-    const missing: string[] = [];
-    if (!customerName.trim()) missing.push("Customer Name");
-    if (!customerEmail.trim()) missing.push("Customer Email");
-    if (!preparedFor.trim()) missing.push("Prepared For");
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
-    void saveHealthCheck();
-    const manualOverrides = loadSeHealthCheckBpOverrides();
-    const bp: Record<string, SophosBPScore> = {};
-    for (const [label, ar] of Object.entries(analysisResults)) {
-      const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-      bp[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-    }
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          {
-            exportedAt: new Date().toISOString(),
-            licence,
-            centralValidated: centralLinkedForAnalysis,
-            seAckMdrThreatFeeds: seMdrThreatFeedsAck,
-            seAckNdrEssentials: seNdrEssentialsAck,
-            seAckDnsProtection: seDnsProtectionAck,
-            seExcludeSecurityHeartbeat,
-            analysisResults,
-            bestPracticeScores: bp,
-            baseline: baselineResults,
-          },
-          null,
-          2,
-        ),
-      ],
-      { type: "application/json" },
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "sophos-firewall-health-check-summary.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [
-    analysisResults,
-    baselineResults,
-    licence,
-    bpOverrideRevision,
-    seCentralHaLabels,
-    seThreatResponseAck,
-    seMdrThreatFeedsAck,
-    seNdrEssentialsAck,
-    seDnsProtectionAck,
-    seExcludedBpChecks,
-    seExcludeSecurityHeartbeat,
-    centralLinkedForAnalysis,
-    customerName,
-    customerEmail,
-    preparedFor,
-    saveHealthCheck,
-  ]);
-
-  const exportFindingsCsv = useCallback(() => {
-    const missing: string[] = [];
-    if (!customerName.trim()) missing.push("Customer Name");
-    if (!customerEmail.trim()) missing.push("Customer Email");
-    if (!preparedFor.trim()) missing.push("Prepared For");
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
-    void saveHealthCheck();
-
-    const manualOverrides = loadSeHealthCheckBpOverrides();
-    const csvRows: string[][] = [["Finding", "Category", "Severity", "Status", "Recommendation", "SE Note"]];
-
-    for (const [label, ar] of Object.entries(analysisResults)) {
-      const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-      const bp = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-      for (const r of bp.results) {
-        csvRows.push([
-          r.check.title,
-          r.check.category,
-          r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A",
-          r.manualOverride ? "Manual Pass" : (r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A"),
-          r.check.recommendation ?? "",
-          findingNotes[r.check.id] ?? "",
-        ]);
-      }
-
-      for (const f of ar.findings ?? []) {
-        csvRows.push([
-          f.title,
-          f.section,
-          f.severity,
-          f.severity,
-          f.remediation ?? "",
-          "",
-        ]);
-      }
-    }
-
-    const csvContent = csvRows
-      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `sophos-health-check-findings-${customerName.trim().replace(/\s+/g, "-").toLowerCase() || "export"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Findings CSV downloaded.");
-  }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes, bpOverrideRevision]);
-
   const [pdfBusy, setPdfBusy] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
@@ -1088,6 +978,116 @@ function HealthCheckInner() {
     activeTeamId,
     savedCheckId,
   ]);
+
+  const exportSummaryJson = useCallback(() => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    void saveHealthCheck();
+    const manualOverrides = loadSeHealthCheckBpOverrides();
+    const bp: Record<string, SophosBPScore> = {};
+    for (const [label, ar] of Object.entries(analysisResults)) {
+      const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+      bp[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+    }
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            exportedAt: new Date().toISOString(),
+            licence,
+            centralValidated: centralLinkedForAnalysis,
+            seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+            seAckNdrEssentials: seNdrEssentialsAck,
+            seAckDnsProtection: seDnsProtectionAck,
+            seExcludeSecurityHeartbeat,
+            analysisResults,
+            bestPracticeScores: bp,
+            baseline: baselineResults,
+          },
+          null,
+          2,
+        ),
+      ],
+      { type: "application/json" },
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sophos-firewall-health-check-summary.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [
+    analysisResults,
+    baselineResults,
+    licence,
+    bpOverrideRevision,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludedBpChecks,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+    customerName,
+    customerEmail,
+    preparedFor,
+    saveHealthCheck,
+  ]);
+
+  const exportFindingsCsv = useCallback(() => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    void saveHealthCheck();
+
+    const manualOverrides = loadSeHealthCheckBpOverrides();
+    const csvRows: string[][] = [["Finding", "Category", "Severity", "Status", "Recommendation", "SE Note"]];
+
+    for (const [label, ar] of Object.entries(analysisResults)) {
+      const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+      const bp = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      for (const r of bp.results) {
+        csvRows.push([
+          r.check.title,
+          r.check.category,
+          r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A",
+          r.manualOverride ? "Manual Pass" : (r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A"),
+          r.check.recommendation ?? "",
+          findingNotes[r.check.id] ?? "",
+        ]);
+      }
+
+      for (const f of ar.findings ?? []) {
+        csvRows.push([
+          f.title,
+          f.section,
+          f.severity,
+          f.severity,
+          f.remediation ?? "",
+          "",
+        ]);
+      }
+    }
+
+    const csvContent = csvRows
+      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sophos-health-check-findings-${customerName.trim().replace(/\s+/g, "-").toLowerCase() || "export"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Findings CSV downloaded.");
+  }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes, bpOverrideRevision]);
 
   const handleRecheckSearch = useCallback(async (query: string) => {
     setRecheckQuery(query);
