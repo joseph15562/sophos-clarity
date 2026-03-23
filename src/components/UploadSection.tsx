@@ -13,6 +13,7 @@ import { Save } from "lucide-react";
 import { Suspense } from "react";
 import { FirewallLinker } from "@/components/FirewallLinker";
 import { WelcomeBackCard } from "@/components/WelcomeBackCard";
+import { TrustStrip } from "@/components/TrustStrip";
 
 export interface ParsingProgress {
   current: number;
@@ -123,6 +124,7 @@ export function UploadSection({
               </p>
             </div>
           )}
+          <TrustStrip />
         </section>
       )}
 

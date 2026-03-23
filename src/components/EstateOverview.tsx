@@ -360,9 +360,24 @@ function FindingCard({ finding, label, fileCount, selectedFrameworks, onExplainF
       {open && (
         <div className="px-4 pb-3.5 pl-[3.25rem] space-y-2">
           <p className="text-xs text-muted-foreground leading-relaxed">{finding.detail}</p>
-          {finding.evidence && (
-            <p className="text-[10px] text-muted-foreground/70 font-mono leading-relaxed">Evidence: {finding.evidence}</p>
-          )}
+          <div className="rounded bg-muted/40 border border-border/50 px-3 py-2 space-y-1">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Evidence Source</p>
+            <p className="text-[10px] text-foreground leading-relaxed">
+              <span className="font-medium">Section:</span> {finding.section}
+              {finding.evidence && (
+                <><br /><span className="font-medium">Extracted fact:</span> <span className="font-mono">{finding.evidence}</span></>
+              )}
+            </p>
+            {finding.confidence && (
+              <span className={`inline-block text-[9px] font-bold uppercase px-1.5 py-0.5 rounded mt-0.5 ${
+                finding.confidence === "high" ? "bg-[#00F2B3]/10 text-[#00F2B3]"
+                : finding.confidence === "medium" ? "bg-[#F29400]/10 text-[#F29400]"
+                : "bg-muted text-muted-foreground"
+              }`}>
+                {finding.confidence} confidence
+              </span>
+            )}
+          </div>
           {finding.remediation && (
             <div className="px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
               <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {finding.remediation}</p>

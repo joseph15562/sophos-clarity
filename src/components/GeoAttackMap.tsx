@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { lookupGeoIp, lookupCves, type GeoLocation, type CveEntry } from "@/lib/geo-cve";
-
-/** Simplified world outline path (equirectangular, Natural Earth–style). Minimal ~2KB path. */
-const OCEAN_PATH = "M-180,90L-180,-90L180,-90L180,90L-180,90Z";
-const LAND_PATH =
-  "M-170,-50L-50,-55L30,-55L100,-45L170,-60L180,-75L180,-90L100,-90L-30,-90L-120,-75L-170,-50ZM-170,20L-120,30L-60,25L0,35L50,30L120,45L170,35L180,20L180,-20L150,-35L80,-45L20,-40L-50,-45L-120,-35L-170,-25L-180,-10L-180,20L-170,20ZM-30,90L50,90L120,75L180,60L180,30L150,15L80,5L0,10L-80,0L-150,10L-180,25L-180,60L-120,75L-50,90L-30,90ZM-170,60L-100,75L-30,70L50,80L120,70L170,80L180,90L120,90L50,90L-50,90L-120,85L-170,60ZM30,-90L120,-90L180,-75L180,-55L150,-45L100,-50L50,-55L0,-60L-50,-55L-100,-50L-150,-45L-180,-55L-180,-90L-120,-90L-30,-90L30,-90Z";
+import { WORLD_LAND_PATH } from "@/data/world-land";
 
 interface IpWithGeo {
   ip: string;
@@ -15,14 +11,13 @@ interface IpWithGeo {
 
 interface Props {
   externalIps: string[];
-  /** Service names and ports from exposed DNAT rules, for CVE lookup */
   exposedServices?: Array<{ service: string; port: string }>;
 }
 
-/** Convert lat/lon to SVG coords for viewBox="-180 -90 360 180" (equirectangular) */
 function latLonToXY(lat: number, lon: number): { x: number; y: number } {
   return { x: lon, y: -lat };
 }
+
 
 export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
   const [data, setData] = useState<IpWithGeo[]>([]);
@@ -43,12 +38,7 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
       const cveByKey = new Map<string, CveEntry[]>();
 
       for (const ip of externalIps) {
-        results.push({
-          ip,
-          geo: null,
-          cves: [],
-          status: "loading",
-        });
+        results.push({ ip, geo: null, cves: [], status: "loading" });
       }
       setData([...results]);
 
@@ -76,58 +66,65 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
       const hasCves = allCves.length > 0;
 
       for (let i = 0; i < results.length; i++) {
-        results[i] = {
-          ...results[i],
-          cves: hasCves ? allCves.slice(0, 5) : [],
-        };
+        results[i] = { ...results[i], cves: hasCves ? allCves.slice(0, 5) : [] };
       }
       setData([...results]);
       setLoading(false);
     };
 
     run();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalIps.join(","), exposedServices.length]);
 
   const pointsWithCoords = data.filter((d) => d.geo) as Array<IpWithGeo & { geo: GeoLocation }>;
 
-  const getDotColor = (d: IpWithGeo) => {
-    if (d.cves.length > 0) return "#EA0022";
-    return "#F29400";
-  };
+  const getDotColor = (d: IpWithGeo) => d.cves.length > 0 ? "#EA0022" : "#F29400";
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 rounded-lg border border-border bg-card p-4">
       <div className="flex-1 min-w-0">
-        <div className="rounded-lg overflow-hidden border border-border bg-background dark:bg-muted/30" style={{ aspectRatio: "2/1" }}>
+        <div className="rounded-lg overflow-hidden border border-border" style={{ aspectRatio: "2/1" }}>
           <svg
             viewBox="-180 -90 360 180"
             className="w-full h-full"
             preserveAspectRatio="xMidYMid meet"
+            style={{ background: "#0a1628" }}
           >
-            <path d={OCEAN_PATH} fill="hsl(var(--background))" />
+            <defs>
+              <radialGradient id="dot-glow-orange" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#F29400" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#F29400" stopOpacity="0" />
+              </radialGradient>
+              <radialGradient id="dot-glow-red" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#EA0022" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#EA0022" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+
+            {/* Land masses — Natural Earth 110m coastlines */}
             <path
-              d={LAND_PATH}
-              fill="hsl(var(--muted))"
-              stroke="hsl(var(--border))"
-              strokeWidth="0.5"
+              d={WORLD_LAND_PATH}
+              fill="#162340"
+              stroke="#2a4060"
+              strokeWidth="0.3"
+              strokeLinejoin="round"
             />
+
+            {/* Data points with glow */}
             {pointsWithCoords.map((d) => {
               const { x, y } = latLonToXY(d.geo.lat, d.geo.lon);
+              const glowId = d.cves.length > 0 ? "dot-glow-red" : "dot-glow-orange";
               return (
-                <circle
-                  key={d.ip}
-                  cx={x}
-                  cy={y}
-                  r={6}
-                  fill={getDotColor(d)}
-                  stroke="hsl(var(--background))"
-                  strokeWidth="2"
-                  className="drop-shadow-sm"
-                />
+                <g key={d.ip}>
+                  <circle cx={x} cy={y} r={14} fill={`url(#${glowId})`} />
+                  <circle
+                    cx={x} cy={y} r={4}
+                    fill={getDotColor(d)}
+                    stroke="#0a1628"
+                    strokeWidth="1.5"
+                  />
+                </g>
               );
             })}
           </svg>

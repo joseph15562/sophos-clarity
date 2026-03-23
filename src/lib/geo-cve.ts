@@ -132,7 +132,7 @@ export async function lookupCves(service: string, port: number): Promise<CveEntr
         id?: string;
         descriptions?: Array<{ value?: string; lang?: string }>;
         published?: string;
-        metrics?: Record<string, Array<{ cvssData?: { baseScore?: number }; severity?: string }>>;
+        metrics?: Record<string, Array<{ cvssData?: { baseScore?: number; baseSeverity?: string }; baseSeverity?: string }>>;
       };
     }>;
     const entries: CveEntry[] = vulns.slice(0, 5).map((v) => {
@@ -143,7 +143,7 @@ export async function lookupCves(service: string, port: number): Promise<CveEntr
       const v30 = metrics.cvssMetricV30?.[0];
       const v2 = metrics.cvssMetricV2?.[0];
       const score = v31?.cvssData?.baseScore ?? v30?.cvssData?.baseScore ?? v2?.cvssData?.baseScore ?? 0;
-      const severity = (v31?.cvssData ? v31.severity : v30?.cvssData ? v30.severity : v2?.severity) ?? "UNKNOWN";
+      const severity = v31?.cvssData?.baseSeverity ?? v30?.cvssData?.baseSeverity ?? v2?.baseSeverity ?? "UNKNOWN";
       return {
         id: cve.id ?? "unknown",
         description: desc.slice(0, 200) + (desc.length > 200 ? "…" : ""),

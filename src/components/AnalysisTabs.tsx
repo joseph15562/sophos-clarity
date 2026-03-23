@@ -7,6 +7,8 @@ import { EstateOverview } from "@/components/EstateOverview";
 import { ReportUpsellStrip } from "@/components/ReportUpsellStrip";
 import { FindingsChanges } from "@/components/FindingsChanges";
 import { PriorityActions } from "@/components/PriorityActions";
+import { HeroOutcomePanel } from "@/components/HeroOutcomePanel";
+import { CriticalActionsPanel } from "@/components/CriticalActionsPanel";
 import { SectionSkeleton, ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 import { WidgetCustomiser } from "@/components/WidgetCustomiser";
 import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
@@ -120,6 +122,7 @@ export interface AnalysisTabsProps {
   onExplainFinding: (title: string) => void;
   /** Organisation id for score-history widgets (authenticated). */
   orgId?: string;
+  hasReports?: boolean;
 }
 
 function fileLabel(f: ParsedFile) {
@@ -148,6 +151,7 @@ export function AnalysisTabs({
   localMode,
   onExplainFinding,
   orgId = "",
+  hasReports = false,
 }: AnalysisTabsProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
@@ -160,7 +164,17 @@ export function AnalysisTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm">
+      {/* Hero outcome summary — visible above all tabs */}
+      <HeroOutcomePanel
+        analysisResults={analysisResult}
+        totalFindings={totalFindings}
+        fileCount={files.length}
+        extractionPct={extractionPct}
+        hasComplianceFrameworks={branding.selectedFrameworks.length > 0}
+        hasReports={hasReports}
+      />
+
+      <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm mt-4">
         <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2 flex items-center gap-1.5">
           Detailed Security Analysis
           <TourHint
@@ -321,7 +335,7 @@ export function AnalysisTabs({
             </div>
           )}
           {totalFindings > 0 && (
-            <PriorityActions analysisResults={analysisResult} />
+            <CriticalActionsPanel analysisResults={analysisResult} onExplainFinding={onExplainFinding} />
           )}
           <FindingsChanges analysisResults={analysisResult} />
 
@@ -742,15 +756,15 @@ export function AnalysisTabs({
       {/* Tools */}
       <TabsContent value="tools" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Tools failed to load">
+          <Suspense fallback={<ChartSkeleton height={220} />}>
+            <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
+          </Suspense>
+
           {totalFindings > 0 && (
             <Suspense fallback={<CardSkeleton />}>
               <ScoreSimulator analysisResults={analysisResult} onProjectedChange={setProjectedScore} defaultOpen />
             </Suspense>
           )}
-
-          <Suspense fallback={<ChartSkeleton height={220} />}>
-            <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
-          </Suspense>
 
           <Suspense fallback={<CardSkeleton />}>
             <AttackSurfaceMap files={files} />

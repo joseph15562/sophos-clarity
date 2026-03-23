@@ -838,6 +838,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   setAiChatOpen(true);
                   setAiChatInitialMessage(`Explain finding: ${title} and how to fix it on a Sophos XGS firewall`);
                 }}
+                hasReports={reports.some((r) => (r.markdown?.trim().length ?? 0) > 0)}
               />
             )}
           </>
