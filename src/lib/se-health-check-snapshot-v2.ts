@@ -24,6 +24,8 @@ export const SE_HEALTH_CHECK_SNAPSHOT_VERSION = 1 as const;
 export type SeHealthCheckSnapshotV1 = {
   version: typeof SE_HEALTH_CHECK_SNAPSHOT_VERSION;
   customerName: string;
+  customerEmail?: string;
+  preparedFor?: string;
   files: Array<{
     id: string;
     label: string;
@@ -141,7 +143,7 @@ export function buildSeHealthCheckExportBundle(
     bpByLabel,
     licence: snapshot.licence,
     customerName,
-    preparedFor: customerName || undefined,
+    preparedFor: snapshot.preparedFor || customerName || undefined,
     preparedBy: preparedBy.trim() || "Sales Engineer",
     dpiExemptZones: snapshot.dpiExemptZones,
     dpiExemptNetworks: snapshot.dpiExemptNetworks,
@@ -169,6 +171,8 @@ export function buildSeHealthCheckExportBundle(
 
 export function buildSeHealthCheckSnapshotV1(args: {
   customerName: string;
+  customerEmail?: string;
+  preparedFor?: string;
   files: ParsedFile[];
   licence: LicenceSelection;
   dpiExemptZones: string[];
@@ -187,6 +191,8 @@ export function buildSeHealthCheckSnapshotV1(args: {
   return {
     version: SE_HEALTH_CHECK_SNAPSHOT_VERSION,
     customerName: args.customerName,
+    customerEmail: args.customerEmail || undefined,
+    preparedFor: args.preparedFor || undefined,
     files: args.files.map((f) => ({
       id: f.id,
       label: f.label,

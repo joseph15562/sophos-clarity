@@ -857,6 +857,8 @@ function HealthCheckInner() {
 
       const snapshot = buildSeHealthCheckSnapshotV1({
         customerName: customerName.trim(),
+        customerEmail: customerEmail.trim() || undefined,
+        preparedFor: preparedFor.trim() || undefined,
         files,
         licence,
         dpiExemptZones,
@@ -961,6 +963,8 @@ function HealthCheckInner() {
     analysisResults,
     licence,
     customerName,
+    customerEmail,
+    preparedFor,
     files,
     dpiExemptZones,
     dpiExemptNetworks,
@@ -1956,6 +1960,8 @@ function HealthCheckInner() {
         /* ignore */
       }
       setCustomerName(snapshot.customerName);
+      setCustomerEmail(snapshot.customerEmail ?? "");
+      setPreparedFor(snapshot.preparedFor ?? "");
       setLicence(snapshot.licence);
       setDpiExemptZones(snapshot.dpiExemptZones);
       setDpiExemptNetworks(snapshot.dpiExemptNetworks);
