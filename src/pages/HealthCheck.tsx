@@ -1062,6 +1062,10 @@ function HealthCheckInner() {
         label: fileName.replace(/\.(xml|html|htm)$/i, ""),
       };
       await handleFilesChange([...uploadedForPicker, uploaded]);
+      const matchedReq = configUploadRequests.find((r) => r.token === token);
+      if (matchedReq?.customer_name && !customerName.trim()) {
+        setCustomerName(matchedReq.customer_name);
+      }
       toast.success(`Config loaded: ${fileName}`);
       setConfigUploadDialogOpen(false);
       setConfigUploadRequestsOpen(false);
@@ -1071,7 +1075,7 @@ function HealthCheckInner() {
     } finally {
       setConfigUploadLoading(false);
     }
-  }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests]);
+  }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests, configUploadRequests, customerName]);
 
   const handleRevokeConfigUpload = useCallback(async (token: string) => {
     try {
