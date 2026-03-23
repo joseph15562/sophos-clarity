@@ -353,11 +353,12 @@ function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expires
   );
 }
 
-function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string, centralNote = ""): string {
+function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string, centralNote = "", seName = ""): string {
   const label = customerName || "A customer";
+  const greeting = seName ? `Hi ${seName},` : "Hi,";
   return buildSophosEmailHtml(
     "Configuration Uploaded",
-    `<p style="margin:0 0 20px;">Hi,</p>
+    `<p style="margin:0 0 20px;">${greeting}</p>
 <p style="margin:0 0 20px;"><strong>${label}</strong> has uploaded their firewall configuration.</p>
 ${centralNote}<p style="margin:0 0 20px;">Open Sophos FireComply to run the health check.</p>`,
     clarityUrl,
@@ -1894,7 +1895,7 @@ serve(async (req: Request) => {
     if (req.method === "POST" && !subRoute) {
       const { data: existing, error: fetchErr } = await db
         .from("config_upload_requests")
-        .select("id, status, expires_at, se_email, customer_name")
+        .select("id, status, expires_at, se_email, customer_name, se_user_id")
         .eq("token", token)
         .maybeSingle();
 
@@ -1952,7 +1953,16 @@ serve(async (req: Request) => {
             ? `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong> (linked to firewall: <strong>${freshRow.central_linked_firewall_name}</strong>).</p>`
             : `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong>.</p>`;
         }
-        const notifHtml = buildSeNotificationEmailHtml(existing.customer_name ?? "", `${APP_URL}/health-check-2`, centralNote);
+        let seName = "";
+        if (existing.se_user_id) {
+          const { data: seProfile } = await db
+            .from("se_profiles")
+            .select("display_name, health_check_prepared_by")
+            .eq("id", existing.se_user_id)
+            .maybeSingle();
+          seName = seProfile?.display_name || seProfile?.health_check_prepared_by || "";
+        }
+        const notifHtml = buildSeNotificationEmailHtml(existing.customer_name ?? "", `${APP_URL}/health-check-2`, centralNote, seName);
         await sendConfigUploadEmail(
           existing.se_email,
           `Config received${existing.customer_name ? ` from ${existing.customer_name}` : ""}`,
