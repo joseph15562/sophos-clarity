@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEAuth, type SEProfile } from "@/hooks/use-se-auth";
 import { useActiveTeam, type SETeam } from "@/hooks/use-active-team";
@@ -51,10 +52,19 @@ async function apiCall(path: string, method: string, body?: unknown) {
   return json;
 }
 
+const SE_TITLE_PRESETS = [
+  "Sophos Sales Engineer",
+  "Sophos Senior Sales Engineer",
+  "Sophos Cyber Security Consultant",
+  "Sophos Senior Professional Services Engineer",
+  "Sophos Professional Services Engineer",
+];
+
 export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
   const { seProfile, reloadSeProfile } = useSEAuth();
   const { teams, reload: reloadTeams } = useActiveTeam();
   const [draft, setDraft] = useState("");
+  const [titleDraft, setTitleDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Team creation
@@ -78,7 +88,8 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
   useEffect(() => {
     if (!open || !seProfile) return;
     setDraft(defaultDraftFromProfile(seProfile));
-  }, [open, seProfile?.id, seProfile?.healthCheckPreparedBy, seProfile?.displayName, seProfile?.email]);
+    setTitleDraft(seProfile.seTitle?.trim() || "");
+  }, [open, seProfile?.id, seProfile?.healthCheckPreparedBy, seProfile?.displayName, seProfile?.email, seProfile?.seTitle]);
 
   const handleSave = async () => {
     if (!seProfile) return;
@@ -87,7 +98,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     try {
       const { error } = await supabase
         .from("se_profiles")
-        .update({ health_check_prepared_by: trimmed || null } as Record<string, unknown>)
+        .update({ health_check_prepared_by: trimmed || null, se_title: titleDraft.trim() || null } as Record<string, unknown>)
         .eq("id", seProfile.id);
       if (error) throw error;
       await reloadSeProfile();
@@ -312,6 +323,38 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                   Stored in your FireComply profile and used for PDF, HTML, and history exports. Leave blank to fall back to
                   your account display name or email.
                 </p>
+
+                <Label htmlFor="se-mgmt-title" className="text-xs font-semibold pt-2">
+                  Title
+                </Label>
+                <Select
+                  value={SE_TITLE_PRESETS.includes(titleDraft) ? titleDraft : "__custom__"}
+                  onValueChange={(v) => { if (v !== "__custom__") setTitleDraft(v); }}
+                >
+                  <SelectTrigger className="rounded-lg text-sm h-10">
+                    <SelectValue placeholder="Select a title…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SE_TITLE_PRESETS.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                    <SelectItem value="__custom__">Custom…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!SE_TITLE_PRESETS.includes(titleDraft) && (
+                  <Input
+                    id="se-mgmt-title"
+                    className="rounded-lg text-sm h-10"
+                    placeholder="e.g. Sophos Regional Sales Engineer"
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    disabled={saving}
+                  />
+                )}
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Shown below your name in report emails sent to customers.
+                </p>
+
                 <Button
                   type="button"
                   className="rounded-lg bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"

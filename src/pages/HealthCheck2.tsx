@@ -1665,6 +1665,9 @@ function HealthCheckInner() {
         body: JSON.stringify({
           customer_email: customerEmail.trim(),
           customer_name: customerName.trim() || undefined,
+          prepared_for: preparedFor.trim() || undefined,
+          prepared_by: effectivePreparedBy,
+          se_title: seAuth.seProfile?.seTitle || undefined,
           pdf_base64: pdfBase64,
           html_base64: htmlBase64,
           filename_base: filenameBase,

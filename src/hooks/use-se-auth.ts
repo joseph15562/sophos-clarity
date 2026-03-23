@@ -8,6 +8,8 @@ export interface SEProfile {
   displayName: string | null;
   /** Optional report cover line; null = fall back to display name / email. */
   healthCheckPreparedBy: string | null;
+  /** Job title shown on report emails (e.g. "Sophos Sales Engineer"). */
+  seTitle: string | null;
 }
 
 export interface SEAuthState {
@@ -32,7 +34,7 @@ function isSophosDomain(email: string): boolean {
 async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
   const { data, error } = await supabase
     .from("se_profiles")
-    .select("id, email, display_name, health_check_prepared_by")
+    .select("id, email, display_name, health_check_prepared_by, se_title")
     .eq("user_id", userId)
     .limit(1)
     .single();
@@ -43,6 +45,7 @@ async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
     email: data.email as string,
     displayName: (data.display_name as string) ?? null,
     healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
+    seTitle: (data.se_title as string) ?? null,
   };
 }
 
@@ -50,7 +53,7 @@ async function createSEProfile(userId: string, email: string): Promise<SEProfile
   const { data, error } = await supabase
     .from("se_profiles")
     .insert({ user_id: userId, email } as Record<string, unknown>)
-    .select("id, email, display_name, health_check_prepared_by")
+    .select("id, email, display_name, health_check_prepared_by, se_title")
     .single();
 
   if (error || !data) {
@@ -62,6 +65,7 @@ async function createSEProfile(userId: string, email: string): Promise<SEProfile
     email: data.email as string,
     displayName: (data.display_name as string) ?? null,
     healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
+    seTitle: (data.se_title as string) ?? null,
   };
 }
 
