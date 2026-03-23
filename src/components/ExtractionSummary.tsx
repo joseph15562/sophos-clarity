@@ -175,7 +175,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
             <FileBlock
               key={file.fileName}
               file={file}
-              defaultExpanded={files.length === 1}
+              defaultExpanded={false}
             />
           ))}
         </div>
