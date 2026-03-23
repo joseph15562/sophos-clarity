@@ -386,12 +386,13 @@ async function authenticateSE(req: Request) {
   const db = adminClient();
   const { data: seProfile } = await db
     .from("se_profiles")
-    .select("id, email, display_name")
+    .select("id, email, display_name, health_check_prepared_by")
     .eq("user_id", user.id)
     .maybeSingle();
   if (!seProfile) return null;
   if (!seProfile.display_name) {
     seProfile.display_name =
+      (seProfile.health_check_prepared_by as string) ||
       (user.user_metadata as Record<string, unknown>)?.full_name as string ||
       (user.user_metadata as Record<string, unknown>)?.name as string ||
       null;

@@ -93,15 +93,16 @@ export function useSEAuthProvider(): SEAuthState {
       profile = await createSEProfile(u.id, u.email, u);
     }
     if (profile && !profile.displayName) {
-      const metaName =
+      const resolvedName =
+        profile.healthCheckPreparedBy ||
         (u.user_metadata?.full_name as string) ||
         (u.user_metadata?.name as string) ||
         null;
-      if (metaName) {
-        profile = { ...profile, displayName: metaName };
+      if (resolvedName) {
+        profile = { ...profile, displayName: resolvedName };
         await supabase
           .from("se_profiles")
-          .update({ display_name: metaName } as Record<string, unknown>)
+          .update({ display_name: resolvedName } as Record<string, unknown>)
           .eq("id", profile.id);
       }
     }
