@@ -316,9 +316,9 @@ function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: str
   const footNoteBlock = footNote ? `<p style="margin:16px 0 0;font-size:13px;color:#6A889B;line-height:1.5;">${footNote}</p>` : "";
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;font-family:'Zalando Sans','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#EDF2F9;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#EDF2F9;padding:32px 0;">
-<tr><td align="center">
+<body style="margin:0;padding:0;font-family:'Zalando Sans','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#EDF2F9;" bgcolor="#EDF2F9">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#EDF2F9;padding:32px 0;" bgcolor="#EDF2F9">
+<tr><td align="center" bgcolor="#EDF2F9" style="background-color:#EDF2F9;">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;max-width:600px;width:100%;">
 <tr><td style="background:#2006F7;padding:36px 40px;">
   <h1 style="margin:0;font-size:24px;color:#ffffff;font-weight:800;font-family:'Zalando Sans Expanded','Zalando Sans','Segoe UI',Roboto,sans-serif;">${heading}</h1>
