@@ -738,7 +738,7 @@ function HealthCheckInner() {
   const [configUploadResending, setConfigUploadResending] = useState(false);
   const [configUploadLoading, setConfigUploadLoading] = useState(false);
   const [configUploadRequests, setConfigUploadRequests] = useState<Array<{
-    id: string; token: string; customer_name: string | null; customer_email: string | null;
+    id: string; token: string; customer_name: string | null; contact_name?: string | null; customer_email: string | null;
     status: string; expires_at: string; email_sent: boolean; uploaded_at: string | null;
     downloaded_at: string | null; created_at: string; se_user_id?: string; team_id?: string | null;
     central_connected_at?: string | null;
@@ -1387,6 +1387,9 @@ function HealthCheckInner() {
       }
       if (matchedReq?.customer_email && !customerEmail.trim()) {
         setCustomerEmail(matchedReq.customer_email);
+      }
+      if (matchedReq?.contact_name && !preparedFor.trim()) {
+        setPreparedFor(matchedReq.contact_name);
       }
       toast.success(`Config loaded: ${fileName}`);
       setConfigUploadDialogOpen(false);

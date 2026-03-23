@@ -1786,6 +1786,7 @@ serve(async (req: Request) => {
       se_user_id: se.seProfile.id,
       token,
       customer_name: body.customer_name?.trim() || null,
+      contact_name: body.contact_name?.trim() || null,
       customer_email: body.customer_email?.trim() || null,
       se_email: se.user.email,
       expires_at: expiresAt.toISOString(),
@@ -1835,7 +1836,7 @@ serve(async (req: Request) => {
 
     let query = db
       .from("config_upload_requests")
-      .select("id, token, customer_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at, se_user_id, team_id, central_connected_at")
+      .select("id, token, customer_name, contact_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at, se_user_id, team_id, central_connected_at")
       .order("created_at", { ascending: false })
       .limit(50);
 
