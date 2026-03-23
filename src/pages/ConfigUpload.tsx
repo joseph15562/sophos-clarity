@@ -1,17 +1,39 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Upload, CheckCircle2, Shield, AlertTriangle, ChevronDown, Lock, RefreshCw } from "lucide-react";
+import { Upload, CheckCircle2, Shield, AlertTriangle, ChevronDown, Lock, RefreshCw, Loader2, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+interface CentralFirewall {
+  id: string;
+  hostname: string;
+  name: string;
+  serialNumber: string;
+  firmwareVersion: string;
+  model: string;
+}
+
+interface CentralTenant {
+  id: string;
+  name: string;
+}
 
 interface UploadStatus {
   status: "pending" | "uploaded" | "downloaded" | "expired";
   customer_name: string | null;
   expires_at: string;
   file_name: string | null;
+  central_connected?: boolean;
+  central_tenants?: CentralTenant[] | null;
+  central_firewalls?: CentralFirewall[] | null;
+  central_account_type?: string | null;
+  central_linked_firewall_id?: string | null;
+  central_linked_firewall_name?: string | null;
 }
 
 type PageState = "loading" | "ready" | "uploading" | "success" | "already-uploaded" | "expired" | "not-found" | "error";
+type CentralState = "idle" | "connecting" | "connected" | "error";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -49,6 +71,20 @@ const ConfigUpload = () => {
   const [howToOpen, setHowToOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Central connection state
+  const [centralOpen, setCentralOpen] = useState(false);
+  const [centralState, setCentralState] = useState<CentralState>("idle");
+  const [centralError, setCentralError] = useState<string | null>(null);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [centralTenants, setCentralTenants] = useState<CentralTenant[]>([]);
+  const [centralFirewalls, setCentralFirewalls] = useState<CentralFirewall[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [selectedFirewallId, setSelectedFirewallId] = useState<string | null>(null);
+  const [centralAccountType, setCentralAccountType] = useState<string | null>(null);
+  const [loadingFirewalls, setLoadingFirewalls] = useState(false);
+  const [centralHowToOpen, setCentralHowToOpen] = useState(false);
+
   useEffect(() => {
     if (!token) { setPageState("not-found"); return; }
     let cancelled = false;
@@ -57,6 +93,15 @@ const ConfigUpload = () => {
         if (cancelled) return;
         if (!d) { setPageState("expired"); return; }
         setStatusData(d);
+        if (d.central_connected) {
+          setCentralState("connected");
+          setCentralOpen(true);
+          if (d.central_tenants) setCentralTenants(d.central_tenants);
+          if (d.central_firewalls) setCentralFirewalls(d.central_firewalls);
+          if (d.central_account_type) setCentralAccountType(d.central_account_type);
+          if (d.central_linked_firewall_id) setSelectedFirewallId(d.central_linked_firewall_id);
+          if (d.central_tenants?.length === 1) setSelectedTenantId(d.central_tenants[0].id);
+        }
         if (d.status === "uploaded") setPageState("already-uploaded");
         else if (d.status === "downloaded") setPageState("already-uploaded");
         else setPageState("ready");
@@ -125,6 +170,93 @@ const ConfigUpload = () => {
     setStatusData((d) => d ? { ...d, status: "pending" } : d);
   }, []);
 
+  const handleCentralConnect = useCallback(async () => {
+    if (!token || !clientId.trim() || !clientSecret.trim()) return;
+    setCentralState("connecting");
+    setCentralError(null);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+        body: JSON.stringify({ client_id: clientId.trim(), client_secret: clientSecret.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Connection failed");
+
+      setCentralState("connected");
+      setCentralAccountType(data.account_type);
+      const tenants = (data.tenants ?? []) as CentralTenant[];
+      setCentralTenants(tenants);
+      if (data.firewalls) {
+        const fws = data.firewalls as CentralFirewall[];
+        setCentralFirewalls(fws);
+        if (fws.length === 1) {
+          setSelectedFirewallId(fws[0].id);
+          void handleCentralLink(fws[0].id, fws[0].hostname || fws[0].name);
+        }
+      }
+      if (tenants.length === 1) setSelectedTenantId(tenants[0].id);
+    } catch (err) {
+      setCentralState("error");
+      setCentralError(err instanceof Error ? err.message : "Connection failed");
+    }
+  }, [token, clientId, clientSecret]);
+
+  const handleCentralLink = useCallback(async (firewallId: string, firewallName: string) => {
+    if (!token) return;
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+        body: JSON.stringify({ firewall_id: firewallId, firewall_name: firewallName }),
+      });
+    } catch { /* best effort */ }
+  }, [token]);
+
+  const handleTenantSelect = useCallback(async (tenantId: string) => {
+    if (!token) return;
+    setSelectedTenantId(tenantId);
+    setSelectedFirewallId(null);
+    setCentralFirewalls([]);
+    setLoadingFirewalls(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-firewalls`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+        body: JSON.stringify({ tenant_id: tenantId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch firewalls");
+      const fws = (data.firewalls ?? []) as CentralFirewall[];
+      setCentralFirewalls(fws);
+      if (fws.length === 1) {
+        setSelectedFirewallId(fws[0].id);
+        void handleCentralLink(fws[0].id, fws[0].hostname || fws[0].name);
+      }
+    } catch {
+      setCentralFirewalls([]);
+    } finally {
+      setLoadingFirewalls(false);
+    }
+  }, [token, handleCentralLink]);
+
+  const handleFirewallSelect = useCallback((firewallId: string) => {
+    setSelectedFirewallId(firewallId);
+    const fw = centralFirewalls.find((f) => f.id === firewallId);
+    if (fw) void handleCentralLink(fw.id, fw.hostname || fw.name);
+  }, [centralFirewalls, handleCentralLink]);
+
+  const handleCentralRetry = useCallback(() => {
+    setCentralState("idle");
+    setCentralError(null);
+    setClientId("");
+    setClientSecret("");
+    setCentralTenants([]);
+    setCentralFirewalls([]);
+    setSelectedTenantId(null);
+    setSelectedFirewallId(null);
+  }, []);
+
   const expiresLabel = statusData?.expires_at
     ? new Date(statusData.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "";
@@ -170,7 +302,7 @@ const ConfigUpload = () => {
         <div className="max-w-md text-center space-y-4">
           <Shield className="h-10 w-10 text-white/30 mx-auto" />
           <h1 className="text-xl font-bold text-white">Something went wrong</h1>
-          <p className="text-white/50 text-sm">We couldn't load this page. Please try again or contact your Sophos SE.</p>
+          <p className="text-white/50 text-sm">We couldn&apos;t load this page. Please try again or contact your Sophos SE.</p>
         </div>
       </div>
     );
@@ -190,6 +322,17 @@ const ConfigUpload = () => {
           {selectedFile && (
             <p className="text-white/40 text-xs">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)</p>
           )}
+          {centralState === "connected" && (
+            <div className="flex items-center justify-center gap-2 text-[#00995a] text-sm">
+              <Wifi className="h-4 w-4" />
+              <span>Sophos Central connected</span>
+              {selectedFirewallId && centralFirewalls.length > 0 && (
+                <span className="text-white/40">
+                  — linked to {centralFirewalls.find((f) => f.id === selectedFirewallId)?.hostname || "firewall"}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -207,6 +350,12 @@ const ConfigUpload = () => {
             {statusData?.file_name && <>File <strong className="text-white/80">{statusData.file_name}</strong> was uploaded previously.</>}
             {!statusData?.file_name && "A configuration file has already been uploaded for this request."}
           </p>
+          {centralState === "connected" && (
+            <div className="flex items-center justify-center gap-2 text-[#00995a] text-sm">
+              <Wifi className="h-4 w-4" />
+              <span>Sophos Central connected</span>
+            </div>
+          )}
           {statusData?.status !== "downloaded" && (
             <Button
               type="button"
@@ -313,6 +462,182 @@ const ConfigUpload = () => {
             </div>
           )}
 
+          {/* Sophos Central connection */}
+          <div className="rounded-xl border border-white/10 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setCentralOpen(!centralOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Wifi className={cn("h-4 w-4", centralState === "connected" ? "text-[#00995a]" : "text-white/40")} />
+                <span className="text-white/60 text-sm font-medium">
+                  {centralState === "connected" ? "Sophos Central connected" : "Optional: Connect Sophos Central"}
+                </span>
+                {centralState === "connected" && (
+                  <span className="text-[10px] bg-[#00995a]/20 text-[#00995a] px-2 py-0.5 rounded-full font-medium">Connected</span>
+                )}
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-white/40 transition-transform", centralOpen && "rotate-180")} />
+            </button>
+            {centralOpen && (
+              <div className="px-4 pb-4 border-t border-white/5 pt-4 space-y-4">
+                {centralState === "idle" || centralState === "error" ? (
+                  <>
+                    <p className="text-white/50 text-sm leading-relaxed">
+                      Connecting Sophos Central lets your SE enrich the health check with licence expiry, firmware versions, and HA status.
+                    </p>
+                    <div className="space-y-3">
+                      <Input
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 font-mono text-xs h-10"
+                        placeholder="Client ID"
+                        autoComplete="off"
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                      />
+                      <Input
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 font-mono text-xs h-10"
+                        placeholder="Client Secret"
+                        type="password"
+                        autoComplete="off"
+                        value={clientSecret}
+                        onChange={(e) => setClientSecret(e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        className="w-full bg-[#2563eb] hover:bg-[#2563eb]/90 text-white gap-2"
+                        disabled={centralState === "connecting" as never || !clientId.trim() || !clientSecret.trim()}
+                        onClick={handleCentralConnect}
+                      >
+                        <Wifi className="h-4 w-4" />
+                        Connect to Sophos Central
+                      </Button>
+                    </div>
+                    {centralError && (
+                      <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
+                          <p className="text-red-300 text-sm">{centralError}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="border-white/20 text-white/70 hover:bg-white/10 text-xs gap-1.5"
+                          onClick={handleCentralRetry}
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Try again
+                        </Button>
+                      </div>
+                    )}
+                    <p className="text-white/30 text-xs">
+                      Your credentials are encrypted and automatically deleted after the health check is complete.
+                    </p>
+
+                    {/* How to create API credentials */}
+                    <div className="rounded-lg border border-white/5 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setCentralHowToOpen(!centralHowToOpen)}
+                        className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-white/5 transition-colors"
+                      >
+                        <span className="text-white/50 text-xs font-medium">How to create API credentials</span>
+                        <ChevronDown className={cn("h-3 w-3 text-white/30 transition-transform", centralHowToOpen && "rotate-180")} />
+                      </button>
+                      {centralHowToOpen && (
+                        <div className="px-3 pb-3 text-white/40 text-xs leading-relaxed border-t border-white/5 pt-2 space-y-1.5">
+                          <ol className="list-decimal list-inside space-y-1.5">
+                            <li>Sign in to <strong className="text-white/60">Sophos Central</strong> — use the same account that manages the firewall you are exporting the configuration from</li>
+                            <li>Navigate to <strong className="text-white/60">Settings &amp; Policies</strong> &gt; <strong className="text-white/60">API Credentials Management</strong></li>
+                            <li>Click <strong className="text-white/60">Add Credential</strong></li>
+                            <li>Enter a name (e.g. &quot;Health Check&quot;) and select <strong className="text-white/60">Service Principal Read-Only</strong></li>
+                            <li>Click <strong className="text-white/60">Add</strong>, then copy the <strong className="text-white/60">Client ID</strong> and <strong className="text-white/60">Client Secret</strong></li>
+                            <li>Paste them into the fields above</li>
+                          </ol>
+                          <p className="text-white/25 text-[10px] mt-2">
+                            Read-only access is recommended. Your SE only needs to view firewall and licence data.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : centralState === "connecting" ? (
+                  <div className="text-center py-4 space-y-3">
+                    <Loader2 className="h-6 w-6 text-[#2563eb] mx-auto animate-spin" />
+                    <p className="text-white/60 text-sm">Connecting to Sophos Central…</p>
+                  </div>
+                ) : (
+                  /* connected */
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-[#00995a]" />
+                      <span className="text-white/70 text-sm">
+                        Connected as {centralAccountType === "tenant" ? "Tenant" : centralAccountType === "partner" ? "Partner" : "Organization"}
+                      </span>
+                    </div>
+
+                    {/* Tenant selection for partner/org accounts */}
+                    {centralTenants.length > 1 && (
+                      <div className="space-y-2">
+                        <label className="text-white/50 text-xs font-medium block">Select tenant</label>
+                        <select
+                          className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
+                          value={selectedTenantId ?? ""}
+                          onChange={(e) => void handleTenantSelect(e.target.value)}
+                        >
+                          <option value="" disabled>Choose a tenant…</option>
+                          {centralTenants.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name || t.id}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Loading firewalls */}
+                    {loadingFirewalls && (
+                      <div className="flex items-center gap-2 text-white/50 text-sm">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading firewalls…
+                      </div>
+                    )}
+
+                    {/* Firewall selection */}
+                    {centralFirewalls.length > 0 && !loadingFirewalls && (
+                      <div className="space-y-2">
+                        <label className="text-white/50 text-xs font-medium block">
+                          Which firewall does the <code className="bg-white/10 px-1 rounded text-[10px]">entities.xml</code> belong to?
+                        </label>
+                        <select
+                          className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
+                          value={selectedFirewallId ?? ""}
+                          onChange={(e) => handleFirewallSelect(e.target.value)}
+                        >
+                          <option value="" disabled>Choose a firewall…</option>
+                          {centralFirewalls.map((fw) => (
+                            <option key={fw.id} value={fw.id}>
+                              {fw.hostname || fw.name} {fw.serialNumber ? `(${fw.serialNumber})` : ""} {fw.model ? `— ${fw.model}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedFirewallId && (
+                          <div className="flex items-center gap-1.5 text-[#00995a] text-xs">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Firewall linked
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {centralFirewalls.length === 0 && !loadingFirewalls && selectedTenantId && (
+                      <p className="text-white/40 text-xs">No firewalls found for this tenant.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* How to export */}
           <div className="rounded-xl border border-white/10 overflow-hidden">
             <button
@@ -353,6 +678,10 @@ const ConfigUpload = () => {
               <li className="flex items-start gap-2">
                 <span className="text-[#00995a] mt-0.5">•</span>
                 Files are automatically deleted 5 days after your Sophos SE downloads them
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-[#00995a] mt-0.5">•</span>
+                API credentials are encrypted and automatically deleted with this request
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-[#00995a] mt-0.5">•</span>

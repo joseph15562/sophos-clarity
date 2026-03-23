@@ -5,6 +5,10 @@ const HASH_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const CONFIG_UPLOAD_FROM_EMAIL = Deno.env.get("REPORT_FROM_EMAIL") ?? "reports@firecomply.io";
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-clarity.vercel.app";
+const CENTRAL_ENCRYPTION_KEY = Deno.env.get("CENTRAL_ENCRYPTION_KEY") ?? "";
+const SOPHOS_TOKEN_URL = "https://id.sophos.com/api/v2/oauth2/token";
+const SOPHOS_WHOAMI_URL = "https://api.central.sophos.com/whoami/v1";
+const SOPHOS_GLOBAL_URL = "https://api.central.sophos.com";
 
 async function hmacHash(data: string): Promise<string> {
   const enc = new TextEncoder();
@@ -139,6 +143,165 @@ async function sendConfigUploadEmail(
   }
 }
 
+// ── AES-256-GCM encryption for Central credentials ──
+
+async function centralDeriveKey(): Promise<CryptoKey> {
+  if (!CENTRAL_ENCRYPTION_KEY) throw new Error("CENTRAL_ENCRYPTION_KEY not configured");
+  const enc = new TextEncoder();
+  return crypto.subtle.importKey(
+    "raw", enc.encode(CENTRAL_ENCRYPTION_KEY.padEnd(32, "0").slice(0, 32)),
+    { name: "AES-GCM" }, false, ["encrypt", "decrypt"],
+  );
+}
+
+async function centralEncrypt(plaintext: string): Promise<string> {
+  const key = await centralDeriveKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext),
+  );
+  const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(ciphertext), iv.length);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function centralDecrypt(encoded: string): Promise<string> {
+  const key = await centralDeriveKey();
+  const raw = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
+  const iv = raw.slice(0, 12);
+  const ciphertext = raw.slice(12);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv }, key, ciphertext,
+  );
+  return new TextDecoder().decode(decrypted);
+}
+
+// ── Sophos Central API helpers (for customer upload Central connect) ──
+
+async function sophosGetToken(clientId: string, clientSecret: string): Promise<string> {
+  const res = await fetch(SOPHOS_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=token`,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    if (res.status === 400 || res.status === 401) throw new Error("Invalid Client ID or Client Secret. Please check your credentials.");
+    throw new Error(`Sophos auth failed (${res.status}): ${text}`);
+  }
+  const data = await res.json();
+  return data.access_token;
+}
+
+interface SophosIdentity {
+  id: string;
+  idType: "partner" | "organization" | "tenant";
+  apiHosts: { global: string; dataRegion?: string };
+}
+
+async function sophosWhoAmI(token: string): Promise<SophosIdentity> {
+  const res = await fetch(SOPHOS_WHOAMI_URL, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`WhoAmI failed (${res.status})`);
+  return res.json();
+}
+
+async function sophosFetchAllPages(
+  baseUrl: string, token: string, headers: Record<string, string>,
+  pageSize = 100,
+): Promise<unknown[]> {
+  const items: unknown[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const sep = baseUrl.includes("?") ? "&" : "?";
+    const url = `${baseUrl}${sep}page=${page}&pageSize=${pageSize}${page === 1 ? "&pageTotal=true" : ""}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}`, ...headers },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Sophos API error (${res.status}): ${text}`);
+    }
+    const data = await res.json();
+    if (data.items) items.push(...data.items);
+    if (page === 1 && data.pages?.total) totalPages = data.pages.total;
+    page++;
+  } while (page <= totalPages);
+  return items;
+}
+
+async function sophosFetchTenants(token: string, identity: SophosIdentity) {
+  if (identity.idType === "tenant") {
+    const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
+    let name = "(This tenant)";
+    try {
+      const tenantList = await sophosFetchAllPages(
+        `${apiHost}/organization/v1/tenants`, token,
+        { "X-Tenant-ID": identity.id }, 1,
+      ) as Array<{ id: string; name?: string; showAs?: string }>;
+      const self = tenantList?.find((t) => t.id === identity.id);
+      if (self && (self.showAs ?? self.name)) name = (self.showAs ?? self.name) as string;
+    } catch { /* optional name lookup */ }
+    return [{ id: identity.id, name, apiHost }];
+  }
+  const multiHeader = identity.idType === "partner"
+    ? { "X-Partner-ID": identity.id }
+    : { "X-Organization-ID": identity.id };
+  const endpoint = identity.idType === "partner"
+    ? `${SOPHOS_GLOBAL_URL}/partner/v1/tenants`
+    : `${SOPHOS_GLOBAL_URL}/organization/v1/tenants`;
+  const items = await sophosFetchAllPages(endpoint, token, multiHeader) as Array<{
+    id: string; name?: string; showAs?: string; apiHost?: string;
+  }>;
+  return items.map((t) => ({
+    id: t.id,
+    name: t.showAs ?? t.name ?? "",
+    apiHost: t.apiHost ?? "",
+  }));
+}
+
+async function sophosFetchFirewalls(token: string, identity: SophosIdentity, tenantId: string, tenants: Array<{ id: string; apiHost?: string }>) {
+  let apiHost: string;
+  if (identity.idType === "tenant") {
+    apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
+  } else {
+    const row = tenants.find((t) => t.id === tenantId);
+    apiHost = row?.apiHost ?? "";
+    if (!apiHost) throw new Error("Tenant not found or API host missing");
+  }
+  const fwHeaders: Record<string, string> = { "X-Tenant-ID": tenantId };
+  const fwItems = await sophosFetchAllPages(
+    `${apiHost}/firewall/v1/firewalls`, token, fwHeaders,
+  ) as Array<{ id: string; hostname?: string; name?: string; serialNumber?: string; firmwareVersion?: string; model?: string }>;
+
+  let licenseItems: Array<{ serialNumber?: string; licenses?: unknown[] }> = [];
+  try {
+    const licHeaders: Record<string, string> = {};
+    if (identity.idType === "partner") licHeaders["X-Partner-ID"] = identity.id;
+    else if (identity.idType === "organization") licHeaders["X-Organization-ID"] = identity.id;
+    else licHeaders["X-Tenant-ID"] = identity.id;
+    if (!licHeaders["X-Tenant-ID"]) licHeaders["X-Tenant-ID"] = tenantId;
+    licenseItems = await sophosFetchAllPages(
+      `${SOPHOS_GLOBAL_URL}/licenses/v1/licenses/firewalls`, token, licHeaders,
+    ) as typeof licenseItems;
+  } catch { /* licences optional */ }
+
+  return {
+    firewalls: fwItems.map((fw) => ({
+      id: fw.id,
+      hostname: fw.hostname ?? "",
+      name: fw.name ?? "",
+      serialNumber: fw.serialNumber ?? "",
+      firmwareVersion: fw.firmwareVersion ?? "",
+      model: fw.model ?? "",
+    })),
+    licenses: licenseItems,
+  };
+}
+
 function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: string, ctaLabel?: string, footNote?: string): string {
   const ctaBlock = ctaUrl ? `
 <tr><td align="center" style="padding:8px 40px 16px 40px;">
@@ -186,13 +349,13 @@ function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expires
   );
 }
 
-function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string): string {
+function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string, centralNote = ""): string {
   const label = customerName || "A customer";
   return buildSophosEmailHtml(
     "Configuration Uploaded",
     `<p style="margin:0 0 20px;">Hi,</p>
 <p style="margin:0 0 20px;"><strong>${label}</strong> has uploaded their firewall configuration.</p>
-<p style="margin:0 0 20px;">Open Sophos FireComply to run the health check.</p>`,
+${centralNote}<p style="margin:0 0 20px;">Open Sophos FireComply to run the health check.</p>`,
     clarityUrl,
     "Open FireComply",
   );
@@ -1585,7 +1748,7 @@ serve(async (req: Request) => {
 
     let query = db
       .from("config_upload_requests")
-      .select("id, token, customer_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at, se_user_id, team_id")
+      .select("id, token, customer_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at, se_user_id, team_id, central_connected_at")
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -1619,7 +1782,7 @@ serve(async (req: Request) => {
 
       const { data, error } = await db
         .from("config_upload_requests")
-        .select("status, customer_name, expires_at, file_name")
+        .select("status, customer_name, expires_at, file_name, central_connected_at, central_data, central_linked_firewall_id, central_linked_firewall_name")
         .eq("token", token)
         .maybeSingle();
 
@@ -1632,6 +1795,12 @@ serve(async (req: Request) => {
         customer_name: data.customer_name,
         expires_at: data.expires_at,
         file_name: data.file_name,
+        central_connected: !!data.central_connected_at,
+        central_tenants: data.central_data ? (data.central_data as Record<string, unknown>).tenants ?? null : null,
+        central_firewalls: data.central_data ? (data.central_data as Record<string, unknown>).firewalls ?? null : null,
+        central_account_type: data.central_data ? (data.central_data as Record<string, unknown>).accountType ?? null : null,
+        central_linked_firewall_id: data.central_linked_firewall_id,
+        central_linked_firewall_name: data.central_linked_firewall_name,
       });
     }
 
@@ -1686,7 +1855,18 @@ serve(async (req: Request) => {
       if (updateErr) return json({ error: updateErr.message }, 500);
 
       if (existing.se_email) {
-        const notifHtml = buildSeNotificationEmailHtml(existing.customer_name ?? "", `${APP_URL}/health-check-2`);
+        const { data: freshRow } = await db
+          .from("config_upload_requests")
+          .select("central_connected_at, central_linked_firewall_name")
+          .eq("id", existing.id)
+          .maybeSingle();
+        let centralNote = "";
+        if (freshRow?.central_connected_at) {
+          centralNote = freshRow.central_linked_firewall_name
+            ? `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong> (linked to firewall: <strong>${freshRow.central_linked_firewall_name}</strong>).</p>`
+            : `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong>.</p>`;
+        }
+        const notifHtml = buildSeNotificationEmailHtml(existing.customer_name ?? "", `${APP_URL}/health-check-2`, centralNote);
         await sendConfigUploadEmail(
           existing.se_email,
           `Config received${existing.customer_name ? ` from ${existing.customer_name}` : ""}`,
@@ -1799,6 +1979,158 @@ serve(async (req: Request) => {
       return json({ ok: true, claimed_by: se.seProfile.id });
     }
 
+    // POST /api/config-upload/:token/central-connect — customer connects Sophos Central (public, apikey)
+    if (req.method === "POST" && subRoute === "central-connect") {
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, status, expires_at")
+        .eq("token", token)
+        .maybeSingle();
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
+
+      const body = await req.json();
+      const { client_id, client_secret } = body as { client_id?: string; client_secret?: string };
+      if (!client_id?.trim() || !client_secret?.trim()) {
+        return json({ error: "Client ID and Client Secret are required" }, 400);
+      }
+
+      try {
+        const accessToken = await sophosGetToken(client_id.trim(), client_secret.trim());
+        const identity = await sophosWhoAmI(accessToken);
+        const tenants = await sophosFetchTenants(accessToken, identity);
+
+        let centralData: Record<string, unknown> = {
+          accountType: identity.idType,
+          tenants,
+        };
+
+        if (tenants.length === 1) {
+          const fwData = await sophosFetchFirewalls(accessToken, identity, tenants[0].id, tenants);
+          centralData = { ...centralData, ...fwData, selectedTenantId: tenants[0].id };
+        }
+
+        const encClientId = await centralEncrypt(client_id.trim());
+        const encClientSecret = await centralEncrypt(client_secret.trim());
+
+        await db
+          .from("config_upload_requests")
+          .update({
+            central_client_id_enc: encClientId,
+            central_client_secret_enc: encClientSecret,
+            central_data: centralData,
+            central_connected_at: new Date().toISOString(),
+          })
+          .eq("id", row.id);
+
+        return json({
+          ok: true,
+          account_type: identity.idType,
+          tenants: tenants.map((t) => ({ id: t.id, name: t.name })),
+          firewalls: (centralData as Record<string, unknown>).firewalls ?? null,
+        });
+      } catch (err) {
+        return json({ error: err instanceof Error ? err.message : "Central connection failed" }, 400);
+      }
+    }
+
+    // POST /api/config-upload/:token/central-firewalls — fetch firewalls for a selected tenant (public, apikey)
+    if (req.method === "POST" && subRoute === "central-firewalls") {
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, expires_at, central_client_id_enc, central_client_secret_enc, central_data")
+        .eq("token", token)
+        .maybeSingle();
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
+      if (!row.central_client_id_enc) return json({ error: "Central not connected yet" }, 400);
+
+      const body = await req.json();
+      const { tenant_id } = body as { tenant_id?: string };
+      if (!tenant_id?.trim()) return json({ error: "tenant_id is required" }, 400);
+
+      try {
+        const clientId = await centralDecrypt(row.central_client_id_enc);
+        const clientSecret = await centralDecrypt(row.central_client_secret_enc);
+        const accessToken = await sophosGetToken(clientId, clientSecret);
+        const identity = await sophosWhoAmI(accessToken);
+        const tenants = (row.central_data as Record<string, unknown>)?.tenants as Array<{ id: string; apiHost?: string }> ?? [];
+        const fwData = await sophosFetchFirewalls(accessToken, identity, tenant_id.trim(), tenants);
+
+        const updatedCentralData = { ...(row.central_data as Record<string, unknown>), ...fwData, selectedTenantId: tenant_id.trim() };
+        await db
+          .from("config_upload_requests")
+          .update({ central_data: updatedCentralData })
+          .eq("id", row.id);
+
+        return json({ ok: true, firewalls: fwData.firewalls });
+      } catch (err) {
+        return json({ error: err instanceof Error ? err.message : "Failed to fetch firewalls" }, 400);
+      }
+    }
+
+    // POST /api/config-upload/:token/central-link — customer links XML to a firewall (public, apikey)
+    if (req.method === "POST" && subRoute === "central-link") {
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, expires_at, central_connected_at")
+        .eq("token", token)
+        .maybeSingle();
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
+      if (!row.central_connected_at) return json({ error: "Central not connected yet" }, 400);
+
+      const body = await req.json();
+      const { firewall_id, firewall_name } = body as { firewall_id?: string; firewall_name?: string };
+      if (!firewall_id?.trim()) return json({ error: "firewall_id is required" }, 400);
+
+      await db
+        .from("config_upload_requests")
+        .update({
+          central_linked_firewall_id: firewall_id.trim(),
+          central_linked_firewall_name: (firewall_name?.trim()) || null,
+        })
+        .eq("id", row.id);
+
+      return json({ ok: true });
+    }
+
+    // GET /api/config-upload/:token/central-data — SE reads stored Central data (JWT required)
+    if (req.method === "GET" && subRoute === "central-data") {
+      const se = await authenticateSE(req);
+      if (!se) return json({ error: "Unauthorized" }, 401);
+
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, se_user_id, team_id, central_data, central_connected_at, central_linked_firewall_id, central_linked_firewall_name")
+        .eq("token", token)
+        .maybeSingle();
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+
+      let hasAccess = row.se_user_id === se.seProfile.id;
+      if (!hasAccess && row.team_id) {
+        const { data: mem } = await db
+          .from("se_team_members")
+          .select("id")
+          .eq("team_id", row.team_id)
+          .eq("se_profile_id", se.seProfile.id)
+          .maybeSingle();
+        hasAccess = !!mem;
+      }
+      if (!hasAccess) return json({ error: "Forbidden" }, 403);
+
+      return json({
+        central_connected: !!row.central_connected_at,
+        central_data: row.central_data,
+        linked_firewall_id: row.central_linked_firewall_id,
+        linked_firewall_name: row.central_linked_firewall_name,
+      });
+    }
+
     // DELETE /api/config-upload/:token — SE revokes the request (JWT required)
     if (req.method === "DELETE" && !subRoute) {
       const se = await authenticateSE(req);
@@ -1895,6 +2227,69 @@ serve(async (req: Request) => {
       return json({ data: result });
     } catch (err) {
       return json({ error: err instanceof Error ? err.message : "Internal error" }, 500);
+    }
+  }
+
+  // ── POST /api/send-report — email PDF+HTML report to customer (JWT required) ──
+  if (req.method === "POST" && segments[0] === "send-report" && segments.length === 1) {
+    const se = await authenticateSE(req);
+    if (!se) return json({ error: "Unauthorized" }, 401);
+
+    const body = await req.json();
+    const { customer_email, customer_name, pdf_base64, html_base64, filename_base } = body as {
+      customer_email?: string;
+      customer_name?: string;
+      pdf_base64?: string;
+      html_base64?: string;
+      filename_base?: string;
+    };
+
+    if (!customer_email) return json({ error: "customer_email is required" }, 400);
+    if (!pdf_base64 && !html_base64) return json({ error: "At least one of pdf_base64 or html_base64 is required" }, 400);
+
+    const seName = se.seProfile.display_name || se.seProfile.email || "Your SE";
+    const recipientName = customer_name || "Customer";
+    const base = filename_base || "Sophos-Firewall-Health-Check";
+
+    const attachments: Array<{ filename: string; content: string }> = [];
+    if (pdf_base64) attachments.push({ filename: `${base}.pdf`, content: pdf_base64 });
+    if (html_base64) attachments.push({ filename: `${base}.html`, content: html_base64 });
+
+    const emailHtml = buildSophosEmailHtml(
+      "Firewall Health Check Report",
+      `<p>Hi ${recipientName},</p>
+       <p>Please find your Sophos Firewall Health Check report attached. This report includes a comprehensive assessment of your firewall configuration with recommendations for improvement.</p>
+       <p>If you have any questions about the findings, please don't hesitate to reach out.</p>
+       <p style="margin-top:16px;">Best regards,<br/>${seName}</p>`,
+      undefined,
+      undefined,
+      "This report was generated by Sophos FireComply."
+    );
+
+    if (!RESEND_API_KEY) return json({ error: "RESEND_API_KEY not configured" }, 500);
+
+    try {
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: CONFIG_UPLOAD_FROM_EMAIL,
+          to: [customer_email],
+          subject: `Sophos Firewall Health Check Report — ${recipientName}`,
+          html: emailHtml,
+          attachments,
+        }),
+      });
+      if (!resp.ok) {
+        const errBody = await resp.text();
+        return json({ error: `Email send failed: ${errBody}` }, 500);
+      }
+      return json({ ok: true });
+    } catch (err) {
+      return json({ error: String(err) }, 500);
     }
   }
 

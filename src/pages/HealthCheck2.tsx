@@ -18,6 +18,7 @@ import {
   Copy,
   XCircle,
   UserCheck,
+  Send,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { analyseConfig } from "@/lib/analyse-config";
@@ -299,6 +300,7 @@ function HealthCheckInner() {
   /** When non-null, HA BP auto-pass labels come from a reopened save (no live Central groups). */
   const [restoredHaLabels, setRestoredHaLabels] = useState<Set<string> | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [preparedFor, setPreparedFor] = useState("");
   const [seNotesManual, setSeNotesManual] = useState("");
   const [seManagementOpen, setSeManagementOpen] = useState(false);
@@ -822,6 +824,7 @@ function HealthCheckInner() {
   ]);
 
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
   const [savedCheckId, setSavedCheckId] = useState<string | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -847,6 +850,7 @@ function HealthCheckInner() {
     id: string; token: string; customer_name: string | null; customer_email: string | null;
     status: string; expires_at: string; email_sent: boolean; uploaded_at: string | null;
     downloaded_at: string | null; created_at: string; se_user_id?: string; team_id?: string | null;
+    central_connected_at?: string | null;
   }>>([]);
   const [configUploadRequestsOpen, setConfigUploadRequestsOpen] = useState(false);
   const [configUploadListLoading, setConfigUploadListLoading] = useState(false);
@@ -1184,16 +1188,52 @@ function HealthCheckInner() {
       if (matchedReq?.customer_name && !customerName.trim()) {
         setCustomerName(matchedReq.customer_name);
       }
+      if (matchedReq?.customer_email && !customerEmail.trim()) {
+        setCustomerEmail(matchedReq.customer_email);
+      }
       toast.success(`Config loaded: ${fileName}`);
       setConfigUploadDialogOpen(false);
       setConfigUploadRequestsOpen(false);
       void fetchConfigUploadRequests();
+
+      // Fetch Central data if customer connected it
+      try {
+        const centralUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-data`;
+        const centralRes = await fetch(centralUrl, {
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            authorization: `Bearer ${session?.access_token}`,
+          },
+        });
+        if (centralRes.ok) {
+          const centralJson = await centralRes.json();
+          if (centralJson.central_connected && centralJson.central_data) {
+            setCentralValidated(true);
+            setReplayCentralLinked(false);
+            const cd = centralJson.central_data as Record<string, unknown>;
+            if (cd.licenses && Array.isArray(cd.licenses)) {
+              setGuestFirewallLicenseItems(cd.licenses as GuestFirewallLicenseApiRow[]);
+            }
+            if (cd.tenants && Array.isArray(cd.tenants)) {
+              setTenantOptions(cd.tenants as GuestTenantRow[]);
+              if ((cd.tenants as GuestTenantRow[]).length > 0) {
+                setCentralCreds((c) => ({ ...c, tenantId: (cd.tenants as GuestTenantRow[])[0].id }));
+              }
+            }
+            const fwCount = Array.isArray(cd.firewalls) ? (cd.firewalls as unknown[]).length : 0;
+            const linkedName = centralJson.linked_firewall_name;
+            const parts = [`Central data loaded (${fwCount} firewall${fwCount !== 1 ? "s" : ""})`];
+            if (linkedName) parts.push(`linked to ${linkedName}`);
+            toast.success(parts.join(" — "));
+          }
+        }
+      } catch { /* Central data is optional enrichment */ }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not load config.");
     } finally {
       setConfigUploadLoading(false);
     }
-  }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests, configUploadRequests, customerName]);
+  }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests, configUploadRequests, customerName, customerEmail]);
 
   const handleRevokeConfigUpload = useCallback(async (token: string) => {
     try {
@@ -1529,6 +1569,96 @@ function HealthCheckInner() {
     seThreatResponseAck,
     seExcludedBpChecks,
     seNotes,
+  ]);
+
+  const handleSendReportToCustomer = useCallback(async () => {
+    if (!customerEmail.trim()) {
+      toast.error("Enter a customer email address first.");
+      return;
+    }
+    if (!files.length || !analysisResults.length) {
+      toast.error("Run a health check before sending.");
+      return;
+    }
+    setSendingReport(true);
+    try {
+      const { buildSeHealthCheckPdfBlob } = await import("@/lib/se-health-check-pdfmake-v2");
+      const { buildSeHealthCheckBrowserHtmlDocument } = await import("@/lib/se-health-check-browser-html-v2");
+      const { sanitizePdfFilenamePart } = await import("@/lib/html-document-to-pdf-blob");
+
+      const bpByLabel = buildBpByLabel(analysisResults, baselineResults);
+      const reportParams = buildReportParams({
+        files,
+        analysisResults,
+        baselineResults,
+        bpByLabel,
+        licence,
+        customerName,
+        preparedFor: preparedFor.trim() || customerName.trim() || undefined,
+        preparedBy: effectivePreparedBy,
+        dpiExemptZones,
+        dpiExemptNetworks,
+        webFilterComplianceMode,
+        webFilterExemptRuleNames,
+        seMdrThreatFeedsAck,
+        seNdrEssentialsAck,
+        seDnsProtectionAck,
+        seExcludeSecurityHeartbeat,
+        centralLinkedForAnalysis,
+        seCentralHaLabels,
+        restoredHaLabels,
+        seThreatResponseAck,
+        seExcludedBpChecks,
+        seNotes,
+      });
+
+      const [pdfBlob, html] = await Promise.all([
+        buildSeHealthCheckPdfBlob(reportParams),
+        Promise.resolve(buildSeHealthCheckBrowserHtmlDocument(reportParams)),
+      ]);
+
+      const pdfBuf = await pdfBlob.arrayBuffer();
+      const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuf)));
+      const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
+
+      const part = sanitizePdfFilenamePart(customerName);
+      const date = new Date().toISOString().slice(0, 10);
+      const filenameBase = `Sophos-Firewall-Health-Check-${part}-${date}`;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/send-report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          customer_email: customerEmail.trim(),
+          customer_name: customerName.trim() || undefined,
+          pdf_base64: pdfBase64,
+          html_base64: htmlBase64,
+          filename_base: filenameBase,
+        }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Send failed");
+      }
+      toast.success(`Report sent to ${customerEmail.trim()}`);
+    } catch (e) {
+      console.warn("[health-check] send report failed", e);
+      toast.error(e instanceof Error ? e.message : "Could not send report.");
+    } finally {
+      setSendingReport(false);
+    }
+  }, [
+    files, analysisResults, baselineResults, licence, customerName, customerEmail,
+    preparedFor, effectivePreparedBy, dpiExemptZones, dpiExemptNetworks,
+    webFilterComplianceMode, webFilterExemptRuleNames, seMdrThreatFeedsAck,
+    seNdrEssentialsAck, seDnsProtectionAck, seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis, bpOverrideRevision, seCentralHaLabels,
+    seThreatResponseAck, seExcludedBpChecks, seNotes, restoredHaLabels,
   ]);
 
   const restoreFromSavedSnapshot = useCallback(
@@ -1878,6 +2008,22 @@ function HealthCheckInner() {
               </div>
               <div className="space-y-1">
                 <Label
+                  htmlFor="hc-customer-email-top"
+                  className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
+                >
+                  Customer email
+                </Label>
+                <Input
+                  id="hc-customer-email-top"
+                  type="email"
+                  className="rounded-lg text-sm h-10"
+                  placeholder="customer@example.com (optional)"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label
                   htmlFor="hc-prepared-for"
                   className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
                 >
@@ -2114,6 +2260,18 @@ function HealthCheckInner() {
                   <Download className="h-4 w-4" />
                   Summary JSON
                 </Button>
+                {customerEmail.trim() && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
+                    disabled={sendingReport || pdfBusy || !files.length}
+                    onClick={() => void handleSendReportToCustomer()}
+                  >
+                    {sendingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {sendingReport ? "Sending…" : `Send to ${customerEmail.trim()}`}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -2552,6 +2710,7 @@ function HealthCheckInner() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{req.customer_name || "Unnamed"}</span>
                         <span className={cn("text-xs font-medium", statusColor)}>{statusLabel}</span>
+                        {req.central_connected_at && <Badge variant="outline" className="text-[9px] border-blue-500/30 text-blue-500 gap-1"><Wifi className="h-2.5 w-2.5" />Central</Badge>}
                         {isTeammate && <Badge variant="secondary" className="text-[9px]">Teammate</Badge>}
                       </div>
                       <span className="text-[10px] text-muted-foreground">
