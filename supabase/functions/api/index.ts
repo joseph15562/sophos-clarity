@@ -342,7 +342,9 @@ function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expires
     "Firewall Health Check",
     `<p style="margin:0 0 20px;">Hi,</p>
 <p style="margin:0 0 20px;"><strong>${seName}</strong> from Sophos has requested your firewall configuration for a health check.</p>
-<p style="margin:0 0 20px;">Please click the button below to securely upload your <code style="background:#333;padding:2px 6px;border-radius:3px;font-size:13px;color:#fff;">entities.xml</code> file.</p>`,
+<p style="margin:0 0 20px;">Please click the button below to securely upload your <code style="background:#333;padding:2px 6px;border-radius:3px;font-size:13px;color:#fff;">entities.xml</code> file.</p>
+<p style="margin:0 0 10px;font-size:14px;color:#aaa;"><strong style="color:#ccc;">Optional:</strong> You can also connect your <strong style="color:#ccc;">Sophos Central</strong> account on the upload page. This allows your SE to enrich the health check with licence expiry dates, firmware versions, and HA status — giving you a more comprehensive report.</p>
+<p style="margin:0 0 20px;font-size:13px;color:#888;">You'll find the option to connect Central on the upload page. You'll need your Sophos Central API <strong style="color:#aaa;">Client ID</strong> and <strong style="color:#aaa;">Client Secret</strong> (instructions are provided on the page). Your credentials are encrypted and automatically deleted after the health check.</p>`,
     uploadUrl,
     "Upload Configuration",
     `This link expires on <strong>${expiresDate}</strong>.`,
