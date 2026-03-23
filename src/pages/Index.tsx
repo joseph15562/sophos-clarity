@@ -6,8 +6,7 @@ import { BrandingData } from "@/components/BrandingSetup";
 import { AppHeader } from "@/components/AppHeader";
 import { UploadSection } from "@/components/UploadSection";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
-import { DpiExclusionBar } from "@/components/DpiExclusionBar";
-import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar";
+
 import { AuthFlow } from "@/components/AuthFlow";
 import { extractSections, type ExtractedSections } from "@/lib/extract-sections";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
@@ -752,31 +751,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onSaveReports={handleSaveReports}
               totalFindings={totalFindings}
               isViewerOnly={isViewerOnly}
-              beforeReports={
-                (aggregatedPosture.allWanSourceZones.length > 0 ||
-                  aggregatedPosture.allWanSourceNetworks.length > 0 ||
-                  aggregatedPosture.wanMissingWebFilterRuleNames.length > 0) ? (
-                  <div className="space-y-3">
-                    {(aggregatedPosture.allWanSourceZones.length > 0 || aggregatedPosture.allWanSourceNetworks.length > 0) && (
-                      <DpiExclusionBar
-                        detectedZones={aggregatedPosture.allWanSourceZones}
-                        excludedZones={dpiExemptZones}
-                        onZonesChange={setDpiExemptZones}
-                        detectedNetworks={aggregatedPosture.allWanSourceNetworks}
-                        excludedNetworks={dpiExemptNetworks}
-                        onNetworksChange={setDpiExemptNetworks}
-                      />
-                    )}
-                    {aggregatedPosture.wanMissingWebFilterRuleNames.length > 0 && (
-                      <WebFilterRuleExclusionBar
-                        candidateRuleNames={aggregatedPosture.wanMissingWebFilterRuleNames}
-                        exemptRuleNames={branding.webFilterExemptRuleNames ?? []}
-                        onChange={(names) => setBranding((b) => ({ ...b, webFilterExemptRuleNames: names }))}
-                      />
-                    )}
-                  </div>
-                ) : undefined
-              }
+              beforeReports={undefined}
             />
             {hasFiles && !isGuest && org?.id && (
               <div className="grid gap-4 md:grid-cols-2">
