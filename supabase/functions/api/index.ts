@@ -1766,6 +1766,39 @@ serve(async (req: Request) => {
       return json({ config_xml: row.config_xml, file_name: row.file_name });
     }
 
+    // POST /api/config-upload/:token/claim — teammate claims the request (JWT required, team member)
+    if (req.method === "POST" && subRoute === "claim") {
+      const se = await authenticateSE(req);
+      if (!se) return json({ error: "Unauthorized" }, 401);
+
+      const { data: row, error: fetchErr } = await db
+        .from("config_upload_requests")
+        .select("id, se_user_id, team_id, customer_name")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (!row) return json({ error: "Upload request not found" }, 404);
+      if (!row.team_id) return json({ error: "Only team upload requests can be claimed" }, 400);
+      if (row.se_user_id === se.seProfile.id) return json({ error: "You already own this request" }, 400);
+
+      const { data: mem } = await db
+        .from("se_team_members")
+        .select("id")
+        .eq("team_id", row.team_id)
+        .eq("se_profile_id", se.seProfile.id)
+        .maybeSingle();
+      if (!mem) return json({ error: "You are not a member of this team" }, 403);
+
+      const { error: updateErr } = await db
+        .from("config_upload_requests")
+        .update({ se_user_id: se.seProfile.id })
+        .eq("id", row.id);
+      if (updateErr) return json({ error: updateErr.message }, 500);
+
+      return json({ ok: true, claimed_by: se.seProfile.id });
+    }
+
     // DELETE /api/config-upload/:token — SE revokes the request (JWT required)
     if (req.method === "DELETE" && !subRoute) {
       const se = await authenticateSE(req);

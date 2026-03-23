@@ -17,6 +17,7 @@ import {
   Link2,
   Copy,
   XCircle,
+  UserCheck,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { analyseConfig } from "@/lib/analyse-config";
@@ -1093,6 +1094,28 @@ function HealthCheckInner() {
       toast.error("Could not revoke upload request.");
     }
   }, [configUploadToken, fetchConfigUploadRequests]);
+
+  const handleClaimConfigUpload = useCallback(async (token: string) => {
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/claim`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Claim failed");
+      }
+      toast.success("Upload request claimed — it's now yours.");
+      void fetchConfigUploadRequests();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not claim upload request.");
+    }
+  }, [fetchConfigUploadRequests]);
 
   // Poll for upload status when a request is pending
   useEffect(() => {
@@ -2338,6 +2361,18 @@ function HealthCheckInner() {
                         >
                           {configUploadLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
                           Re-download
+                        </Button>
+                      )}
+                      {isTeammate && !isExpired && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => handleClaimConfigUpload(req.token)}
+                        >
+                          <UserCheck className="h-3 w-3" />
+                          Claim
                         </Button>
                       )}
                       {!isExpired && req.status === "pending" && (
