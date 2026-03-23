@@ -1110,6 +1110,24 @@ function HealthCheckInner() {
             const parts = [`Central data loaded (${fwCount} firewall${fwCount !== 1 ? "s" : ""})`];
             if (linkedName) parts.push(`linked to ${linkedName}`);
             toast.success(parts.join(" — "));
+
+            // Auto-link the uploaded file to the firewall the customer chose
+            const linkedFwId = centralJson.linked_firewall_id as string | undefined;
+            if (linkedFwId && Array.isArray(cd.firewalls)) {
+              const fwList = cd.firewalls as GuestFirewallRow[];
+              const linkedFw = fwList.find((fw) => fw.id === linkedFwId);
+              if (linkedFw?.serialNumber) {
+                const sn = linkedFw.serialNumber;
+                const label = (linkedFw.hostname || linkedFw.name || "").trim();
+                setFiles((prev) =>
+                  prev.map((f) => ({
+                    ...f,
+                    serialNumber: sn,
+                    ...(label ? { label } : {}),
+                  })),
+                );
+              }
+            }
           }
         }
       } catch { /* Central data is optional enrichment */ }
