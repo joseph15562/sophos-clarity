@@ -22,6 +22,23 @@ function getCorsHeaders(req: Request): Record<string, string> {
 
 let corsHeaders: Record<string, string> = {};
 
+const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
+const RATE_WINDOW_MS = 60_000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 6;
+const rateLimitMap = new Map<string, number[]>();
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const timestamps = (rateLimitMap.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (timestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    rateLimitMap.set(userId, timestamps);
+    return true;
+  }
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return false;
+}
+
 /**
  * Shared rules appended to every system prompt to avoid duplication.
  * Covers VPN profiles, wireless, external logging, API accounts, SSL/TLS, and web filter scope.
@@ -262,6 +279,24 @@ serve(async (req) => {
     );
   }
 
+  // Per-user rate limit (in-memory, resets on cold start)
+  if (isRateLimited(user.id)) {
+    console.warn(`parse-config: rate limited user=${user.id.slice(0, 8)}…`);
+    return new Response(
+      JSON.stringify({ error: "Too many requests. Please wait a moment before generating another report." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Body size guard
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+  if (contentLength > MAX_BODY_BYTES) {
+    return new Response(
+      JSON.stringify({ error: `Request body too large (${Math.round(contentLength / 1024)} KB). Maximum is ${MAX_BODY_BYTES / 1024 / 1024} MB.` }),
+      { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const body = await req.json();
     const chat: boolean = body?.chat === true;
@@ -285,9 +320,20 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-    } else if (!sections || typeof sections !== "object") {
+      if (chatContext.length > 100_000) {
+        return new Response(
+          JSON.stringify({ error: "Chat context too large." }),
+          { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (!sections || typeof sections !== "object" || Array.isArray(sections)) {
       return new Response(
-        JSON.stringify({ error: "Missing sections field. Expected pre-extracted JSON." }),
+        JSON.stringify({ error: "Missing sections field. Expected pre-extracted JSON object." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else if (Object.keys(sections).length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Sections object is empty. Upload a Sophos config export first." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

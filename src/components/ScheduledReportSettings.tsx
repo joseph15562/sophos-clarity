@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Calendar, Mail, Plus, Trash2, Send, Clock, ToggleLeft, ToggleRight, Eye } from "lucide-react";
@@ -487,7 +488,7 @@ export function ScheduledReportSettings() {
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Body</p>
                 <div
                   className="rounded-lg border border-border bg-muted/20 p-4 text-xs prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: previewData.html }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewData.html) }}
                 />
               </div>
             </div>

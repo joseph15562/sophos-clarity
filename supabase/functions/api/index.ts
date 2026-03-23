@@ -747,12 +747,19 @@ async function handleSubmit(
   return json({ ok: true, drift });
 }
 
+const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
+
 // ── Main router ──
 
 serve(async (req: Request) => {
   corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
+  if (contentLength > API_MAX_BODY_BYTES) {
+    return json({ error: `Request body too large (${Math.round(contentLength / 1024)} KB). Maximum is ${API_MAX_BODY_BYTES / 1024 / 1024} MB.` }, 413);
   }
 
   try {

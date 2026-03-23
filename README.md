@@ -192,6 +192,21 @@ supabase secrets set GEMINI_API_KEY=your-key-here
 - **Data anonymisation** — IP addresses, hostnames, and customer identifiers are replaced with safe placeholders before reaching the AI model
 - **No data persistence** — generated reports are not stored server-side unless the user explicitly saves them
 - **Row Level Security** — all Supabase database access is scoped by organisation via RLS policies
+- **XSS-hardened rendering** — all AI-generated markdown is sanitized via DOMPurify with explicit FORBID_TAGS/FORBID_ATTR before DOM injection
+- **CORS-restricted backend** — edge functions only accept requests from configured origins (configurable via `ALLOWED_ORIGIN`)
+- **Request validation** — body size limits (5 MB for AI, 10 MB for API), payload shape validation, and empty-section rejection
+- **Per-user rate limiting** — AI report generation is throttled per authenticated user to prevent credit abuse
+- **JWT authentication** — all AI and API endpoints require a valid Supabase auth token; unauthenticated requests are rejected
+
+### Supabase Configuration Notes
+
+The `supabase/config.toml` sets `verify_jwt = false` for `parse-config` and `sophos-central`. This is intentional — these functions handle CORS preflight (OPTIONS) requests that don't carry JWTs. Authentication is enforced inside each function via `supabase.auth.getUser()`.
+
+To restrict origins in production, set the `ALLOWED_ORIGIN` secret to your deployed domain:
+
+```bash
+supabase secrets set ALLOWED_ORIGIN=https://your-domain.com
+```
 
 ---
 

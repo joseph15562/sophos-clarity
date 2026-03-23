@@ -5,7 +5,13 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 
-marked.setOptions({ gfm: true });
+marked.setOptions({ gfm: true, breaks: false });
+
+export const PURIFY_CONFIG: DOMPurify.Config = {
+  ADD_TAGS: ["table", "thead", "tbody", "tr", "th", "td", "colgroup", "col"],
+  FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "textarea", "select"],
+  FORBID_ATTR: ["onerror", "onclick", "onload", "onmouseover", "onfocus", "onblur"],
+};
 
 /**
  * Split single-line markdown tables into one line per row so marked can parse them.
@@ -85,7 +91,5 @@ export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptio
   if (options?.footer?.trim()) {
     out += `<footer class="report-footer report-meta text-[10px] text-muted-foreground mt-8 pt-4 border-t border-border">${DOMPurify.sanitize(options.footer)}</footer>`;
   }
-  return DOMPurify.sanitize(out, {
-    ADD_TAGS: ["table", "thead", "tbody", "tr", "th", "td", "colgroup", "col"],
-  });
+  return DOMPurify.sanitize(out, PURIFY_CONFIG);
 }
