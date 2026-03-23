@@ -261,6 +261,174 @@ const ConfigUpload = () => {
     ? new Date(statusData.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "";
 
+  // ── Central connection panel (reused across screens) ──
+  const centralPanel = (
+    <div className="rounded-xl border border-white/10 overflow-hidden w-full max-w-xl text-left">
+      <button
+        type="button"
+        onClick={() => setCentralOpen(!centralOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Wifi className={cn("h-4 w-4", centralState === "connected" ? "text-[#00995a]" : "text-white/40")} />
+          <span className="text-white/60 text-sm font-medium">
+            {centralState === "connected" ? "Sophos Central connected" : "Optional: Connect Sophos Central"}
+          </span>
+          {centralState === "connected" && (
+            <span className="text-[10px] bg-[#00995a]/20 text-[#00995a] px-2 py-0.5 rounded-full font-medium">Connected</span>
+          )}
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-white/40 transition-transform", centralOpen && "rotate-180")} />
+      </button>
+      {centralOpen && (
+        <div className="px-4 pb-4 border-t border-white/5 pt-4 space-y-4">
+          {centralState === "idle" || centralState === "error" ? (
+            <>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Connecting Sophos Central lets your SE enrich the health check with licence expiry, firmware versions, and HA status.
+              </p>
+              <div className="space-y-3">
+                <Input
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 font-mono text-xs h-10"
+                  placeholder="Client ID"
+                  autoComplete="off"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                />
+                <Input
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 font-mono text-xs h-10"
+                  placeholder="Client Secret"
+                  type="password"
+                  autoComplete="off"
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  className="w-full bg-[#2563eb] hover:bg-[#2563eb]/90 text-white gap-2"
+                  disabled={!clientId.trim() || !clientSecret.trim()}
+                  onClick={handleCentralConnect}
+                >
+                  <Wifi className="h-4 w-4" />
+                  Connect to Sophos Central
+                </Button>
+              </div>
+              {centralError && (
+                <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
+                    <p className="text-red-300 text-sm">{centralError}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 text-white/70 hover:bg-white/10 text-xs gap-1.5"
+                    onClick={handleCentralRetry}
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Try again
+                  </Button>
+                </div>
+              )}
+              <p className="text-white/30 text-xs">
+                Your credentials are encrypted and automatically deleted after the health check is complete.
+              </p>
+              <div className="rounded-lg border border-white/5 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setCentralHowToOpen(!centralHowToOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-white/5 transition-colors"
+                >
+                  <span className="text-white/50 text-xs font-medium">How to create API credentials</span>
+                  <ChevronDown className={cn("h-3 w-3 text-white/30 transition-transform", centralHowToOpen && "rotate-180")} />
+                </button>
+                {centralHowToOpen && (
+                  <div className="px-3 pb-3 text-white/40 text-xs leading-relaxed border-t border-white/5 pt-2 space-y-1.5">
+                    <ol className="list-decimal list-inside space-y-1.5">
+                      <li>Sign in to <strong className="text-white/60">Sophos Central</strong> — use the same account that manages the firewall you are exporting the configuration from</li>
+                      <li>Navigate to <strong className="text-white/60">Settings &amp; Policies</strong> &gt; <strong className="text-white/60">API Credentials Management</strong></li>
+                      <li>Click <strong className="text-white/60">Add Credential</strong></li>
+                      <li>Enter a name (e.g. &quot;Health Check&quot;) and select <strong className="text-white/60">Service Principal Read-Only</strong></li>
+                      <li>Click <strong className="text-white/60">Add</strong>, then copy the <strong className="text-white/60">Client ID</strong> and <strong className="text-white/60">Client Secret</strong></li>
+                      <li>Paste them into the fields above</li>
+                    </ol>
+                    <p className="text-white/25 text-[10px] mt-2">
+                      Read-only access is recommended. Your SE only needs to view firewall and licence data.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : centralState === "connecting" ? (
+            <div className="text-center py-4 space-y-3">
+              <Loader2 className="h-6 w-6 text-[#2563eb] mx-auto animate-spin" />
+              <p className="text-white/60 text-sm">Connecting to Sophos Central…</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-[#00995a]" />
+                <span className="text-white/70 text-sm">
+                  Connected as {centralAccountType === "tenant" ? "Tenant" : centralAccountType === "partner" ? "Partner" : "Organization"}
+                </span>
+              </div>
+              {centralTenants.length > 1 && (
+                <div className="space-y-2">
+                  <label className="text-white/50 text-xs font-medium block">Select tenant</label>
+                  <select
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
+                    value={selectedTenantId ?? ""}
+                    onChange={(e) => void handleTenantSelect(e.target.value)}
+                  >
+                    <option value="" disabled>Choose a tenant…</option>
+                    {centralTenants.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name || t.id}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {loadingFirewalls && (
+                <div className="flex items-center gap-2 text-white/50 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading firewalls…
+                </div>
+              )}
+              {centralFirewalls.length > 0 && !loadingFirewalls && (
+                <div className="space-y-2">
+                  <label className="text-white/50 text-xs font-medium block">
+                    Which firewall does the <code className="bg-white/10 px-1 rounded text-[10px]">entities.xml</code> belong to?
+                  </label>
+                  <select
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
+                    value={selectedFirewallId ?? ""}
+                    onChange={(e) => handleFirewallSelect(e.target.value)}
+                  >
+                    <option value="" disabled>Choose a firewall…</option>
+                    {centralFirewalls.map((fw) => (
+                      <option key={fw.id} value={fw.id}>
+                        {fw.hostname || fw.name} {fw.serialNumber ? `(${fw.serialNumber})` : ""} {fw.model ? `— ${fw.model}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedFirewallId && (
+                    <div className="flex items-center gap-1.5 text-[#00995a] text-xs">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Firewall linked
+                    </div>
+                  )}
+                </div>
+              )}
+              {centralFirewalls.length === 0 && !loadingFirewalls && selectedTenantId && (
+                <p className="text-white/40 text-xs">No firewalls found for this tenant.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   // --- Render states ---
 
   if (pageState === "loading") {
@@ -311,28 +479,20 @@ const ConfigUpload = () => {
   if (pageState === "success") {
     return (
       <div className="min-h-screen bg-[#001A47] flex flex-col items-center justify-center p-6">
-        <div className="max-w-md text-center space-y-5">
-          <div className="mx-auto w-16 h-16 rounded-full bg-[#00995a]/20 flex items-center justify-center">
-            <CheckCircle2 className="h-8 w-8 text-[#00995a]" />
-          </div>
-          <h1 className="text-xl font-bold text-white">Configuration uploaded</h1>
-          <p className="text-white/60 text-sm leading-relaxed">
-            Your configuration has been securely uploaded. Your Sophos SE will review it shortly.
-          </p>
-          {selectedFile && (
-            <p className="text-white/40 text-xs">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)</p>
-          )}
-          {centralState === "connected" && (
-            <div className="flex items-center justify-center gap-2 text-[#00995a] text-sm">
-              <Wifi className="h-4 w-4" />
-              <span>Sophos Central connected</span>
-              {selectedFirewallId && centralFirewalls.length > 0 && (
-                <span className="text-white/40">
-                  — linked to {centralFirewalls.find((f) => f.id === selectedFirewallId)?.hostname || "firewall"}
-                </span>
-              )}
+        <div className="max-w-xl w-full flex flex-col items-center space-y-6">
+          <div className="text-center space-y-5">
+            <div className="mx-auto w-16 h-16 rounded-full bg-[#00995a]/20 flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-[#00995a]" />
             </div>
-          )}
+            <h1 className="text-xl font-bold text-white">Configuration uploaded</h1>
+            <p className="text-white/60 text-sm leading-relaxed">
+              Your configuration has been securely uploaded. Your Sophos SE will review it shortly.
+            </p>
+            {selectedFile && (
+              <p className="text-white/40 text-xs">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)</p>
+            )}
+          </div>
+          {centralPanel}
         </div>
       </div>
     );
@@ -341,35 +501,32 @@ const ConfigUpload = () => {
   if (pageState === "already-uploaded") {
     return (
       <div className="min-h-screen bg-[#001A47] flex flex-col items-center justify-center p-6">
-        <div className="max-w-md text-center space-y-5">
-          <div className="mx-auto w-16 h-16 rounded-full bg-[#00995a]/20 flex items-center justify-center">
-            <CheckCircle2 className="h-8 w-8 text-[#00995a]" />
-          </div>
-          <h1 className="text-xl font-bold text-white">Configuration already uploaded</h1>
-          <p className="text-white/60 text-sm leading-relaxed">
-            {statusData?.file_name && <>File <strong className="text-white/80">{statusData.file_name}</strong> was uploaded previously.</>}
-            {!statusData?.file_name && "A configuration file has already been uploaded for this request."}
-          </p>
-          {centralState === "connected" && (
-            <div className="flex items-center justify-center gap-2 text-[#00995a] text-sm">
-              <Wifi className="h-4 w-4" />
-              <span>Sophos Central connected</span>
+        <div className="max-w-xl w-full flex flex-col items-center space-y-6">
+          <div className="text-center space-y-5">
+            <div className="mx-auto w-16 h-16 rounded-full bg-[#00995a]/20 flex items-center justify-center">
+              <CheckCircle2 className="h-8 w-8 text-[#00995a]" />
             </div>
-          )}
-          {statusData?.status !== "downloaded" && (
-            <Button
-              type="button"
-              onClick={handleReplace}
-              variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Replace with a different file
-            </Button>
-          )}
-          {statusData?.status === "downloaded" && (
-            <p className="text-white/40 text-xs">Your SE has already downloaded this configuration. Please contact them if you need to send a new file.</p>
-          )}
+            <h1 className="text-xl font-bold text-white">Configuration already uploaded</h1>
+            <p className="text-white/60 text-sm leading-relaxed">
+              {statusData?.file_name && <>File <strong className="text-white/80">{statusData.file_name}</strong> was uploaded previously.</>}
+              {!statusData?.file_name && "A configuration file has already been uploaded for this request."}
+            </p>
+            {statusData?.status !== "downloaded" && (
+              <Button
+                type="button"
+                onClick={handleReplace}
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10 gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Replace with a different file
+              </Button>
+            )}
+            {statusData?.status === "downloaded" && (
+              <p className="text-white/40 text-xs">Your SE has already downloaded this configuration. Please contact them if you need to send a new file.</p>
+            )}
+          </div>
+          {centralPanel}
         </div>
       </div>
     );
@@ -463,180 +620,7 @@ const ConfigUpload = () => {
           )}
 
           {/* Sophos Central connection */}
-          <div className="rounded-xl border border-white/10 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setCentralOpen(!centralOpen)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Wifi className={cn("h-4 w-4", centralState === "connected" ? "text-[#00995a]" : "text-white/40")} />
-                <span className="text-white/60 text-sm font-medium">
-                  {centralState === "connected" ? "Sophos Central connected" : "Optional: Connect Sophos Central"}
-                </span>
-                {centralState === "connected" && (
-                  <span className="text-[10px] bg-[#00995a]/20 text-[#00995a] px-2 py-0.5 rounded-full font-medium">Connected</span>
-                )}
-              </div>
-              <ChevronDown className={cn("h-4 w-4 text-white/40 transition-transform", centralOpen && "rotate-180")} />
-            </button>
-            {centralOpen && (
-              <div className="px-4 pb-4 border-t border-white/5 pt-4 space-y-4">
-                {centralState === "idle" || centralState === "error" ? (
-                  <>
-                    <p className="text-white/50 text-sm leading-relaxed">
-                      Connecting Sophos Central lets your SE enrich the health check with licence expiry, firmware versions, and HA status.
-                    </p>
-                    <div className="space-y-3">
-                      <Input
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 font-mono text-xs h-10"
-                        placeholder="Client ID"
-                        autoComplete="off"
-                        value={clientId}
-                        onChange={(e) => setClientId(e.target.value)}
-                      />
-                      <Input
-                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 font-mono text-xs h-10"
-                        placeholder="Client Secret"
-                        type="password"
-                        autoComplete="off"
-                        value={clientSecret}
-                        onChange={(e) => setClientSecret(e.target.value)}
-                      />
-                      <Button
-                        type="button"
-                        className="w-full bg-[#2563eb] hover:bg-[#2563eb]/90 text-white gap-2"
-                        disabled={centralState === "connecting" as never || !clientId.trim() || !clientSecret.trim()}
-                        onClick={handleCentralConnect}
-                      >
-                        <Wifi className="h-4 w-4" />
-                        Connect to Sophos Central
-                      </Button>
-                    </div>
-                    {centralError && (
-                      <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 space-y-2">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
-                          <p className="text-red-300 text-sm">{centralError}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="border-white/20 text-white/70 hover:bg-white/10 text-xs gap-1.5"
-                          onClick={handleCentralRetry}
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          Try again
-                        </Button>
-                      </div>
-                    )}
-                    <p className="text-white/30 text-xs">
-                      Your credentials are encrypted and automatically deleted after the health check is complete.
-                    </p>
-
-                    {/* How to create API credentials */}
-                    <div className="rounded-lg border border-white/5 overflow-hidden">
-                      <button
-                        type="button"
-                        onClick={() => setCentralHowToOpen(!centralHowToOpen)}
-                        className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-white/5 transition-colors"
-                      >
-                        <span className="text-white/50 text-xs font-medium">How to create API credentials</span>
-                        <ChevronDown className={cn("h-3 w-3 text-white/30 transition-transform", centralHowToOpen && "rotate-180")} />
-                      </button>
-                      {centralHowToOpen && (
-                        <div className="px-3 pb-3 text-white/40 text-xs leading-relaxed border-t border-white/5 pt-2 space-y-1.5">
-                          <ol className="list-decimal list-inside space-y-1.5">
-                            <li>Sign in to <strong className="text-white/60">Sophos Central</strong> — use the same account that manages the firewall you are exporting the configuration from</li>
-                            <li>Navigate to <strong className="text-white/60">Settings &amp; Policies</strong> &gt; <strong className="text-white/60">API Credentials Management</strong></li>
-                            <li>Click <strong className="text-white/60">Add Credential</strong></li>
-                            <li>Enter a name (e.g. &quot;Health Check&quot;) and select <strong className="text-white/60">Service Principal Read-Only</strong></li>
-                            <li>Click <strong className="text-white/60">Add</strong>, then copy the <strong className="text-white/60">Client ID</strong> and <strong className="text-white/60">Client Secret</strong></li>
-                            <li>Paste them into the fields above</li>
-                          </ol>
-                          <p className="text-white/25 text-[10px] mt-2">
-                            Read-only access is recommended. Your SE only needs to view firewall and licence data.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : centralState === "connecting" ? (
-                  <div className="text-center py-4 space-y-3">
-                    <Loader2 className="h-6 w-6 text-[#2563eb] mx-auto animate-spin" />
-                    <p className="text-white/60 text-sm">Connecting to Sophos Central…</p>
-                  </div>
-                ) : (
-                  /* connected */
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-[#00995a]" />
-                      <span className="text-white/70 text-sm">
-                        Connected as {centralAccountType === "tenant" ? "Tenant" : centralAccountType === "partner" ? "Partner" : "Organization"}
-                      </span>
-                    </div>
-
-                    {/* Tenant selection for partner/org accounts */}
-                    {centralTenants.length > 1 && (
-                      <div className="space-y-2">
-                        <label className="text-white/50 text-xs font-medium block">Select tenant</label>
-                        <select
-                          className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
-                          value={selectedTenantId ?? ""}
-                          onChange={(e) => void handleTenantSelect(e.target.value)}
-                        >
-                          <option value="" disabled>Choose a tenant…</option>
-                          {centralTenants.map((t) => (
-                            <option key={t.id} value={t.id}>{t.name || t.id}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {/* Loading firewalls */}
-                    {loadingFirewalls && (
-                      <div className="flex items-center gap-2 text-white/50 text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading firewalls…
-                      </div>
-                    )}
-
-                    {/* Firewall selection */}
-                    {centralFirewalls.length > 0 && !loadingFirewalls && (
-                      <div className="space-y-2">
-                        <label className="text-white/50 text-xs font-medium block">
-                          Which firewall does the <code className="bg-white/10 px-1 rounded text-[10px]">entities.xml</code> belong to?
-                        </label>
-                        <select
-                          className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
-                          value={selectedFirewallId ?? ""}
-                          onChange={(e) => handleFirewallSelect(e.target.value)}
-                        >
-                          <option value="" disabled>Choose a firewall…</option>
-                          {centralFirewalls.map((fw) => (
-                            <option key={fw.id} value={fw.id}>
-                              {fw.hostname || fw.name} {fw.serialNumber ? `(${fw.serialNumber})` : ""} {fw.model ? `— ${fw.model}` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedFirewallId && (
-                          <div className="flex items-center gap-1.5 text-[#00995a] text-xs">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Firewall linked
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {centralFirewalls.length === 0 && !loadingFirewalls && selectedTenantId && (
-                      <p className="text-white/40 text-xs">No firewalls found for this tenant.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {centralPanel}
 
           {/* How to export */}
           <div className="rounded-xl border border-white/10 overflow-hidden">
