@@ -785,7 +785,9 @@ export function computeSophosBPScore(
         applicable: false,
       };
     }
-    let { status, detail } = check.evaluate(analysisResult);
+    const evaluated = check.evaluate(analysisResult);
+    let status = evaluated.status;
+    const detail = evaluated.detail;
     if (status === ("unknown" as CheckStatus)) status = "warn";
 
     if (centralAutoChecks?.has(check.id) && (status === "warn" || status === ("unknown" as CheckStatus))) {

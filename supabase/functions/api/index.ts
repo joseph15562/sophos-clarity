@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const HASH_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const CONFIG_UPLOAD_FROM_EMAIL = Deno.env.get("REPORT_FROM_EMAIL") ?? "reports@firecomply.io";
-const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-clarity.vercel.app";
+const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
 const CENTRAL_ENCRYPTION_KEY = Deno.env.get("CENTRAL_ENCRYPTION_KEY") ?? "";
 const SOPHOS_TOKEN_URL = "https://id.sophos.com/api/v2/oauth2/token";
 const SOPHOS_WHOAMI_URL = "https://api.central.sophos.com/whoami/v1";
@@ -26,7 +26,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost:8080",
-  "https://sophos-clarity.vercel.app",
+  "https://sophos-firecomply.vercel.app",
   Deno.env.get("ALLOWED_ORIGIN") ?? "",
 ].filter(Boolean);
 

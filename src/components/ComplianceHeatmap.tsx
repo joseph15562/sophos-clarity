@@ -97,8 +97,6 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
     }
   }, [findingsById, selectedCell]);
 
-  if (mappings.length === 0) return null;
-
   const allControlsRaw = Array.from(
     new Set(mappings.flatMap((m) => m.controls.map((c) => c.controlName)))
   );
@@ -136,6 +134,8 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
     a.click();
     URL.revokeObjectURL(url);
   }, [mappings, allControlsRaw]);
+
+  if (mappings.length === 0) return null;
 
   const detailMapping = selectedFw ? mappings.find((m) => m.framework === selectedFw) : null;
 

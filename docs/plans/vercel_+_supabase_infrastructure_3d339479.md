@@ -43,7 +43,7 @@ You already have **Supabase** with auth configured and an empty database schema.
 
 ## What Vercel gives you
 
-- **Frontend hosting** — deploy the Vite/React app with automatic builds from your GitHub repo (`joseph15562/sophos-clarity`)
+- **Frontend hosting** — deploy the Vite/React app with automatic builds from your GitHub repo (`joseph15562/sophos-firecomply`)
 - **Preview deployments** — every PR gets a preview URL for testing
 - **CI/CD** — build + type-check on every push (catches parser regressions)
 - **Environment variables** — store your `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` securely
@@ -133,7 +133,7 @@ graph TD
 ## To deploy to Vercel now
 
 1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import `joseph15562/sophos-clarity` from GitHub
+2. Import `joseph15562/sophos-firecomply` from GitHub
 3. Framework preset: **Vite**
 4. Add environment variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`
 5. Deploy — done, you get a live URL

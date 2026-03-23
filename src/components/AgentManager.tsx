@@ -669,17 +669,17 @@ export function AgentManager() {
           {agents.length === 0 && " Register an agent above to get your API key."}
         </p>
         <div className="flex gap-2">
-          <a href="https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector-Setup.exe" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector-Setup.exe" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1">
               <Server className="h-3 w-3" /> Windows .exe
             </Button>
           </a>
-          <a href="https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector-mac.zip" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector-mac.zip" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1">
               <Server className="h-3 w-3" /> macOS .zip
             </Button>
           </a>
-          <a href="https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector.AppImage" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector.AppImage" target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1">
               <Server className="h-3 w-3" /> Linux .AppImage
             </Button>
@@ -687,7 +687,7 @@ export function AgentManager() {
         </div>
         <p className="text-[8px] text-muted-foreground">
           Download the latest version.{" "}
-          <a href="https://github.com/joseph15562/sophos-clarity/releases" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">View all releases</a>
+          <a href="https://github.com/joseph15562/sophos-firecomply/releases" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">View all releases</a>
         </p>
       </div>
 

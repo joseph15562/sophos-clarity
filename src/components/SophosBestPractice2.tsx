@@ -231,7 +231,7 @@ export function SophosBestPractice({
   const toggleCategory = useCallback((cat: string) => {
     setExpandedCategories((prev) => {
       const next = new Set(prev);
-      next.has(cat) ? next.delete(cat) : next.add(cat);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
       return next;
     });
   }, []);
@@ -239,7 +239,7 @@ export function SophosBestPractice({
   const toggleOverride = useCallback((checkId: string) => {
     setManualOverrides((prev) => {
       const next = new Set(prev);
-      next.has(checkId) ? next.delete(checkId) : next.add(checkId);
+      if (next.has(checkId)) next.delete(checkId); else next.add(checkId);
       return next;
     });
   }, []);

@@ -393,7 +393,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         }
 
         // Fetch per-firewall licence data
-        let fwLicenceMap: Record<string, Array<{ product: string; endDate: string; type: string }>> = {};
+        const fwLicenceMap: Record<string, Array<{ product: string; endDate: string; type: string }>> = {};
         try {
           const fwLicences = await getFirewallLicences(orgId);
           for (const fwl of fwLicences) {

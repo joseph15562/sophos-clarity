@@ -8,7 +8,7 @@ import { getLogBuffer, onLog } from "../logger";
 import { queueSize } from "../api/queue";
 import type { BackgroundService } from "./service";
 
-const GITHUB_RELEASES_URL = "https://api.github.com/repos/joseph15562/sophos-clarity/releases";
+const GITHUB_RELEASES_URL = "https://api.github.com/repos/joseph15562/sophos-firecomply/releases";
 
 interface UpdateCheckResult {
   available: boolean;

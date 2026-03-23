@@ -59,8 +59,8 @@ Update [src/components/AgentManager.tsx](src/components/AgentManager.tsx) lines 
 
 - Remove `disabled` from all three buttons
 - Each button becomes an `<a>` link to the latest GitHub release:
-  - Windows: `https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector-Setup.exe`
-  - macOS: `https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector.dmg`
-  - Linux: `https://github.com/joseph15562/sophos-clarity/releases/latest/download/FireComply-Connector.AppImage`
+  - Windows: `https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector-Setup.exe`
+  - macOS: `https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector.dmg`
+  - Linux: `https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector.AppImage`
 - Replace "Binaries will be available" text with "Download the latest version from GitHub Releases"
 

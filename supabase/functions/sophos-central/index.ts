@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8080",
   "http://localhost:8081",
   "http://localhost:4173",
-  "https://sophos-clarity.vercel.app",
+  "https://sophos-firecomply.vercel.app",
   Deno.env.get("ALLOWED_ORIGIN") ?? "",
 ].filter(Boolean);
 

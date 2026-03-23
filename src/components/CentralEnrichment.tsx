@@ -77,7 +77,7 @@ export function CentralEnrichment({ configMetas, customerName: _customerName }: 
     const tenantIds = [...new Set(links.map((l) => l.central_tenant_id))];
 
     // Fetch per-firewall licence data — try each tenant
-    let licencesBySerial: Record<string, LicenceSummary[]> = {};
+    const licencesBySerial: Record<string, LicenceSummary[]> = {};
     for (const tenantId of tenantIds) {
       try {
         const fwLicences = await getFirewallLicences(orgId, tenantId);

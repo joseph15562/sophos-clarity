@@ -108,7 +108,7 @@ Update [src/components/SeHealthCheckManagementDrawer2.tsx](src/components/SeHeal
 
 Branded Sophos email (same style as config upload emails):
 
-- Subject: `You've been invited to join "{team_name}" on Sophos Clarity`
+- Subject: `You've been invited to join "{team_name}" on Sophos FireComply`
 - Body: "{inviter_name} has invited you to join the {team_name} team. Click to accept."
 - CTA button: "Join Team"
 - Expires after 14 days

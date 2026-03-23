@@ -1,4 +1,4 @@
-# Sophos Clarity — Updates & Changes (Start to Finish)
+# Sophos FireComply — Updates & Changes (Start to Finish)
 
 This document summarizes all updates and changes completed in this session, from start to finish.
 

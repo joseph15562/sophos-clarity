@@ -21,21 +21,23 @@ export function ScoreDeltaBanner({ analysisResults }: Props) {
 
   const entries = Object.entries(analysisResults);
   const firstEntry = entries[0];
-  if (!firstEntry) return null;
-
-  const [label, result] = firstEntry;
-  const hostname = result.hostname || label;
-  const currentScoreResult = computeRiskScore(result);
-  const currentScore = currentScoreResult.overall;
-  const currentGrade = currentScoreResult.grade;
+  const label = firstEntry?.[0];
+  const result = firstEntry?.[1];
+  const hostname = result?.hostname || label || "";
+  const currentScoreResult = result ? computeRiskScore(result) : null;
+  const currentScore = currentScoreResult?.overall ?? 0;
+  const currentGrade = currentScoreResult?.grade ?? ("F" as Grade);
 
   useEffect(() => {
+    if (!hostname) return;
     let cancelled = false;
     loadPreviousSnapshot(hostname).then((snap) => {
       if (!cancelled && snap) setPrevious({ score: snap.score });
     });
     return () => { cancelled = true; };
   }, [hostname]);
+
+  if (!firstEntry) return null;
 
   if (previous === null) return null;
 

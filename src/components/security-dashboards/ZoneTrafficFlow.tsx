@@ -184,8 +184,6 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
     };
   }, [files]);
 
-  if (flows.length === 0) return null;
-
   const filteredFlows = useMemo(() => {
     let result = activeCategory
       ? flows.filter((f) => {
@@ -212,6 +210,8 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
     if (internalOnly.length > 0) msgs.push({ text: `${internalOnly.length} internal-only flow${internalOnly.length > 1 ? "s" : ""} (no WAN exposure)`, type: "info" });
     return msgs.slice(0, 3);
   }, [flows]);
+
+  if (flows.length === 0) return null;
 
   const categories = (["WAN", "LAN", "DMZ", "VPN", "Guest", "Other"] as ZoneCategory[]).filter((c) => categoryMap.has(c));
 

@@ -255,8 +255,6 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
     return () => { cancelled = true; };
   }, [playbooks]);
 
-  if (playbooks.length === 0) return null;
-
   const totalMinutes = playbooks.filter((p) => !completed.has(p.findingId)).reduce((s, p) => s + p.estimatedMinutes, 0);
 
   const slaStats = useMemo(() => {
@@ -275,6 +273,8 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
     navigator.clipboard.writeText(path);
     toast.success("Console path copied to clipboard — paste into your Sophos XGS admin URL");
   }, []);
+
+  if (playbooks.length === 0) return null;
 
   function getProjectedScore(pb: Playbook & { fwLabel: string }): { current: number; projected: number } | null {
     const result = analysisResults[pb.fwLabel];

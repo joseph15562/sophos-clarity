@@ -3,7 +3,7 @@
 **Original assessment date:** 2026-03-12  
 **Updated assessment:** 2026-03-17  
 **Project name:** FireComply (Sophos FireComply)  
-**Repo:** https://github.com/joseph15562/sophos-clarity (package: sophos-firecomply)
+**Repo:** https://github.com/joseph15562/sophos-firecomply (package: sophos-firecomply)
 
 ---
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { computeRiskScore } from "@/lib/risk-score";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
@@ -40,15 +40,6 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
   }, [labels]);
   const selectLabels = labels;
 
-  if (labels.length < 2) {
-    return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-2">Fleet Comparison</h3>
-        <p className="text-sm text-muted-foreground">Upload 2+ configurations to compare firewalls</p>
-      </div>
-    );
-  }
-
   const resultA = analysisResults[firewallA];
   const resultB = analysisResults[firewallB];
   const scoreA = resultA ? computeRiskScore(resultA) : null;
@@ -64,14 +55,23 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
     return { onlyA, onlyB, commonCount };
   }, [resultA, resultB]);
 
-  const categoriesA = scoreA?.categories ?? [];
-  const categoriesB = scoreB?.categories ?? [];
+  const categoriesA = useMemo(() => scoreA?.categories ?? [], [scoreA]);
+  const categoriesB = useMemo(() => scoreB?.categories ?? [], [scoreB]);
   const categoryLabels = useMemo(() => {
     const set = new Set<string>();
     categoriesA.forEach((c) => set.add(c.label));
     categoriesB.forEach((c) => set.add(c.label));
     return Array.from(set);
   }, [categoriesA, categoriesB]);
+
+  if (labels.length < 2) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-2">Fleet Comparison</h3>
+        <p className="text-sm text-muted-foreground">Upload 2+ configurations to compare firewalls</p>
+      </div>
+    );
+  }
 
   const getCategoryScore = (categories: { label: string; pct: number }[], label: string) =>
     categories.find((c) => c.label === label)?.pct ?? 0;

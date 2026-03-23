@@ -5,7 +5,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost:8080",
-  "https://sophos-clarity.vercel.app",
+  "https://sophos-firecomply.vercel.app",
   Deno.env.get("ALLOWED_ORIGIN") ?? "",
 ].filter(Boolean);
 
@@ -125,7 +125,7 @@ serve(async (req: Request) => {
 
     // 2. Build data from agents + agent_submissions (tenant-filtered when applicable)
     let scoreHistory: Array<Record<string, unknown>> = [];
-    let findings: Array<{ id: string; title: string; severity: string }> = [];
+    const findings: Array<{ id: string; title: string; severity: string }> = [];
     let firewallBreakdown: Array<Record<string, unknown>> = [];
 
     if (tenantName) {
