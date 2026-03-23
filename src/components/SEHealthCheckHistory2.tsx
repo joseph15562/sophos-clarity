@@ -68,6 +68,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
   const [exportingKind, setExportingKind] = useState<"pdf" | "html" | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [movingBulk, setMovingBulk] = useState(false);
+  const [viewMode, setViewMode] = useState<"mine" | "team">("mine");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +80,9 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
 
     if (activeTeamId) {
       query = query.eq("team_id", activeTeamId);
+      if (viewMode === "mine") {
+        query = query.eq("se_user_id", seProfileId);
+      }
     } else {
       query = query.eq("se_user_id", seProfileId).is("team_id", null);
     }
@@ -89,7 +93,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     }
     setSelectedIds(new Set());
     setLoading(false);
-  }, [seProfileId, activeTeamId]);
+  }, [seProfileId, activeTeamId, viewMode]);
 
   useEffect(() => {
     void load();
@@ -250,10 +254,30 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                 </div>
               )}
             </div>
-            <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-1.5">
+              {activeTeamId && (
+                <div className="flex items-center rounded-md border border-border overflow-hidden">
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${viewMode === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    onClick={() => setViewMode("mine")}
+                  >
+                    My reports
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${viewMode === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    onClick={() => setViewMode("team")}
+                  >
+                    <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Team</span>
+                  </button>
+                </div>
+              )}
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           {rows.length === 0 ? (
