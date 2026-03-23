@@ -33,23 +33,33 @@ function isSophosDomain(email: string): boolean {
   return SOPHOS_DOMAIN_RE.test(email.trim());
 }
 
-async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
-  const { data, error } = await supabase
-    .from("se_profiles")
-    .select("id, email, display_name, health_check_prepared_by, se_title, profile_completed")
-    .eq("user_id", userId)
-    .limit(1)
-    .single();
+async function fetchSEProfile(userId: string, retries = 2): Promise<SEProfile | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const { data, error } = await supabase
+      .from("se_profiles")
+      .select("id, email, display_name, health_check_prepared_by, se_title, profile_completed")
+      .eq("user_id", userId)
+      .limit(1)
+      .single();
 
-  if (error || !data) return null;
-  return {
-    id: data.id as string,
-    email: data.email as string,
-    displayName: (data.display_name as string) ?? null,
-    healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
-    seTitle: (data.se_title as string) ?? null,
-    profileCompleted: !!(data.profile_completed),
-  };
+    if (data) {
+      return {
+        id: data.id as string,
+        email: data.email as string,
+        displayName: (data.display_name as string) ?? null,
+        healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
+        seTitle: (data.se_title as string) ?? null,
+        profileCompleted: !!(data.profile_completed),
+      };
+    }
+
+    if (error && attempt < retries) {
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      continue;
+    }
+    break;
+  }
+  return null;
 }
 
 async function createSEProfile(userId: string, email: string, user?: User): Promise<SEProfile | null> {
@@ -110,12 +120,13 @@ export function useSEAuthProvider(): SEAuthState {
 
   useEffect(() => {
     let profileTimeout: ReturnType<typeof setTimeout> | undefined;
-    /** Never leave the UI stuck on loading if getSession or Supabase hangs */
-    const bootTimeout = setTimeout(() => setIsLoading(false), 12_000);
+    const bootTimeout = setTimeout(() => setIsLoading(false), 6_000);
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session: s } }) => {
+    const sessionDeadline = new Promise<null>((r) => setTimeout(() => r(null), 5_000));
+    const sessionFetch = supabase.auth.getSession().then(({ data }) => data.session).catch(() => null);
+
+    Promise.race([sessionFetch, sessionDeadline])
+      .then((s) => {
         clearTimeout(bootTimeout);
         setSession(s);
         setUser(s?.user ?? null);
@@ -124,14 +135,10 @@ export function useSEAuthProvider(): SEAuthState {
             clearTimeout(profileTimeout);
             setIsLoading(false);
           });
-          profileTimeout = setTimeout(() => setIsLoading(false), 10_000);
+          profileTimeout = setTimeout(() => setIsLoading(false), 5_000);
         } else {
           setIsLoading(false);
         }
-      })
-      .catch(() => {
-        clearTimeout(bootTimeout);
-        setIsLoading(false);
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {

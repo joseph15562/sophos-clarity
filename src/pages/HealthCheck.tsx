@@ -2691,6 +2691,12 @@ export default function HealthCheck() {
           <p className="text-xs text-muted-foreground max-w-xs">
             If nothing appears after a few seconds, refresh the page or check your connection.
           </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-3 text-xs text-[#2006F7] dark:text-[#00EDFF] hover:underline"
+          >
+            Reload page
+          </button>
         </div>
       </div>
     );
