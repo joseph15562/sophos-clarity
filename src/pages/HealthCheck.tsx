@@ -827,6 +827,8 @@ function HealthCheckInner() {
         manualBpOverrideIds: [...manualOverrides],
       });
 
+      const serialNumbers = files.map((f) => f.serialNumber).filter(Boolean).sort() as string[];
+
       const payload = {
         se_user_id: seAuth.seProfile.id,
         customer_name: customerName.trim() || null,
@@ -835,6 +837,7 @@ function HealthCheckInner() {
         findings_count: allFindings.length,
         firewall_count: files.length,
         team_id: activeTeamId ?? null,
+        serial_numbers: serialNumbers,
         summary_json: {
           scores,
           topFindings: allFindings.slice(0, 10).map((f) => f.title ?? f.id),
@@ -853,13 +856,12 @@ function HealthCheckInner() {
         setHistoryRefreshKey((k) => k + 1);
         toast.success("Health check updated.");
       } else {
-        const serialNumbers = files.map((f) => f.serialNumber).filter(Boolean).sort();
         let matchId: string | null = null;
 
         if (customerName.trim()) {
           const { data: candidates } = await supabase
             .from("se_health_checks")
-            .select("id, checked_at, summary_json")
+            .select("id, checked_at, serial_numbers")
             .eq("se_user_id", seAuth.seProfile.id)
             .eq("customer_name", customerName.trim())
             .order("checked_at", { ascending: false })
@@ -869,11 +871,7 @@ function HealthCheckInner() {
             const match = candidates.find((row) => {
               const age = Date.now() - new Date(row.checked_at as string).getTime();
               if (age > STALE_MS) return false;
-              const snap = (row.summary_json as Record<string, unknown>)?.snapshot as Record<string, unknown> | undefined;
-              const savedSerials = ((snap?.files as Array<{ serialNumber?: string }>) ?? [])
-                .map((f) => f.serialNumber)
-                .filter(Boolean)
-                .sort();
+              const savedSerials = ((row.serial_numbers as string[]) ?? []).slice().sort();
               return JSON.stringify(savedSerials) === JSON.stringify(serialNumbers);
             });
             matchId = match?.id as string | null;

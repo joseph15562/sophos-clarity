@@ -38,17 +38,21 @@ function gradeColorClass(grade: string): string {
   }
 }
 
-export function SEScoreTrendChart({ currentScore, currentGrade, seProfileId, activeTeamId }: Props) {
+export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, seProfileId, activeTeamId }: Props) {
   const [points, setPoints] = useState<TrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
+  const serialKey = useMemo(() => serialNumbers.filter(Boolean).sort().join(","), [serialNumbers]);
+
   const load = useCallback(async () => {
+    if (!serialKey) { setPoints([]); setLoading(false); return; }
     setLoading(true);
     try {
       let query = supabase
         .from("se_health_checks")
         .select("id, overall_score, overall_grade, checked_at, customer_name")
+        .overlaps("serial_numbers", serialKey.split(","))
         .order("checked_at", { ascending: true })
         .limit(100);
 
@@ -79,7 +83,7 @@ export function SEScoreTrendChart({ currentScore, currentGrade, seProfileId, act
     } finally {
       setLoading(false);
     }
-  }, [seProfileId, activeTeamId]);
+  }, [serialKey, seProfileId, activeTeamId]);
 
   useEffect(() => { void load(); }, [load]);
 
