@@ -1645,24 +1645,26 @@ function HealthCheckInner() {
                       <Link2 className="h-3.5 w-3.5" />
                       Request Config Upload from Customer
                     </Button>
-                    {configUploadRequests.filter((r) => r.status === "uploaded").length > 0 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-2 text-xs border-[#00995a]/30 text-[#00995a] hover:bg-[#00995a]/5"
-                        onClick={() => setConfigUploadRequestsOpen(true)}
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        {configUploadRequests.filter((r) => r.status === "uploaded").length} config{configUploadRequests.filter((r) => r.status === "uploaded").length !== 1 ? "s" : ""} ready to load
-                      </Button>
-                    )}
-                    {configUploadRequests.filter((r) => r.status === "pending").length > 0 && (
-                      <p className="text-[10px] text-muted-foreground text-center">
-                        {configUploadRequests.filter((r) => r.status === "pending").length} pending upload{configUploadRequests.filter((r) => r.status === "pending").length !== 1 ? "s" : ""}{" "}
-                        <button type="button" className="underline hover:text-foreground" onClick={() => setConfigUploadRequestsOpen(true)}>View all</button>
-                      </p>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2 text-xs"
+                      onClick={() => setConfigUploadRequestsOpen(true)}
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      Upload Requests
+                      {configUploadRequests.filter((r) => r.status === "uploaded").length > 0 && (
+                        <span className="ml-auto text-[10px] font-semibold text-[#00995a]">
+                          {configUploadRequests.filter((r) => r.status === "uploaded").length} ready
+                        </span>
+                      )}
+                      {configUploadRequests.filter((r) => r.status === "pending").length > 0 && configUploadRequests.filter((r) => r.status === "uploaded").length === 0 && (
+                        <span className="ml-auto text-[10px] text-muted-foreground">
+                          {configUploadRequests.filter((r) => r.status === "pending").length} pending
+                        </span>
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
