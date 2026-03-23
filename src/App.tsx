@@ -9,8 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import SharedReport from "./pages/SharedReport";
 import NotFound from "./pages/NotFound";
-import HealthCheck from "./pages/HealthCheck";
-import HealthCheck2 from "./pages/HealthCheck2";
+import HealthCheck from "./pages/HealthCheck2";
 
 const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const SharedHealthCheck = lazy(() => import("./pages/SharedHealthCheck"));
@@ -39,7 +38,6 @@ const App = () => (
                 <Route path="/shared/:token" element={<SharedReport />} />
                 <Route path="/portal/:tenantId" element={<ClientPortal />} />
                 <Route path="/health-check" element={<HealthCheck />} />
-                <Route path="/health-check-2" element={<HealthCheck2 />} />
                 <Route path="/health-check/shared/:token" element={<SharedHealthCheck />} />
                 <Route path="/upload/:token" element={<ConfigUpload />} />
                 <Route path="/team-invite/:token" element={<TeamInviteAccept />} />
