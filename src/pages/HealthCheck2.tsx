@@ -107,6 +107,13 @@ import {
 } from "@/lib/se-health-check-snapshot-v2";
 import { ActiveTeamProvider, useActiveTeam } from "@/hooks/use-active-team";
 import { TeamSwitcher } from "@/components/TeamSwitcher";
+import { startHealthCheckTour, startHealthCheckResultsTour } from "@/lib/guided-tours";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ActiveStep = "landing" | "analyzing" | "results";
 
@@ -835,6 +842,16 @@ function HealthCheckInner() {
     syncHash();
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
+  }, []);
+
+  useEffect(() => {
+    const key = "firecomply-hc-tour-seen";
+    try {
+      if (localStorage.getItem(key) === "1") return;
+      localStorage.setItem(key, "1");
+    } catch { return; }
+    const timer = setTimeout(() => startHealthCheckTour(), 800);
+    return () => clearTimeout(timer);
   }, []);
 
   const saveHealthCheck = useCallback(async () => {
@@ -2013,16 +2030,42 @@ function HealthCheckInner() {
             </span>
           )}
           {seAuth.seProfile && (
+            <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg gap-1.5 shrink-0"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Tours</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => startHealthCheckTour()}>
+                  <Upload className="h-3.5 w-3.5 mr-2 shrink-0" /> Getting Started
+                </DropdownMenuItem>
+                {activeStep === "results" && (
+                  <DropdownMenuItem onClick={() => startHealthCheckResultsTour()}>
+                    <FileText className="h-3.5 w-3.5 mr-2 shrink-0" /> Results & Export
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="rounded-lg gap-1.5 shrink-0"
+              data-tour="hc-management"
               onClick={() => setSeManagementOpen(true)}
             >
               <PanelRight className="h-4 w-4" />
               <span className="hidden sm:inline">Management</span>
             </Button>
+            </>
           )}
           <Button variant="outline" size="sm" className="rounded-lg shrink-0" onClick={seAuth.signOut}>
             Sign out
@@ -2083,6 +2126,7 @@ function HealthCheckInner() {
                       variant="outline"
                       size="sm"
                       className="w-full gap-2 text-xs"
+                      data-tour="hc-upload-requests"
                       onClick={() => setConfigUploadRequestsOpen(true)}
                     >
                       <Upload className="h-3.5 w-3.5" />
@@ -2263,6 +2307,7 @@ function HealthCheckInner() {
               <div className="flex flex-wrap gap-2 items-center">
                 <div
                   className="flex rounded-lg border border-border overflow-hidden"
+                  data-tour="hc-licence-toggle"
                   title={
                     licenceLockedByCentral
                       ? "Licence tier is auto-detected from Sophos Central (matched firewall serial)."
@@ -2298,7 +2343,7 @@ function HealthCheckInner() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3">
+            <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3" data-tour="hc-customer-details">
               <div className="space-y-1">
                 <Label
                   htmlFor="hc-customer-top"
@@ -2505,7 +2550,7 @@ function HealthCheckInner() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-card px-4 py-4 space-y-3">
+            <div className="rounded-xl border border-border bg-card px-4 py-4 space-y-3" data-tour="hc-export">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Save &amp; export</p>
               <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
                 <Button
@@ -2712,6 +2757,7 @@ function HealthCheckInner() {
                 </div>
               }
             >
+              <div data-tour="hc-bp-results">
               <SophosBestPractice
                 analysisResults={analysisResults}
                 centralLicences={centralBpLicenceFlat}
@@ -2730,6 +2776,7 @@ function HealthCheckInner() {
                   return next;
                 })}
               />
+              </div>
             </Suspense>
 
             <HealthCheckDashboard
@@ -2752,14 +2799,17 @@ function HealthCheckInner() {
         )}
 
         {seAuth.seProfile && files.length > 0 && files.some((f) => f.serialNumber) && (
+          <div data-tour="hc-score-trend">
           <SEScoreTrendChart
             serialNumbers={files.map((f) => f.serialNumber).filter(Boolean) as string[]}
             seProfileId={seAuth.seProfile.id}
             activeTeamId={activeTeamId}
           />
+          </div>
         )}
 
         {seAuth.seProfile && (
+          <div data-tour="hc-history">
           <SEHealthCheckHistory
             seProfileId={seAuth.seProfile.id}
             refreshTrigger={historyRefreshKey}
@@ -2768,10 +2818,13 @@ function HealthCheckInner() {
             activeTeamId={activeTeamId}
             teams={teams}
           />
+          </div>
         )}
 
         {seAuth.seProfile && activeTeamId && (
+          <div data-tour="hc-team-dashboard">
           <TeamDashboard activeTeamId={activeTeamId} seProfileId={seAuth.seProfile.id} />
+          </div>
         )}
 
         <Collapsible

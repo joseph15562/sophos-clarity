@@ -535,14 +535,31 @@ export function startMicroTourForTab(tab: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Health Check Tour
+// Health Check Tour — Landing (data sources)
 // ---------------------------------------------------------------------------
 export function startHealthCheckTour(): void {
   const t = createTour([
     { element: sel("health-check"), popover: { title: "Sophos SE Health Check", description: "A dedicated tool for Sophos Sales Engineers to run best-practice health checks on customer firewalls.", side: "bottom", align: "center" } },
-    { element: sel("hc-upload"), popover: { title: "Upload Config", description: "Drop in a customer's HTML config viewer export — no full XML needed.", side: "bottom", align: "center" } },
-    { element: sel("hc-central"), popover: { title: "Customer Central API", description: "Enter the customer's Sophos Central API credentials to pull firewall data directly. Credentials are session-only and never stored.", side: "bottom", align: "center" } },
-    { element: sel("hc-proxy"), popover: { title: "API Proxy (Coming Soon)", description: "When Sophos ships the Central API proxy, run live health checks directly — no config export needed.", side: "bottom", align: "center" } },
+    { element: sel("hc-upload"), popover: { title: "Upload Config", description: "Drop in the customer's entities.xml or HTML config viewer export. You can also request the customer uploads it for you via a secure link.", side: "bottom", align: "center" } },
+    { element: sel("hc-upload-requests"), popover: { title: "Upload Requests", description: "View pending and completed upload requests from customers. Load uploaded configs directly from here.", side: "top", align: "center" } },
+    { element: sel("hc-central"), popover: { title: "Sophos Central API", description: "Connect the customer's Sophos Central to discover firewalls, auto-detect licence tiers, and pull firmware data. Credentials stay in your session only.", side: "bottom", align: "center" } },
+    { element: sel("hc-management"), popover: { title: "Management", description: "Open the management panel to update your display name, SE title, and profile settings.", side: "bottom", align: "end" } },
+    { element: sel("hc-history"), popover: { title: "Saved Reports", description: "View and reopen previously saved health checks. Switch between your reports, team reports, and all teams.", side: "top", align: "center" } },
+  ]);
+  t.drive();
+}
+
+// ---------------------------------------------------------------------------
+// Health Check Tour — Results & Export
+// ---------------------------------------------------------------------------
+export function startHealthCheckResultsTour(): void {
+  const t = createTour([
+    { element: sel("hc-customer-details"), popover: { title: "Customer Details", description: "Fill in the customer name, email, and who the report is prepared for. These fields are required before you can export or email the report.", side: "bottom", align: "center" } },
+    { element: sel("hc-licence-toggle"), popover: { title: "Licence Tier", description: "Toggle between Standard and Xstream Protection. This determines which best practice checks apply. If Central is connected, the tier is auto-detected.", side: "bottom", align: "center" } },
+    { element: sel("hc-bp-results"), popover: { title: "Best Practice Results", description: "Detailed pass/fail/warning results for every Sophos best practice check. You can add notes to individual findings and view remediation guides.", side: "top", align: "center" } },
+    { element: sel("hc-export"), popover: { title: "Save & Export", description: "Save the health check, download as PDF + HTML, export findings as CSV, or email the report directly to the customer. Set follow-up reminders for 3 or 6 months.", side: "top", align: "center" } },
+    { element: sel("hc-score-trend"), popover: { title: "Score Trend", description: "Track how this customer's health check score changes over time, matched by firewall serial number.", side: "top", align: "center" } },
+    { element: sel("hc-team-dashboard"), popover: { title: "Team Dashboard", description: "Operational stats for your team — total checks, average scores, common findings, and recent activity.", side: "top", align: "center" } },
   ]);
   t.drive();
 }
