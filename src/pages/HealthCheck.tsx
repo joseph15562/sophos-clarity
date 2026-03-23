@@ -1564,7 +1564,12 @@ function HealthCheckInner() {
       ]);
 
       const pdfBuf = await pdfBlob.arrayBuffer();
-      const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuf)));
+      const pdfBytes = new Uint8Array(pdfBuf);
+      let pdfBinary = "";
+      for (let i = 0; i < pdfBytes.length; i += 8192) {
+        pdfBinary += String.fromCharCode(...pdfBytes.subarray(i, i + 8192));
+      }
+      const pdfBase64 = btoa(pdfBinary);
       const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
 
       const part = sanitizePdfFilenamePart(customerName);
