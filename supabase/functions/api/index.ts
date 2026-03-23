@@ -311,29 +311,29 @@ function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: str
   </td></tr></table>
 </td></tr>
 <tr><td align="center" style="padding:8px 40px 8px 40px;">
-  <p style="margin:0;font-size:12px;color:#6A889B;line-height:1.5;">Do not share this link or forward this email.</p>
+  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5;">Do not share this link or forward this email.</p>
 </td></tr>` : "";
-  const footNoteBlock = footNote ? `<p style="margin:16px 0 0;font-size:13px;color:#6A889B;line-height:1.5;">${footNote}</p>` : "";
+  const footNoteBlock = footNote ? `<p style="margin:16px 0 0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.5;">${footNote}</p>` : "";
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;font-family:'Zalando Sans','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#223E4C;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#223E4C;padding:32px 0;">
 <tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#001A47;max-width:600px;width:100%;">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#223E4C;max-width:600px;width:100%;">
 <tr><td style="background:#2006F7;padding:36px 40px;">
   <h1 style="margin:0;font-size:24px;color:#ffffff;font-weight:800;font-family:'Zalando Sans Expanded','Zalando Sans','Segoe UI',Roboto,sans-serif;">${heading}</h1>
 </td></tr>
-<tr><td style="padding:36px 40px 24px 40px;font-size:15px;color:#EDF2F9;line-height:1.6;">
+<tr><td style="padding:36px 40px 24px 40px;font-size:15px;color:#ffffff;line-height:1.6;">
   ${bodyContent}${footNoteBlock}
 </td></tr>${ctaBlock}
 <tr><td style="padding:20px 40px 36px 40px;">
-  <p style="margin:0;font-size:15px;color:#EDF2F9;line-height:1.6;">
+  <p style="margin:0;font-size:15px;color:#ffffff;line-height:1.6;">
     Best Regards,<br><strong>Your Sophos FireComply Team</strong>
   </p>
 </td></tr>
-<tr><td style="padding:20px 40px;border-top:1px solid #10037C;text-align:center;">
-  <p style="margin:0 0 8px;font-size:11px;color:#6A889B;line-height:1.5;">&copy; ${new Date().getFullYear()} Sophos Ltd. All rights reserved.</p>
-  <p style="margin:0;font-size:11px;color:#6A889B;line-height:1.5;">Sophos FireComply &bull; Sales Engineering Tools</p>
+<tr><td style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.15);text-align:center;">
+  <p style="margin:0 0 8px;font-size:11px;color:#ffffff;line-height:1.5;">&copy; ${new Date().getFullYear()} Sophos Ltd. All rights reserved.</p>
+  <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.7);line-height:1.5;">Sophos FireComply &bull; Sales Engineering Tools</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -344,9 +344,9 @@ function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expires
     "Firewall Health Check",
     `<p style="margin:0 0 20px;">${greeting}</p>
 <p style="margin:0 0 20px;"><strong>${seName}</strong> from Sophos has requested your firewall configuration for a health check.</p>
-<p style="margin:0 0 20px;">Please click the button below to securely upload your <code style="background:#10037C;padding:2px 6px;border-radius:3px;font-size:13px;color:#EDF2F9;">entities.xml</code> file.</p>
-<p style="margin:0 0 10px;font-size:14px;color:#BBCFDE;"><strong style="color:#EDF2F9;">Optional:</strong> You can also connect your <strong style="color:#EDF2F9;">Sophos Central</strong> account on the upload page. This allows your SE to enrich the health check with licence expiry dates, firmware versions, and HA status — giving you a more comprehensive report.</p>
-<p style="margin:0 0 20px;font-size:13px;color:#6A889B;">You'll find the option to connect Central on the upload page. You'll need your Sophos Central API <strong style="color:#BBCFDE;">Client ID</strong> and <strong style="color:#BBCFDE;">Client Secret</strong> (instructions are provided on the page). Your credentials are encrypted and automatically deleted after the health check.</p>`,
+<p style="margin:0 0 20px;">Please click the button below to securely upload your <code style="background:#10037C;padding:2px 6px;border-radius:3px;font-size:13px;color:#ffffff;">entities.xml</code> file.</p>
+<p style="margin:0 0 10px;font-size:14px;color:rgba(255,255,255,0.85);"><strong style="color:#ffffff;">Optional:</strong> You can also connect your <strong style="color:#ffffff;">Sophos Central</strong> account on the upload page. This allows your SE to enrich the health check with licence expiry dates, firmware versions, and HA status — giving you a more comprehensive report.</p>
+<p style="margin:0 0 20px;font-size:13px;color:rgba(255,255,255,0.7);">You'll find the option to connect Central on the upload page. You'll need your Sophos Central API <strong style="color:#ffffff;">Client ID</strong> and <strong style="color:#ffffff;">Client Secret</strong> (instructions are provided on the page). Your credentials are encrypted and automatically deleted after the health check.</p>`,
     uploadUrl,
     "Upload Configuration",
     `This link expires on <strong>${expiresDate}</strong>.`,
@@ -370,7 +370,7 @@ function buildReminderEmailHtml(uploadUrl: string, expiresDate: string): string 
     "Reminder: Upload Pending",
     `<p style="margin:0 0 20px;">Hi,</p>
 <p style="margin:0 0 20px;"><strong>Reminder:</strong> Your Sophos SE is still waiting for your firewall configuration.</p>
-<p style="margin:0 0 20px;">Please upload your <code style="background:#10037C;padding:2px 6px;border-radius:3px;font-size:13px;color:#EDF2F9;">entities.xml</code> before this link expires.</p>`,
+<p style="margin:0 0 20px;">Please upload your <code style="background:#10037C;padding:2px 6px;border-radius:3px;font-size:13px;color:#ffffff;">entities.xml</code> before this link expires.</p>`,
     uploadUrl,
     "Upload Configuration",
     `This link expires on <strong>${expiresDate}</strong>.`,
