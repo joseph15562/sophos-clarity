@@ -404,7 +404,7 @@ function HealthCheckInner() {
       !centralCreds.clientId.trim() ||
       !centralCreds.clientSecret.trim()
     ) {
-      setGuestFirewallLicenseItems([]);
+      if (!centralFromUploadRef.current) setGuestFirewallLicenseItems([]);
       return;
     }
     let cancelled = false;
@@ -761,6 +761,7 @@ function HealthCheckInner() {
     setFirewallOptions([]);
     setGuestFirewallLicenseItems([]);
     setCentralCreds({ clientId: "", clientSecret: "", tenantId: "" });
+    centralFromUploadRef.current = false;
     setDpiExemptZones([]);
     setDpiExemptNetworks([]);
     setWebFilterComplianceMode("strict");
@@ -855,6 +856,7 @@ function HealthCheckInner() {
   const [configUploadRequestsOpen, setConfigUploadRequestsOpen] = useState(false);
   const [configUploadListLoading, setConfigUploadListLoading] = useState(false);
   const configUploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const centralFromUploadRef = useRef(false);
 
   useEffect(() => {
     const syncHash = () => {
@@ -1208,6 +1210,7 @@ function HealthCheckInner() {
         if (centralRes.ok) {
           const centralJson = await centralRes.json();
           if (centralJson.central_connected && centralJson.central_data) {
+            centralFromUploadRef.current = true;
             setCentralValidated(true);
             setReplayCentralLinked(false);
             const cd = centralJson.central_data as Record<string, unknown>;
