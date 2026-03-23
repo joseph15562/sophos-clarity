@@ -1089,41 +1089,56 @@ function HealthCheckInner() {
     toast.success("Findings CSV downloaded.");
   }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes, bpOverrideRevision]);
 
-  const handleRecheckSearch = useCallback(async (query: string) => {
+  const recheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recheckVersionRef = useRef(0);
+
+  const handleRecheckSearch = useCallback((query: string) => {
     setRecheckQuery(query);
-    if (!query.trim() || !seAuth.seProfile) { setRecheckResults([]); return; }
-    setRecheckSearching(true);
-    try {
-      let q = supabase
-        .from("se_health_checks")
-        .select("id, customer_name, overall_score, overall_grade, checked_at, summary_json")
-        .ilike("customer_name", `%${query.trim()}%`)
-        .order("checked_at", { ascending: false })
-        .limit(10);
-      if (activeTeamId) q = q.eq("team_id", activeTeamId);
-      else q = q.eq("se_user_id", seAuth.seProfile.id);
-      const { data } = await q;
-      const results = (data ?? []).map((row: any) => {
-        const sj = row.summary_json as Record<string, unknown> | null;
-        const snap = sj?.snapshot as Record<string, unknown> | undefined;
-        const files = (snap?.files as Array<{ serialNumber?: string }>) ?? [];
-        const serialNumbers = files.map((f) => f.serialNumber).filter(Boolean) as string[];
-        return {
-          id: row.id,
-          customer_name: row.customer_name ?? "",
-          overall_score: row.overall_score,
-          overall_grade: row.overall_grade,
-          checked_at: row.checked_at,
-          customer_email: (snap as any)?.customerEmail ?? undefined,
-          serialNumbers,
-        };
-      });
-      setRecheckResults(results);
-    } catch {
+    if (recheckTimerRef.current) clearTimeout(recheckTimerRef.current);
+    if (!query.trim() || !seAuth.seProfile) {
       setRecheckResults([]);
-    } finally {
       setRecheckSearching(false);
+      return;
     }
+    setRecheckSearching(true);
+    recheckTimerRef.current = setTimeout(async () => {
+      const version = ++recheckVersionRef.current;
+      try {
+        const profileId = seAuth.seProfile!.id;
+        let q = supabase
+          .from("se_health_checks")
+          .select("id, customer_name, overall_score, overall_grade, checked_at, summary_json")
+          .ilike("customer_name", `%${query.trim()}%`)
+          .order("checked_at", { ascending: false })
+          .limit(10);
+        if (activeTeamId) q = q.eq("team_id", activeTeamId);
+        else q = q.eq("se_user_id", profileId);
+        const { data, error } = await q;
+        if (version !== recheckVersionRef.current) return;
+        if (error) { console.error("[recheck-search]", error); setRecheckResults([]); return; }
+        const results = (data ?? []).map((row: any) => {
+          const sj = row.summary_json as Record<string, unknown> | null;
+          const snap = sj?.snapshot as Record<string, unknown> | undefined;
+          const snapFiles = (snap?.files as Array<{ serialNumber?: string }>) ?? [];
+          const serialNumbers = snapFiles.map((f) => f.serialNumber).filter(Boolean) as string[];
+          return {
+            id: row.id,
+            customer_name: row.customer_name ?? "",
+            overall_score: row.overall_score,
+            overall_grade: row.overall_grade,
+            checked_at: row.checked_at,
+            customer_email: (snap as any)?.customerEmail ?? undefined,
+            serialNumbers,
+          };
+        });
+        setRecheckResults(results);
+      } catch (err) {
+        console.error("[recheck-search]", err);
+        if (version === recheckVersionRef.current) setRecheckResults([]);
+      } finally {
+        if (version === recheckVersionRef.current) setRecheckSearching(false);
+      }
+    }, 300);
   }, [seAuth.seProfile, activeTeamId]);
 
   const handleRecheckSelect = useCallback((result: typeof recheckResults[0]) => {
@@ -3150,7 +3165,7 @@ function HealthCheckInner() {
                 className="pl-9 rounded-lg"
                 placeholder="Search by customer name…"
                 value={recheckQuery}
-                onChange={(e) => void handleRecheckSearch(e.target.value)}
+                onChange={(e) => handleRecheckSearch(e.target.value)}
                 autoFocus
               />
             </div>
