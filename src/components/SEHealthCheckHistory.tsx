@@ -29,7 +29,7 @@ interface HealthCheckRow {
   findings_count: number | null;
   firewall_count: number | null;
   checked_at: string;
-  summary_json: Record<string, unknown> | null;
+  summary_json?: Record<string, unknown> | null;
   se_user_id?: string;
   team_id?: string | null;
   se_profiles?: { display_name: string | null } | null;
@@ -75,7 +75,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     setLoading(true);
     let query = supabase
       .from("se_health_checks")
-      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, summary_json, se_user_id, team_id, se_profiles(display_name)")
+      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, se_user_id, team_id, se_profiles(display_name)")
       .order("checked_at", { ascending: false })
       .limit(50);
 
@@ -102,17 +102,27 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     void load();
   }, [load, refreshTrigger]);
 
+  const fetchSnapshot = useCallback(async (rowId: string): Promise<SeHealthCheckSnapshotV1 | null> => {
+    const { data, error } = await supabase
+      .from("se_health_checks")
+      .select("summary_json")
+      .eq("id", rowId)
+      .single();
+    if (error || !data) return null;
+    return parseSeHealthCheckSnapshotFromSummaryJson(data.summary_json as Record<string, unknown> | null);
+  }, []);
+
   const runExport = useCallback(
     async (row: HealthCheckRow, kind: "pdf" | "html") => {
-      const snapshot = parseSeHealthCheckSnapshotFromSummaryJson(row.summary_json);
-      if (!snapshot) {
-        toast.error("This save has no full snapshot — save the health check again from a current session to enable reopen and export.");
-        return;
-      }
       const id = row.id;
       setExportingId(id);
       setExportingKind(kind);
       try {
+        const snapshot = await fetchSnapshot(id);
+        if (!snapshot) {
+          toast.error("This save has no full snapshot — save the health check again from a current session to enable reopen and export.");
+          return;
+        }
         const generatedAt = new Date(row.checked_at);
         const { reportParams, branding } = buildSeHealthCheckExportBundle(snapshot, preparedBy, generatedAt);
         const customerPart = row.customer_name?.trim() || snapshot.customerName.trim() || "health-check";
@@ -133,7 +143,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
         setExportingKind(null);
       }
     },
-    [preparedBy],
+    [preparedBy, fetchSnapshot],
   );
 
   const handleMoveToTeam = useCallback(async (checkId: string, targetTeamId: string | null) => {
@@ -331,11 +341,6 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                 </thead>
                 <tbody>
                   {rows.map((row) => {
-                    const snapshot = parseSeHealthCheckSnapshotFromSummaryJson(row.summary_json);
-                    const hasSnapshot = snapshot !== null;
-                    const serials = snapshot?.files
-                      ?.map((f) => f.serialNumber?.trim())
-                      .filter((s): s is string => Boolean(s)) ?? [];
                     const busyPdf = exportingId === row.id && exportingKind === "pdf";
                     const busyHtml = exportingId === row.id && exportingKind === "html";
                     const isOwn = row.se_user_id === seProfileId;
@@ -359,11 +364,6 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                           <span className="font-medium truncate block max-w-[160px]">
                             {row.customer_name || <span className="text-muted-foreground italic">—</span>}
                           </span>
-                          {serials.length > 0 && (
-                            <span className="text-[10px] font-mono text-muted-foreground block truncate max-w-[160px]">
-                              {serials.join(", ")}
-                            </span>
-                          )}
                         </td>
                         {viewMode !== "mine" && (
                           <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
@@ -399,10 +399,13 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                               variant="ghost"
                               size="sm"
                               className="h-8 px-2 text-xs gap-1"
-                              disabled={!hasSnapshot || !onRestoreSnapshot}
-                              title={!hasSnapshot ? "Re-save from a current session to enable" : "Open in editor"}
-                              onClick={() => {
-                                if (snapshot && onRestoreSnapshot) onRestoreSnapshot(snapshot);
+                              disabled={!onRestoreSnapshot || busyPdf || busyHtml}
+                              title="Open in editor"
+                              onClick={async () => {
+                                if (!onRestoreSnapshot) return;
+                                const snap = await fetchSnapshot(row.id);
+                                if (snap) onRestoreSnapshot(snap);
+                                else toast.error("No snapshot found — re-save from a current session.");
                               }}
                             >
                               <FolderOpen className="h-3.5 w-3.5" />
@@ -413,7 +416,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                               variant="ghost"
                               size="sm"
                               className="h-8 px-2 text-xs gap-1"
-                              disabled={!hasSnapshot || busyPdf || busyHtml}
+                              disabled={busyPdf || busyHtml}
                               title="Download PDF"
                               onClick={() => void runExport(row, "pdf")}
                             >
@@ -425,7 +428,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                               variant="ghost"
                               size="sm"
                               className="h-8 px-2 text-xs gap-1"
-                              disabled={!hasSnapshot || busyPdf || busyHtml}
+                              disabled={busyPdf || busyHtml}
                               title="Download HTML"
                               onClick={() => void runExport(row, "html")}
                             >

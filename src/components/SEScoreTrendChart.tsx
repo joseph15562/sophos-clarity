@@ -38,20 +38,17 @@ function gradeColorClass(grade: string): string {
   }
 }
 
-export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, seProfileId, activeTeamId }: Props) {
+export function SEScoreTrendChart({ currentScore, currentGrade, seProfileId, activeTeamId }: Props) {
   const [points, setPoints] = useState<TrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
-  const serialSet = useMemo(() => new Set(serialNumbers.filter(Boolean)), [serialNumbers]);
-
   const load = useCallback(async () => {
-    if (serialSet.size === 0) { setPoints([]); setLoading(false); return; }
     setLoading(true);
     try {
       let query = supabase
         .from("se_health_checks")
-        .select("id, overall_score, overall_grade, checked_at, customer_name, summary_json")
+        .select("id, overall_score, overall_grade, checked_at, customer_name")
         .order("checked_at", { ascending: true })
         .limit(100);
 
@@ -66,12 +63,7 @@ export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, s
 
       const matched: TrendPoint[] = [];
       for (const row of data) {
-        const sj = row.summary_json as Record<string, unknown> | null;
-        const snapshot = sj?.snapshot as Record<string, unknown> | undefined;
-        const files = (snapshot?.files as Array<{ serialNumber?: string }>) ?? [];
-        const rowSerials = files.map((f) => f.serialNumber).filter(Boolean);
-        const hasMatch = rowSerials.some((s) => serialSet.has(s!));
-        if (hasMatch && row.overall_score != null && row.overall_grade) {
+        if (row.overall_score != null && row.overall_grade) {
           matched.push({
             id: row.id,
             score: row.overall_score,
@@ -87,7 +79,7 @@ export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, s
     } finally {
       setLoading(false);
     }
-  }, [serialSet, seProfileId, activeTeamId]);
+  }, [seProfileId, activeTeamId]);
 
   useEffect(() => { void load(); }, [load]);
 

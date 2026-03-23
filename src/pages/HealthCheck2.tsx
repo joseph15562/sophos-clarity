@@ -169,110 +169,25 @@ function guestFirewallMatchValueForFile(file: ParsedFile, groups: GuestHaGroup[]
 }
 
 async function callGuestCentral<T extends Record<string, unknown>>(body: Record<string, unknown>): Promise<T> {
-  const rawUrl = import.meta.env.VITE_SUPABASE_URL ?? "";
-  const rawKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
   const resolved = getSupabasePublicEdgeAuth();
-  // #region agent log
-  fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-    body: JSON.stringify({
-      sessionId: "360061",
-      runId: "post-fix",
-      hypothesisId: "H2",
-      location: "HealthCheck.tsx:callGuestCentral:pre",
-      message: "guest central auth: raw env vs resolved client",
-      data: {
-        mode: (body as { mode?: string }).mode,
-        rawUrlLen: rawUrl.length,
-        rawKeyLen: rawKey.length,
-        resolvedUrlLen: resolved.url.length,
-        resolvedKeyLen: resolved.anonKey.length,
-        urlsDiffer: rawUrl !== resolved.url,
-        keysDiffer: rawKey !== resolved.anonKey,
-        bearerWouldBeEmpty: rawKey.length === 0,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   const url = `${resolved.url.replace(/\/$/, "")}/functions/v1/sophos-central`;
   const key = resolved.anonKey.trim();
   const jwtRole = readJwtPayloadClaim(key, "role");
   if (jwtRole === "service_role") {
-    // #region agent log
-    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-      body: JSON.stringify({
-        sessionId: "360061",
-        runId: "post-fix",
-        hypothesisId: "H6",
-        location: "HealthCheck.tsx:callGuestCentral:wrong-key-type",
-        message: "VITE key is service_role JWT; Edge expects anon",
-        data: { mode: (body as { mode?: string }).mode },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     throw new Error(
       "Wrong Supabase key: use the anon (publishable) key in VITE_SUPABASE_PUBLISHABLE_KEY, not the service_role secret.",
     );
   }
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-        apikey: key,
-      },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    // #region agent log
-    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-      body: JSON.stringify({
-        sessionId: "360061",
-        runId: "post-fix",
-        hypothesisId: "H-CORS",
-        location: "HealthCheck.tsx:callGuestCentral:fetch-threw",
-        message: "fetch network/CORS failure",
-        data: {
-          mode: (body as { mode?: string }).mode,
-          errName: err instanceof Error ? err.name : "unknown",
-          errMsg: err instanceof Error ? err.message.slice(0, 120) : String(err).slice(0, 120),
-          pageOrigin: typeof window !== "undefined" ? window.location.origin : "",
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-    throw err;
-  }
-  const data = (await res.json()) as { error?: string } & T;
-  // #region agent log
-  fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
+  const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-    body: JSON.stringify({
-      sessionId: "360061",
-      runId: "post-fix",
-      hypothesisId: "H2",
-      location: "HealthCheck.tsx:callGuestCentral:response",
-      message: "guest central response",
-      data: {
-        mode: (body as { mode?: string }).mode,
-        status: res.status,
-        errorShape: typeof data.error,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`,
+      apikey: key,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json()) as { error?: string } & T;
   if (!res.ok || data.error) {
     throw new Error(typeof data.error === "string" ? data.error : `Request failed (${res.status})`);
   }

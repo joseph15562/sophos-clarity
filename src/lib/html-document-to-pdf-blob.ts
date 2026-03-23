@@ -548,28 +548,6 @@ function nudgeSeHealthHeadingsClearOfPageEnd(
   const heads = [
     ...body.querySelectorAll<HTMLElement>(".se-hc-report-body-pages h2, .se-hc-report-body-pages h3"),
   ];
-  // #region agent log
-  fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-    body: JSON.stringify({
-      sessionId: "360061",
-      runId: "post-fix",
-      hypothesisId: "B",
-      location: "html-document-to-pdf-blob.ts:nudgeSeHealthHeadingsClearOfPageEnd:entry",
-      message: "nudge entry",
-      data: {
-        headCount: heads.length,
-        scrollH,
-        imgH_mm,
-        planPages: tilePlan?.length ?? 0,
-        usingPlanBounds: !!bounds?.length,
-        previews: heads.slice(0, 12).map((h) => (h.textContent || "").trim().slice(0, 80)),
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   heads.sort((a, b) => elementTopRelativeToBody(a, body) - elementTopRelativeToBody(b, body));
   for (const el of heads) {
     const isBaselineFindingsH2 =
@@ -614,30 +592,6 @@ function nudgeSeHealthHeadingsClearOfPageEnd(
         needNudge = true;
       }
     }
-    // #region agent log
-    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-      body: JSON.stringify({
-        sessionId: "360061",
-        runId: "post-fix",
-        hypothesisId: "A",
-        location: "html-document-to-pdf-blob.ts:nudgeSeHealthHeadingsClearOfPageEnd:heading",
-        message: "heading slice math (plan-aware)",
-        data: {
-          tag: el.tagName,
-          text: (el.textContent || "").trim().slice(0, 100),
-          yPx,
-          sliceIndex,
-          posInSlicePx: Math.round(posInSlicePx * 10) / 10,
-          sliceHeightPx: Math.round(sliceHeightPx * 10) / 10,
-          frac: Math.round(frac * 1000) / 1000,
-          needNudge,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     /* Baseline/findings h2 uses block spacers (see applySeHealthBaselineH2SliceSpacers) — not margin-top (collapses with ul). */
     if (needNudge && !isBaselineFindingsH2) {
       const deltaPx = sh - posInSlicePx + 20;
@@ -977,30 +931,6 @@ export async function htmlDocumentStringToPdfBlob(fullHtml: string): Promise<Blo
     const usableW = pageW - 2 * pageMarginMm;
     const usableH = pageH - 2 * pageMarginMm;
     const imgH_pre = (canvas.height * usableW) / canvas.width;
-
-    // #region agent log
-    if (isSeHealthPdf) {
-      fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-        body: JSON.stringify({
-          sessionId: "360061",
-          runId: "pre-fix",
-          hypothesisId: "C",
-          location: "html-document-to-pdf-blob.ts:htmlDocumentStringToPdfBlob:post-canvas",
-          message: "capture dimensions",
-          data: {
-            scrollH,
-            canvasH: canvas.height,
-            canvasW: canvas.width,
-            imgH_pre_mm: Math.round(imgH_pre * 100) / 100,
-            usableW_mm: Math.round(usableW * 100) / 100,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
 
     const seTilePlan = isSeHealthPdf
       ? buildSeHealthPdfTilePlan(imgH_pre, usableH, scrollH, tableSlices)

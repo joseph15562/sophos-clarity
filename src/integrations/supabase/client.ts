@@ -36,32 +36,6 @@ function buildClient(): ReturnType<typeof createClient<Database>> {
   let supabaseUrl = rawUrl;
   let supabaseKey = rawKey;
 
-  // #region agent log
-  {
-    const allow = allowSupabaseDevPlaceholder();
-    const hn = typeof window !== "undefined" ? window.location.hostname : "(no window)";
-    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-      body: JSON.stringify({
-        sessionId: "360061",
-        runId: "verify",
-        hypothesisId: "H1",
-        location: "client.ts:buildClient:entry",
-        message: "supabase buildClient entry",
-        data: {
-          hasUrl: Boolean(rawUrl),
-          hasKey: Boolean(rawKey),
-          allowDevPlaceholder: allow,
-          viteDev: import.meta.env.DEV,
-          hostname: hn,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
-
   if (!supabaseUrl || !supabaseKey) {
     if (allowSupabaseDevPlaceholder()) {
       console.warn(
@@ -70,24 +44,6 @@ function buildClient(): ReturnType<typeof createClient<Database>> {
       supabaseUrl = PLACEHOLDER_URL;
       supabaseKey = PLACEHOLDER_KEY;
     } else {
-      // #region agent log
-      fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-        body: JSON.stringify({
-          sessionId: "360061",
-          runId: "verify",
-          hypothesisId: "H1",
-          location: "client.ts:buildClient:throw-missing-env",
-          message: "throwing missing env (no dev placeholder)",
-          data: {
-            viteDev: import.meta.env.DEV,
-            hostname: typeof window !== "undefined" ? window.location.hostname : "(no window)",
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       throw new Error(
         "Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY. Set them in your deployment environment (see .env.example).",
       );
@@ -109,21 +65,6 @@ function buildClient(): ReturnType<typeof createClient<Database>> {
     const c = createClient<Database>(supabaseUrl, supabaseKey, options);
     resolvedPublicUrl = supabaseUrl;
     resolvedPublicKey = supabaseKey;
-    // #region agent log
-    fetch("http://127.0.0.1:7279/ingest/a33c19e5-9dd2-4af3-bd97-167e5af829e3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "360061" },
-      body: JSON.stringify({
-        sessionId: "360061",
-        runId: "verify",
-        hypothesisId: "H1",
-        location: "client.ts:buildClient:success",
-        message: "createClient ok",
-        data: { usedPlaceholder: supabaseUrl === PLACEHOLDER_URL },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return c;
   } catch (err) {
     if (allowSupabaseDevPlaceholder()) {
