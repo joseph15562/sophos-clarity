@@ -40,7 +40,7 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
       for (const [sectionKey, section] of Object.entries(extracted)) {
         if (!section || typeof section !== "object") continue;
         let rowsInSection = 0;
-        for (const table of (section as any).tables ?? []) {
+        for (const table of (section as { tables?: { rows?: unknown[] }[] }).tables ?? []) {
           const count = table?.rows?.length ?? 0;
           rowsInSection += count;
           totalRows += count;

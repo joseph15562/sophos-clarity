@@ -1,0 +1,297 @@
+<!--
+  Synthetic Sophos XGS Config Viewer HTML — Demo / Evaluation Fixture
+  This is NOT real customer data. All names, IPs, and identifiers are fictional.
+  Designed to exercise the full range of FireComply analysis capabilities.
+-->
+<!DOCTYPE html>
+<html>
+<head><title>Sophos Config Viewer — Demo Firewall</title></head>
+<body>
+  <!-- Sidebar with section checkboxes -->
+  <div id="sidebar">
+    <div data-section-name="Firewall Rules">
+      <input type="checkbox" data-section-key="firewallRules" checked />
+    </div>
+    <div data-section-name="NAT Rule">
+      <input type="checkbox" data-section-key="NATRule" checked />
+    </div>
+    <div data-section-name="Zones">
+      <input type="checkbox" data-section-key="Zone" checked />
+    </div>
+    <div data-section-name="Networks">
+      <input type="checkbox" data-section-key="Network" checked />
+    </div>
+    <div data-section-name="SSL TLS Inspection Rules">
+      <input type="checkbox" data-section-key="sslTlsInspectionRules" checked />
+    </div>
+    <div data-section-name="Local Service ACL">
+      <input type="checkbox" data-section-key="LocalServiceACL" checked />
+    </div>
+    <div data-section-name="OTP Settings">
+      <input type="checkbox" data-section-key="OTPSettings" checked />
+    </div>
+    <div data-section-name="Web Filter Policies">
+      <input type="checkbox" data-section-key="WebFilterPolicy" checked />
+    </div>
+    <div data-section-name="IPS Policies">
+      <input type="checkbox" data-section-key="IPSPolicy" checked />
+    </div>
+    <div data-section-name="Intrusion Prevention">
+      <input type="checkbox" data-section-key="IntrusionPrevention" checked />
+    </div>
+    <div data-section-name="Virus Scanning">
+      <input type="checkbox" data-section-key="VirusScanning" checked />
+    </div>
+    <div data-section-name="Groups">
+      <input type="checkbox" data-section-key="groups" checked />
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- Firewall Rules (8 rules — mix of good, bad, disabled, broad) -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div id="section-content-firewall-rules">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
+        <thead>
+          <tr><th>#</th><th>Rule Name</th><th>Status</th><th>Action</th><th>Source</th><th>Destination</th><th>Services</th></tr>
+        </thead>
+        <tbody>
+          <!-- Rule 1: Well-configured WAN rule -->
+          <tr id="row-fw-rule-0"><td>1</td><td>Corporate-Internet</td><td><span>✓ On</span></td><td><span>Accept</span></td><td>LAN</td><td>WAN</td><td>HTTPS, HTTP</td></tr>
+          <tr id="details-fw-rule-0" style="display: none;"><td colspan="7"><div id="rule-content-rule-0">
+            <table><tbody><tr><td>Policy Type</td><td>Network</td></tr><tr><td>IP Family</td><td>IPv4</td></tr></tbody></table>
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Enable</td></tr><tr><td>Schedule</td><td>All The Time</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>LAN</td></tr><tr><td>Source Networks</td><td>Corporate_Subnet</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>WAN</td></tr><tr><td>Destination Networks</td><td>Any</td></tr><tr><td>Services/Ports</td><td>HTTPS, HTTP</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>Corporate-Web-Policy</td></tr><tr><td>Application Control</td><td>Default</td></tr><tr><td>Intrusion Prevention</td><td>LAN-IPS-Policy</td></tr><tr><td>Virus Scanning</td><td>Enable</td></tr><tr><td>Zero Day Protection</td><td>Enable</td></tr><tr><td>HTTPS Decryption</td><td>Enable</td></tr></tbody></table>
+          </div></td></tr>
+
+          <!-- Rule 2: WAN rule missing web filter + IPS (finding trigger) -->
+          <tr id="row-fw-rule-1"><td>2</td><td>Guest-WiFi-Internet</td><td><span>✓ On</span></td><td><span>Accept</span></td><td>GUEST</td><td>WAN</td><td>Any</td></tr>
+          <tr id="details-fw-rule-1" style="display: none;"><td colspan="7"><div id="rule-content-rule-1">
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Disable</td></tr><tr><td>Schedule</td><td>All The Time</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>GUEST</td></tr><tr><td>Source Networks</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>WAN</td></tr><tr><td>Destination Networks</td><td>Any</td></tr><tr><td>Services/Ports</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>None</td></tr><tr><td>Application Control</td><td>None</td></tr><tr><td>Intrusion Prevention</td><td>None</td></tr><tr><td>Virus Scanning</td><td>Disable</td></tr></tbody></table>
+          </div></td></tr>
+
+          <!-- Rule 3: Disabled rule (finding trigger) -->
+          <tr id="row-fw-rule-2"><td>3</td><td>Old-VPN-Policy</td><td><span>✗ Off</span></td><td><span>Accept</span></td><td>VPN</td><td>WAN</td><td>Any</td></tr>
+          <tr id="details-fw-rule-2" style="display: none;"><td colspan="7"><div id="rule-content-rule-2">
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Disable</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>VPN</td></tr><tr><td>Source Networks</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>WAN</td></tr><tr><td>Destination Networks</td><td>Any</td></tr><tr><td>Services/Ports</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>None</td></tr><tr><td>Application Control</td><td>None</td></tr><tr><td>Intrusion Prevention</td><td>None</td></tr></tbody></table>
+          </div></td></tr>
+
+          <!-- Rule 4: Fully open rule — broad source + ANY service (critical finding) -->
+          <tr id="row-fw-rule-3"><td>4</td><td>Allow-All-Temp</td><td><span>✓ On</span></td><td><span>Accept</span></td><td>Any</td><td>WAN</td><td>Any</td></tr>
+          <tr id="details-fw-rule-3" style="display: none;"><td colspan="7"><div id="rule-content-rule-3">
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Enable</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>Any</td></tr><tr><td>Source Networks</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>WAN</td></tr><tr><td>Destination Networks</td><td>Any</td></tr><tr><td>Services/Ports</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>None</td></tr><tr><td>Application Control</td><td>None</td></tr><tr><td>Intrusion Prevention</td><td>None</td></tr></tbody></table>
+          </div></td></tr>
+
+          <!-- Rule 5: Internal DNS (not WAN — no posture penalty) -->
+          <tr id="row-fw-rule-4"><td>5</td><td>Internal-DNS</td><td><span>✓ On</span></td><td><span>Accept</span></td><td>LAN</td><td>LAN</td><td>DNS</td></tr>
+          <tr id="details-fw-rule-4" style="display: none;"><td colspan="7"><div id="rule-content-rule-4">
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Enable</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>LAN</td></tr><tr><td>Source Networks</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>LAN</td></tr><tr><td>Destination Networks</td><td>DNS-Server</td></tr><tr><td>Services/Ports</td><td>DNS</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>None</td></tr><tr><td>Intrusion Prevention</td><td>None</td></tr></tbody></table>
+          </div></td></tr>
+
+          <!-- Rule 6: Server publish — WAN inbound (DNAT target) -->
+          <tr id="row-fw-rule-5"><td>6</td><td>Publish-WebServer</td><td><span>✓ On</span></td><td><span>Accept</span></td><td>WAN</td><td>DMZ</td><td>HTTPS</td></tr>
+          <tr id="details-fw-rule-5" style="display: none;"><td colspan="7"><div id="rule-content-rule-5">
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Enable</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>WAN</td></tr><tr><td>Source Networks</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>DMZ</td></tr><tr><td>Destination Networks</td><td>WebServer-01</td></tr><tr><td>Services/Ports</td><td>HTTPS</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>None</td></tr><tr><td>Intrusion Prevention</td><td>DMZ-IPS</td></tr><tr><td>Virus Scanning</td><td>Enable</td></tr></tbody></table>
+          </div></td></tr>
+
+          <!-- Rule 7: VPN access — good but missing app control -->
+          <tr id="row-fw-rule-6"><td>7</td><td>VPN-to-LAN</td><td><span>✓ On</span></td><td><span>Accept</span></td><td>VPN</td><td>LAN</td><td>Any</td></tr>
+          <tr id="details-fw-rule-6" style="display: none;"><td colspan="7"><div id="rule-content-rule-6">
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Enable</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>VPN</td></tr><tr><td>Source Networks</td><td>VPN-Pool</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>LAN</td></tr><tr><td>Destination Networks</td><td>Server-Subnet</td></tr><tr><td>Services/Ports</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>None</td></tr><tr><td>Application Control</td><td>None</td></tr><tr><td>Intrusion Prevention</td><td>LAN-IPS-Policy</td></tr></tbody></table>
+          </div></td></tr>
+
+          <!-- Rule 8: Duplicate of rule 4 (overlapping finding) -->
+          <tr id="row-fw-rule-7"><td>8</td><td>Legacy-Allow-All</td><td><span>✓ On</span></td><td><span>Accept</span></td><td>Any</td><td>WAN</td><td>Any</td></tr>
+          <tr id="details-fw-rule-7" style="display: none;"><td colspan="7"><div id="rule-content-rule-7">
+            <table><tbody><tr><td>Action</td><td>Accept</td></tr><tr><td>Log Traffic</td><td>Disable</td></tr></tbody></table>
+            <table><tbody><tr><td>Source Zones</td><td>Any</td></tr><tr><td>Source Networks</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Destination Zones</td><td>WAN</td></tr><tr><td>Destination Networks</td><td>Any</td></tr><tr><td>Services/Ports</td><td>Any</td></tr></tbody></table>
+            <table><tbody><tr><td>Web Filter</td><td>None</td></tr><tr><td>Application Control</td><td>None</td></tr><tr><td>Intrusion Prevention</td><td>None</td></tr></tbody></table>
+          </div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- NAT Rules                  -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-nat-rules">
+    <div><table>
+      <thead><tr><th>#</th><th>Rule Name</th><th>Type</th><th>Source</th><th>Destination</th><th>Translated To</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>LAN-Masquerade</td><td>Masquerade</td><td>LAN_Subnet</td><td>WAN</td><td>MASQ</td></tr>
+        <tr><td>2</td><td>DNAT-WebServer</td><td>DNAT</td><td>Any</td><td>203.0.113.10</td><td>WebServer-01</td></tr>
+        <tr><td>3</td><td>DNAT-MailRelay</td><td>DNAT</td><td>Any</td><td>203.0.113.11</td><td>MailRelay-01</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- Zones                      -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-zones">
+    <div><table>
+      <thead><tr><th>Zone</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>LAN</td><td>LAN</td><td>Corporate network</td></tr>
+        <tr><td>WAN</td><td>WAN</td><td>Internet</td></tr>
+        <tr><td>DMZ</td><td>DMZ</td><td>Demilitarised zone for published services</td></tr>
+        <tr><td>VPN</td><td>VPN</td><td>Remote access VPN zone</td></tr>
+        <tr><td>GUEST</td><td>LAN</td><td>Guest WiFi network</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- Networks / Hosts           -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-networks">
+    <div><table>
+      <thead><tr><th>Name</th><th>Type</th><th>IP / Range</th></tr></thead>
+      <tbody>
+        <tr><td>Corporate_Subnet</td><td>Network</td><td>192.168.1.0/24</td></tr>
+        <tr><td>Server-Subnet</td><td>Network</td><td>192.168.10.0/24</td></tr>
+        <tr><td>Guest-Subnet</td><td>Network</td><td>10.10.10.0/24</td></tr>
+        <tr><td>WebServer-01</td><td>Host</td><td>192.168.10.20</td></tr>
+        <tr><td>MailRelay-01</td><td>Host</td><td>192.168.10.25</td></tr>
+        <tr><td>DNS-Server</td><td>Host</td><td>192.168.10.2</td></tr>
+        <tr><td>VPN-Pool</td><td>Range</td><td>10.81.234.1 - 10.81.234.50</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- SSL/TLS Inspection (empty) -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-ssl-tls-inspection-rules">
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- Local Service ACL          -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-local-service-acl">
+    <div><table>
+      <thead><tr><th>Service</th><th>Zone</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>HTTPS (Admin)</td><td>LAN</td><td>Accept</td></tr>
+        <tr><td>HTTPS (Admin)</td><td>WAN</td><td>Accept</td></tr>
+        <tr><td>SSH</td><td>LAN</td><td>Accept</td></tr>
+        <tr><td>SSH</td><td>WAN</td><td>Accept</td></tr>
+        <tr><td>Ping/ICMP</td><td>LAN</td><td>Accept</td></tr>
+        <tr><td>SNMP</td><td>LAN</td><td>Accept</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- OTP Settings               -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-additional-OTPSettings">
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>OTP</div><div>Enabled</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>otpWebAdmin</div><div>Enabled</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>otpVPNPortal</div><div>Disabled</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>otpIPsec</div><div>Disabled</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr;">
+      <div>otpSSLVPN</div><div>Disabled</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- Web Filter Policies        -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-webfilter-policies">
+    <div><table>
+      <thead><tr><th>Policy Name</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>Corporate-Web-Policy</td><td>Active</td><td>Block malware, phishing, adult</td></tr>
+        <tr><td>Guest-Policy</td><td>Active</td><td>Block malware only</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- IPS Policies               -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-ips-policies">
+    <div><table>
+      <thead><tr><th>Policy Name</th><th>Status</th><th>Mode</th></tr></thead>
+      <tbody>
+        <tr><td>LAN-IPS-Policy</td><td>Active</td><td>Protect</td></tr>
+        <tr><td>DMZ-IPS</td><td>Active</td><td>Protect</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- Intrusion Prevention       -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-intrusion-prevention">
+    <div><table>
+      <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>IPS Status</td><td>Enabled</td></tr>
+        <tr><td>IPS Mode</td><td>Protect</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- Virus Scanning             -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-virus-scanning">
+    <div><table>
+      <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP Scanning</td><td>Enabled</td></tr>
+        <tr><td>FTP Scanning</td><td>Enabled</td></tr>
+        <tr><td>SMTP Scanning</td><td>Enabled</td></tr>
+        <tr><td>POP3/IMAP Scanning</td><td>Disabled</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <!-- ═══════════════════════════ -->
+  <!-- Groups                     -->
+  <!-- ═══════════════════════════ -->
+  <div id="section-content-groups">
+    <div><table>
+      <thead><tr><th>Group Name</th><th>Members</th></tr></thead>
+      <tbody>
+        <tr><td>Admins</td><td>admin, j.smith</td></tr>
+        <tr><td>VPN-Users</td><td>remote-workers</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+</body>
+</html>

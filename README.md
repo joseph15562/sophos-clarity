@@ -47,6 +47,9 @@ Visual coverage bars showing web filtering, IPS, and application control coverag
 ### Compliance Heatmap
 Interactive matrix mapping extracted configuration facts to multiple compliance frameworks simultaneously. Each control is graded pass/partial/fail with evidence citations.
 
+### Security Posture Scorecard
+Deterministic scorecard grading 9 categories — Web Filtering, Intrusion Prevention, Application Control, Authentication, Logging, Rule Hygiene, Admin Access, Anti-Malware, and Network Security — as Good / Needs Review / High Risk. Each score is evidence-based with explanations referencing extracted configuration facts. Visible in the Overview tab alongside the risk gauge.
+
 ### Risk Scoring and Estate Comparison
 Weighted risk scoring per firewall with category breakdowns. When multiple configs are loaded, compare firewalls side-by-side with finding deltas, score differences, and grade changes.
 
@@ -55,6 +58,9 @@ Client-side replacement of IP addresses, customer names, and network identifiers
 
 ### Multi-Format Export
 Word (.docx), PDF (styled HTML), PowerPoint (.pptx), and ZIP bundles with consistent formatting and branding.
+
+### Demo Mode
+One-click "Try Demo Config" button on the landing page loads a synthetic Sophos XGS configuration export so evaluators and judges can explore the full analysis and reporting experience without needing their own firewall config.
 
 ### Fleet Management (SE Health Check)
 Purpose-built workflow for Sophos SEs to manage health check assessments at scale — upload requests, scheduled reports, saved baselines, config diff comparison, and assessment history tracking.
@@ -230,11 +236,13 @@ supabase secrets set ALLOWED_ORIGIN=https://your-domain.com
 
 ## Roadmap
 
-- [ ] Demo mode with synthetic sample config for evaluators
-- [ ] Security Posture Scorecard (deterministic, evidence-based)
-- [ ] Extraction coverage reporting and unsupported section visibility
-- [ ] Enhanced backend abuse protection and rate limiting
+- [x] Demo mode with synthetic sample config for evaluators
+- [x] Security Posture Scorecard (deterministic, evidence-based)
+- [x] Extraction coverage reporting and unsupported section visibility
+- [x] Backend abuse protection and rate limiting
+- [x] XSS-hardened markdown rendering (DOMPurify)
 - [ ] Code splitting for improved initial load performance
+- [ ] Model fallback / graceful degraded mode when AI backend is unavailable
 
 ---
 
@@ -243,14 +251,14 @@ supabase secrets set ALLOWED_ORIGIN=https://your-domain.com
 If you are evaluating this app and do not have a Sophos firewall config export:
 
 1. Visit the deployed app URL
-2. Use the **SE Health Check** flow at `/health-check` for the full-featured experience (requires Supabase auth)
-3. Or use the **MSP** flow on the home page — upload any Sophos XGS HTML config export
-4. After upload, the deterministic analysis runs instantly — review findings, risk score, inspection posture, and best-practice checks
-5. Click **Generate Report** to see AI-assisted documentation streamed in real time
-6. Export to Word, PDF, PowerPoint, or ZIP
+2. Click **Try Demo Config** on the landing page — this loads a synthetic sample Sophos XGS configuration (no real customer data)
+3. The deterministic analysis runs instantly — review findings, risk score, Security Posture Scorecard, inspection posture, and best-practice checks
+4. Click **Generate Report** to see AI-assisted documentation streamed in real time
+5. Export to Word, PDF, PowerPoint, or ZIP
+6. Or use the **SE Health Check** flow at `/health-check` for the full SE-facing experience (requires auth)
 7. Load a second config to see fleet comparison, estate risk ranking, and compliance heatmap
 
-The entire flow from upload to exported report takes under 2 minutes.
+The entire flow from demo config to exported report takes under 2 minutes.
 
 ---
 

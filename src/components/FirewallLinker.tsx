@@ -85,7 +85,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
       }
     };
     load();
-  }, [orgId, configs, central.firewalls]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [orgId, configs, central.firewalls]);
 
   // Auto-match by serial number then hostname (skip configs from manual upload — do not link to a different Central firewall)
   useEffect(() => {

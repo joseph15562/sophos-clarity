@@ -36,6 +36,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
 import { toast } from "sonner";
 import { isLocalMode, setLocalMode } from "@/lib/local-mode";
+import { getDemoConfigHtml, DEMO_FILE_NAME, DEMO_LABEL } from "@/lib/demo-mode";
 
 const DocumentPreview = lazy(() => import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })));
 const ConfigDiff = lazy(() => import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })));
@@ -354,6 +355,18 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setLoadedSavedSummary(null);
     scrollPageToTop();
   }, [setReports, setActiveReportId]);
+
+  const handleLoadDemo = useCallback(() => {
+    const html = getDemoConfigHtml();
+    const demoFile: UploadedFile = {
+      id: "demo",
+      fileName: DEMO_FILE_NAME,
+      label: DEMO_LABEL,
+      content: html,
+    };
+    handleFilesChange([demoFile]);
+    toast.info("Demo config loaded — this is synthetic data, not a real customer.");
+  }, [handleFilesChange]);
 
   // Clear analysis override when user uploads new files normally
   useEffect(() => {
@@ -772,6 +785,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   ? <ExtractionSummary files={extractionSummaryFiles} />
                   : undefined
               }
+              onLoadDemo={handleLoadDemo}
             />
             {hasFiles && !isGuest && org?.id && (
               <div className="grid gap-4 md:grid-cols-2">

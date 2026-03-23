@@ -1,4 +1,4 @@
-import { LogIn } from "lucide-react";
+import { LogIn, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -52,6 +52,7 @@ export interface UploadSectionProps {
   isViewerOnly?: boolean;
   /** Rendered above the Generate Reports section */
   beforeReports?: React.ReactNode;
+  onLoadDemo?: () => void;
 }
 
 export function UploadSection({
@@ -85,6 +86,7 @@ export function UploadSection({
   totalFindings,
   isViewerOnly = false,
   beforeReports,
+  onLoadDemo,
 }: UploadSectionProps) {
   return (
     <>
@@ -105,6 +107,22 @@ export function UploadSection({
             <span className="flex items-center gap-1.5"><img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Compliance Reports</span>
             <span className="flex items-center gap-1.5"><img src="/icons/sophos-security.svg" alt="" className="h-4 w-4 sophos-icon" /> Data Anonymised</span>
           </div>
+          {onLoadDemo && (
+            <div className="pt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLoadDemo}
+                className="gap-2 text-xs border-[#2006F7]/30 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
+              >
+                <Play className="h-3.5 w-3.5" />
+                Try Demo Config
+              </Button>
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                Load a synthetic sample — no real customer data
+              </p>
+            </div>
+          )}
         </section>
       )}
 

@@ -899,9 +899,10 @@ function HealthCheckInner() {
           toast.success("Health check saved.");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[health-check] save failed", err);
-      const msg = err?.message || err?.error || (typeof err === "string" ? err : JSON.stringify(err));
+      const e = err as Record<string, unknown>;
+      const msg = e?.message || e?.error || (typeof err === "string" ? err : JSON.stringify(err));
       toast.error("Could not save health check — " + msg);
     } finally {
       setSavingCheck(false);

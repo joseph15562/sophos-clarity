@@ -883,9 +883,10 @@ function HealthCheckInner() {
           toast.success("Health check saved.");
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[health-check] save failed", err);
-      const msg = err?.message || err?.error || (typeof err === "string" ? err : JSON.stringify(err));
+      const e = err as Record<string, unknown>;
+      const msg = e?.message || e?.error || (typeof err === "string" ? err : JSON.stringify(err));
       toast.error("Could not save health check — " + msg);
     } finally {
       setSavingCheck(false);
@@ -1052,18 +1053,18 @@ function HealthCheckInner() {
         const { data, error } = await q;
         if (version !== recheckVersionRef.current) return;
         if (error) { console.error("[recheck-search]", error); setRecheckResults([]); return; }
-        const allRows = (data ?? []).map((row: any) => {
+        const allRows = (data ?? []).map((row: Record<string, unknown>) => {
           const sj = row.summary_json as Record<string, unknown> | null;
           const snap = sj?.snapshot as Record<string, unknown> | undefined;
           const snapFiles = (snap?.files as Array<{ serialNumber?: string }>) ?? [];
           const serialNumbers = snapFiles.map((f) => f.serialNumber).filter(Boolean) as string[];
           return {
-            id: row.id,
-            customer_name: row.customer_name ?? "",
-            overall_score: row.overall_score,
-            overall_grade: row.overall_grade,
-            checked_at: row.checked_at,
-            customer_email: (snap as any)?.customerEmail ?? undefined,
+            id: row.id as string,
+            customer_name: (row.customer_name as string) ?? "",
+            overall_score: row.overall_score as number,
+            overall_grade: row.overall_grade as string,
+            checked_at: row.checked_at as string,
+            customer_email: (snap as Record<string, unknown>)?.customerEmail as string | undefined,
             serialNumbers,
           };
         });

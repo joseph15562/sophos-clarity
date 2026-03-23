@@ -18,6 +18,7 @@ import type { InspectionPosture } from "@/lib/analyse-config";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { RiskScoreResult } from "@/lib/risk-score";
+import { SecurityPostureScorecard } from "@/components/SecurityPostureScorecard";
 
 const RiskScoreDashboard = lazy(() => import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })));
 const RemediationPlaybooks = lazy(() => import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })));
@@ -236,6 +237,8 @@ export function AnalysisTabs({
           <Suspense fallback={<StatGridSkeleton count={6} />}>
             <RiskSummaryCards analysisResults={analysisResult} />
           </Suspense>
+
+          <SecurityPostureScorecard analysisResults={analysisResult} />
 
           <ReportUpsellStrip
             fileCount={files.length}

@@ -26,9 +26,14 @@ test-results/
 .env
 .env.local
 
+# Lock files from other package managers
+bun.lock
+bun.lockb
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+.cursor/
 .idea
 .DS_Store
 *.suo
@@ -36,3 +41,6 @@ test-results/
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase temp files
+supabase/.temp/
