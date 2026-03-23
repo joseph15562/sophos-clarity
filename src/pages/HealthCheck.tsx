@@ -859,6 +859,7 @@ function HealthCheckInner() {
   }>>([]);
   const [configUploadRequestsOpen, setConfigUploadRequestsOpen] = useState(false);
   const [configUploadListLoading, setConfigUploadListLoading] = useState(false);
+  const [resendingUploadToken, setResendingUploadToken] = useState<string | null>(null);
   const configUploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const centralFromUploadRef = useRef(false);
 
@@ -1113,6 +1114,31 @@ function HealthCheckInner() {
       setConfigUploadResending(false);
     }
   }, [configUploadToken]);
+
+  const handleResendUploadEmail = useCallback(async (token: string) => {
+    setResendingUploadToken(token);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/resend`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      const json = await res.json();
+      if (json.email_sent) {
+        toast.success("Email resent to customer.");
+      } else {
+        toast.error(json.error || "Could not resend email.");
+      }
+    } catch {
+      toast.error("Could not resend email.");
+    } finally {
+      setResendingUploadToken(null);
+    }
+  }, []);
 
   const handleLoadConfigFromUpload = useCallback(async (token: string) => {
     setConfigUploadLoading(true);
@@ -2698,6 +2724,19 @@ function HealthCheckInner() {
                         >
                           <Copy className="h-3 w-3" />
                           Copy Link
+                        </Button>
+                      )}
+                      {!isExpired && req.status === "pending" && req.customer_email && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs gap-1.5"
+                          disabled={resendingUploadToken === req.token}
+                          onClick={() => handleResendUploadEmail(req.token)}
+                        >
+                          {resendingUploadToken === req.token ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          Resend Email
                         </Button>
                       )}
                       {!isExpired && (
