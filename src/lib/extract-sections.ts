@@ -48,10 +48,22 @@ export interface DetailBlock {
 
 // ── Extraction metadata types ──
 
+export type ExtractionMethod =
+  | "sidebar-mapped"
+  | "sidebar-direct"
+  | "sidebar-additional"
+  | "map-fallback"
+  | "generic-discovery"
+  | "otp-fallback"
+  | "xml-agent";
+
 export interface SectionMeta {
   key: string;
   displayName: string;
   status: "extracted" | "empty";
+  htmlId: string;
+  extractionMethod: ExtractionMethod;
+  plainTextFallback: boolean;
   rowCount: number;
   tableCount: number;
   detailCount: number;
@@ -529,6 +541,18 @@ function sectionDataCounts(data: SectionData) {
   };
 }
 
+function isPlainTextFallback(data: SectionData): boolean {
+  return data.tables.length === 0 && data.details.length === 0 && data.text.length > 0;
+}
+
+/** Convert a section-content HTML ID suffix to a human-readable display name. */
+function htmlIdToDisplayName(htmlId: string): string {
+  return htmlId
+    .replace(/^additional-/, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const EMPTY_META: ExtractionMeta = {
   sections: [],
   totalDetected: 0,
@@ -555,7 +579,9 @@ export async function extractSectionsWithMeta(html: string): Promise<ExtractionR
     const sections: ExtractedSections = {};
     const sectionMetas: SectionMeta[] = [];
     const processedKeys = new Set<string>();
+    const processedHtmlIds = new Set<string>();
 
+    // ── Pass 1: Sidebar checkboxes ──
     const checkboxes = Array.from(doc.querySelectorAll("input[data-section-key]"));
 
     for (let ci = 0; ci < checkboxes.length; ci++) {
@@ -571,16 +597,25 @@ export async function extractSectionsWithMeta(html: string): Promise<ExtractionR
 
       const mappedId = SECTION_ID_MAP[sectionKey];
       let data: SectionData | null = null;
+      let method: ExtractionMethod = "sidebar-mapped";
+      let usedHtmlId = mappedId ?? sectionKey;
 
       try {
         if (mappedId) {
           data = extractSectionContent(doc, mappedId);
+          if (data) usedHtmlId = mappedId;
+          processedHtmlIds.add(mappedId);
         }
         if (!data) {
           data = extractSectionContent(doc, sectionKey);
+          if (data) { method = "sidebar-direct"; usedHtmlId = sectionKey; }
+          processedHtmlIds.add(sectionKey);
         }
         if (!data) {
-          data = extractSectionContent(doc, `additional-${sectionKey}`);
+          const additionalId = `additional-${sectionKey}`;
+          data = extractSectionContent(doc, additionalId);
+          if (data) { method = "sidebar-additional"; usedHtmlId = additionalId; }
+          processedHtmlIds.add(additionalId);
         }
       } catch (err) {
         console.warn(`[extractSections] Failed to extract section "${sectionKey}":`, err);
@@ -590,14 +625,23 @@ export async function extractSectionsWithMeta(html: string): Promise<ExtractionR
 
       if (data) {
         sections[readableName] = data;
-        sectionMetas.push({ key: sectionKey, displayName: readableName, status: "extracted", ...sectionDataCounts(data) });
+        sectionMetas.push({
+          key: sectionKey, displayName: readableName, status: "extracted",
+          htmlId: usedHtmlId, extractionMethod: method, plainTextFallback: isPlainTextFallback(data),
+          ...sectionDataCounts(data),
+        });
       } else {
-        sectionMetas.push({ key: sectionKey, displayName: readableName, status: "empty", rowCount: 0, tableCount: 0, detailCount: 0 });
+        sectionMetas.push({
+          key: sectionKey, displayName: readableName, status: "empty",
+          htmlId: usedHtmlId, extractionMethod: method, plainTextFallback: false,
+          rowCount: 0, tableCount: 0, detailCount: 0,
+        });
       }
 
       if (ci % 3 === 2) await yieldToMain();
     }
 
+    // ── Pass 2: SECTION_ID_MAP fallback (sections mapped but without checkboxes) ──
     const mapEntries = Object.entries(SECTION_ID_MAP);
     for (let ei = 0; ei < mapEntries.length; ei++) {
       const [key, htmlId] = mapEntries[ei];
@@ -608,12 +652,18 @@ export async function extractSectionsWithMeta(html: string): Promise<ExtractionR
       );
       if (alreadyFound) continue;
 
+      processedHtmlIds.add(htmlId);
+
       try {
         const data = extractSectionContent(doc, htmlId);
         if (data) {
           const name = key.replace(/([A-Z])/g, " $1").trim();
           sections[name] = data;
-          sectionMetas.push({ key, displayName: name, status: "extracted", ...sectionDataCounts(data) });
+          sectionMetas.push({
+            key, displayName: name, status: "extracted",
+            htmlId, extractionMethod: "map-fallback", plainTextFallback: isPlainTextFallback(data),
+            ...sectionDataCounts(data),
+          });
         }
       } catch (err) {
         console.warn(`[extractSections] Failed fallback extraction for "${key}":`, err);
@@ -622,19 +672,61 @@ export async function extractSectionsWithMeta(html: string): Promise<ExtractionR
       if (ei % 3 === 2) await yieldToMain();
     }
 
+    // ── Pass 3: OTP special-case ──
     const hasOtp = Object.keys(sections).some((name) =>
       /otpsettings|otp settings/i.test(name.replace(/\s+/g, ""))
     );
     if (!hasOtp) {
+      processedHtmlIds.add("additional-OTPSettings");
       try {
         const otpData = extractSectionContent(doc, "additional-OTPSettings");
         if (otpData) {
           sections["Authentication & OTP Settings"] = otpData;
-          sectionMetas.push({ key: "OTPSettings", displayName: "Authentication & OTP Settings", status: "extracted", ...sectionDataCounts(otpData) });
+          sectionMetas.push({
+            key: "OTPSettings", displayName: "Authentication & OTP Settings", status: "extracted",
+            htmlId: "additional-OTPSettings", extractionMethod: "otp-fallback",
+            plainTextFallback: isPlainTextFallback(otpData),
+            ...sectionDataCounts(otpData),
+          });
         }
       } catch (err) {
         console.warn("[extractSections] OTP extraction failed:", err);
       }
+    }
+
+    // ── Pass 4: Generic discovery — find section-content-* containers not yet processed ──
+    const allContainers = doc.querySelectorAll('[id^="section-content-"]');
+    let discoveryCount = 0;
+    for (let di = 0; di < allContainers.length; di++) {
+      const container = allContainers[di];
+      const fullId = container.id;
+      const htmlId = fullId.replace(/^section-content-/, "");
+
+      if (processedHtmlIds.has(htmlId)) continue;
+      processedHtmlIds.add(htmlId);
+
+      try {
+        const data = extractSectionContent(doc, htmlId);
+        if (data) {
+          const name = htmlIdToDisplayName(htmlId);
+          sections[name] = data;
+          sectionMetas.push({
+            key: htmlId, displayName: name, status: "extracted",
+            htmlId, extractionMethod: "generic-discovery",
+            plainTextFallback: isPlainTextFallback(data),
+            ...sectionDataCounts(data),
+          });
+          discoveryCount++;
+        }
+      } catch (err) {
+        console.warn(`[extractSections] Generic discovery failed for "${htmlId}":`, err);
+      }
+
+      if (di % 3 === 2) await yieldToMain();
+    }
+
+    if (discoveryCount > 0) {
+      console.info(`[extractSections] Generic discovery found ${discoveryCount} additional section(s)`);
     }
 
     const totalDetected = sectionMetas.length;
@@ -671,6 +763,9 @@ export function buildMetaFromSections(sections: ExtractedSections): ExtractionMe
     key: name,
     displayName: name,
     status: "extracted" as const,
+    htmlId: "",
+    extractionMethod: "xml-agent" as const,
+    plainTextFallback: isPlainTextFallback(data),
     ...sectionDataCounts(data),
   }));
   const total = metas.length;

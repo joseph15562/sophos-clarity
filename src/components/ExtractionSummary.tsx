@@ -12,9 +12,21 @@ export interface ExtractionSummaryProps {
   files: FileExtractionInfo[];
 }
 
+const METHOD_LABELS: Record<string, string> = {
+  "sidebar-mapped": "mapped",
+  "sidebar-direct": "direct",
+  "sidebar-additional": "additional",
+  "map-fallback": "fallback",
+  "generic-discovery": "discovered",
+  "otp-fallback": "OTP",
+  "xml-agent": "agent",
+};
+
 function SectionRow({ section }: { section: SectionMeta }) {
   const isExtracted = section.status === "extracted";
   const itemCount = section.rowCount + section.detailCount;
+  const methodLabel = METHOD_LABELS[section.extractionMethod] ?? section.extractionMethod;
+  const isDiscovered = section.extractionMethod === "generic-discovery";
 
   return (
     <div className="flex items-center gap-2 py-1 text-xs">
@@ -26,6 +38,12 @@ function SectionRow({ section }: { section: SectionMeta }) {
       <span className={`flex-1 truncate ${isExtracted ? "text-foreground" : "text-muted-foreground"}`}>
         {section.displayName}
       </span>
+      {section.plainTextFallback && (
+        <span className="text-[9px] px-1 py-0.5 rounded bg-[#F29400]/10 text-[#F29400] font-medium">text</span>
+      )}
+      {isDiscovered && (
+        <span className="text-[9px] px-1 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-medium">{methodLabel}</span>
+      )}
       {isExtracted && itemCount > 0 && (
         <span className="text-[10px] text-muted-foreground tabular-nums">
           {itemCount} {itemCount === 1 ? "item" : "items"}

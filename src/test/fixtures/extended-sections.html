@@ -1,0 +1,75 @@
+<!--
+  Extended Sophos XGS Config Viewer fixture for testing generic section discovery.
+  Has standard sidebar sections PLUS extra section-content-* containers that are
+  NOT in the sidebar checkboxes or SECTION_ID_MAP.
+-->
+<!DOCTYPE html>
+<html>
+<head><title>Sophos Config Viewer</title></head>
+<body>
+  <!-- Sidebar with a subset of checkboxes -->
+  <div id="sidebar">
+    <div data-section-name="Firewall Rules">
+      <input type="checkbox" data-section-key="firewallRules" checked />
+    </div>
+    <div data-section-name="Zones">
+      <input type="checkbox" data-section-key="Zone" checked />
+    </div>
+  </div>
+
+  <!-- Standard firewall rules section (sidebar-mapped) -->
+  <div id="section-content-firewall-rules">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Rule Name</th><th>Status</th><th>Source</th><th>Destination</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Allow-All</td><td>On</td><td>LAN</td><td>WAN</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Standard zones section (sidebar-mapped) -->
+  <div id="section-content-zones">
+    <table>
+      <thead><tr><th>Zone</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>LAN</td><td>LAN</td></tr>
+        <tr><td>WAN</td><td>WAN</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- UNMAPPED section: VPN settings (NOT in sidebar, NOT in SECTION_ID_MAP) -->
+  <div id="section-content-vpn-settings">
+    <table>
+      <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>IPsec VPN</td><td>Enabled</td></tr>
+        <tr><td>SSL VPN</td><td>Enabled</td></tr>
+        <tr><td>Remote Access</td><td>Disabled</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- UNMAPPED section: DHCP server (NOT in sidebar, NOT in SECTION_ID_MAP) -->
+  <div id="section-content-dhcp-server">
+    <table>
+      <thead><tr><th>Interface</th><th>Range Start</th><th>Range End</th><th>Lease Time</th></tr></thead>
+      <tbody>
+        <tr><td>Port1</td><td>10.0.0.100</td><td>10.0.0.200</td><td>8h</td></tr>
+        <tr><td>Port2</td><td>192.168.1.100</td><td>192.168.1.200</td><td>24h</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- UNMAPPED section: DNS settings (text-only, no table — tests plain text fallback) -->
+  <div id="section-content-dns-settings">
+    Primary DNS: 8.8.8.8  Secondary DNS: 8.8.4.4  DNS Proxy: Enabled  Conditional Forwarding: corp.local → 10.0.0.5
+  </div>
+
+  <!-- UNMAPPED section: empty container (should NOT be discovered as it yields no data) -->
+  <div id="section-content-empty-custom">
+  </div>
+</body>
+</html>
