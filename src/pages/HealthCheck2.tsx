@@ -3397,7 +3397,8 @@ export default function HealthCheck() {
 }
 
 function CompleteProfileGate({ seAuth }: { seAuth: ReturnType<typeof import("@/hooks/use-se-auth").useSEAuthProvider> }) {
-  const [name, setName] = useState("");
+  const suggestedName = seAuth.seProfile?.healthCheckPreparedBy || seAuth.user?.user_metadata?.full_name as string || seAuth.user?.user_metadata?.name as string || "";
+  const [name, setName] = useState(suggestedName);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
