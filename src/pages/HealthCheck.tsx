@@ -314,6 +314,8 @@ function HealthCheckInner() {
     return activeTeam ? `${name} — ${activeTeam.name}` : name;
   }, [seAuth.seProfile, activeTeam]);
 
+  const exportFieldsReady = !!(customerName.trim() && customerEmail.trim() && preparedFor.trim());
+
   /** One-time: copy legacy localStorage "Prepared by" into `se_profiles.health_check_prepared_by`. */
   useEffect(() => {
     const p = seAuth.seProfile;
@@ -776,6 +778,11 @@ function HealthCheckInner() {
   }, []);
 
   const exportSummaryJson = useCallback(() => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
     const manualOverrides = loadSeHealthCheckBpOverrides();
     const bp: Record<string, SophosBPScore> = {};
@@ -828,6 +835,7 @@ function HealthCheckInner() {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
+  const [savedCheckId, setSavedCheckId] = useState<string | null>(null);
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useState(false);
 
   // Config upload request state
@@ -900,26 +908,80 @@ function HealthCheckInner() {
         manualBpOverrideIds: [...manualOverrides],
       });
 
-      const { error } = await supabase
-        .from("se_health_checks")
-        .insert({
-          se_user_id: seAuth.seProfile.id,
-          customer_name: customerName.trim() || null,
-          overall_score: avgScore,
-          overall_grade: avgGrade,
-          findings_count: allFindings.length,
-          firewall_count: files.length,
-          team_id: activeTeamId ?? null,
-          summary_json: {
-            scores,
-            topFindings: allFindings.slice(0, 10).map((f) => f.title ?? f.id),
-            snapshot,
-          },
-        } as Record<string, unknown>);
+      const payload = {
+        se_user_id: seAuth.seProfile.id,
+        customer_name: customerName.trim() || null,
+        overall_score: avgScore,
+        overall_grade: avgGrade,
+        findings_count: allFindings.length,
+        firewall_count: files.length,
+        team_id: activeTeamId ?? null,
+        summary_json: {
+          scores,
+          topFindings: allFindings.slice(0, 10).map((f) => f.title ?? f.id),
+          snapshot,
+        },
+      } as Record<string, unknown>;
 
-      if (error) throw error;
-      setHistoryRefreshKey((k) => k + 1);
-      toast.success("Health check saved to your history.");
+      const STALE_MS = 7 * 24 * 60 * 60 * 1000;
+
+      if (savedCheckId) {
+        const { error } = await supabase
+          .from("se_health_checks")
+          .update({ ...payload, checked_at: new Date().toISOString() })
+          .eq("id", savedCheckId);
+        if (error) throw error;
+        setHistoryRefreshKey((k) => k + 1);
+        toast.success("Health check updated.");
+      } else {
+        const serialNumbers = files.map((f) => f.serialNumber).filter(Boolean).sort();
+        let matchId: string | null = null;
+
+        if (customerName.trim()) {
+          const { data: candidates } = await supabase
+            .from("se_health_checks")
+            .select("id, checked_at, summary_json")
+            .eq("se_user_id", seAuth.seProfile.id)
+            .eq("customer_name", customerName.trim())
+            .order("checked_at", { ascending: false })
+            .limit(20);
+
+          if (candidates?.length) {
+            const match = candidates.find((row) => {
+              const age = Date.now() - new Date(row.checked_at as string).getTime();
+              if (age > STALE_MS) return false;
+              const snap = (row.summary_json as Record<string, unknown>)?.snapshot as Record<string, unknown> | undefined;
+              const savedSerials = ((snap?.files as Array<{ serialNumber?: string }>) ?? [])
+                .map((f) => f.serialNumber)
+                .filter(Boolean)
+                .sort();
+              return JSON.stringify(savedSerials) === JSON.stringify(serialNumbers);
+            });
+            matchId = match?.id as string | null;
+          }
+        }
+
+        if (matchId) {
+          const { error } = await supabase
+            .from("se_health_checks")
+            .update({ ...payload, checked_at: new Date().toISOString() })
+            .eq("id", matchId);
+          if (error) throw error;
+          setSavedCheckId(matchId);
+          setHistoryRefreshKey((k) => k + 1);
+          toast.success("Health check updated.");
+        } else {
+          const { data: insertedRow, error } = await supabase
+            .from("se_health_checks")
+            .insert(payload)
+            .select("id")
+            .single();
+          if (error) throw error;
+          if (insertedRow) setSavedCheckId((insertedRow as { id: string }).id);
+          setHistoryRefreshKey((k) => k + 1);
+          toast.success("Health check saved.");
+        }
+      }
     } catch (err: any) {
       console.error("[health-check] save failed", err);
       const msg = err?.message || err?.error || (typeof err === "string" ? err : JSON.stringify(err));
@@ -947,6 +1009,7 @@ function HealthCheckInner() {
     seExcludedBpChecks,
     centralLinkedForAnalysis,
     activeTeamId,
+    savedCheckId,
   ]);
 
   // ── Config upload request handlers ──
@@ -1217,6 +1280,11 @@ function HealthCheckInner() {
   }, [seAuth.seProfile, fetchConfigUploadRequests]);
 
   const handleDownloadHealthCheckPdf = useCallback(async () => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
     const labels = files
       .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
@@ -1308,6 +1376,11 @@ function HealthCheckInner() {
   ]);
 
   const handleDownloadHealthCheckHtml = useCallback(async () => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
     const labels = files
       .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
@@ -1395,6 +1468,11 @@ function HealthCheckInner() {
   ]);
 
   const handleDownloadHealthCheckZip = useCallback(async () => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
     const labels = files
       .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
@@ -1482,11 +1560,12 @@ function HealthCheckInner() {
   ]);
 
   const handleSendReportToCustomer = useCallback(async () => {
+    const missing: string[] = [];
+    if (!customerName.trim()) missing.push("Customer Name");
+    if (!customerEmail.trim()) missing.push("Customer Email");
+    if (!preparedFor.trim()) missing.push("Prepared For");
+    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
-    if (!customerEmail.trim()) {
-      toast.error("Enter a customer email address first.");
-      return;
-    }
     const labels = files
       .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
       .filter((l) => analysisResults[l]);
@@ -2136,13 +2215,16 @@ function HealthCheckInner() {
                   {savingCheck ? "Saving…" : "Save health check"}
                 </Button>
               </div>
+              {!exportFieldsReady && (
+                <p className="text-xs text-amber-500">Fill in Customer Name, Customer Email, and Prepared For to enable exports.</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="default"
                   size="sm"
                   className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
-                  disabled={pdfBusy}
+                  disabled={pdfBusy || !exportFieldsReady}
                   onClick={() => void handleDownloadHealthCheckZip()}
                 >
                   {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -2153,7 +2235,7 @@ function HealthCheckInner() {
                   variant="outline"
                   size="sm"
                   className="rounded-lg gap-1.5"
-                  disabled={pdfBusy}
+                  disabled={pdfBusy || !exportFieldsReady}
                   onClick={() => void handleDownloadHealthCheckPdf()}
                 >
                   {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -2164,28 +2246,26 @@ function HealthCheckInner() {
                   variant="outline"
                   size="sm"
                   className="rounded-lg gap-1.5"
-                  disabled={pdfBusy}
+                  disabled={pdfBusy || !exportFieldsReady}
                   onClick={() => void handleDownloadHealthCheckHtml()}
                 >
                   <FileText className="h-4 w-4" />
                   HTML only
                 </Button>
-                <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" onClick={exportSummaryJson}>
+                <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" disabled={!exportFieldsReady} onClick={exportSummaryJson}>
                   <Download className="h-4 w-4" />
                   Summary JSON
                 </Button>
-                {customerEmail.trim() && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
-                    disabled={sendingReport || pdfBusy || !files.length}
-                    onClick={() => void handleSendReportToCustomer()}
-                  >
-                    {sendingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    {sendingReport ? "Sending…" : `Send to ${customerEmail.trim()}`}
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  className="rounded-lg gap-1.5 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background"
+                  disabled={sendingReport || pdfBusy || !files.length || !exportFieldsReady}
+                  onClick={() => void handleSendReportToCustomer()}
+                >
+                  {sendingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sendingReport ? "Sending…" : customerEmail.trim() ? `Send to ${customerEmail.trim()}` : "Send to customer"}
+                </Button>
               </div>
             </div>
 
