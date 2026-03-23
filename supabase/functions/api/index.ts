@@ -275,7 +275,7 @@ async function sophosFetchFirewalls(token: string, identity: SophosIdentity, ten
   const fwHeaders: Record<string, string> = { "X-Tenant-ID": tenantId };
   const fwItems = await sophosFetchAllPages(
     `${apiHost}/firewall/v1/firewalls`, token, fwHeaders,
-  ) as Array<{ id: string; hostname?: string; name?: string; serialNumber?: string; firmwareVersion?: string; model?: string }>;
+  ) as Array<{ id: string; hostname?: string; name?: string; serialNumber?: string; firmwareVersion?: string; model?: string; cluster?: { id?: string; mode?: string; status?: string } | null }>;
 
   let licenseItems: Array<{ serialNumber?: string; licenses?: unknown[] }> = [];
   try {
@@ -297,6 +297,7 @@ async function sophosFetchFirewalls(token: string, identity: SophosIdentity, ten
       serialNumber: fw.serialNumber ?? "",
       firmwareVersion: fw.firmwareVersion ?? "",
       model: fw.model ?? "",
+      cluster: fw.cluster ?? null,
     })),
     licenses: licenseItems,
   };

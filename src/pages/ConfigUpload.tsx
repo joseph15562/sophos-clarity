@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Upload, CheckCircle2, Shield, AlertTriangle, ChevronDown, Lock, RefreshCw, Loader2, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,39 @@ interface CentralFirewall {
   serialNumber: string;
   firmwareVersion: string;
   model: string;
+  cluster?: { id?: string; mode?: string; status?: string } | null;
+}
+
+interface FirewallGroup {
+  primary: CentralFirewall;
+  peers: CentralFirewall[];
+  isHA: boolean;
+}
+
+function buildFirewallGroups(fws: CentralFirewall[]): FirewallGroup[] {
+  const byHostname = new Map<string, CentralFirewall[]>();
+  const noHostKey: CentralFirewall[] = [];
+  for (const fw of fws) {
+    const key = (fw.hostname || fw.id || "").trim().toLowerCase();
+    if (!key) { noHostKey.push(fw); continue; }
+    if (!byHostname.has(key)) byHostname.set(key, []);
+    byHostname.get(key)!.push(fw);
+  }
+  const groups = Array.from(byHostname.values()).map((group) => {
+    const primary = group.find((f) => f.cluster?.status?.toLowerCase() === "primary") ?? group[0];
+    const peers = group.filter((f) => f.id !== primary.id);
+    const isHA = group.length > 1 || !!primary.cluster;
+    return { primary, peers, isHA };
+  });
+  for (const fw of noHostKey) {
+    groups.push({ primary: fw, peers: [], isHA: !!fw.cluster });
+  }
+  groups.sort((a, b) => {
+    const na = (a.primary.hostname || a.primary.name || "").toLowerCase();
+    const nb = (b.primary.hostname || b.primary.name || "").toLowerCase();
+    return na.localeCompare(nb);
+  });
+  return groups;
 }
 
 interface CentralTenant {
@@ -84,6 +117,8 @@ const ConfigUpload = () => {
   const [centralAccountType, setCentralAccountType] = useState<string | null>(null);
   const [loadingFirewalls, setLoadingFirewalls] = useState(false);
   const [centralHowToOpen, setCentralHowToOpen] = useState(false);
+
+  const firewallGroups = useMemo(() => buildFirewallGroups(centralFirewalls), [centralFirewalls]);
 
   useEffect(() => {
     if (!token) { setPageState("not-found"); return; }
@@ -247,6 +282,11 @@ const ConfigUpload = () => {
   }, [token, handleCentralLink]);
 
   const handleFirewallSelect = useCallback((firewallId: string) => {
+    if (firewallId === "__none__") {
+      setSelectedFirewallId(null);
+      void handleCentralLink("", "");
+      return;
+    }
     setSelectedFirewallId(firewallId);
     const fw = centralFirewalls.find((f) => f.id === firewallId);
     if (fw) void handleCentralLink(fw.id, fw.hostname || fw.name);
@@ -407,15 +447,21 @@ const ConfigUpload = () => {
                   </label>
                   <select
                     className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 appearance-none"
-                    value={selectedFirewallId ?? ""}
+                    value={selectedFirewallId ?? "__none__"}
                     onChange={(e) => handleFirewallSelect(e.target.value)}
                   >
-                    <option value="" disabled>Choose a firewall…</option>
-                    {centralFirewalls.map((fw) => (
-                      <option key={fw.id} value={fw.id}>
-                        {fw.hostname || fw.name} {fw.serialNumber ? `(${fw.serialNumber})` : ""} {fw.model ? `— ${fw.model}` : ""}
-                      </option>
-                    ))}
+                    <option value="__none__">Not linked</option>
+                    {firewallGroups.map((g) => {
+                      const all = [g.primary, ...g.peers];
+                      const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
+                      const displayName = g.primary.hostname || g.primary.name || g.primary.serialNumber || "Unknown";
+                      const ha = g.isHA ? ` [HA${g.peers.length > 0 ? ` — ${1 + g.peers.length} nodes` : ""}]` : "";
+                      return (
+                        <option key={g.primary.id} value={g.primary.id}>
+                          {displayName} — {serials}{ha}
+                        </option>
+                      );
+                    })}
                   </select>
                   {selectedFirewallId && (
                     <div className="flex items-center gap-1.5 text-[#00995a] text-xs">
