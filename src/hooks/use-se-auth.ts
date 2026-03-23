@@ -49,10 +49,18 @@ async function fetchSEProfile(userId: string): Promise<SEProfile | null> {
   };
 }
 
-async function createSEProfile(userId: string, email: string): Promise<SEProfile | null> {
+async function createSEProfile(userId: string, email: string, user?: User): Promise<SEProfile | null> {
+  const metaName =
+    (user?.user_metadata?.full_name as string) ||
+    (user?.user_metadata?.name as string) ||
+    null;
+
+  const insert: Record<string, unknown> = { user_id: userId, email };
+  if (metaName) insert.display_name = metaName;
+
   const { data, error } = await supabase
     .from("se_profiles")
-    .insert({ user_id: userId, email } as Record<string, unknown>)
+    .insert(insert)
     .select("id, email, display_name, health_check_prepared_by, se_title")
     .single();
 
@@ -82,7 +90,20 @@ export function useSEAuthProvider(): SEAuthState {
     }
     let profile = await fetchSEProfile(u.id);
     if (!profile) {
-      profile = await createSEProfile(u.id, u.email);
+      profile = await createSEProfile(u.id, u.email, u);
+    }
+    if (profile && !profile.displayName) {
+      const metaName =
+        (u.user_metadata?.full_name as string) ||
+        (u.user_metadata?.name as string) ||
+        null;
+      if (metaName) {
+        profile = { ...profile, displayName: metaName };
+        await supabase
+          .from("se_profiles")
+          .update({ display_name: metaName } as Record<string, unknown>)
+          .eq("id", profile.id);
+      }
     }
     setSEProfile(profile);
   }, []);

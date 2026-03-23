@@ -390,6 +390,12 @@ async function authenticateSE(req: Request) {
     .eq("user_id", user.id)
     .maybeSingle();
   if (!seProfile) return null;
+  if (!seProfile.display_name) {
+    seProfile.display_name =
+      (user.user_metadata as Record<string, unknown>)?.full_name as string ||
+      (user.user_metadata as Record<string, unknown>)?.name as string ||
+      null;
+  }
   return { user, seProfile };
 }
 
