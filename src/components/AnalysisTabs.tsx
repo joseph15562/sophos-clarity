@@ -316,13 +316,11 @@ export function AnalysisTabs({
             </SecurityWidgetShell>
           )}
 
-          {w("quick-actions") && (
-            <SecurityWidgetShell>
-              <Suspense fallback={null}>
-                <QuickActions onNavigate={setActiveTab} />
-              </Suspense>
-            </SecurityWidgetShell>
-          )}
+          <SecurityWidgetShell>
+            <Suspense fallback={null}>
+              <QuickActions onNavigate={setActiveTab} />
+            </Suspense>
+          </SecurityWidgetShell>
 
           {totalFindings > 0 && (
             <div className="flex flex-wrap items-center gap-2" data-tour="export-buttons">
@@ -418,14 +416,12 @@ export function AnalysisTabs({
             />
           </SecurityWidgetShell>
           {!isGuest && !localMode && configMetas.length > 0 && (
-            <SecurityWidgetShell>
               <Suspense fallback={null}>
                 <CentralEnrichment
                   configMetas={configMetas}
                   customerName={branding.customerName}
                 />
               </Suspense>
-            </SecurityWidgetShell>
           )}
 
           {(w("mdr-status") || w("firmware-tracker")) && (

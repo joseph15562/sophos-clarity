@@ -1,5 +1,5 @@
-import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
-import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Mail, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck, Globe, Webhook, FileStack } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from "react";
+import { X, LayoutDashboard, FileText, History, Settings, ChevronRight, Wifi, Users, Activity, Shield, Trash2, Bell, Mail, Plane, Plug, Fingerprint, Code, Eye, ClipboardCheck, Globe, Webhook, FileStack, ImageIcon, Upload, Loader2 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,8 @@ import { ClientPortalView, type Assessment } from "@/components/ClientPortalView
 import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
+import { useCompanyLogo } from "@/hooks/use-company-logo";
+import { useToast } from "@/hooks/use-toast";
 
 const TenantDashboard = lazy(() => import("@/components/TenantDashboard").then((m) => ({ default: m.TenantDashboard })));
 const LicenceExpiryWidget = lazy(() => import("@/components/LicenceExpiryWidget").then((m) => ({ default: m.LicenceExpiryWidget })));
@@ -220,6 +222,98 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
   );
 }
 
+function CompanyLogoSettings() {
+  const { logoUrl, setLogo, saving, canEdit } = useCompanyLogo();
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 512_000) {
+        toast({ title: "Logo too large", description: "Maximum file size is 500 KB.", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setLogo(reader.result as string);
+        toast({ title: "Company logo updated" });
+      };
+      reader.readAsDataURL(file);
+    },
+    [setLogo, toast],
+  );
+
+  if (!canEdit) return null;
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold text-foreground">Company Logo</p>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          Upload your company logo. It appears in the workspace header and can be used in generated reports and client portals.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="flex h-16 w-40 items-center justify-center rounded-xl border border-dashed border-border bg-background/70 px-3">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Company logo"
+              className="h-12 w-auto max-w-[140px] object-contain"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-1 text-muted-foreground">
+              <ImageIcon className="h-5 w-5" />
+              <span className="text-[9px]">No logo</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-[10px] h-8"
+            onClick={() => fileRef.current?.click()}
+            disabled={saving}
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+            {logoUrl ? "Change Logo" : "Upload Logo"}
+          </Button>
+          {logoUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-[10px] h-7 text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                setLogo(null);
+                toast({ title: "Company logo removed" });
+              }}
+              disabled={saving}
+            >
+              <X className="h-3 w-3" />
+              Remove
+            </Button>
+          )}
+        </div>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          className="hidden"
+          onChange={handleFile}
+        />
+      </div>
+
+      <p className="text-[9px] text-muted-foreground">PNG, JPEG, SVG, or WebP. Max 500 KB.</p>
+    </div>
+  );
+}
+
 export function ManagementDrawer({
   open,
   onClose,
@@ -238,6 +332,7 @@ export function ManagementDrawer({
   onDownloadReport,
 }: Props) {
   const { org, isViewerOnly, canManageTeam } = useAuth();
+  const { logoUrl: companyLogo } = useCompanyLogo();
   const [clientViewOpen, setClientViewOpen] = useState(false);
   const [clientViewAssessments, setClientViewAssessments] = useState<Assessment[]>([]);
   const [clientViewScoreHistory, setClientViewScoreHistory] = useState<ScoreHistoryEntry[]>([]);
@@ -306,6 +401,11 @@ export function ManagementDrawer({
         <div className="relative overflow-hidden border-b border-border/70 shrink-0">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
           <div className="flex items-center gap-3 px-5 py-4 bg-card/70 backdrop-blur-sm">
+            {companyLogo && (
+              <div className="shrink-0 h-10 w-10 rounded-xl border border-border/50 bg-white dark:bg-white/10 flex items-center justify-center overflow-hidden">
+                <img src={companyLogo} alt="Company logo" className="h-8 w-8 object-contain" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent mb-1">Workspace controls</p>
               <h2 className="text-base font-display font-black text-foreground truncate">
@@ -473,6 +573,12 @@ export function ManagementDrawer({
                   </div>
                 )}
               </div>
+
+              {canManageTeam && (
+              <SettingsSection title="Company Branding" icon={<ImageIcon className="h-3.5 w-3.5 text-brand-accent" />} subtitle="Set your company logo for reports and portals">
+                <CompanyLogoSettings />
+              </SettingsSection>
+              )}
 
               {!localMode && (
               <SettingsSection title="Sophos Central API" icon={<Wifi className="h-3.5 w-3.5 text-[#005BC8]" />} subtitle="Manage your API connection">

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { Building2, Shield, ChevronDown, Search, ArrowUpDown, Cloud, HardDrive, Plug, Download, Maximize2, X, ChevronRight } from "lucide-react";
+import { Building2, Shield, ChevronDown, Search, ArrowUpDown, Cloud, HardDrive, Plug, Download, Maximize2, X, ChevronRight, Activity, AlertTriangle, FileWarning } from "lucide-react";
+import { scoreToColor } from "@/lib/design-tokens";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
@@ -418,7 +419,7 @@ export function TenantDashboard() {
             <div className="flex flex-wrap gap-2 justify-center">
               {allFirewalls.map((fw) => {
                 const g = fw.grade;
-                const color = g === "A" || g === "B" ? "bg-[#00F2B3]/80" : g === "C" ? "bg-[#F8E300]/80" : g === "D" ? "bg-[#F29400]/80" : "bg-[#EA0022]/80";
+                const color = g === "A" || g === "B" ? "bg-severity-low/80" : g === "C" ? "bg-severity-medium/80" : g === "D" ? "bg-severity-high/80" : "bg-severity-critical/80";
                 return (
                   <div
                     key={`${fw.customer}-${fw.label}`}
@@ -505,45 +506,63 @@ export function TenantDashboard() {
 
       {/* Fleet KPI Summary Bar */}
       <div className="space-y-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{customers.length}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Customers</p>
-          </div>
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{totalFirewalls}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Firewalls</p>
-          </div>
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{avgScore}<span className="text-sm font-semibold text-muted-foreground">/100</span></p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Avg Score</p>
-          </div>
-          <div className={`rounded-2xl border shadow-sm px-4 py-3.5 text-center space-y-1 ${atRisk > 0 ? "border-[#EA0022]/25 bg-[#EA0022]/[0.04]" : "border-[#00F2B3]/25 bg-[#00F2B3]/[0.04]"}`}>
-            <p className={`text-2xl font-display font-bold tracking-tight tabular-nums ${atRisk > 0 ? "text-[#EA0022]" : "text-[#00F2B3]"}`}>{atRisk}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">At Risk (&lt;60)</p>
-          </div>
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{totalFindings}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Total Findings</p>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          {([
+            { value: customers.length, label: "Customers", icon: <Building2 className="h-3.5 w-3.5" /> },
+            { value: totalFirewalls, label: "Firewalls", icon: <Shield className="h-3.5 w-3.5" /> },
+            { value: avgScore, label: "Score /100", icon: <Activity className="h-3.5 w-3.5" />, color: scoreToColor(avgScore) },
+            { value: atRisk, label: "At Risk", icon: <AlertTriangle className="h-3.5 w-3.5" />, alert: atRisk > 0 },
+            { value: totalFindings, label: "Findings", icon: <FileWarning className="h-3.5 w-3.5" /> },
+          ] as const).map((kpi) => {
+            const isAlert = "alert" in kpi && kpi.alert;
+            return (
+              <div
+                key={kpi.label}
+                className={`group relative rounded-2xl border px-3 py-3.5 text-center flex flex-col items-center justify-between transition-all duration-200 hover:shadow-md overflow-hidden ${
+                  isAlert
+                    ? "border-severity-critical/30 bg-severity-critical/[0.06] dark:bg-severity-critical/[0.08] shadow-sm"
+                    : "border-border/50 bg-card/60 dark:bg-white/[0.03] shadow-sm hover:border-brand-accent/20"
+                }`}
+              >
+                <div className={`h-6 w-6 rounded-md flex items-center justify-center mb-2 ${
+                  isAlert
+                    ? "bg-severity-critical/10 text-severity-critical"
+                    : "bg-brand-accent/[0.08] text-brand-accent"
+                }`}>
+                  {kpi.icon}
+                </div>
+                <p className={`text-2xl font-display font-black tracking-tight tabular-nums leading-none ${
+                  isAlert ? "text-severity-critical" : ""
+                }`} style={"color" in kpi && kpi.color && !isAlert ? { color: kpi.color } : undefined}>
+                  {kpi.value}
+                </p>
+                <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.14em] mt-2 h-4 flex items-center">{kpi.label}</p>
+              </div>
+            );
+          })}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{slaBreaches}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">SLA Breaches</p>
-          </div>
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{useCloud ? agentsOffline : "—"}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Agents Offline</p>
-          </div>
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{useCloud ? assessmentsThisWeek : "—"}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Assessments (7d)</p>
-          </div>
-          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
-            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{totalRulesAnalysed.toLocaleString()}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Rules Analysed</p>
-          </div>
+          {([
+            { value: slaBreaches, label: "SLA Breaches", warn: slaBreaches > 0 },
+            { value: useCloud ? agentsOffline : "—", label: "Agents Offline", warn: typeof agentsOffline === "number" && agentsOffline > 0 },
+            { value: useCloud ? assessmentsThisWeek : "—", label: "Assessments 7d" },
+            { value: totalRulesAnalysed.toLocaleString(), label: "Rules Analysed" },
+          ] as const).map((kpi) => {
+            const isWarn = "warn" in kpi && kpi.warn;
+            return (
+              <div
+                key={kpi.label}
+                className={`rounded-xl border px-3 py-3 text-center flex flex-col items-center justify-center transition-colors ${
+                  isWarn
+                    ? "border-severity-high/25 bg-severity-high/[0.05]"
+                    : "border-border/40 bg-card/40 dark:bg-white/[0.02]"
+                }`}
+              >
+                <p className={`text-xl font-display font-bold tracking-tight tabular-nums leading-none ${isWarn ? "text-severity-high" : "text-foreground"}`}>{kpi.value}</p>
+                <p className="text-[9px] font-semibold text-muted-foreground/60 uppercase tracking-[0.14em] mt-1.5 whitespace-nowrap">{kpi.label}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
