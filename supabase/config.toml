@@ -2,6 +2,15 @@ project_id = "rpnvyrxorfaqabkdhctl"
 
 [functions.parse-config]
 verify_jwt = false
+# Anonymous access needed: browser sends JWT via Authorization header,
+# but the function validates it internally via auth.getUser().
+
+[functions.api]
+verify_jwt = false
+# Mixed auth: JWT (web app), API keys (agents), service role (cron),
+# public tokens (shared reports). Per-route auth enforced in handler.
+# Re-enable after API split (see docs/plans/war-room-audit.md #5).
 
 [functions.sophos-central]
 verify_jwt = false
+# Proxied from the browser with user JWT in header; validated internally.

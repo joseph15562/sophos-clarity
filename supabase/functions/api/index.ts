@@ -749,6 +749,28 @@ async function handleSubmit(
 
 const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 
+// ── Route Auth Matrix ──
+// Gateway-level JWT verification is DISABLED (config.toml). Each route
+// enforces its own auth. Re-enable after splitting the monolith (#5).
+//
+//   Route prefix              Auth mechanism
+//   ─────────────────────────  ─────────────────────────────────────
+//   agent/register|delete|…   JWT via userClient + getUser
+//   agent/config|submit|…     API key via X-API-Key + authenticateAgent
+//   passkey/*                  JWT via userClient + getUser
+//   admin/*                    JWT + org admin role check
+//   auth/mfa-recovery          JWT + org admin role check
+//   assessments                JWT via userClient + getUser
+//   shared/:token              Public (token-based, no auth)
+//   shared-health-check/:token Public (token-based, no auth)
+//   se-teams/*                 JWT via authenticateSE
+//   health-checks/*            JWT via authenticateSE
+//   health-checks/process-…    Service role key (cron)
+//   config-upload-request(s)   JWT via authenticateSE
+//   config-upload/:token/…     Public or JWT depending on sub-route
+//   firewalls                  JWT via userClient + getUser
+//   send-report                JWT via authenticateSE
+
 // ── Main router ──
 
 serve(async (req: Request) => {
@@ -816,7 +838,7 @@ serve(async (req: Request) => {
       if (!email || !totpCode) return json({ error: "email and totpCode required" }, 400);
 
       const db = adminClient();
-      // Verify the user belongs to the agent's org
+
       const { data: users } = await db.auth.admin.listUsers();
       const targetUser = users?.users?.find((u: any) => u.email === email);
       if (!targetUser) return json({ error: "User not found" }, 404);
@@ -830,9 +852,48 @@ serve(async (req: Request) => {
 
       if (!membership) return json({ error: "User not in agent's organisation" }, 403);
 
-      // Verify TOTP via a sign-in + MFA challenge/verify flow
-      // Note: In production, use Supabase Auth MFA API server-side
-      // For now, return a short-lived session token
+      // Verify TOTP via Supabase Auth MFA admin API
+      const { data: factors, error: factorsErr } = await db.auth.admin.mfa.listFactors({
+        userId: targetUser.id,
+      });
+
+      if (factorsErr) return json({ error: "Failed to retrieve MFA factors" }, 500);
+
+      const totpFactors = factors?.factors?.filter((f: any) => f.factor_type === "totp" && f.status === "verified") ?? [];
+      if (totpFactors.length === 0) {
+        return json({ error: "User has no enrolled TOTP factor. Enrol MFA in the web app first." }, 412);
+      }
+
+      const factorId = totpFactors[0].id;
+
+      const { data: challenge, error: challengeErr } = await db.auth.admin.mfa.createChallenge({
+        factorId,
+        userId: targetUser.id,
+      });
+
+      if (challengeErr || !challenge) {
+        return json({ error: "Failed to create MFA challenge" }, 500);
+      }
+
+      const { data: verification, error: verifyErr } = await db.auth.admin.mfa.verify({
+        factorId,
+        challengeId: challenge.id,
+        code: totpCode,
+      });
+
+      if (verifyErr || !verification) {
+        return json({ error: "Invalid TOTP code" }, 401);
+      }
+
+      await db.from("audit_log").insert({
+        org_id: agent.org_id,
+        user_id: targetUser.id,
+        action: "agent.mfa_verify",
+        resource_type: "agent",
+        resource_id: agent.id as string,
+        metadata: { email, agentName: agent.name },
+      }).then(() => {}).catch(() => {});
+
       return json({
         sessionToken: crypto.randomUUID(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),

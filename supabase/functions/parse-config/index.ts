@@ -25,18 +25,15 @@ let corsHeaders: Record<string, string> = {};
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
 const RATE_WINDOW_MS = 60_000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 6;
-const rateLimitMap = new Map<string, number[]>();
 
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-  if (timestamps.length >= MAX_REQUESTS_PER_WINDOW) {
-    rateLimitMap.set(userId, timestamps);
-    return true;
-  }
-  timestamps.push(now);
-  rateLimitMap.set(userId, timestamps);
-  return false;
+async function isRateLimited(userId: string, db: ReturnType<typeof createClient>): Promise<boolean> {
+  const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
+  const { count } = await db
+    .from("gemini_usage")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", windowStart);
+  return (count ?? 0) >= MAX_REQUESTS_PER_WINDOW;
 }
 
 /**
@@ -279,8 +276,8 @@ serve(async (req) => {
     );
   }
 
-  // Per-user rate limit (in-memory, resets on cold start)
-  if (isRateLimited(user.id)) {
+  // Per-user rate limit (DB-backed via gemini_usage table)
+  if (adminClient && await isRateLimited(user.id, adminClient)) {
     console.warn(`parse-config: rate limited user=${user.id.slice(0, 8)}…`);
     return new Response(
       JSON.stringify({ error: "Too many requests. Please wait a moment before generating another report." }),
@@ -575,6 +572,7 @@ serve(async (req) => {
                         completion_tokens: completionTokens ?? null,
                         model,
                         is_chat: chat,
+                        user_id: user.id,
                       }).then(() => {}).catch((err) => console.warn("[parse-config] gemini_usage insert failed:", err.message));
                     }
                     const FREE_TIER_TPM = 250_000;
