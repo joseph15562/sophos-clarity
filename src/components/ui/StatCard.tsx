@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
+
 export function StatCard({ icon, value, label, border, bg, iconBg, valueColor, onClick }: {
-  icon: string; value: number; label: string;
+  icon: string | ReactNode; value: number; label: string;
   border: string; bg: string; iconBg: string; valueColor: string;
   onClick?: () => void;
 }) {
@@ -10,7 +12,11 @@ export function StatCard({ icon, value, label, border, bg, iconBg, valueColor, o
       onClick={onClick}
     >
       <div className={`h-12 w-12 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
-        <img src={icon} alt="" className="h-7 w-7 sophos-icon" />
+        {typeof icon === "string" ? (
+          <img src={icon} alt="" className="h-7 w-7 sophos-icon" />
+        ) : (
+          icon
+        )}
       </div>
       <div>
         <p className={`text-3xl font-extrabold ${valueColor} leading-none`}>{value}</p>

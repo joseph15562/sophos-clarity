@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
-import { Download } from "lucide-react";
+import { Download, Scale } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { mapToAllFrameworks, CONTROL_CATEGORIES, type FrameworkMapping, type ControlMapping, type ControlStatus } from "@/lib/compliance-map";
 
@@ -140,13 +140,22 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
   const detailMapping = selectedFw ? mappings.find((m) => m.framework === selectedFw) : null;
 
   return (
-    <section ref={cardRef} className="rounded-xl border border-border bg-card p-5 space-y-4 relative">
+    <section ref={cardRef} className="rounded-[28px] border border-[#5A00FF]/15 bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,246,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(12,15,30,0.98),rgba(18,14,34,0.98))] p-5 sm:p-6 space-y-5 relative shadow-[0_20px_55px_rgba(90,0,255,0.10)] overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00EDFF]" />
       <div>
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <img src="/icons/sophos-governance.svg" alt="" className="h-5 w-5 sophos-icon" />
-            <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
-            <span className="text-[10px] text-muted-foreground">{mappings.length} framework{mappings.length !== 1 ? "s" : ""}</span>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#5A00FF]/15 bg-[#5A00FF]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#5A00FF] dark:text-[#B47AFF]">
+              Framework coverage view
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Scale className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+              <h3 className="text-lg font-display font-black text-foreground tracking-tight">Compliance Heatmap</h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">{mappings.length} framework{mappings.length !== 1 ? "s" : ""}</span>
+            </div>
+            <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
+              Visualize where controls are covered, partially met, or missing so audit conversations and remediation priorities are immediately clearer.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -167,9 +176,23 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             </button>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1 pl-7">Indicative mapping based on firewall configuration controls. A full compliance audit requires additional evidence beyond firewall configuration.</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Pass</p>
+            <p className="text-sm font-semibold text-foreground mt-1">Controls appear aligned in the current firewall posture</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Partial</p>
+            <p className="text-sm font-semibold text-foreground mt-1">Controls need stronger evidence or fuller implementation</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Fail</p>
+            <p className="text-sm font-semibold text-foreground mt-1">Controls show material compliance gaps or missing safeguards</p>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1">Indicative mapping based on firewall configuration controls. A full compliance audit requires additional evidence beyond firewall configuration.</p>
         {mappings.length > 0 && (
-          <div className="mt-2 pl-7 space-y-0.5">
+          <div className="mt-2 space-y-0.5">
             {mappings.map((m) => {
               const scorable = m.summary.pass + m.summary.partial + m.summary.fail;
               const total = scorable + m.summary.na;
@@ -184,21 +207,40 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px]">
-        {(Object.entries(STATUS_STYLES) as [ControlStatus, typeof STATUS_STYLES.pass][]).map(([status, s]) => (
-          <div key={status} className="flex items-center gap-1.5">
-            <span className={`inline-flex items-center justify-center h-4 w-4 rounded text-[9px] font-bold ${s.cell} ${s.iconColor}`}>{s.icon}</span>
-            <span className="text-muted-foreground">{s.label}</span>
+      <div className="rounded-2xl border border-border/70 bg-card/60 px-4 py-4 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status legend</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Use this to read control alignment at a glance across every mapped framework.</p>
           </div>
-        ))}
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-[10px]">
+          {(Object.entries(STATUS_STYLES) as [ControlStatus, typeof STATUS_STYLES.pass][]).map(([status, s]) => (
+            <div key={status} className="rounded-xl border border-border bg-background/70 px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
+              <span className={`inline-flex items-center justify-center h-8 w-8 rounded-xl text-[11px] font-bold shrink-0 ${s.cell} ${s.iconColor}`}>{s.icon}</span>
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">{s.label}</p>
+                <p className="text-muted-foreground leading-relaxed">
+                  {status === "pass"
+                    ? "Control appears aligned in the current firewall posture."
+                    : status === "partial"
+                      ? "Control is only partly evidenced or needs strengthening."
+                      : status === "fail"
+                        ? "Control gap is visible and likely needs remediation."
+                        : "Control is not applicable or not assessable from this config."}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Heatmap grid */}
-      <div className="overflow-x-auto -mx-2 px-2" onMouseLeave={() => setTooltip(null)}>
-        <table className="w-full min-w-max border-collapse text-[10px]">
+      <div className="overflow-x-auto -mx-2 px-2 rounded-2xl border border-border/70 bg-card/80 p-2 shadow-sm" onMouseLeave={() => setTooltip(null)}>
+        <table className="w-full min-w-max border-separate border-spacing-0 text-[11px]">
           <thead>
             <tr>
-              <th className="text-left p-1.5 text-muted-foreground font-semibold uppercase tracking-wider sticky left-0 bg-card z-10 min-w-[100px]">
+              <th className="text-left p-2 text-foreground/80 font-semibold uppercase tracking-[0.16em] sticky left-0 bg-card z-10 min-w-[130px] rounded-tl-xl">
                 Control
               </th>
               {mappings.map((m) => {
@@ -207,14 +249,14 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                 return (
                   <th
                     key={m.framework}
-                    className="p-1.5 text-center text-muted-foreground font-semibold cursor-pointer hover:text-foreground transition-colors min-w-[80px]"
+                    className="p-2 text-center text-foreground/75 font-semibold cursor-pointer hover:text-foreground transition-colors min-w-[100px]"
                     onClick={() => setSelectedFw(selectedFw === m.framework ? null : m.framework)}
                   >
-                    <span className={selectedFw === m.framework ? "text-[#2006F7] dark:text-[#00EDFF] underline underline-offset-2" : ""}>
+                    <span className={selectedFw === m.framework ? "text-[#2006F7] dark:text-[#00EDFF] underline underline-offset-2 font-bold" : ""}>
                       {m.framework.length > 20 ? m.framework.slice(0, 18) + "…" : m.framework}
                     </span>
                     {scorable > 0 && (
-                      <span className={`block text-[9px] font-bold tabular-nums mt-0.5 ${
+                      <span className={`block text-[10px] font-bold tabular-nums mt-0.5 ${
                         pct >= 80 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
                         pct >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
                       }`}>{pct}%</span>
@@ -227,7 +269,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
           <tbody>
             {allControls.map((controlName) => (
               <tr key={controlName}>
-                <td className="p-1.5 text-foreground font-medium sticky left-0 bg-card z-10 border-t border-border/50">
+                <td className="p-2 text-foreground font-semibold sticky left-0 bg-card z-10 border-t border-border/50">
                   {controlName}
                 </td>
                 {mappings.map((m) => {
@@ -241,12 +283,12 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   return (
                     <td
                       key={cellKey}
-                      className={`p-1.5 text-center border-t border-border/50 rounded-sm transition-colors select-none ${s.cell} ${hasFindings ? "cursor-pointer" : ""} ${isSelected ? "ring-2 ring-[#2006F7]/50" : ""}`}
+                      className={`p-2 text-center border-t border-border/50 rounded-md transition-colors select-none ${s.cell} ${hasFindings ? "cursor-pointer" : ""} ${isSelected ? "ring-2 ring-[#2006F7]/60 shadow-[0_0_0_1px_rgba(32,6,247,0.18)]" : ""}`}
                       onClick={ctrl && hasFindings ? () => handleCellClick(m.framework, ctrl) : undefined}
                       onMouseEnter={ctrl ? (e) => showTooltip(e, { controlName: ctrl.controlName, evidence: ctrl.evidence, status }) : undefined}
                       onMouseLeave={() => setTooltip(null)}
                     >
-                      <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[11px] font-bold ${s.iconColor}`}>
+                      <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-[12px] font-black ${s.iconColor}`}>
                         {s.icon}
                       </span>
                     </td>
@@ -310,7 +352,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       )}
 
       {/* Framework summary bars */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 pt-2 border-t border-border">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 pt-2 border-t border-border/70">
         {mappings.map((m) => {
           const total = m.summary.pass + m.summary.partial + m.summary.fail;
           const passPct = total > 0 ? Math.round((m.summary.pass / total) * 100) : 0;
@@ -318,10 +360,10 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             <button
               key={m.framework}
               onClick={() => setSelectedFw(selectedFw === m.framework ? null : m.framework)}
-              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+              className={`rounded-2xl border px-3 py-3 text-left transition-colors shadow-sm ${
                 selectedFw === m.framework
                   ? "border-[#2006F7]/30 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08]"
-                  : "border-border hover:border-[#2006F7]/20"
+                  : "border-border bg-card/70 hover:border-[#2006F7]/20"
               }`}
             >
               <p className="text-[10px] font-semibold text-foreground truncate">{m.framework}</p>

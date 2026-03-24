@@ -1,4 +1,4 @@
-import { LogIn, Play, ArrowRight, Sparkles, ShieldCheck, Clock3 } from "lucide-react";
+import { LogIn, Play, ArrowRight, Sparkles, ShieldCheck, Clock3, Save, FileText, BarChart3, Scale, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +9,6 @@ import { AgentFleetPanel } from "@/components/AgentFleetPanel";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { OrgInfo } from "@/hooks/use-auth";
-import { Save } from "lucide-react";
 import { Suspense } from "react";
 import { FirewallLinker } from "@/components/FirewallLinker";
 import { WelcomeBackCard } from "@/components/WelcomeBackCard";
@@ -146,12 +145,23 @@ export function UploadSection({
               Upload Firewall Export
               <ArrowRight className="h-4 w-4" />
             </Button>
+            {!isGuest && org && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="gap-2 rounded-xl px-5 border-[#00F2B3]/25 dark:border-[#00F2B3]/30 hover:bg-[#00F2B3]/10 text-[#00774a] dark:text-[#00F2B3]"
+                onClick={() => document.getElementById("firecomply-agent-fleet-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              >
+                <Wifi className="h-4 w-4" />
+                Connected Firewalls
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-wrap justify-center gap-6 pt-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" /> Technical Reports</span>
-            <span className="flex items-center gap-1.5"><img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" /> Executive Briefs</span>
-            <span className="flex items-center gap-1.5"><img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" /> Compliance Reports</span>
+            <span className="flex items-center gap-1.5"><FileText className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Technical Reports</span>
+            <span className="flex items-center gap-1.5"><BarChart3 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Executive Briefs</span>
+            <span className="flex items-center gap-1.5"><Scale className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Compliance Reports</span>
             <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Deterministic Findings</span>
             <span className="flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Export-Ready Outputs</span>
           </div>
@@ -205,9 +215,9 @@ export function UploadSection({
       <section className="space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">1</span>
-              <h2 className="text-lg font-display font-bold text-foreground">
+            <div className="flex items-center gap-2.5">
+              <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">1</span>
+              <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
                 {hasFiles ? "Firewall Configs" : "Upload Firewall Exports"}
               </h2>
               {hasFiles && (
@@ -216,8 +226,11 @@ export function UploadSection({
                 </span>
               )}
             </div>
-            <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-              Upload Sophos HTML or XML exports to create a deterministic security baseline, map controls, and prepare customer-ready reports with evidence-backed findings.
+            <p className="text-base font-medium text-foreground/85 dark:text-white/75 max-w-3xl leading-relaxed">
+              Upload Sophos HTML or XML exports to create a{" "}
+              <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">deterministic security baseline</span>, map controls, and prepare{" "}
+              <span className="text-foreground dark:text-white font-semibold">customer-ready reports</span> with{" "}
+              <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">evidence-backed findings</span>.
             </p>
           </div>
 
@@ -257,7 +270,7 @@ export function UploadSection({
             {hasFiles && (
               <div className="flex items-center gap-4 py-1">
                 <div className="flex-1 border-t border-border" />
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2006F7] dark:text-[#00EDFF]">
                   Add from connected agents
                 </span>
                 <div className="flex-1 border-t border-border" />
@@ -282,8 +295,10 @@ export function UploadSection({
                   <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
                     Connected Firewalls for <span className="text-[#2006F7] dark:text-[#00EDFF]">live managed assessments</span>
                   </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Pull fresh assessments directly from connected agents to refresh customer posture, compare sites side-by-side, and scale reviews across your managed firewall estate without waiting for manual exports.
+                  <p className="text-base font-medium text-foreground/85 dark:text-white/75 leading-relaxed">
+                    Pull{" "}
+                    <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">fresh assessments directly from connected agents</span> to refresh customer posture, compare sites side-by-side, and{" "}
+                    <span className="text-foreground dark:text-white font-semibold">scale reviews across your managed firewall estate</span> without waiting for manual exports.
                   </p>
                 </div>
 
@@ -314,8 +329,10 @@ export function UploadSection({
                 </div>
               </div>
 
-              <p className="text-[11px] text-muted-foreground rounded-xl border border-border/60 bg-card/60 px-4 py-3">
-                <span className="font-semibold text-foreground">Why this matters:</span> manual upload is perfect for one-off reviews; connected firewalls unlock continuous assessment across a managed estate.
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
+                <span className="font-semibold text-foreground dark:text-white">Why this matters:</span>{" "}
+                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">manual upload is perfect for one-off reviews</span>; connected firewalls unlock{" "}
+                <span className="text-foreground dark:text-white font-semibold">continuous assessment across a managed estate</span>.
               </p>
 
               <AgentFleetPanel
@@ -331,16 +348,76 @@ export function UploadSection({
       {/* Step 2 — Assessment Context (before findings so compliance tags are dynamic) */}
       {hasFiles && (
         <section className="space-y-4" data-tour="step-context">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">2</span>
-            <h2 className="text-lg font-display font-bold text-foreground">Assessment Context</h2>
-            <span className="text-xs text-muted-foreground">(optional — select frameworks to tag findings)</span>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">
+              2
+            </span>
+            <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
+              Assessment Context
+            </h2>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#2006F7] dark:text-[#00EDFF] rounded-full border border-[#2006F7]/20 dark:border-[#00EDFF]/30 px-2 py-0.5">
+              Optional: frameworks tagging
+            </span>
           </div>
-          <Card>
-            <CardContent className="pt-6">
-              <BrandingSetup branding={branding} onChange={setBranding} />
-            </CardContent>
-          </Card>
+
+          <div className="relative overflow-hidden rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)]">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
+
+            <div className="p-5 sm:p-6 space-y-5">
+              <div className="flex items-start justify-between gap-5 flex-wrap">
+                <div className="space-y-2 max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF]">
+                    Executive-ready setup
+                  </div>
+                  <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
+                    Shape the assessment into a <span className="text-[#2006F7] dark:text-[#00EDFF]">customer-ready outcome</span>
+                  </h3>
+                  <p className="text-base font-medium text-foreground/85 dark:text-white/75 leading-relaxed">
+                    <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">Add the client context</span>, brand the output, and select the frameworks that matter so{" "}
+                    <span className="text-foreground dark:text-white font-semibold">findings, reports, and executive summaries land with the right audience</span>.
+                  </p>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[360px] lg:max-w-[430px]">
+                  <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best for</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">Customer-specific reports, executive packs, compliance-aligned reviews</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Outcome</p>
+                    <p className="text-sm font-semibold text-foreground mt-1">Sharper findings, clearer story, more credible deliverables</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Brand</p>
+                  <p className="text-sm font-semibold text-foreground mt-1">Tailor outputs for the customer and stakeholder audience</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Align</p>
+                  <p className="text-sm font-semibold text-foreground mt-1">Map findings to the frameworks that drive remediation</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Elevate</p>
+                  <p className="text-sm font-semibold text-foreground mt-1">Turn technical output into boardroom-ready reporting</p>
+                </div>
+              </div>
+
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
+                <span className="font-semibold text-foreground dark:text-white">Why this matters:</span>{" "}
+                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">the analysis is deterministic</span>, but the context determines how clearly it speaks to{" "}
+                <span className="text-foreground dark:text-white font-semibold">customers, auditors, and executives</span>.
+              </p>
+
+              <Card className="border-border/70 bg-card/80 shadow-sm">
+                <CardContent className="pt-6">
+                  <BrandingSetup branding={branding} onChange={setBranding} />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </section>
       )}
 
@@ -358,12 +435,17 @@ export function UploadSection({
 
       {/* Privacy banner */}
       {hasFiles && (
-        <div className="rounded-xl border border-[#00F2B3]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00F2B3] dark:border-l-[#00F2B3] bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
+        <div className="rounded-xl border border-[#00F2B3]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00F2B3] dark:border-l-[#00F2B3] bg-[#00F2B3]/[0.05] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
           <div className="h-10 w-10 rounded-lg bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0 mt-0.5">
-            <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
+            <ShieldCheck className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
           </div>
-          <div className="text-sm text-muted-foreground leading-relaxed">
-            <span className="font-bold text-[#00774a] dark:text-[#00F2B3]">Data Privacy Protected</span> — All IP addresses, customer names, and firewall identifiers are automatically anonymised before being sent to the AI. Your sensitive network data never leaves the browser; only sanitised structural data is transmitted for analysis. Real values are restored locally in the final report.
+          <div className="space-y-1.5">
+            <p className="text-sm font-semibold text-[#00774a] dark:text-[#00F2B3] tracking-tight">
+              Data Privacy Protected
+            </p>
+            <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
+              All IP addresses, customer names, and firewall identifiers are automatically anonymised before being sent to the AI. Your sensitive network data never leaves the browser; only sanitised structural data is transmitted for analysis. Real values are restored locally in the final report.
+            </p>
           </div>
         </div>
       )}
@@ -389,9 +471,11 @@ export function UploadSection({
       {/* Guest sign-in prompt for reports */}
       {hasFiles && isGuest && onShowAuth && (
         <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">3</span>
-            <h2 className="text-lg font-display font-bold text-foreground">Generate Reports</h2>
+          <div className="flex items-center gap-2.5">
+            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">3</span>
+            <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
+              Generate Reports
+            </h2>
           </div>
           <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] px-5 py-4 flex items-center gap-4">
             <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
@@ -399,8 +483,9 @@ export function UploadSection({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Sign in to generate reports</p>
-              <p className="text-[10px] text-muted-foreground">
-                Create an account or sign in to generate technical reports, executive briefs, and compliance packs from your analysis.
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
+                Create an account or sign in to generate{" "}
+                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">technical reports, executive briefs, and compliance packs</span> from your analysis.
               </p>
             </div>
             <Button
@@ -419,7 +504,7 @@ export function UploadSection({
       {hasReports && !isGuest && (
         <div className="rounded-xl border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-5 py-4 flex items-center gap-4">
           <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-            <img src="/icons/sophos-document.svg" alt="" className="h-5 w-5 sophos-icon" />
+            <FileText className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-foreground">
@@ -430,7 +515,7 @@ export function UploadSection({
             </p>
           </div>
           <Button onClick={() => setViewingReports(true)} className="gap-2 bg-[#2006F7] hover:bg-[#10037C] text-white">
-            <img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 brightness-0 invert" />
+            <FileText className="h-4 w-4" />
             View Reports
           </Button>
         </div>
@@ -443,10 +528,10 @@ export function UploadSection({
           <button
             onClick={() => onSaveReports(false)}
             disabled={savingReports}
-            className={`no-print flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${
+            className={`no-print flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg border transition-colors ${
               reportsSaved
-                ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
-                : "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
+                ? "bg-[#00F2B3]/10 border-[#00F2B3]/30 text-[#00F2B3] dark:text-[#00F2B3]"
+                : "bg-[#2006F7]/10 border-[#2006F7]/30 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
             }`}
           >
             <Save className="h-3.5 w-3.5" />

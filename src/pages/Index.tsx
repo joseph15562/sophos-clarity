@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
-import { ArrowLeftRight, RotateCcw, Save } from "lucide-react";
+import { ArrowLeftRight, RotateCcw, Save, BarChart3, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadedFile } from "@/components/FileUpload";
 import { BrandingData } from "@/components/BrandingSetup";
@@ -689,7 +689,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center">
-                  <img src="/icons/sophos-chart.svg" alt="" className="h-4 w-4 sophos-icon" />
+                  <BarChart3 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -859,12 +859,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                 <div className="flex flex-wrap gap-2">
                   {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
                     <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
-                      <img src="/icons/sophos-chart.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Executive Brief
+                      <BarChart3 className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" /> Add Executive Brief
                     </Button>
                   )}
                   {!reports.find((r) => r.id === "report-compliance") && (
                     <Button variant="outline" size="sm" onClick={generateCompliance} className="gap-1.5 text-xs">
-                      <img src="/icons/sophos-governance.svg" alt="" className="h-3.5 w-3.5 sophos-icon" /> Add Compliance Report
+                      <Scale className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" /> Add Compliance Report
                     </Button>
                   )}
                 </div>

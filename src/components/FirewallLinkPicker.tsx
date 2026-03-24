@@ -272,7 +272,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
     <div className="mt-1">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-[10px] text-[#2006F7] dark:text-[#00EDFF] hover:underline"
+        className="inline-flex items-center gap-1.5 rounded-md border border-[#2006F7]/30 dark:border-[#00EDFF]/30 bg-[#2006F7]/[0.06] dark:bg-[#00EDFF]/[0.08] px-2 py-1 text-[11px] font-semibold tracking-tight text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/12 transition-colors"
       >
         <Link2 className="h-3 w-3" />
         Link to Central Firewall

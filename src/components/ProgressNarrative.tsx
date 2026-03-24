@@ -225,24 +225,24 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
   if (Object.keys(currentResults).length === 0) return null;
 
   return (
-    <Card className="rounded-xl border border-border shadow-sm no-print">
+    <Card className="rounded-xl border border-[#2006F7]/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] shadow-[0_12px_36px_rgba(32,6,247,0.08)] no-print">
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-lg font-display font-black tracking-tight flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
               Progress narrative
             </CardTitle>
-            <CardDescription className="text-xs flex items-center gap-1.5">
+            <CardDescription className="text-sm font-medium text-foreground/80 dark:text-white/75 flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-[#00F2B3] dark:text-[#00F2B3] shrink-0" />
               Share with your customer — paste into email or Teams
             </CardDescription>
           </div>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             size="sm"
-            className="shrink-0 gap-1.5"
+            className="shrink-0 gap-1.5 border-[#2006F7]/25 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10 font-semibold"
             disabled={loading || !text}
             onClick={handleCopy}
           >
@@ -253,9 +253,9 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
       </CardHeader>
       <CardContent className="pt-0">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading score history…</p>
+          <p className="text-sm font-medium text-foreground/75 dark:text-white/70">Loading score history…</p>
         ) : (
-          <p className="text-sm text-foreground leading-relaxed">{text}</p>
+          <p className="text-sm font-medium text-foreground/85 dark:text-white/78 leading-relaxed">{text}</p>
         )}
       </CardContent>
     </Card>

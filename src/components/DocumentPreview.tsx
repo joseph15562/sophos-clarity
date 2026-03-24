@@ -75,7 +75,7 @@ function ReportToc({ markdown }: { markdown: string }) {
         onClick={() => setOpen(!open)}
         className="text-xs font-semibold text-[#2006F7] dark:text-[#009CFB] hover:underline flex items-center gap-1.5"
       >
-        <img src="/icons/sophos-document.svg" alt="" className="h-3.5 w-3.5 sophos-icon" />
+        <FileText className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" />
         {open ? "Hide" : "Show"} Table of Contents ({headings.length} sections)
       </button>
       {open && (

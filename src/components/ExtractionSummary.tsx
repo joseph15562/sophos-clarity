@@ -129,12 +129,14 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="h-7 w-7 rounded-full bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center">
-          <img src="/icons/sophos-document.svg" alt="" className="h-4 w-4 sophos-icon" />
+      <div className="flex items-center gap-2.5">
+        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7]/20 to-[#5A00FF]/20 dark:from-[#2006F7]/25 dark:to-[#00EDFF]/20 ring-2 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 flex items-center justify-center">
+          <FileText className="h-4.5 w-4.5 text-[#2006F7] dark:text-[#00EDFF]" />
         </div>
-        <h3 className="text-sm font-display font-bold text-foreground">Extraction Summary</h3>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+        <h3 className="text-base sm:text-lg font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
+          Extraction Summary
+        </h3>
+        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
           overallCoverage === 100
             ? "bg-[#00F2B3]/10 text-[#00F2B3]"
             : overallCoverage >= 70
@@ -145,13 +147,25 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
         </span>
       </div>
 
-      <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3">
+      <div className="rounded-xl border border-[#2006F7]/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] px-4 py-3 space-y-3 shadow-[0_12px_36px_rgba(32,6,247,0.08)]">
         {/* Overall stats */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span><strong className="text-foreground">{totalDetected}</strong> sections detected</span>
-          <span><strong className="text-foreground">{totalExtracted}</strong> extracted</span>
-          {totalEmpty > 0 && <span className="text-[#F29400]"><strong>{totalEmpty}</strong> empty</span>}
-          <span><strong className="text-foreground">{totalRows.toLocaleString()}</strong> items parsed</span>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+            <p className="text-muted-foreground">Sections detected</p>
+            <p className="font-semibold text-foreground tabular-nums">{totalDetected}</p>
+          </div>
+          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+            <p className="text-muted-foreground">Extracted</p>
+            <p className="font-semibold text-foreground tabular-nums">{totalExtracted}</p>
+          </div>
+          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+            <p className="text-muted-foreground">Empty</p>
+            <p className={`font-semibold tabular-nums ${totalEmpty > 0 ? "text-[#F29400]" : "text-foreground"}`}>{totalEmpty}</p>
+          </div>
+          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+            <p className="text-muted-foreground">Items parsed</p>
+            <p className="font-semibold text-foreground tabular-nums">{totalRows.toLocaleString()}</p>
+          </div>
         </div>
 
         {/* Coverage bar */}

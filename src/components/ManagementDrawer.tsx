@@ -84,19 +84,19 @@ function Skeleton() {
 function SettingsSection({ title, icon, subtitle, children }: { title: string; icon?: ReactNode; subtitle?: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="rounded-2xl border border-border/80 bg-card/80 overflow-hidden shadow-[0_10px_30px_rgba(15,23,42,0.04)] backdrop-blur-sm">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+        className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${open ? "bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.10]" : "hover:bg-muted/30"}`}
       >
-        {icon && <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{icon}</div>}
+        {icon && <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${open ? "bg-[#2006F7]/10 dark:bg-[#00EDFF]/10" : "bg-muted/30"}`}>{icon}</div>}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-foreground">{title}</p>
-          {subtitle && <p className="text-[9px] text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="text-[9px] text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
-        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0 ${open ? "rotate-90" : ""}`} />
+        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0 ${open ? "rotate-90 text-[#2006F7] dark:text-[#00EDFF]" : ""}`} />
       </button>
-      {open && <div className="border-t border-border">{children}</div>}
+      {open && <div className="border-t border-border/70 bg-background/50">{children}</div>}
     </div>
   );
 }
@@ -297,23 +297,26 @@ export function ManagementDrawer({
       />
 
       {/* Drawer */}
-      <div className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-lg bg-background border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-lg border-l border-[#2006F7]/10 bg-[radial-gradient(circle_at_top_right,rgba(32,6,247,0.08),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,251,255,0.98))] dark:bg-[radial-gradient(circle_at_top_right,rgba(32,6,247,0.16),transparent_26%),linear-gradient(180deg,rgba(9,13,24,0.99),rgba(12,17,30,0.99))] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-card shrink-0">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-display font-bold text-foreground truncate">
-              {isGuest ? "Settings" : (orgName || "Management")}
-            </h2>
-            <p className="text-[10px] text-muted-foreground">
-              {isGuest ? "Reports & assessment history" : "Dashboard, reports & settings"}
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
+        <div className="relative overflow-hidden border-b border-border/70 shrink-0">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
+          <div className="flex items-center gap-3 px-5 py-4 bg-card/70 backdrop-blur-sm">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF] mb-1">Workspace controls</p>
+              <h2 className="text-base font-display font-black text-foreground truncate">
+                {isGuest ? "Settings" : (orgName || "Management")}
+              </h2>
+              <p className="text-[10px] text-muted-foreground">
+                {isGuest ? "Reports & assessment history" : "Dashboard, reports, team controls, integrations"}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
             {canManageTeam && (
               <Dialog open={clientViewOpen} onOpenChange={setClientViewOpen}>
                 <DialogTrigger asChild>
                   <button
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium border border-[#2006F7]/15 bg-[#2006F7]/[0.05] text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10 transition-colors"
                     title="Preview client portal view"
                   >
                     <Eye className="h-3.5 w-3.5" />
@@ -342,24 +345,27 @@ export function ManagementDrawer({
             </button>
           </div>
         </div>
+      </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-border bg-card shrink-0 px-2">
-          {visibleTabs.map((tab) => (
-            <button
-              key={tab.id}
-              data-tour={`drawer-tab-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium border-b-2 transition-colors ${
-                currentTab === tab.id
-                  ? "border-[#2006F7] text-[#2006F7] dark:text-[#6B5BFF]"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
+        <div className="border-b border-border/70 bg-card/60 shrink-0 px-3 py-2">
+          <div className="flex gap-2 rounded-2xl bg-muted/30 p-1">
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.id}
+                data-tour={`drawer-tab-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-medium transition-all ${
+                  currentTab === tab.id
+                    ? "bg-background text-[#2006F7] dark:text-[#00EDFF] shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Content */}
@@ -428,15 +434,15 @@ export function ManagementDrawer({
               {onRerunSetup && <RerunSetupButton onClick={onRerunSetup} />}
 
               {/* Local Mode toggle */}
-              <div className="rounded-lg border border-border bg-card overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3">
+              <div className="rounded-2xl border border-[#2006F7]/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.05),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.12),rgba(0,242,179,0.04))] overflow-hidden shadow-[0_10px_30px_rgba(32,6,247,0.05)]">
+                <div className="flex items-center justify-between px-4 py-3.5 gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                      <Plane className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="h-8 w-8 rounded-xl bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
+                      <Plane className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-foreground">Local Mode</p>
-                      <p className="text-[9px] text-muted-foreground">Air-gapped / offline — no external API calls</p>
+                      <p className="text-[9px] text-muted-foreground">Air-gapped / offline operation with no external API calls</p>
                     </div>
                   </div>
                   <button
@@ -455,7 +461,7 @@ export function ManagementDrawer({
                   </button>
                 </div>
                 {localMode && (
-                  <div className="border-t border-border px-4 py-3 bg-[#F29400]/5 dark:bg-[#F29400]/10">
+                  <div className="border-t border-border/70 px-4 py-3 bg-[#F29400]/5 dark:bg-[#F29400]/10">
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
                       <strong className="text-foreground">Local mode enabled.</strong> AI report generation and Sophos Central integration are disabled. All analysis, scoring, and compliance mapping run client-side. Data is saved to IndexedDB/localStorage only.
                     </p>

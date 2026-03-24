@@ -19,6 +19,7 @@ import {
   XCircle,
   UserCheck,
   Send,
+  Shield,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { analyseConfig } from "@/lib/analyse-config";
@@ -1664,7 +1665,7 @@ function HealthCheckInner() {
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="mx-auto max-w-5xl px-4 py-3 flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
-            <img src="/icons/sophos-shield.svg" alt="" className="h-6 w-6 sophos-icon" />
+            <Shield className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
           </div>
           <div className="mr-auto shrink-0">
             <h1 className="text-base sm:text-lg font-display font-bold tracking-tight">

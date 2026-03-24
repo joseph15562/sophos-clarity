@@ -1,5 +1,5 @@
 import { useCallback, useState, useMemo } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, FileText, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FirewallLinkPicker, type FirewallLink } from "@/components/FirewallLinkPicker";
 
@@ -108,9 +108,13 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
     <div className="space-y-3">
       {/* File list */}
       {files.map((f) => (
-        <div key={f.id} className="rounded-xl border border-[#2006F7]/25 dark:border-[#2006F7]/30 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] flex items-center gap-4 p-4">
+        <div
+          key={f.id}
+          className="relative overflow-hidden rounded-xl border border-[#2006F7]/25 dark:border-[#2006F7]/30 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] flex items-center gap-4 p-4 shadow-[0_10px_28px_rgba(32,6,247,0.10)]"
+        >
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#2006F7]/50 to-transparent" />
           <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
-            <img src="/icons/sophos-document.svg" alt="" className="h-5 w-5 sophos-icon" />
+            <FileText className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
           </div>
           <div className="flex-1 min-w-0 space-y-1">
             <input
@@ -123,9 +127,9 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
                 onFilesChange(updated);
               }}
               placeholder="Firewall name (e.g. Sophos Firewall)"
-              className="w-full bg-transparent border-b border-[#2006F7]/25 focus:border-[#2006F7] outline-none font-bold text-foreground text-sm pb-0.5"
+              className="w-full bg-transparent border-b border-[#2006F7]/25 focus:border-[#2006F7] outline-none font-semibold tracking-tight text-foreground text-base pb-0.5"
             />
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs font-medium text-foreground/80 dark:text-white/72">
               {f.serialNumber
                 ? [f.hardwareModel, `S/N: ${f.serialNumber}`].filter(Boolean).join(" · ")
                 : f.fileName}
@@ -139,14 +143,21 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               onLinked={(link) => onFirewallLinked?.(f.id, link)}
             />
           </div>
-          <Button variant="ghost" size="icon" aria-label="Remove file" onClick={() => removeFile(f.id)} className="shrink-0 opacity-50 hover:opacity-100 self-start">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Remove file"
+            onClick={() => removeFile(f.id)}
+            className="shrink-0 self-start text-foreground/55 hover:text-[#EA0022] hover:bg-[#EA0022]/10 transition-colors"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
       ))}
       {files.length > 0 && (
-        <p className="text-[11px] text-muted-foreground">
-          Click on the config name above to rename the firewall for the report.
+        <p className="text-xs font-medium text-foreground/80 dark:text-white/70">
+          Click on the <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">config name</span> above to rename the firewall for the{" "}
+          <span className="text-foreground dark:text-white font-semibold">report</span>.
         </p>
       )}
 
@@ -166,14 +177,14 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
         }`}
       >
         {files.length > 0 ? (
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <Plus className="h-5 w-5" />
-            <span className="text-sm font-medium">Add another firewall config</span>
+          <div className="flex items-center justify-center gap-2.5 text-foreground/80 dark:text-white/75">
+            <Plus className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+            <span className="text-sm font-semibold tracking-tight">Add another firewall config</span>
           </div>
         ) : (
           <>
             <div className="mx-auto h-20 w-20 rounded-[24px] bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_40%),linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.10))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.28),transparent_40%),linear-gradient(135deg,rgba(32,6,247,0.16),rgba(0,242,179,0.10))] flex items-center justify-center mb-5 shadow-sm">
-              <img src="/icons/sophos-network.svg" alt="" className="h-9 w-9 sophos-icon" />
+              <Network className="h-9 w-9 text-[#2006F7] dark:text-[#00EDFF]" />
             </div>
             <p className="text-xl font-display font-black text-foreground mb-1 tracking-tight">
               Drop your Sophos firewall export here

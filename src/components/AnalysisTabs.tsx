@@ -1,5 +1,5 @@
 import { lazy, Suspense, useRef, useEffect, useState } from "react";
-import { ArrowLeftRight, Download, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal } from "lucide-react";
+import { ArrowLeftRight, Download, LayoutDashboard, ShieldCheck, Zap, Wrench, ClipboardCheck, SlidersHorizontal, Scale } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -129,6 +129,14 @@ function fileLabel(f: ParsedFile) {
   return f.label || f.fileName.replace(/\.(html|htm)$/i, "");
 }
 
+function SecurityWidgetShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-[26px] border border-[#2006F7]/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,249,255,0.82))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.82),rgba(14,20,34,0.82))] shadow-[0_14px_34px_rgba(15,23,42,0.05)] p-1 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 export function AnalysisTabs({
   analysisResult,
   files,
@@ -242,17 +250,36 @@ export function AnalysisTabs({
       {/* Overview */}
       <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Overview failed to load">
-          <Suspense fallback={null}>
-            <ScoreDeltaBanner analysisResults={analysisResult} />
-          </Suspense>
-          <Suspense fallback={<ChartSkeleton height={200} />}>
-            <ScoreDialGauge analysisResults={analysisResult} />
-          </Suspense>
-          <Suspense fallback={<StatGridSkeleton count={6} />}>
-            <RiskSummaryCards analysisResults={analysisResult} />
-          </Suspense>
+          <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+                  Executive posture overview
+                </div>
+                <h3 className="text-2xl font-display font-black text-foreground tracking-tight">Overview</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">Surface the headline score, posture trend, top actions, and estate-wide summary in a stronger executive-grade overview surface.</p>
+              </div>
+            </div>
 
-          <SecurityPostureScorecard analysisResults={analysisResult} />
+          <SecurityWidgetShell>
+            <Suspense fallback={null}>
+              <ScoreDeltaBanner analysisResults={analysisResult} />
+            </Suspense>
+          </SecurityWidgetShell>
+          <SecurityWidgetShell>
+            <Suspense fallback={<ChartSkeleton height={200} />}>
+              <ScoreDialGauge analysisResults={analysisResult} />
+            </Suspense>
+          </SecurityWidgetShell>
+          <SecurityWidgetShell>
+            <Suspense fallback={<StatGridSkeleton count={6} />}>
+              <RiskSummaryCards analysisResults={analysisResult} />
+            </Suspense>
+          </SecurityWidgetShell>
+
+          <SecurityWidgetShell>
+            <SecurityPostureScorecard analysisResults={analysisResult} />
+          </SecurityWidgetShell>
 
           {totalFindings > 0 && (
             <button
@@ -279,20 +306,24 @@ export function AnalysisTabs({
           />
 
           {w("assessment-pulse") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <AssessmentPulse
-                orgId={orgId}
-                currentScore={securityStats?.score}
-                currentGrade={securityStats?.grade}
-                isGuest={isGuest}
-              />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<CardSkeleton />}>
+                <AssessmentPulse
+                  orgId={orgId}
+                  currentScore={securityStats?.score}
+                  currentGrade={securityStats?.grade}
+                  isGuest={isGuest}
+                />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {w("quick-actions") && (
-            <Suspense fallback={null}>
-              <QuickActions onNavigate={setActiveTab} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={null}>
+                <QuickActions onNavigate={setActiveTab} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {totalFindings > 0 && (
@@ -335,21 +366,29 @@ export function AnalysisTabs({
             </div>
           )}
           {totalFindings > 0 && (
-            <CriticalActionsPanel analysisResults={analysisResult} onExplainFinding={onExplainFinding} />
+            <SecurityWidgetShell>
+              <CriticalActionsPanel analysisResults={analysisResult} onExplainFinding={onExplainFinding} />
+            </SecurityWidgetShell>
           )}
-          <FindingsChanges analysisResults={analysisResult} />
+          <SecurityWidgetShell>
+            <FindingsChanges analysisResults={analysisResult} />
+          </SecurityWidgetShell>
 
           {totalFindings > 0 && (w("findings-by-age") || w("sla-compliance-gauge")) && (
             <div className="grid gap-6 lg:grid-cols-2">
               {w("findings-by-age") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <FindingsByAge analysisResults={analysisResult} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <FindingsByAge analysisResults={analysisResult} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
               {w("sla-compliance-gauge") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <SlaComplianceGauge analysisResults={analysisResult} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <SlaComplianceGauge analysisResults={analysisResult} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
             </div>
           )}
@@ -357,65 +396,91 @@ export function AnalysisTabs({
           {(w("remediation-velocity") || w("alert-feed")) && (
             <div className="grid gap-6 lg:grid-cols-2">
               {w("remediation-velocity") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <RemediationVelocity analysisResults={analysisResult} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <RemediationVelocity analysisResults={analysisResult} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
               {w("alert-feed") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <AlertFeedWidget analysisResults={analysisResult} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <AlertFeedWidget analysisResults={analysisResult} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
             </div>
           )}
 
           {w("assessment-countdown") && (
-            <Suspense fallback={null}>
-              <AssessmentCountdown />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={null}>
+                <AssessmentCountdown />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
-          <EstateOverview
-            fileCount={files.length}
-            analysisResults={analysisResult}
-            totalFindings={totalFindings}
-            totalRules={totalRules}
-            totalSections={totalSections}
-            totalPopulated={totalPopulated}
-            extractionPct={extractionPct}
-            aggregatedPosture={aggregatedPosture}
-            selectedFrameworks={branding.selectedFrameworks}
-            onExplainFinding={onExplainFinding}
-          />
+          <SecurityWidgetShell>
+            <EstateOverview
+              fileCount={files.length}
+              analysisResults={analysisResult}
+              totalFindings={totalFindings}
+              totalRules={totalRules}
+              totalSections={totalSections}
+              totalPopulated={totalPopulated}
+              extractionPct={extractionPct}
+              aggregatedPosture={aggregatedPosture}
+              selectedFrameworks={branding.selectedFrameworks}
+              onExplainFinding={onExplainFinding}
+            />
+          </SecurityWidgetShell>
           {!isGuest && !localMode && configMetas.length > 0 && (
-            <Suspense fallback={null}>
-              <CentralEnrichment
-                configMetas={configMetas}
-                customerName={branding.customerName}
-              />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={null}>
+                <CentralEnrichment
+                  configMetas={configMetas}
+                  customerName={branding.customerName}
+                />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {(w("mdr-status") || w("firmware-tracker")) && (
             <div className="grid gap-6 lg:grid-cols-2">
               {w("mdr-status") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <MdrStatus analysisResults={analysisResult} files={files} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <MdrStatus analysisResults={analysisResult} files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
               {w("firmware-tracker") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <FirmwareTracker files={files} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <FirmwareTracker files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
             </div>
           )}
+          </div>
         </ErrorBoundary>
       </TabsContent>
 
       {/* Security Analysis */}
       <TabsContent value="security" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Security analysis failed to load">
+          <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+                  Deep-dive security posture
+                </div>
+                <h3 className="text-2xl font-display font-black text-foreground tracking-tight">Detailed Security Analysis</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">Explore score drivers, rule health, traffic exposure, findings distribution, and security control coverage in a stronger executive-grade analysis surface.</p>
+              </div>
+            </div>
+
           {securityStats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div
@@ -499,70 +564,94 @@ export function AnalysisTabs({
               </div>
             </div>
           )}
-          <Suspense fallback={<ChartSkeleton height={220} />}>
-            <RiskScoreDashboard analysisResults={analysisResult} />
-          </Suspense>
+          <SecurityWidgetShell>
+            <Suspense fallback={<ChartSkeleton height={220} />}>
+              <RiskScoreDashboard analysisResults={analysisResult} />
+            </Suspense>
+          </SecurityWidgetShell>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<StatGridSkeleton />}>
-              <RuleHealthOverview analysisResults={analysisResult} />
-            </Suspense>
-            <Suspense fallback={<StatGridSkeleton count={4} />}>
-              <SecurityFeatureCoverage analysisResults={analysisResult} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<StatGridSkeleton />}>
+                <RuleHealthOverview analysisResults={analysisResult} />
+              </Suspense>
+            </SecurityWidgetShell>
+            <SecurityWidgetShell>
+              <Suspense fallback={<StatGridSkeleton count={4} />}>
+                <SecurityFeatureCoverage analysisResults={analysisResult} />
+              </Suspense>
+            </SecurityWidgetShell>
           </div>
 
           {totalFindings > 0 && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <Suspense fallback={<ChartSkeleton />}>
-                <SeverityBreakdown analysisResults={analysisResult} />
-              </Suspense>
-              <Suspense fallback={<ChartSkeleton />}>
-                <FindingsBySection analysisResults={analysisResult} />
-              </Suspense>
+              <SecurityWidgetShell>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <SeverityBreakdown analysisResults={analysisResult} />
+                </Suspense>
+              </SecurityWidgetShell>
+              <SecurityWidgetShell>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <FindingsBySection analysisResults={analysisResult} />
+                </Suspense>
+              </SecurityWidgetShell>
             </div>
           )}
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Suspense fallback={<ChartSkeleton />}>
-              <ZoneTrafficFlow files={files} />
-            </Suspense>
-            {totalFindings > 0 && (
-              <Suspense fallback={<CardSkeleton />}>
-                <TopFindings analysisResults={analysisResult} />
+            <SecurityWidgetShell>
+              <Suspense fallback={<ChartSkeleton />}>
+                <ZoneTrafficFlow files={files} />
               </Suspense>
+            </SecurityWidgetShell>
+            {totalFindings > 0 && (
+              <SecurityWidgetShell>
+                <Suspense fallback={<CardSkeleton />}>
+                  <TopFindings analysisResults={analysisResult} />
+                </Suspense>
+              </SecurityWidgetShell>
             )}
           </div>
 
           {totalFindings > 0 && (
-            <Suspense fallback={<ChartSkeleton />}>
-              <PriorityMatrix analysisResults={analysisResult} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<ChartSkeleton />}>
+                <PriorityMatrix analysisResults={analysisResult} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {w("category-score-bars") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <CategoryScoreBars analysisResults={analysisResult} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<CardSkeleton />}>
+                <CategoryScoreBars analysisResults={analysisResult} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {w("coverage-matrix") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <CoverageMatrix analysisResults={analysisResult} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<CardSkeleton />}>
+                <CoverageMatrix analysisResults={analysisResult} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {(w("category-trends") || w("risk-distribution")) && (
             <div className="grid gap-6 lg:grid-cols-2">
               {w("category-trends") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <CategoryTrends analysisResults={analysisResult} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <CategoryTrends analysisResults={analysisResult} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
               {w("risk-distribution") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <RiskDistributionWidget analysisResults={analysisResult} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <RiskDistributionWidget analysisResults={analysisResult} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
             </div>
           )}
@@ -570,14 +659,18 @@ export function AnalysisTabs({
           {(w("encryption-overview") || w("admin-exposure-map")) && (
             <div className="grid gap-6 lg:grid-cols-2">
               {w("encryption-overview") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <EncryptionOverview analysisResults={analysisResult} files={files} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <EncryptionOverview analysisResults={analysisResult} files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
               {w("admin-exposure-map") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <AdminExposureMap analysisResults={analysisResult} files={files} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <AdminExposureMap analysisResults={analysisResult} files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
             </div>
           )}
@@ -585,133 +678,192 @@ export function AnalysisTabs({
           {(w("vpn-security-summary") || w("network-zone-map")) && (
             <div className="grid gap-6 lg:grid-cols-2">
               {w("vpn-security-summary") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <VpnSecuritySummary files={files} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <VpnSecuritySummary files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
               {w("network-zone-map") && (
-                <Suspense fallback={<ChartSkeleton />}>
-                  <NetworkZoneMap files={files} />
-                </Suspense>
+                <SecurityWidgetShell>
+                  <Suspense fallback={<ChartSkeleton />}>
+                    <NetworkZoneMap files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
             </div>
           )}
 
           {w("protocol-service-usage") && (
-            <Suspense fallback={<ChartSkeleton />}>
-              <ProtocolServiceWidget files={files} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<ChartSkeleton />}>
+                <ProtocolServiceWidget files={files} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {w("rule-action-dist") && (
-            <Suspense fallback={<ChartSkeleton />}>
-              <RuleActionDistribution files={files} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<ChartSkeleton />}>
+                <RuleActionDistribution files={files} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {w("finding-heatmap-time") && (
-            <Suspense fallback={<ChartSkeleton />}>
-              <FindingHeatmapTime analysisResults={analysisResult} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<ChartSkeleton />}>
+                <FindingHeatmapTime analysisResults={analysisResult} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {w("threat-feed-timeline") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <ThreatFeedTimeline files={files} />
-            </Suspense>
+            <SecurityWidgetShell>
+              <Suspense fallback={<CardSkeleton />}>
+                <ThreatFeedTimeline files={files} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
+          </div>
         </ErrorBoundary>
       </TabsContent>
 
       {/* Compliance */}
       <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Compliance view failed to load">
-          <div className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="compliance-heatmap">
-            <div className="flex items-center gap-2">
-              <img src="/icons/sophos-governance.svg" alt="" className="h-4 w-4 sophos-icon" />
-              <h3 className="text-sm font-semibold text-foreground">Compliance Heatmap</h3>
-              <TourHint
-                tourId="compliance-heatmap"
-                title="Compliance Heatmap"
-                description="View control coverage, gaps, and readiness across NIST 800-53, ISO 27001, CIS, PCI DSS, HIPAA, Essential Eight, Cyber Essentials, and more."
-              />
-              {branding.selectedFrameworks.length > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
-                  {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
-                </span>
-              )}
+          <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+                  Compliance readiness
+                </div>
+                <h3 className="text-2xl font-display font-black text-foreground tracking-tight">Compliance Analysis</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">Review control alignment, framework coverage, evidence readiness, and audit-focused posture across your selected standards.</p>
+              </div>
             </div>
-            <Suspense fallback={<ChartSkeleton height={120} />}>
-              <ComplianceHeatmap
-                analysisResults={analysisResult}
-                selectedFrameworks={branding.selectedFrameworks}
-              />
-            </Suspense>
-          </div>
 
-          <div data-tour="sophos-best-practice">
+            <div className="rounded-[26px] border border-[#5A00FF]/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(248,246,255,0.86))] dark:bg-[linear-gradient(180deg,rgba(14,18,32,0.86),rgba(20,16,34,0.86))] shadow-[0_14px_34px_rgba(90,0,255,0.08)] p-5 space-y-4" data-tour="compliance-heatmap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Scale className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                <h3 className="text-base font-display font-black text-foreground tracking-tight">Compliance Heatmap</h3>
+                <TourHint
+                  tourId="compliance-heatmap"
+                  title="Compliance Heatmap"
+                  description="View control coverage, gaps, and readiness across NIST 800-53, ISO 27001, CIS, PCI DSS, HIPAA, Essential Eight, Cyber Essentials, and more."
+                />
+                {branding.selectedFrameworks.length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
+                    {branding.selectedFrameworks.length} framework{branding.selectedFrameworks.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Coverage</p>
+                  <p className="text-sm font-semibold text-foreground mt-1">See where controls are present, partial, or missing</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Priority</p>
+                  <p className="text-sm font-semibold text-foreground mt-1">Focus remediation on the frameworks that matter most</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Readiness</p>
+                  <p className="text-sm font-semibold text-foreground mt-1">Turn technical findings into audit-facing context</p>
+                </div>
+              </div>
+              <Suspense fallback={<ChartSkeleton height={120} />}>
+                <ComplianceHeatmap
+                  analysisResults={analysisResult}
+                  selectedFrameworks={branding.selectedFrameworks}
+                />
+              </Suspense>
+            </div>
+
+          <SecurityWidgetShell className="border-[#5A00FF]/10">
+            <div data-tour="sophos-best-practice">
+              <Suspense fallback={<CardSkeleton />}>
+                <SophosBestPractice
+                  analysisResults={analysisResult}
+                  centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
+                />
+              </Suspense>
+            </div>
+          </SecurityWidgetShell>
+
+          <SecurityWidgetShell className="border-[#5A00FF]/10">
             <Suspense fallback={<CardSkeleton />}>
-              <SophosBestPractice
-                analysisResults={analysisResult}
-                centralLicences={files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences}
-              />
+              <PeerBenchmark analysisResults={analysisResult} environment={branding.environment} />
             </Suspense>
-          </div>
+          </SecurityWidgetShell>
 
-          <Suspense fallback={<CardSkeleton />}>
-            <PeerBenchmark analysisResults={analysisResult} environment={branding.environment} />
-          </Suspense>
-
-          <Suspense fallback={<CardSkeleton />}>
-            <InsuranceReadiness analysisResults={analysisResult} />
-          </Suspense>
+          <SecurityWidgetShell className="border-[#5A00FF]/10">
+            <Suspense fallback={<CardSkeleton />}>
+              <InsuranceReadiness analysisResults={analysisResult} />
+            </Suspense>
+          </SecurityWidgetShell>
 
           {w("compliance-summary") && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <Suspense fallback={<ChartSkeleton />}>
-                <CompliancePostureRing analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-              </Suspense>
-              <Suspense fallback={<ChartSkeleton />}>
-                <FrameworkCoverageBars analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-              </Suspense>
+              <SecurityWidgetShell className="border-[#5A00FF]/10">
+                <Suspense fallback={<ChartSkeleton />}>
+                  <CompliancePostureRing analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+                </Suspense>
+              </SecurityWidgetShell>
+              <SecurityWidgetShell className="border-[#5A00FF]/10">
+                <Suspense fallback={<ChartSkeleton />}>
+                  <FrameworkCoverageBars analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+                </Suspense>
+              </SecurityWidgetShell>
             </div>
           )}
 
           {w("compliance-gaps") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <ComplianceGapWidget analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
-            </Suspense>
+            <SecurityWidgetShell className="border-[#5A00FF]/10">
+              <Suspense fallback={<CardSkeleton />}>
+                <ComplianceGapWidget analysisResults={analysisResult} selectedFrameworks={branding.selectedFrameworks} />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {w("evidence-collection") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <EvidenceCollection
-                analysisResults={analysisResult}
-                selectedFrameworks={branding.selectedFrameworks}
-              />
-            </Suspense>
+            <SecurityWidgetShell className="border-[#5A00FF]/10">
+              <Suspense fallback={<CardSkeleton />}>
+                <EvidenceCollection
+                  analysisResults={analysisResult}
+                  selectedFrameworks={branding.selectedFrameworks}
+                />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
 
           {(w("compliance-calendar") || w("attestation-workflow")) && (
             <div className="grid gap-6 lg:grid-cols-2">
               {w("compliance-calendar") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <ComplianceCalendar files={files} />
-                </Suspense>
+                <SecurityWidgetShell className="border-[#5A00FF]/10">
+                  <Suspense fallback={<CardSkeleton />}>
+                    <ComplianceCalendar files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
               {w("attestation-workflow") && (
-                <Suspense fallback={<CardSkeleton />}>
-                  <AttestationWorkflow frameworks={branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined} />
-                </Suspense>
+                <SecurityWidgetShell className="border-[#5A00FF]/10">
+                  <Suspense fallback={<CardSkeleton />}>
+                    <AttestationWorkflow frameworks={branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
             </div>
           )}
 
           {w("regulatory-tracker") && (
-            <Suspense fallback={<CardSkeleton />}>
-              <RegulatoryTracker />
-            </Suspense>
+            <SecurityWidgetShell className="border-[#5A00FF]/10">
+              <Suspense fallback={<CardSkeleton />}>
+                <RegulatoryTracker />
+              </Suspense>
+            </SecurityWidgetShell>
           )}
+          </div>
         </ErrorBoundary>
       </TabsContent>
 

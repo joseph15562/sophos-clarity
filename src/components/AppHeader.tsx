@@ -232,18 +232,27 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
   const { user, org, isGuest, signOut } = useAuth();
 
   const showContext = hasFiles || customerName || selectedFrameworks.length > 0;
+  const isLoginShell = isGuest && !showContext;
 
   return (
     <>
-      <header className="border-b border-[#10037C]/20 bg-[#001A47] sticky top-0 z-40 no-print">
+      <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-[0_14px_40px_rgba(0,10,35,0.32)] backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-[0_8px_22px_rgba(0,0,0,0.18)] shrink-0">
+            <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
+          </div>
           <div className="mr-auto shrink-0">
-            <h1 className="text-base font-display font-bold text-white leading-tight tracking-tight">
+            <div className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1 ${isLoginShell ? "shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : ""}`}>
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
+                {isLoginShell ? "Firewall Compliance Workspace" : "Enterprise Firewall Compliance"}
+              </span>
+            </div>
+            <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">
               Sophos FireComply
             </h1>
-            <p className="text-[11px] text-[#6A889B] hidden sm:block">
-              Firewall Configuration Assessment & Compliance Reporting
+            <p className="text-[11px] text-[#9BB0D3] hidden sm:block">
+              {isLoginShell ? "Executive-ready firewall security assessments and compliance reporting" : "Firewall Configuration Assessment & Compliance Reporting"}
             </p>
           </div>
 
@@ -253,7 +262,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               {org && (
                 <button
                   onClick={onOrgClick}
-                  className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+                  className="flex items-center gap-1.5 text-[10px] text-[#B6C4FF] hover:text-white transition-colors px-2 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
                   title="Open management panel"
                   aria-label="Open management panel"
                   data-tour="management-panel"
@@ -265,14 +274,14 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               )}
               {org && !localMode && <CentralStatusDot orgId={org.id} />}
               {org && !localMode && <ConnectorStatus orgId={org.id} onOpenSetup={onOrgClick} />}
-              <Button variant="ghost" size="sm" className="inline-flex h-7 px-2 text-[10px] text-[#6A889B] hover:text-white hover:bg-[#10037C]/40 gap-1.5 shrink-0 max-sm:px-1.5" asChild>
+              <Button variant="ghost" size="sm" className="inline-flex h-8 px-2.5 text-[10px] text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] gap-1.5 shrink-0 max-sm:px-1.5 rounded-xl border border-white/10 bg-white/[0.04]" asChild>
                 <Link to="/health-check" data-tour="health-check-nav" title="SE Health Check">
                   <Shield className="h-3 w-3 shrink-0" />
                   <span className="hidden sm:inline">SE Health Check</span>
                 </Link>
               </Button>
               {notificationSlot}
-              <span className="flex items-center gap-1 text-[10px] text-[#6A889B]">
+              <span className="flex items-center gap-1 text-[10px] text-[#B6C4FF] rounded-xl border border-white/10 bg-white/[0.04] px-2 py-1.5">
                 <User className="h-3 w-3 shrink-0" />
                 <span className="max-w-[100px] truncate hidden sm:inline">{user?.email?.split("@")[0]}</span>
               </span>
@@ -280,7 +289,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                 variant="ghost"
                 size="icon"
                 onClick={signOut}
-                className="shrink-0 text-[#6A889B] hover:text-white hover:bg-[#10037C]/40 h-7 w-7"
+                className="shrink-0 text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] h-8 w-8 rounded-xl border border-white/10 bg-white/[0.04]"
                 aria-label="Sign out"
                 title="Sign out"
               >
@@ -290,23 +299,31 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
           )}
 
           {isGuest && (
-            <button
-              onClick={onOrgClick}
-              className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-2 py-1 rounded hover:bg-[#10037C]/40"
-              title="Open settings"
-              aria-label="Open settings"
-            >
-              <SlidersHorizontal className="h-3 w-3 shrink-0" />
-              <span className="font-medium hidden sm:inline">Settings</span>
-              <ChevronDown className="h-2.5 w-2.5 shrink-0" />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {isLoginShell && (
+                <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] text-[#B6C4FF]">
+                  <span className="inline-block h-2 w-2 rounded-full bg-[#00F2B3]" />
+                  Boardroom-ready reporting
+                </div>
+              )}
+              <button
+                onClick={onOrgClick}
+                className="flex items-center gap-1.5 text-[10px] text-[#B6C4FF] hover:text-white transition-colors px-2.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                title="Open settings"
+                aria-label="Open settings"
+              >
+                <SlidersHorizontal className="h-3 w-3 shrink-0" />
+                <span className="font-medium hidden sm:inline">{isLoginShell ? "Workspace options" : "Settings"}</span>
+                <ChevronDown className="h-2.5 w-2.5 shrink-0" />
+              </button>
+            </div>
           )}
 
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="shrink-0 text-[#6A889B] hover:text-white hover:bg-[#10037C]/40"
+            className={`shrink-0 text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] rounded-xl border border-white/10 bg-white/[0.04] ${isLoginShell ? "shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : ""}`}
             aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             data-tour="theme-toggle"
           >
@@ -316,22 +333,22 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
       </header>
 
       {showContext && (
-        <div className="border-b border-border bg-muted/50 no-print hidden sm:block">
-          <div className="max-w-5xl mx-auto px-4 py-1.5 flex items-center gap-4 text-[11px] text-muted-foreground overflow-x-auto">
+        <div className="border-b border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.92),rgba(14,20,34,0.92))] no-print hidden sm:block backdrop-blur-sm">
+          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4 text-[11px] text-muted-foreground overflow-x-auto">
             {customerName && (
-              <span className="flex items-center gap-1.5 shrink-0">
+              <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
                 <span className="font-semibold text-foreground">{customerName}</span>
                 {environment && <span className="opacity-60">· {environment}</span>}
               </span>
             )}
             {hasFiles && (
-              <span className="flex items-center gap-1 shrink-0">
+              <span className="flex items-center gap-1 shrink-0 rounded-full border border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] px-2.5 py-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00F2B3] dark:bg-[#00F2B3]" />
                 {fileCount} firewall{fileCount !== 1 ? "s" : ""} loaded
               </span>
             )}
             {selectedFrameworks.length > 0 && (
-              <span className="flex items-center gap-1.5 shrink-0">
+              <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
                 <span className="opacity-60">Frameworks:</span>
                 {selectedFrameworks.map((fw) => (
                   <span key={fw} className="px-1.5 py-0.5 rounded bg-[#2006F7]/10 dark:bg-[#2006F7]/20 text-[#10037C] dark:text-[#009CFB] font-medium">
@@ -341,7 +358,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               </span>
             )}
             {reportCount > 0 && (
-              <span className="flex items-center gap-1 shrink-0 ml-auto">
+              <span className="flex items-center gap-1 shrink-0 ml-auto rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.06] px-2.5 py-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#2006F7]" />
                 {reportCount} report{reportCount !== 1 ? "s" : ""} generated
               </span>

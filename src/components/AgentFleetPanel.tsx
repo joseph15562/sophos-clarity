@@ -462,8 +462,9 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
               <h4 className="text-base font-display font-black text-foreground tracking-tight">
                 Connected Firewalls
               </h4>
-              <p className="text-[11px] text-muted-foreground mt-1 max-w-2xl leading-relaxed">
-                Load fresh assessments from connected agents, compare customer sites side-by-side, and refresh posture without waiting for manual exports.
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 mt-1 max-w-2xl leading-relaxed">
+                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">Load fresh assessments from connected agents</span>, compare customer sites side-by-side, and{" "}
+                <span className="text-foreground dark:text-white font-semibold">refresh posture without waiting for manual exports</span>.
               </p>
             </div>
           </div>

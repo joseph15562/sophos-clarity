@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, ShieldCheck } from "lucide-react";
 import {
   RadarChart,
   Radar,
@@ -128,7 +128,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
     <section className="rounded-xl border border-border bg-card p-5 space-y-5">
       <div>
         <div className="flex items-center gap-2">
-          <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
+          <ShieldCheck className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
           <h3 className="text-sm font-semibold text-foreground">Security Risk Score</h3>
           <span className="text-[10px] text-muted-foreground">
             {perFirewall.length > 1 ? `aggregated across ${perFirewall.length} firewalls` : "single firewall"}

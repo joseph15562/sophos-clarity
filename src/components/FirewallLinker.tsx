@@ -207,32 +207,41 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
   const allLinked = linkedCount === configs.length;
 
   return (
-    <Card>
+    <Card className="overflow-hidden rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_55px_rgba(32,6,247,0.08)]">
+      <div className="h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
       <CardContent className="pt-5">
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link2 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
-          <h3 className="text-sm font-semibold text-foreground">
-            Link to Sophos Central
-          </h3>
-          {matchedTenant && (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] font-medium">
-              {matchedTenant.name}
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+            Live enrichment
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link2 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+            <h3 className="text-lg font-display font-black text-foreground tracking-tight">
+              Link to Sophos Central
+            </h3>
+            {matchedTenant && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] font-medium">
+                {matchedTenant.name}
+              </span>
+            )}
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+              allLinked ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"
+            }`}>
+              {linkedCount}/{configs.length} linked
             </span>
-          )}
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-            allLinked ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"
-          }`}>
-            {linkedCount}/{configs.length} linked
-          </span>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Match uploaded configs to live Sophos Central firewalls to enrich reports with current device context, firmware visibility, and managed-estate accuracy.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {central.groups.length > 0 && (
             <select
               value={filterGroup}
               onChange={(e) => setFilterGroup(e.target.value)}
-              className="text-[10px] rounded border border-border bg-background px-2 py-1 text-foreground"
+              className="text-[10px] rounded-lg border border-border bg-background/80 px-2.5 py-1.5 text-foreground"
             >
               <option value="all">All groups</option>
               {central.groups.map((g) => (
@@ -241,17 +250,34 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
               <option value="ungrouped">Ungrouped</option>
             </select>
           )}
-          <Button variant="ghost" size="sm" onClick={handleRefreshFirewalls} disabled={syncing} className="gap-1 text-[10px] h-7">
+          <Button variant="outline" size="sm" onClick={handleRefreshFirewalls} disabled={syncing} className="gap-1 text-[10px] h-8 border-[#2006F7]/20 bg-background/70 hover:bg-[#2006F7]/5">
             <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
-            Sync
+            Sync Central
           </Button>
         </div>
       </div>
 
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Why link</p>
+          <p className="text-sm font-semibold text-foreground mt-1">Tie exports to live managed firewalls</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">What it adds</p>
+          <p className="text-sm font-semibold text-foreground mt-1">Current device context, tenancy, and estate metadata</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best for</p>
+          <p className="text-sm font-semibold text-foreground mt-1">MSP workflows and customer-ready reporting</p>
+        </div>
+      </div>
+
       {central.firewalls.length === 0 && !syncing && (
-        <p className="text-xs text-muted-foreground text-center py-3">
-          No firewalls found for this tenant. Click <span className="font-medium">Sync</span> to pull from Sophos Central.
-        </p>
+        <div className="rounded-xl border border-border/70 bg-card/60 px-4 py-4 text-center">
+          <p className="text-xs text-muted-foreground">
+            No firewalls found for this tenant. Click <span className="font-medium text-foreground">Sync Central</span> to pull the latest estate inventory from Sophos Central.
+          </p>
+        </div>
       )}
 
       <div className="space-y-2">
@@ -260,13 +286,13 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
           const isExpanded = expandedConfig === config.configHash;
 
           return (
-            <div key={config.configHash} className={`rounded-lg border ${link ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20" : "border-border"} overflow-hidden`}>
+            <div key={config.configHash} className={`rounded-2xl border ${link ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.03]" : "border-border bg-card/70"} overflow-hidden shadow-sm`}>
               {/* Config Header Row */}
               <div className="flex items-center gap-3 px-3 py-2.5">
-                <Server className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <Server className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium text-foreground truncate block">{config.label}</span>
-                  <span className="text-[10px] text-muted-foreground font-mono">
+                  <span className="text-sm font-display font-bold tracking-tight text-foreground truncate block">{config.label}</span>
+                  <span className="text-[11px] font-medium text-foreground/70 dark:text-white/60 font-mono">
                     {[config.hostname, config.serialNumber && `S/N: ${config.serialNumber}`].filter(Boolean).join(" · ") || null}
                   </span>
                 </div>
@@ -296,7 +322,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                 ) : (
                   <button
                     onClick={() => setExpandedConfig(isExpanded ? null : config.configHash)}
-                    className="flex items-center gap-1 text-[10px] text-[#2006F7] dark:text-[#00EDFF] hover:underline shrink-0"
+                    className="flex items-center gap-1 rounded-md border border-[#2006F7]/30 dark:border-[#00EDFF]/30 bg-[#2006F7]/[0.06] dark:bg-[#00EDFF]/[0.08] px-2 py-1 text-[11px] font-semibold tracking-tight text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/12 transition-colors shrink-0"
                   >
                     <Link2 className="h-3 w-3" />
                     Link firewall
@@ -307,7 +333,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
 
               {/* Expanded Link Panel */}
               {isExpanded && !link && (
-                <div className="border-t border-border bg-muted/30 px-3 py-3 space-y-3">
+                <div className="border-t border-border bg-muted/20 px-3 py-3 space-y-3">
                   {/* Serial search */}
                   <div className="flex gap-2">
                     <Input
@@ -315,9 +341,9 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                       value={serialInput[config.configHash] ?? ""}
                       onChange={(e) => setSerialInput((p) => ({ ...p, [config.configHash]: e.target.value }))}
                       onKeyDown={(e) => e.key === "Enter" && handleSerialSearch(config.configHash)}
-                      className="text-xs font-mono flex-1 h-8"
+                      className="text-sm font-mono placeholder:text-foreground/55 dark:placeholder:text-white/45 flex-1 h-9"
                     />
-                    <Button size="sm" variant="outline" onClick={() => handleSerialSearch(config.configHash)} className="h-8 gap-1 text-xs">
+                    <Button size="sm" variant="outline" onClick={() => handleSerialSearch(config.configHash)} className="h-9 gap-1 text-sm font-semibold border-[#2006F7]/25 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10">
                       <Search className="h-3 w-3" /> Match
                     </Button>
                   </div>
@@ -329,8 +355,8 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                   )}
 
                   {/* Firewall dropdown */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Or select from Central</span>
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2006F7] dark:text-[#00EDFF]">Or select from Central</span>
                     <div className="max-h-44 overflow-y-auto rounded border border-border divide-y divide-border bg-background">
                       {filteredFirewalls.map((entry) => {
                         const fw = entry.primary;
@@ -340,14 +366,14 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                             key={fw.id}
                             onClick={() => !isLinkedElsewhere && handleLink(config.configHash, fw, "manual")}
                             disabled={isLinkedElsewhere}
-                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-xs transition-colors ${
+                            className={`w-full flex items-center gap-2 px-2.5 py-2 text-left text-sm transition-colors ${
                               isLinkedElsewhere ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
                             }`}
                           >
                             <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`} />
-                            <span className="font-medium text-foreground truncate">{getFirewallDisplayName(fw)}</span>
-                            <span className="font-mono text-[10px] text-muted-foreground shrink-0">{fw.serialNumber}</span>
-                            <span className="text-[10px] text-muted-foreground shrink-0">{fw.firmwareVersion}</span>
+                            <span className="font-semibold text-foreground truncate">{getFirewallDisplayName(fw)}</span>
+                            <span className="font-mono text-[11px] text-foreground/70 dark:text-white/60 shrink-0">{fw.serialNumber}</span>
+                            <span className="text-[11px] font-medium text-foreground/70 dark:text-white/60 shrink-0">{fw.firmwareVersion}</span>
                             {entry.isHA && (
                               <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B98EFF] font-bold shrink-0">
                                 HA{entry.peers.length > 0 ? ` (${1 + entry.peers.length} nodes)` : ""}

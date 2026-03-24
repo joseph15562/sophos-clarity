@@ -1,4 +1,4 @@
-import { BookOpen, ClipboardCheck, FileText } from "lucide-react";
+import { BookOpen, ClipboardCheck, FileText, BarChart3, Scale, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ReportCardsProps {
@@ -25,35 +25,85 @@ export function ReportCards({
   const canGenerate = !localMode && !isViewerOnly;
   return (
     <section className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="flex items-center justify-center h-7 w-7 rounded-full bg-[#2006F7] text-white text-xs font-bold ring-4 ring-[#2006F7]/15 dark:ring-[#2006F7]/25">3</span>
+      <div className="flex items-center gap-2.5">
+        <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">3</span>
         <div>
-          <h2 className="text-lg font-display font-bold text-foreground">Generate Reports</h2>
-          <p className="text-[10px] text-muted-foreground">Technical Report, Executive Brief, Compliance Pack — export deliverables for customer handoff or audit.</p>
+          <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
+            Generate Reports
+          </h2>
+          <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
+            Create{" "}
+            <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">technical reports, executive briefs, and compliance packs</span> as packaged deliverables for{" "}
+            <span className="text-foreground dark:text-white font-semibold">customer handoff, board review, and audit preparation</span>.
+          </p>
         </div>
       </div>
 
-      {localMode && (
-        <div className="rounded-xl border border-[#F29400]/30 bg-[#F29400]/5 dark:bg-[#F29400]/10 px-5 py-4 flex items-start gap-3">
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">AI reports unavailable in local mode.</strong> Technical reports, executive briefs, and compliance reports require an external AI service. Generate the Executive One-Pager below for a local-only summary.
-          </p>
-        </div>
-      )}
+      <div className="relative overflow-hidden rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)]">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Technical Report — AI, disabled in local mode */}
-        <div
-          className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
-            !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#2006F7]/30 dark:hover:border-[#2006F7]/40 cursor-pointer group"
-          }`}
-          onClick={canGenerate ? onGenerateIndividual : undefined}
-        >
+        <div className="p-5 sm:p-6 space-y-5">
+          <div className="flex items-start justify-between gap-5 flex-wrap">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF]">
+                Delivery ready
+              </div>
+              <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
+                Turn analysis into <span className="text-[#2006F7] dark:text-[#00EDFF]">executive-ready deliverables</span>
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Generate polished outputs for technical teams, leadership stakeholders, and compliance conversations without rebuilding the story by hand.
+              </p>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[360px] lg:max-w-[430px]">
+              <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best for</p>
+                <p className="text-sm font-semibold text-foreground mt-1">Customer handoff, board packs, audit preparation</p>
+              </div>
+              <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Outcome</p>
+                <p className="text-sm font-semibold text-foreground mt-1">Clearer reporting with less manual rewriting</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Technical</p>
+              <p className="text-sm font-semibold text-foreground mt-1">Detailed evidence and remediation for engineers</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Executive</p>
+              <p className="text-sm font-semibold text-foreground mt-1">Stakeholder-ready narrative for business decisions</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Compliance</p>
+              <p className="text-sm font-semibold text-foreground mt-1">Framework mapping and readiness context for audits</p>
+            </div>
+          </div>
+
+          {localMode && (
+            <div className="rounded-xl border border-[#F29400]/30 bg-[#F29400]/5 dark:bg-[#F29400]/10 px-5 py-4 flex items-start gap-3">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <strong className="text-foreground">AI reports unavailable in local mode.</strong> Technical reports, executive briefs, and compliance reports require an external AI service. Generate the Executive One-Pager below for a local-only summary.
+              </p>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Technical Report — AI, disabled in local mode */}
+            <div
+              className={`rounded-2xl border border-border bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
+                !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#2006F7]/30 dark:hover:border-[#2006F7]/40 cursor-pointer group"
+              }`}
+              onClick={canGenerate ? onGenerateIndividual : undefined}
+            >
           <div className="h-1 bg-gradient-to-r from-[#2006F7] to-[#5A00FF]" />
           <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0 group-hover:bg-[#2006F7]/15 dark:group-hover:bg-[#2006F7]/25 transition-colors">
-                <img src="/icons/sophos-document.svg" alt="" className="h-6 w-6 sophos-icon" />
+                <FileText className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
               </div>
               <span className="font-display font-bold text-foreground text-[15px]">Generate Technical Report</span>
             </div>
@@ -61,24 +111,24 @@ export function ReportCards({
               Comprehensive per-firewall assessment covering rules, NAT, interfaces, hosts, policies, and security posture. Includes prioritised findings, NCSC-aligned recommendations, and remediation guidance.
             </p>
             <Button size="sm" className="w-full gap-2 bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-sm" disabled={!canGenerate}>
-              <img src="/icons/sophos-ai-white.svg" alt="" className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
               {!canGenerate ? (isViewerOnly ? "View only" : "AI unavailable") : (fileCount === 1 ? "Generate Report" : `Generate ${fileCount} Reports`)}
             </Button>
           </div>
         </div>
 
-        {/* Executive Brief — AI, disabled in local mode */}
-        <div
-          className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
-            !canGenerate || fileCount < 1 ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group"
-          }`}
-          onClick={canGenerate && fileCount >= 1 ? onGenerateExecutive : undefined}
-        >
+            {/* Executive Brief — AI, disabled in local mode */}
+            <div
+              className={`rounded-2xl border border-border bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
+                !canGenerate || fileCount < 1 ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group"
+              }`}
+              onClick={canGenerate && fileCount >= 1 ? onGenerateExecutive : undefined}
+            >
           <div className="h-1 bg-gradient-to-r from-[#5A00FF] to-[#B529F7]" />
           <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-lg bg-[#5A00FF]/10 dark:bg-[#5A00FF]/15 flex items-center justify-center shrink-0">
-                <img src="/icons/sophos-chart.svg" alt="" className="h-6 w-6 sophos-icon" />
+                <BarChart3 className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
               </div>
               <span className="font-display font-bold text-foreground text-[15px]">Generate Executive Brief</span>
             </div>
@@ -93,13 +143,13 @@ export function ReportCards({
           </div>
         </div>
 
-        {/* Executive One-Pager */}
-        <div
-          className={`rounded-xl border border-border bg-card shadow-sm transition-all duration-200 overflow-hidden ${
-            canGenerate ? "hover:shadow-md hover:border-[#B529F7]/30 dark:hover:border-[#B529F7]/40 cursor-pointer group" : "opacity-50 pointer-events-none"
-          }`}
-          onClick={canGenerate ? onGenerateExecutiveOnePager : undefined}
-        >
+            {/* Executive One-Pager */}
+            <div
+              className={`rounded-2xl border border-border bg-card/90 shadow-sm transition-all duration-200 overflow-hidden ${
+                canGenerate ? "hover:shadow-md hover:border-[#B529F7]/30 dark:hover:border-[#B529F7]/40 cursor-pointer group" : "opacity-50 pointer-events-none"
+              }`}
+              onClick={canGenerate ? onGenerateExecutiveOnePager : undefined}
+            >
           <div className="h-1 bg-gradient-to-r from-[#B529F7] to-[#E040FB]" />
           <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
@@ -117,18 +167,18 @@ export function ReportCards({
           </div>
         </div>
 
-        {/* Compliance Readiness Report — AI, disabled in local mode */}
-        <div
-          className={`rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all duration-200 ${
-            !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#009CFB]/30 dark:hover:border-[#009CFB]/40 cursor-pointer group"
-          }`}
-          onClick={canGenerate ? onGenerateCompliance : undefined}
-        >
+            {/* Compliance Readiness Report — AI, disabled in local mode */}
+            <div
+              className={`rounded-2xl border border-border bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
+                !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#009CFB]/30 dark:hover:border-[#009CFB]/40 cursor-pointer group"
+              }`}
+              onClick={canGenerate ? onGenerateCompliance : undefined}
+            >
           <div className="h-1 bg-gradient-to-r from-[#009CFB] to-[#00EDFF]" />
           <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-lg bg-[#009CFB]/10 dark:bg-[#009CFB]/15 flex items-center justify-center shrink-0 group-hover:bg-[#009CFB]/15 dark:group-hover:bg-[#009CFB]/25 transition-colors">
-                <img src="/icons/sophos-governance.svg" alt="" className="h-6 w-6 sophos-icon" />
+                <Scale className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
               </div>
               <span className="font-display font-bold text-foreground text-[15px]">Generate Compliance Pack</span>
             </div>
@@ -142,14 +192,18 @@ export function ReportCards({
         </div>
       </div>
 
-      {canGenerate && (
-      <Button size="lg" onClick={onGenerateAll} className="w-full gap-2 text-base bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white">
-        <img src="/icons/sophos-orchestration-white.svg" alt="" className="h-5 w-5" />
-        {fileCount >= 2
-          ? "Generate All Reports + Executive Brief"
-          : "Generate All Reports + Compliance Report"}
-      </Button>
-      )}
+          {canGenerate && (
+            <div className="rounded-2xl border border-[#2006F7]/15 bg-card/70 p-3 sm:p-4">
+              <Button size="lg" onClick={onGenerateAll} className="w-full gap-2 text-base bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-sm">
+                <Sparkles className="h-5 w-5" />
+                {fileCount >= 2
+                  ? "Generate All Reports + Executive Brief"
+                  : "Generate All Reports + Compliance Report"}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback } from "react";
-import { CheckCircle2, Download, Shield, Globe, Lock, Network, AlertTriangle, Settings, Bug, Eye, Activity, Server, Clock, Key, Database, Wifi, FileWarning, ChevronDown, ChevronRight, Lightbulb } from "lucide-react";
+import { CheckCircle2, Download, Shield, Globe, Lock, Network, AlertTriangle, Settings, Bug, Eye, Activity, Server, Clock, Key, Database, Wifi, FileWarning, ChevronDown, ChevronRight, Lightbulb, Scale, ShieldCheck, Search, GitBranch } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import type { AnalysisResult, Severity, Finding, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
@@ -61,7 +61,7 @@ export function EstateOverview({
       {/* Estate summary cards */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
-          icon="/icons/sophos-network.svg"
+          icon={<Network className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
           value={fileCount}
           label={`Firewall${fileCount !== 1 ? "s" : ""}`}
           border="border-[#2006F7]/20 dark:border-[#00EDFF]/20"
@@ -70,7 +70,7 @@ export function EstateOverview({
           valueColor="text-[#2006F7] dark:text-[#00EDFF]"
         />
         <StatCard
-          icon="/icons/sophos-governance.svg"
+          icon={<Scale className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
           value={totalRules}
           label="Rules Parsed"
           border="border-[#10037C]/15 dark:border-[#2006F7]/20"
@@ -79,7 +79,7 @@ export function EstateOverview({
           valueColor="text-[#001A47] dark:text-white"
         />
         <StatCard
-          icon="/icons/sophos-search.svg"
+          icon={<Search className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
           value={totalSections}
           label="Sections"
           border="border-[#5A00FF]/15 dark:border-[#5A00FF]/20"
@@ -88,7 +88,7 @@ export function EstateOverview({
           valueColor="text-[#001A47] dark:text-white"
         />
         <StatCard
-          icon="/icons/sophos-alert.svg"
+          icon={<AlertTriangle className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
           value={totalFindings}
           label="Issues"
           border={totalFindings > 0 ? "border-[#EA0022]/20 dark:border-[#F29400]/25" : "border-[#00F2B3]/20 dark:border-[#00F2B3]/20"}
@@ -261,7 +261,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-3">
       <div className="flex items-center gap-2">
-        <img src="/icons/sophos-security.svg" alt="" className="h-5 w-5 sophos-icon" />
+        <ShieldCheck className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
         <h3 className="text-sm font-semibold text-foreground">Inspection Posture</h3>
         <span className="text-[10px] text-muted-foreground">across {posture.totalWanRules} WAN-facing rule{posture.totalWanRules !== 1 ? "s" : ""}</span>
       </div>
@@ -474,7 +474,7 @@ function FindingsPanel({ analysisResults, fileCount, selectedFrameworks, onExpla
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <img src="/icons/sophos-alert.svg" alt="" className="h-5 w-5 sophos-icon" />
+        <AlertTriangle className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
         <h3 className="text-sm font-semibold text-foreground">Deterministic Findings</h3>
         <span className="text-xs text-muted-foreground">{totalCount} issues across {groups.length} sections</span>
         <div className="ml-auto flex items-center gap-1.5">
@@ -563,7 +563,7 @@ function EstateRiskComparison({ analysisResults }: { analysisResults: Record<str
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-3">
       <div className="flex items-center gap-2">
-        <img src="/icons/sophos-orchestration.svg" alt="" className="h-5 w-5 sophos-icon" />
+        <GitBranch className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
         <h3 className="text-sm font-semibold text-foreground">Estate Risk Comparison</h3>
       </div>
       <div className="space-y-2">

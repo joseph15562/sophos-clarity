@@ -138,14 +138,17 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
 
   if (signupSuccess) {
     return (
-      <div className="max-w-md mx-auto mt-16 rounded-xl border border-border bg-card p-8 text-center space-y-4">
-        <div className="h-12 w-12 rounded-full bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
-          <UserPlus className="h-6 w-6 text-[#00F2B3] dark:text-[#00F2B3]" />
+      <div className="max-w-md mx-auto mt-16 rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(10,14,26,0.98),rgba(12,18,34,0.98))] p-8 text-center space-y-4 shadow-[0_20px_60px_rgba(32,6,247,0.10)] overflow-hidden">
+        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+          Enterprise workspace
         </div>
-        <h2 className="text-lg font-display font-bold text-foreground">Check your email</h2>
-        <p className="text-sm text-muted-foreground">
+        <div className="h-14 w-14 rounded-2xl bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
+          <UserPlus className="h-7 w-7 text-[#00F2B3] dark:text-[#00F2B3]" />
+        </div>
+        <h2 className="text-2xl font-display font-black text-foreground tracking-tight">Check your email</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
           We've sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
-          Click the link to activate your account, then sign in.
+          Activate your account, then return to sign in and access your workspace.
         </p>
         <button
           onClick={() => { setMode("signin"); setSignupSuccess(false); }}
@@ -158,19 +161,47 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-16 rounded-xl border border-border bg-card overflow-hidden">
+    <div className="max-w-md mx-auto mt-16 rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] overflow-hidden shadow-[0_24px_70px_rgba(32,6,247,0.10)]">
+      <div className="h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
+
+      <div className="px-6 pt-6 pb-4 space-y-3">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+          Firewall Compliance Workspace
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-2xl font-display font-black text-foreground tracking-tight">Sign in to Sophos FireComply</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Access premium reporting, saved assessments, managed firewall workflows, and customer-ready compliance deliverables.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-card/70 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Save</p>
+            <p className="text-xs font-semibold text-foreground mt-1">Assessments and generated reports</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/70 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Manage</p>
+            <p className="text-xs font-semibold text-foreground mt-1">Teams, connectors, and Sophos Central</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card/70 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Deliver</p>
+            <p className="text-xs font-semibold text-foreground mt-1">Executive and compliance-ready outputs</p>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
-      <div className="flex border-b border-border">
+      <div className="mx-6 flex rounded-2xl bg-muted/30 p-1 mb-2">
         <button
           onClick={() => { setMode("signin"); setError(null); }}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${mode === "signin" ? "text-foreground border-b-2 border-[#2006F7] dark:border-[#00EDFF]" : "text-muted-foreground hover:text-foreground"}`}
+          className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${mode === "signin" ? "bg-background text-[#2006F7] dark:text-[#00EDFF] shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           <LogIn className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
           Sign In
         </button>
         <button
           onClick={() => { setMode("signup"); setError(null); }}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${mode === "signup" ? "text-foreground border-b-2 border-[#2006F7] dark:border-[#00EDFF]" : "text-muted-foreground hover:text-foreground"}`}
+          className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-xl transition-all ${mode === "signup" ? "bg-background text-[#2006F7] dark:text-[#00EDFF] shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           <UserPlus className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
           Create Account
@@ -178,6 +209,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <div className="rounded-2xl border border-border/70 bg-card/75 p-4 space-y-4">
         <div className="space-y-1.5">
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Email</label>
           <input
@@ -243,7 +275,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
             type="button"
             onClick={handlePasskeyLogin}
             disabled={passkeyLoading}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-border hover:bg-muted/50 text-foreground px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-border hover:bg-muted/50 text-foreground px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
           >
             {passkeyLoading ? (
               <span className="animate-spin h-4 w-4 border-2 border-foreground/30 border-t-foreground rounded-full" />
@@ -256,20 +288,24 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
           </button>
         )}
 
+        </div>
+
         <div className="relative py-2">
           <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
           <div className="relative flex justify-center">
-            <span className="bg-card px-3 text-[10px] text-muted-foreground uppercase tracking-wider">or</span>
+            <span className="bg-transparent px-3 text-[10px] text-muted-foreground uppercase tracking-wider">or</span>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onSkip}
-          className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
-        >
-          Continue as guest — data stays in this browser only
-        </button>
+        <div className="rounded-2xl border border-dashed border-border bg-background/50 px-4 py-3 text-center">
+          <button
+            type="button"
+            onClick={onSkip}
+            className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Continue as guest — data stays in this browser only
+          </button>
+        </div>
       </form>
     </div>
   );
