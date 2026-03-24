@@ -88,16 +88,16 @@ export function RuleActionDistribution({ files }: Props) {
 
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Rule Action Distribution</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Action Distribution</h3>
         <p className="text-sm text-muted-foreground">No firewall rules found</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Rule Action Distribution</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Action Distribution</h3>
       <div className="relative" style={{ height: 200 }}>
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
@@ -120,7 +120,7 @@ export function RuleActionDistribution({ files }: Props) {
                 const d = payload[0].payload;
                 const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
                 return (
-                  <div className="rounded-md border border-border bg-card px-2 py-1.5 text-xs shadow-md">
+                  <div className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-xs shadow-elevated">
                     {d.name}: {d.value} ({pct}%)
                   </div>
                 );

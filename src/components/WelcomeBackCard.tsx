@@ -47,7 +47,7 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
 
   if (loading) {
     return (
-      <Card className="rounded-[28px] border border-[#2006F7]/15 bg-card shadow-[0_16px_50px_rgba(32,6,247,0.08)]">
+      <Card className="rounded-[28px] border border-brand-accent/15 bg-card shadow-[0_16px_50px_rgba(32,6,247,0.08)]">
         <CardHeader className="pb-2">
           <Skeleton className="h-5 w-36" />
         </CardHeader>
@@ -75,12 +75,12 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
     : assessed.toLocaleDateString(undefined, { dateStyle: "medium" });
 
   return (
-    <Card className="relative overflow-hidden rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.10)]">
+    <Card className="relative overflow-hidden rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.10)]">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
       <CardHeader className="pb-3 pt-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF] mb-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-accent mb-3">
               <Sparkles className="h-3.5 w-3.5" />
               Welcome back
             </div>
@@ -98,7 +98,7 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
       </CardHeader>
       <CardContent className="space-y-5 pb-6">
         <div className="grid gap-3 sm:grid-cols-3">
-          <MetricCard icon={<ShieldCheck className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />} label="Posture" value={summary.posture} />
+          <MetricCard icon={<ShieldCheck className="h-4 w-4 text-brand-accent" />} label="Posture" value={summary.posture} />
           <MetricCard icon={<TrendingUp className="h-4 w-4 text-[#00F2B3]" />} label="Next best move" value={summary.delta} />
           <MetricCard icon={<Clock3 className="h-4 w-4 text-[#F29400]" />} label="Expected effort" value="Fresh review in under 2 minutes" />
         </div>
@@ -108,7 +108,7 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
             <Upload className="h-4 w-4" />
             Upload New Config
           </Button>
-          <Button type="button" variant="outline" size="lg" className="gap-2 rounded-xl px-5 border-[#2006F7]/25 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10" onClick={onLoadAgent}>
+          <Button type="button" variant="outline" size="lg" className="gap-2 rounded-xl px-5" onClick={onLoadAgent}>
             <RefreshCw className="h-4 w-4" />
             Load from Agent
           </Button>
@@ -120,7 +120,7 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
 
 function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
+    <div className="rounded-[24px] border border-border/70 bg-card/70 px-4 py-3.5 shadow-sm">
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         {icon}
         {label}

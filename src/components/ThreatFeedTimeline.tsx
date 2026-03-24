@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
 import { Shield } from "lucide-react";
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: "#EA0022",
-  high: "#F29400",
-  medium: "#F8E300",
-  low: "#00F2B3",
-};
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
 
 interface Alert {
   severity: string;
@@ -77,8 +71,8 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
 
   if (!hasCentralEnrichment || !hasAlerts) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
           Threat Intelligence Feed
         </h3>
@@ -93,8 +87,8 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-4">
         <Shield className="h-4 w-4" />
         Threat Intelligence Feed
       </h3>
@@ -145,7 +139,7 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
 
       {mdrIndicators.length > 0 && (
         <div className="mt-5 pt-4 border-t border-border">
-          <h4 className="text-xs font-semibold text-foreground mb-2">MDR Indicators</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-2">MDR Indicators</h4>
           <div className="space-y-2 max-h-[200px] overflow-y-auto">
             {mdrIndicators.map((ind, idx) => (
               <div

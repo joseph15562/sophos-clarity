@@ -100,7 +100,7 @@ export function MfaVerification({ onVerified, onCancel, showPasskeyOption = true
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-6 space-y-6 max-w-sm mx-auto">
-      <div className="h-16 w-16 rounded-2xl bg-[#2006F7]/10 flex items-center justify-center">
+      <div className="h-16 w-16 rounded-2xl bg-brand-accent/10 flex items-center justify-center">
         <Shield className="h-8 w-8 text-[#2006F7]" />
       </div>
 

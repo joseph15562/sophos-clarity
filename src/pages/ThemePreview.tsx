@@ -25,7 +25,7 @@ export default function ThemePreview() {
           <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-[#2006F7]" />
             <span className="text-sm font-display font-bold tracking-tight text-white">FireComply</span>
-            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#2006F7]/20 text-[#00EDFF] tracking-[0.2em]">Preview</span>
+            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-brand-accent/20 text-[#00EDFF] tracking-[0.2em]">Preview</span>
           </div>
           <div className="flex items-center gap-4 text-xs text-white/50">
             <span>Acme Corp</span>
@@ -39,11 +39,11 @@ export default function ThemePreview() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-10">
+      <main id="main-content" className="max-w-6xl mx-auto px-6 py-8 space-y-10">
 
         {/* ── Section: Landing Hero + Trust Strip ── */}
         <SectionLabel>Landing Page — First Impression</SectionLabel>
-        <section className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(0,237,255,0.10),transparent_35%),linear-gradient(135deg,rgba(0,16,46,0.98),rgba(0,24,64,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] relative overflow-hidden">
+        <section className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(0,237,255,0.10),transparent_35%),linear-gradient(135deg,rgba(0,16,46,0.98),rgba(0,24,64,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] relative overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
           <div className="text-center pt-10 pb-6 px-6 space-y-5">
@@ -67,7 +67,7 @@ export default function ThemePreview() {
 
           <div className="border-t border-white/[0.06] px-5 py-4 space-y-3">
             <div className="grid gap-2 sm:grid-cols-3">
-              <div className="rounded-xl border border-[#2006F7]/15 bg-[#2006F7]/[0.04] px-3 py-2 text-left">
+              <div className="rounded-xl border border-brand-accent/15 bg-[#2006F7]/[0.04] px-3 py-2 text-left">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Manual review</p>
                 <p className="text-lg font-black text-white mt-0.5">3–4 hours</p>
               </div>
@@ -112,7 +112,7 @@ export default function ThemePreview() {
 
         {/* ── Section: Hero Outcome Panel ── */}
         <SectionLabel>Hero Outcome Panel — Post-Analysis</SectionLabel>
-        <div className="relative overflow-hidden rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(0,16,46,0.98),rgba(0,24,64,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] p-6 sm:p-7 space-y-6">
+        <div className="relative overflow-hidden rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(0,16,46,0.98),rgba(0,24,64,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] p-6 sm:p-7 space-y-6">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -122,7 +122,7 @@ export default function ThemePreview() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#EA0022]">D</span>
               </div>
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#00EDFF]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#00EDFF]">
                   <Sparkles className="h-3 w-3" /> FireComply Outcome Summary
                 </div>
                 <h3 className="mt-3 text-2xl font-display font-black text-white tracking-tight">
@@ -284,7 +284,7 @@ export default function ThemePreview() {
                 </p>
                 <span className="inline-block text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] mt-0.5">high confidence</span>
               </div>
-              <div className="rounded-lg bg-[#2006F7]/[0.06] border border-[#2006F7]/15 px-3 py-2">
+              <div className="rounded-lg bg-brand-accent/[0.06] border border-brand-accent/15 px-3 py-2">
                 <p className="text-[10px] text-white/70">
                   <span className="font-semibold text-[#009CFB]">Remediation:</span> Go to Rules and policies → Firewall rules. Edit each affected rule → expand Web Filtering → set a Web policy.
                 </p>

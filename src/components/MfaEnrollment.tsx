@@ -103,7 +103,7 @@ export function MfaEnrollment() {
       {enrolled && !enrolling && (
         <div className="space-y-2">
           {existingFactors.map((f) => (
-            <div key={f.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+            <div key={f.id} className="flex items-center justify-between rounded-xl border border-border/70 bg-card px-3 py-2">
               <div className="flex items-center gap-2">
                 <Check className="h-3.5 w-3.5 text-[#00F2B3]" />
                 <span className="text-[11px] text-foreground font-medium">

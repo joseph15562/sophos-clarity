@@ -87,8 +87,8 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
   }, [analysisResults, files]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Config Composition</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Config Composition</h3>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="rounded-lg border border-border bg-muted/30 p-3">

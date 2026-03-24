@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; color: string }> = {
-  "report.generated": { label: "Report generated", icon: FileText, color: "text-[#2006F7] dark:text-[#00EDFF]" },
+  "report.generated": { label: "Report generated", icon: FileText, color: "text-brand-accent" },
   "report.saved": { label: "Report saved", icon: FileText, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
   "report.deleted": { label: "Report deleted", icon: Trash2, color: "text-[#EA0022]" },
-  "config.uploaded": { label: "Config uploaded", icon: Upload, color: "text-[#2006F7] dark:text-[#00EDFF]" },
+  "config.uploaded": { label: "Config uploaded", icon: Upload, color: "text-brand-accent" },
   "assessment.saved": { label: "Assessment saved", icon: Shield, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
   "central.linked": { label: "Central API linked", icon: Wifi, color: "text-[#005BC8]" },
   "central.synced": { label: "Central synced", icon: Wifi, color: "text-[#009CFB]" },
-  "team.invited": { label: "Team member invited", icon: Users, color: "text-[#2006F7] dark:text-[#00EDFF]" },
+  "team.invited": { label: "Team member invited", icon: Users, color: "text-brand-accent" },
   "team.removed": { label: "Team member removed", icon: Users, color: "text-[#EA0022]" },
   "auth.login": { label: "User signed in", icon: Shield, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
   "auth.logout": { label: "User signed out", icon: Shield, color: "text-muted-foreground" },
@@ -120,7 +120,7 @@ export function AuditLog() {
             placeholder="Search activity…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+            className="w-full pl-8 pr-3 py-2 rounded-xl border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
           />
         </div>
         <span className="text-[10px] text-muted-foreground">{filtered.length} event{filtered.length !== 1 ? "s" : ""}</span>
@@ -130,7 +130,7 @@ export function AuditLog() {
             type="date"
             value={exportFrom}
             onChange={(e) => setExportFrom(e.target.value)}
-            className="rounded-md border border-input bg-background px-2 py-1.5 text-[11px]"
+            className="rounded-xl border border-input bg-card px-2.5 py-2 text-[11px] shadow-sm"
             title="Export from date"
           />
           <span className="text-[10px] text-muted-foreground">to</span>
@@ -138,7 +138,7 @@ export function AuditLog() {
             type="date"
             value={exportTo}
             onChange={(e) => setExportTo(e.target.value)}
-            className="rounded-md border border-input bg-background px-2 py-1.5 text-[11px]"
+            className="rounded-xl border border-input bg-card px-2.5 py-2 text-[11px] shadow-sm"
             title="Export to date"
           />
           <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as "csv" | "json")}>
@@ -159,7 +159,7 @@ export function AuditLog() {
 
       {loading && (
         <div className="flex items-center justify-center py-8">
-          <span className="animate-spin h-5 w-5 border-2 border-[#2006F7]/30 border-t-[#2006F7] rounded-full" />
+          <span className="animate-spin h-5 w-5 border-2 border-brand-accent/30 border-t-[#2006F7] rounded-full" />
         </div>
       )}
 
@@ -221,7 +221,7 @@ export function AuditLog() {
       {!loading && entries.length >= 50 && !showMore && (
         <button
           onClick={() => setShowMore(true)}
-          className="w-full flex items-center justify-center gap-1.5 text-[10px] text-[#2006F7] dark:text-[#00EDFF] hover:underline py-2"
+          className="w-full flex items-center justify-center gap-1.5 text-[10px] text-brand-accent hover:underline py-2"
         >
           <ChevronDown className="h-3 w-3" /> Show more activity
         </button>

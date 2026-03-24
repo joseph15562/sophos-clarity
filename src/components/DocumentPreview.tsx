@@ -6,7 +6,10 @@ import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { mapToFramework, type FrameworkMapping } from "@/lib/compliance-map";
 import { Loader2, Download, FileText, RefreshCw, Archive, Shield, AlertTriangle, CheckCircle, BarChart3, TrendingUp, Share2, Copy, Bug, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -75,7 +78,7 @@ function ReportToc({ markdown }: { markdown: string }) {
         onClick={() => setOpen(!open)}
         className="text-xs font-semibold text-[#2006F7] dark:text-[#009CFB] hover:underline flex items-center gap-1.5"
       >
-        <FileText className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" />
+        <FileText className="h-3.5 w-3.5 text-brand-accent" />
         {open ? "Hide" : "Show"} Table of Contents ({headings.length} sections)
       </button>
       {open && (
@@ -156,15 +159,15 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
           <GradeRing grade={riskScore.grade} score={riskScore.overall} />
           <div className="flex-1 min-w-[200px] space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Rules</p>
                 <p className="text-lg font-bold text-foreground">{result.stats.totalRules}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Findings</p>
                 <p className="text-lg font-bold text-foreground">{result.findings.length}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">WAN Rules</p>
                 <p className="text-lg font-bold text-foreground">{result.inspectionPosture.enabledWanRules}<span className="text-xs text-muted-foreground font-normal">/{result.inspectionPosture.totalWanRules}</span></p>
               </div>
@@ -224,19 +227,19 @@ function ReportSummaryHeader({ reportId, analysisResults, branding }: {
           <GradeRing grade={avgGrade} score={avgScore} />
           <div className="flex-1 min-w-[200px] space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Firewalls</p>
                 <p className="text-lg font-bold text-foreground">{allResults.length}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Rules</p>
                 <p className="text-lg font-bold text-foreground">{totalRules}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Findings</p>
                 <p className="text-lg font-bold text-foreground">{totalFindings}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-xl border border-border/70 bg-card px-3 py-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Score</p>
                 <p className="text-lg font-bold text-foreground">{avgScore}%</p>
               </div>
@@ -376,6 +379,7 @@ function ShareReportDialog({
   onCopy,
   onCreateLink,
   markdown,
+  error,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -384,6 +388,7 @@ function ShareReportDialog({
   onCopy: () => void;
   onCreateLink?: (allowDownload: boolean, advisorNotes?: string) => Promise<void>;
   markdown?: string;
+  error?: string;
 }) {
   const [allowDownload, setAllowDownload] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -400,7 +405,7 @@ function ShareReportDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+            <Share2 className="h-5 w-5 text-brand-accent" />
             Share Report
           </DialogTitle>
           <DialogDescription>
@@ -411,19 +416,36 @@ function ShareReportDialog({
         </DialogHeader>
         {!hasLink && onCreateLink && markdown ? (
           <div className="space-y-4">
-            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={allowDownload}
-                onChange={(e) => setAllowDownload(e.target.checked)}
-                className="rounded border-border"
-              />
-              Allow recipients to download/export (Word, PDF)
-            </label>
-            <div className="space-y-1.5">
-              <label htmlFor="share-advisor-notes" className="text-xs font-medium text-foreground">
-                Note for your customer (optional)
+            {error && (
+              <div className="rounded-lg border border-[#EA0022]/20 bg-[#EA0022]/5 px-3 py-2 text-xs text-[#EA0022]">
+                {error}
+              </div>
+            )}
+            <div className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="share-allow-download"
+                  checked={allowDownload}
+                  onCheckedChange={(checked) => setAllowDownload(Boolean(checked))}
+                  className="mt-0.5 rounded-md border-border/80"
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="share-allow-download" className="cursor-pointer text-sm font-semibold text-foreground">
+                    Allow recipients to download and export
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable Word and PDF export for customer-facing handovers. Disable this for view-only board or advisor review links.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1.5 rounded-2xl border border-border/70 bg-muted/20 p-4">
+              <label htmlFor="share-advisor-notes" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Note for your customer
               </label>
+              <p className="text-xs text-muted-foreground">
+                Add short delivery context, next steps, or meeting guidance. This appears at the top of the shared report.
+              </p>
               <Textarea
                 id="share-advisor-notes"
                 value={advisorNotes}
@@ -450,11 +472,20 @@ function ShareReportDialog({
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-3">
-            <input
+          <div className="space-y-3 rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Share link ready</p>
+                <p className="text-xs text-muted-foreground">Copy this customer-facing link and send it directly.</p>
+              </div>
+              <div className="rounded-full border border-[#00F2B3]/20 bg-[#00F2B3]/10 px-2.5 py-1 text-[10px] font-semibold text-[#00a67a] dark:text-[#00F2B3]">
+                Expires {new Date(expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              </div>
+            </div>
+            <Input
               readOnly
               value={shareUrl}
-              className="flex-1 min-w-0 bg-transparent text-sm text-foreground outline-none"
+              className="font-mono text-xs"
             />
             <Button size="sm" variant="secondary" onClick={onCopy} className="gap-1.5 shrink-0">
               <Copy className="h-3.5 w-3.5" /> Copy
@@ -484,6 +515,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareExpiresAt, setShareExpiresAt] = useState("");
+  const [shareError, setShareError] = useState("");
   const [extractedOpen, setExtractedOpen] = useState(false);
   const exportTheme: ReportExportTheme = resolvedTheme === "dark" ? "dark" : "light";
 
@@ -525,14 +557,22 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
   const handleShare = () => {
     setShareUrl("");
     setShareExpiresAt("");
+    setShareError("");
     setShareOpen(true);
   };
 
   const handleCreateShareLink = async (allowDownload: boolean, advisorNotes?: string) => {
+    setShareError("");
     const token = generateShareToken();
-    const report = await saveSharedReport(token, markdown, branding.customerName || "Customer", 7, allowDownload, advisorNotes);
-    setShareUrl(`${window.location.origin}/shared/${token}`);
-    setShareExpiresAt(report.expiresAt);
+    try {
+      const report = await saveSharedReport(token, markdown, branding.customerName || "Customer", 7, allowDownload, advisorNotes);
+      setShareUrl(`${window.location.origin}/shared/${token}`);
+      setShareExpiresAt(report.expiresAt);
+    } catch (error) {
+      setShareUrl("");
+      setShareExpiresAt("");
+      setShareError(error instanceof Error ? error.message : "Unable to create share link.");
+    }
   };
 
   const handleCopyShareUrl = async () => {
@@ -581,10 +621,11 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
         onCopy={handleCopyShareUrl}
         onCreateLink={handleCreateShareLink}
         markdown={markdown}
+        error={shareError}
       />
 
       {/* Enterprise document studio shell */}
-      <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">
+      <div className="rounded-xl border border-border shadow-card overflow-hidden doc-section">
         <div className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex items-center justify-between no-print">
           <div className="flex items-center gap-3">
             <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5 opacity-60" />
@@ -594,7 +635,7 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
         </div>
         <div ref={docRef} className="bg-card p-8 md:p-12">
         {(branding.companyName || branding.logoUrl) && (
-          <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-[#2006F7]/20 dark:border-[#2006F7]/30">
+          <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-brand-accent/20 dark:border-brand-accent/30">
             {branding.logoUrl && (
               <img src={branding.logoUrl} alt="Company logo" className="h-14 w-auto max-w-[200px] object-contain" />
             )}
@@ -704,8 +745,6 @@ function ReportContent({ markdown, isLoading, isFailed, onRetry, branding, pdfFi
     </div>
   );
 }
-
-type SeverityFilterValue = "all" | "critical-high" | "critical";
 
 type SeverityFilterValue = "all" | "critical-high" | "critical";
 
@@ -971,7 +1010,7 @@ export function DocumentPreview({ reports, activeReportId, onActiveChange, isLoa
                 onClick={() => onActiveChange(r.id)}
                 className={`px-4 py-2.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                   isActive
-                    ? "border-[#2006F7] text-[#2006F7] dark:text-[#00EDFF] dark:border-[#00EDFF]"
+                    ? "border-[#2006F7] text-brand-accent dark:border-[#00EDFF]"
                     : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                 }`}
               >

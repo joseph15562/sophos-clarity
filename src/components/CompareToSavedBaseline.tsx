@@ -90,10 +90,10 @@ export function CompareToSavedBaseline({ analysisResults, customerName }: Compar
   );
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="compare-baseline">
+    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4" data-tour="compare-baseline">
       <div className="flex items-center gap-2">
-        <History className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
-        <h3 className="text-sm font-semibold text-foreground">Compare to saved baseline</h3>
+        <History className="h-4 w-4 text-brand-accent" />
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Compare to saved baseline</h3>
       </div>
       <p className="text-xs text-muted-foreground">
         Select a past assessment (from score history) to see score delta and findings added/removed since that date.
@@ -101,7 +101,7 @@ export function CompareToSavedBaseline({ analysisResults, customerName }: Compar
 
       {loading ? (
         <div className="flex items-center justify-center py-6">
-          <span className="animate-spin h-5 w-5 border-2 border-[#2006F7]/30 border-t-[#2006F7] rounded-full" />
+          <span className="animate-spin h-5 w-5 border-2 border-brand-accent/30 border-t-[#2006F7] rounded-full" />
         </div>
       ) : (
         <>

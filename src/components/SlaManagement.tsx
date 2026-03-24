@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const CARD_CLASS = "rounded-xl border border-border bg-card p-5";
+const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
 const STORAGE_KEY = "firecomply-sla-tiers";
 
 type SlaTier = "gold" | "silver" | "bronze";
@@ -87,7 +87,7 @@ export function SlaManagement() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
         <Clock className="h-4 w-4" />
         SLA Management Console
       </h3>
@@ -97,7 +97,7 @@ export function SlaManagement() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div>
-          <h4 className="text-xs font-semibold text-foreground mb-3">Tier definitions</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">Tier definitions</h4>
           <div className="space-y-2">
             {TIERS.map((t) => (
               <div
@@ -124,7 +124,7 @@ export function SlaManagement() {
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold text-foreground mb-3">Assign tier</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">Assign tier</h4>
           <div className="flex gap-2">
             <div className="flex-1">
               <Input
@@ -190,7 +190,7 @@ export function SlaManagement() {
       </div>
 
       <div className="mt-5">
-        <h4 className="text-xs font-semibold text-foreground mb-3">SLA performance by tier</h4>
+        <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">SLA performance by tier</h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {performance.map((p) => {
             const tierInfo = TIERS.find((t) => t.id === p.tier)!;

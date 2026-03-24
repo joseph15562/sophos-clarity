@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    name: Type-check & Test
+    name: Quality Gates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,10 +17,16 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Lint
+        run: npm run lint
       - name: Type-check
         run: npx tsc --noEmit
       - name: Run tests
         run: npm test
+      - name: Build
+        run: npm run build
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
 
   deploy-staging:
     name: Deploy to Staging

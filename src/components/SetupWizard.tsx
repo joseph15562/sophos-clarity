@@ -1,6 +1,6 @@
 import { useState, useMemo, lazy, Suspense } from "react";
 import {
-  ArrowRight, ArrowLeft, Building2, Wifi, Upload, Sparkles, Check, X, RotateCcw,
+  ArrowRight, ArrowLeft, Building2, Wifi, Upload, Sparkles, Check, X, RotateCcw, ChevronRight,
   FileText, LayoutDashboard, Settings, Eye, Download, MousePointerClick,
   ChevronDown, Shield, BarChart3, History, Users, Activity, ExternalLink,
   Plug, Key, RefreshCw, Bell, Globe, Lock, Fingerprint, Mail, Webhook,
@@ -85,7 +85,7 @@ function GuideStep({ number, title, description, icon, color }: {
   color: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+    <div className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-3">
       <div className="flex items-center gap-2 shrink-0">
         <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#2006F7] text-white text-[9px] font-bold">{number}</span>
         <div className={`h-7 w-7 rounded-lg bg-muted/50 flex items-center justify-center ${color}`}>
@@ -107,6 +107,24 @@ function Skeleton() {
       <div className="h-4 bg-muted/40 rounded w-3/4" />
       <div className="h-4 bg-muted/40 rounded w-1/2" />
       <div className="h-32 bg-muted/40 rounded" />
+    </div>
+  );
+}
+
+function SetupPreviewFrame({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-[24px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.08),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,249,255,0.96))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.14),transparent_35%),linear-gradient(180deg,rgba(13,18,32,0.96),rgba(10,15,28,0.96))] shadow-elevated overflow-hidden">
+      <div className="h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00EDFF]" />
+      <div className="p-4 space-y-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Preview</p>
+          <p className="text-sm font-semibold text-foreground mt-1">{title}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
+        </div>
+        <div className="rounded-2xl border border-border/70 bg-card/70 p-3">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
@@ -138,7 +156,7 @@ function FeatureButton({ icon, title, desc, color, onClick }: {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-left hover:border-[#2006F7]/30 hover:bg-muted/30 transition-all group"
+      className="w-full flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left hover:border-brand-accent/30 hover:bg-muted/30 transition-all group"
     >
       <div className={`h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 ${color} group-hover:scale-110 transition-transform`}>
         {icon}
@@ -164,8 +182,8 @@ function MockGauge({ score, grade, color }: { score: number; grade: string; colo
       <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="5"
         strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
         transform="rotate(-90 50 50)" />
-      <text x="50" y="46" textAnchor="middle" fill={color} fontSize="22" fontWeight="700">{score}</text>
-      <text x="50" y="62" textAnchor="middle" fill={color} fontSize="10" fontWeight="600">Grade {grade}</text>
+      <text x="50" y="46" textAnchor="middle" fill={color} fontSize="22" fontWeight="700" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>{score}</text>
+      <text x="50" y="62" textAnchor="middle" fill={color} fontSize="10" fontWeight="600" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>Grade {grade}</text>
     </svg>
   );
 }
@@ -324,15 +342,15 @@ function MockReportViewer({ type }: { type: "individual" | "executive" | "compli
           <>
             <p className="text-[10px] font-semibold text-foreground">Executive Summary</p>
             <div className="grid grid-cols-3 gap-2 my-2">
-              <div className="rounded border border-border bg-card p-2 text-center">
+              <div className="rounded border border-border/70 bg-card p-2 text-center">
                 <p className="text-lg font-bold text-[#F29400]">54</p>
                 <p className="text-[8px] text-muted-foreground">Risk Score</p>
               </div>
-              <div className="rounded border border-border bg-card p-2 text-center">
+              <div className="rounded border border-border/70 bg-card p-2 text-center">
                 <p className="text-lg font-bold text-[#EA0022]">32</p>
                 <p className="text-[8px] text-muted-foreground">Findings</p>
               </div>
-              <div className="rounded border border-border bg-card p-2 text-center">
+              <div className="rounded border border-border/70 bg-card p-2 text-center">
                 <p className="text-lg font-bold text-[#00F2B3]">8</p>
                 <p className="text-[8px] text-muted-foreground">Recommendations</p>
               </div>
@@ -357,7 +375,7 @@ function MockReportViewer({ type }: { type: "individual" | "executive" | "compli
         )}
       </div>
       <div className="flex gap-1.5">
-        <div className="px-2 py-1 rounded text-[9px] font-medium bg-[#2006F7]/10 text-[#2006F7]">PDF</div>
+        <div className="px-2 py-1 rounded text-[9px] font-medium bg-brand-accent/10 text-[#2006F7]">PDF</div>
         <div className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">Word</div>
         <div className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">PPTX</div>
         <div className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">ZIP</div>
@@ -375,7 +393,7 @@ function MockTenantDashboard() {
   return (
     <div className="space-y-2">
       {customers.map((c) => (
-        <div key={c.name} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+        <div key={c.name} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5">
           <div className="h-8 w-8 rounded-lg bg-muted/30 flex items-center justify-center">
             <span className="text-sm font-bold" style={{ color: c.color }}>{c.score}</span>
           </div>
@@ -457,7 +475,7 @@ function MockSettingsPanel() {
         { icon: <Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />, title: "Activity Log", desc: "47 events · Last: report.saved 2h ago" },
         { icon: <BookOpen className="h-3.5 w-3.5 text-[#005BC8]" />, title: "API Documentation", desc: "REST API reference for automation" },
       ].map((s) => (
-        <div key={s.title} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+        <div key={s.title} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5">
           <div className="h-6 w-6 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{s.icon}</div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-semibold text-foreground">{s.title}</p>
@@ -479,8 +497,8 @@ function MockTeamPanel() {
   return (
     <div className="space-y-2">
       {members.map((m) => (
-        <div key={m.email} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
-          <div className="h-8 w-8 rounded-full bg-[#2006F7]/10 flex items-center justify-center shrink-0">
+        <div key={m.email} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5">
+          <div className="h-8 w-8 rounded-full bg-brand-accent/10 flex items-center justify-center shrink-0">
             <span className="text-[11px] font-bold text-[#2006F7]">{m.name.split(" ").map((n) => n[0]).join("")}</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -488,7 +506,7 @@ function MockTeamPanel() {
             <p className="text-[9px] text-muted-foreground">{m.email}</p>
           </div>
           <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-            m.role === "Owner" ? "bg-[#2006F7]/10 text-[#2006F7]" :
+            m.role === "Owner" ? "bg-brand-accent/10 text-[#2006F7]" :
             m.role === "Engineer" ? "bg-[#6B5BFF]/10 text-[#6B5BFF]" :
             "bg-muted text-muted-foreground"
           }`}>{m.role}</span>
@@ -504,7 +522,7 @@ function MockTeamPanel() {
 function MockSecurityPanel() {
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-3">
+      <div className="rounded-xl border border-border/70 bg-card p-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
           <ShieldCheck className="h-4 w-4 text-[#00F2B3]" />
         </div>
@@ -514,7 +532,7 @@ function MockSecurityPanel() {
         </div>
         <div className="px-2 py-1 rounded text-[9px] font-semibold bg-[#00F2B3]/10 text-[#00F2B3]">Enabled</div>
       </div>
-      <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-3">
+      <div className="rounded-xl border border-border/70 bg-card p-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-[#6B5BFF]/10 flex items-center justify-center shrink-0">
           <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />
         </div>
@@ -537,7 +555,7 @@ function MockAlertPanel() {
   return (
     <div className="space-y-2">
       {rules.map((r) => (
-        <div key={r.name} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+        <div key={r.name} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5">
           <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0" style={{ color: r.color }}>
             {r.icon}
           </div>
@@ -581,7 +599,7 @@ function MockClientPortalPanel() {
             ))}
           </div>
           <div className="flex gap-1.5">
-            <span className="px-2 py-1 rounded text-[9px] font-medium bg-[#2006F7]/10 text-[#2006F7]">Reports</span>
+            <span className="px-2 py-1 rounded text-[9px] font-medium bg-brand-accent/10 text-[#2006F7]">Reports</span>
             <span className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">Compliance</span>
             <span className="px-2 py-1 rounded text-[9px] font-medium bg-muted text-muted-foreground">History</span>
           </div>
@@ -601,7 +619,7 @@ function MockRuleOptimiser() {
   return (
     <div className="space-y-2">
       {rules.map((r) => (
-        <div key={r.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+        <div key={r.id} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5">
           <span className="text-[9px] font-mono text-muted-foreground w-8 shrink-0">{r.id}</span>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-semibold text-foreground">{r.name}</p>
@@ -631,7 +649,7 @@ function MockPolicyComplexity() {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         {metrics.map((m) => (
-          <div key={m.label} className="rounded-lg border border-border bg-card p-2.5 text-center">
+          <div key={m.label} className="rounded-xl border border-border/70 bg-card p-2.5 text-center">
             <p className="text-lg font-bold text-foreground">{m.value}</p>
             <p className="text-[9px] font-medium text-foreground">{m.label}</p>
             <p className="text-[8px] text-muted-foreground">{m.sub}</p>
@@ -655,17 +673,17 @@ function MockUnusedObjects() {
   return (
     <div className="space-y-2">
       <div className="flex gap-3 text-center mb-2">
-        <div className="flex-1 rounded border border-border bg-card p-2">
+        <div className="flex-1 rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-[#F29400]">12</p>
           <p className="text-[8px] text-muted-foreground">Unused Objects</p>
         </div>
-        <div className="flex-1 rounded border border-border bg-card p-2">
+        <div className="flex-1 rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-[#00F2B3]">89</p>
           <p className="text-[8px] text-muted-foreground">Active Objects</p>
         </div>
       </div>
       {objects.map((o) => (
-        <div key={o.name} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
+        <div key={o.name} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2">
           <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">{o.icon}</div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-medium text-foreground truncate">{o.name}</p>
@@ -688,15 +706,15 @@ function MockRemediationProgress() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded border border-border bg-card p-2">
+        <div className="rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-[#00F2B3]">21</p>
           <p className="text-[8px] text-muted-foreground">Fixed</p>
         </div>
-        <div className="rounded border border-border bg-card p-2">
+        <div className="rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-[#F29400]">8</p>
           <p className="text-[8px] text-muted-foreground">In Progress</p>
         </div>
-        <div className="rounded border border-border bg-card p-2">
+        <div className="rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-muted-foreground">3</p>
           <p className="text-[8px] text-muted-foreground">Remaining</p>
         </div>
@@ -725,7 +743,7 @@ function MockRemediationRoadmap() {
   return (
     <div className="space-y-2">
       {phases.map((p) => (
-        <div key={p.phase} className="rounded-lg border border-border bg-card p-3">
+        <div key={p.phase} className="rounded-xl border border-border/70 bg-card p-3">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="h-3 w-3 text-muted-foreground" />
             <span className="text-[10px] font-semibold text-foreground">{p.phase}</span>
@@ -748,7 +766,7 @@ function MockRemediationRoadmap() {
 function MockPlaybooks() {
   return (
     <div className="space-y-2">
-      <div className="rounded-lg border border-border bg-card p-3">
+      <div className="rounded-xl border border-border/70 bg-card p-3">
         <div className="flex items-center gap-2 mb-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#EA0022]" />
           <p className="text-[10px] font-semibold text-foreground">Disable WAN Admin Services</p>
@@ -768,7 +786,7 @@ function MockPlaybooks() {
           ))}
         </div>
       </div>
-      <div className="rounded-lg border border-border bg-card p-3">
+      <div className="rounded-xl border border-border/70 bg-card p-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#F29400]" />
           <p className="text-[10px] font-semibold text-foreground">Enable IPS on WAN Rules</p>
@@ -776,7 +794,7 @@ function MockPlaybooks() {
         </div>
         <p className="text-[9px] text-muted-foreground mt-1 pl-5">4 steps · ~10 min per rule</p>
       </div>
-      <div className="rounded-lg border border-border bg-card p-3">
+      <div className="rounded-xl border border-border/70 bg-card p-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#F8E300]" />
           <p className="text-[10px] font-semibold text-foreground">Enforce TLS 1.2+ on VPNs</p>
@@ -847,15 +865,15 @@ function MockAttackSurface() {
         ))}
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded border border-border bg-card p-2">
+        <div className="rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-[#EA0022]">5</p>
           <p className="text-[8px] text-muted-foreground">Exposed Services</p>
         </div>
-        <div className="rounded border border-border bg-card p-2">
+        <div className="rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-[#F29400]">2</p>
           <p className="text-[8px] text-muted-foreground">High Risk</p>
         </div>
-        <div className="rounded border border-border bg-card p-2">
+        <div className="rounded border border-border/70 bg-card p-2">
           <p className="text-lg font-bold text-foreground">3</p>
           <p className="text-[8px] text-muted-foreground">Zones</p>
         </div>
@@ -875,12 +893,12 @@ function MockConfigCompare() {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3 mb-2">
-        <div className="flex-1 rounded border border-border bg-card p-2 text-center">
+        <div className="flex-1 rounded border border-border/70 bg-card p-2 text-center">
           <p className="text-[9px] text-muted-foreground">Before</p>
           <p className="text-sm font-bold text-[#F29400]">Score 54</p>
         </div>
         <ArrowLeftRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        <div className="flex-1 rounded border border-border bg-card p-2 text-center">
+        <div className="flex-1 rounded border border-border/70 bg-card p-2 text-center">
           <p className="text-[9px] text-muted-foreground">After</p>
           <p className="text-sm font-bold text-[#00F2B3]">Score 78</p>
         </div>
@@ -908,7 +926,7 @@ function MockScheduledReports() {
   return (
     <div className="space-y-2">
       {schedules.map((s) => (
-        <div key={s.customer} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+        <div key={s.customer} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5">
           <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
             <Calendar className="h-3.5 w-3.5 text-[#2006F7]" />
           </div>
@@ -933,7 +951,7 @@ function MockWebhookPanel() {
   return (
     <div className="space-y-2">
       {hooks.map((h) => (
-        <div key={h.name} className="rounded-lg border border-border bg-card p-3">
+        <div key={h.name} className="rounded-xl border border-border/70 bg-card p-3">
           <div className="flex items-center gap-2 mb-1.5">
             <Webhook className="h-3.5 w-3.5 text-[#6B5BFF]" />
             <p className="text-[10px] font-semibold text-foreground flex-1">{h.name}</p>
@@ -956,7 +974,7 @@ function MockCustomFrameworkPanel() {
   ];
   return (
     <div className="space-y-2">
-      <div className="rounded-lg border border-border bg-card p-3">
+      <div className="rounded-xl border border-border/70 bg-card p-3">
         <div className="flex items-center gap-2 mb-2.5">
           <BookOpen className="h-3.5 w-3.5 text-[#6B5BFF]" />
           <p className="text-[10px] font-semibold text-foreground">Internal Security Standard v2.1</p>
@@ -1023,7 +1041,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
     <>
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-xl bg-background rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="w-full max-w-4xl bg-background rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
           {/* Header with progress */}
           <div className="px-6 pt-5 pb-4 border-b border-border bg-card shrink-0">
             <div className="flex items-center justify-between mb-4">
@@ -1054,8 +1072,8 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
               ))}
             </div>
             <div className="flex items-center gap-2 mt-3">
-              <div className="h-7 w-7 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center">
-                <step.icon className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" />
+              <div className="h-7 w-7 rounded-lg bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center">
+                <step.icon className="h-3.5 w-3.5 text-brand-accent" />
               </div>
               <span className="text-xs font-semibold text-foreground">{step.title}</span>
               <span className="text-[10px] text-muted-foreground ml-auto">Step {currentStep + 1} of {steps.length}</span>
@@ -1063,53 +1081,87 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">
             {step.id === "welcome" && (
-              <div className="text-center space-y-5 py-4">
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#2006F7] to-[#00EDFF] flex items-center justify-center mx-auto shadow-lg shadow-[#2006F7]/20">
-                  <Sparkles className="h-8 w-8 text-white" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-display font-bold text-foreground">
-                    Welcome to Sophos FireComply{orgName ? `, ${orgName}` : ""}
+              <div className="space-y-5 py-2 max-w-2xl mx-auto">
+                {/* Centered hero */}
+                <div className="text-center space-y-3">
+                  <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-[#2006F7] to-[#00EDFF] flex items-center justify-center shadow-lg shadow-[#2006F7]/20">
+                    <Sparkles className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
+                    First-time setup
+                  </div>
+                  <h2 className="text-2xl font-display font-black text-foreground tracking-tight leading-tight">
+                    Welcome to Sophos FireComply{orgName ? <span className="text-brand-accent">, {orgName}</span> : null}
                   </h2>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                    Let's get your workspace set up. This takes about 3 minutes and you can always change these settings later.
+                  <p className="text-sm font-medium text-foreground/75 dark:text-white/70 max-w-md mx-auto leading-relaxed">
+                    Get your workspace ready in about 3 minutes. We'll configure branding, connect Sophos Central, and prepare you to assess, report, and remediate.
                   </p>
                 </div>
-                <div className="grid grid-cols-4 gap-2.5 pt-2">
-                  <div className="rounded-lg border border-border bg-card p-3 text-center">
-                    <Building2 className="h-5 w-5 mx-auto text-[#2006F7] dark:text-[#6B5BFF] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Branding & Central</p>
-                    <p className="text-[9px] text-muted-foreground">Company details & API</p>
+
+                {/* Feature pills */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+                    <Building2 className="h-5 w-5 text-[#2006F7] dark:text-[#6B5BFF] mx-auto mb-1" />
+                    <p className="text-[11px] font-semibold text-foreground leading-tight">Branding</p>
+                    <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Company & Central</p>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3 text-center">
-                    <Shield className="h-5 w-5 mx-auto text-[#00F2B3] dark:text-[#00F2B3] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Analysis & Reports</p>
-                    <p className="text-[9px] text-muted-foreground">AI, optimisation, tools</p>
+                  <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+                    <Shield className="h-5 w-5 text-[#00F2B3] mx-auto mb-1" />
+                    <p className="text-[11px] font-semibold text-foreground leading-tight">Analysis</p>
+                    <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Posture & reports</p>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3 text-center">
-                    <ListChecks className="h-5 w-5 mx-auto text-[#F29400] dark:text-[#F29400] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Remediation</p>
-                    <p className="text-[9px] text-muted-foreground">Playbooks, roadmaps</p>
+                  <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+                    <ListChecks className="h-5 w-5 text-[#F29400] mx-auto mb-1" />
+                    <p className="text-[11px] font-semibold text-foreground leading-tight">Remediation</p>
+                    <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Priorities & roadmap</p>
                   </div>
-                  <div className="rounded-lg border border-border bg-card p-3 text-center">
-                    <Globe className="h-5 w-5 mx-auto text-[#005BC8] dark:text-[#00EDFF] mb-1.5" />
-                    <p className="text-[10px] font-medium text-foreground">Portal & Alerts</p>
-                    <p className="text-[9px] text-muted-foreground">Portals, webhooks, schedules</p>
+                  <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
+                    <Globe className="h-5 w-5 text-[#005BC8] dark:text-[#00EDFF] mx-auto mb-1" />
+                    <p className="text-[11px] font-semibold text-foreground leading-tight">Delivery</p>
+                    <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Portal & alerts</p>
                   </div>
                 </div>
+
+                {/* Compact preview */}
+                <SetupPreviewFrame
+                  title="What you'll configure"
+                  subtitle="Security posture scoring, compliance mapping, and customer-ready reporting from a single config export."
+                >
+                  <div className="grid gap-3 grid-cols-[110px_1fr] items-start">
+                    <div className="flex justify-center">
+                      <MockGauge score={82} grade="B" color="#00F2B3" />
+                    </div>
+                    <div className="space-y-2">
+                      <MockSeverityBar />
+                      <div className="rounded-lg border border-border bg-muted/20 p-2">
+                        <MockInspectionPosture />
+                      </div>
+                    </div>
+                  </div>
+                </SetupPreviewFrame>
               </div>
             )}
 
             {step.id === "branding" && (
               <div className="space-y-5">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Company Branding</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    This information appears on all your reports and assessments. You can change it anytime.
-                  </p>
-                </div>
+                <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] items-start">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
+                      Report identity
+                    </div>
+                    <h3 className="text-base font-display tracking-tight font-semibold text-foreground mt-2">Company Branding</h3>
+                    <p className="text-[11px] text-muted-foreground">
+                      This information appears on all your reports and assessments. You can change it anytime.
+                    </p>
+                    <SetupPreviewFrame
+                      title="Branded customer deliverables"
+                      subtitle="Your company details shape the exported reports and executive packs customers receive."
+                    >
+                      <MockReportViewer type="executive" />
+                    </SetupPreviewFrame>
+                  </div>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="setup-company" className="text-xs">Company / MSP Name</Label>
@@ -1149,27 +1201,43 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     </p>
                   </div>
                 </div>
+                </div>
               </div>
             )}
 
             {step.id === "central" && (
               <div className="space-y-5">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Connect Sophos Central</h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Link your Sophos Central Partner or Tenant account to enrich reports with live firewall data, licence info, and alerts. You can skip this and connect later.
-                  </p>
+                <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr] items-start">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
+                      Live estate enrichment
+                    </div>
+                    <h3 className="text-xl font-display font-black tracking-tight text-foreground mt-2">
+                      Connect Sophos Central
+                    </h3>
+                    <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
+                      Link your Sophos Central Partner or Tenant account to enrich reports with live firewall data, licence info, and alerts. You can skip this and connect later.
+                    </p>
+                    <SetupPreviewFrame
+                      title="Managed estate visibility"
+                      subtitle="Linking Sophos Central adds live tenancy, device, and enrichment context to your compliance workflow."
+                    >
+                      <MockTenantDashboard />
+                    </SetupPreviewFrame>
+                  </div>
+                  <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] shadow-card">
+                    <Suspense fallback={<Skeleton />}>
+                      <CentralIntegration />
+                    </Suspense>
+                  </div>
                 </div>
-                <Suspense fallback={<Skeleton />}>
-                  <CentralIntegration />
-                </Suspense>
               </div>
             )}
 
             {step.id === "connector-agent" && (
               <div className="space-y-5">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">FireComply Connector Agent</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">FireComply Connector Agent</h3>
                   <p className="text-[11px] text-muted-foreground">
                     The Connector Agent is a lightweight desktop app that sits on your customer's network and automatically pulls firewall configs, runs security assessments, and submits results back to FireComply — on a schedule, with no manual exports needed.
                   </p>
@@ -1207,7 +1275,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 </div>
 
                 {/* Mock agent card */}
-                <div className="rounded-lg border border-border bg-card p-3 space-y-2">
+                <div className="rounded-xl border border-border/70 bg-card p-3 space-y-2">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">What you'll see in the dashboard</p>
                   <div className="rounded-lg border border-border bg-muted/20 p-2.5 flex items-center gap-3">
                     <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#00F2B3]" />
@@ -1231,7 +1299,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   </div>
                 </div>
 
-                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Optional:</strong> The agent is completely optional. You can always upload firewall configs manually instead. The agent just automates the process for ongoing monitoring.
                   </p>
@@ -1242,7 +1310,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
             {step.id === "guide-upload" && (
               <div className="space-y-5">
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">How to Upload & Assess</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">How to Upload & Assess</h3>
                   <p className="text-[11px] text-muted-foreground">
                     FireComply analyses Sophos XGS HTML configuration exports. Here's the workflow:
                   </p>
@@ -1279,7 +1347,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   />
                 </div>
 
-                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Tip:</strong> Set the customer name and compliance frameworks in the <strong className="text-foreground">Assessment Context</strong> section before generating reports — this tailors the AI analysis.
                   </p>
@@ -1321,7 +1389,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         { severity: "MEDIUM", title: "DNS rebinding protection disabled", color: "#F8E300" },
                         { severity: "LOW", title: "SNMP community string is 'public'", color: "#00F2B3" },
                       ].map((f) => (
-                        <div key={f.title} className="flex items-center gap-2 rounded border border-border bg-card p-2">
+                        <div key={f.title} className="flex items-center gap-2 rounded border border-border/70 bg-card p-2">
                           <span className="px-1.5 py-0.5 rounded text-[8px] font-bold" style={{ backgroundColor: f.color + "15", color: f.color }}>{f.severity}</span>
                           <span className="text-[10px] text-foreground">{f.title}</span>
                         </div>
@@ -1350,7 +1418,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Pre-AI Assessment (Instant)</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Pre-AI Assessment (Instant)</h3>
                   <p className="text-[11px] text-muted-foreground">
                     As soon as you upload a config, FireComply runs a <strong className="text-foreground">deterministic analysis</strong> — no AI needed. Click each panel below to preview.
                   </p>
@@ -1399,7 +1467,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">AI-Powered Reports</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">AI-Powered Reports</h3>
                   <p className="text-[11px] text-muted-foreground">
                     After the Pre-AI assessment, generate <strong className="text-foreground">AI narrative reports</strong> for your customers. Click each to preview.
                   </p>
@@ -1453,11 +1521,11 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureOverlay title="Consistency Checker" subtitle="Cross-firewall rule consistency analysis" onClose={() => setActiveOverlay(null)}>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-2 text-center">
-                        <div className="rounded border border-border bg-card p-2">
+                        <div className="rounded border border-border/70 bg-card p-2">
                           <p className="text-lg font-bold text-[#00F2B3]">87%</p>
                           <p className="text-[8px] text-muted-foreground">Consistency Score</p>
                         </div>
-                        <div className="rounded border border-border bg-card p-2">
+                        <div className="rounded border border-border/70 bg-card p-2">
                           <p className="text-lg font-bold text-[#F29400]">4</p>
                           <p className="text-[8px] text-muted-foreground">Inconsistencies</p>
                         </div>
@@ -1468,7 +1536,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         { rule: "Admin HTTPS", fw1: "Disabled", fw2: "Enabled", status: "mismatch" },
                         { rule: "SSL Inspection", fw1: "38%", fw2: "42%", status: "match" },
                       ].map((r) => (
-                        <div key={r.rule} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-[9px]">
+                        <div key={r.rule} className="flex items-center gap-2 rounded-xl border border-border/70 bg-card p-2.5 text-[9px]">
                           <span className={`h-2 w-2 rounded-full shrink-0 ${r.status === "match" ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`} />
                           <span className="font-medium text-foreground flex-1">{r.rule}</span>
                           <span className="text-muted-foreground">FW1: {r.fw1}</span>
@@ -1483,7 +1551,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Optimisation</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Optimisation</h3>
                   <p className="text-[11px] text-muted-foreground">
                     FireComply analyses your firewall rules for <strong className="text-foreground">redundancy, complexity, and hygiene</strong> — helping you clean up and streamline your policy. Click each to preview.
                   </p>
@@ -1496,7 +1564,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureButton icon={<Scale className="h-4 w-4" />} title="Consistency Checker" desc="Cross-firewall rule consistency analysis when multiple configs are loaded" color="text-[#00F2B3]" onClick={() => setActiveOverlay("consistency-checker")} />
                 </div>
 
-                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Tip:</strong> The Optimisation tab appears automatically after uploading a config. Upload multiple configs to enable cross-firewall consistency checking.
                   </p>
@@ -1530,7 +1598,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         { id: "CR-002", title: "Enable IPS on all WAN rules", status: "Pending", statusColor: "#F29400", by: "Joseph McDonald", date: "16 Mar 2026" },
                         { id: "CR-003", title: "Enforce TLS 1.2+ on VPNs", status: "Draft", statusColor: "#6B5BFF", by: "Alex Rivera", date: "18 Mar 2026" },
                       ].map((cr) => (
-                        <div key={cr.id} className="rounded-lg border border-border bg-card p-3">
+                        <div key={cr.id} className="rounded-xl border border-border/70 bg-card p-3">
                           <div className="flex items-center gap-2 mb-1.5">
                             <span className="text-[9px] font-mono text-muted-foreground">{cr.id}</span>
                             <p className="text-[10px] font-semibold text-foreground flex-1">{cr.title}</p>
@@ -1555,7 +1623,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Remediation</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Remediation</h3>
                   <p className="text-[11px] text-muted-foreground">
                     Plan, prioritise, and track the work needed to <strong className="text-foreground">fix security findings</strong> — from individual playbooks to full remediation roadmaps. Click each to preview.
                   </p>
@@ -1604,7 +1672,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                         { format: "CSV / Excel", desc: "Raw data for analysis and risk registers", icon: <FileText className="h-3.5 w-3.5 text-[#00F2B3]" />, types: "Findings, Risk Register, Evidence" },
                         { format: "ZIP Bundle", desc: "All reports and evidence in a single download", icon: <Package className="h-3.5 w-3.5 text-[#6B5BFF]" />, types: "Full assessment package" },
                       ].map((f) => (
-                        <div key={f.format} className="flex items-center gap-3 rounded-lg border border-border bg-card p-2.5">
+                        <div key={f.format} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5">
                           <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">{f.icon}</div>
                           <div className="flex-1 min-w-0">
                             <p className="text-[10px] font-semibold text-foreground">{f.format}</p>
@@ -1630,7 +1698,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Tools & Compare</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Tools & Compare</h3>
                   <p className="text-[11px] text-muted-foreground">
                     Power tools for deeper analysis — <strong className="text-foreground">simulate scores</strong>, <strong className="text-foreground">map your attack surface</strong>, <strong className="text-foreground">compare configs</strong>, and <strong className="text-foreground">export everything</strong>. Click each to preview.
                   </p>
@@ -1643,7 +1711,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureButton icon={<Package className="h-4 w-4" />} title="Export Centre" desc="Export reports, risk registers, and evidence in PDF, Word, PPTX" color="text-[#00F2B3]" onClick={() => setActiveOverlay("export-centre")} />
                 </div>
 
-                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Tip:</strong> Upload two configs to enable the Compare tab. The Remediation Impact Simulator and Attack Surface Map are in the Tools tab after uploading any config.
                   </p>
@@ -1687,7 +1755,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">The Management Panel</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">The Management Panel</h3>
                   <p className="text-[11px] text-muted-foreground">
                     Click your <strong className="text-foreground">organisation name</strong> in the top navbar to open it. Click each tab below to preview.
                   </p>
@@ -1763,7 +1831,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                           <p className="text-[10px] text-muted-foreground mt-1">Sign in with Face ID, Touch ID, Windows Hello, or a hardware security key</p>
                         </div>
                       </div>
-                      <div className="rounded-lg border border-border bg-card p-3">
+                      <div className="rounded-xl border border-border/70 bg-card p-3">
                         <p className="text-[10px] font-semibold text-foreground mb-2">Registered Passkeys</p>
                         <div className="flex items-center gap-3 rounded bg-muted/20 p-2.5">
                           <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />
@@ -1782,7 +1850,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Team & Security</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Team & Security</h3>
                   <p className="text-[11px] text-muted-foreground">
                     Invite your team and secure your workspace with <strong className="text-foreground">multi-factor authentication</strong> and <strong className="text-foreground">passkeys</strong>. Click each to learn more.
                   </p>
@@ -1846,7 +1914,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                 )}
 
                 <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-foreground">Portal, Alerts & Integrations</h3>
+                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Portal, Alerts & Integrations</h3>
                   <p className="text-[11px] text-muted-foreground">
                     Share results with customers through <strong className="text-foreground">branded portals</strong>, automate <strong className="text-foreground">scheduled reports</strong>, stay informed with <strong className="text-foreground">real-time alerts</strong>, and connect to your <strong className="text-foreground">existing tools via webhooks</strong>. Click each to learn more.
                   </p>
@@ -1860,7 +1928,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                   <FeatureButton icon={<BookOpen className="h-4 w-4" />} title="Custom Frameworks" desc="Create your own compliance standards with custom controls" color="text-[#00F2B3]" onClick={() => setActiveOverlay("custom-frameworks")} />
                 </div>
 
-                <div className="rounded-lg bg-[#2006F7]/5 border border-[#2006F7]/15 p-3">
+                <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Tip:</strong> Configure all of these from Settings. Client portals and scheduled reports are especially useful for MSPs who want to give customers ongoing visibility into their security posture.
                   </p>
@@ -1879,7 +1947,7 @@ export function SetupWizard({ open, onClose, branding, onBrandingChange, orgName
                     Your workspace is ready. Upload a Sophos XGS firewall config export to start your first security assessment.
                   </p>
                 </div>
-                <div className="rounded-lg border border-border bg-card p-4 text-left space-y-2">
+                <div className="rounded-xl border border-border/70 bg-card p-4 text-left space-y-2">
                   <p className="text-xs font-semibold text-foreground">What's next?</p>
                   <ul className="space-y-1.5">
                     <li className="flex items-start gap-2 text-[11px] text-muted-foreground">
@@ -1933,16 +2001,16 @@ export function RerunSetupButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors text-left"
+      className="w-full flex items-center gap-3.5 px-5 py-4 rounded-2xl border border-border/50 bg-card shadow-card hover:bg-muted/20 transition-colors text-left group"
     >
-      <div className="h-8 w-8 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-        <RotateCcw className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+      <div className="h-9 w-9 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0 group-hover:bg-brand-accent/15 dark:group-hover:bg-[#00EDFF]/15 transition-colors">
+        <RotateCcw className="h-4.5 w-4.5 text-brand-accent" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-foreground">Re-run First-Time Setup</p>
-        <p className="text-[10px] text-muted-foreground">Walk through the setup wizard again to update branding and connections</p>
+        <p className="text-[13px] font-display font-semibold tracking-tight text-foreground">Re-run First-Time Setup</p>
+        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Walk through the setup wizard again to update branding and connections</p>
       </div>
-      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
     </button>
   );
 }

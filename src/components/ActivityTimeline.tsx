@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const CARD_CLASS = "rounded-xl border border-border bg-card p-5";
+const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
 const STORAGE_KEY = "firecomply-audit-log";
 
 export type AuditActionType =
@@ -125,7 +125,7 @@ export function ActivityTimeline() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
         <Activity className="h-4 w-4" />
         Activity Audit Timeline
       </h3>

@@ -119,7 +119,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
       {showPopover && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowPopover(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-lg border border-border bg-card shadow-lg p-3 space-y-2">
+          <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border border-border/70 bg-card shadow-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} />
               <span className="text-xs font-semibold text-foreground">
@@ -136,7 +136,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
                 <button
                   onClick={(e) => { e.stopPropagation(); refresh(); }}
                   disabled={refreshing}
-                  className="w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-[#2006F7] dark:text-[#00EDFF] hover:bg-muted/50 rounded px-2 py-1.5 transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-brand-accent hover:bg-muted/50 rounded px-2 py-1.5 transition-colors"
                 >
                   <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} />
                   {refreshing ? "Refreshing..." : "Refresh Now"}
@@ -236,9 +236,9 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
 
   return (
     <>
-      <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-[0_14px_40px_rgba(0,10,35,0.32)] backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-[0_8px_22px_rgba(0,0,0,0.18)] shrink-0">
+      <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm">
+        <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-elevated shrink-0">
             <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
           </div>
           <div className="mr-auto shrink-0">
@@ -334,7 +334,7 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
 
       {showContext && (
         <div className="border-b border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.92),rgba(14,20,34,0.92))] no-print hidden sm:block backdrop-blur-sm">
-          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-4 text-[11px] text-muted-foreground overflow-x-auto">
+          <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-2 flex items-center gap-4 text-[11px] text-muted-foreground overflow-x-auto">
             {customerName && (
               <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
                 <span className="font-semibold text-foreground">{customerName}</span>
@@ -351,14 +351,14 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
                 <span className="opacity-60">Frameworks:</span>
                 {selectedFrameworks.map((fw) => (
-                  <span key={fw} className="px-1.5 py-0.5 rounded bg-[#2006F7]/10 dark:bg-[#2006F7]/20 text-[#10037C] dark:text-[#009CFB] font-medium">
+                  <span key={fw} className="px-1.5 py-0.5 rounded bg-brand-accent/10 dark:bg-brand-accent/20 text-[#10037C] dark:text-[#009CFB] font-medium">
                     {fw}
                   </span>
                 ))}
               </span>
             )}
             {reportCount > 0 && (
-              <span className="flex items-center gap-1 shrink-0 ml-auto rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.06] px-2.5 py-1">
+              <span className="flex items-center gap-1 shrink-0 ml-auto rounded-full border border-brand-accent/15 bg-brand-accent/[0.06] px-2.5 py-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#2006F7]" />
                 {reportCount} report{reportCount !== 1 ? "s" : ""} generated
               </span>

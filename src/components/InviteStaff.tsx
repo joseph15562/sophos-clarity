@@ -5,6 +5,9 @@ import { useAuth } from "@/hooks/use-auth";
 import type { OrgRole } from "@/hooks/use-auth";
 import { logAudit } from "@/lib/audit";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 const ROLE_OPTIONS: { value: OrgRole; label: string; description: string }[] = [
   { value: "admin", label: "Admin", description: "Full access — manage agents, Central, team, and settings" },
@@ -181,31 +184,32 @@ export function InviteStaff() {
 
       {/* Invite form */}
       <form onSubmit={handleInvite} className="space-y-2">
-        <div className="flex gap-2">
-          <input
+        <div className="flex gap-2 flex-wrap">
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="colleague@company.com"
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+            className="flex-1 min-w-[220px]"
           />
-          <select
-            value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as OrgRole)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-          >
-            {ROLE_OPTIONS.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
-          <button
+          <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as OrgRole)}>
+            <SelectTrigger className="w-[140px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_OPTIONS.map((r) => (
+                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-1.5 rounded-lg bg-[#2006F7] hover:bg-[#10037C] text-white px-3 py-2 text-xs font-medium transition-colors disabled:opacity-50"
+            className="gap-1.5 text-xs"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Invite
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -233,7 +237,7 @@ export function InviteStaff() {
           <div className="space-y-1">
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30">
-                <Shield className={`h-3 w-3 shrink-0 ${m.role === "admin" ? "text-[#2006F7] dark:text-[#00EDFF]" : "text-muted-foreground"}`} />
+                <Shield className={`h-3 w-3 shrink-0 ${m.role === "admin" ? "text-brand-accent" : "text-muted-foreground"}`} />
                 <span className="text-xs text-foreground flex-1 truncate">
                   {m.email ?? m.user_id}
                   {m.isYou && <span className="text-[9px] text-muted-foreground ml-1">(you)</span>}

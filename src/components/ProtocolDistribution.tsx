@@ -106,8 +106,8 @@ export function ProtocolDistribution({ files }: Props) {
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
           Protocol Distribution
         </h3>
         <p className="text-sm text-muted-foreground">No firewall rules found</p>
@@ -116,9 +116,9 @@ export function ProtocolDistribution({ files }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Protocol Distribution
         </h3>
         <span className="text-[10px] text-muted-foreground">

@@ -49,6 +49,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
+import type { Severity } from "@/lib/design-tokens";
 
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#00F2B3] dark:text-[#00F2B3]",
@@ -65,8 +66,6 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: "bg-blue-500 text-white",
   info: "bg-slate-400 text-white",
 };
-
-type Severity = "critical" | "high" | "medium" | "low" | "info";
 
 interface PortalFinding {
   id: string;
@@ -651,7 +650,7 @@ export default function ClientPortal() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main id="main-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Login form */}
         {showLogin && !authUser && (
           <PortalLoginForm

@@ -90,8 +90,8 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
   const severities: Severity[] = ["critical", "high", "medium", "low"];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground">Cost of Risk Estimator</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Cost of Risk Estimator</h3>
       <div className="mt-4 space-y-4">
         <p className="text-2xl font-bold text-destructive">
           Estimated Annual Risk Exposure: {fmt(riskExposure.minExposure)} – {fmt(riskExposure.maxExposure)}

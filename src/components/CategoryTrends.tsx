@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
+import { BRAND } from "@/lib/design-tokens";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 
@@ -89,8 +90,8 @@ export function CategoryTrends({ analysisResults }: CategoryTrendsProps) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Category Trends</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Category Trends</h3>
       {aggregated.length === 0 ? (
         <p className="text-xs text-muted-foreground">No analysis data</p>
       ) : (
@@ -133,7 +134,7 @@ export function CategoryTrends({ analysisResults }: CategoryTrendsProps) {
                         <polyline
                           points={polyPoints}
                           fill="none"
-                          stroke="#2006F7"
+                          stroke={BRAND.blue}
                           strokeWidth={1.5}
                           strokeLinecap="round"
                           strokeLinejoin="round"

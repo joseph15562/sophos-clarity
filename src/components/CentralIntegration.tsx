@@ -11,7 +11,7 @@ function SetupStep({ step, title, children, defaultOpen }: { step: number; title
   return (
     <div className="border border-border rounded-lg overflow-hidden">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/30 transition-colors">
-        <span className="flex items-center justify-center h-6 w-6 rounded-full bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] text-xs font-bold shrink-0">{step}</span>
+        <span className="flex items-center justify-center h-6 w-6 rounded-full bg-brand-accent/10 text-brand-accent text-xs font-bold shrink-0">{step}</span>
         <span className="text-sm font-medium text-foreground flex-1">{title}</span>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -117,7 +117,7 @@ export function CentralIntegration() {
             </div>
             <button
               onClick={() => setShowSetupGuide(!showSetupGuide)}
-              className="text-[10px] text-[#2006F7] dark:text-[#00EDFF] hover:underline flex items-center gap-1"
+              className="text-[10px] text-brand-accent hover:underline flex items-center gap-1"
             >
               {showSetupGuide ? "Hide setup guide" : "How do I get API credentials?"}
             </button>
@@ -127,7 +127,7 @@ export function CentralIntegration() {
           {showSetupGuide && (
             <div className="space-y-2">
               <SetupStep step={1} title="Sign in to Sophos Central" defaultOpen>
-                <p>Go to <a href="https://central.sophos.com" target="_blank" rel="noopener noreferrer" className="text-[#2006F7] dark:text-[#00EDFF] hover:underline inline-flex items-center gap-0.5">central.sophos.com <ExternalLink className="h-2.5 w-2.5" /></a></p>
+                <p>Go to <a href="https://central.sophos.com" target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:underline inline-flex items-center gap-0.5">central.sophos.com <ExternalLink className="h-2.5 w-2.5" /></a></p>
                 <p className="mt-1">Partners: use the Partner dashboard. Customers: use Sophos Central Admin.</p>
               </SetupStep>
               <SetupStep step={2} title="Navigate to API Credentials">
@@ -218,7 +218,7 @@ export function CentralIntegration() {
       {/* Tenant List (when connected as partner/org) */}
       {central.isConnected && central.status?.partner_type !== "tenant" && central.tenants.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground flex items-center gap-1.5">
             <Building2 className="h-3.5 w-3.5" />
             Managed Customers ({central.tenants.length})
           </h4>
@@ -237,7 +237,7 @@ export function CentralIntegration() {
       {/* Firewall list preview (when connected as single tenant) */}
       {central.isConnected && central.status?.partner_type === "tenant" && central.firewalls.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground flex items-center gap-1.5">
             <Server className="h-3.5 w-3.5" />
             Your Firewalls ({central.firewalls.length})
           </h4>

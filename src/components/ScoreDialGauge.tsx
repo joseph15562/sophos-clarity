@@ -3,15 +3,11 @@
 import { useMemo } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
+import { scoreToColor } from "@/lib/design-tokens";
 
 interface ScoreDialGaugeProps {
   analysisResults: Record<string, AnalysisResult>;
 }
-
-const RED = "#EA0022";
-const AMBER = "#F29400";
-const GREEN = "#00F2B3";
-const GREEN_DARK = "#00F2B3";
 
 function arcPath(
   cx: number,
@@ -36,12 +32,6 @@ function scoreToAngle(score: number): number {
   return start + (score / 100) * sweep;
 }
 
-function scoreToColor(score: number): string {
-  if (score <= 40) return RED;
-  if (score <= 75) return AMBER;
-  return GREEN;
-}
-
 function GaugeSvg({
   score,
   size,
@@ -56,8 +46,8 @@ function GaugeSvg({
   const cx = size / 2;
   const cy = size / 2;
   const r = size * 0.38;
-  const strokeWidth = size * 0.06;
-  const needleLength = r - strokeWidth * 2;
+  const strokeWidth = size * 0.065;
+  const needleLength = r - strokeWidth * 1.5;
 
   const startAngle = 150;
   const endAngle = 390;
@@ -68,7 +58,15 @@ function GaugeSvg({
   const filledPath = arcPath(cx, cy, r, startAngle, filledEndAngle);
 
   const fillColor = scoreToColor(score);
-  const isGreen = score > 75;
+  const gaugeId = `gauge-${size}-${Math.round(score)}`;
+  const trackColor = "hsl(213 27% 86%)";
+  const trackColorDark = "hsl(215 40% 22%)";
+  const needleColor = "hsl(215 52% 25%)";
+  const needleColorDark = "hsl(210 20% 65%)";
+  const textColor = "hsl(215 52% 14%)";
+  const textColorDark = "hsl(0 0% 96%)";
+  const subtextColor = "hsl(210 25% 50%)";
+  const subtextColorDark = "hsl(210 20% 65%)";
 
   return (
     <svg
@@ -77,24 +75,81 @@ function GaugeSvg({
       viewBox={`0 0 ${size} ${size}`}
       className="overflow-visible"
     >
-      {/* Track */}
+      <defs>
+        <linearGradient id={`${gaugeId}-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={fillColor} stopOpacity={0.8} />
+          <stop offset="100%" stopColor={fillColor} />
+        </linearGradient>
+        <filter id={`${gaugeId}-glow`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation={size * 0.02} result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {/* Track background */}
       <path
         d={trackPath}
         fill="none"
-        stroke="rgb(229 231 235)"
+        stroke={trackColor}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
+        className="dark:hidden"
       />
-      {/* Filled arc */}
+      <path
+        d={trackPath}
+        fill="none"
+        stroke={trackColorDark}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        className="hidden dark:block"
+      />
+
+      {/* Tick marks around the arc */}
+      {Array.from({ length: 11 }, (_, i) => {
+        const tickAngle = startAngle + (i / 10) * (endAngle - startAngle);
+        const rad = (tickAngle * Math.PI) / 180;
+        const isMajor = i % 5 === 0;
+        const outerR = r + strokeWidth * 0.8;
+        const innerR = r + strokeWidth * (isMajor ? 1.6 : 1.2);
+        return (
+          <line
+            key={i}
+            x1={cx + outerR * Math.cos(rad)}
+            y1={cy + outerR * Math.sin(rad)}
+            x2={cx + innerR * Math.cos(rad)}
+            y2={cy + innerR * Math.sin(rad)}
+            stroke={fillColor}
+            strokeWidth={isMajor ? 1.5 : 0.8}
+            opacity={isMajor ? 0.4 : 0.2}
+            strokeLinecap="round"
+          />
+        );
+      })}
+
+      {/* Glow layer behind filled arc */}
       <path
         d={filledPath}
         fill="none"
         stroke={fillColor}
+        strokeWidth={strokeWidth * 2.2}
+        strokeLinecap="round"
+        opacity={0.15}
+        filter={`url(#${gaugeId}-glow)`}
+      />
+
+      {/* Filled arc */}
+      <path
+        d={filledPath}
+        fill="none"
+        stroke={`url(#${gaugeId}-grad)`}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
-        className={isGreen ? "dark:!stroke-[#00F2B3]" : ""}
       />
-      {/* Needle - line points right (0°), inner group rotates to needleAngle */}
+
+      {/* Needle */}
       <g transform={`translate(${cx}, ${cy})`}>
         <g
           className="gauge-needle"
@@ -104,39 +159,60 @@ function GaugeSvg({
             animation: "gaugeNeedleSweep 0.6s ease-out forwards",
           }}
         >
-          <line
-            x1={0}
-            y1={0}
-            x2={needleLength}
-            y2={0}
-            stroke="rgb(55 65 81)"
-            strokeWidth={size * 0.012}
-            strokeLinecap="round"
-          />
+          {/* Light mode needle */}
+          <line x1={0} y1={0} x2={needleLength} y2={0}
+            stroke={needleColor} strokeWidth={size * 0.02} strokeLinecap="round"
+            className="dark:hidden" />
+          {/* Dark mode needle */}
+          <line x1={0} y1={0} x2={needleLength} y2={0}
+            stroke={needleColorDark} strokeWidth={size * 0.02} strokeLinecap="round"
+            className="hidden dark:block" />
         </g>
       </g>
+
+      {/* Needle cap outer ring */}
+      <circle cx={cx} cy={cy} r={size * 0.04}
+        fill="none" stroke={fillColor} strokeWidth={size * 0.008} opacity={0.3} />
       {/* Needle cap */}
-      <circle cx={cx} cy={cy} r={size * 0.02} fill="rgb(55 65 81)" />
+      <circle cx={cx} cy={cy} r={size * 0.028}
+        fill={needleColor} className="dark:hidden" />
+      <circle cx={cx} cy={cy} r={size * 0.028}
+        fill={needleColorDark} className="hidden dark:block" />
+
       {/* Centre content */}
       {showLabels && (
         <g>
+          {/* Grade letter — colored to match the arc */}
           <text
             x={cx}
-            y={cy - size * 0.02}
+            y={cy - size * 0.04}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-foreground text-[10px] font-bold"
-            style={{ fontSize: size * 0.12 }}
+            fill={fillColor}
+            style={{ fontSize: size * 0.18, fontWeight: 900, fontFamily: "'Zalando Sans Expanded', 'Zalando Sans', system-ui, sans-serif", letterSpacing: "-0.02em" }}
           >
             {label ?? "—"}
           </text>
+          {/* Score number */}
           <text
             x={cx}
-            y={cy + size * 0.08}
+            y={cy + size * 0.1}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-muted-foreground text-[10px] font-medium"
-            style={{ fontSize: size * 0.06 }}
+            fill={subtextColor}
+            style={{ fontSize: size * 0.07, fontWeight: 700, fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
+            className="dark:hidden"
+          >
+            {score}
+          </text>
+          <text
+            x={cx}
+            y={cy + size * 0.1}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={subtextColorDark}
+            style={{ fontSize: size * 0.07, fontWeight: 700, fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
+            className="hidden dark:block"
           >
             {score}
           </text>
@@ -176,8 +252,8 @@ export function ScoreDialGauge({ analysisResults }: ScoreDialGaugeProps) {
 
   if (!scores.aggregate) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Security Score</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Security Score</h3>
         <p className="text-sm text-muted-foreground text-center py-8">
           No analysis results to display.
         </p>
@@ -190,9 +266,25 @@ export function ScoreDialGauge({ analysisResults }: ScoreDialGaugeProps) {
   const aggGrade = "grade" in scores.aggregate ? scores.aggregate.grade : "—";
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Security Score</h3>
+    <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-6 sm:p-8 shadow-[0_18px_50px_rgba(32,6,247,0.08)] space-y-5">
+      <div className="space-y-3">
+        <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-brand-accent">
+          Security score
+        </div>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-xl font-display font-black text-foreground tracking-tight">Executive Security Score</h3>
+            <p className="text-[11px] text-muted-foreground/60 leading-relaxed mt-1">A clear, client-ready posture signal for MSP reviews and SE-led assessment walkthroughs.</p>
+          </div>
+          <div className="rounded-2xl border border-border/50 bg-card shadow-card px-5 py-4 text-right">
+            <p className="text-[9px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">Current posture</p>
+            <p className="text-4xl font-display font-black tracking-tight tabular-nums mt-1.5" style={{ color: scoreToColor(aggScore) }}>{aggScore}<span className="text-lg font-semibold text-muted-foreground">/100</span></p>
+            <p className="text-[11px] font-display font-semibold mt-1" style={{ color: scoreToColor(aggScore) }}>Grade {aggGrade}</p>
+          </div>
+        </div>
+      </div>
 
+      <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
       <div className="flex flex-col items-center gap-6">
         {/* Main gauge */}
         <div className="relative flex items-center justify-center" data-tour="score-dial">
@@ -204,33 +296,34 @@ export function ScoreDialGauge({ analysisResults }: ScoreDialGaugeProps) {
           >
             <GaugeSvg
               score={aggScore}
-              size={220}
+              size={240}
               showLabels
               label={aggGrade}
             />
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground text-center">
-          Your firewall scores {aggScore}/100 (Grade {aggGrade})
+        <p className="text-[13px] font-display font-medium text-muted-foreground/70 text-center">
+          Your firewall scores <span className="font-bold text-foreground">{aggScore}/100</span> <span className="text-foreground/60">(Grade {aggGrade})</span>
         </p>
 
         {/* Mini gauges for multiple firewalls */}
         {!isSingle && scores.perFirewall.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-4 pt-2 border-t border-border w-full">
+          <div className="flex flex-wrap justify-center gap-4 pt-5 border-t border-border/40 w-full">
             {scores.perFirewall.map(({ key, name, score, grade }) => (
               <div
                 key={key}
-                className="flex flex-col items-center gap-1"
+                className="flex flex-col items-center gap-1.5 rounded-2xl border border-border/40 bg-muted/10 dark:bg-muted/5 px-4 py-3 shadow-sm"
               >
                 <GaugeSvg score={score} size={80} showLabels label={grade} />
-                <span className="text-[10px] font-medium text-muted-foreground truncate max-w-[80px]">
+                <span className="text-[10px] font-display font-medium text-muted-foreground/70 truncate max-w-[80px]">
                   {name}
                 </span>
               </div>
             ))}
           </div>
         )}
+      </div>
       </div>
 
       <style>{`

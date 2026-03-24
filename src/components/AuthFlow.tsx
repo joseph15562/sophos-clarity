@@ -38,8 +38,8 @@ export function AuthFlow({ auth, children }: AuthFlowProps) {
       <AuthProvider value={auth}>
         <div className="min-h-screen bg-background">
           <header className="border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-[0_16px_40px_rgba(0,10,35,0.32)]">
-            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-[0_8px_22px_rgba(0,0,0,0.18)] shrink-0">
+            <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-elevated shrink-0">
                 <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
               </div>
               <div className="flex-1 min-w-0">
@@ -67,8 +67,8 @@ export function AuthFlow({ auth, children }: AuthFlowProps) {
       <AuthProvider value={auth}>
         <div className="min-h-screen bg-background">
           <header className="border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-[0_16px_40px_rgba(0,10,35,0.32)]">
-            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-[0_8px_22px_rgba(0,0,0,0.18)] shrink-0">
+            <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-elevated shrink-0">
                 <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
               </div>
               <div className="flex-1 min-w-0">
@@ -92,8 +92,8 @@ export function AuthFlow({ auth, children }: AuthFlowProps) {
       <AuthProvider value={auth}>
         <div className="min-h-screen bg-background">
           <header className="border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-[0_16px_40px_rgba(0,10,35,0.32)]">
-            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-[0_8px_22px_rgba(0,0,0,0.18)] shrink-0">
+            <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-elevated shrink-0">
                 <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
               </div>
               <div className="flex-1 min-w-0">

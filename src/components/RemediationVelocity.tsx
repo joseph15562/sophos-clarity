@@ -118,7 +118,7 @@ export function RemediationVelocity({ analysisResults }: Props) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5 animate-pulse">
+      <div className="rounded-xl border border-border/70 bg-card p-5 animate-pulse">
         <div className="h-4 bg-muted/40 rounded w-1/3 mb-3" />
         <div className="h-40 bg-muted/40 rounded" />
       </div>
@@ -128,8 +128,8 @@ export function RemediationVelocity({ analysisResults }: Props) {
   const hasData = weeklyData.some((w) => w.count > 0);
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-2">Remediation Velocity</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">Remediation Velocity</h3>
         <p className="text-sm text-muted-foreground">
           No remediation history yet. Complete playbook items to see velocity.
         </p>
@@ -146,8 +146,8 @@ export function RemediationVelocity({ analysisResults }: Props) {
   const improving = last4Avg > first4Avg;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-3">Remediation Velocity</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">Remediation Velocity</h3>
       <div className="h-40">
         <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -174,7 +174,7 @@ export function RemediationVelocity({ analysisResults }: Props) {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div className="rounded-md border border-border bg-card px-2 py-1.5 text-xs shadow-md">
+                  <div className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-xs shadow-elevated">
                     Week {d.label.replace("W", "")}: {d.count} finding{d.count === 1 ? "" : "s"} resolved
                   </div>
                 );

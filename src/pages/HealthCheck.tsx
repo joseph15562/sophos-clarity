@@ -617,7 +617,7 @@ function HealthCheckInner() {
     if (!centralValidated || guestFirewallGroups.length === 0 || files.length === 0) return null;
     return (
       <div
-        className="rounded-lg border border-dashed border-[#2006F7]/25 dark:border-[#00EDFF]/20 bg-muted/15 p-3 space-y-3"
+        className="rounded-lg border border-dashed border-brand-accent/25 dark:border-[#00EDFF]/20 bg-muted/15 p-3 space-y-3"
         data-tour="hc-central-match"
       >
         <p className="text-[11px] leading-snug text-muted-foreground">
@@ -1664,8 +1664,8 @@ function HealthCheckInner() {
     >
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="mx-auto max-w-5xl px-4 py-3 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
-            <Shield className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
+          <div className="h-10 w-10 rounded-xl bg-brand-accent/10 dark:bg-brand-accent/15 flex items-center justify-center shrink-0">
+            <Shield className="h-6 w-6 text-brand-accent" />
           </div>
           <div className="mr-auto shrink-0">
             <h1 className="text-base sm:text-lg font-display font-bold tracking-tight">
@@ -1710,20 +1710,20 @@ function HealthCheckInner() {
           <section className="space-y-6" aria-label="Data sources">
             {activeStep === "analyzing" && (
               <div
-                className="rounded-xl border border-[#2006F7]/30 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] p-4 text-center space-y-1"
+                className="rounded-xl border border-brand-accent/30 bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08] p-4 text-center space-y-1"
                 role="status"
                 aria-live="polite"
               >
-                <p className="font-semibold text-[#2006F7] dark:text-[#00EDFF]">Analysing configuration…</p>
+                <p className="font-semibold text-brand-accent">Analysing configuration…</p>
                 <p className="text-sm text-muted-foreground">Extracting sections and running deterministic checks.</p>
               </div>
             )}
             <div className="grid gap-4 md:grid-cols-3">
-              <Card data-tour="hc-upload" className="rounded-xl border border-[#2006F7]/30 bg-card md:col-span-1 shadow-sm">
+              <Card data-tour="hc-upload" className="rounded-xl border border-brand-accent/30 bg-card md:col-span-1 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Upload className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                      <Upload className="h-4 w-4 text-brand-accent" />
                       HTML config upload
                     </CardTitle>
                     <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] border-0">
@@ -1775,7 +1775,7 @@ function HealthCheckInner() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Wifi className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                      <Wifi className="h-4 w-4 text-brand-accent" />
                       Sophos Central API
                     </CardTitle>
                     <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3] border-0">
@@ -1787,7 +1787,7 @@ function HealthCheckInner() {
                     never stored. Step-by-step setup:{" "}
                     <a
                       href="#central-api-help"
-                      className="text-[#2006F7] dark:text-[#00EDFF] font-medium underline underline-offset-2"
+                      className="text-brand-accent font-medium underline underline-offset-2"
                     >
                       Help: Central API
                     </a>{" "}
@@ -1872,7 +1872,7 @@ function HealthCheckInner() {
                     <strong>Sophos Central API</strong> in the middle column; credential steps are in{" "}
                     <a
                       href="#central-api-help"
-                      className="text-[#2006F7] dark:text-[#00EDFF] underline underline-offset-2 font-medium"
+                      className="text-brand-accent underline underline-offset-2 font-medium"
                     >
                       Help: Central API
                     </a>{" "}
@@ -1912,7 +1912,7 @@ function HealthCheckInner() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+                  <FileText className="h-5 w-5 text-brand-accent" />
                   Results
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -2010,7 +2010,7 @@ function HealthCheckInner() {
             </div>
 
             {replayCentralLinked && !centralValidated && (
-              <p className="rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/5 dark:bg-[#00EDFF]/10 px-3 py-2 text-xs text-muted-foreground">
+              <p className="rounded-lg border border-brand-accent/20 bg-brand-accent/5 dark:bg-[#00EDFF]/10 px-3 py-2 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">Opened from saved history.</span> Best-practice scoring uses the
                 saved Central-linked state. Connect to Sophos Central again if you need live discovery or licensing API data.
               </p>
@@ -2019,7 +2019,7 @@ function HealthCheckInner() {
             {!centralValidated && (
               <div className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-end gap-3">
                 <div className="flex items-center gap-2 text-sm font-medium shrink-0">
-                  <Wifi className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                  <Wifi className="h-4 w-4 text-brand-accent" />
                   Sophos Central
                 </div>
                 <Input
@@ -2287,7 +2287,7 @@ function HealthCheckInner() {
         >
           <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40 rounded-t-xl transition-colors [&[data-state=open]]:rounded-b-none">
             <span className="flex items-center gap-2 text-sm font-semibold">
-              <HelpCircle className="h-4 w-4 shrink-0 text-[#2006F7] dark:text-[#00EDFF]" aria-hidden />
+              <HelpCircle className="h-4 w-4 shrink-0 text-brand-accent" aria-hidden />
               Help: Sophos Central API (optional)
             </span>
             <ChevronDown
@@ -2352,7 +2352,7 @@ function HealthCheckInner() {
                   href="https://developer.sophos.com/getting-started"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#2006F7] dark:text-[#00EDFF] font-medium hover:underline underline-offset-2"
+                  className="inline-flex items-center gap-1 text-brand-accent font-medium hover:underline underline-offset-2"
                 >
                   Sophos API getting started
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -2368,7 +2368,7 @@ function HealthCheckInner() {
         <p>Powered by Sophos FireComply</p>
         <Link
           to="/"
-          className="inline-flex items-center gap-1 text-[#2006F7] dark:text-[#00EDFF] hover:underline underline-offset-2"
+          className="inline-flex items-center gap-1 text-brand-accent hover:underline underline-offset-2"
         >
           <ExternalLink className="h-3 w-3" />
           Return to main app
@@ -2586,7 +2586,7 @@ function HealthCheckInner() {
                 const statusColor = isExpired ? "text-muted-foreground" : req.status === "uploaded" ? "text-[#00F2B3]" : req.status === "downloaded" ? "text-blue-500" : "text-amber-500";
                 const isTeammate = activeTeam && req.se_user_id && req.se_user_id !== seAuth.seProfile?.id;
                 return (
-                  <div key={req.id} className={cn("rounded-lg border p-3 space-y-2", isTeammate && "border-[#2006F7]/30 dark:border-[#00EDFF]/20")}>
+                  <div key={req.id} className={cn("rounded-lg border p-3 space-y-2", isTeammate && "border-brand-accent/30 dark:border-[#00EDFF]/20")}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{req.customer_name || "Unnamed"}</span>
@@ -2709,7 +2709,7 @@ export default function HealthCheck() {
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-3 text-xs text-[#2006F7] dark:text-[#00EDFF] hover:underline"
+            className="mt-3 text-xs text-brand-accent hover:underline"
           >
             Reload page
           </button>

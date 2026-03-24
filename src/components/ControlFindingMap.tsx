@@ -72,8 +72,8 @@ export function ControlFindingMap({ analysisResults, selectedFrameworks }: Props
 
   if (selectedFrameworks.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Control-to-Finding Mapping</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Control-to-Finding Mapping</h3>
         <p className="text-sm text-muted-foreground">Select compliance frameworks to see control mapping</p>
       </div>
     );
@@ -81,9 +81,9 @@ export function ControlFindingMap({ analysisResults, selectedFrameworks }: Props
   if (mappings.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between gap-2 mb-4">
-        <h3 className="text-sm font-semibold text-foreground">Control-to-Finding Mapping</h3>
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Control-to-Finding Mapping</h3>
         <div className="flex gap-1">
           {(["all", "fail", "partial", "pass"] as const).map((f) => (
             <button

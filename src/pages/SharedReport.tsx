@@ -32,7 +32,7 @@ const SharedReport = () => {
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-xl font-bold text-foreground">Invalid link</h1>
           <p className="text-muted-foreground">This share link is invalid. Please request a new link from the report owner.</p>
-          <a href="/" className="text-[#2006F7] dark:text-[#00EDFF] hover:underline font-medium">
+          <a href="/" className="text-brand-accent hover:underline font-medium">
             Return to Sophos FireComply
           </a>
         </div>
@@ -56,7 +56,7 @@ const SharedReport = () => {
           <p className="text-muted-foreground">
             Shared reports are available for 7 days. Please request a new link from the report owner.
           </p>
-          <a href="/" className="text-[#2006F7] dark:text-[#00EDFF] hover:underline font-medium">
+          <a href="/" className="text-brand-accent hover:underline font-medium">
             Return to Sophos FireComply
           </a>
         </div>
@@ -100,7 +100,7 @@ const SharedReport = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <main id="main-content" className="min-h-screen bg-background">
       {/* Match main doc shell exactly: same classes and structure as DocumentPreview ReportContent */}
       <div className="max-w-full w-full mx-auto px-4 py-8">
         <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">
@@ -142,7 +142,7 @@ const SharedReport = () => {
           </div>
           <div className="bg-card p-8 md:p-12">
             {/* Same title block as main doc: company name + report subtitle only */}
-            <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-[#2006F7]/20 dark:border-[#2006F7]/30">
+            <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-brand-accent/20 dark:border-brand-accent/30">
               <div className="flex-1">
                 {report.customerName && (
                   <p className="text-lg font-display font-bold text-foreground">{report.customerName}</p>
@@ -170,7 +170,7 @@ const SharedReport = () => {
                   onClick={() => setTocOpen(!tocOpen)}
                   className="text-xs font-semibold text-[#2006F7] dark:text-[#009CFB] hover:underline flex items-center gap-1.5"
                 >
-                  <FileText className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" />
+                  <FileText className="h-3.5 w-3.5 text-brand-accent" />
                   {tocOpen ? "Hide" : "Show"} Table of Contents ({headings.length} sections)
                 </button>
                 {tocOpen && (
@@ -202,7 +202,7 @@ const SharedReport = () => {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

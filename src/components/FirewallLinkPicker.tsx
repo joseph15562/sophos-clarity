@@ -272,7 +272,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
     <div className="mt-1">
       <button
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-[#2006F7]/30 dark:border-[#00EDFF]/30 bg-[#2006F7]/[0.06] dark:bg-[#00EDFF]/[0.08] px-2 py-1 text-[11px] font-semibold tracking-tight text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/12 transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-md border border-brand-accent/30 dark:border-[#00EDFF]/30 bg-brand-accent/[0.06] dark:bg-[#00EDFF]/[0.08] px-2 py-1 text-[11px] font-semibold tracking-tight text-brand-accent hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/12 transition-colors"
       >
         <Link2 className="h-3 w-3" />
         Link to Central Firewall
@@ -280,14 +280,14 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
       </button>
 
       {open && (
-        <div className="mt-2 rounded-lg border border-border bg-card p-3 space-y-2.5 shadow-sm">
+        <div className="mt-2 rounded-xl border border-border/70 bg-card p-3 space-y-2.5 shadow-sm">
           {/* Tenant selector */}
           <div className="space-y-1">
             <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Tenant</label>
             <select
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
-              className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#2006F7]/30"
+              className="w-full rounded-xl border border-border/70 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
             >
               <option value="">Select tenant…</option>
               {tenants.map((t) => (
@@ -319,7 +319,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                   <select
                     value={selectedGroupId}
                     onChange={(e) => setSelectedGroupId(e.target.value)}
-                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#2006F7]/30"
+                    className="w-full rounded-xl border border-border/70 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                   >
                     <option value="">All groups ({firewalls.length})</option>
                     {groups.map((g) => (
@@ -352,7 +352,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                       key={haGroup.primary.firewallId}
                       onClick={() => setSelectedFwId(haGroup.primary.firewallId)}
                       className={`w-full text-left flex items-center gap-2 px-2 py-1.5 text-[11px] hover:bg-muted/30 transition-colors ${
-                        isSelected ? "bg-[#2006F7]/5 dark:bg-[#2006F7]/10" : ""
+                        isSelected ? "bg-brand-accent/5 dark:bg-brand-accent/10" : ""
                       }`}
                     >
                       <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${
@@ -371,7 +371,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                         </span>
                       </div>
                       {isSelected && (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-accent shrink-0" />
                       )}
                       {autoMatch && (
                         <span className="text-[8px] px-1 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold shrink-0">AUTO</span>

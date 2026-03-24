@@ -174,7 +174,7 @@ function RegisterDialog({
       <div className="relative bg-background border border-border rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-foreground">Register Agent</h3>
+            <h3 className="text-sm font-display tracking-tight font-bold text-foreground">Register Agent</h3>
             <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-lg" aria-label="Close">&times;</button>
           </div>
 
@@ -492,7 +492,7 @@ export function AgentManager() {
               const isLinked = tenantName !== "Unassigned";
 
               return (
-                <div key={tenantName} className="rounded-lg border border-border bg-card overflow-hidden">
+                <div key={tenantName} className="rounded-xl border border-border/70 bg-card overflow-hidden">
                   <div className="flex items-center gap-2 px-3 py-2 bg-muted/20 border-b border-border">
                     <Server className="h-3 w-3 text-muted-foreground shrink-0" />
                     <span className="text-[10px] font-semibold text-foreground flex-1">{tenantName}</span>
@@ -640,7 +640,7 @@ export function AgentManager() {
 
       {/* Data retention */}
       {canManageTeam && agents.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-3">
+        <div className="rounded-xl border border-border/70 bg-card p-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px] font-medium text-foreground">Data Retention</p>
@@ -660,7 +660,7 @@ export function AgentManager() {
       )}
 
       {/* Download section */}
-      <div className="rounded-lg border border-border bg-card p-3 space-y-2" data-tour="connector-download">
+      <div className="rounded-xl border border-border/70 bg-card p-3 space-y-2" data-tour="connector-download">
         <p className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
           <Download className="h-3 w-3" /> Download Agent
         </p>

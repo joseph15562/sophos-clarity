@@ -60,8 +60,8 @@ export function BaselineManager({ analysisResults }: BaselineManagerProps) {
   if (labels.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5" data-tour="baseline-manager">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Configuration Baseline</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="baseline-manager">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Configuration Baseline</h3>
 
       {!baselineLabel ? (
         <p className="text-sm text-muted-foreground mb-4">Select a well-configured firewall as your baseline</p>

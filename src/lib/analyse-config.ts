@@ -402,6 +402,54 @@ function extractHostname(sections: ExtractedSections): string | undefined {
   return m?.[1] || undefined;
 }
 
+/** Extract the management IP from Interface/Port sections (first LAN-zone IP, or first IP found). */
+function extractManagementIp(sections: ExtractedSections): string | undefined {
+  for (const key of Object.keys(sections)) {
+    if (!/interface|port|vlan/i.test(key)) continue;
+    for (const t of sections[key].tables) {
+      const ipIdx = t.headers.findIndex((h) => /ip\s*address/i.test(h));
+      const zoneIdx = t.headers.findIndex((h) => /zone|network\s*zone/i.test(h));
+      if (ipIdx < 0) continue;
+      for (const row of t.rows) {
+        const vals = Object.values(row);
+        const ip = typeof vals[ipIdx] === "string" ? vals[ipIdx] : undefined;
+        const zone = zoneIdx >= 0 && typeof vals[zoneIdx] === "string" ? vals[zoneIdx] : "";
+        if (ip && ip !== "N/A" && /^\d+\.\d+\.\d+\.\d+/.test(ip) && /lan/i.test(zone)) {
+          return ip.split("/")[0];
+        }
+      }
+      // Fallback: first interface with any valid IP
+      for (const row of t.rows) {
+        const vals = Object.values(row);
+        const ip = typeof vals[ipIdx] === "string" ? vals[ipIdx] : undefined;
+        if (ip && ip !== "N/A" && /^\d+\.\d+\.\d+\.\d+/.test(ip)) {
+          return ip.split("/")[0];
+        }
+      }
+    }
+  }
+  // Also try row-based lookup (keyed rows like { IPAddress: "..." })
+  for (const key of Object.keys(sections)) {
+    if (!/interface|port/i.test(key)) continue;
+    for (const t of sections[key].tables) {
+      for (const row of t.rows) {
+        const ip = (row as Record<string, string>)["IPAddress"] ?? (row as Record<string, string>)["IPv4Address"] ?? (row as Record<string, string>)["IP"];
+        const zone = (row as Record<string, string>)["Zone"] ?? (row as Record<string, string>)["NetworkZone"] ?? "";
+        if (ip && ip !== "N/A" && /^\d+\.\d+\.\d+\.\d+/.test(ip) && /lan/i.test(zone)) {
+          return ip.split("/")[0];
+        }
+      }
+      for (const row of t.rows) {
+        const ip = (row as Record<string, string>)["IPAddress"] ?? (row as Record<string, string>)["IPv4Address"] ?? (row as Record<string, string>)["IP"];
+        if (ip && ip !== "N/A" && /^\d+\.\d+\.\d+\.\d+/.test(ip)) {
+          return ip.split("/")[0];
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
 /**
  * Run deterministic analysis on a single firewall's extracted sections.
  */
@@ -451,7 +499,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       confidence: "medium",
       evidence: "No table matching 'firewall rules' section found in parsed HTML",
     });
-    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [], hostname: extractHostname(sections), atpStatus: extractAtpStatus(sections) };
+    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [], hostname: extractHostname(sections), managementIp: extractManagementIp(sections), atpStatus: extractAtpStatus(sections) };
   }
 
   // --- Track disabled rules across all rules ---
@@ -884,7 +932,7 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
 
   const atpStatus = extractAtpStatus(sections);
 
-  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers, hostname: extractHostname(sections), atpStatus };
+  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers, hostname: extractHostname(sections), managementIp: extractManagementIp(sections), atpStatus };
 }
 
 /**

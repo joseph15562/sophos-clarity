@@ -79,8 +79,8 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
         <circle cx="34" cy="34" r={r} fill="none" stroke={color} strokeWidth="4"
           strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
           transform="rotate(-90 34 34)" />
-        <text x="34" y="31" textAnchor="middle" fill={color} fontSize="16" fontWeight="700">{score}</text>
-        <text x="34" y="44" textAnchor="middle" fill={color} fontSize="9" fontWeight="600">Grade {grade}</text>
+        <text x="34" y="31" textAnchor="middle" fill={color} fontSize="16" fontWeight="700" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>{score}</text>
+        <text x="34" y="44" textAnchor="middle" fill={color} fontSize="9" fontWeight="600" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>Grade {grade}</text>
       </svg>
     </div>
   );
@@ -435,7 +435,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-card p-4 animate-pulse space-y-3">
+      <div className="rounded-xl border border-border/70 bg-card p-4 animate-pulse space-y-3">
         <div className="h-4 bg-muted/40 rounded w-48" />
         <div className="h-12 bg-muted/40 rounded" />
         <div className="h-12 bg-muted/40 rounded" />
@@ -448,22 +448,22 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
   ).length;
 
   return (
-    <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(12,18,34,0.98),rgba(10,14,26,0.98))] overflow-hidden shadow-[0_16px_45px_rgba(32,6,247,0.08)]" data-tour="agent-fleet">
+    <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(12,18,34,0.98),rgba(10,14,26,0.98))] overflow-hidden shadow-[0_16px_45px_rgba(32,6,247,0.08)]" data-tour="agent-fleet">
       <div className="px-5 py-4 border-b border-border/70 bg-card/70">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-2xl bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-              <Activity className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+            <div className="h-10 w-10 rounded-2xl bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
+              <Activity className="h-4 w-4 text-brand-accent" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF] mb-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent mb-1">
                 Live managed estate
               </p>
               <h4 className="text-base font-display font-black text-foreground tracking-tight">
                 Connected Firewalls
               </h4>
               <p className="text-sm font-medium text-foreground/80 dark:text-white/75 mt-1 max-w-2xl leading-relaxed">
-                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">Load fresh assessments from connected agents</span>, compare customer sites side-by-side, and{" "}
+                <span className="text-brand-accent font-semibold">Load fresh assessments from connected agents</span>, compare customer sites side-by-side, and{" "}
                 <span className="text-foreground dark:text-white font-semibold">refresh posture without waiting for manual exports</span>.
               </p>
             </div>
@@ -483,7 +483,7 @@ export function AgentFleetPanel({ onLoadAssessment, filterTenantName, loadedLabe
       {agents.length === 0 && (
         <div className="px-6 py-8 text-center space-y-3">
           <div className="mx-auto h-12 w-12 rounded-2xl bg-muted/40 flex items-center justify-center">
-            <Server className="h-6 w-6 text-muted-foreground/50" />
+            <Server className="h-6 w-6 text-muted-foreground/70" />
           </div>
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">No connected firewalls yet</p>

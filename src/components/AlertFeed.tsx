@@ -123,13 +123,13 @@ export function AlertFeed({ analysisResults }: AlertFeedProps) {
     const base = "h-3.5 w-3.5 shrink-0";
     switch (e.type) {
       case "new":
-        return <AlertTriangle className={base} style={{ color: "#EA0022" }} />;
+        return <AlertTriangle className={`${base} text-severity-critical`} />;
       case "fixed":
-        return <CheckCircle className={base} style={{ color: "#00F2B3" }} />;
+        return <CheckCircle className={`${base} text-severity-low`} />;
       case "score_up":
-        return <TrendingUp className={base} style={{ color: "#00F2B3" }} />;
+        return <TrendingUp className={`${base} text-severity-low`} />;
       case "score_down":
-        return <TrendingDown className={base} style={{ color: "#EA0022" }} />;
+        return <TrendingDown className={`${base} text-severity-critical`} />;
       default:
         return <Shield className={base} />;
     }
@@ -150,8 +150,8 @@ export function AlertFeed({ analysisResults }: AlertFeedProps) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground">Activity Feed</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Activity Feed</h3>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {(["all", "new", "fixed"] as const).map((f) => (

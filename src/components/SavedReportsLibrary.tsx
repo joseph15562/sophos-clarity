@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { FileText, Trash2, Search, ArrowUpDown, ChevronDown, Cloud, HardDrive, Cpu, Sparkles, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   loadSavedReportsCloud,
   loadSavedReportsLocal,
@@ -98,7 +100,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
   if (loading) {
     return (
       <div className="p-5 text-center">
-        <span className="animate-spin inline-block h-4 w-4 border-2 border-[#2006F7]/30 border-t-[#2006F7] rounded-full" />
+        <span className="animate-spin inline-block h-4 w-4 border-2 border-brand-accent/30 border-t-[#2006F7] rounded-full" />
       </div>
     );
   }
@@ -117,20 +119,20 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
   return (
     <div className="p-5 space-y-4">
       {/* Storage badge + search */}
-      <div className="flex items-center gap-2">
-        <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded shrink-0 ${useCloud ? "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF]" : "bg-muted text-muted-foreground"}`}>
-          {useCloud ? <Cloud className="h-2.5 w-2.5" /> : <HardDrive className="h-2.5 w-2.5" />}
-          {useCloud ? "Cloud" : "Local"}
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/90 px-4 py-3 shadow-sm">
+        <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold shrink-0 ${useCloud ? "bg-brand-accent/10 text-brand-accent" : "bg-muted text-muted-foreground"}`}>
+          {useCloud ? <Cloud className="h-3 w-3" /> : <HardDrive className="h-3 w-3" />}
+          {useCloud ? "Cloud Library" : "Local Library"}
         </span>
-        <span className="text-[10px] text-muted-foreground">{packages.length} saved</span>
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <input
+        <span className="text-[11px] text-muted-foreground">{packages.length} saved package{packages.length !== 1 ? "s" : ""}</span>
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
             type="text"
             placeholder="Search saved reports…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+            className="pl-9 text-sm"
           />
         </div>
       </div>
@@ -172,7 +174,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
                     {pkg.environment && <p className="text-[9px] text-muted-foreground truncate">{pkg.environment}</p>}
                   </div>
                 </div>
-                <span className={`flex items-center gap-1 text-[10px] font-medium ${pkg.reportType === "full" ? "text-[#2006F7] dark:text-[#00EDFF]" : "text-muted-foreground"}`}>
+                <span className={`flex items-center gap-1 text-[10px] font-medium ${pkg.reportType === "full" ? "text-brand-accent" : "text-muted-foreground"}`}>
                   {pkg.reportType === "full" ? <Sparkles className="h-3 w-3" /> : <Cpu className="h-3 w-3" />}
                   {pkg.reportType === "full" ? "Full" : "Pre-AI"}
                 </span>
@@ -181,13 +183,16 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
                 </span>
                 <span className="text-[10px] text-muted-foreground">{formatDate(pkg.createdAt)}</span>
                 <div className="flex items-center gap-1 justify-end">
-                  <button
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
                     onClick={(e) => { e.stopPropagation(); handleDelete(pkg); }}
-                    className="p-1 rounded text-muted-foreground hover:text-[#EA0022] transition-colors"
+                    className="h-7 w-7 text-muted-foreground hover:text-[#EA0022]"
                     title="Delete"
                   >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </button>
 
@@ -214,7 +219,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
                       <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Reports ({pkg.reports.length})</p>
                       {pkg.reports.map((r) => (
                         <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-muted/30">
-                          <FileText className="h-3 w-3 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
+                          <FileText className="h-3 w-3 text-brand-accent shrink-0" />
                           <span className="text-[10px] font-medium text-foreground flex-1 truncate">{r.label}</span>
                           <span className="text-[9px] text-muted-foreground">{Math.round(r.markdown.length / 1024)}KB</span>
                         </div>
@@ -225,13 +230,16 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
                   )}
 
                   {/* Load button */}
-                  <button
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => onLoadReports({ reports: pkg.reports, customerName: pkg.customerName, environment: pkg.environment, analysisSummary: pkg.analysisSummary })}
-                    className="flex items-center gap-1.5 text-[10px] font-medium px-3 py-1.5 rounded-lg bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20 transition-colors"
+                    className="gap-1.5 text-[11px]"
                   >
-                    <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                     {pkg.reports.length > 0 ? "Load Reports into Viewer" : "View Assessment"}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

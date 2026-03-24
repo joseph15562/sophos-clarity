@@ -126,8 +126,8 @@ export function FindingsBulkView({ analysisResults }: Props) {
   if (allFindings.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="findings-bulk">
-      <h3 className="text-sm font-semibold text-foreground">Findings — bulk actions</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4" data-tour="findings-bulk">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Findings — bulk actions</h3>
       <p className="text-[11px] text-muted-foreground">
         Select findings to mark as accepted risk, add to remediation plan, or export as CSV.
       </p>

@@ -80,56 +80,58 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
 
   if (gaps.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Compliance Gaps</h3>
-        <p className="text-sm text-muted-foreground">All mapped controls are passing</p>
+      <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-3">Compliance Gaps</h3>
+        <p className="text-sm text-muted-foreground/60">All mapped controls are passing</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-2">Compliance Gaps</h3>
-      <p className="text-[10px] text-muted-foreground mb-4">
-        {gaps.length} control{gaps.length !== 1 ? "s" : ""} need attention across {frameworks.length} framework
-        {frameworks.length !== 1 ? "s" : ""}
-      </p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-[10px]">
+    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card space-y-5">
+      <div>
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">Compliance Gaps</h3>
+        <p className="text-[11px] text-muted-foreground/60 mt-1">
+          {gaps.length} control{gaps.length !== 1 ? "s" : ""} need attention across {frameworks.length} framework
+          {frameworks.length !== 1 ? "s" : ""}
+        </p>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-border/40 overflow-hidden">
+        <table className="w-full text-[11px]">
           <thead>
-            <tr className="border-b border-border">
+            <tr className="border-b border-border/40 bg-muted/15 dark:bg-muted/10">
               <th
-                className="text-left py-2 px-2 font-medium cursor-pointer hover:text-foreground"
+                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("framework")}
               >
                 Framework {sortKey === "framework" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-2 px-2 font-medium cursor-pointer hover:text-foreground"
+                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("controlId")}
               >
                 Control ID {sortKey === "controlId" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-2 px-2 font-medium cursor-pointer hover:text-foreground"
+                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("controlName")}
               >
                 Control Name {sortKey === "controlName" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-2 px-2 font-medium cursor-pointer hover:text-foreground"
+                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("status")}
               >
                 Status {sortKey === "status" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-2 px-2 font-medium cursor-pointer hover:text-foreground"
+                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("findings")}
               >
                 Linked Findings {sortKey === "findings" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-2 px-2 font-medium cursor-pointer hover:text-foreground"
+                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("effort")}
               >
                 Effort {sortKey === "effort" && (sortDir === "asc" ? "↑" : "↓")}
@@ -138,23 +140,23 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
           </thead>
           <tbody>
             {displayed.map(({ framework, control, findingCount, effort }) => (
-              <tr key={`${framework}-${control.controlId}`} className="border-b border-border/50 hover:bg-muted/30">
-                <td className="py-2 px-2 text-foreground">{framework}</td>
-                <td className="py-2 px-2 text-muted-foreground font-mono">{control.controlId}</td>
-                <td className="py-2 px-2 text-foreground">{control.controlName}</td>
-                <td className="py-2 px-2">
+              <tr key={`${framework}-${control.controlId}`} className="border-b border-border/30 last:border-b-0 hover:bg-muted/15 dark:hover:bg-muted/10 transition-colors">
+                <td className="py-3 px-4 font-display font-medium text-foreground/80">{framework}</td>
+                <td className="py-3 px-4 text-muted-foreground/70 font-mono text-[10px]">{control.controlId}</td>
+                <td className="py-3 px-4 font-display font-medium text-foreground">{control.controlName}</td>
+                <td className="py-3 px-4">
                   <span
-                    className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                    className={`inline-flex px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide border ${
                       control.status === "fail"
-                        ? "bg-[#EA0022]/20 text-[#EA0022]"
-                        : "bg-[#F29400]/20 text-[#F29400]"
+                        ? "bg-[#EA0022]/10 text-[#EA0022] border-[#EA0022]/20"
+                        : "bg-[#F29400]/10 text-[#F29400] border-[#F29400]/20"
                     }`}
                   >
                     {control.status}
                   </span>
                 </td>
-                <td className="py-2 px-2 tabular-nums">{findingCount}</td>
-                <td className="py-2 px-2 text-muted-foreground">{effort}</td>
+                <td className="py-3 px-4 tabular-nums font-display font-semibold text-foreground">{findingCount}</td>
+                <td className="py-3 px-4 text-muted-foreground/60 font-medium">{effort}</td>
               </tr>
             ))}
           </tbody>
@@ -163,9 +165,9 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
       {hasMore && !showAll && (
         <button
           onClick={() => setShowAll(true)}
-          className="mt-3 text-[10px] font-medium text-primary hover:underline"
+          className="text-[11px] font-semibold text-brand-accent hover:underline underline-offset-2"
         >
-          Show all ({sorted.length})
+          Show all {sorted.length} gaps
         </button>
       )}
     </div>

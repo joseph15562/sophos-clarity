@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Target } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { loadAcceptedFindings, isAccepted, type AcceptedFinding } from "@/lib/accepted-findings";
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -95,7 +96,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
 
   if (plotted.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5 text-center text-xs text-muted-foreground">
+      <div className="rounded-2xl border border-border/50 bg-card p-6 text-center text-sm text-muted-foreground/60 shadow-card">
         No actionable findings to prioritise.
       </div>
     );
@@ -111,7 +112,10 @@ export function PriorityMatrix({ analysisResults }: Props) {
   const toY = (impact: number) => H - PAD - ((impact - 0.5) / IMPACT_MAX) * (H - 2 * PAD);
 
   const SEV_DOT: Record<string, string> = {
-    critical: "#EA0022", high: "#F29400", medium: "#F8E300", low: "#009CFB",
+    critical: SEVERITY_COLORS.critical,
+    high: SEVERITY_COLORS.high,
+    medium: SEVERITY_COLORS.medium,
+    low: "#009CFB",
   };
 
   const visiblePlotted = activeQuadrant ? plotted.filter((p) => p.quadrant === activeQuadrant) : plotted;
@@ -131,13 +135,17 @@ export function PriorityMatrix({ analysisResults }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 space-y-5 shadow-card">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
-          <h3 className="text-sm font-semibold text-foreground">Finding Priority Matrix</h3>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10">
+            <Target className="h-5 w-5 text-brand-accent" />
+          </div>
+          <div className="flex items-baseline gap-2.5">
+            <h3 className="text-base font-display font-bold tracking-tight text-foreground">Finding Priority Matrix</h3>
+          </div>
         </div>
-        <span className="text-[10px] text-muted-foreground">{plotted.length} findings plotted · Impact vs effort</span>
+        <span className="text-[11px] text-muted-foreground/60 font-medium">{plotted.length} findings plotted · Impact vs effort</span>
       </div>
 
       {/* Quadrant summary chips — clickable filter */}
@@ -148,8 +156,8 @@ export function PriorityMatrix({ analysisResults }: Props) {
             <button
               key={q}
               onClick={() => { setActiveQuadrant(isActive ? null : q); setSelected(null); }}
-              className={`text-[10px] font-medium px-2 py-1 rounded-md transition-all ${QUADRANT_CONFIG[q].bg} ${QUADRANT_CONFIG[q].color} ${
-                isActive ? "ring-1 ring-current shadow-sm scale-105" : activeQuadrant && !isActive ? "opacity-40" : "hover:scale-105"
+              className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg border transition-all ${QUADRANT_CONFIG[q].bg} ${QUADRANT_CONFIG[q].color} ${
+                isActive ? "ring-1 ring-current shadow-sm scale-105 border-current/20" : activeQuadrant && !isActive ? "opacity-40 border-transparent" : "hover:scale-105 border-transparent"
               }`}
             >
               {quadrantCounts[q]} {QUADRANT_CONFIG[q].label}
@@ -157,7 +165,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
           );
         })}
         {activeQuadrant && (
-          <button onClick={() => { setActiveQuadrant(null); setSelected(null); }} className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 rounded-md border border-border/50 transition-colors">
+          <button onClick={() => { setActiveQuadrant(null); setSelected(null); }} className="text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/50 hover:border-border transition-colors">
             Clear
           </button>
         )}
@@ -179,14 +187,14 @@ export function PriorityMatrix({ analysisResults }: Props) {
           <line x1={PAD + (W - 2 * PAD) / 2} y1={PAD} x2={PAD + (W - 2 * PAD) / 2} y2={H - PAD} stroke="currentColor" className="text-border" strokeWidth="0.2" strokeDasharray="2 2" />
 
           {/* Quadrant labels */}
-          <text x={PAD + 2} y={H - PAD - 2} fontSize="2.5" fill="currentColor" className="text-[#00F2B3]/60 dark:text-[#00F2B3]/60" fontWeight="600">QUICK WINS</text>
-          <text x={PAD + (W - 2 * PAD) / 2 + 2} y={PAD + 4} fontSize="2.5" fill="currentColor" className="text-muted-foreground/40" fontWeight="600">RECONSIDER</text>
-          <text x={PAD + 2} y={PAD + 4} fontSize="2.5" fill="currentColor" className="text-[#F29400]/60" fontWeight="600">STRATEGIC</text>
-          <text x={PAD + (W - 2 * PAD) / 2 + 2} y={H - PAD - 2} fontSize="2.5" fill="currentColor" className="text-[#009CFB]/60" fontWeight="600">LOW PRIORITY</text>
+          <text x={PAD + 2} y={H - PAD - 2} fontSize="3" fill="currentColor" className="text-[#00F2B3]/70 dark:text-[#00F2B3]/70" fontWeight="700" letterSpacing="0.08em" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>QUICK WINS</text>
+          <text x={PAD + (W - 2 * PAD) / 2 + 2} y={PAD + 5} fontSize="3" fill="currentColor" className="text-muted-foreground/40" fontWeight="700" letterSpacing="0.08em" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>RECONSIDER</text>
+          <text x={PAD + 2} y={PAD + 5} fontSize="3" fill="currentColor" className="text-[#F29400]/70" fontWeight="700" letterSpacing="0.08em" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>STRATEGIC</text>
+          <text x={PAD + (W - 2 * PAD) / 2 + 2} y={H - PAD - 2} fontSize="3" fill="currentColor" className="text-[#009CFB]/70" fontWeight="700" letterSpacing="0.08em" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>LOW PRIORITY</text>
 
           {/* Axis labels */}
-          <text x={W / 2} y={H - 2} fontSize="3" textAnchor="middle" fill="currentColor" className="text-muted-foreground">Effort →</text>
-          <text x={3} y={H / 2} fontSize="3" textAnchor="middle" fill="currentColor" className="text-muted-foreground" transform={`rotate(-90, 3, ${H / 2})`}>Impact →</text>
+          <text x={W / 2} y={H - 1.5} fontSize="3.5" textAnchor="middle" fill="currentColor" className="text-muted-foreground/60" fontWeight="600" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>Effort →</text>
+          <text x={2.5} y={H / 2} fontSize="3.5" textAnchor="middle" fill="currentColor" className="text-muted-foreground/60" fontWeight="600" transform={`rotate(-90, 2.5, ${H / 2})`} style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>Impact →</text>
 
           {/* Faded-out dots (filtered out by quadrant) */}
           {activeQuadrant && plotted.filter((p) => p.quadrant !== activeQuadrant).map((p, i) => {
@@ -205,6 +213,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             const cx = toX(p.effort) + jitterX;
             const cy = toY(p.impact) + jitterY;
             const isSelected = selected === p;
+            const dotColor = SEV_DOT[p.finding.severity] ?? "#999";
             return (
               <g
                 key={origIdx}
@@ -213,15 +222,16 @@ export function PriorityMatrix({ analysisResults }: Props) {
                 onMouseEnter={(e) => handleDotHover(p, e)}
                 onMouseLeave={() => setHoveredDot(null)}
               >
-                {isSelected && <circle cx={cx} cy={cy} r={4} fill={SEV_DOT[p.finding.severity] ?? "#999"} opacity={0.15} />}
+                {isSelected && <circle cx={cx} cy={cy} r={5} fill={dotColor} opacity={0.12} />}
+                <circle cx={cx} cy={cy} r={isSelected ? 3.5 : 2.8} fill={dotColor} opacity={0.2} />
                 <circle
                   cx={cx} cy={cy}
-                  r={isSelected ? 2.5 : 1.8}
-                  fill={SEV_DOT[p.finding.severity] ?? "#999"}
-                  opacity={isSelected ? 1 : 0.8}
+                  r={isSelected ? 2.5 : 2}
+                  fill={dotColor}
+                  opacity={isSelected ? 1 : 0.85}
                   stroke={isSelected ? "#fff" : "none"}
                   strokeWidth="0.5"
-                  className="transition-all duration-150"
+                  className="transition-all duration-200"
                 />
               </g>
             );
@@ -232,15 +242,15 @@ export function PriorityMatrix({ analysisResults }: Props) {
         {hoveredDot && (
           <div
             className="absolute pointer-events-none z-30"
-            style={{ left: hoveredDot.x, top: hoveredDot.y - 8, transform: "translate(-50%, -100%)" }}
+            style={{ left: hoveredDot.x, top: hoveredDot.y - 10, transform: "translate(-50%, -100%)" }}
           >
-            <div className="bg-popover border border-border rounded-lg shadow-lg px-2.5 py-1.5 text-[10px] max-w-[180px]">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="inline-block h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: SEV_DOT[hoveredDot.p.finding.severity] ?? "#999" }} />
-                <span className="font-bold uppercase text-[8px]" style={{ color: SEV_DOT[hoveredDot.p.finding.severity] ?? "#999" }}>{hoveredDot.p.finding.severity}</span>
+            <div className="bg-popover border border-border/60 rounded-xl shadow-elevated px-3.5 py-2.5 text-[11px] max-w-[220px]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-block h-2 w-2 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: SEV_DOT[hoveredDot.p.finding.severity] ?? "#999" }} />
+                <span className="font-bold uppercase text-[9px] tracking-wide" style={{ color: SEV_DOT[hoveredDot.p.finding.severity] ?? "#999" }}>{hoveredDot.p.finding.severity}</span>
               </div>
-              <p className="text-foreground font-medium line-clamp-2 leading-tight">{hoveredDot.p.finding.title}</p>
-              <p className="text-muted-foreground mt-0.5">Impact {hoveredDot.p.impact}/5 · Effort {hoveredDot.p.effort}/4</p>
+              <p className="text-foreground font-display font-semibold line-clamp-2 leading-snug">{hoveredDot.p.finding.title}</p>
+              <p className="text-muted-foreground/60 mt-1 text-[10px] font-medium">Impact {hoveredDot.p.impact}/5 · Effort {hoveredDot.p.effort}/4</p>
             </div>
           </div>
         )}
@@ -248,23 +258,23 @@ export function PriorityMatrix({ analysisResults }: Props) {
 
       {/* Selected finding detail */}
       {selected && (
-        <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${selected.finding.severity === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : selected.finding.severity === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : selected.finding.severity === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}>
-              {selected.finding.severity.toUpperCase()}
+        <div className="rounded-xl border border-border/40 bg-muted/5 dark:bg-muted/5 p-5 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-lg border ${selected.finding.severity === "critical" ? "bg-[#EA0022]/10 text-[#EA0022] border-[#EA0022]/20" : selected.finding.severity === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400] border-[#F29400]/20" : selected.finding.severity === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300] border-[#F8E300]/20" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB] border-[#009CFB]/20"}`}>
+              {selected.finding.severity}
             </span>
-            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${QUADRANT_CONFIG[selected.quadrant].bg} ${QUADRANT_CONFIG[selected.quadrant].color}`}>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg border border-current/10 ${QUADRANT_CONFIG[selected.quadrant].bg} ${QUADRANT_CONFIG[selected.quadrant].color}`}>
               {QUADRANT_CONFIG[selected.quadrant].label}
             </span>
-            <span className="text-[9px] text-muted-foreground ml-auto">
+            <span className="text-[10px] text-muted-foreground/60 font-medium ml-auto">
               Impact {selected.impact}/5 · Effort {selected.effort}/4 · {selected.firewallLabel}
             </span>
           </div>
-          <p className="text-xs font-medium text-foreground">{selected.finding.title}</p>
-          <p className="text-[10px] text-muted-foreground leading-relaxed">{selected.finding.detail}</p>
+          <p className="text-[13px] font-display font-semibold tracking-tight text-foreground">{selected.finding.title}</p>
+          <p className="text-[11px] text-muted-foreground/70 leading-relaxed">{selected.finding.detail}</p>
           {selected.finding.remediation && (
-            <div className="rounded-md bg-[#00F2B3]/5 border border-[#00F2B3]/10 p-2 mt-1">
-              <p className="text-[10px] text-[#00F2B3] dark:text-[#00F2B3]"><strong>Remediation:</strong> {selected.finding.remediation}</p>
+            <div className="rounded-lg bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06] border border-[#00F2B3]/15 px-4 py-3">
+              <p className="text-[11px] text-foreground/90 leading-relaxed"><span className="font-bold text-[#00F2B3]">Remediation:</span> {selected.finding.remediation}</p>
             </div>
           )}
         </div>
@@ -282,19 +292,19 @@ export function PriorityMatrix({ analysisResults }: Props) {
             <button
               key={q}
               onClick={() => { setActiveQuadrant(isActive ? null : q); setSelected(null); }}
-              className={`text-left rounded-lg border border-border p-3 transition-all ${cfg.bg} ${isFaded ? "opacity-40" : "hover:shadow-sm"} ${isActive ? "ring-1 ring-current/20 shadow-sm" : ""}`}
+              className={`text-left rounded-xl border p-4 sm:p-5 transition-all ${cfg.bg} ${isFaded ? "opacity-30 border-border/30" : "hover:shadow-card border-border/50"} ${isActive ? "ring-1 ring-current/20 shadow-card border-border/60" : ""}`}
             >
-              <p className={`text-[10px] font-bold uppercase tracking-wider ${cfg.color} mb-1`}>{cfg.label}</p>
-              <p className="text-[9px] text-muted-foreground mb-2">{cfg.description}</p>
-              <ul className="space-y-1">
+              <p className={`text-[11px] font-display font-bold uppercase tracking-[0.1em] ${cfg.color} mb-1`}>{cfg.label}</p>
+              <p className="text-[10px] text-muted-foreground/60 mb-3">{cfg.description}</p>
+              <ul className="space-y-1.5">
                 {items.slice(0, 5).map((p, i) => (
-                  <li key={i} className="text-[10px] text-foreground flex items-start gap-1.5">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full mt-1 shrink-0" style={{ backgroundColor: SEV_DOT[p.finding.severity] ?? "#999" }} />
-                    <span className="line-clamp-1">{p.finding.title}</span>
+                  <li key={i} className="text-[11px] text-foreground/90 flex items-start gap-2">
+                    <span className="inline-block h-2 w-2 rounded-full mt-0.5 shrink-0 shadow-sm" style={{ backgroundColor: SEV_DOT[p.finding.severity] ?? "#999" }} />
+                    <span className="line-clamp-1 font-medium">{p.finding.title}</span>
                   </li>
                 ))}
                 {items.length > 5 && (
-                  <li className="text-[9px] text-muted-foreground">+{items.length - 5} more</li>
+                  <li className="text-[10px] text-muted-foreground/60 font-medium mt-1">+{items.length - 5} more</li>
                 )}
               </ul>
             </button>

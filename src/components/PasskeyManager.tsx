@@ -127,7 +127,7 @@ export function PasskeyManager() {
       {passkeys.length > 0 ? (
         <div className="space-y-2">
           {passkeys.map((pk) => (
-            <div key={pk.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+            <div key={pk.id} className="flex items-center justify-between rounded-xl border border-border/70 bg-card px-3 py-2">
               <div className="flex items-center gap-2 min-w-0">
                 {pk.device_type === "platform" ? (
                   <Smartphone className="h-3.5 w-3.5 text-[#6B5BFF] shrink-0" />

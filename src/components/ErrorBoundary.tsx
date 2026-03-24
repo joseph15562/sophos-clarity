@@ -30,13 +30,13 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
+        <div className="rounded-xl border border-border/70 bg-card p-6 text-center space-y-3">
           <div className="flex justify-center">
-            <div className="h-10 w-10 rounded-full bg-[#F29400]/10 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-[#F29400]" />
+            <div className="h-10 w-10 rounded-full bg-severity-high/10 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-severity-high" />
             </div>
           </div>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
             {this.props.fallbackTitle ?? "Something went wrong"}
           </h3>
           <p className="text-xs text-muted-foreground max-w-md mx-auto">

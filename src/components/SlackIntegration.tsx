@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const CARD_CLASS = "rounded-xl border border-border bg-card p-5";
+const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
 const STORAGE_KEY = "firecomply-slack-config";
 
 interface SlackConfig {
@@ -74,7 +74,7 @@ export function SlackIntegration() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
         <MessageSquare className="h-4 w-4" />
         Slack Notifications
       </h3>

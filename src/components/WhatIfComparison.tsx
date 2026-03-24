@@ -72,8 +72,8 @@ export function WhatIfComparison({ analysisResults }: Props) {
 
   if (!firstResult || allFindings.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground">What-If Analysis</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">What-If Analysis</h3>
         <p className="mt-3 text-sm text-muted-foreground">No findings to analyse</p>
       </div>
     );
@@ -82,8 +82,8 @@ export function WhatIfComparison({ analysisResults }: Props) {
   const improved = currentScore && projectedScore && projectedScore.overall > currentScore.overall;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5" data-tour="what-if">
-      <h3 className="text-sm font-semibold text-foreground">What-If Analysis</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="what-if">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">What-If Analysis</h3>
       <div className="mt-4 flex flex-wrap items-center gap-6">
         <div className="flex flex-col items-center rounded-lg border border-border bg-muted/30 px-6 py-4">
           <span className="text-xs font-medium text-muted-foreground">Current</span>

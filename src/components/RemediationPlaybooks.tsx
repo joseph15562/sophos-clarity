@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { ChevronDown, ChevronRight, Clock, CheckCircle2, Wrench, ExternalLink, Settings2, Zap, ShieldOff, ShieldCheck, Download, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { generatePlaybook, type Playbook } from "@/lib/remediation-playbooks";
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/tooltip";
 import { getAvailableRemediations } from "@/lib/auto-remediate";
 import { loadAcceptedFindings, acceptFinding, unacceptFinding, isAccepted, type AcceptedFinding } from "@/lib/accepted-findings";
+import { SEVERITY_ORDER } from "@/lib/design-tokens";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -74,8 +76,6 @@ function getSophosConsoleLink(findingSection: string): string {
   }
   return "/";
 }
-
-const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
 const SLA_STORAGE_KEY = "sophos-sla-config";
 
@@ -152,8 +152,9 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
     const list: (Playbook & { fwLabel: string; findingSection: string; findingTitle: string; hostname: string })[] = [];
     for (const [label, result] of Object.entries(analysisResults)) {
       const hostname = result.hostname ?? label;
+      const mgmtIp = result.managementIp;
       for (const finding of result.findings) {
-        const pb = generatePlaybook(finding);
+        const pb = generatePlaybook(finding, mgmtIp);
         if (pb) list.push({ ...pb, fwLabel: label, findingSection: finding.section, findingTitle: finding.title, hostname });
       }
     }
@@ -340,19 +341,25 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   }
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="remediation-playbooks">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-          <h3 className="text-sm font-semibold text-foreground">Remediation Playbooks</h3>
-          <span className="text-[10px] text-muted-foreground">
-            {playbooks.length} playbook{playbooks.length !== 1 ? "s" : ""} &middot; Sophos XGS step-by-step
-          </span>
+    <section className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-5 sm:p-6 space-y-4 shadow-[0_18px_50px_rgba(32,6,247,0.08)] overflow-hidden" data-tour="remediation-playbooks">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
+            Guided remediation
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Wrench className="h-5 w-5 text-brand-accent" />
+            <h3 className="text-lg font-display font-black tracking-tight text-foreground">Remediation Playbooks</h3>
+            <span className="text-[10px] text-muted-foreground">
+              {playbooks.length} playbook{playbooks.length !== 1 ? "s" : ""} &middot; Sophos XGS step-by-step
+            </span>
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">Structured, engineer-friendly steps for closing findings with clear effort, SLA context, and Sophos console guidance.</p>
           <Popover>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                className="p-2 rounded-xl border border-border/70 bg-card/70 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
                 aria-label="SLA settings"
               >
                 <Settings2 className="h-3.5 w-3.5" />
@@ -364,7 +371,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                 {(["critical", "high", "medium", "low"] as Severity[]).map((sev) => (
                   <div key={sev} className="flex items-center justify-between gap-2">
                     <span className="capitalize text-muted-foreground">{sev}</span>
-                    <input
+                    <Input
                       type="number"
                       min={1}
                       max={365}
@@ -377,7 +384,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                           saveSlaConfig(next);
                         }
                       }}
-                      className="w-14 rounded border border-border bg-background px-2 py-1 text-right text-[11px]"
+                      className="w-16 h-9 rounded-lg px-2 py-1 text-right text-[11px]"
                     />
                   </div>
                 ))}
@@ -395,7 +402,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
       </div>
 
       {slaStats.totalWithSla > 0 && (
-        <div className="rounded-lg bg-muted/30 px-3 py-2">
+        <div className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 shadow-sm">
           <div className="flex items-center justify-between text-[10px] mb-1">
             <span className="text-muted-foreground">SLA progress</span>
             <span className="font-medium text-foreground">{slaStats.resolvedWithinSla} of {slaStats.totalWithSla} findings resolved within SLA</span>
@@ -410,7 +417,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
       )}
 
       {/* Select All header */}
-      <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-border bg-muted/20">
+      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-border/70 bg-card/70 shadow-sm">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             ref={selectAllRef}
@@ -438,7 +445,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           const consolePath = getSophosConsoleLink(pb.findingSection);
 
           return (
-            <div key={pb.findingId} className={`rounded-lg border ${accepted ? "border-muted-foreground/20 bg-muted/[0.04] opacity-60" : isDone ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.02] dark:bg-[#00F2B3]/[0.02]" : "border-border bg-card"} transition-colors`}>
+            <div key={pb.findingId} className={`rounded-[24px] border ${accepted ? "border-muted-foreground/20 bg-muted/[0.04] opacity-60" : isDone ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.02] dark:bg-[#00F2B3]/[0.02]" : "border-border/70 bg-card/85"} transition-colors shadow-sm`}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <label
                   className="shrink-0 cursor-pointer"
@@ -525,18 +532,31 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                   {!accepted && (
                     <>
                       <ol className="space-y-2 ml-7">
-                        {pb.steps.map((s) => (
-                          <li key={s.step} className="text-xs leading-relaxed">
-                            <span className="inline-flex items-center justify-center h-4.5 w-4.5 rounded-full bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] text-[9px] font-bold mr-2">{s.step}</span>
-                            <span className="text-foreground">{s.action}</span>
-                            {s.path && (
-                              <span className="block ml-6 mt-0.5 text-[10px] text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded">{s.path}</span>
-                            )}
-                          </li>
-                        ))}
+                        {pb.steps.map((s) => {
+                          const isUrl = s.path?.startsWith("https://");
+                          return (
+                            <li key={s.step} className="text-xs leading-relaxed">
+                              <span className="inline-flex items-center justify-center h-4.5 w-4.5 rounded-full bg-brand-accent/10 text-brand-accent text-[9px] font-bold mr-2">{s.step}</span>
+                              <span className="text-foreground">{s.action}</span>
+                              {s.path && isUrl ? (
+                                <a
+                                  href={s.path}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 ml-2 text-[10px] font-mono text-brand-accent hover:underline underline-offset-2"
+                                >
+                                  {s.path}
+                                  <ExternalLink className="h-2.5 w-2.5" />
+                                </a>
+                              ) : s.path ? (
+                                <span className="block ml-6 mt-0.5 text-[10px] text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded">{s.path}</span>
+                              ) : null}
+                            </li>
+                          );
+                        })}
                       </ol>
 
-                      <div className="ml-7 rounded-lg bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 px-3 py-2">
+                      <div className="ml-7 rounded-lg bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08] border border-brand-accent/10 px-3 py-2">
                         <p className="text-[10px] text-foreground leading-relaxed">
                           <span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Verify:</span> {pb.verifyStep}
                         </p>
@@ -596,7 +616,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
       {checkedIds.size > 0 && (
         <div className="sticky bottom-0 left-0 right-0 -mx-5 -mb-5 mt-4 flex items-center justify-between gap-3 rounded-t-xl border-t border-border bg-card/95 backdrop-blur-sm px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
           <span className="text-xs font-medium text-foreground">
-            <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full bg-[#2006F7]/10 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF] font-bold">
+            <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full bg-brand-accent/10 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF] font-bold">
               {checkedIds.size}
             </span>
             {" "}selected

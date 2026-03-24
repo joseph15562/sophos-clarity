@@ -49,14 +49,14 @@ export function NotificationCentre({ notifications, unreadCount, onMarkRead, onM
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-30 w-80 rounded-xl border border-border bg-card shadow-xl overflow-hidden">
+          <div className="absolute right-0 top-full mt-1 z-30 w-80 rounded-xl border border-border/70 bg-card shadow-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
               <span className="text-xs font-semibold text-foreground">Notifications</span>
               <div className="flex items-center gap-1.5">
                 {unreadCount > 0 && (
                   <button
                     onClick={onMarkAllRead}
-                    className="text-[10px] text-[#2006F7] dark:text-[#00EDFF] hover:underline flex items-center gap-1"
+                    className="text-[10px] text-brand-accent hover:underline flex items-center gap-1"
                     title="Mark all read"
                   >
                     <CheckCheck className="h-3 w-3" /> Read all
@@ -89,7 +89,7 @@ export function NotificationCentre({ notifications, unreadCount, onMarkRead, onM
                   <div
                     key={n.id}
                     className={`flex items-start gap-2.5 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer ${
-                      !n.read ? "bg-[#2006F7]/[0.03] dark:bg-[#2006F7]/[0.06]" : ""
+                      !n.read ? "bg-[#2006F7]/[0.03] dark:bg-brand-accent/[0.06]" : ""
                     }`}
                     onClick={() => { if (!n.read) onMarkRead(n.id); }}
                   >

@@ -55,9 +55,9 @@ export function ClientPortalView({
         <p className="text-xs text-muted-foreground mt-0.5">Firewall Configuration Assessment</p>
       </header>
 
-      <main className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+      <main id="main-content" className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         {/* Score display */}
-        <section className="rounded-xl border border-border bg-card p-8 text-center">
+        <section className="rounded-xl border border-border/70 bg-card p-8 text-center">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             Overall Security Score
           </p>
@@ -91,7 +91,7 @@ export function ClientPortalView({
 
         {/* Recent assessments */}
         {assessments.length > 0 && (
-          <section className="rounded-xl border border-border bg-card p-6">
+          <section className="rounded-xl border border-border/70 bg-card p-6">
             <h2 className="text-sm font-semibold text-foreground mb-4">Recent Assessments</h2>
             <ul className="space-y-3">
               {assessments.slice(0, 10).map((a) => (

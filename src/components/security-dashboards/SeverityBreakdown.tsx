@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { SEV_COLORS } from "./constants";
+import { type Severity, SEVERITY_COLORS, SEVERITY_ORDER } from "@/lib/design-tokens";
 
-const SEV_ORDER: string[] = ["critical", "high", "medium", "low", "info"];
+const SEV_ORDER = (Object.keys(SEVERITY_ORDER) as Severity[]).sort((a, b) => SEVERITY_ORDER[a] - SEVERITY_ORDER[b]);
 
 type ViewMode = "all" | "per-firewall";
 
@@ -27,13 +27,13 @@ export function SeverityBreakdown({ analysisResults }: { analysisResults: Record
     }
 
     const ordered = SEV_ORDER
-      .map((sev) => ({ key: sev, name: sev.charAt(0).toUpperCase() + sev.slice(1), value: counts[sev] || 0, color: SEV_COLORS[sev] }))
+      .map((sev) => ({ key: sev, name: sev.charAt(0).toUpperCase() + sev.slice(1), value: counts[sev] || 0, color: SEVERITY_COLORS[sev] }))
       .filter((d) => d.value > 0);
 
     const perFw = Object.entries(byFirewall).map(([fw, fwCounts]) => ({
       firewall: fw,
       data: SEV_ORDER
-        .map((sev) => ({ key: sev, name: sev.charAt(0).toUpperCase() + sev.slice(1), value: fwCounts[sev] || 0, color: SEV_COLORS[sev] }))
+        .map((sev) => ({ key: sev, name: sev.charAt(0).toUpperCase() + sev.slice(1), value: fwCounts[sev] || 0, color: SEVERITY_COLORS[sev] }))
         .filter((d) => d.value > 0),
     }));
 
@@ -56,9 +56,9 @@ export function SeverityBreakdown({ analysisResults }: { analysisResults: Record
   const displayPerFw = viewMode === "per-firewall" ? perFirewallData : [];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">Finding Severity</h3>
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Finding Severity</h3>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground">{total} total findings</span>
           {multipleFirewalls && (
@@ -122,7 +122,7 @@ export function SeverityBreakdown({ analysisResults }: { analysisResults: Record
                       style={{ backgroundColor: d.color, height: "28px", filter: "brightness(1.15)", borderRadius: isFirst && isLast ? "9999px" : undefined }}
                     />
                     <div className="opacity-0 group-hover/seg:opacity-100 absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-3 pointer-events-none transition-opacity duration-150">
-                      <div className="rounded-lg border border-border bg-popover shadow-lg px-3 py-2 whitespace-nowrap">
+                      <div className="rounded-lg border border-border bg-popover shadow-elevated px-3 py-2 whitespace-nowrap">
                         <p className="text-[11px] font-bold" style={{ color: d.color }}>{d.value} {d.name}</p>
                         <p className="text-[9px] text-muted-foreground">{pct}% of all findings</p>
                       </div>
@@ -145,14 +145,14 @@ export function SeverityBreakdown({ analysisResults }: { analysisResults: Record
                   key={d.key}
                   onClick={() => handleSevClick(d.key)}
                   className={`relative text-center rounded-lg border py-2.5 px-1 transition-all group/card ${
-                    isActive ? "ring-1 bg-foreground/5 scale-105" : isDimmed ? "border-border bg-muted/10 opacity-40" : "border-border bg-muted/20 hover:bg-muted/30 hover:scale-105 hover:shadow-md"
+                    isActive ? "ring-1 bg-foreground/5 scale-105" : isDimmed ? "border-border bg-muted/10 opacity-40" : "border-border bg-muted/20 hover:bg-muted/30 hover:scale-105 hover:shadow-elevated"
                   }`}
                   style={isActive ? { borderColor: d.color + "60", ["--tw-ring-color" as string]: d.color + "30" } : {}}
                 >
                   <span className="text-xl font-extrabold tabular-nums block" style={{ color: d.color }}>{d.value}</span>
                   <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">{d.name}</span>
                   <div className="opacity-0 group-hover/card:opacity-100 absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none transition-opacity duration-150">
-                    <div className="rounded-md border border-border bg-popover shadow-lg px-2.5 py-1.5 whitespace-nowrap text-left">
+                    <div className="rounded-md border border-border bg-popover shadow-elevated px-2.5 py-1.5 whitespace-nowrap text-left">
                       <p className="text-[10px] font-bold" style={{ color: d.color }}>{d.value} {d.name.toLowerCase()} finding{d.value !== 1 ? "s" : ""}</p>
                       <p className="text-[9px] text-muted-foreground">{pct}% of total · Click to filter</p>
                     </div>
@@ -212,7 +212,7 @@ export function SeverityBreakdown({ analysisResults }: { analysisResults: Record
                     onClick={() => setExpandedFinding(isOpen ? null : uid)}
                     className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/20 transition-colors"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: SEV_COLORS[f.severity] }} />
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: SEVERITY_COLORS[f.severity as Severity] }} />
                     <span className="text-[11px] font-medium text-foreground flex-1 truncate">{f.title}</span>
                     {multipleFirewalls && (
                       <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{f.firewall}</span>

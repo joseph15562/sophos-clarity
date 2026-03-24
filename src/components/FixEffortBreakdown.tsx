@@ -2,14 +2,7 @@ import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { generatePlaybook } from "@/lib/remediation-playbooks";
-
-const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: "#EA0022",
-  high: "#F29400",
-  medium: "#F8E300",
-  low: "#00F2B3",
-  info: "#009CFB",
-};
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
 
 const SEVERITY_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
 
@@ -59,8 +52,8 @@ export function FixEffortBreakdown({ analysisResults }: Props) {
   if (data.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Fix Effort Breakdown</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Fix Effort Breakdown</h3>
       <div className="relative" style={{ height: 200 }}>
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>

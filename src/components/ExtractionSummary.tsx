@@ -70,7 +70,7 @@ function FileBlock({ file, defaultExpanded }: { file: FileExtractionInfo; defaul
   const totalRows = meta.sections.reduce((sum, s) => sum + s.rowCount + s.detailCount, 0);
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 overflow-hidden">
+    <div className="rounded-xl border border-border/70 bg-card/50 overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
@@ -80,7 +80,7 @@ function FileBlock({ file, defaultExpanded }: { file: FileExtractionInfo; defaul
         ) : (
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         )}
-        <FileText className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
+        <FileText className="h-3.5 w-3.5 text-brand-accent shrink-0" />
         <span className="text-xs font-medium text-foreground truncate flex-1">
           {file.fileName}
         </span>
@@ -131,7 +131,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
     <section className="space-y-3">
       <div className="flex items-center gap-2.5">
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7]/20 to-[#5A00FF]/20 dark:from-[#2006F7]/25 dark:to-[#00EDFF]/20 ring-2 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 flex items-center justify-center">
-          <FileText className="h-4.5 w-4.5 text-[#2006F7] dark:text-[#00EDFF]" />
+          <FileText className="h-4.5 w-4.5 text-brand-accent" />
         </div>
         <h3 className="text-base sm:text-lg font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
           Extraction Summary
@@ -147,7 +147,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
         </span>
       </div>
 
-      <div className="rounded-xl border border-[#2006F7]/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] px-4 py-3 space-y-3 shadow-[0_12px_36px_rgba(32,6,247,0.08)]">
+      <div className="rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] px-4 py-3 space-y-3 shadow-[0_12px_36px_rgba(32,6,247,0.08)]">
         {/* Overall stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">

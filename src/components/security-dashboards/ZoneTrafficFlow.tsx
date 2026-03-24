@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ParsedFile } from "@/hooks/use-report-generation";
+import { BRAND, SEVERITY_COLORS } from "@/lib/design-tokens";
 
 interface RuleDetail {
   name: string;
@@ -35,10 +36,10 @@ function isWebTraffic(service: string): boolean {
 type ZoneCategory = "WAN" | "LAN" | "DMZ" | "VPN" | "Guest" | "Other";
 
 const ZONE_CAT_CONFIG: Record<ZoneCategory, { color: string; match: (z: string) => boolean }> = {
-  WAN:   { color: "#EA0022", match: (z) => z.includes("wan") },
-  LAN:   { color: "#00F2B3", match: (z) => z.includes("lan") || z.includes("server") },
-  DMZ:   { color: "#F29400", match: (z) => z.includes("dmz") },
-  VPN:   { color: "#2006F7", match: (z) => z.includes("vpn") },
+  WAN:   { color: SEVERITY_COLORS.critical, match: (z) => z.includes("wan") },
+  LAN:   { color: SEVERITY_COLORS.low, match: (z) => z.includes("lan") || z.includes("server") },
+  DMZ:   { color: SEVERITY_COLORS.high, match: (z) => z.includes("dmz") },
+  VPN:   { color: BRAND.blue, match: (z) => z.includes("vpn") },
   Guest: { color: "#B529F7", match: (z) => z.includes("guest") || z.includes("wifi") },
   Other: { color: "#6A889B", match: () => true },
 };
@@ -68,7 +69,7 @@ function ProtectionDot({ covered, total, label }: { covered: number; total: numb
     );
   }
   const ratio = covered / total;
-  const color = ratio >= 1 ? "#00F2B3" : ratio > 0 ? "#F29400" : "#EA0022";
+  const color = ratio >= 1 ? SEVERITY_COLORS.low : ratio > 0 ? SEVERITY_COLORS.high : SEVERITY_COLORS.critical;
   return (
     <span
       title={`${label}: ${covered}/${total} rules`}
@@ -216,9 +217,9 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
   const categories = (["WAN", "LAN", "DMZ", "VPN", "Guest", "Other"] as ZoneCategory[]).filter((c) => categoryMap.has(c));
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Zone Traffic Flow</h3>
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Zone Traffic Flow</h3>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setProblemsOnly((v) => !v)}
@@ -302,7 +303,7 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                       <span className="font-semibold truncate max-w-[100px]" style={{ color: zoneColor(f.source) }} title={f.source}>
                         {f.source}
                       </span>
-                      <span className="text-muted-foreground/50">→</span>
+                      <span className="text-muted-foreground/70">→</span>
                       <span className="font-semibold truncate max-w-[100px]" style={{ color: zoneColor(f.dest) }} title={f.dest}>
                         {f.dest}
                       </span>
@@ -333,7 +334,7 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                                   ? <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">WF</span>
                                   : <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">WF</span>
                               ) : (
-                                <span className="px-1 rounded bg-muted/40 text-muted-foreground/50" title="Non-web service — web filter not applicable">WF n/a</span>
+                                <span className="px-1 rounded bg-muted/40 text-muted-foreground/70" title="Non-web service — web filter not applicable">WF n/a</span>
                               )}
                               {r.hasIps && <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">IPS</span>}
                               {!r.hasIps && <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">IPS</span>}

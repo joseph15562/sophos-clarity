@@ -3,6 +3,7 @@ import { Link2, Unlink, Search, Server, RefreshCw, ChevronDown, CheckCircle2, Al
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";
 import { getFirewallDisplayName, getEffectiveTenantDisplayName, type CentralFirewall } from "@/lib/sophos-central";
@@ -207,22 +208,22 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
   const allLinked = linkedCount === configs.length;
 
   return (
-    <Card className="overflow-hidden rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_55px_rgba(32,6,247,0.08)]">
+    <Card className="overflow-hidden rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_55px_rgba(32,6,247,0.08)]">
       <div className="h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
       <CardContent className="pt-5">
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
             Live enrichment
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Link2 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+            <Link2 className="h-4 w-4 text-brand-accent" />
             <h3 className="text-lg font-display font-black text-foreground tracking-tight">
               Link to Sophos Central
             </h3>
             {matchedTenant && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] font-medium">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent font-medium">
                 {matchedTenant.name}
               </span>
             )}
@@ -238,19 +239,20 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {central.groups.length > 0 && (
-            <select
-              value={filterGroup}
-              onChange={(e) => setFilterGroup(e.target.value)}
-              className="text-[10px] rounded-lg border border-border bg-background/80 px-2.5 py-1.5 text-foreground"
-            >
-              <option value="all">All groups</option>
-              {central.groups.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-              <option value="ungrouped">Ungrouped</option>
-            </select>
+            <Select value={filterGroup} onValueChange={setFilterGroup}>
+              <SelectTrigger className="h-8 min-w-[140px] text-[10px] bg-background/80">
+                <SelectValue placeholder="All groups" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All groups</SelectItem>
+                {central.groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
+                <SelectItem value="ungrouped">Ungrouped</SelectItem>
+              </SelectContent>
+            </Select>
           )}
-          <Button variant="outline" size="sm" onClick={handleRefreshFirewalls} disabled={syncing} className="gap-1 text-[10px] h-8 border-[#2006F7]/20 bg-background/70 hover:bg-[#2006F7]/5">
+          <Button variant="outline" size="sm" onClick={handleRefreshFirewalls} disabled={syncing} className="gap-1 text-[10px] h-8 bg-background/70">
             <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
             Sync Central
           </Button>
@@ -289,7 +291,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
             <div key={config.configHash} className={`rounded-2xl border ${link ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.03]" : "border-border bg-card/70"} overflow-hidden shadow-sm`}>
               {/* Config Header Row */}
               <div className="flex items-center gap-3 px-3 py-2.5">
-                <Server className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
+                <Server className="h-4 w-4 text-brand-accent shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-display font-bold tracking-tight text-foreground truncate block">{config.label}</span>
                   <span className="text-[11px] font-medium text-foreground/70 dark:text-white/60 font-mono">
@@ -322,7 +324,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                 ) : (
                   <button
                     onClick={() => setExpandedConfig(isExpanded ? null : config.configHash)}
-                    className="flex items-center gap-1 rounded-md border border-[#2006F7]/30 dark:border-[#00EDFF]/30 bg-[#2006F7]/[0.06] dark:bg-[#00EDFF]/[0.08] px-2 py-1 text-[11px] font-semibold tracking-tight text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/12 transition-colors shrink-0"
+                    className="flex items-center gap-1 rounded-md border border-brand-accent/30 dark:border-[#00EDFF]/30 bg-brand-accent/[0.06] dark:bg-[#00EDFF]/[0.08] px-2 py-1 text-[11px] font-semibold tracking-tight text-brand-accent hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/12 transition-colors shrink-0"
                   >
                     <Link2 className="h-3 w-3" />
                     Link firewall
@@ -343,7 +345,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                       onKeyDown={(e) => e.key === "Enter" && handleSerialSearch(config.configHash)}
                       className="text-sm font-mono placeholder:text-foreground/55 dark:placeholder:text-white/45 flex-1 h-9"
                     />
-                    <Button size="sm" variant="outline" onClick={() => handleSerialSearch(config.configHash)} className="h-9 gap-1 text-sm font-semibold border-[#2006F7]/25 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10">
+                    <Button size="sm" variant="outline" onClick={() => handleSerialSearch(config.configHash)} className="h-9 gap-1 text-sm font-semibold border-brand-accent/25 dark:border-[#00EDFF]/30 hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10">
                       <Search className="h-3 w-3" /> Match
                     </Button>
                   </div>
@@ -356,7 +358,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
 
                   {/* Firewall dropdown */}
                   <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2006F7] dark:text-[#00EDFF]">Or select from Central</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Or select from Central</span>
                     <div className="max-h-44 overflow-y-auto rounded border border-border divide-y divide-border bg-background">
                       {filteredFirewalls.map((entry) => {
                         const fw = entry.primary;
@@ -367,7 +369,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                             onClick={() => !isLinkedElsewhere && handleLink(config.configHash, fw, "manual")}
                             disabled={isLinkedElsewhere}
                             className={`w-full flex items-center gap-2 px-2.5 py-2 text-left text-sm transition-colors ${
-                              isLinkedElsewhere ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
+                              isLinkedElsewhere ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10"
                             }`}
                           >
                             <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${fw.status?.connected ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`} />
@@ -380,7 +382,7 @@ export function FirewallLinker({ configs, customerName, analysisResults: _analys
                               </span>
                             )}
                             {fw.group?.name && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] shrink-0">{fw.group.name}</span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-accent/10 text-brand-accent shrink-0">{fw.group.name}</span>
                             )}
                             {isLinkedElsewhere && <span className="text-[9px] text-muted-foreground ml-auto shrink-0">(linked)</span>}
                           </button>

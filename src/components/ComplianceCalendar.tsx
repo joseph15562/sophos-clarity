@@ -57,9 +57,10 @@ export function ComplianceCalendar({ files = [] }: Props) {
 
   useEffect(() => {
     const load = () => setSchedules(parseAssessmentSchedule());
+    const onStorage = () => load();
     load();
-    window.addEventListener("storage", () => load());
-    return () => window.removeEventListener("storage", load);
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const licenceEvents = useMemo<LicenceEvent[]>(() => {
@@ -126,37 +127,39 @@ export function ComplianceCalendar({ files = [] }: Props) {
   const selectedEvents = selectedDate ? eventsByDate.get(selectedDate) ?? [] : [];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-        <Calendar className="h-4 w-4" />
-        Compliance Calendar
-      </h3>
+    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10">
+          <Calendar className="h-5 w-5 text-brand-accent" />
+        </div>
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">Compliance Calendar</h3>
+      </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={prevMonth}
-          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+          className="p-2 rounded-lg hover:bg-muted/40 text-muted-foreground/50 hover:text-foreground transition-colors"
           aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="text-sm font-medium text-foreground">
+        <span className="text-sm font-display font-semibold text-foreground">
           {viewDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
         </span>
         <button
           type="button"
           onClick={nextMonth}
-          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+          className="p-2 rounded-lg hover:bg-muted/40 text-muted-foreground/50 hover:text-foreground transition-colors"
           aria-label="Next month"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-0.5 text-[10px] mb-2">
+      <div className="grid grid-cols-7 gap-1 text-[10px]">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <div key={d} className="text-center font-medium text-muted-foreground py-1">
+          <div key={d} className="text-center font-display font-semibold text-muted-foreground/50 uppercase tracking-wider py-1.5">
             {d}
           </div>
         ))}
@@ -174,19 +177,19 @@ export function ComplianceCalendar({ files = [] }: Props) {
               key={key}
               type="button"
               onClick={() => setSelectedDate(key)}
-              className={`min-h-[2rem] rounded flex flex-col items-center justify-center ${
+              className={`min-h-[2.25rem] rounded-lg flex flex-col items-center justify-center text-[11px] font-medium transition-all ${
                 isSelected
-                  ? "bg-[#2006F7] dark:bg-[#00EDFF] text-white"
+                  ? "bg-[#2006F7] dark:bg-[#00EDFF] text-white dark:text-[#0a0a14] shadow-sm font-bold"
                   : hasEvents
-                    ? "bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 text-foreground"
+                    ? "bg-brand-accent/10 dark:bg-[#00EDFF]/10 text-foreground hover:bg-brand-accent/20 dark:hover:bg-[#00EDFF]/20"
                     : isToday
-                      ? "ring-1 ring-border text-foreground"
-                      : "text-foreground hover:bg-muted/50"
+                      ? "ring-1 ring-[#2006F7]/30 dark:ring-[#00EDFF]/30 text-foreground font-semibold"
+                      : "text-foreground/70 hover:bg-muted/30"
               }`}
             >
               <span>{d}</span>
               {hasEvents && (
-                <span className="w-1 h-1 rounded-full bg-current opacity-70 mt-0.5" />
+                <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? "bg-white dark:bg-[#0a0a14]" : "bg-[#2006F7] dark:bg-[#00EDFF]"}`} />
               )}
             </button>
           );
@@ -194,23 +197,23 @@ export function ComplianceCalendar({ files = [] }: Props) {
       </div>
 
       {selectedDate && (
-        <div className="mt-4 pt-4 border-t border-border">
-          <h4 className="text-xs font-semibold text-foreground mb-2">
+        <div className="pt-4 border-t border-border/40 space-y-2">
+          <h4 className="text-[12px] font-display font-semibold tracking-tight text-foreground">
             {new Date(selectedDate + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric" })}
           </h4>
           {selectedEvents.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No events on this day</p>
+            <p className="text-[11px] text-muted-foreground/50">No events on this day</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {selectedEvents.map((e, i) => (
-                <li key={i} className="flex items-center gap-2 text-xs">
+                <li key={i} className="flex items-center gap-2.5 text-[11px] rounded-lg bg-muted/10 dark:bg-muted/5 border border-border/30 px-3 py-2">
                   <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      e.type === "assessment" ? "bg-[#F29400]" : "bg-[#00F2B3] dark:bg-[#00F2B3]"
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 shadow-sm ${
+                      e.type === "assessment" ? "bg-[#F29400] shadow-[0_0_6px_rgba(242,148,0,0.4)]" : "bg-[#00F2B3] shadow-[0_0_6px_rgba(0,242,179,0.4)]"
                     }`}
                   />
-                  <span className="font-medium text-foreground">{e.label}</span>
-                  {e.detail && <span className="text-muted-foreground">— {e.detail}</span>}
+                  <span className="font-display font-semibold text-foreground">{e.label}</span>
+                  {e.detail && <span className="text-muted-foreground/60">— {e.detail}</span>}
                 </li>
               ))}
             </ul>

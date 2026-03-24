@@ -10,6 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ScheduledReport {
   id: string;
@@ -225,131 +230,144 @@ export function ScheduledReportSettings() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          Automatically email compliance reports to clients on a schedule.
-        </p>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[#2006F7] text-white hover:bg-[#2006F7]/90 transition-colors"
-        >
-          <Plus className="h-3 w-3" />
-          New Schedule
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/90 px-4 py-3 shadow-sm">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Scheduled delivery
+          </p>
+          <p className="text-sm text-foreground">
+            Automatically email executive or compliance reports to client stakeholders on a recurring cadence.
+          </p>
+        </div>
+        <Button onClick={() => setShowForm(!showForm)} className="gap-1.5">
+          <Plus className="h-3.5 w-3.5" />
+          {showForm ? "Hide Schedule Builder" : "New Schedule"}
+        </Button>
       </div>
 
       {/* Create form */}
       {showForm && (
-        <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 p-5 space-y-5 shadow-card">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <label className="block text-[10px] font-medium text-muted-foreground mb-1">
-                Schedule Name
-              </label>
-              <input
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-accent">
+                Schedule builder
+              </p>
+              <h3 className="text-lg font-display font-semibold tracking-tight text-foreground">
+                Set the delivery cadence, audience, and content mix
+              </h3>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-card/80 px-3 py-2 text-[11px] text-muted-foreground shadow-sm">
+              Best for monthly compliance packs, QBRs, and recurring executive updates.
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Schedule Name</Label>
+              <Input
                 type="text"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Monthly Report — Acme Corp"
-                className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs"
+                className="text-sm"
               />
             </div>
-            <div>
-              <label className="block text-[10px] font-medium text-muted-foreground mb-1">
-                Customer Name
-              </label>
-              <input
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Customer Name</Label>
+              <Input
                 type="text"
                 value={formCustomer}
                 onChange={(e) => setFormCustomer(e.target.value)}
                 placeholder="Acme Corp"
-                className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs"
+                className="text-sm"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Recipients (comma-separated emails)
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               value={formRecipients}
               onChange={(e) => setFormRecipients(e.target.value)}
               placeholder="client@example.com, manager@example.com"
-              className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs"
+              className="text-sm"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-medium text-muted-foreground mb-1">
-                Frequency
-              </label>
-              <select
-                value={formSchedule}
-                onChange={(e) => setFormSchedule(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs"
-              >
-                {SCHEDULE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Frequency</Label>
+              <Select value={formSchedule} onValueChange={setFormSchedule}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SCHEDULE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-[10px] font-medium text-muted-foreground mb-1">
-                Report Type
-              </label>
-              <select
-                value={formReportType}
-                onChange={(e) => setFormReportType(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs"
-              >
-                {REPORT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label} ({t.desc})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Report Type</Label>
+              <Select value={formReportType} onValueChange={setFormReportType}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label} — {t.desc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-medium text-muted-foreground mb-1.5">
-              Include Sections
-            </label>
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {Object.entries(formSections).map(([key, val]) => (
-                <label key={key} className="flex items-center gap-1.5 text-[10px] text-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={val}
-                    onChange={() =>
-                      setFormSections((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))
-                    }
-                    className="rounded border-input"
-                  />
-                  {key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
-                </label>
-              ))}
+          <div className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm">
+            <div className="mb-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Include Sections</p>
+              <p className="text-xs text-muted-foreground">Choose the standard content blocks recipients should receive in each automated delivery.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Object.entries(formSections).map(([key, val]) => {
+                const label = key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
+                return (
+                  <label
+                    key={key}
+                    className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/80 px-3 py-3 text-sm text-foreground shadow-sm transition-colors hover:border-brand-accent/30"
+                  >
+                    <Checkbox
+                      checked={val}
+                      onCheckedChange={() =>
+                        setFormSections((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))
+                      }
+                      className="mt-0.5 rounded-md border-border/80"
+                    />
+                    <span className="leading-relaxed">{label}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
-            <button
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
               onClick={handleCreate}
               disabled={!formName.trim() || !formRecipients.trim()}
-              className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-md bg-[#00F2B3] text-white hover:bg-[#00F2B3]/90 transition-colors disabled:opacity-50"
+              className="gap-1.5"
             >
-              <Calendar className="h-3 w-3" />
+              <Calendar className="h-3.5 w-3.5" />
               Create Schedule
-            </button>
-            <button
-              onClick={resetForm}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
-            >
+            </Button>
+            <Button onClick={resetForm} variant="outline">
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -388,7 +406,7 @@ export function ScheduledReportSettings() {
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
                       {report.schedule}
                     </span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] shrink-0">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-accent/10 text-brand-accent shrink-0">
                       {REPORT_TYPES.find((t) => t.value === report.report_type)?.label ?? report.report_type}
                     </span>
                   </div>
@@ -468,7 +486,7 @@ export function ScheduledReportSettings() {
           </DialogHeader>
           {previewLoading && (
             <div className="flex items-center justify-center py-12">
-              <span className="animate-spin h-8 w-8 border-2 border-[#2006F7]/30 border-t-[#2006F7] rounded-full" />
+              <span className="animate-spin h-8 w-8 border-2 border-brand-accent/30 border-t-[#2006F7] rounded-full" />
             </div>
           )}
           {previewError && (

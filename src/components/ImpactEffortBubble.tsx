@@ -12,15 +12,8 @@ import {
   ReferenceArea,
 } from "recharts";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
 import { generatePlaybook } from "@/lib/remediation-playbooks";
-
-const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: "#EA0022",
-  high: "#F29400",
-  medium: "#F8E300",
-  low: "#00F2B3",
-  info: "#009CFB",
-};
 
 const SEVERITY_SCORE: Record<Severity, number> = {
   critical: 5,
@@ -90,8 +83,8 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
   const padding = maxEffort * 0.1;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Impact vs Effort</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Impact vs Effort</h3>
       <div className="relative" style={{ height: 280 }}>
         <ResponsiveContainer width="100%" height={280}>
           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
@@ -172,7 +165,7 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
                 if (!active || !payload?.length) return null;
                 const p = payload[0].payload as ScatterPoint;
                 return (
-                  <div className="rounded-md border border-border bg-card px-3 py-2 text-xs shadow-md">
+                  <div className="rounded-md border border-border/70 bg-card px-3 py-2 text-xs shadow-elevated">
                     <p className="font-semibold text-foreground">{p.title}</p>
                     <p className="text-muted-foreground mt-0.5">
                       Severity: {p.severity} · ~{p.effort} min

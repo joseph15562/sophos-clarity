@@ -39,12 +39,12 @@ export function InsuranceReadiness({ analysisResults }: Props) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center">
+    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 space-y-5 shadow-card">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10">
             <svg
-              className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]"
+              className="h-5 w-5 text-brand-accent"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -58,30 +58,30 @@ export function InsuranceReadiness({ analysisResults }: Props) {
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
+            <h3 className="text-base font-display font-bold tracking-tight text-foreground">
               Cyber Insurance Readiness
             </h3>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground/60 mt-0.5">
               Common questionnaire items mapped from firewall analysis
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold tabular-nums ${
+            className={`flex items-center gap-2.5 px-4 py-2 rounded-xl border font-bold tabular-nums ${
               result.readinessScore >= 75
-                ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
+                ? "bg-[#00F2B3]/10 text-[#00F2B3] border-[#00F2B3]/20"
                 : result.readinessScore >= 50
-                  ? "bg-[#F29400]/10 text-[#F29400]"
-                  : "bg-[#EA0022]/10 text-[#EA0022]"
+                  ? "bg-[#F29400]/10 text-[#F29400] border-[#F29400]/20"
+                  : "bg-[#EA0022]/10 text-[#EA0022] border-[#EA0022]/20"
             }`}
           >
-            <span className="text-lg">{result.readinessScore}%</span>
-            <span className="text-[10px] font-medium">Readiness</span>
+            <span className="text-xl font-display font-black">{result.readinessScore}%</span>
+            <span className="text-[11px] font-semibold opacity-70">Readiness</span>
           </div>
           <button
             onClick={handleExportPdf}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium rounded-lg border border-border bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-medium rounded-xl border border-border/60 bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground hover:border-border transition-colors shadow-sm"
           >
             <FileDown className="h-3.5 w-3.5" />
             Export as PDF
@@ -92,20 +92,24 @@ export function InsuranceReadiness({ analysisResults }: Props) {
       <div className="space-y-2">
         {result.questions.map((q) => {
           const style = ANSWER_STYLES[q.answer];
+          const borderAccent =
+            q.answer === "yes" ? "border-l-[#00F2B3]" :
+            q.answer === "no" ? "border-l-[#EA0022]" :
+            "border-l-[#F29400]";
           return (
             <div
               key={q.question}
-              className="flex items-start gap-3 rounded-lg border border-border/50 bg-muted/20 px-3 py-2.5"
+              className={`flex items-start gap-3.5 rounded-xl border border-border/40 border-l-[3px] ${borderAccent} bg-muted/10 dark:bg-muted/5 px-4 py-3.5 transition-colors hover:bg-muted/20`}
             >
               <span
-                className={`inline-flex items-center justify-center h-6 w-6 rounded shrink-0 text-sm font-bold ${style.bg} ${style.color}`}
+                className={`inline-flex items-center justify-center h-7 w-7 rounded-lg shrink-0 text-sm font-bold ${style.bg} ${style.color}`}
                 title={q.answer}
               >
                 {style.symbol}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground">{q.question}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
+                <p className="text-[13px] font-display font-semibold tracking-tight text-foreground">{q.question}</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-1 leading-relaxed">
                   {q.evidence}
                 </p>
               </div>

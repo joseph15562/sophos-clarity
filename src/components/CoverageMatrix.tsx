@@ -114,8 +114,8 @@ export function CoverageMatrix({ analysisResults }: Props) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
         Security Feature Coverage Matrix
       </h3>
       <div className="overflow-x-auto">

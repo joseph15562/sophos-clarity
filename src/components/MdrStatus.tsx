@@ -68,8 +68,8 @@ export function MdrStatus({ analysisResults, files }: MdrStatusProps) {
 
   if (!hasAnyMdrData) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground">MDR Integration</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">MDR Integration</h3>
         <p className="mt-3 text-sm text-muted-foreground">
           MDR status not available. Check firewall configuration.
         </p>
@@ -81,8 +81,8 @@ export function MdrStatus({ analysisResults, files }: MdrStatusProps) {
   const primary = perFileData[0];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground">MDR Integration</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">MDR Integration</h3>
 
       {singleFile ? (
         <div className="mt-4 space-y-4">

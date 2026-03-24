@@ -93,8 +93,8 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Finding Activity</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Finding Activity</h3>
       {!hasData ? (
         <p className="text-xs text-muted-foreground">Assessment history builds over time</p>
       ) : (

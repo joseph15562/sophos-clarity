@@ -126,8 +126,8 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
   const filledPath = arcPath(cx, cy, r, startAngle, filledEndAngle);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Policy Complexity</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Policy Complexity</h3>
 
       <div className="flex flex-col items-center gap-4">
         <svg

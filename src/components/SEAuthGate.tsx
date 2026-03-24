@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import { LogIn, UserPlus, ArrowRight, AlertCircle, Shield } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -65,7 +67,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
   if (signupSuccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="max-w-md w-full rounded-xl border border-border bg-card p-8 text-center space-y-4">
+        <div className="max-w-md w-full rounded-xl border border-border/70 bg-card p-8 text-center space-y-4">
           <div className="h-12 w-12 rounded-full bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
             <UserPlus className="h-6 w-6 text-[#00F2B3] dark:text-[#00F2B3]" />
           </div>
@@ -76,7 +78,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
           </p>
           <button
             onClick={() => { setMode("signin"); setSignupSuccess(false); }}
-            className="text-sm text-[#2006F7] dark:text-[#00EDFF] hover:underline"
+            className="text-sm text-brand-accent hover:underline"
           >
             Back to sign in
           </button>
@@ -106,8 +108,8 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center space-y-2">
-            <div className="h-14 w-14 rounded-xl bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center mx-auto">
-              <Shield className="h-8 w-8 text-[#2006F7] dark:text-[#00EDFF]" />
+            <div className="h-14 w-14 rounded-xl bg-brand-accent/10 dark:bg-brand-accent/15 flex items-center justify-center mx-auto">
+              <Shield className="h-8 w-8 text-brand-accent" />
             </div>
             <h2 className="text-xl font-display font-bold text-foreground">SE Sign In</h2>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto">
@@ -115,7 +117,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
             <div className="flex border-b border-border">
               <button
                 onClick={() => { setMode("signin"); setError(null); }}
@@ -139,12 +141,12 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
                   <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Full Name
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Joseph McDonald"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="bg-background/80"
                     autoComplete="name"
                   />
                 </div>
@@ -154,12 +156,12 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Sophos Email
                 </label>
-                <input
+                <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="firstname.lastname@sophos.com"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                  className="bg-background/80"
                   autoComplete="email"
                 />
               </div>
@@ -168,12 +170,12 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Password
                 </label>
-                <input
+                <Input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                  className="bg-background/80"
                   autoComplete={mode === "signin" ? "current-password" : "new-password"}
                 />
               </div>
@@ -183,12 +185,12 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
                   <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Confirm Password
                   </label>
-                  <input
+                  <Input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="bg-background/80"
                     autoComplete="new-password"
                   />
                 </div>
@@ -201,10 +203,10 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
                 </div>
               )}
 
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#2006F7] hover:bg-[#10037C] text-white px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+                className="w-full gap-2"
               >
                 {loading ? (
                   <span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
@@ -214,7 +216,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
                     <ArrowRight className="h-3.5 w-3.5" />
                   </>
                 )}
-              </button>
+              </Button>
             </form>
           </div>
 

@@ -68,16 +68,16 @@ export function ServiceUsage({ files }: Props) {
 
   if (topServices.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Service Usage</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Service Usage</h3>
         <p className="text-sm text-muted-foreground">No firewall rules found</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Service Usage</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Service Usage</h3>
       <div className="space-y-2.5">
         {topServices.map(({ name, count }) => (
           <div key={name} className="flex items-center gap-3">

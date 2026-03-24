@@ -225,12 +225,12 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
   if (Object.keys(currentResults).length === 0) return null;
 
   return (
-    <Card className="rounded-xl border border-[#2006F7]/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] shadow-[0_12px_36px_rgba(32,6,247,0.08)] no-print">
+    <Card className="rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] shadow-[0_12px_36px_rgba(32,6,247,0.08)] no-print">
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="space-y-1">
             <CardTitle className="text-lg font-display font-black tracking-tight flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+              <MessageSquare className="h-4 w-4 text-brand-accent" />
               Progress narrative
             </CardTitle>
             <CardDescription className="text-sm font-medium text-foreground/80 dark:text-white/75 flex items-center gap-1.5">
@@ -242,7 +242,7 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0 gap-1.5 border-[#2006F7]/25 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10 font-semibold"
+            className="shrink-0 gap-1.5 border-brand-accent/25 dark:border-[#00EDFF]/30 hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10 font-semibold"
             disabled={loading || !text}
             onClick={handleCopy}
           >

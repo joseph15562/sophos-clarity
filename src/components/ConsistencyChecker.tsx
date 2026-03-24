@@ -21,7 +21,7 @@ export function ConsistencyChecker({ analysisResults }: Props) {
   if (Object.keys(analysisResults).length < 2 || gaps.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
+    <section className="rounded-xl border border-border/70 bg-card overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
@@ -30,7 +30,7 @@ export function ConsistencyChecker({ analysisResults }: Props) {
           <span className="text-lg">⚖️</span>
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-foreground">Multi-Firewall Consistency</h3>
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Multi-Firewall Consistency</h3>
           <p className="text-[10px] text-muted-foreground">
             {gaps.length} policy discrepanc{gaps.length !== 1 ? "ies" : "y"} across {Object.keys(analysisResults).length} firewalls
           </p>

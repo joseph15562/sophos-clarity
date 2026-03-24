@@ -19,7 +19,21 @@ export interface Playbook {
 
 const DOCS_BASE = "https://docs.sophos.com/nsg/sophos-firewall/21.0/Help/en-us/webhelp/onlinehelp/AdministratorHelp";
 
-export function generatePlaybook(finding: Finding): Playbook | null {
+export function generatePlaybook(finding: Finding, managementIp?: string): Playbook | null {
+  const consoleUrl = managementIp ? `https://${managementIp}:4444` : "https://<firewall-ip>:4444";
+  const pb = generatePlaybookInner(finding, consoleUrl);
+  if (!pb) return null;
+  const hasLoginStep = pb.steps[0]?.action.toLowerCase().includes("log in to sophos");
+  if (!hasLoginStep) {
+    pb.steps = [
+      { step: 1, action: "Log in to Sophos Firewall web admin console", path: consoleUrl },
+      ...pb.steps.map((s) => ({ ...s, step: s.step + 1 })),
+    ];
+  }
+  return pb;
+}
+
+function generatePlaybookInner(finding: Finding, consoleUrl: string): Playbook | null {
   const title = finding.title.toLowerCase();
 
   if (title.includes("missing web filtering")) {
@@ -30,7 +44,7 @@ export function generatePlaybook(finding: Finding): Playbook | null {
       severity: finding.severity,
       estimatedMinutes: 5 * ruleNames.length,
       steps: [
-        { step: 1, action: "Log in to Sophos Firewall web admin console", path: "https://<firewall-ip>:4444" },
+        { step: 1, action: `Log in to Sophos Firewall web admin console`, path: consoleUrl },
         { step: 2, action: "Go to Rules and policies > Firewall rules", path: "Rules and policies > Firewall rules", docUrl: `${DOCS_BASE}/RulesAndPolicies/FirewallRules/` },
         ...ruleNames.slice(0, 5).map((name, i) => ({
           step: 3 + i,
@@ -519,7 +533,7 @@ export function generatePlaybook(finding: Finding): Playbook | null {
       severity: finding.severity,
       estimatedMinutes: 5,
       steps: [
-        { step: 1, action: "Log in to Sophos Firewall web admin console", path: "https://<firewall-ip>:4444" },
+        { step: 1, action: `Log in to Sophos Firewall web admin console`, path: consoleUrl },
         { step: 2, action: "Navigate to Intrusion prevention > DoS & spoof protection", path: "Intrusion prevention > DoS & spoof protection", docUrl: `${DOCS_BASE}/ProtectPolicies/IntrusionPrevention/DoSSpoof/` },
         { step: 3, action: "Under DoS Settings, enable SYN flood protection" },
         { step: 4, action: "Set Source and Destination thresholds — Sophos recommends starting with defaults and tuning based on traffic patterns" },
@@ -536,7 +550,7 @@ export function generatePlaybook(finding: Finding): Playbook | null {
       severity: finding.severity,
       estimatedMinutes: 5,
       steps: [
-        { step: 1, action: "Log in to Sophos Firewall web admin console", path: "https://<firewall-ip>:4444" },
+        { step: 1, action: `Log in to Sophos Firewall web admin console`, path: consoleUrl },
         { step: 2, action: "Navigate to Intrusion prevention > DoS & spoof protection", path: "Intrusion prevention > DoS & spoof protection", docUrl: `${DOCS_BASE}/ProtectPolicies/IntrusionPrevention/DoSSpoof/` },
         { step: 3, action: "Under Spoof Prevention, enable IP spoof prevention" },
         { step: 4, action: "Click Apply to save changes" },
@@ -552,7 +566,7 @@ export function generatePlaybook(finding: Finding): Playbook | null {
       severity: finding.severity,
       estimatedMinutes: 10,
       steps: [
-        { step: 1, action: "Log in to Sophos Firewall web admin console", path: "https://<firewall-ip>:4444" },
+        { step: 1, action: `Log in to Sophos Firewall web admin console`, path: consoleUrl },
         { step: 2, action: "Navigate to Intrusion prevention > DoS & spoof protection", path: "Intrusion prevention > DoS & spoof protection", docUrl: `${DOCS_BASE}/ProtectPolicies/IntrusionPrevention/DoSSpoof/` },
         { step: 3, action: "Enable SYN flood protection with recommended thresholds" },
         { step: 4, action: "Enable IP spoof prevention" },

@@ -88,7 +88,7 @@ export default function TeamInviteAccept() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
+    <main id="main-content" className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-[#2006F7] to-[#4A20F7] shadow-lg mb-4">
@@ -210,6 +210,6 @@ export default function TeamInviteAccept() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

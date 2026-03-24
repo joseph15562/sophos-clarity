@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { ArrowUp, ArrowDown, Minus, GitCompareArrows } from "lucide-react";
 import { computeRiskScore } from "@/lib/risk-score";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SEV_BADGE: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
@@ -66,8 +67,8 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
 
   if (labels.length < 2) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-2">Fleet Comparison</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">Fleet Comparison</h3>
         <p className="text-sm text-muted-foreground">Upload 2+ configurations to compare firewalls</p>
       </div>
     );
@@ -77,33 +78,48 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
     categories.find((c) => c.label === label)?.pct ?? 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Fleet Comparison</h3>
+    <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-card">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="mb-1 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-brand-accent/10 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]">
+              <GitCompareArrows className="h-4 w-4" />
+            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fleet comparison</p>
+          </div>
+          <h3 className="text-lg font-display font-semibold tracking-tight text-foreground">Compare posture, scoring, and deltas side-by-side</h3>
+        </div>
+        <div className="rounded-2xl border border-border/70 bg-card/80 px-3 py-2 text-[11px] text-muted-foreground shadow-sm">
+          Best used after uploading two or more customer firewall exports.
+        </div>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 mb-6">
         <div className="space-y-1.5">
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Firewall A</label>
-          <select
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-            value={firewallA}
-            onChange={(e) => setFirewallA(e.target.value)}
-          >
-            {selectLabels.map((l) => (
-              <option key={l} value={l} disabled={l === firewallB}>{l}</option>
-            ))}
-          </select>
+          <Select value={firewallA} onValueChange={setFirewallA}>
+            <SelectTrigger className="text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {selectLabels.map((l) => (
+                <SelectItem key={l} value={l} disabled={l === firewallB}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Firewall B</label>
-          <select
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-            value={firewallB}
-            onChange={(e) => setFirewallB(e.target.value)}
-          >
-            {selectLabels.map((l) => (
-              <option key={l} value={l} disabled={l === firewallA}>{l}</option>
-            ))}
-          </select>
+          <Select value={firewallB} onValueChange={setFirewallB}>
+            <SelectTrigger className="text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {selectLabels.map((l) => (
+                <SelectItem key={l} value={l} disabled={l === firewallA}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

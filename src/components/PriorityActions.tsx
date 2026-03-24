@@ -68,8 +68,8 @@ export function PriorityActions({ analysisResults }: Props) {
   if (top3.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5" data-tour="priority-actions">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Priority Actions</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="priority-actions">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Priority Actions</h3>
       <div className="space-y-3">
         {top3.map((f, i) => {
           const style = SEVERITY_STYLE[f.severity];

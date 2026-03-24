@@ -149,7 +149,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               Framework coverage view
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <Scale className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+              <Scale className="h-5 w-5 text-brand-accent" />
               <h3 className="text-lg font-display font-black text-foreground tracking-tight">Compliance Heatmap</h3>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">{mappings.length} framework{mappings.length !== 1 ? "s" : ""}</span>
             </div>
@@ -252,7 +252,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                     className="p-2 text-center text-foreground/75 font-semibold cursor-pointer hover:text-foreground transition-colors min-w-[100px]"
                     onClick={() => setSelectedFw(selectedFw === m.framework ? null : m.framework)}
                   >
-                    <span className={selectedFw === m.framework ? "text-[#2006F7] dark:text-[#00EDFF] underline underline-offset-2 font-bold" : ""}>
+                    <span className={selectedFw === m.framework ? "text-brand-accent underline underline-offset-2 font-bold" : ""}>
                       {m.framework.length > 20 ? m.framework.slice(0, 18) + "…" : m.framework}
                     </span>
                     {scorable > 0 && (
@@ -306,7 +306,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
           className="absolute z-30 pointer-events-none transition-opacity duration-100"
           style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}
         >
-          <div className="mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-lg text-left min-w-[200px] max-w-[280px]">
+          <div className="mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-elevated text-left min-w-[200px] max-w-[280px]">
             <p className="font-semibold text-foreground text-[11px]">{tooltip.controlName}</p>
             <p className="text-muted-foreground mt-0.5 text-[10px]">{tooltip.evidence || "No evidence gathered"}</p>
             <p className="mt-1">
@@ -326,7 +326,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
 
       {/* Selected cell findings panel */}
       {selectedCell && selectedCell.findings.length > 0 && (
-        <div className="rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.03] dark:bg-[#2006F7]/[0.06] p-4 space-y-2">
+        <div className="rounded-lg border border-brand-accent/20 bg-[#2006F7]/[0.03] dark:bg-brand-accent/[0.06] p-4 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-foreground">
               {selectedCell.control.controlName} — {selectedCell.framework}
@@ -335,7 +335,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
           </div>
           <p className="text-[10px] text-muted-foreground">{selectedCell.findings.length} related finding{selectedCell.findings.length !== 1 ? "s" : ""}</p>
           {selectedCell.findings.map((f) => (
-            <div key={f.id} className="rounded-md border border-border bg-card px-3 py-2">
+            <div key={f.id} className="rounded-md border border-border/70 bg-card px-3 py-2">
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
                   f.severity === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" :
@@ -362,8 +362,8 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               onClick={() => setSelectedFw(selectedFw === m.framework ? null : m.framework)}
               className={`rounded-2xl border px-3 py-3 text-left transition-colors shadow-sm ${
                 selectedFw === m.framework
-                  ? "border-[#2006F7]/30 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08]"
-                  : "border-border bg-card/70 hover:border-[#2006F7]/20"
+                  ? "border-brand-accent/30 bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08]"
+                  : "border-border bg-card/70 hover:border-brand-accent/20"
               }`}
             >
               <p className="text-[10px] font-semibold text-foreground truncate">{m.framework}</p>

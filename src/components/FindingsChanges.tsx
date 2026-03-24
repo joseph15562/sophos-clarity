@@ -159,9 +159,9 @@ export function FindingsChanges({ analysisResults }: Props) {
   if (!diff || !diff.hasPrevious || !diff.hasChanges) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Changes since last assessment
         </h3>
         <button

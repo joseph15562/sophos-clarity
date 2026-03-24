@@ -21,16 +21,9 @@ import {
 } from "@/lib/sophos-licence";
 import { loadSeHealthCheckBpOverrides, seCentralAutoForLabel } from "@/lib/se-health-check-bp";
 import { evaluateBaseline, type BaselineResult } from "@/lib/policy-baselines";
+import { GRADE_COLORS } from "@/lib/design-tokens";
 
 const NO_SE_CENTRAL_HA_LABELS = new Set<string>();
-
-const GRADE_COLORS: Record<string, string> = {
-  A: "#00F2B3",
-  B: "#00F2B3",
-  C: "#F8E300",
-  D: "#F29400",
-  F: "#EA0022",
-};
 
 function GaugeRing({ score, grade }: { score: number; grade: string }) {
   const r = 48;
@@ -60,10 +53,10 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
         transform="rotate(-90 60 60)"
         className="transition-all duration-700"
       />
-      <text x="60" y="54" textAnchor="middle" fill={color} fontSize="28" fontWeight="700">
+      <text x="60" y="54" textAnchor="middle" fill={color} fontSize="28" fontWeight="700" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>
         {score}
       </text>
-      <text x="60" y="72" textAnchor="middle" fill={color} fontSize="12" fontWeight="600">
+      <text x="60" y="72" textAnchor="middle" fill={color} fontSize="12" fontWeight="600" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>
         Grade {grade}
       </text>
     </svg>
@@ -228,10 +221,10 @@ export function HealthCheckDashboard({
 
   if (!activeResult || !activeBp) {
     return (
-      <Card className="rounded-xl border border-border bg-card">
+      <Card className="rounded-xl border border-border/70 bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Shield className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+            <Shield className="h-5 w-5 text-brand-accent" />
             Health check results
           </CardTitle>
           <CardDescription>No analysis data for the selected firewall.</CardDescription>
@@ -263,10 +256,10 @@ export function HealthCheckDashboard({
 
       <div className={`grid gap-4 ${hideSophosBpCard ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
         {!hideSophosBpCard && (
-          <Card className="rounded-xl border border-border bg-card">
+          <Card className="rounded-xl border border-border/70 bg-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Shield className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+                <Shield className="h-5 w-5 text-brand-accent" />
                 Sophos best practices
               </CardTitle>
               <CardDescription>Weighted checks from official Sophos hardening guidance (not a compliance framework).</CardDescription>
@@ -289,7 +282,7 @@ export function HealthCheckDashboard({
 
       </div>
 
-      <Card className="rounded-xl border border-border bg-card">
+      <Card className="rounded-xl border border-border/70 bg-card">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-base">Findings</CardTitle>
@@ -366,7 +359,7 @@ export function HealthCheckDashboard({
           href="https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline-offset-2 hover:underline text-[#2006F7] dark:text-[#00EDFF]"
+          className="underline-offset-2 hover:underline text-brand-accent"
         >
           Sophos Firewall security hardening (official docs)
         </a>

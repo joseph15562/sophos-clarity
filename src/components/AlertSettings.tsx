@@ -156,7 +156,7 @@ export function AlertSettings() {
       </div>
 
       {activeTab === "webhook" && (
-        <div className="rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.02] dark:bg-[#2006F7]/[0.04] p-3">
+        <div className="rounded-lg border border-brand-accent/20 bg-[#2006F7]/[0.02] dark:bg-[#2006F7]/[0.04] p-3">
           <p className="text-[10px] font-medium text-foreground mb-1">Webhook / SIEM integration</p>
           <p className="text-[9px] text-muted-foreground">
             Configure webhook URLs to receive finding events in your SIEM. Webhook delivery runs when findings change (via the connector agent). Use the Test Webhook button to validate connectivity.
@@ -199,7 +199,7 @@ export function AlertSettings() {
           {(activeTab === "webhook" ? webhookRules : rules).map((rule) => (
             <div
               key={rule.id}
-              className="rounded-lg border border-border bg-card p-3 space-y-3"
+              className="rounded-xl border border-border/70 bg-card p-3 space-y-3"
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -249,7 +249,7 @@ export function AlertSettings() {
                   }
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[10px] transition-colors ${
                     rule.channel === "email"
-                      ? "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#6B5BFF]"
+                      ? "bg-brand-accent/10 text-[#2006F7] dark:text-[#6B5BFF]"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
                   }`}
                 >
@@ -266,7 +266,7 @@ export function AlertSettings() {
                   }
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[10px] transition-colors ${
                     rule.channel === "webhook"
-                      ? "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#6B5BFF]"
+                      ? "bg-brand-accent/10 text-[#2006F7] dark:text-[#6B5BFF]"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted"
                   }`}
                 >

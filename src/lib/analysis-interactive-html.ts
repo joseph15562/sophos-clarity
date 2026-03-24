@@ -212,6 +212,9 @@ export function buildInteractiveAnalysisHtml(
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700;800;900&family=Zalando+Sans+Expanded:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <title>${escapeHtml(docTitle)}</title>
   <style>
     :root {
@@ -231,7 +234,7 @@ export function buildInteractiveAnalysisHtml(
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Zalando Sans', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;

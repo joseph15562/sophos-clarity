@@ -1,17 +1,10 @@
 import { useMemo } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import { gradeForScore } from "@/lib/design-tokens";
 import { computeRiskScore } from "@/lib/risk-score";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
-}
-
-function gradeFromPct(pct: number): "A" | "B" | "C" | "D" | "F" {
-  if (pct >= 90) return "A";
-  if (pct >= 75) return "B";
-  if (pct >= 60) return "C";
-  if (pct >= 40) return "D";
-  return "F";
 }
 
 function barColorClass(pct: number): string {
@@ -43,11 +36,11 @@ export function CategoryScoreBars({ analysisResults }: Props) {
   }, [analysisResults]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Category Scores</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Category Scores</h3>
       <div className="space-y-3">
         {aggregated.map(({ label, pct }) => {
-          const grade = gradeFromPct(pct);
+          const grade = gradeForScore(pct);
           return (
             <div key={label} className="flex items-center gap-3">
               <span className="text-xs text-foreground w-36 shrink-0">{label}</span>

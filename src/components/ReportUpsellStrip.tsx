@@ -72,7 +72,7 @@ export function ReportUpsellStrip({
   if (!activeRule) return null;
 
   return (
-    <div className="w-full rounded-xl border border-border bg-card px-4 py-2.5 flex items-center gap-3">
+    <div className="w-full rounded-xl border border-border/70 bg-card px-4 py-2.5 flex items-center gap-3">
       <Info className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
       <p className="text-xs sm:text-sm text-foreground flex-1 min-w-0 leading-snug">{activeRule.message}</p>
       <Button

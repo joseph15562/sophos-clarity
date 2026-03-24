@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const CARD_CLASS = "rounded-xl border border-border bg-card p-5";
+const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
 const STORAGE_KEY = "firecomply-psa-config";
 
 type PsaType = "connectwise" | "autotask" | "jira" | "servicenow";
@@ -90,7 +90,7 @@ export function PsaIntegrations() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
         <Plug className="h-4 w-4" />
         PSA Integrations
       </h3>

@@ -45,7 +45,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
 
   if (isGuest) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5 flex items-start gap-3">
+      <div className="rounded-xl border border-border/70 bg-card p-5 flex items-start gap-3">
         <LogIn className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
         <p className="text-sm text-muted-foreground">Sign in to track score history</p>
       </div>
@@ -56,7 +56,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+      <div className="rounded-xl border border-border/70 bg-card p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Skeleton className="h-4 w-4 rounded" />
           <Skeleton className="h-4 w-40" />
@@ -78,7 +78,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
   const firstOnly = history.length <= 1;
 
   return (
-    <Card className="rounded-xl border border-border bg-card">
+    <Card className="rounded-xl border border-border/70 bg-card">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -93,7 +93,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
               <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-muted text-foreground">{displayGrade}</span>
             )}
             {firstOnly && (
-              <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF]">
+              <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent">
                 First assessment
               </span>
             )}

@@ -118,8 +118,8 @@ export function SlaComplianceGauge({ analysisResults }: SlaComplianceGaugeProps)
 
   if (!loaded || !hasHistoricalData) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground">SLA Compliance</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">SLA Compliance</h3>
         <p className="mt-4 text-sm text-muted-foreground text-center">
           SLA tracking requires assessment history
         </p>
@@ -136,8 +136,8 @@ export function SlaComplianceGauge({ analysisResults }: SlaComplianceGaugeProps)
   const breachedLen = totalFindings > 0 ? (breached / totalFindings) * circumference : 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground">SLA Compliance</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">SLA Compliance</h3>
 
       <div className="mt-4 flex flex-col items-center">
         <svg width={200} height={200} viewBox="0 0 200 200" className="overflow-visible">

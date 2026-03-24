@@ -29,8 +29,8 @@
     --destructive: 352 100% 46%;     /* #EA0022 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 213 27% 78%;           /* Slightly stronger than #BBCFDE */
-    --input: 213 27% 78%;
+    --border: 213 27% 76%;           /* Visible but soft on light backgrounds */
+    --input: 213 27% 76%;
     --ring: 243 95% 50%;             /* Sophos Blue */
 
     --radius: 0.5rem;
@@ -44,21 +44,26 @@
     --sidebar-border: 213 27% 80%;
     --sidebar-ring: 243 95% 50%;
 
-    --success: 160 100% 30%;         /* Darker green for light-bg readability */
+    --success: 160 100% 30%;
     --success-foreground: 0 0% 100%;
 
-    /* Sophos brand tokens */
-    --sophos-dark: #001A47;
-    --sophos-blue: #2006F7;
-    --sophos-deep: #10037C;
-    --sophos-purple: #5A00FF;
-    --sophos-violet: #B529F7;
-    --sophos-sky: #009CFB;
-    --sophos-cyber-blue: #00EDFF;
-    --sophos-cyber-green: #00F2B3;
-    --sophos-neutral: #EDF2F9;
-    --sophos-grey: #6A889B;
-    --sophos-dark-grey: #223E4C;
+    --warning: 33 100% 48%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Severity scale — used for findings, badges, charts */
+    --severity-critical: 352 100% 46%;    /* #EA0022 */
+    --severity-high: 33 100% 48%;         /* #F29400 */
+    --severity-medium: 52 100% 49%;       /* #F8E300 */
+    --severity-low: 159 100% 47%;         /* #00F2B3 */
+
+    --severity-info: 206 100% 49%;         /* #009CFB */
+    --severity-critical-foreground: 0 0% 100%;
+    --severity-high-foreground: 0 0% 100%;
+    --severity-medium-foreground: 0 0% 10%;
+    --severity-low-foreground: 0 0% 10%;
+
+    /* Brand accent — switches from blue (light) to cyan (dark) */
+    --brand-accent: 243 95% 50%;           /* #2006F7 */
   }
 
   .dark {
@@ -102,6 +107,22 @@
 
     --success: 160 100% 47%;
     --success-foreground: 0 0% 100%;
+
+    --warning: 33 100% 52%;
+    --warning-foreground: 0 0% 100%;
+
+    --severity-critical: 352 90% 50%;
+    --severity-high: 33 100% 52%;
+    --severity-medium: 52 100% 52%;
+    --severity-low: 159 100% 47%;
+
+    --severity-info: 210 100% 62%;
+    --severity-critical-foreground: 0 0% 100%;
+    --severity-high-foreground: 0 0% 100%;
+    --severity-medium-foreground: 0 0% 10%;
+    --severity-low-foreground: 0 0% 100%;
+
+    --brand-accent: 186 100% 50%;          /* #00EDFF */
   }
 }
 
@@ -112,9 +133,27 @@
 
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at top left, rgba(32, 6, 247, 0.06), transparent 28%),
+      linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
+    background-attachment: fixed;
     font-family: 'Zalando Sans', 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  input, textarea, select, button {
+    font-family: inherit;
+  }
+
+  svg text {
+    font-family: 'Zalando Sans', system-ui, sans-serif;
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(circle at top left, rgba(32, 6, 247, 0.14), transparent 30%),
+      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -132,6 +171,57 @@
 }
 .dark .sophos-icon {
   filter: brightness(0) invert(1);
+}
+
+::selection {
+  background: rgba(32, 6, 247, 0.18);
+  color: hsl(var(--foreground));
+}
+
+@layer components {
+  .section-stack {
+    @apply space-y-8 md:space-y-10;
+  }
+
+  .workspace-shell {
+    @apply mx-auto w-full max-w-[1320px] px-4 md:px-6 py-8 md:py-10;
+  }
+
+  .panel-subtle {
+    @apply rounded-2xl border border-border/70 bg-card/95 shadow-card;
+  }
+
+  .panel-elevated {
+    @apply rounded-2xl border border-border/70 bg-card/95 shadow-elevated;
+  }
+
+  .section-heading {
+    @apply text-base font-display font-bold tracking-tight text-foreground;
+  }
+
+  .section-subtext {
+    @apply text-sm text-muted-foreground leading-relaxed;
+  }
+
+  .widget-card {
+    @apply rounded-xl border border-border/70 bg-card p-5 shadow-card;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold tracking-tight tabular-nums;
+  }
+
+  .stat-label {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+
+  .eyebrow {
+    @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-primary;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold;
+  }
 }
 
 @layer utilities {

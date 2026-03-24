@@ -45,7 +45,7 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-[#2006F7]/30 transition-colors shadow-sm"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/70 bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
           title="Guided tours"
           aria-label="Guided tours"
         >

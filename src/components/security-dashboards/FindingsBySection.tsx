@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { SEV_COLORS } from "./constants";
+import { type Severity, SEVERITY_COLORS, SEVERITY_ORDER } from "@/lib/design-tokens";
+
+const SEVERITY_KEYS: Severity[] = ["critical", "high", "medium", "low", "info"];
 
 export function FindingsBySection({ analysisResults }: { analysisResults: Record<string, AnalysisResult> }) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -36,10 +38,9 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
 
   const drillFindings = useMemo(() => {
     if (!activeSection) return [];
-    const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
     return allFindings
       .filter((f) => f.section === activeSection)
-      .sort((a, b) => (order[a.severity] ?? 5) - (order[b.severity] ?? 5));
+      .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 5) - (SEVERITY_ORDER[b.severity] ?? 5));
   }, [allFindings, activeSection]);
 
   if (data.length === 0) return null;
@@ -47,9 +48,9 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
   const maxTotal = Math.max(...data.map((d) => d.total), 1);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-foreground">Findings by Section</h3>
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Findings by Section</h3>
         <span className="text-[10px] text-muted-foreground">{allFindings.length} total findings</span>
       </div>
 
@@ -58,13 +59,11 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
         {data.map((d) => {
           const isActive = activeSection === d.section;
           const isFaded = activeSection !== null && !isActive;
-          const sevs: { key: string; count: number; color: string }[] = [
-            { key: "critical", count: d.critical, color: "#EA0022" },
-            { key: "high", count: d.high, color: "#F29400" },
-            { key: "medium", count: d.medium, color: "#F8E300" },
-            { key: "low", count: d.low, color: "#00F2B3" },
-            { key: "info", count: d.info, color: "#009CFB" },
-          ].filter((s) => s.count > 0);
+          const sevs: { key: Severity; count: number; color: string }[] = SEVERITY_KEYS.filter((key) => d[key] > 0).map((key) => ({
+            key,
+            count: d[key],
+            color: SEVERITY_COLORS[key],
+          }));
 
           return (
             <button
@@ -101,11 +100,11 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
       {/* Severity legend */}
       <div className="flex items-center justify-center gap-3 mt-3 pt-2 border-t border-border/50">
         {[
-          { label: "Critical", color: "#EA0022" },
-          { label: "High", color: "#F29400" },
-          { label: "Medium", color: "#F8E300" },
-          { label: "Low", color: "#00F2B3" },
-          { label: "Info", color: "#009CFB" },
+          { label: "Critical", color: SEVERITY_COLORS.critical },
+          { label: "High", color: SEVERITY_COLORS.high },
+          { label: "Medium", color: SEVERITY_COLORS.medium },
+          { label: "Low", color: SEVERITY_COLORS.low },
+          { label: "Info", color: SEVERITY_COLORS.info },
         ].map((s) => (
           <span key={s.label} className="flex items-center gap-1 text-[9px] text-muted-foreground">
             <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: s.color }} />
@@ -125,7 +124,7 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
             {drillFindings.map((f, i) => (
               <div key={`${f.id}-${i}`} className="px-3 py-2 hover:bg-muted/20 transition-colors">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[8px] font-bold uppercase px-1 py-0.5 rounded" style={{ backgroundColor: SEV_COLORS[f.severity] + "18", color: SEV_COLORS[f.severity] }}>
+                  <span className="text-[8px] font-bold uppercase px-1 py-0.5 rounded" style={{ backgroundColor: SEVERITY_COLORS[f.severity as Severity] + "18", color: SEVERITY_COLORS[f.severity as Severity] }}>
                     {f.severity}
                   </span>
                   <span className="text-[10px] font-medium text-foreground flex-1 truncate">{f.title}</span>

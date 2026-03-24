@@ -473,74 +473,87 @@ export function TenantDashboard() {
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-5 sm:p-6 space-y-5 shadow-[0_18px_50px_rgba(32,6,247,0.08)] overflow-hidden">
       {/* Storage mode badge + NOC + Export */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded ${useCloud ? "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF]" : "bg-muted text-muted-foreground"}`}>
-          {useCloud ? <Cloud className="h-2.5 w-2.5" /> : <HardDrive className="h-2.5 w-2.5" />}
-          {useCloud ? `${org?.name} (Cloud)` : "Local Browser Storage"}
-        </span>
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="space-y-2 min-w-[220px] max-w-2xl">
+          <div className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1 rounded-full border ${useCloud ? "bg-brand-accent/[0.06] text-brand-accent border-brand-accent/15 dark:border-[#00EDFF]/15" : "bg-muted/40 text-muted-foreground border-border/50"}`}>
+            {useCloud ? <Cloud className="h-3 w-3" /> : <HardDrive className="h-3 w-3" />}
+            {useCloud ? `${org?.name} (Cloud)` : "Local Browser Storage"}
+          </div>
+          <div>
+            <h3 className="text-lg font-display font-black tracking-tight text-foreground">Fleet Command Overview</h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">Review customer posture, identify recurring weaknesses, and monitor managed estate health from one MSP-facing dashboard.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={exportFleetCsv}
-            className="flex items-center gap-1 text-[9px] px-2 py-1 rounded border border-border hover:bg-muted/50"
+            className="flex items-center gap-1.5 text-[11px] font-semibold px-3.5 py-2 rounded-xl border border-border/70 bg-card/70 hover:bg-muted/40 hover:border-brand-accent/15 transition-colors shadow-sm"
           >
-            <Download className="h-2.5 w-2.5" /> Export Fleet Report (CSV)
+            <Download className="h-3 w-3" /> Export Fleet Report (CSV)
           </button>
           <button
             onClick={() => setNocMode(true)}
-            className="flex items-center gap-1 text-[9px] px-2 py-1 rounded border border-border hover:bg-muted/50"
+            className="flex items-center gap-1.5 text-[11px] font-semibold px-3.5 py-2 rounded-xl border border-border/70 bg-card/70 hover:bg-muted/40 hover:border-brand-accent/15 transition-colors shadow-sm"
             title="Fullscreen NOC view"
           >
-            <Maximize2 className="h-2.5 w-2.5" /> NOC Mode
+            <Maximize2 className="h-3 w-3" /> NOC Mode
           </button>
         </div>
       </div>
 
       {/* Fleet KPI Summary Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{customers.length}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Customers</p>
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{customers.length}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Customers</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{totalFirewalls}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Firewalls</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{avgScore}<span className="text-sm font-semibold text-muted-foreground">/100</span></p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Avg Score</p>
+          </div>
+          <div className={`rounded-2xl border shadow-sm px-4 py-3.5 text-center space-y-1 ${atRisk > 0 ? "border-[#EA0022]/25 bg-[#EA0022]/[0.04]" : "border-[#00F2B3]/25 bg-[#00F2B3]/[0.04]"}`}>
+            <p className={`text-2xl font-display font-bold tracking-tight tabular-nums ${atRisk > 0 ? "text-[#EA0022]" : "text-[#00F2B3]"}`}>{atRisk}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">At Risk (&lt;60)</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{totalFindings}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Total Findings</p>
+          </div>
         </div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{totalFirewalls}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Firewalls</p>
-        </div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{avgScore}/100</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Avg Score</p>
-        </div>
-        <div className={`rounded-lg px-3 py-2.5 text-center ${atRisk > 0 ? "bg-[#EA0022]/5" : "bg-[#00F2B3]/5"}`}>
-          <p className={`text-lg font-bold ${atRisk > 0 ? "text-[#EA0022]" : "text-[#00F2B3] dark:text-[#00F2B3]"}`}>{atRisk}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">At Risk (&lt;60)</p>
-        </div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{totalFindings}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Total Findings</p>
-        </div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{slaBreaches}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">SLA Breaches</p>
-        </div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{useCloud ? agentsOffline : "—"}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Agents Offline</p>
-        </div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{useCloud ? assessmentsThisWeek : "—"}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Assessments (7d)</p>
-        </div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2.5 text-center">
-          <p className="text-lg font-bold text-foreground">{totalRulesAnalysed.toLocaleString()}</p>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Rules Analysed</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{slaBreaches}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">SLA Breaches</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{useCloud ? agentsOffline : "—"}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Agents Offline</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{useCloud ? assessmentsThisWeek : "—"}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Assessments (7d)</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card/75 shadow-sm px-4 py-3.5 text-center space-y-1">
+            <p className="text-2xl font-display font-bold tracking-tight text-foreground tabular-nums">{totalRulesAnalysed.toLocaleString()}</p>
+            <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[0.12em]">Rules Analysed</p>
+          </div>
         </div>
       </div>
 
-      {/* Fleet heatmap grid — upgraded: 40x40px tiles, interactive, grade letter, tooltip, grouped by customer */}
+      {/* Fleet heatmap grid */}
       {allFirewalls.length > 1 && (
-        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-3">
-          <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Fleet Health Map</p>
+        <div className="rounded-[24px] border border-border/70 bg-card/75 shadow-sm p-4 sm:p-5 space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-display font-semibold tracking-tight text-foreground uppercase tracking-[0.12em]">Fleet Health Map</h3>
+            <p className="text-[11px] text-muted-foreground">Spot weak sites, drill into affected firewalls, and compare customer posture at a glance.</p>
+          </div>
           {(() => {
             const byCustomer = new Map<string, typeof allFirewalls>();
             for (const fw of allFirewalls) {
@@ -553,7 +566,7 @@ export function TenantDashboard() {
               <div className="space-y-3">
                 {customersList.map(([custName, fws]) => (
                   <div key={custName || "single"} className="space-y-1.5">
-                    {custName && <p className="text-[9px] font-medium text-muted-foreground">{custName}</p>}
+                    {custName && <p className="text-[11px] font-display font-medium text-muted-foreground/70">{custName}</p>}
                     <div className="flex flex-wrap gap-2">
                       {fws.map((fw) => {
                         const g = fw.grade;
@@ -566,29 +579,33 @@ export function TenantDashboard() {
                           <div
                             key={key}
                             title={`${fw.customer} — ${fw.label}: ${fw.score} (${g})`}
-                            className={`min-w-[40px] min-h-[40px] w-10 h-10 rounded-md ${color} cursor-pointer flex items-center justify-center transition-all hover:scale-105 hover:ring-2 hover:ring-white/50 ${isDrilled ? "ring-2 ring-white ring-offset-2 ring-offset-background" : ""}`}
+                            className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-lg ${color} cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-white/60 hover:shadow-lg ${isDrilled ? "ring-2 ring-white ring-offset-2 ring-offset-background scale-110" : ""}`}
                             onClick={() => setHeatmapDrill(isDrilled ? null : key)}
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => e.key === "Enter" && setHeatmapDrill(isDrilled ? null : key)}
                           >
-                            <span className="text-sm font-bold text-white drop-shadow-sm">{g}</span>
+                            <span className="text-sm font-display font-bold text-white drop-shadow-md">{g}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
                 ))}
-                {heatmapDrill && (
-                  <div className="mt-2 p-2 rounded bg-muted/50 text-[10px]">
-                    <p className="font-medium">
-                      {allFirewalls.find((f) => `${f.customer}-${f.label}` === heatmapDrill)?.customer} — {allFirewalls.find((f) => `${f.customer}-${f.label}` === heatmapDrill)?.label}
-                    </p>
-                    <p className="text-muted-foreground">
-                      Score: {allFirewalls.find((f) => `${f.customer}-${f.label}` === heatmapDrill)?.score}/100 · Grade {allFirewalls.find((f) => `${f.customer}-${f.label}` === heatmapDrill)?.grade}
-                    </p>
-                  </div>
-                )}
+                {heatmapDrill && (() => {
+                  const drilled = allFirewalls.find((f) => `${f.customer}-${f.label}` === heatmapDrill);
+                  if (!drilled) return null;
+                  return (
+                    <div className="mt-2 p-3.5 rounded-lg bg-muted/20 dark:bg-muted/10 border border-border/30">
+                      <p className="text-[12px] font-display font-semibold text-foreground">
+                        {drilled.customer} — {drilled.label}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                        Score: <span className="font-semibold text-foreground tabular-nums">{drilled.score}/100</span> · Grade <span className={`font-bold ${GRADE_COLORS[drilled.grade]?.split(" ")[0] ?? "text-foreground"}`}>{drilled.grade}</span>
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}
@@ -597,28 +614,31 @@ export function TenantDashboard() {
 
       {/* Top 10 Findings Across Fleet */}
       {topFindings.length > 0 && (
-        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
-          <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Top 10 Findings Across Fleet</p>
+        <div className="rounded-[24px] border border-border/70 bg-card/75 shadow-sm p-4 sm:p-5 space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-display font-semibold tracking-tight text-foreground uppercase tracking-[0.12em]">Top 10 Findings Across Fleet</h3>
+            <p className="text-[11px] text-muted-foreground">Identify the recurring weaknesses most likely to drive customer conversations and remediation priorities.</p>
+          </div>
           <div className="space-y-1.5">
             {topFindings.map((f) => {
               const isExpanded = expandedFinding === f.title;
               return (
-                <div key={f.title} className="rounded bg-background/50 overflow-hidden">
+                <div key={f.title} className="rounded-lg border border-border/30 bg-muted/10 dark:bg-muted/5 overflow-hidden transition-all">
                   <button
                     onClick={() => setExpandedFinding(isExpanded ? null : f.title)}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-muted/30 transition-colors"
+                    className="w-full flex items-center gap-3 px-3.5 py-3 text-left hover:bg-muted/20 transition-colors group"
                   >
-                    <ChevronRight className={`h-3 w-3 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted capitalize">{f.severity}</span>
-                    <span className="flex-1 text-xs font-medium text-foreground truncate">{f.title}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">{f.affectedCount} of {f.totalFirewalls} firewalls</span>
+                    <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-[#F29400]/10 text-[#F29400] border border-[#F29400]/20 capitalize">{f.severity}</span>
+                    <span className="flex-1 text-[13px] font-display font-semibold tracking-tight text-foreground truncate">{f.title}</span>
+                    <span className="text-[11px] text-muted-foreground/60 font-medium tabular-nums shrink-0">{f.affectedCount} of {f.totalFirewalls} firewalls</span>
                   </button>
                   {isExpanded && (
-                    <div className="px-2.5 pb-2 pt-0 border-t border-border">
-                      <p className="text-[9px] text-muted-foreground mb-1">Affected firewalls:</p>
-                      <div className="flex flex-wrap gap-1">
+                    <div className="px-3.5 pb-3 pt-2 border-t border-border/30 space-y-2">
+                      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wide">Affected firewalls</p>
+                      <div className="flex flex-wrap gap-1.5">
                         {f.firewalls.map((host) => (
-                          <span key={host} className="text-[9px] px-1.5 py-0.5 rounded bg-muted/50">{host}</span>
+                          <span key={host} className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted/30 dark:bg-muted/20 border border-border/40 text-foreground/80">{host}</span>
                         ))}
                       </div>
                     </div>
@@ -632,11 +652,11 @@ export function TenantDashboard() {
 
       {/* Outlier detection */}
       {outlierCounts.length > 0 && (
-        <div className="rounded-lg border border-[#F29400]/20 bg-[#F29400]/[0.04] p-3 space-y-1.5">
-          <p className="text-[10px] font-semibold text-[#c47800] dark:text-[#F29400] uppercase tracking-wider">Common Weaknesses Across Fleet</p>
+        <div className="rounded-[24px] border border-[#F29400]/20 bg-[#F29400]/[0.04] p-4 sm:p-5 space-y-2 shadow-sm">
+          <h3 className="text-sm font-display font-semibold tracking-tight text-[#c47800] dark:text-[#F29400]">Common Weaknesses Across Fleet</h3>
           {outlierCounts.map((o) => (
-            <p key={o.label} className="text-[10px] text-muted-foreground">
-              <span className="font-medium text-foreground">{o.count} of {allFirewalls.length}</span> firewalls have <span className="font-medium text-foreground">{o.label}</span> below 50%
+            <p key={o.label} className="text-[11px] text-muted-foreground leading-relaxed">
+              <span className="font-semibold text-foreground">{o.count} of {allFirewalls.length}</span> firewalls have <span className="font-semibold text-foreground">{o.label}</span> below 50%
             </p>
           ))}
         </div>
@@ -644,8 +664,8 @@ export function TenantDashboard() {
 
       {/* Agent Status Timeline — last 7 days, green/red/grey dots */}
       {agentTimelineData && agentTimelineData.agents.length > 0 && (
-        <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-2">
-          <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Agent Status (Last 7 Days)</p>
+        <div className="rounded-[24px] border border-border/70 bg-card/75 shadow-sm p-4 sm:p-5 space-y-3">
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Agent Status (Last 7 Days)</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-[9px] border-collapse">
               <thead>
@@ -687,19 +707,19 @@ export function TenantDashboard() {
       {/* Search + sort */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <input
             type="text"
             placeholder="Search customers…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+            className="w-full rounded-xl border border-border/70 bg-card/90 pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30 focus:border-brand-accent/30 shadow-sm transition-colors"
           />
         </div>
       </div>
 
       {/* Table header */}
-      <div className="grid grid-cols-[1fr_80px_80px_90px] gap-2 px-3 py-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+      <div className="grid grid-cols-[1fr_80px_80px_90px] gap-2 px-4 py-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.12em]">
         <button className="flex items-center gap-1 text-left" onClick={() => toggleSort("customer")}>
           Customer <ArrowUpDown className="h-2.5 w-2.5" />
         </button>
@@ -715,38 +735,39 @@ export function TenantDashboard() {
       </div>
 
       {/* Customer rows */}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {filtered.map((c) => {
           const isExpanded = expanded === c.latestSnapshot.id;
           const sparkColor = c.latestSnapshot.overallScore >= 75 ? "#00F2B3" : c.latestSnapshot.overallScore >= 50 ? "#F29400" : "#EA0022";
           const assessmentStale = Date.now() - c.latestSnapshot.timestamp > STALE_ASSESSMENT_MS;
+          const scoreGrade = scoreToGrade(c.latestSnapshot.overallScore);
           return (
-            <div key={c.latestSnapshot.id} className="rounded-lg border border-border bg-card overflow-hidden">
-              <button onClick={() => setExpanded(isExpanded ? null : c.latestSnapshot.id)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors">
-                <div className="h-9 w-9 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-bold" style={{ color: sparkColor }}>{c.latestSnapshot.overallScore}</span>
+            <div key={c.latestSnapshot.id} className="rounded-[24px] border border-border/70 bg-card/85 shadow-sm overflow-hidden transition-all hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)] hover:border-brand-accent/15">
+              <button onClick={() => setExpanded(isExpanded ? null : c.latestSnapshot.id)} className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-muted/20 transition-colors group">
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${GRADE_COLORS[scoreGrade] ?? GRADE_COLORS.C}`}>
+                  <span className="text-sm font-display font-bold tabular-nums">{c.latestSnapshot.overallScore}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[13px] font-display font-semibold tracking-tight text-foreground truncate">{c.name}</p>
                     {assessmentStale && (
                       <span
-                        className="text-[8px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/35 shrink-0"
+                        className="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25 shrink-0"
                         title="Last assessment was more than 60 days ago"
                       >
                         Overdue
                       </span>
                     )}
                     {agentCustomers.has(c.name) && (
-                      <span className="flex items-center gap-0.5 text-[8px] px-1 py-0.5 rounded bg-[#6B5BFF]/10 text-[#6B5BFF] shrink-0" title={`Agent: ${agentCustomers.get(c.name)?.status}`}>
-                        <Plug className="h-2 w-2" /> Agent
+                      <span className="flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-md bg-[#6B5BFF]/10 text-[#6B5BFF] border border-[#6B5BFF]/15 shrink-0" title={`Agent: ${agentCustomers.get(c.name)?.status}`}>
+                        <Plug className="h-2.5 w-2.5" /> Agent
                       </span>
                     )}
                   </div>
-                  <p className="text-[9px] text-muted-foreground truncate">
+                  <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
                     {c.latestSnapshot.firewalls.length} firewall{c.latestSnapshot.firewalls.length !== 1 ? "s" : ""} · Grade {c.latestSnapshot.overallGrade}
                     {c.scoreTrend !== 0 && (
-                      <span className={c.scoreTrend > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
+                      <span className={`font-semibold ${c.scoreTrend > 0 ? "text-[#00F2B3]" : "text-[#EA0022]"}`}>
                         {" "}({c.scoreTrend > 0 ? "+" : ""}{c.scoreTrend})
                       </span>
                     )}
@@ -756,31 +777,34 @@ export function TenantDashboard() {
                   </p>
                 </div>
                 <MiniSparkline values={c.scoreHistory} color={sparkColor} />
-                <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                <ChevronRight className={`h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
               </button>
 
               {isExpanded && (
-                <div className="px-3 pb-3 pt-1 border-t border-border space-y-2">
-                  {c.latestSnapshot.firewalls.map((fw) => (
-                    <div key={fw.label} className="flex items-center gap-3 px-2.5 py-1.5 rounded bg-muted/30">
-                      <Shield className="h-3 w-3 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
-                      <span className="text-[10px] font-medium text-foreground flex-1 truncate">{fw.label}</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${gradeColor(fw.riskScore.overall >= 90 ? "A" : fw.riskScore.overall >= 75 ? "B" : fw.riskScore.overall >= 60 ? "C" : fw.riskScore.overall >= 40 ? "D" : "F")}`}>
-                        {fw.riskScore.overall}/100
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">{fw.totalRules} rules</span>
-                      <span className="text-[10px] text-muted-foreground">{fw.totalFindings} findings</span>
-                    </div>
-                  ))}
+                <div className="px-4 pb-4 pt-2 border-t border-border/40 space-y-2">
+                  {c.latestSnapshot.firewalls.map((fw) => {
+                    const fwGrade = fw.riskScore.overall >= 90 ? "A" : fw.riskScore.overall >= 75 ? "B" : fw.riskScore.overall >= 60 ? "C" : fw.riskScore.overall >= 40 ? "D" : "F";
+                    return (
+                      <div key={fw.label} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg bg-muted/20 dark:bg-muted/10 border border-border/30">
+                        <Shield className="h-3.5 w-3.5 text-brand-accent shrink-0" />
+                        <span className="text-[11px] font-display font-medium text-foreground flex-1 truncate">{fw.label}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${gradeColor(fwGrade)}`}>
+                          {fw.riskScore.overall}/100
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/70 tabular-nums">{fw.totalRules} rules</span>
+                        <span className="text-[10px] text-muted-foreground/70 tabular-nums">{fw.totalFindings} findings</span>
+                      </div>
+                    );
+                  })}
                   {c.previousSnapshot && (
-                    <div className="text-[9px] text-muted-foreground pt-1 flex items-center gap-2">
+                    <div className="text-[10px] text-muted-foreground/70 pt-1 flex items-center gap-2">
                       <span>Previous: {formatDate(c.previousSnapshot.timestamp)} — Score {c.previousSnapshot.overallScore} ({c.scoreTrend > 0 ? "+" : ""}{c.scoreTrend})</span>
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {c.latestSnapshot.firewalls.flatMap((fw) =>
                       fw.riskScore.categories.filter((cat) => cat.pct < 50).map((cat) => (
-                        <span key={`${fw.label}-${cat.label}`} className="text-[9px] px-1.5 py-0.5 rounded bg-[#EA0022]/10 text-[#EA0022]">
+                        <span key={`${fw.label}-${cat.label}`} className="text-[9px] font-medium px-2 py-0.5 rounded-md bg-[#EA0022]/8 text-[#EA0022] border border-[#EA0022]/15">
                           {fw.label}: {cat.label} {cat.pct}%
                         </span>
                       ))

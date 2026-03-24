@@ -57,7 +57,7 @@ export function TourHint({ tourId, steps, title, description, side = "bottom", c
     <button
       type="button"
       onClick={handleClick}
-      className={`inline-flex items-center justify-center h-5 w-5 rounded-full text-muted-foreground/60 hover:text-[#2006F7] dark:hover:text-[#00EDFF] hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10 transition-colors ${className}`}
+      className={`inline-flex items-center justify-center h-5 w-5 rounded-full text-muted-foreground/60 hover:text-[#2006F7] dark:hover:text-[#00EDFF] hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10 transition-colors ${className}`}
       aria-label={title ? `Learn about: ${title}` : "Quick tour"}
       title={title ?? "Quick tour"}
     >

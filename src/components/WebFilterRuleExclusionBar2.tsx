@@ -31,7 +31,7 @@ export function WebFilterRuleExclusionBar({ candidateRuleNames, exemptRuleNames,
   if (unique.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">
+    <div className="rounded-xl border border-border/70 bg-card px-4 py-3 space-y-2">
       <div className="flex items-center gap-2 text-sm font-medium">
         <Filter className="h-4 w-4 text-muted-foreground" />
         Web filter rule scope

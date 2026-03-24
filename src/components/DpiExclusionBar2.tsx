@@ -101,7 +101,7 @@ export function DpiExclusionBar({
   if (userZones.length === 0 && userNetworks.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">
+    <div className="rounded-xl border border-border/70 bg-card px-4 py-3 space-y-2">
       <div className="flex items-center gap-2 text-sm font-medium">
         <ShieldOff className="h-4 w-4 text-muted-foreground" />
         DPI Exclusions

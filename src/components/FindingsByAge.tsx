@@ -80,8 +80,8 @@ export function FindingsByAge({ analysisResults }: { analysisResults: Record<str
 
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground">Findings by Age</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Findings by Age</h3>
         <p className="mt-3 text-[10px] text-muted-foreground">No findings detected</p>
       </div>
     );
@@ -90,8 +90,8 @@ export function FindingsByAge({ analysisResults }: { analysisResults: Record<str
   const bandsWithCount = AGE_BANDS.map((b) => ({ ...b, count: bandCounts[b.key] })).filter((b) => b.count > 0);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground">Findings by Age</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Findings by Age</h3>
 
       <div className="mt-3 w-full h-4 rounded-full overflow-hidden flex">
         {AGE_BANDS.map((band, idx) => {

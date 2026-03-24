@@ -143,8 +143,8 @@ export function EncryptionOverview({
 
   if (data.length === 0 && !sslStatus) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
           Encryption Strength
         </h3>
         <p className="text-xs text-muted-foreground">
@@ -155,8 +155,8 @@ export function EncryptionOverview({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
         Encryption Strength
       </h3>
       {data.length > 0 ? (
@@ -185,7 +185,7 @@ export function EncryptionOverview({
                     const pct =
                       total > 0 ? Math.round((d.value / total) * 100) : 0;
                     return (
-                      <div className="rounded-md border border-border bg-card px-2 py-1.5 text-xs shadow-md">
+                      <div className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-xs shadow-elevated">
                         {d.name}: {d.value} ({pct}%)
                       </div>
                     );

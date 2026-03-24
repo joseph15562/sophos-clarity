@@ -56,9 +56,13 @@ export function downloadFindingsPdf(analysisResults: Record<string, AnalysisResu
     }
   };
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>FireComply Findings</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<title>FireComply Findings</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 2rem; color: #1a1a1a; font-size: 11px; }
+  body { font-family: 'Zalando Sans', system-ui, sans-serif; margin: 2rem; color: #1a1a1a; font-size: 11px; }
   h1 { font-size: 18px; color: #10037C; margin-bottom: 4px; }
   .meta { color: #666; font-size: 10px; margin-bottom: 16px; }
   table { border-collapse: collapse; width: 100%; }

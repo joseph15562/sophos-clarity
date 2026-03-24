@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const CARD_CLASS = "rounded-xl border border-border bg-card p-5";
+const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
 const STORAGE_KEY = "firecomply-onboarding";
 
 interface OnboardingData {
@@ -97,7 +97,7 @@ export function ClientOnboarding() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-semibold text-foreground">Client Onboarding Wizard</h3>
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Client Onboarding Wizard</h3>
       <p className="text-[10px] text-muted-foreground mt-1">
         Step-by-step setup for new customers.
       </p>
@@ -129,7 +129,7 @@ export function ClientOnboarding() {
       <div className="mt-6 rounded-lg border border-border bg-muted/20 p-4">
         {step === 1 && (
           <div className="space-y-4">
-            <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <h4 className="text-xs font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
               <User className="h-4 w-4" />
               Customer Details
             </h4>
@@ -174,7 +174,7 @@ export function ClientOnboarding() {
 
         {step === 2 && (
           <div className="space-y-4">
-            <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <h4 className="text-xs font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
               <Server className="h-4 w-4" />
               Agent Setup
             </h4>
@@ -192,7 +192,7 @@ export function ClientOnboarding() {
 
         {step === 3 && (
           <div className="space-y-4">
-            <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <h4 className="text-xs font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
               <Link2 className="h-4 w-4" />
               Central Integration
             </h4>
@@ -207,7 +207,7 @@ export function ClientOnboarding() {
 
         {step === 4 && (
           <div className="space-y-4">
-            <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <h4 className="text-xs font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
               <FileUp className="h-4 w-4" />
               First Assessment
             </h4>

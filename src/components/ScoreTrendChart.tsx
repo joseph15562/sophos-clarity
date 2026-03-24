@@ -2,17 +2,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { TrendingUp, Download } from "lucide-react";
 import { toPng } from "html-to-image";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
-
-const GRADE_COLORS: Record<string, string> = {
-  A: "stroke-[#00F2B3] dark:stroke-[#00F2B3] fill-[#00F2B3] dark:fill-[#00F2B3]",
-  B: "stroke-[#009CFB] fill-[#009CFB]",
-  C: "stroke-[#F8E300] fill-[#F8E300]",
-  D: "stroke-[#F29400] fill-[#F29400]",
-  F: "stroke-[#EA0022] fill-[#EA0022]",
-};
+import { GRADE_COLORS, gradeForScore, type Grade } from "@/lib/design-tokens";
 
 function gradeColor(grade: string): string {
-  return GRADE_COLORS[grade] ?? GRADE_COLORS.C;
+  const hex = GRADE_COLORS[grade as Grade] ?? GRADE_COLORS.C;
+  return `stroke-[${hex}] dark:stroke-[${hex}] fill-[${hex}] dark:fill-[${hex}]`;
 }
 
 interface ScoreTrendChartProps {
@@ -72,12 +66,7 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
 
   const getGrade = useCallback((d: ScoreHistoryEntry): string => {
     if (selectedCategory === CATEGORY_OVERALL) return d.overall_grade;
-    const score = getScore(d);
-    if (score >= 90) return "A";
-    if (score >= 75) return "B";
-    if (score >= 60) return "C";
-    if (score >= 40) return "D";
-    return "F";
+    return gradeForScore(getScore(d));
   }, [selectedCategory, getScore]);
 
   const handleExportPng = useCallback(async () => {
@@ -96,7 +85,7 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4 animate-pulse">
+      <div className="rounded-xl border border-border/70 bg-card p-4 animate-pulse">
         <div className="h-4 bg-muted/40 rounded w-1/3 mb-3" />
         <div className="h-32 bg-muted/40 rounded" />
       </div>
@@ -105,7 +94,7 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
 
   if (data.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card p-5 text-center space-y-2">
+      <div className="rounded-xl border border-border/70 bg-card p-5 text-center space-y-2">
         <TrendingUp className="h-8 w-8 mx-auto text-muted-foreground/30" />
         <p className="text-xs text-muted-foreground">
           No historical data yet. Scores will be tracked as assessments are run.
@@ -139,7 +128,7 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
   const diff = currentScore - initialScore;
 
   return (
-    <div ref={chartRef} className="rounded-lg border border-border bg-card p-4 space-y-3">
+    <div ref={chartRef} className="rounded-xl border border-border/70 bg-card p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
           <TrendingUp className="h-3.5 w-3.5 text-primary" />

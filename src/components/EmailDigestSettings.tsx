@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-const CARD_CLASS = "rounded-xl border border-border bg-card p-5";
+const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
 const STORAGE_KEY = "firecomply-email-digest";
 
 type Frequency = "weekly" | "monthly";
@@ -75,7 +75,7 @@ function buildPreviewHtml(config: EmailDigestConfig): string {
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><style>
-  body { font-family: system-ui, sans-serif; font-size: 14px; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+  body { font-family: 'Zalando Sans', system-ui, sans-serif; font-size: 14px; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
   h1 { color: #2006F7; font-size: 20px; }
   .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
   .section { margin: 16px 0; padding: 12px; background: #f5f5f5; border-radius: 8px; }
@@ -110,7 +110,7 @@ export function EmailDigestSettings() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
         <Mail className="h-4 w-4" />
         Email Digest Settings
       </h3>

@@ -6,6 +6,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PageSkeleton } from "@/components/PageSkeleton";
 import NotFound from "./pages/NotFound";
 
 const Index = lazy(() => import("./pages/Index"));
@@ -33,7 +34,7 @@ const App = () => (
             Skip to main content
           </a>
           <BrowserRouter>
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+            <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/shared/:token" element={<SharedReport />} />

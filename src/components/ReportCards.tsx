@@ -33,23 +33,23 @@ export function ReportCards({
           </h2>
           <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
             Create{" "}
-            <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">technical reports, executive briefs, and compliance packs</span> as packaged deliverables for{" "}
+            <span className="text-brand-accent font-semibold">technical reports, executive briefs, and compliance packs</span> as packaged deliverables for{" "}
             <span className="text-foreground dark:text-white font-semibold">customer handoff, board review, and audit preparation</span>.
           </p>
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)]">
+      <div className="relative overflow-hidden rounded-[32px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)]">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
         <div className="p-5 sm:p-6 space-y-5">
           <div className="flex items-start justify-between gap-5 flex-wrap">
             <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-accent">
                 Delivery ready
               </div>
               <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
-                Turn analysis into <span className="text-[#2006F7] dark:text-[#00EDFF]">executive-ready deliverables</span>
+                Turn analysis into <span className="text-brand-accent">executive-ready deliverables</span>
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Generate polished outputs for technical teams, leadership stakeholders, and compliance conversations without rebuilding the story by hand.
@@ -84,7 +84,7 @@ export function ReportCards({
           </div>
 
           {localMode && (
-            <div className="rounded-xl border border-[#F29400]/30 bg-[#F29400]/5 dark:bg-[#F29400]/10 px-5 py-4 flex items-start gap-3">
+            <div className="rounded-[24px] border border-[#F29400]/30 bg-[#F29400]/5 dark:bg-[#F29400]/10 px-5 py-4 flex items-start gap-3 shadow-sm">
               <p className="text-sm text-muted-foreground leading-relaxed">
                 <strong className="text-foreground">AI reports unavailable in local mode.</strong> Technical reports, executive briefs, and compliance reports require an external AI service. Generate the Executive One-Pager below for a local-only summary.
               </p>
@@ -94,16 +94,16 @@ export function ReportCards({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Technical Report — AI, disabled in local mode */}
             <div
-              className={`rounded-2xl border border-border bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
-                !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#2006F7]/30 dark:hover:border-[#2006F7]/40 cursor-pointer group"
+              className={`rounded-[24px] border border-border/70 bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
+                !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-brand-accent/30 dark:hover:border-[#2006F7]/40 cursor-pointer group"
               }`}
               onClick={canGenerate ? onGenerateIndividual : undefined}
             >
           <div className="h-1 bg-gradient-to-r from-[#2006F7] to-[#5A00FF]" />
           <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0 group-hover:bg-[#2006F7]/15 dark:group-hover:bg-[#2006F7]/25 transition-colors">
-                <FileText className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
+              <div className="h-11 w-11 rounded-lg bg-brand-accent/10 dark:bg-brand-accent/15 flex items-center justify-center shrink-0 group-hover:bg-brand-accent/15 dark:group-hover:bg-[#2006F7]/25 transition-colors">
+                <FileText className="h-6 w-6 text-brand-accent" />
               </div>
               <span className="font-display font-bold text-foreground text-[15px]">Generate Technical Report</span>
             </div>
@@ -119,7 +119,7 @@ export function ReportCards({
 
             {/* Executive Brief — AI, disabled in local mode */}
             <div
-              className={`rounded-2xl border border-border bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
+              className={`rounded-[24px] border border-border/70 bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
                 !canGenerate || fileCount < 1 ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#5A00FF]/30 dark:hover:border-[#5A00FF]/40 cursor-pointer group"
               }`}
               onClick={canGenerate && fileCount >= 1 ? onGenerateExecutive : undefined}
@@ -128,7 +128,7 @@ export function ReportCards({
           <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-lg bg-[#5A00FF]/10 dark:bg-[#5A00FF]/15 flex items-center justify-center shrink-0">
-                <BarChart3 className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
+                <BarChart3 className="h-6 w-6 text-brand-accent" />
               </div>
               <span className="font-display font-bold text-foreground text-[15px]">Generate Executive Brief</span>
             </div>
@@ -145,7 +145,7 @@ export function ReportCards({
 
             {/* Executive One-Pager */}
             <div
-              className={`rounded-2xl border border-border bg-card/90 shadow-sm transition-all duration-200 overflow-hidden ${
+              className={`rounded-[24px] border border-border/70 bg-card/90 shadow-sm transition-all duration-200 overflow-hidden ${
                 canGenerate ? "hover:shadow-md hover:border-[#B529F7]/30 dark:hover:border-[#B529F7]/40 cursor-pointer group" : "opacity-50 pointer-events-none"
               }`}
               onClick={canGenerate ? onGenerateExecutiveOnePager : undefined}
@@ -169,7 +169,7 @@ export function ReportCards({
 
             {/* Compliance Readiness Report — AI, disabled in local mode */}
             <div
-              className={`rounded-2xl border border-border bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
+              className={`rounded-[24px] border border-border/70 bg-card/90 shadow-sm overflow-hidden transition-all duration-200 ${
                 !canGenerate ? "opacity-50 pointer-events-none" : "hover:shadow-md hover:border-[#009CFB]/30 dark:hover:border-[#009CFB]/40 cursor-pointer group"
               }`}
               onClick={canGenerate ? onGenerateCompliance : undefined}
@@ -178,7 +178,7 @@ export function ReportCards({
           <div className="p-5 space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 rounded-lg bg-[#009CFB]/10 dark:bg-[#009CFB]/15 flex items-center justify-center shrink-0 group-hover:bg-[#009CFB]/15 dark:group-hover:bg-[#009CFB]/25 transition-colors">
-                <Scale className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
+                <Scale className="h-6 w-6 text-brand-accent" />
               </div>
               <span className="font-display font-bold text-foreground text-[15px]">Generate Compliance Pack</span>
             </div>
@@ -193,7 +193,7 @@ export function ReportCards({
       </div>
 
           {canGenerate && (
-            <div className="rounded-2xl border border-[#2006F7]/15 bg-card/70 p-3 sm:p-4">
+            <div className="rounded-2xl border border-brand-accent/15 bg-card/70 p-3 sm:p-4">
               <Button size="lg" onClick={onGenerateAll} className="w-full gap-2 text-base bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-sm">
                 <Sparkles className="h-5 w-5" />
                 {fileCount >= 2

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 
 interface TrendPoint {
   id: string;
@@ -19,18 +20,10 @@ interface Props {
   activeTeamId?: string | null;
 }
 
-const GRADE_COLORS: Record<string, string> = {
-  A: "#00F2B3",
-  B: "#009CFB",
-  C: "#F8E300",
-  D: "#F29400",
-  F: "#EA0022",
-};
-
 function gradeColorClass(grade: string): string {
   switch (grade) {
     case "A": return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
-    case "B": return "bg-[#2006F7]/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
+    case "B": return "bg-brand-accent/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
     case "C": return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
     case "D": return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
     case "F": return "bg-[#EA0022]/15 text-[#EA0022]";
@@ -111,7 +104,7 @@ export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, s
   const deltaColor = delta > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : delta < 0 ? "text-[#EA0022]" : "text-muted-foreground";
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-border/70 bg-card p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <TrendingUp className="h-3.5 w-3.5 text-primary" />
@@ -171,7 +164,7 @@ export function SEScoreTrendChart({ serialNumbers, currentScore, currentGrade, s
             const x = toX(i);
             const y = toY(p.score);
             const isHovered = hoveredIdx === i;
-            const color = GRADE_COLORS[p.grade] ?? GRADE_COLORS.C;
+            const color = GRADE_COLORS[p.grade as Grade] ?? GRADE_COLORS.C;
 
             return (
               <g key={p.id + "-" + i}>

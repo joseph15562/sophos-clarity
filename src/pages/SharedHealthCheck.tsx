@@ -126,7 +126,7 @@ const SharedHealthCheck = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#001A47]">
+    <main id="main-content" className="min-h-screen bg-[#001A47]">
       {/* Header bar */}
       <div className="sticky top-0 z-10 bg-[#001A47]/95 backdrop-blur border-b border-white/10 px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ const SharedHealthCheck = () => {
       <div className="text-center py-6 text-[10px] text-white/25">
         Sophos Firewall Health Check · Powered by Sophos FireComply
       </div>
-    </div>
+    </main>
   );
 };
 

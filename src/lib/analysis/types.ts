@@ -95,6 +95,7 @@ export interface AnalysisResult {
   inspectionPosture: InspectionPosture;
   ruleColumns?: string[];
   hostname?: string;
+  managementIp?: string;
   atpStatus?: AtpStatus;
   threatStatus?: ThreatStatus;
 }

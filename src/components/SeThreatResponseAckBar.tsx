@@ -16,9 +16,9 @@ export function SeThreatResponseAckBar({
   onNdrChange,
 }: Props) {
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3">
+    <div className="rounded-xl border border-border/70 bg-card px-4 py-3 space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-        <Radar className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" aria-hidden />
+        <Radar className="h-4 w-4 text-brand-accent shrink-0" aria-hidden />
         <span>Active threat response (export gaps)</span>
         <span className="text-[11px] text-muted-foreground font-normal w-full sm:w-auto sm:flex-1">
           Toggle when you have verified on the appliance — MDR threat feeds and NDR Essentials are often omitted from HTML/XML exports. This scores those best-practice rows as pass without using per-check manual overrides.
@@ -49,9 +49,9 @@ interface DnsProtectionAckBarProps {
 
 export function SeDnsProtectionAckBar({ acknowledged, onChange }: DnsProtectionAckBarProps) {
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3">
+    <div className="rounded-xl border border-border/70 bg-card px-4 py-3 space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-        <Globe className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" aria-hidden />
+        <Globe className="h-4 w-4 text-brand-accent shrink-0" aria-hidden />
         <span>DNS Protection</span>
         <span className="text-[11px] text-muted-foreground font-normal w-full sm:w-auto sm:flex-1">
           DNS Protection configuration is not included in HTML/XML exports. Toggle when you have verified that Sophos DNS Protection IPs are configured as the firewall's upstream DNS servers.

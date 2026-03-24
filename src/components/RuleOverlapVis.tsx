@@ -100,8 +100,8 @@ export function RuleOverlapVis({ files }: Props) {
 
   if (rules.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Rule Overlap Matrix</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Overlap Matrix</h3>
         <p className="text-sm text-muted-foreground">No firewall rules found</p>
       </div>
     );
@@ -117,8 +117,8 @@ export function RuleOverlapVis({ files }: Props) {
       : null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Rule Overlap Matrix</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Overlap Matrix</h3>
 
       {maxRules > 20 && (
         <p className="text-[10px] text-muted-foreground mb-3">

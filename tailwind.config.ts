@@ -53,6 +53,22 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        severity: {
+          critical: "hsl(var(--severity-critical))",
+          high: "hsl(var(--severity-high))",
+          medium: "hsl(var(--severity-medium))",
+          low: "hsl(var(--severity-low))",
+          info: "hsl(var(--severity-info))",
+        },
+        "brand-accent": "hsl(var(--brand-accent))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -63,6 +79,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      boxShadow: {
+        card: "0 1px 3px rgba(15,23,42,0.05), 0 4px 14px rgba(15,23,42,0.04)",
+        elevated: "0 4px 16px rgba(15,23,42,0.07), 0 12px 32px rgba(15,23,42,0.05)",
+        panel: "0 8px 30px rgba(15,23,42,0.08), 0 20px 50px rgba(15,23,42,0.05)",
       },
       borderRadius: {
         lg: "var(--radius)",

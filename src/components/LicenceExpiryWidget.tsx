@@ -283,7 +283,7 @@ export function LicenceExpiryWidget() {
   if (!central.isConnected || isGuest) return null;
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
       {showBanner && (
         <div
           className={`flex items-center justify-between gap-3 px-4 py-2.5 ${

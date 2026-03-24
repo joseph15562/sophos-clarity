@@ -8,6 +8,7 @@ import { loadConfigSnapshots, type ConfigSnapshot } from "@/lib/config-snapshots
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { ConfigDiff } from "@/components/ConfigDiff";
 import { Button } from "@/components/ui/button";
+import { GRADE_COLORS, gradeForScore } from "@/lib/design-tokens";
 
 interface Props {
   /** Optional: filter by hostname */
@@ -16,24 +17,14 @@ interface Props {
   refreshTrigger?: number;
 }
 
-const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00F2B3] dark:text-[#00F2B3]",
-  B: "text-[#009CFB]",
-  C: "text-[#F8E300] dark:text-[#F8E300]",
-  D: "text-[#F29400]",
-  F: "text-[#EA0022]",
-};
-
 function gradeColor(grade: string): string {
   const score = parseInt(grade, 10);
   if (!isNaN(score)) {
-    if (score >= 90) return GRADE_COLORS.A;
-    if (score >= 75) return GRADE_COLORS.B;
-    if (score >= 60) return GRADE_COLORS.C;
-    if (score >= 40) return GRADE_COLORS.D;
-    return GRADE_COLORS.F;
+    const g = gradeForScore(score);
+    const hex = GRADE_COLORS[g];
+    return `text-[${hex}] dark:text-[${hex}]`;
   }
-  return GRADE_COLORS.C;
+  return `text-[${GRADE_COLORS.C}] dark:text-[${GRADE_COLORS.C}]`;
 }
 
 export function ConfigHistory({ hostname, refreshTrigger }: Props) {
@@ -64,7 +55,7 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
 
   if (snapshots.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-center">
+      <div className="rounded-xl border border-border/70 bg-card p-6 text-center">
         <History className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
         <p className="text-xs text-muted-foreground">
           No configuration snapshots yet. Snapshots are saved when analyses are run.
@@ -74,11 +65,11 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
   }
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <section className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <History className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-          <h3 className="text-sm font-semibold text-foreground">Config History</h3>
+          <History className="h-5 w-5 text-brand-accent" />
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Config History</h3>
           <span className="text-[10px] text-muted-foreground">{snapshots.length} snapshot{snapshots.length !== 1 ? "s" : ""}</span>
         </div>
       </div>
@@ -94,7 +85,7 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
                 const id = e.target.value;
                 selectForCompare(snapshots.find((s) => s.id === id)!, 0);
               }}
-              className="text-[10px] rounded border border-border bg-background px-2 py-1 min-w-[140px]"
+              className="text-[10px] rounded-xl border border-border/70 bg-card px-2.5 py-1.5 min-w-[160px] shadow-sm"
             >
               <option value="">Before…</option>
               {snapshots.map((s) => (
@@ -110,7 +101,7 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
                 const id = e.target.value;
                 selectForCompare(snapshots.find((s) => s.id === id)!, 1);
               }}
-              className="text-[10px] rounded border border-border bg-background px-2 py-1 min-w-[140px]"
+              className="text-[10px] rounded-xl border border-border/70 bg-card px-2.5 py-1.5 min-w-[160px] shadow-sm"
             >
               <option value="">After…</option>
               {snapshots.map((s) => (
@@ -141,7 +132,7 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
         {snapshots.map((snap) => (
           <div
             key={snap.id}
-            className="flex items-center justify-between py-2 px-3 rounded-lg border border-border bg-card hover:bg-muted/20 transition-colors"
+            className="flex items-center justify-between py-2 px-3 rounded-xl border border-border/70 bg-card hover:bg-muted/20 transition-colors"
           >
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-[10px] text-muted-foreground shrink-0">

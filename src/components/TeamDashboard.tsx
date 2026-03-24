@@ -34,7 +34,7 @@ interface Props {
 function gradeColor(grade: string | null): string {
   switch (grade) {
     case "A": return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
-    case "B": return "bg-[#2006F7]/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
+    case "B": return "bg-brand-accent/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
     case "C": return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
     case "D": return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
     case "F": return "bg-[#EA0022]/15 text-[#EA0022]";
@@ -138,22 +138,32 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
   if (loading && rows.length === 0) return null;
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-[#2006F7] dark:hover:text-[#00EDFF] transition-colors"
+        className="w-full flex items-center justify-between gap-3 rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] px-4 py-3.5 text-left shadow-sm hover:border-brand-accent/25 transition-colors"
       >
-        <BarChart3 className="h-4 w-4" />
-        Team Dashboard
-        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-xl border border-brand-accent/15 bg-brand-accent/10 flex items-center justify-center shrink-0">
+            <BarChart3 className="h-4 w-4 text-brand-accent" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-display font-black text-foreground tracking-tight">Team Dashboard</p>
+            <p className="text-[11px] text-muted-foreground">Monitor team score distribution, activity, and recurring findings.</p>
+          </div>
+        </div>
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
 
       {open && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-border">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Team Overview</p>
-            <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
+        <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] overflow-hidden shadow-[0_18px_50px_rgba(32,6,247,0.08)]">
+          <div className="flex items-center justify-between p-4 border-b border-border/70 bg-card/60">
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Team Overview</p>
+              <p className="text-sm font-semibold text-foreground mt-1">Health check performance across the active team</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
@@ -201,10 +211,10 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
               {stats.commonFindings.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Most Common Findings</p>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {stats.commonFindings.map(([finding, count]) => (
-                      <div key={finding} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border last:border-0">
-                        <span className="truncate text-foreground">{finding}</span>
+                      <div key={finding} className="flex items-center justify-between gap-2 text-xs py-2 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm">
+                        <span className="truncate text-foreground font-medium">{finding}</span>
                         <Badge variant="outline" className="text-[9px] shrink-0">{count}x</Badge>
                       </div>
                     ))}
@@ -219,10 +229,10 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
                     <Users className="h-3 w-3" />
                     Team Activity
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {stats.memberActivity.map((m) => (
-                      <div key={m.name} className="flex items-center justify-between gap-2 text-xs py-1 border-b border-border last:border-0">
-                        <span className="text-foreground">{m.name}</span>
+                      <div key={m.name} className="flex items-center justify-between gap-2 text-xs py-2 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm">
+                        <span className="text-foreground font-medium">{m.name}</span>
                         <span className="text-muted-foreground">{m.count} check{m.count !== 1 ? "s" : ""}</span>
                       </div>
                     ))}
@@ -236,9 +246,9 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
                   <Clock className="h-3 w-3" />
                   Recent Activity
                 </p>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {stats.recent.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between gap-2 text-xs py-1.5 border-b border-border last:border-0">
+                    <div key={r.id} className="flex items-center justify-between gap-2 text-xs py-2.5 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-medium truncate">{r.customer_name || "—"}</span>
                         <span className="text-muted-foreground shrink-0">
@@ -267,9 +277,9 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-border p-3 text-center">
-      <p className="text-xl font-bold text-foreground">{value}</p>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+    <div className="rounded-2xl border border-border/70 bg-card/70 p-3.5 text-center shadow-sm">
+      <p className="text-2xl font-display font-black tracking-tight text-foreground">{value}</p>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{label}</p>
     </div>
   );
 }

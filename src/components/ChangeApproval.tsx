@@ -54,11 +54,11 @@ export function ChangeApproval() {
   };
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="change-approval">
+    <section className="rounded-xl border border-border/70 bg-card p-5 space-y-4" data-tour="change-approval">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="h-5 w-5 text-[#2006F7]" />
-          <h3 className="text-sm font-semibold text-foreground">Change Approval Workflow</h3>
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Change Approval Workflow</h3>
           <span className="text-[10px] text-muted-foreground">{plans.length} plan{plans.length !== 1 ? "s" : ""}</span>
         </div>
         <Button variant="outline" size="sm" onClick={handleNew} className="gap-1.5 text-xs">

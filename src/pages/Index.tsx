@@ -673,11 +673,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         }
       />
 
-      <main id="main-content" className={`mx-auto px-4 py-8 space-y-8 ${viewingReports ? "max-w-full w-full" : "max-w-5xl"}`}>
+      <main id="main-content" className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"}`}>
         {/* Restored session banner */}
         {restoredSession && !viewingReports && hasReports && !isLoading && (
-          <div className="no-print rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-4 py-2.5 flex items-center gap-3 text-sm">
-            <RotateCcw className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF] shrink-0" />
+          <div className="no-print rounded-lg border border-brand-accent/20 bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08] px-4 py-2.5 flex items-center gap-3 text-sm">
+            <RotateCcw className="h-4 w-4 text-brand-accent shrink-0" />
             <span className="text-foreground">Previous session restored — {reports.length} report{reports.length !== 1 ? "s" : ""} recovered.</span>
             <span className="text-muted-foreground text-xs">Reports are saved locally for 24 hours.</span>
           </div>
@@ -689,7 +689,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center">
-                  <BarChart3 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                  <BarChart3 className="h-4 w-4 text-brand-accent" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -789,7 +789,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onLoadDemo={handleLoadDemo}
             />
             {hasFiles && !isGuest && org?.id && (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-5 xl:grid-cols-2">
                 <ProgressNarrative
                   orgId={org.id}
                   currentResults={analysisResults}
@@ -859,12 +859,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                 <div className="flex flex-wrap gap-2">
                   {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
                     <Button variant="secondary" size="sm" onClick={() => generateExecutive()} className="gap-1.5 text-xs">
-                      <BarChart3 className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" /> Add Executive Brief
+                      <BarChart3 className="h-3.5 w-3.5 text-brand-accent" /> Add Executive Brief
                     </Button>
                   )}
                   {!reports.find((r) => r.id === "report-compliance") && (
                     <Button variant="outline" size="sm" onClick={generateCompliance} className="gap-1.5 text-xs">
-                      <Scale className="h-3.5 w-3.5 text-[#2006F7] dark:text-[#00EDFF]" /> Add Compliance Report
+                      <Scale className="h-3.5 w-3.5 text-brand-accent" /> Add Compliance Report
                     </Button>
                   )}
                 </div>
@@ -1007,7 +1007,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         />
         <button
           onClick={() => setShortcutsOpen(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-[#2006F7]/30 transition-colors shadow-sm"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
           title="Keyboard shortcuts (?)"
           aria-label="Keyboard shortcuts"
           data-tour="shortcuts-button"

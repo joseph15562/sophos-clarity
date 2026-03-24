@@ -147,8 +147,8 @@ export function AdminExposureMap({
 
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">
           Admin Access Exposure
         </h3>
         <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
@@ -163,9 +163,9 @@ export function AdminExposureMap({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Admin Access Exposure
         </h3>
         {warningCount > 0 && (

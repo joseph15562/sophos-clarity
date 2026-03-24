@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import { Building2, ArrowRight, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   userEmail: string;
@@ -26,11 +28,11 @@ export function OrgSetup({ userEmail, onCreateOrg, onSignOut }: Props) {
   }, [name, onCreateOrg]);
 
   return (
-    <div className="max-w-md mx-auto mt-16 rounded-xl border border-border bg-card overflow-hidden">
+    <div className="max-w-md mx-auto mt-16 rounded-xl border border-border/70 bg-card overflow-hidden">
       <div className="p-6 space-y-5">
         <div className="text-center space-y-2">
-          <div className="h-12 w-12 rounded-full bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center mx-auto">
-            <Building2 className="h-6 w-6 text-[#2006F7] dark:text-[#00EDFF]" />
+          <div className="h-12 w-12 rounded-full bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center mx-auto">
+            <Building2 className="h-6 w-6 text-brand-accent" />
           </div>
           <h2 className="text-lg font-display font-bold text-foreground">Create Your Organisation</h2>
           <p className="text-xs text-muted-foreground">
@@ -41,12 +43,12 @@ export function OrgSetup({ userEmail, onCreateOrg, onSignOut }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Organisation Name</label>
-            <input
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Acme IT Solutions"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+              className="bg-background/80"
               autoFocus
             />
           </div>
@@ -62,10 +64,10 @@ export function OrgSetup({ userEmail, onCreateOrg, onSignOut }: Props) {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#2006F7] hover:bg-[#10037C] text-white px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+            className="w-full gap-2"
           >
             {loading ? (
               <span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
@@ -75,7 +77,7 @@ export function OrgSetup({ userEmail, onCreateOrg, onSignOut }: Props) {
                 <ArrowRight className="h-3.5 w-3.5" />
               </>
             )}
-          </button>
+          </Button>
         </form>
 
         <button

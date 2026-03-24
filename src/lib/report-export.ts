@@ -295,7 +295,7 @@ export function buildPdfHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} — ${companyName || "Sophos FireComply"}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700&family=Zalando+Sans+Expanded:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700;800;900&family=Zalando+Sans+Expanded:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
     :root {
       --bg: #ffffff;
@@ -566,7 +566,7 @@ export function buildPdfHtml(
         padding: 0;
         background: #fff !important;
         color: #1a1a1a !important;
-        font-family: Georgia, 'Times New Roman', serif !important;
+        font-family: 'Zalando Sans', system-ui, sans-serif !important;
         font-size: 11pt;
         line-height: 1.6;
       }
@@ -609,7 +609,7 @@ export function buildPdfHtml(
         left: 0;
         right: 0;
         padding: 4mm 0;
-        font-family: Georgia, serif;
+        font-family: 'Zalando Sans', system-ui, sans-serif;
         font-size: 9pt;
         color: #666;
         border-top: 1px solid #ddd;

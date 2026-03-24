@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback } from "react";
-import { CheckCircle2, Download, Shield, Globe, Lock, Network, AlertTriangle, Settings, Bug, Eye, Activity, Server, Clock, Key, Database, Wifi, FileWarning, ChevronDown, ChevronRight, Lightbulb, Scale, ShieldCheck, Search, GitBranch } from "lucide-react";
+import { CheckCircle2, Download, Shield, Globe, Lock, Network, AlertTriangle, Settings, Bug, Eye, Activity, Server, Clock, Key, Database, Wifi, FileWarning, ChevronRight, Lightbulb, Scale, ShieldCheck, Search, GitBranch } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import type { AnalysisResult, Severity, Finding, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
@@ -57,29 +57,29 @@ export function EstateOverview({
   }, []);
 
   return (
-    <>
+    <div className="space-y-6">
       {/* Estate summary cards */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
-          icon={<Network className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
+          icon={<Network className="h-7 w-7 text-brand-accent" />}
           value={fileCount}
           label={`Firewall${fileCount !== 1 ? "s" : ""}`}
-          border="border-[#2006F7]/20 dark:border-[#00EDFF]/20"
+          border="border-brand-accent/20 dark:border-[#00EDFF]/20"
           bg="bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.06]"
-          iconBg="bg-[#2006F7]/10 dark:bg-[#00EDFF]/10"
-          valueColor="text-[#2006F7] dark:text-[#00EDFF]"
+          iconBg="bg-brand-accent/10 dark:bg-[#00EDFF]/10"
+          valueColor="text-brand-accent"
         />
         <StatCard
-          icon={<Scale className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
+          icon={<Scale className="h-7 w-7 text-brand-accent" />}
           value={totalRules}
           label="Rules Parsed"
-          border="border-[#10037C]/15 dark:border-[#2006F7]/20"
-          bg="bg-[#10037C]/[0.03] dark:bg-[#2006F7]/[0.06]"
-          iconBg="bg-[#10037C]/10 dark:bg-[#2006F7]/10"
+          border="border-[#10037C]/15 dark:border-brand-accent/20"
+          bg="bg-[#10037C]/[0.03] dark:bg-brand-accent/[0.06]"
+          iconBg="bg-[#10037C]/10 dark:bg-brand-accent/10"
           valueColor="text-[#001A47] dark:text-white"
         />
         <StatCard
-          icon={<Search className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
+          icon={<Search className="h-7 w-7 text-brand-accent" />}
           value={totalSections}
           label="Sections"
           border="border-[#5A00FF]/15 dark:border-[#5A00FF]/20"
@@ -88,7 +88,7 @@ export function EstateOverview({
           valueColor="text-[#001A47] dark:text-white"
         />
         <StatCard
-          icon={<AlertTriangle className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />}
+          icon={<AlertTriangle className="h-7 w-7 text-brand-accent" />}
           value={totalFindings}
           label="Issues"
           border={totalFindings > 0 ? "border-[#EA0022]/20 dark:border-[#F29400]/25" : "border-[#00F2B3]/20 dark:border-[#00F2B3]/20"}
@@ -137,7 +137,7 @@ export function EstateOverview({
 
       {/* Parser diagnostics (collapsible) */}
       <ParserDiagnostics analysisResults={analysisResults} />
-    </>
+    </div>
   );
 }
 
@@ -145,7 +145,7 @@ function ParserDiagnostics({ analysisResults }: { analysisResults: Record<string
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-xl border border-border/70 bg-card">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[10px] text-muted-foreground hover:text-foreground transition-colors"
@@ -213,7 +213,7 @@ function ExtractionCoverage({ extractionPct, totalPopulated, totalSections, tota
     : "text-[#EA0022]";
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
+    <div className="rounded-xl border border-border/70 bg-card p-4 flex items-center gap-4">
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-semibold text-foreground">Extraction Coverage</span>
@@ -243,58 +243,84 @@ function ExtractionCoverage({ extractionPct, totalPopulated, totalSections, tota
 function InspectionPostureDashboard({ posture }: { posture: InspectionPosture }) {
   const pct = (n: number) => posture.totalWanRules > 0 ? Math.round((n / posture.totalWanRules) * 100) : 0;
 
-  const bar = (label: string, value: number, color: string) => (
-    <div key={label} className="space-y-1">
-      <div className="flex justify-between text-[10px]">
-        <span className="text-muted-foreground font-medium">{label}</span>
-        <span className="font-bold text-foreground">{value}/{posture.totalWanRules} <span className="text-muted-foreground font-normal">({pct(value)}%)</span></span>
-      </div>
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct(value)}%` }} />
-      </div>
-    </div>
-  );
-
   const barColor = (value: number) =>
-    pct(value) >= 80 ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : pct(value) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]";
+    pct(value) >= 80 ? "bg-[#00F2B3]" : pct(value) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]";
+
+  const barGlow = (value: number) =>
+    pct(value) >= 80 ? "shadow-[0_0_8px_rgba(0,242,179,0.3)]" : pct(value) >= 50 ? "shadow-[0_0_8px_rgba(242,148,0,0.3)]" : "shadow-[0_0_8px_rgba(234,0,34,0.3)]";
+
+  const pctColor = (value: number) =>
+    pct(value) >= 80 ? "text-[#00F2B3]" : pct(value) >= 50 ? "text-[#F29400]" : "text-[#EA0022]";
+
+  const bar = (label: string, value: number, color: string) => {
+    const p = pct(value);
+    return (
+      <div key={label} className="rounded-lg bg-muted/20 dark:bg-muted/10 border border-border/30 px-3.5 py-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-display font-semibold tracking-tight text-foreground">{label}</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className={`text-sm font-display font-bold tabular-nums ${pctColor(value)}`}>{value}/{posture.totalWanRules}</span>
+            <span className={`text-[10px] font-medium tabular-nums ${pctColor(value)}/70`}>({p}%)</span>
+          </div>
+        </div>
+        <div className="h-2 rounded-full bg-muted/60 dark:bg-muted/40 overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-700 ${color} ${barGlow(value)}`} style={{ width: `${Math.max(2, p)}%` }} />
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-        <h3 className="text-sm font-semibold text-foreground">Inspection Posture</h3>
-        <span className="text-[10px] text-muted-foreground">across {posture.totalWanRules} WAN-facing rule{posture.totalWanRules !== 1 ? "s" : ""}</span>
+    <div className="rounded-xl border border-border/70 bg-card p-5 sm:p-6 space-y-4 shadow-card">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-brand-accent/10 dark:bg-[#00EDFF]/10">
+          <ShieldCheck className="h-4.5 w-4.5 text-brand-accent" />
+        </div>
+        <div className="flex items-baseline gap-2.5">
+          <h3 className="text-base font-display font-bold tracking-tight text-foreground">Inspection Posture</h3>
+          <span className="text-xs text-muted-foreground/70 font-medium">across {posture.totalWanRules} WAN-facing rule{posture.totalWanRules !== 1 ? "s" : ""}</span>
+        </div>
       </div>
-      <div className="grid gap-2.5 sm:grid-cols-2">
+
+      <div className="grid gap-3 sm:grid-cols-2">
         {bar("Web Filtering", posture.withWebFilter, barColor(posture.withWebFilter))}
         {bar("IPS / Intrusion Prevention", posture.withIps, barColor(posture.withIps))}
         {bar("Application Control", posture.withAppControl, barColor(posture.withAppControl))}
       </div>
+
       {!posture.dpiEngineEnabled && posture.totalWanRules > 0 && (
-        <div className="rounded-md bg-[#EA0022]/10 px-3 py-2 flex items-center gap-2">
-          <span className="text-[#EA0022] font-bold text-[10px]">SSL/TLS INSPECTION OFF</span>
-          <span className="text-[10px] text-[#EA0022]/80">
-            {posture.withSslInspection === 0
-              ? "No SSL/TLS inspection rules configured — encrypted traffic is not being inspected (DPI inactive)"
-              : `${posture.withSslInspection} SSL/TLS rule${posture.withSslInspection !== 1 ? "s" : ""} found but all are exclusions (Do not decrypt) — no traffic is being decrypted`}
-          </span>
+        <div className="rounded-lg bg-[#EA0022]/8 dark:bg-[#EA0022]/10 border border-[#EA0022]/20 px-4 py-3 flex items-start gap-3">
+          <span className="mt-0.5 h-2 w-2 rounded-full bg-[#EA0022] shrink-0 animate-pulse" />
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-display font-bold text-[#EA0022] uppercase tracking-wide">SSL/TLS Inspection Off</span>
+            <p className="text-[11px] text-[#EA0022]/70 dark:text-[#EA0022]/60 leading-relaxed">
+              {posture.withSslInspection === 0
+                ? "No SSL/TLS inspection rules configured — encrypted traffic is not being inspected (DPI inactive)"
+                : `${posture.withSslInspection} SSL/TLS rule${posture.withSslInspection !== 1 ? "s" : ""} found but all are exclusions (Do not decrypt) — no traffic is being decrypted`}
+            </p>
+          </div>
         </div>
       )}
+
       {posture.disabledWanRules > 0 && (
-        <p className="text-[10px] text-[#c47800] dark:text-[#F29400]">
-          {posture.disabledWanRules} of {posture.totalWanRules} WAN rules are disabled — coverage scores based on {posture.enabledWanRules} enabled rule{posture.enabledWanRules !== 1 ? "s" : ""}
-        </p>
+        <div className="rounded-lg bg-[#F29400]/5 dark:bg-[#F29400]/8 border border-[#F29400]/15 px-4 py-2.5 flex items-center gap-2.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#F29400] shrink-0" />
+          <p className="text-[11px] text-[#c47800] dark:text-[#F29400] leading-relaxed">
+            {posture.disabledWanRules} of {posture.totalWanRules} WAN rules are disabled — coverage scores based on {posture.enabledWanRules} enabled rule{posture.enabledWanRules !== 1 ? "s" : ""}
+          </p>
+        </div>
       )}
+
       {posture.withSslInspection > 0 && (
-        <div className="text-[10px] space-y-0.5">
-          <p className={posture.dpiEngineEnabled ? "text-muted-foreground" : "text-[#c47800] dark:text-[#F29400]"}>
+        <div className="rounded-lg bg-muted/20 dark:bg-muted/10 border border-border/30 px-4 py-2.5 space-y-1">
+          <p className={`text-[11px] leading-relaxed ${posture.dpiEngineEnabled ? "text-muted-foreground" : "text-[#c47800] dark:text-[#F29400]"}`}>
             {posture.withSslInspection} SSL/TLS inspection rule{posture.withSslInspection !== 1 ? "s" : ""}:
             {posture.sslDecryptRules > 0 ? ` ${posture.sslDecryptRules} Decrypt` : ""}
             {posture.sslExclusionRules > 0 ? `${posture.sslDecryptRules > 0 ? "," : ""} ${posture.sslExclusionRules} Do-not-decrypt` : ""}
             {posture.dpiEngineEnabled ? " (DPI active)" : ""}
           </p>
           {posture.sslUncoveredZones.length > 0 && (
-            <p className="text-[#c47800] dark:text-[#F29400]">
+            <p className="text-[11px] text-[#c47800] dark:text-[#F29400] leading-relaxed">
               Zone gap: {posture.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")} → WAN traffic is not covered by any Decrypt rule
             </p>
           )}
@@ -304,10 +330,20 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   );
 }
 
-const CONFIDENCE_STYLE: Record<string, string> = {
-  high: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  low: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
+const SEV_DOT_BG: Record<Severity, string> = {
+  critical: "bg-[#EA0022]",
+  high: "bg-[#F29400]",
+  medium: "bg-[#F8C300]",
+  low: "bg-[#00F2B3]",
+  info: "bg-[#009CFB]",
+};
+
+const SEV_BADGE_INLINE: Record<Severity, string> = {
+  critical: "bg-[#EA0022]/15 text-[#EA0022] border-[#EA0022]/20",
+  high: "bg-[#F29400]/15 text-[#c47800] dark:text-[#F29400] border-[#F29400]/20",
+  medium: "bg-[#F8C300]/15 text-[#b8a200] dark:text-[#F8C300] border-[#F8C300]/20",
+  low: "bg-[#00F2B3]/15 text-[#00b386] dark:text-[#00F2B3] border-[#00F2B3]/20",
+  info: "bg-[#009CFB]/15 text-[#0077cc] dark:text-[#009CFB] border-[#009CFB]/20",
 };
 
 function FindingCard({ finding, label, fileCount, selectedFrameworks, onExplainFinding }: {
@@ -321,66 +357,71 @@ function FindingCard({ finding, label, fileCount, selectedFrameworks, onExplainF
     : [];
 
   return (
-    <div className={`rounded-lg border border-border border-l-4 ${SEVERITY_BORDER[finding.severity]} bg-card shadow-sm overflow-hidden`}>
-      <div className="flex items-center gap-1">
+    <div className={`rounded-xl border border-border/50 border-l-[3px] ${SEVERITY_BORDER[finding.severity]} bg-card shadow-card overflow-hidden transition-all`}>
+      <div className="flex items-center gap-1.5">
         <button
           onClick={() => setOpen(!open)}
-          className="flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors min-w-0"
+          className="flex-1 flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors min-w-0 group"
         >
-          <span className="text-lg shrink-0" title={finding.severity}>{severityIcon(finding.severity)}</span>
-          <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
-            <span className={`font-bold text-sm ${SEVERITY_COLOR[finding.severity]}`}>{finding.title}</span>
-            {finding.confidence && (
-              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${CONFIDENCE_STYLE[finding.confidence] ?? CONFIDENCE_STYLE.medium}`}>
-                {finding.confidence}
-              </span>
-            )}
+          <span className={`h-2.5 w-2.5 rounded-full ${SEV_DOT_BG[finding.severity]} shrink-0 shadow-[0_0_6px_rgba(0,0,0,0.15)]`} title={finding.severity} />
+          <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+            <span className={`font-display font-semibold text-[13px] tracking-tight ${SEVERITY_COLOR[finding.severity]}`}>{finding.title}</span>
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border ${SEV_BADGE_INLINE[finding.severity]}`}>
+              {finding.severity}
+            </span>
             {fileCount > 1 && (
-              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-medium">{label}</span>
+              <span className="text-[10px] text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md font-medium border border-border/40">{label}</span>
             )}
             {frameworks.map((fw) => (
-              <span key={fw} className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/20 dark:text-[#ff6b6b]">
+              <span key={fw} className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/15 dark:text-[#ff6b6b] border border-[#EA0022]/15">
                 {fw}
               </span>
             ))}
           </div>
-          <span className="text-muted-foreground text-xs shrink-0">{open ? "▼" : "▶"}</span>
+          <ChevronRight className={`h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
         </button>
         {onExplainFinding && (
           <button
             onClick={(e) => { e.stopPropagation(); onExplainFinding(finding.title); }}
-            className="p-2 shrink-0 text-muted-foreground hover:text-[#2006F7] dark:hover:text-[#00EDFF] hover:bg-muted/50 rounded transition-colors"
+            className="p-2.5 mr-1 shrink-0 text-muted-foreground/50 hover:text-[#2006F7] dark:hover:text-[#00EDFF] hover:bg-muted/40 rounded-lg transition-colors"
             title="Explain this finding"
             aria-label="Explain this finding"
           >
-            <Lightbulb className="h-3.5 w-3.5" />
+            <Lightbulb className="h-4 w-4" />
           </button>
         )}
       </div>
       {open && (
-        <div className="px-4 pb-3.5 pl-[3.25rem] space-y-2">
+        <div className="px-4 pb-4 pl-[3.25rem] space-y-3 border-t border-border/30 pt-3">
           <p className="text-xs text-muted-foreground leading-relaxed">{finding.detail}</p>
-          <div className="rounded bg-muted/40 border border-border/50 px-3 py-2 space-y-1">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Evidence Source</p>
-            <p className="text-[10px] text-foreground leading-relaxed">
-              <span className="font-medium">Section:</span> {finding.section}
+
+          <div className="rounded-lg bg-muted/30 dark:bg-muted/20 border border-border/40 px-3.5 py-2.5 space-y-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">Evidence Source</p>
+            <p className="text-[11px] text-foreground/90 leading-relaxed">
+              <span className="font-semibold">Section:</span> {finding.section}
               {finding.evidence && (
-                <><br /><span className="font-medium">Extracted fact:</span> <span className="font-mono">{finding.evidence}</span></>
+                <><br /><span className="font-semibold">Extracted fact:</span> <span className="font-mono text-[10px] text-foreground/70">{finding.evidence}</span></>
               )}
             </p>
             {finding.confidence && (
-              <span className={`inline-block text-[9px] font-bold uppercase px-1.5 py-0.5 rounded mt-0.5 ${
-                finding.confidence === "high" ? "bg-[#00F2B3]/10 text-[#00F2B3]"
-                : finding.confidence === "medium" ? "bg-[#F29400]/10 text-[#F29400]"
-                : "bg-muted text-muted-foreground"
+              <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md mt-0.5 border ${
+                finding.confidence === "high" ? "bg-[#00F2B3]/10 text-[#00b386] dark:text-[#00F2B3] border-[#00F2B3]/20"
+                : finding.confidence === "medium" ? "bg-[#F29400]/10 text-[#F29400] border-[#F29400]/20"
+                : "bg-muted text-muted-foreground border-border/40"
               }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${
+                  finding.confidence === "high" ? "bg-[#00F2B3]" : finding.confidence === "medium" ? "bg-[#F29400]" : "bg-muted-foreground"
+                }`} />
                 {finding.confidence} confidence
               </span>
             )}
           </div>
+
           {finding.remediation && (
-            <div className="px-3 py-2 rounded bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] border border-[#2006F7]/10 dark:border-[#2006F7]/20">
-              <p className="text-[10px] text-foreground leading-relaxed"><span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Remediation:</span> {finding.remediation}</p>
+            <div className="px-3.5 py-2.5 rounded-lg bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08] border border-brand-accent/15 dark:border-brand-accent/25">
+              <p className="text-[11px] text-foreground/90 leading-relaxed">
+                <span className="font-bold text-[#2006F7] dark:text-[#009CFB]">Remediation:</span> {finding.remediation}
+              </p>
             </div>
           )}
         </div>
@@ -472,28 +513,32 @@ function FindingsPanel({ analysisResults, fileCount, selectedFrameworks, onExpla
   const totalCount = groups.reduce((s, g) => s + g.findings.length, 0);
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <AlertTriangle className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-        <h3 className="text-sm font-semibold text-foreground">Deterministic Findings</h3>
-        <span className="text-xs text-muted-foreground">{totalCount} issues across {groups.length} sections</span>
+    <section className="space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-[#EA0022]/10 dark:bg-[#EA0022]/15">
+          <AlertTriangle className="h-4.5 w-4.5 text-[#EA0022]" />
+        </div>
+        <div className="flex items-baseline gap-2.5">
+          <h3 className="text-base font-display font-bold tracking-tight text-foreground">Deterministic Findings</h3>
+          <span className="text-xs text-muted-foreground/70 font-medium tabular-nums">{totalCount} issues across {groups.length} sections</span>
+        </div>
         <div className="ml-auto flex items-center gap-1.5">
           <button
             onClick={openSections.size > 0 ? collapseAll : expandAll}
-            className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted/50 transition-colors"
+            className="text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/70 hover:bg-muted/50 hover:border-border transition-colors"
           >
             {openSections.size > 0 ? "Collapse all" : "Expand all"}
           </button>
           <button
             onClick={() => downloadCsv(analysisResults)}
-            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted/50 transition-colors"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/70 hover:bg-muted/50 hover:border-border transition-colors"
             title="Export findings as CSV"
           >
             <Download className="h-3 w-3" /> CSV
           </button>
           <button
             onClick={() => downloadFindingsPdf(analysisResults)}
-            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border hover:bg-muted/50 transition-colors"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/70 hover:bg-muted/50 hover:border-border transition-colors"
             title="Export findings as printable PDF"
           >
             <Download className="h-3 w-3" /> PDF
@@ -501,39 +546,36 @@ function FindingsPanel({ analysisResults, fileCount, selectedFrameworks, onExpla
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {groups.map((g) => {
           const isOpen = openSections.has(g.section);
           const Icon = SECTION_ICONS[g.section] ?? AlertTriangle;
           const borderSev = SEV_ORDER[g.highestSeverity] ?? "info";
           return (
-            <div key={g.section} className={`rounded-xl border border-border border-l-4 ${SEVERITY_BORDER[borderSev]} bg-card overflow-hidden transition-all`}>
+            <div key={g.section} className={`rounded-xl border border-border/60 border-l-[3px] ${SEVERITY_BORDER[borderSev]} bg-card shadow-card overflow-hidden transition-all`}>
               <button
                 onClick={() => toggleSection(g.section)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/20 transition-colors"
+                className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors group"
               >
-                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm font-semibold text-foreground flex-1 min-w-0 truncate">{g.section}</span>
-                <span className="flex items-center gap-1 shrink-0">
+                <Icon className="h-4 w-4 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors shrink-0" />
+                <span className="text-[13px] font-display font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate">{g.section}</span>
+                <span className="flex items-center gap-1.5 shrink-0">
                   {SEV_ORDER.map((sev) => {
                     const count = g.sevCounts[sev];
                     if (count === 0) return null;
                     const badge = SEV_BADGE[sev];
                     return (
-                      <span key={sev} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.bg} ${badge.text}`}>
+                      <span key={sev} className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${badge.bg} ${badge.text}`}>
                         {count}{badge.label}
                       </span>
                     );
                   })}
                 </span>
-                <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 w-6 text-right">{g.findings.length}</span>
-                {isOpen
-                  ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                }
+                <span className="text-xs font-semibold text-muted-foreground/60 tabular-nums shrink-0 w-6 text-right">{g.findings.length}</span>
+                <ChevronRight className={`h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
               </button>
               {isOpen && (
-                <div className="px-3 pb-3 space-y-1.5 border-t border-border/50 pt-2">
+                <div className="px-3 pb-3 space-y-1.5 border-t border-border/40 pt-2.5">
                   {g.findings.map((f, i) => (
                     <FindingCard
                       key={`${f.firewall}-${f.id}-${i}`}
@@ -561,10 +603,10 @@ function EstateRiskComparison({ analysisResults }: { analysisResults: Record<str
   const maxScore = Math.max(1, ...Object.values(analysisResults).map(weight));
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-3">
       <div className="flex items-center gap-2">
-        <GitBranch className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-        <h3 className="text-sm font-semibold text-foreground">Estate Risk Comparison</h3>
+        <GitBranch className="h-5 w-5 text-brand-accent" />
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Estate Risk Comparison</h3>
       </div>
       <div className="space-y-2">
         {Object.entries(analysisResults)

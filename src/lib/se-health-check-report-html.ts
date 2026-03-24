@@ -139,8 +139,8 @@ function buildBpScoreDashboardHtml(firewallLabel: string, bp: SophosBPScore): st
   const gauge = `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true" class="se-hc-bp-gauge-svg">
     <circle cx="60" cy="60" r="${r}" fill="none" stroke="rgba(148,163,184,0.2)" stroke-width="6" />
     <circle cx="60" cy="60" r="${r}" fill="none" stroke="${col}" stroke-width="6" stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 60 60)" />
-    <text x="60" y="54" text-anchor="middle" fill="${col}" font-size="28" font-weight="700">${overall}</text>
-    <text x="60" y="72" text-anchor="middle" fill="${col}" font-size="12" font-weight="600">Grade ${grade}</text>
+    <text x="60" y="54" text-anchor="middle" fill="${col}" font-size="28" font-weight="700" font-family="'Zalando Sans', system-ui, sans-serif">${overall}</text>
+    <text x="60" y="72" text-anchor="middle" fill="${col}" font-size="12" font-weight="600" font-family="'Zalando Sans', system-ui, sans-serif">Grade ${grade}</text>
   </svg>`;
   const stats = `<div class="se-hc-bp-stats">
     <div class="se-hc-bp-stat"><span class="se-hc-bp-stat-n se-hc-n-pass">${passed}</span><span class="se-hc-bp-stat-l">Passed</span></div>

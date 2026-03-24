@@ -248,8 +248,8 @@ export function NetworkZoneMap({ files }: Props) {
 
   if (allZones.length === 0 && flows.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5" data-tour="zone-map">
-        <h3 className="text-sm font-semibold text-foreground">
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="zone-map">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Network Zone Map
         </h3>
         <p className="mt-2 text-xs text-muted-foreground">
@@ -275,9 +275,9 @@ export function NetworkZoneMap({ files }: Props) {
   ).filter((cat) => grouped[cat].length > 0);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4" data-tour="zone-map">
+    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4" data-tour="zone-map">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Network Zone Map
         </h3>
         <span className="text-[10px] text-muted-foreground">
@@ -300,7 +300,7 @@ export function NetworkZoneMap({ files }: Props) {
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <span>{CAT_ICONS[cat]}</span>
               {CAT_LABELS[cat]}
-              <span className="text-muted-foreground/50 font-normal normal-case">
+              <span className="text-muted-foreground/70 font-normal normal-case">
                 ({grouped[cat].length})
               </span>
             </p>

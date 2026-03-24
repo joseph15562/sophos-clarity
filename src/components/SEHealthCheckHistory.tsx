@@ -40,7 +40,7 @@ function gradeColor(grade: string | null): string {
     case "A":
       return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
     case "B":
-      return "bg-[#2006F7]/15 text-[#2006F7] dark:text-[#00EDFF]/10 dark:text-[#00EDFF]";
+      return "bg-brand-accent/15 text-brand-accent/10 dark:text-[#00EDFF]";
     case "C":
       return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
     case "D":
@@ -250,7 +250,7 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
       </button>
 
       {open && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
           <div className="flex items-center justify-between p-2 border-b border-border gap-2">
             <div className="flex items-center gap-2">
               {selectedIds.size > 0 && moveTargets.length > 0 && (

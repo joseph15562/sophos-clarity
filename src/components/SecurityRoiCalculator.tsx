@@ -45,8 +45,8 @@ export function SecurityRoiCalculator({ analysisResults }: Props) {
   }, [analysisResults, hourlyRate]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground">Security Investment ROI</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Security Investment ROI</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">

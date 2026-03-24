@@ -200,7 +200,7 @@ export function CentralEnrichment({ configMetas, customerName: _customerName }: 
       {expanded && (
         <div className="border-t border-border px-4 py-3 space-y-3">
           {enrichedData.map((data) => (
-            <div key={data.configLabel} className="rounded-lg border border-border bg-card p-3 space-y-2">
+            <div key={data.configLabel} className="rounded-xl border border-border/70 bg-card p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Server className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-semibold text-foreground">{data.configLabel}</span>

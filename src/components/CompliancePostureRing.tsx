@@ -56,14 +56,14 @@ export function CompliancePostureRing({ analysisResults, selectedFrameworks }: P
   if (mappings.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <h3 className="text-sm font-semibold text-foreground">Compliance Posture</h3>
+    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">Compliance Posture</h3>
         {mappings.length > 1 && (
           <select
             value={activeFramework ?? ""}
             onChange={(e) => setSelectedFramework(e.target.value || null)}
-            className="text-[10px] font-medium rounded-md border border-border bg-muted/30 text-foreground px-2 py-1"
+            className="text-[11px] font-medium rounded-lg border border-border/60 bg-card text-foreground px-3 py-1.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30 focus:border-brand-accent/30 transition-colors"
           >
             {mappings.map((m) => (
               <option key={m.framework} value={m.framework}>
@@ -73,17 +73,18 @@ export function CompliancePostureRing({ analysisResults, selectedFrameworks }: P
           </select>
         )}
       </div>
-      <div className="relative" style={{ height: 220 }}>
-        <ResponsiveContainer width="100%" height={220}>
+      <div className="relative" style={{ height: 240 }}>
+        <ResponsiveContainer width="100%" height={240}>
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={2}
+              innerRadius={65}
+              outerRadius={95}
+              paddingAngle={3}
               dataKey="value"
+              strokeWidth={0}
             >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -96,31 +97,33 @@ export function CompliancePostureRing({ analysisResults, selectedFrameworks }: P
           style={{ top: 0, left: 0, right: 0, bottom: 0 }}
         >
           <div className="text-center">
-            <span className="text-2xl font-bold text-foreground tabular-nums">{compliantPct}%</span>
-            <span className="block text-xs text-muted-foreground">Compliant</span>
+            <span className={`text-3xl font-display font-black tracking-tight tabular-nums ${
+              compliantPct >= 75 ? "text-[#00F2B3]" : compliantPct >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
+            }`}>{compliantPct}%</span>
+            <span className="block text-[11px] font-display font-semibold text-muted-foreground/60 mt-0.5">Compliant</span>
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="w-2 h-2 rounded-full shrink-0 bg-[#00F2B3]" />
-          <span className="text-muted-foreground">Pass</span>
-          <span className="font-bold tabular-nums text-foreground">{pass}</span>
+      <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 mt-4">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#00F2B3] shadow-[0_0_6px_rgba(0,242,179,0.4)]" />
+          <span className="text-muted-foreground/70 font-medium">Pass</span>
+          <span className="font-display font-bold tabular-nums text-foreground">{pass}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="w-2 h-2 rounded-full shrink-0 bg-[#F29400]" />
-          <span className="text-muted-foreground">Partial</span>
-          <span className="font-bold tabular-nums text-foreground">{partial}</span>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#F29400] shadow-[0_0_6px_rgba(242,148,0,0.4)]" />
+          <span className="text-muted-foreground/70 font-medium">Partial</span>
+          <span className="font-display font-bold tabular-nums text-foreground">{partial}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="w-2 h-2 rounded-full shrink-0 bg-[#EA0022]" />
-          <span className="text-muted-foreground">Fail</span>
-          <span className="font-bold tabular-nums text-foreground">{fail}</span>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#EA0022] shadow-[0_0_6px_rgba(234,0,34,0.4)]" />
+          <span className="text-muted-foreground/70 font-medium">Fail</span>
+          <span className="font-display font-bold tabular-nums text-foreground">{fail}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="w-2 h-2 rounded-full shrink-0 bg-[#6B7280]" />
-          <span className="text-muted-foreground">N/A</span>
-          <span className="font-bold tabular-nums text-foreground">{na}</span>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#6B7280]" />
+          <span className="text-muted-foreground/70 font-medium">N/A</span>
+          <span className="font-display font-bold tabular-nums text-foreground">{na}</span>
         </div>
       </div>
     </div>

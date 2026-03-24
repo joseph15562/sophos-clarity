@@ -92,17 +92,17 @@ export function UploadSection({
     <>
       {/* Landing hero */}
       {!hasFiles && (
-        <section className="relative overflow-hidden rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.16),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.14),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_25px_80px_rgba(32,6,247,0.12)] px-6 py-8 sm:px-8 sm:py-10 space-y-6">
+        <section className="relative overflow-hidden rounded-[32px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.16),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.14),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-panel px-6 py-8 sm:px-8 sm:py-10 space-y-6">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
           <div className="text-center space-y-4 max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-accent">
               <Sparkles className="h-3.5 w-3.5" />
               AI-assisted Sophos firewall assessment
             </div>
 
             <h2 className="text-3xl sm:text-5xl font-display font-black text-foreground tracking-tight leading-[1.05] max-w-3xl mx-auto">
-              Turn Sophos Firewall Exports into <span className="text-[#2006F7] dark:text-[#00EDFF]">Audit-Ready Reports</span> in Minutes
+              Turn Sophos Firewall Exports into <span className="text-brand-accent">Audit-Ready Reports</span> in Minutes
             </h2>
 
             <p className="text-muted-foreground max-w-2xl mx-auto text-base leading-relaxed">
@@ -119,7 +119,7 @@ export function UploadSection({
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">With FireComply</p>
               <p className="text-2xl font-black text-[#00774a] dark:text-[#00F2B3] mt-1">Under 2 minutes</p>
             </div>
-            <div className="rounded-2xl border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-4 py-3 text-left">
+            <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] px-4 py-3 text-left">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Effort saved</p>
               <p className="text-2xl font-black text-foreground mt-1">90%+</p>
             </div>
@@ -139,7 +139,7 @@ export function UploadSection({
             <Button
               variant="outline"
               size="lg"
-              className="gap-2 rounded-xl px-5 border-[#2006F7]/25 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
+              className="gap-2 rounded-xl px-5 border-brand-accent/25 dark:border-[#00EDFF]/30 hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10"
               onClick={() => document.querySelector<HTMLElement>('[data-tour="step-upload"]')?.scrollIntoView({ behavior: "smooth", block: "center" })}
             >
               Upload Firewall Export
@@ -159,11 +159,11 @@ export function UploadSection({
           </div>
 
           <div className="flex flex-wrap justify-center gap-6 pt-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><FileText className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Technical Reports</span>
-            <span className="flex items-center gap-1.5"><BarChart3 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Executive Briefs</span>
-            <span className="flex items-center gap-1.5"><Scale className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Compliance Reports</span>
-            <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Deterministic Findings</span>
-            <span className="flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" /> Export-Ready Outputs</span>
+            <span className="flex items-center gap-1.5"><FileText className="h-4 w-4 text-brand-accent" /> Technical Reports</span>
+            <span className="flex items-center gap-1.5"><BarChart3 className="h-4 w-4 text-brand-accent" /> Executive Briefs</span>
+            <span className="flex items-center gap-1.5"><Scale className="h-4 w-4 text-brand-accent" /> Compliance Reports</span>
+            <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-brand-accent" /> Deterministic Findings</span>
+            <span className="flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-brand-accent" /> Export-Ready Outputs</span>
           </div>
 
           {onLoadDemo && (
@@ -190,20 +190,20 @@ export function UploadSection({
       )}
 
       {!hasFiles && isGuest && onShowAuth && (
-        <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] px-5 py-4 flex items-center gap-4">
-          <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-            <LogIn className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+        <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] px-5 py-4 flex items-center gap-4 shadow-sm">
+          <div className="h-10 w-10 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10 border border-brand-accent/15 flex items-center justify-center shrink-0">
+            <LogIn className="h-4 w-4 text-brand-accent" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">Sign in to unlock the full experience</p>
-            <p className="text-[10px] text-muted-foreground">
-              Connect your Sophos Central account, use automated agents, save reports, and manage your firewall estate — all included.
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Connect Sophos Central, use automated agents, save reports, and manage your firewall estate from a single assessment workspace.
             </p>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0 gap-1.5 text-xs border-[#2006F7]/30 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
+            className="shrink-0 gap-1.5 text-xs"
             onClick={onShowAuth}
           >
             <LogIn className="h-3 w-3" /> Sign In / Register
@@ -228,9 +228,9 @@ export function UploadSection({
             </div>
             <p className="text-base font-medium text-foreground/85 dark:text-white/75 max-w-3xl leading-relaxed">
               Upload Sophos HTML or XML exports to create a{" "}
-              <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">deterministic security baseline</span>, map controls, and prepare{" "}
+              <span className="text-brand-accent font-semibold">deterministic security baseline</span>, map controls, and prepare{" "}
               <span className="text-foreground dark:text-white font-semibold">customer-ready reports</span> with{" "}
-              <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">evidence-backed findings</span>.
+              <span className="text-brand-accent font-semibold">evidence-backed findings</span>.
             </p>
           </div>
 
@@ -240,7 +240,7 @@ export function UploadSection({
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Supported inputs</p>
                 <p className="text-sm font-semibold text-foreground mt-1">HTML, HTM, XML</p>
               </div>
-              <div className="rounded-2xl border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-4 py-3">
+              <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best use</p>
                 <p className="text-sm font-semibold text-foreground mt-1">Single firewall or estate comparison</p>
               </div>
@@ -248,8 +248,8 @@ export function UploadSection({
           )}
         </div>
         {parsingProgress && (
-          <div className="rounded-lg border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-4 py-3 space-y-2">
-            <p className="text-xs font-medium text-foreground">
+          <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(247,249,255,0.96))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(12,18,34,0.92))] px-4 py-3 space-y-2 shadow-sm">
+            <p className="text-xs font-semibold text-foreground">
               {parsingProgress.phase === "parsing"
                 ? `Parsing file ${parsingProgress.current} of ${parsingProgress.total}...`
                 : "Analysing configuration..."}
@@ -270,7 +270,7 @@ export function UploadSection({
             {hasFiles && (
               <div className="flex items-center gap-4 py-1">
                 <div className="flex-1 border-t border-border" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2006F7] dark:text-[#00EDFF]">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-accent">
                   Add from connected agents
                 </span>
                 <div className="flex-1 border-t border-border" />
@@ -284,20 +284,20 @@ export function UploadSection({
               </div>
             )}
 
-            <div className="relative overflow-hidden rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.10)] p-5 sm:p-6 space-y-5">
+            <div className="relative overflow-hidden rounded-[32px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.10)] p-5 sm:p-6 space-y-5">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
               <div className="flex items-start justify-between gap-5 flex-wrap">
                 <div className="space-y-2 max-w-2xl">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF]">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-accent">
                     Managed estate mode
                   </div>
                   <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
-                    Connected Firewalls for <span className="text-[#2006F7] dark:text-[#00EDFF]">live managed assessments</span>
+                    Connected Firewalls for <span className="text-brand-accent">live managed assessments</span>
                   </h3>
                   <p className="text-base font-medium text-foreground/85 dark:text-white/75 leading-relaxed">
                     Pull{" "}
-                    <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">fresh assessments directly from connected agents</span> to refresh customer posture, compare sites side-by-side, and{" "}
+                    <span className="text-brand-accent font-semibold">fresh assessments directly from connected agents</span> to refresh customer posture, compare sites side-by-side, and{" "}
                     <span className="text-foreground dark:text-white font-semibold">scale reviews across your managed firewall estate</span> without waiting for manual exports.
                   </p>
                 </div>
@@ -331,7 +331,7 @@ export function UploadSection({
 
               <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
                 <span className="font-semibold text-foreground dark:text-white">Why this matters:</span>{" "}
-                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">manual upload is perfect for one-off reviews</span>; connected firewalls unlock{" "}
+                <span className="text-brand-accent font-semibold">manual upload is perfect for one-off reviews</span>; connected firewalls unlock{" "}
                 <span className="text-foreground dark:text-white font-semibold">continuous assessment across a managed estate</span>.
               </p>
 
@@ -355,25 +355,25 @@ export function UploadSection({
             <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
               Assessment Context
             </h2>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#2006F7] dark:text-[#00EDFF] rounded-full border border-[#2006F7]/20 dark:border-[#00EDFF]/30 px-2 py-0.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-accent rounded-full border border-brand-accent/20 dark:border-[#00EDFF]/30 px-2 py-0.5">
               Optional: frameworks tagging
             </span>
           </div>
 
-          <div className="relative overflow-hidden rounded-[32px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)]">
+          <div className="relative overflow-hidden rounded-[32px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.99),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.08),transparent_28%),linear-gradient(135deg,rgba(8,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)]">
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
             <div className="p-5 sm:p-6 space-y-5">
               <div className="flex items-start justify-between gap-5 flex-wrap">
                 <div className="space-y-2 max-w-2xl">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF]">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-accent">
                     Executive-ready setup
                   </div>
                   <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
-                    Shape the assessment into a <span className="text-[#2006F7] dark:text-[#00EDFF]">customer-ready outcome</span>
+                    Shape the assessment into a <span className="text-brand-accent">customer-ready outcome</span>
                   </h3>
                   <p className="text-base font-medium text-foreground/85 dark:text-white/75 leading-relaxed">
-                    <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">Add the client context</span>, brand the output, and select the frameworks that matter so{" "}
+                    <span className="text-brand-accent font-semibold">Add the client context</span>, brand the output, and select the frameworks that matter so{" "}
                     <span className="text-foreground dark:text-white font-semibold">findings, reports, and executive summaries land with the right audience</span>.
                   </p>
                 </div>
@@ -407,11 +407,11 @@ export function UploadSection({
 
               <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
                 <span className="font-semibold text-foreground dark:text-white">Why this matters:</span>{" "}
-                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">the analysis is deterministic</span>, but the context determines how clearly it speaks to{" "}
+                <span className="text-brand-accent font-semibold">the analysis is deterministic</span>, but the context determines how clearly it speaks to{" "}
                 <span className="text-foreground dark:text-white font-semibold">customers, auditors, and executives</span>.
               </p>
 
-              <Card className="border-border/70 bg-card/80 shadow-sm">
+              <Card className="border-border/70 bg-card/80 shadow-card">
                 <CardContent className="pt-6">
                   <BrandingSetup branding={branding} onChange={setBranding} />
                 </CardContent>
@@ -435,16 +435,16 @@ export function UploadSection({
 
       {/* Privacy banner */}
       {hasFiles && (
-        <div className="rounded-xl border border-[#00F2B3]/20 dark:border-[#00F2B3]/20 border-l-4 border-l-[#00F2B3] dark:border-l-[#00F2B3] bg-[#00F2B3]/[0.05] dark:bg-[#00F2B3]/[0.04] px-5 py-4 flex items-start gap-4">
-          <div className="h-10 w-10 rounded-lg bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0 mt-0.5">
-            <ShieldCheck className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+        <div className="rounded-[24px] border border-[#00F2B3]/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,255,251,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(10,26,24,0.96))] px-5 py-4 flex items-start gap-4 shadow-sm">
+          <div className="h-10 w-10 rounded-xl bg-[#00F2B3]/10 border border-[#00F2B3]/15 flex items-center justify-center shrink-0 mt-0.5">
+            <ShieldCheck className="h-5 w-5 text-brand-accent" />
           </div>
           <div className="space-y-1.5">
             <p className="text-sm font-semibold text-[#00774a] dark:text-[#00F2B3] tracking-tight">
               Data Privacy Protected
             </p>
             <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
-              All IP addresses, customer names, and firewall identifiers are automatically anonymised before being sent to the AI. Your sensitive network data never leaves the browser; only sanitised structural data is transmitted for analysis. Real values are restored locally in the final report.
+              All IP addresses, customer names, and firewall identifiers are automatically anonymised before being sent to the AI. Sensitive network data stays in the browser; only sanitised structural data is used for AI-assisted report generation, and real values are restored locally in the final report.
             </p>
           </div>
         </div>
@@ -477,21 +477,20 @@ export function UploadSection({
               Generate Reports
             </h2>
           </div>
-          <div className="rounded-xl border border-[#2006F7]/20 dark:border-[#00EDFF]/20 bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] px-5 py-4 flex items-center gap-4">
-            <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-              <LogIn className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] px-5 py-4 flex items-center gap-4 shadow-sm">
+            <div className="h-10 w-10 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10 border border-brand-accent/15 flex items-center justify-center shrink-0">
+              <LogIn className="h-4 w-4 text-brand-accent" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Sign in to generate reports</p>
               <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
-                Create an account or sign in to generate{" "}
-                <span className="text-[#2006F7] dark:text-[#00EDFF] font-semibold">technical reports, executive briefs, and compliance packs</span> from your analysis.
+                Create an account or sign in to generate <span className="text-brand-accent font-semibold">technical reports, executive briefs, and compliance packs</span> from your analysis.
               </p>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="shrink-0 gap-1.5 text-xs border-[#2006F7]/30 dark:border-[#00EDFF]/30 hover:bg-[#2006F7]/10 dark:hover:bg-[#00EDFF]/10"
+              className="shrink-0 gap-1.5 text-xs"
               onClick={onShowAuth}
             >
               <LogIn className="h-3 w-3" /> Sign In
@@ -502,19 +501,19 @@ export function UploadSection({
 
       {/* View Reports banner — shown when reports exist but user is on dashboard (authenticated only) */}
       {hasReports && !isGuest && (
-        <div className="rounded-xl border border-[#2006F7]/20 bg-[#2006F7]/[0.04] dark:bg-[#2006F7]/[0.08] px-5 py-4 flex items-center gap-4">
-          <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-            <FileText className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+        <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] px-5 py-4 flex items-center gap-4 shadow-sm">
+          <div className="h-10 w-10 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10 border border-brand-accent/15 flex items-center justify-center shrink-0">
+            <FileText className="h-5 w-5 text-brand-accent" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-foreground">
               {reports.length} Report{reports.length !== 1 ? "s" : ""} Ready
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               Your generated reports are available to view, print, or save.
             </p>
           </div>
-          <Button onClick={() => setViewingReports(true)} className="gap-2 bg-[#2006F7] hover:bg-[#10037C] text-white">
+          <Button onClick={() => setViewingReports(true)} className="gap-2">
             <FileText className="h-4 w-4" />
             View Reports
           </Button>
@@ -531,7 +530,7 @@ export function UploadSection({
             className={`no-print flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg border transition-colors ${
               reportsSaved
                 ? "bg-[#00F2B3]/10 border-[#00F2B3]/30 text-[#00F2B3] dark:text-[#00F2B3]"
-                : "bg-[#2006F7]/10 border-[#2006F7]/30 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
+                : "bg-brand-accent/10 border-brand-accent/30 text-brand-accent hover:bg-brand-accent/20"
             }`}
           >
             <Save className="h-3.5 w-3.5" />

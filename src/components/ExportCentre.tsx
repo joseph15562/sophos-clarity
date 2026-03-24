@@ -80,15 +80,15 @@ const exportCards = [
 
 export function ExportCentre({ analysisResults, branding }: Props) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground">Export Centre</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Export Centre</h3>
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {exportCards.map((card) => (
           <button
             key={card.id}
             type="button"
             onClick={() => card.onClick(analysisResults, branding)}
-            className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-accent/50 cursor-pointer"
+            className="flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card p-4 text-left transition-colors hover:bg-accent/50 cursor-pointer"
           >
             <card.icon className="h-6 w-6 text-muted-foreground" />
             <span className="font-medium">{card.title}</span>

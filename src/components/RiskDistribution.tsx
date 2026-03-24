@@ -50,8 +50,8 @@ export function RiskDistribution({ analysisResults }: Props) {
   }, [analysisResults]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
         Score Distribution
       </h3>
 
@@ -85,7 +85,7 @@ export function RiskDistribution({ analysisResults }: Props) {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div className="rounded-md border border-border bg-card px-2 py-1.5 text-xs shadow-md">
+                  <div className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-xs shadow-elevated">
                     <span className="font-medium">{d.range}</span>: {d.count}{" "}
                     firewall{d.count !== 1 ? "s" : ""}
                   </div>

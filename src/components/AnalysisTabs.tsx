@@ -131,7 +131,7 @@ function fileLabel(f: ParsedFile) {
 
 function SecurityWidgetShell({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-[26px] border border-[#2006F7]/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(247,249,255,0.82))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.82),rgba(14,20,34,0.82))] shadow-[0_14px_34px_rgba(15,23,42,0.05)] p-1 ${className}`}>
+    <div className={`rounded-[26px] border border-brand-accent/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(247,249,255,0.88))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.84),rgba(14,20,34,0.84))] shadow-card p-1.5 ${className}`}>
       {children}
     </div>
   );
@@ -182,8 +182,8 @@ export function AnalysisTabs({
         hasReports={hasReports}
       />
 
-      <div className="sticky top-[53px] z-20 -mx-4 px-4 pt-4 bg-background/95 backdrop-blur-sm mt-4">
-        <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-2 flex items-center gap-1.5">
+      <div className="sticky top-[53px] z-20 mt-5 rounded-[24px] border border-border/60 bg-background/92 px-4 py-4 backdrop-blur-md shadow-sm">
+        <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-3 flex items-center gap-1.5">
           Detailed Security Analysis
           <TourHint
             tourId="analysis-tabs"
@@ -191,8 +191,8 @@ export function AnalysisTabs({
             description="Deep-dive into security analysis, compliance mapping, rule optimisation, and remediation playbooks. Click any tab to explore."
           />
         </h2>
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="flex-nowrap whitespace-nowrap w-max inline-flex" data-tour="analysis-tabs">
+        <div className="overflow-x-auto">
+          <TabsList className="flex-nowrap whitespace-nowrap w-max min-w-full inline-flex" data-tour="analysis-tabs">
           <TabsTrigger value="overview" className="gap-2">
             <LayoutDashboard className="h-3.5 w-3.5" />
             Overview
@@ -232,8 +232,8 @@ export function AnalysisTabs({
         </div>
       </div>
 
-      <div className="mt-3 px-1 flex items-start justify-between gap-4">
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
+      <div className="mt-4 px-1 flex items-start justify-between gap-4 flex-wrap">
+        <p className="text-[10px] text-muted-foreground leading-relaxed max-w-3xl">
           FireComply provides automated security analysis based on firewall configuration data. Results should be validated by a qualified security professional. Compliance mappings are indicative and do not constitute a formal audit.
         </p>
         <div className="flex items-center gap-1">
@@ -250,10 +250,10 @@ export function AnalysisTabs({
       {/* Overview */}
       <TabsContent value="overview" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Overview failed to load">
-          <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
+          <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="space-y-2 max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
                   Executive posture overview
                 </div>
                 <h3 className="text-2xl font-display font-black text-foreground tracking-tight">Overview</h3>
@@ -261,11 +261,9 @@ export function AnalysisTabs({
               </div>
             </div>
 
-          <SecurityWidgetShell>
-            <Suspense fallback={null}>
-              <ScoreDeltaBanner analysisResults={analysisResult} />
-            </Suspense>
-          </SecurityWidgetShell>
+          <Suspense fallback={null}>
+            <ScoreDeltaBanner analysisResults={analysisResult} />
+          </Suspense>
           <SecurityWidgetShell>
             <Suspense fallback={<ChartSkeleton height={200} />}>
               <ScoreDialGauge analysisResults={analysisResult} />
@@ -374,50 +372,35 @@ export function AnalysisTabs({
             <FindingsChanges analysisResults={analysisResult} />
           </SecurityWidgetShell>
 
-          {totalFindings > 0 && (w("findings-by-age") || w("sla-compliance-gauge")) && (
-            <div className="grid gap-6 lg:grid-cols-2">
+          {totalFindings > 0 && (w("findings-by-age") || w("sla-compliance-gauge") || w("remediation-velocity") || w("alert-feed")) && (
+            <div className="grid gap-4 lg:grid-cols-2 items-start">
               {w("findings-by-age") && (
-                <SecurityWidgetShell>
-                  <Suspense fallback={<ChartSkeleton />}>
-                    <FindingsByAge analysisResults={analysisResult} />
-                  </Suspense>
-                </SecurityWidgetShell>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <FindingsByAge analysisResults={analysisResult} />
+                </Suspense>
               )}
               {w("sla-compliance-gauge") && (
-                <SecurityWidgetShell>
-                  <Suspense fallback={<ChartSkeleton />}>
-                    <SlaComplianceGauge analysisResults={analysisResult} />
-                  </Suspense>
-                </SecurityWidgetShell>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <SlaComplianceGauge analysisResults={analysisResult} />
+                </Suspense>
               )}
-            </div>
-          )}
-
-          {(w("remediation-velocity") || w("alert-feed")) && (
-            <div className="grid gap-6 lg:grid-cols-2">
               {w("remediation-velocity") && (
-                <SecurityWidgetShell>
-                  <Suspense fallback={<ChartSkeleton />}>
-                    <RemediationVelocity analysisResults={analysisResult} />
-                  </Suspense>
-                </SecurityWidgetShell>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <RemediationVelocity analysisResults={analysisResult} />
+                </Suspense>
               )}
               {w("alert-feed") && (
-                <SecurityWidgetShell>
-                  <Suspense fallback={<CardSkeleton />}>
-                    <AlertFeedWidget analysisResults={analysisResult} />
-                  </Suspense>
-                </SecurityWidgetShell>
+                <Suspense fallback={<CardSkeleton />}>
+                  <AlertFeedWidget analysisResults={analysisResult} />
+                </Suspense>
               )}
             </div>
           )}
 
           {w("assessment-countdown") && (
-            <SecurityWidgetShell>
-              <Suspense fallback={null}>
-                <AssessmentCountdown />
-              </Suspense>
-            </SecurityWidgetShell>
+            <Suspense fallback={null}>
+              <AssessmentCountdown />
+            </Suspense>
           )}
 
           <SecurityWidgetShell>
@@ -470,10 +453,10 @@ export function AnalysisTabs({
       {/* Security Analysis */}
       <TabsContent value="security" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Security analysis failed to load">
-          <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
+          <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="space-y-2 max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
                   Deep-dive security posture
                 </div>
                 <h3 className="text-2xl font-display font-black text-foreground tracking-tight">Detailed Security Analysis</h3>
@@ -519,7 +502,7 @@ export function AnalysisTabs({
                 </div>
               </div>
               <div
-                className={`rounded-xl border border-border bg-card p-4 ${
+                className={`rounded-xl border border-border/70 bg-card p-4 ${
                   securityStats.criticalHigh === 0
                     ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
                     : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
@@ -535,7 +518,7 @@ export function AnalysisTabs({
                 </div>
               </div>
               <div
-                className={`rounded-xl border border-border bg-card p-4 ${
+                className={`rounded-xl border border-border/70 bg-card p-4 ${
                   securityStats.coverage >= 75
                     ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
                     : securityStats.coverage >= 40
@@ -556,7 +539,7 @@ export function AnalysisTabs({
                   {securityStats.coverage}%
                 </div>
               </div>
-              <div className="rounded-xl border border-border bg-card p-4">
+              <div className="rounded-xl border border-border/70 bg-card p-4">
                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rules Analysed</div>
                 <div className="text-2xl font-extrabold tabular-nums mt-1 text-foreground">
                   {securityStats.totalRules}
@@ -732,10 +715,10 @@ export function AnalysisTabs({
       {/* Compliance */}
       <TabsContent value="compliance" className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
         <ErrorBoundary fallbackTitle="Compliance view failed to load">
-          <div className="rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
+          <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="space-y-2 max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#2006F7] dark:text-[#00EDFF]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
                   Compliance readiness
                 </div>
                 <h3 className="text-2xl font-display font-black text-foreground tracking-tight">Compliance Analysis</h3>
@@ -745,7 +728,7 @@ export function AnalysisTabs({
 
             <div className="rounded-[26px] border border-[#5A00FF]/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.86),rgba(248,246,255,0.86))] dark:bg-[linear-gradient(180deg,rgba(14,18,32,0.86),rgba(20,16,34,0.86))] shadow-[0_14px_34px_rgba(90,0,255,0.08)] p-5 space-y-4" data-tour="compliance-heatmap">
               <div className="flex items-center gap-2 flex-wrap">
-                <Scale className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                <Scale className="h-4 w-4 text-brand-accent" />
                 <h3 className="text-base font-display font-black text-foreground tracking-tight">Compliance Heatmap</h3>
                 <TourHint
                   tourId="compliance-heatmap"
@@ -1006,7 +989,7 @@ export function AnalysisTabs({
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Before (baseline)</label>
                 <select
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                  className="w-full rounded-xl border border-border/70 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                   value={diffSelection?.beforeIdx ?? 0}
                   data-tour="compare-before"
                   onChange={(e) => setDiffSelection((prev: DiffSelection) => ({
@@ -1022,7 +1005,7 @@ export function AnalysisTabs({
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">After (current)</label>
                 <select
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                  className="w-full rounded-xl border border-border/70 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                   value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
                   data-tour="compare-after"
                   onChange={(e) => setDiffSelection((prev: DiffSelection) => ({

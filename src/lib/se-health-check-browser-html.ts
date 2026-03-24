@@ -87,7 +87,7 @@ const BROWSER_BASE_CSS = `
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Zalando Sans', system-ui, sans-serif;
     font-size: 15px;
     line-height: 1.5;
     color: var(--text);
@@ -368,6 +368,9 @@ export function buildSeHealthCheckBrowserHtmlDocument(p: SEHealthCheckReportPara
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark light">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700;800;900&family=Zalando+Sans+Expanded:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <title>${title} — ${company}</title>
   <style>${BROWSER_BASE_CSS}</style>
 </head>

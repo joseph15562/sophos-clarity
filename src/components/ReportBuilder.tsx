@@ -9,7 +9,7 @@ interface Props {
   analysisResults: Record<string, AnalysisResult>;
 }
 
-const CARD_CLASS = "rounded-xl border border-border bg-card p-5";
+const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
 const STORAGE_KEY = "firecomply-report-templates";
 
 const SECTIONS = [
@@ -86,7 +86,7 @@ export function ReportBuilder({ analysisResults }: Props) {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
         <FileText className="h-4 w-4" />
         Interactive Report Builder
       </h3>
@@ -96,7 +96,7 @@ export function ReportBuilder({ analysisResults }: Props) {
 
       <div className="mt-4 flex flex-col lg:flex-row gap-4">
         <aside className="lg:w-56 shrink-0 space-y-3">
-          <h4 className="text-xs font-semibold text-foreground">Report sections</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground">Report sections</h4>
           <div className="space-y-2">
             {SECTIONS.map((s) => (
               <label
@@ -130,7 +130,7 @@ export function ReportBuilder({ analysisResults }: Props) {
 
           {templates.length > 0 && (
             <div className="pt-2 border-t border-border">
-              <h4 className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
+              <h4 className="text-[10px] font-display tracking-tight font-semibold text-muted-foreground uppercase mb-2">
                 Saved templates
               </h4>
               <div className="space-y-1">
@@ -150,7 +150,7 @@ export function ReportBuilder({ analysisResults }: Props) {
         </aside>
 
         <div className="flex-1 min-w-0 rounded-lg border border-border bg-muted/20 p-4">
-          <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5 mb-3">
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground flex items-center gap-1.5 mb-3">
             <Layout className="h-3.5 w-3.5" />
             Live preview
           </h4>

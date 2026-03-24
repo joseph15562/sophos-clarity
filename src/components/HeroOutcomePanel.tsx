@@ -107,7 +107,7 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
   const gs = GRADE_STYLE[grade] ?? GRADE_STYLE.F;
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-[#2006F7]/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(9,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] p-6 sm:p-7 space-y-6">
+    <div className="relative overflow-hidden rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(9,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] p-6 sm:p-7 space-y-6">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -117,7 +117,7 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
             <span className={`text-[10px] font-bold uppercase tracking-[0.22em] ${gs.text}`}>{grade}</span>
           </div>
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#2006F7]/15 bg-[#2006F7]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#2006F7] dark:text-[#00EDFF]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-accent">
               <Sparkles className="h-3 w-3" />
               FireComply Outcome Summary
             </div>
@@ -202,7 +202,7 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
 function ValueCard({ label, value, sublabel, accent = "neutral" }: { label: string; value: string; sublabel: string; accent?: "neutral" | "primary" | "success" }) {
   const styles = {
     neutral: "border-border bg-card/70 text-foreground",
-    primary: "border-[#2006F7]/20 bg-[#2006F7]/[0.05] text-[#2006F7] dark:text-[#00EDFF]",
+    primary: "border-brand-accent/20 bg-brand-accent/[0.05] text-brand-accent",
     success: "border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] text-[#00774a] dark:text-[#00F2B3]",
   } as const;
   return (

@@ -311,7 +311,7 @@ export function PortalConfigurator() {
   return (
     <div className="space-y-6">
       {/* Tenant Portal Summary */}
-      <div className="rounded-lg border border-border bg-card">
+      <div className="rounded-xl border border-border/70 bg-card">
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-muted-foreground" />
@@ -382,7 +382,7 @@ export function PortalConfigurator() {
 
       {/* Selected Tenant Configuration */}
       {config && (
-        <div className="rounded-lg border border-border bg-card">
+        <div className="rounded-xl border border-border/70 bg-card">
           <button
             type="button"
             className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-muted/50 transition-colors"

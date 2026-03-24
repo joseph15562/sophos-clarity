@@ -108,8 +108,8 @@ export function CustomFrameworkBuilder() {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Custom Framework Builder</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Custom Framework Builder</h3>
 
       <div className="space-y-4">
         <div>
@@ -213,7 +213,7 @@ export function CustomFrameworkBuilder() {
 
       {frameworks.length > 0 && (
         <div className="mt-6 pt-4 border-t border-border">
-          <h4 className="text-xs font-semibold text-foreground mb-2">Existing custom frameworks</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-2">Existing custom frameworks</h4>
           <ul className="space-y-2">
             {frameworks.map((fw) => (
               <li

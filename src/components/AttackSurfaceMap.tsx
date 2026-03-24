@@ -70,7 +70,7 @@ export function AttackSurfaceMap({ files }: Props) {
   for (const s of allServices) counts[s.risk]++;
 
   return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden" data-tour="attack-surface">
+    <section className="rounded-xl border border-border/70 bg-card overflow-hidden" data-tour="attack-surface">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
@@ -79,7 +79,7 @@ export function AttackSurfaceMap({ files }: Props) {
           <span className="text-lg">🎯</span>
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-foreground">Attack Surface Map</h3>
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Attack Surface Map</h3>
           <p className="text-[10px] text-muted-foreground">
             {allServices.length} inbound service{allServices.length !== 1 ? "s" : ""} exposed via DNAT/port forwarding
           </p>
@@ -119,10 +119,10 @@ export function AttackSurfaceMap({ files }: Props) {
 
               {/* Firewall */}
               <div className="flex flex-col items-center gap-1">
-                <div className="h-14 w-14 rounded-lg bg-[#2006F7]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center border-2 border-[#2006F7]/30 dark:border-[#00EDFF]/30">
+                <div className="h-14 w-14 rounded-lg bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center border-2 border-brand-accent/30 dark:border-[#00EDFF]/30">
                   <span className="text-xl">🛡️</span>
                 </div>
-                <span className="text-[10px] text-[#2006F7] dark:text-[#00EDFF] font-medium">Firewall</span>
+                <span className="text-[10px] text-brand-accent font-medium">Firewall</span>
               </div>
 
               {/* Arrow */}
@@ -145,7 +145,7 @@ export function AttackSurfaceMap({ files }: Props) {
                       <p className="text-[9px] text-muted-foreground truncate">{s.service !== "Any" && s.service !== "Unknown" ? s.service : s.destination}</p>
                       <div className="flex items-center justify-center gap-1 mt-1">
                         {s.hasIps && <span className="text-[8px] bg-[#00F2B3]/20 text-[#00F2B3] dark:text-[#00F2B3] px-1 rounded">IPS</span>}
-                        {s.hasWebFilter && <span className="text-[8px] bg-[#2006F7]/20 text-[#2006F7] dark:text-[#00EDFF] px-1 rounded">WF</span>}
+                        {s.hasWebFilter && <span className="text-[8px] bg-brand-accent/20 text-brand-accent px-1 rounded">WF</span>}
                         {!s.hasIps && !s.hasWebFilter && <span className="text-[8px] bg-[#EA0022]/20 text-[#EA0022] px-1 rounded">Unprotected</span>}
                       </div>
                     </div>
@@ -158,8 +158,8 @@ export function AttackSurfaceMap({ files }: Props) {
           {/* Geo-IP & CVE section */}
           {externalIps.length > 0 && (
             <div className="mt-5 pt-4 border-t border-border">
-              <h4 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-2">
-                <span className="text-[#2006F7] dark:text-[#00EDFF]">🌍</span>
+              <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3 flex items-center gap-2">
+                <span className="text-brand-accent">🌍</span>
                 Geo-IP & CVE Correlation
               </h4>
               <GeoAttackMap

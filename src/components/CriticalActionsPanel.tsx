@@ -73,13 +73,13 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
   if (actions.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-2xl border border-border/70 bg-card p-5 space-y-4">
       <div className="flex items-center gap-2">
         <div className="h-7 w-7 rounded-lg bg-[#EA0022]/10 flex items-center justify-center">
           <AlertTriangle className="h-4 w-4 text-[#EA0022]" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-foreground">Top {actions.length} Critical Actions</h3>
+          <h3 className="text-sm font-display tracking-tight font-bold text-foreground">Top {actions.length} Critical Actions</h3>
           <p className="text-[10px] text-muted-foreground">Highest-impact remediations ranked by severity and expected score improvement</p>
         </div>
       </div>
@@ -148,7 +148,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
                   {onExplainFinding && (
                     <button
                       onClick={() => onExplainFinding(f.title)}
-                      className="text-[10px] font-medium text-[#2006F7] dark:text-[#00EDFF] hover:underline flex items-center gap-1"
+                      className="text-[10px] font-medium text-brand-accent hover:underline flex items-center gap-1"
                     >
                       <Shield className="h-3 w-3" /> Explain with AI
                     </button>

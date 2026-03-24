@@ -64,8 +64,8 @@ export function AssessmentCountdown() {
   const display = schedules.slice(0, 10);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
+    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-4">
         <Calendar className="h-4 w-4" aria-hidden />
         Assessment Schedule
       </h3>

@@ -88,8 +88,8 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center">
-            <ArrowLeftRight className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
+          <div className="h-10 w-10 rounded-lg bg-brand-accent/10 dark:bg-brand-accent/15 flex items-center justify-center">
+            <ArrowLeftRight className="h-5 w-5 text-brand-accent" />
           </div>
           <div>
             <h2 className="text-lg font-display font-bold text-foreground">Configuration Diff</h2>
@@ -106,7 +106,7 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
       {/* Side-by-side risk scores */}
       {beforeScore && afterScore && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <div className="rounded-xl border border-border/70 bg-card p-4 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Before</p>
             <p className={`text-3xl font-extrabold ${beforeScore.overall >= 70 ? "text-[#00F2B3] dark:text-[#00F2B3]" : beforeScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
               {beforeScore.overall}
@@ -114,7 +114,7 @@ export function ConfigDiff({ beforeLabel, afterLabel, beforeSections, afterSecti
             <p className="text-xs font-bold text-muted-foreground mt-0.5">{beforeScore.grade}</p>
             <p className="text-[10px] text-muted-foreground">{beforeAnalysis!.findings.length} findings</p>
           </div>
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <div className="rounded-xl border border-border/70 bg-card p-4 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">After</p>
             <p className={`text-3xl font-extrabold ${afterScore.overall >= 70 ? "text-[#00F2B3] dark:text-[#00F2B3]" : afterScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}>
               {afterScore.overall}
@@ -197,7 +197,7 @@ function FindingsDeltaSection({ newFindings, fixedFindings }: { newFindings: Fin
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">Findings Delta</h3>
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Findings Delta</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         {/* New findings */}
         <div className="rounded-xl border border-[#EA0022]/30 dark:border-[#EA0022]/40 bg-[#EA0022]/5 overflow-hidden">
@@ -319,7 +319,7 @@ function TableDiffView({ tableDiff }: { tableDiff: import("@/lib/diff-config").T
   if (tableDiff.headers.length === 0 && tableDiff.rows.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
       {changedRows.length < tableDiff.rows.length && (
         <div className="px-3 py-1.5 bg-muted/40 border-b border-border flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground">

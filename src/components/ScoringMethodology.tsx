@@ -16,7 +16,7 @@ export function ScoringMethodology({ onClose }: { onClose: () => void }) {
   return (
     <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold text-foreground">How Scoring Works</h4>
+        <h4 className="text-xs font-display font-semibold tracking-tight text-foreground">How Scoring Works</h4>
         <button onClick={onClose} aria-label="Close scoring methodology" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
       </div>
       <p className="text-[10px] text-muted-foreground leading-relaxed">

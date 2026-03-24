@@ -213,8 +213,8 @@ export function VpnSecuritySummary({ files }: Props) {
 
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">VPN Security Summary</h3>
+      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">VPN Security Summary</h3>
         <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           <div className="text-[11px] text-muted-foreground space-y-0.5">
@@ -231,8 +231,8 @@ export function VpnSecuritySummary({ files }: Props) {
   const weakPct = total > 0 ? (weakCount / total) * 100 : 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-      <h3 className="text-sm font-semibold text-foreground">VPN Security Summary</h3>
+    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">VPN Security Summary</h3>
 
       <p className="text-xs text-muted-foreground">
         {total} tunnel{total !== 1 ? "s" : ""} total · {strongCount} strong · {acceptableCount} acceptable · {weakCount} weak

@@ -329,7 +329,7 @@ ${reportSummary}`;
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="no-print fixed bottom-20 right-6 z-50 w-[380px] max-h-[600px] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+        <div className="no-print fixed bottom-20 right-6 z-50 w-[380px] max-h-[600px] rounded-2xl border border-border/70 bg-card shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#001A47] text-white">
             <div className="flex items-center gap-2">

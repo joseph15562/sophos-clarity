@@ -105,46 +105,56 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
   if (mappings.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-4">Evidence Collection</h3>
+    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card space-y-5">
+      <h3 className="text-base font-display font-bold tracking-tight text-foreground">Evidence Collection</h3>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {Array.from(controlsWithEvidence.values()).map(({ control, framework, key }) => {
           const items = evidenceByControl.get(key) ?? [];
           const isAdding = addingFor === key;
+          const borderAccent =
+            control.status === "pass" ? "border-l-[#00F2B3]" :
+            control.status === "fail" ? "border-l-[#EA0022]" :
+            control.status === "partial" ? "border-l-[#F29400]" :
+            "border-l-border";
 
           return (
             <div
               key={key}
-              className="rounded-lg border border-border bg-muted/10 p-3"
+              className={`rounded-xl border border-border/40 border-l-[3px] ${borderAccent} bg-muted/5 dark:bg-muted/5 p-4 transition-colors hover:bg-muted/15`}
             >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div>
-                  <span className="text-xs font-medium text-foreground">{control.controlName}</span>
-                  <span className={`text-[10px] ml-2 ${STATUS_STYLES[control.status]}`}>
-                    ({control.status})
+              <div className="flex items-center justify-between gap-3 mb-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-[13px] font-display font-semibold tracking-tight text-foreground truncate">{control.controlName}</span>
+                  <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border ${
+                    control.status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022] border-[#EA0022]/20" :
+                    control.status === "partial" ? "bg-[#F29400]/10 text-[#F29400] border-[#F29400]/20" :
+                    control.status === "pass" ? "bg-[#00F2B3]/10 text-[#00F2B3] border-[#00F2B3]/20" :
+                    "bg-muted text-muted-foreground border-border/40"
+                  }`}>
+                    {control.status}
                   </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">{framework}</span>
+                <span className="text-[10px] text-muted-foreground/50 font-medium shrink-0">{framework}</span>
               </div>
 
               {items.length > 0 && (
-                <ul className="space-y-1.5 mb-2">
+                <ul className="space-y-2 mb-3">
                   {items.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-[10px]">
-                      <div className="flex-1 min-w-0">
-                        {item.note && <p className="text-foreground">{item.note}</p>}
+                    <li key={i} className="flex items-start gap-2.5 text-[11px] rounded-lg bg-muted/15 dark:bg-muted/10 border border-border/30 px-3.5 py-2.5">
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        {item.note && <p className="text-foreground/90 leading-relaxed">{item.note}</p>}
                         {item.url && (
                           <a
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[#2006F7] dark:text-[#00EDFF] truncate block"
+                            className="text-brand-accent truncate block hover:underline underline-offset-2"
                           >
                             {item.url}
                           </a>
                         )}
-                        <span className="text-muted-foreground">
+                        <span className="text-muted-foreground/50 text-[10px]">
                           {new Date(item.addedAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -154,10 +164,10 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
                           const idx = evidence.indexOf(item);
                           if (idx >= 0) removeEvidence(idx);
                         }}
-                        className="p-1 rounded hover:bg-destructive/10 text-destructive shrink-0"
+                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive transition-colors shrink-0"
                         aria-label="Remove evidence"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </li>
                   ))}
@@ -165,28 +175,28 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
               )}
 
               {isAdding ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5 pt-1">
                   <textarea
                     value={noteInput}
                     onChange={(e) => setNoteInput(e.target.value)}
-                    placeholder="Note"
+                    placeholder="Describe the evidence…"
                     rows={2}
-                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs resize-none"
+                    className="w-full rounded-lg border border-border/60 bg-card px-3.5 py-2.5 text-[12px] resize-none focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30 focus:border-brand-accent/30 transition-colors placeholder:text-muted-foreground/40"
                   />
                   <input
                     type="url"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="URL"
-                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs"
+                    placeholder="Link to evidence (URL)"
+                    className="w-full rounded-lg border border-border/60 bg-card px-3.5 py-2.5 text-[12px] focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30 focus:border-brand-accent/30 transition-colors placeholder:text-muted-foreground/40"
                   />
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={addEvidence}
-                      className="px-2.5 py-1 rounded bg-[#2006F7] dark:bg-[#00EDFF] text-white text-xs font-medium"
+                      className="px-4 py-2 rounded-lg bg-[#2006F7] dark:bg-[#00EDFF] text-white dark:text-[#0a0a14] text-[11px] font-semibold shadow-sm hover:opacity-90 transition-opacity"
                     >
-                      Save
+                      Save Evidence
                     </button>
                     <button
                       type="button"
@@ -195,7 +205,7 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
                         setNoteInput("");
                         setUrlInput("");
                       }}
-                      className="px-2.5 py-1 rounded border border-border text-xs"
+                      className="px-4 py-2 rounded-lg border border-border/60 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors"
                     >
                       Cancel
                     </button>
@@ -205,9 +215,9 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
                 <button
                   type="button"
                   onClick={() => setAddingFor(key)}
-                  className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground/50 hover:text-[#2006F7] dark:hover:text-[#00EDFF] transition-colors"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3.5 w-3.5" />
                   Add Evidence
                 </button>
               )}

@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { loadHistory } from "@/lib/assessment-history";
@@ -262,7 +263,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
       <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="rounded-2xl border border-border bg-card/70 p-4 sm:p-5 space-y-4">
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#2006F7] dark:text-[#00EDFF]">Report identity</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Report identity</p>
             <h4 className="text-base font-display font-bold tracking-tight text-foreground">Set how the assessment appears in reports</h4>
             <p className="text-xs text-muted-foreground">These fields control the report header, attribution, and exported delivery details.</p>
           </div>
@@ -341,9 +342,9 @@ export function BrandingSetup({ branding, onChange }: Props) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#2006F7]/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] p-4 sm:p-5 space-y-4">
+        <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] p-4 sm:p-5 space-y-4">
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#2006F7] dark:text-[#00EDFF]">Customer context</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Customer context</p>
             <h4 className="text-base font-display font-bold tracking-tight text-foreground">Anchor the assessment to the right customer and scope</h4>
             <p className="text-xs text-muted-foreground">Customer, geography, and sector settings influence defaults and how findings are framed.</p>
           </div>
@@ -365,14 +366,15 @@ export function BrandingSetup({ branding, onChange }: Props) {
                     className="bg-background/80"
                   />
                   {(knownCustomers.length > 0 || centralTenants.length > 0) && (
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => setAddingNew(false)}
-                      className="flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0"
+                      className="gap-1 text-xs shrink-0"
                     >
                       <ChevronDown className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">List</span>
-                    </button>
+                    </Button>
                   )}
                 </div>
                 {addingNew && (knownCustomers.length > 0 || centralTenants.length > 0) && (
@@ -380,7 +382,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
                     <Plus className="h-2.5 w-2.5" /> Adding new customer.
                     <button
                       onClick={() => { setAddingNew(false); onChange({ ...branding, customerName: "" }); }}
-                      className="text-[#2006F7] dark:text-[#00EDFF] hover:underline ml-1"
+                      className="text-brand-accent hover:underline ml-1"
                     >
                       Back to list
                     </button>
@@ -389,11 +391,9 @@ export function BrandingSetup({ branding, onChange }: Props) {
               </>
             ) : (
               <div className="flex gap-2 max-w-md">
-                <select
-                  id="customerName"
-                  value={branding.customerName}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                <Select
+                  value={branding.customerName || undefined}
+                  onValueChange={(val) => {
                     if (val === "__new__") {
                       setAddingNew(true);
                       onChange({ ...branding, customerName: "" });
@@ -401,42 +401,36 @@ export function BrandingSetup({ branding, onChange }: Props) {
                       selectCustomer(val);
                     }
                   }}
-                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30 appearance-none cursor-pointer"
-                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}
                 >
-                  <option value="" disabled>Select customer…</option>
-                  {branding.customerName &&
-                    !centralTenants.some((t) => getEffectiveTenantDisplayName(t, branding.customerName) === branding.customerName || t.name === branding.customerName) &&
-                    !knownCustomers.includes(branding.customerName) && (
-                    <option key="__current__" value={branding.customerName}>
-                      {branding.customerName} (from connector)
-                    </option>
-                  )}
-                  {centralTenants.length > 0 && (
-                    <optgroup label="Sophos Central Tenants">
-                      {centralTenants
-                        .filter((t) => !knownCustomers.includes(getEffectiveTenantDisplayName(t, branding.customerName)))
-                        .map((t) => {
-                          const displayName = getEffectiveTenantDisplayName(t, branding.customerName) || t.name;
-                          return (
-                            <option key={`central-${t.id}`} value={displayName}>
-                              {displayName} {t.dataRegion ? `(${t.dataRegion})` : ""}
-                            </option>
-                          );
-                        })}
-                    </optgroup>
-                  )}
-                  {knownCustomers.length > 0 && (
-                    <optgroup label={centralTenants.length > 0 ? "Previous Assessments" : "Customers"}>
-                      {knownCustomers.map((name) => (
-                        <option key={name} value={name}>
-                          {name}{customerReportCounts[name] > 0 ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})` : ""}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  <option value="__new__">＋ Add New Customer</option>
-                </select>
+                  <SelectTrigger id="customerName" className="flex-1 bg-background/80">
+                    <SelectValue placeholder="Select customer…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branding.customerName &&
+                      !centralTenants.some((t) => getEffectiveTenantDisplayName(t, branding.customerName) === branding.customerName || t.name === branding.customerName) &&
+                      !knownCustomers.includes(branding.customerName) && (
+                      <SelectItem value={branding.customerName}>
+                        {branding.customerName} (from connector)
+                      </SelectItem>
+                    )}
+                    {centralTenants
+                      .filter((t) => !knownCustomers.includes(getEffectiveTenantDisplayName(t, branding.customerName)))
+                      .map((t) => {
+                        const displayName = getEffectiveTenantDisplayName(t, branding.customerName) || t.name;
+                        return (
+                          <SelectItem key={`central-${t.id}`} value={displayName}>
+                            {displayName} {t.dataRegion ? `(${t.dataRegion})` : ""}
+                          </SelectItem>
+                        );
+                      })}
+                    {knownCustomers.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}{customerReportCounts[name] > 0 ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})` : ""}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__new__">＋ Add New Customer</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -532,7 +526,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
       <div className="rounded-2xl border border-border bg-card/70 p-4 sm:p-5 space-y-4">
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#2006F7] dark:text-[#00EDFF]">Compliance alignment</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Compliance alignment</p>
           <h4 className="text-base font-display font-bold tracking-tight text-foreground">Tune scope and framework mapping</h4>
           <p className="text-xs text-muted-foreground">Select the frameworks that should shape findings, executive summaries, and compliance reporting.</p>
         </div>
@@ -582,7 +576,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
               return (
                 <label
                   key={fw}
-                  className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm cursor-pointer transition-all ${checked ? "border-[#2006F7]/30 bg-[#2006F7]/[0.06] dark:bg-[#00EDFF]/[0.08] shadow-sm" : "border-border bg-background/70 hover:bg-muted/50"}`}
+                  className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm cursor-pointer transition-all ${checked ? "border-brand-accent/30 bg-brand-accent/[0.06] dark:bg-[#00EDFF]/[0.08] shadow-sm" : "border-border bg-background/70 hover:bg-muted/50"}`}
                 >
                   <Checkbox
                     checked={checked}

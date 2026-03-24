@@ -327,7 +327,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
   const hasSimulation = active.size > 0;
 
   return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden" data-tour="score-simulator">
+    <section className="rounded-xl border border-border/70 bg-card overflow-hidden" data-tour="score-simulator">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
@@ -336,7 +336,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
           <TrendingUp className="h-4.5 w-4.5 text-[#5A00FF] dark:text-[#00EDFF]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground">Remediation Impact Simulator</h3>
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Remediation Impact Simulator</h3>
           <p className="text-[10px] text-muted-foreground">Select recommended actions to see projected score, grade, and coverage improvements</p>
         </div>
         {hasSimulation && (
@@ -356,7 +356,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
                 {relevantToggles.length} recommended actions based on your findings
               </p>
               <div className="flex items-center gap-2">
-                <button onClick={selectAll} className="text-[10px] text-[#2006F7] dark:text-[#00EDFF] hover:underline font-medium">Apply all</button>
+                <button onClick={selectAll} className="text-[10px] text-brand-accent hover:underline font-medium">Apply all</button>
                 <span className="text-muted-foreground text-[10px]">|</span>
                 <button onClick={clearAll} className="text-[10px] text-muted-foreground hover:underline font-medium">Reset</button>
               </div>

@@ -20,7 +20,7 @@ export function TeamSwitcher() {
     >
       <SelectTrigger className="h-8 w-auto min-w-[120px] max-w-[200px] rounded-lg text-xs font-medium gap-1.5 border-border/60 bg-card shrink-0">
         <div className="flex items-center gap-1.5 truncate">
-          <Users className="h-3.5 w-3.5 shrink-0 text-[#2006F7] dark:text-[#00EDFF]" />
+          <Users className="h-3.5 w-3.5 shrink-0 text-brand-accent" />
           <SelectValue />
         </div>
       </SelectTrigger>

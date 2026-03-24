@@ -82,7 +82,7 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
   const getDotColor = (d: IpWithGeo) => d.cves.length > 0 ? "#EA0022" : "#F29400";
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 rounded-lg border border-border bg-card p-4">
+    <div className="flex flex-col sm:flex-row gap-4 rounded-xl border border-border/70 bg-card p-4">
       <div className="flex-1 min-w-0">
         <div className="rounded-lg overflow-hidden border border-border" style={{ aspectRatio: "2/1" }}>
           <svg
@@ -166,7 +166,7 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
                       href={`https://nvd.nist.gov/vuln/detail/${c.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#2006F7] dark:text-[#00EDFF] hover:underline"
+                      className="text-brand-accent hover:underline"
                     >
                       {c.id}
                     </a>

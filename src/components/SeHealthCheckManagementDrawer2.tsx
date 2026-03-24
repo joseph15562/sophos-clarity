@@ -285,8 +285,8 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
       />
       <div className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-lg bg-background border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-card shrink-0">
-          <div className="h-9 w-9 rounded-lg bg-[#2006F7]/10 dark:bg-[#2006F7]/15 flex items-center justify-center shrink-0">
-            <PanelRight className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" aria-hidden />
+          <div className="h-9 w-9 rounded-lg bg-brand-accent/10 dark:bg-brand-accent/15 flex items-center justify-center shrink-0">
+            <PanelRight className="h-4 w-4 text-brand-accent" aria-hidden />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-display font-bold text-foreground truncate">Management</h2>
@@ -371,8 +371,8 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
 
               {/* Teams section */}
               <div className="space-y-4">
-                <h3 className="text-xs font-semibold flex items-center gap-1.5">
-                  <Users className="h-4 w-4 text-[#2006F7] dark:text-[#00EDFF]" />
+                <h3 className="text-xs font-display tracking-tight font-semibold flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-brand-accent" />
                   Teams
                 </h3>
 
@@ -382,13 +382,13 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                     {teams.map((team) => {
                       const expanded = expandedTeamId === team.id;
                       return (
-                        <div key={team.id} className="rounded-lg border border-border bg-card overflow-hidden">
+                        <div key={team.id} className="rounded-xl border border-border/70 bg-card overflow-hidden">
                           <button
                             type="button"
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
                             onClick={() => toggleExpand(team)}
                           >
-                            <Users className="h-3.5 w-3.5 shrink-0 text-[#2006F7] dark:text-[#00EDFF]" />
+                            <Users className="h-3.5 w-3.5 shrink-0 text-brand-accent" />
                             <span className="flex-1 text-sm font-medium truncate">{team.name}</span>
                             <Badge variant="secondary" className="text-[10px] shrink-0">
                               {team.role === "admin" ? "Admin" : "Member"}

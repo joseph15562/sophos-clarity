@@ -158,15 +158,15 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
   const hasResults = Object.keys(analysisResults).length > 0;
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <section className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <History className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
-          <h3 className="text-sm font-semibold text-foreground">Assessment History</h3>
+          <History className="h-5 w-5 text-brand-accent" />
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Assessment History</h3>
           {history.length > 0 && (
             <span className="text-[10px] text-muted-foreground">{history.length} snapshot{history.length !== 1 ? "s" : ""}</span>
           )}
-          <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded ${useCloud ? "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF]" : "bg-muted text-muted-foreground"}`}>
+          <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded ${useCloud ? "bg-brand-accent/10 text-brand-accent" : "bg-muted text-muted-foreground"}`}>
             {useCloud ? <Cloud className="h-2.5 w-2.5" /> : <HardDrive className="h-2.5 w-2.5" />}
             {useCloud ? "Cloud" : "Local"}
           </span>
@@ -179,7 +179,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
               className={`flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-lg transition-colors ${
                 justSaved
                   ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
-                  : "bg-[#2006F7]/10 text-[#2006F7] dark:text-[#00EDFF] hover:bg-[#2006F7]/20"
+                  : "bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/20"
               }`}
             >
               <Save className="h-3.5 w-3.5" />
@@ -211,7 +211,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
             const isOpen = expanded.has(snap.id);
 
             return (
-              <div key={snap.id} className="rounded-lg border border-border bg-card">
+              <div key={snap.id} className="rounded-xl border border-border/70 bg-card">
                 <button onClick={() => editingId !== snap.id && toggle(snap.id)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
                   {isOpen
                     ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
