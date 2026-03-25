@@ -67,15 +67,23 @@ function emptyConfig(orgId: string, tenantName: string | null): PortalConfig {
   };
 }
 
+function randomHex(len: number): string {
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function slugify(name: string): string {
-  return name
+  const base = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
+    .slice(0, 36);
+  const suffix = randomHex(4);
+  return `${base}-${suffix}`.slice(0, 48);
 }
 
-const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,46}[a-z0-9]$/;
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{10,46}[a-z0-9]$/;
 
 export function PortalConfigurator() {
   const { org } = useAuth();
@@ -99,14 +107,8 @@ export function PortalConfigurator() {
     setLoading(true);
 
     const [{ data: agents }, { data: configs }] = await Promise.all([
-      supabase
-        .from("agents")
-        .select("tenant_name")
-        .not("tenant_name", "is", null),
-      supabase
-        .from("portal_config")
-        .select("*")
-        .eq("org_id", orgId),
+      supabase.from("agents").select("tenant_name").not("tenant_name", "is", null),
+      supabase.from("portal_config").select("*").eq("org_id", orgId),
     ]);
 
     const tenantSet = new Set<string>();
@@ -145,9 +147,7 @@ export function PortalConfigurator() {
       setConfig(null);
       return;
     }
-    const existing = portalConfigs.find(
-      (pc) => pc.tenant_name === selectedTenant,
-    );
+    const existing = portalConfigs.find((pc) => pc.tenant_name === selectedTenant);
     setConfig(existing ?? emptyConfig(orgId, selectedTenant));
     setSlugError(null);
     setConfigExpanded(true);
@@ -174,29 +174,33 @@ export function PortalConfigurator() {
     };
   }
 
-  const update = useCallback(
-    (patch: Partial<PortalConfig>) => {
-      setConfig((prev) => (prev ? { ...prev, ...patch } : prev));
-    },
-    [],
-  );
+  const update = useCallback((patch: Partial<PortalConfig>) => {
+    setConfig((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
 
-  const handleSlugChange = useCallback((raw: string) => {
-    const slug = raw.toLowerCase().replace(/[^a-z0-9-]/g, "");
-    update({ slug });
-    if (slug && !SLUG_RE.test(slug)) {
-      setSlugError("3-48 chars, lowercase letters, numbers, and hyphens only");
-    } else {
-      setSlugError(null);
-    }
-  }, [update]);
+  const handleSlugChange = useCallback(
+    (raw: string) => {
+      const slug = raw.toLowerCase().replace(/[^a-z0-9-]/g, "");
+      update({ slug });
+      if (slug && !SLUG_RE.test(slug)) {
+        setSlugError("12-48 chars, lowercase letters, numbers, and hyphens only");
+      } else {
+        setSlugError(null);
+      }
+    },
+    [update],
+  );
 
   const handleLogoUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       if (file.size > 512_000) {
-        toast({ title: "Logo too large", description: "Maximum file size is 500 KB.", variant: "destructive" });
+        toast({
+          title: "Logo too large",
+          description: "Maximum file size is 500 KB.",
+          variant: "destructive",
+        });
         return;
       }
       const reader = new FileReader();
@@ -208,18 +212,15 @@ export function PortalConfigurator() {
     [update, toast],
   );
 
-  const toggleSection = useCallback(
-    (sectionId: SectionId) => {
-      setConfig((prev) => {
-        if (!prev) return prev;
-        const sections = prev.visible_sections.includes(sectionId)
-          ? prev.visible_sections.filter((s) => s !== sectionId)
-          : [...prev.visible_sections, sectionId];
-        return { ...prev, visible_sections: sections };
-      });
-    },
-    [],
-  );
+  const toggleSection = useCallback((sectionId: SectionId) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const sections = prev.visible_sections.includes(sectionId)
+        ? prev.visible_sections.filter((s) => s !== sectionId)
+        : [...prev.visible_sections, sectionId];
+      return { ...prev, visible_sections: sections };
+    });
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!config || !orgId) return;
@@ -248,10 +249,7 @@ export function PortalConfigurator() {
 
     let error;
     if (config.id) {
-      ({ error } = await supabase
-        .from("portal_config")
-        .update(row)
-        .eq("id", config.id));
+      ({ error } = await supabase.from("portal_config").update(row).eq("id", config.id));
     } else {
       const { data, error: insertErr } = await supabase
         .from("portal_config")
@@ -268,9 +266,7 @@ export function PortalConfigurator() {
       const isDupe = error.message?.includes("duplicate") || error.code === "23505";
       toast({
         title: isDupe ? "Slug already taken" : "Save failed",
-        description: isDupe
-          ? "Another portal is already using this slug."
-          : error.message,
+        description: isDupe ? "Another portal is already using this slug." : error.message,
         variant: "destructive",
       });
     } else {
@@ -279,15 +275,16 @@ export function PortalConfigurator() {
     }
   }, [config, orgId, toast, update, loadTenants]);
 
-  const portalUrl = config?.slug
-    ? `${window.location.origin}/portal/${config.slug}`
-    : "";
+  const portalUrl = config?.slug ? `${window.location.origin}/portal/${config.slug}` : "";
 
-  const copyLink = useCallback((url: string) => {
-    if (!url) return;
-    navigator.clipboard.writeText(url);
-    toast({ title: "Portal link copied to clipboard" });
-  }, [toast]);
+  const copyLink = useCallback(
+    (url: string) => {
+      if (!url) return;
+      navigator.clipboard.writeText(url);
+      toast({ title: "Portal link copied to clipboard" });
+    },
+    [toast],
+  );
 
   if (loading) {
     return (
@@ -302,7 +299,8 @@ export function PortalConfigurator() {
       <div className="rounded-lg border border-border bg-muted/30 p-6 text-center">
         <Building2 className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
         <p className="text-sm text-muted-foreground">
-          No tenants found. Connect a FireComply Connector agent with a tenant name to create tenant portals.
+          No tenants found. Connect a FireComply Connector agent with a tenant name to create tenant
+          portals.
         </p>
       </div>
     );
@@ -324,9 +322,7 @@ export function PortalConfigurator() {
         <div className="divide-y divide-border">
           {tenants.map((tenant) => {
             const pc = portalConfigs.find((c) => c.tenant_name === tenant);
-            const url = pc?.slug
-              ? `${window.location.origin}/portal/${pc.slug}`
-              : null;
+            const url = pc?.slug ? `${window.location.origin}/portal/${pc.slug}` : null;
             const isSelected = selectedTenant === tenant;
 
             return (
@@ -339,21 +335,18 @@ export function PortalConfigurator() {
               >
                 <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {tenant}
-                  </p>
+                  <p className="text-sm font-medium text-foreground truncate">{tenant}</p>
                   {url ? (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {url}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{url}</p>
                   ) : (
-                    <p className="text-xs text-muted-foreground italic">
-                      Not configured
-                    </p>
+                    <p className="text-xs text-muted-foreground italic">Not configured</p>
                   )}
                 </div>
                 {pc?.slug ? (
-                  <Badge variant="outline" className="shrink-0 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800">
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                  >
                     Live
                   </Badge>
                 ) : (
@@ -393,9 +386,7 @@ export function PortalConfigurator() {
             ) : (
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
-            <span className="text-sm font-medium text-foreground">
-              Configure: {selectedTenant}
-            </span>
+            <span className="text-sm font-medium text-foreground">Configure: {selectedTenant}</span>
             {config.id && (
               <Badge variant="secondary" className="ml-auto text-xs">
                 Saved
@@ -444,7 +435,9 @@ export function PortalConfigurator() {
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Show Branding</Label>
-                  <p className="text-xs text-muted-foreground">Display your logo and company name on the portal</p>
+                  <p className="text-xs text-muted-foreground">
+                    Display your logo and company name on the portal
+                  </p>
                 </div>
                 <Switch
                   checked={config.show_branding}
@@ -476,11 +469,7 @@ export function PortalConfigurator() {
                       <ImageIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                     {config.logo_url ? "Change" : "Upload"}
                   </Button>
                   <input
@@ -491,7 +480,9 @@ export function PortalConfigurator() {
                     onChange={handleLogoUpload}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">PNG, JPEG, SVG, or WebP. Max 500 KB.</p>
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPEG, SVG, or WebP. Max 500 KB.
+                </p>
               </div>
 
               {/* Company Name */}
