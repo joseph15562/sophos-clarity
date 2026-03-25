@@ -4,11 +4,6 @@ import { toPng } from "html-to-image";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
 import { GRADE_COLORS, gradeForScore, type Grade } from "@/lib/design-tokens";
 
-function gradeColor(grade: string): string {
-  const hex = GRADE_COLORS[grade as Grade] ?? GRADE_COLORS.C;
-  return `stroke-[${hex}] dark:stroke-[${hex}] fill-[${hex}] dark:fill-[${hex}]`;
-}
-
 interface ScoreTrendChartProps {
   orgId?: string;
   hostname?: string;
@@ -45,7 +40,9 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
         setLoading(false);
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [orgId, hostname, propData]);
 
   const categoryOptions = useMemo(() => {
@@ -58,22 +55,31 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
     return Array.from(seen).sort();
   }, [data]);
 
-  const getScore = useCallback((d: ScoreHistoryEntry): number => {
-    if (selectedCategory === CATEGORY_OVERALL) return d.overall_score;
-    const cat = (d.category_scores ?? []).find((c) => c.label === selectedCategory);
-    return cat?.score ?? d.overall_score;
-  }, [selectedCategory]);
+  const getScore = useCallback(
+    (d: ScoreHistoryEntry): number => {
+      if (selectedCategory === CATEGORY_OVERALL) return d.overall_score;
+      const cat = (d.category_scores ?? []).find((c) => c.label === selectedCategory);
+      return cat?.score ?? d.overall_score;
+    },
+    [selectedCategory],
+  );
 
-  const getGrade = useCallback((d: ScoreHistoryEntry): string => {
-    if (selectedCategory === CATEGORY_OVERALL) return d.overall_grade;
-    return gradeForScore(getScore(d));
-  }, [selectedCategory, getScore]);
+  const getGrade = useCallback(
+    (d: ScoreHistoryEntry): string => {
+      if (selectedCategory === CATEGORY_OVERALL) return d.overall_grade;
+      return gradeForScore(getScore(d));
+    },
+    [selectedCategory, getScore],
+  );
 
   const handleExportPng = useCallback(async () => {
     if (!chartRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(chartRef.current, { pixelRatio: 2, backgroundColor: "hsl(var(--card))" });
+      const dataUrl = await toPng(chartRef.current, {
+        pixelRatio: 2,
+        backgroundColor: "hsl(var(--card))",
+      });
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = `score-trend-${selectedCategory === CATEGORY_OVERALL ? "overall" : selectedCategory.replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.png`;
@@ -85,16 +91,16 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-4 animate-pulse">
+      <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] p-5 sm:p-6 animate-pulse">
         <div className="h-4 bg-muted/40 rounded w-1/3 mb-3" />
-        <div className="h-32 bg-muted/40 rounded" />
+        <div className="h-36 bg-muted/40 rounded-xl" />
       </div>
     );
   }
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 text-center space-y-2">
+      <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] p-5 sm:p-6 text-center space-y-2">
         <TrendingUp className="h-8 w-8 mx-auto text-muted-foreground/30" />
         <p className="text-xs text-muted-foreground">
           No historical data yet. Scores will be tracked as assessments are run.
@@ -104,8 +110,8 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
   }
 
   const w = 400;
-  const h = 140;
-  const pad = { top: 12, right: 12, bottom: 28, left: 36 };
+  const h = 180;
+  const pad = { top: 16, right: 16, bottom: 28, left: 36 };
   const chartW = w - pad.left - pad.right;
   const chartH = h - pad.top - pad.bottom;
 
@@ -128,143 +134,245 @@ export function ScoreTrendChart({ orgId, hostname, data: propData }: ScoreTrendC
   const diff = currentScore - initialScore;
 
   return (
-    <div ref={chartRef} className="rounded-xl border border-border/70 bg-card p-4 space-y-3">
+    <div
+      ref={chartRef}
+      className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-5 sm:p-6 space-y-4"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-          <TrendingUp className="h-3.5 w-3.5 text-primary" />
+        <p className="text-xs font-display font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+          <span className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center">
+            <TrendingUp className="h-3.5 w-3.5 text-white" />
+          </span>
           Score Trend
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="rounded-md border border-border bg-background px-2 py-1 text-[10px] text-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+            className="rounded-xl border border-brand-accent/15 bg-background/60 dark:bg-background/30 px-2.5 py-1.5 text-[10px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
           >
             <option value={CATEGORY_OVERALL}>Overall</option>
             {categoryOptions.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
             ))}
           </select>
           <button
             type="button"
             onClick={handleExportPng}
             disabled={exporting}
-            className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-[10px] text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            className="flex items-center gap-1 rounded-xl border border-brand-accent/15 bg-brand-accent/[0.04] px-2.5 py-1.5 text-[10px] font-medium text-foreground hover:bg-brand-accent/[0.08] transition-all disabled:opacity-50"
           >
             <Download className="h-3 w-3" />
             Export PNG
           </button>
         </div>
       </div>
-      <div className="flex items-center gap-3 text-[10px]">
+      <div className="flex items-center gap-4 text-xs">
         <span className="text-muted-foreground">
-          Initial: <span className="font-semibold text-foreground">{initialScore}</span> ({getGrade(initial)})
+          Initial: <span className="font-bold text-foreground">{initialScore}</span>{" "}
+          <span className="opacity-60">({getGrade(initial)})</span>
         </span>
-        <span className="text-muted-foreground">→</span>
+        <span className="text-muted-foreground/40">→</span>
         <span className="text-muted-foreground">
-          Current: <span className={`font-semibold ${diff >= 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}`}>
+          Current:{" "}
+          <span className={`font-bold ${diff >= 0 ? "text-[#00F2B3]" : "text-[#EA0022]"}`}>
             {currentScore}
-          </span> ({getGrade(current)})
-          {diff !== 0 && (
-            <span className={diff > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"}>
-              {" "}({diff > 0 ? "+" : ""}{diff})
-            </span>
-          )}
+          </span>{" "}
+          <span className="opacity-60">({getGrade(current)})</span>
         </span>
-      </div>
-
-      <div className="w-full" style={{ minHeight: 140 }}>
-        <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" className="overflow-visible">
-        {/* Y-axis labels */}
-        {[0, 25, 50, 75, 100].map((v) => {
-          const y = toY(v);
-          return (
-            <g key={v}>
-              <line x1={pad.left} y1={y} x2={pad.left + chartW} y2={y} stroke="currentColor" strokeOpacity={0.1} strokeDasharray="2 2" />
-              <text x={pad.left - 6} y={y + 4} textAnchor="end" className="text-[9px] fill-muted-foreground" fontSize={9}>
-                {v}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* X-axis labels (first, middle, last) */}
-        {data.length > 0 && (
-          <>
-            <text x={pad.left} y={h - 6} textAnchor="start" className="text-[9px] fill-muted-foreground" fontSize={9}>
-              {new Date(data[0].assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-            </text>
-            {data.length > 1 && (
-              <text x={pad.left + chartW / 2} y={h - 6} textAnchor="middle" className="text-[9px] fill-muted-foreground" fontSize={9}>
-                {new Date(data[Math.floor(data.length / 2)].assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-              </text>
-            )}
-            {data.length > 1 && (
-              <text x={pad.left + chartW} y={h - 6} textAnchor="end" className="text-[9px] fill-muted-foreground" fontSize={9}>
-                {new Date(data[data.length - 1].assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-              </text>
-            )}
-          </>
+        {diff !== 0 && (
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${diff > 0 ? "bg-[#00F2B3]/10 text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}
+          >
+            {diff > 0 ? "+" : ""}
+            {diff}
+          </span>
         )}
-
-        {/* Line */}
-        <path d={pathD} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* Dots with grade labels */}
-        {data.map((d, i) => {
-          const x = toX(i);
-          const y = toY(getScore(d));
-          const isHovered = hoveredIdx === i;
-          const colorClass = gradeColor(getGrade(d));
-
-          return (
-            <g key={d.id}>
-              <circle
-                cx={x}
-                cy={y}
-                r={isHovered ? 8 : 5}
-                className={`${colorClass} transition-all cursor-pointer`}
-                onMouseEnter={() => setHoveredIdx(i)}
-                onMouseLeave={() => setHoveredIdx(null)}
-              />
-              <text
-                x={x}
-                y={y + 4}
-                textAnchor="middle"
-                className="text-[8px] font-bold fill-background pointer-events-none"
-                fontSize={8}
-              >
-                {getGrade(d)}
-              </text>
-              {/* Tooltip */}
-              {isHovered && (
-                <g>
-                  <rect
-                    x={x - 42}
-                    y={y - 36}
-                    width={84}
-                    height={28}
-                    rx={4}
-                    className="fill-card stroke-border"
-                    strokeWidth={1}
-                  />
-                  <text x={x} y={y - 22} textAnchor="middle" className="text-[9px] fill-foreground" fontSize={9}>
-                    {new Date(d.assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  </text>
-                  <text x={x} y={y - 12} textAnchor="middle" className="text-[10px] font-bold fill-foreground" fontSize={10}>
-                    {getScore(d)} ({getGrade(d)})
-                  </text>
-                </g>
-              )}
-            </g>
-          );
-        })}
-      </svg>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-[9px] text-muted-foreground">
-        <span>● Score over time</span>
-        <span>Letter = grade at each assessment</span>
+      <div className="w-full" style={{ minHeight: h }}>
+        <svg
+          width="100%"
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="overflow-visible"
+        >
+          <defs>
+            <linearGradient id="trend-line-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#5A00FF" />
+              <stop offset="50%" stopColor="#2006F7" />
+              <stop offset="100%" stopColor="#00EDFF" />
+            </linearGradient>
+            <linearGradient id="trend-area-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#2006F7" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#2006F7" stopOpacity="0" />
+            </linearGradient>
+            <filter id="line-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Y-axis labels */}
+          {[0, 25, 50, 75, 100].map((v) => {
+            const y = toY(v);
+            return (
+              <g key={v}>
+                <line
+                  x1={pad.left}
+                  y1={y}
+                  x2={pad.left + chartW}
+                  y2={y}
+                  stroke="currentColor"
+                  strokeOpacity={0.07}
+                  strokeDasharray="3 3"
+                />
+                <text
+                  x={pad.left - 6}
+                  y={y + 4}
+                  textAnchor="end"
+                  className="fill-muted-foreground"
+                  fontSize={9}
+                >
+                  {v}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* X-axis labels — spread evenly, max 6 */}
+          {(() => {
+            const count = Math.min(data.length, 6);
+            const indices =
+              count <= 1
+                ? [0]
+                : Array.from({ length: count }, (_, i) =>
+                    Math.round((i * (data.length - 1)) / (count - 1)),
+                  );
+            return indices.map((idx) => (
+              <text
+                key={idx}
+                x={toX(idx)}
+                y={h - 4}
+                textAnchor="middle"
+                className="fill-muted-foreground"
+                fontSize={9}
+              >
+                {new Date(data[idx].assessed_at).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </text>
+            ));
+          })()}
+
+          {/* Area fill under line */}
+          <path
+            d={`${pathD} L ${toX(data.length - 1)} ${pad.top + chartH} L ${toX(0)} ${pad.top + chartH} Z`}
+            fill="url(#trend-area-grad)"
+          />
+
+          {/* Line with glow */}
+          <path
+            d={pathD}
+            fill="none"
+            stroke="url(#trend-line-grad)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#line-glow)"
+          />
+
+          {/* Dots */}
+          {data.map((d, i) => {
+            const x = toX(i);
+            const y = toY(getScore(d));
+            const isHovered = hoveredIdx === i;
+            const grade = getGrade(d);
+            const hex = GRADE_COLORS[grade as Grade] ?? GRADE_COLORS.C;
+
+            return (
+              <g key={d.id}>
+                {isHovered && <circle cx={x} cy={y} r={14} fill={hex} fillOpacity={0.15} />}
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={isHovered ? 7 : 4.5}
+                  fill={hex}
+                  stroke="#0a1628"
+                  strokeWidth={1.5}
+                  className="transition-all duration-150 cursor-pointer"
+                  onMouseEnter={() => setHoveredIdx(i)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                />
+                {isHovered && (
+                  <text
+                    x={x}
+                    y={y + 3.5}
+                    textAnchor="middle"
+                    className="font-bold fill-background pointer-events-none"
+                    fontSize={8}
+                  >
+                    {grade}
+                  </text>
+                )}
+                {/* Tooltip */}
+                {isHovered && (
+                  <g>
+                    <rect
+                      x={x - 50}
+                      y={y - 42}
+                      width={100}
+                      height={30}
+                      rx={6}
+                      fill="#0a1628"
+                      stroke={hex}
+                      strokeWidth={1}
+                      fillOpacity={0.95}
+                    />
+                    <text
+                      x={x}
+                      y={y - 27}
+                      textAnchor="middle"
+                      className="fill-muted-foreground"
+                      fontSize={9}
+                    >
+                      {new Date(d.assessed_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </text>
+                    <text
+                      x={x}
+                      y={y - 16}
+                      textAnchor="middle"
+                      className="font-bold"
+                      fontSize={11}
+                      fill={hex}
+                    >
+                      {getScore(d)} ({grade})
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4 text-[9px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="h-1 w-5 rounded-full bg-gradient-to-r from-[#5A00FF] to-[#00EDFF]" />
+          Score over time
+        </span>
+        <span>Hover for grade detail</span>
       </div>
     </div>
   );

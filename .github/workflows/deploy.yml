@@ -77,6 +77,7 @@ jobs:
           supabase functions deploy api-public --no-verify-jwt
           supabase functions deploy portal-data --no-verify-jwt
           supabase functions deploy send-scheduled-reports --no-verify-jwt
+          supabase functions deploy agent-nudge --no-verify-jwt
           supabase functions deploy regulatory-scanner --no-verify-jwt
           supabase functions deploy sophos-central --no-verify-jwt
         env:

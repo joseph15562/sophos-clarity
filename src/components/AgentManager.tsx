@@ -1,7 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Plug, Plus, Trash2, RefreshCw, Copy, Check, ChevronDown,
-  ChevronRight, Download, Server, Key, Play, Link2, Unlink, Loader2,
+  Plug,
+  Plus,
+  Trash2,
+  RefreshCw,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Server,
+  Key,
+  Play,
+  Link2,
+  Unlink,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +43,7 @@ const RETENTION_OPTIONS = [
 ];
 
 function StatusDot({ status, lastSeenAt }: { status: string; lastSeenAt: string | null }) {
-  const isRecent =
-    lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < 30 * 60 * 1000;
+  const isRecent = lastSeenAt && Date.now() - new Date(lastSeenAt).getTime() < 30 * 60 * 1000;
   const color =
     status === "online" && isRecent
       ? "bg-[#00F2B3]"
@@ -53,11 +65,9 @@ function FirmwareBadge({ version }: { version: string | null }) {
         ? "bg-[#009CFB]/10 text-[#009CFB]"
         : major >= 19
           ? "bg-[#F29400]/10 text-[#F29400]"
-          : "bg-muted text-muted-foreground";
+          : "bg-brand-accent/[0.06] text-muted-foreground";
   return (
-    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${color}`}>
-      {version}
-    </span>
+    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${color}`}>{version}</span>
   );
 }
 
@@ -123,7 +133,7 @@ function RegisterDialog({
             hardware_model: hardwareModel.trim() || undefined,
             firmware_version_override: fwOverride.trim() || undefined,
           }),
-        }
+        },
       );
 
       if (!res.ok) {
@@ -171,28 +181,51 @@ function RegisterDialog({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative bg-background border border-border rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-5 space-y-4">
+      <div className="relative rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.98),rgba(14,20,34,0.98))] shadow-[0_24px_60px_rgba(32,6,247,0.12)] w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-display tracking-tight font-bold text-foreground">Register Agent</h3>
-            <button onClick={handleClose} className="text-muted-foreground hover:text-foreground text-lg" aria-label="Close">&times;</button>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center shrink-0">
+                <Key className="h-3.5 w-3.5 text-white" />
+              </div>
+              <h3 className="text-sm font-display tracking-tight font-bold text-foreground">
+                Register Agent
+              </h3>
+            </div>
+            <button
+              onClick={handleClose}
+              className="text-muted-foreground hover:text-foreground text-lg"
+              aria-label="Close"
+            >
+              &times;
+            </button>
           </div>
 
           {generatedKey ? (
             <div className="space-y-3">
-              <div className="rounded-lg bg-[#00F2B3]/10 border border-[#00F2B3]/20 p-3">
-                <p className="text-[11px] font-semibold text-[#00F2B3] dark:text-[#00F2B3] mb-2">
+              <div className="rounded-xl bg-[#00F2B3]/[0.06] border border-[#00F2B3]/15 p-4">
+                <p className="text-[11px] font-display font-semibold text-[#00F2B3] dark:text-[#00F2B3] mb-2">
                   API Key Generated
                 </p>
-                <p className="text-[10px] text-muted-foreground mb-2">
-                  Paste this key into the FireComply Connector app during setup. This key will not be shown again.
+                <p className="text-[10px] text-muted-foreground/70 mb-2">
+                  Paste this key into the FireComply Connector app during setup. This key will not
+                  be shown again.
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-[10px] bg-background rounded px-2 py-1.5 border border-border font-mono break-all select-all">
+                  <code className="flex-1 text-[10px] bg-background/60 dark:bg-background/30 rounded-lg px-3 py-2 border border-brand-accent/15 font-mono break-all select-all">
                     {generatedKey}
                   </code>
-                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
-                    {copied ? <Check className="h-3.5 w-3.5 text-[#00F2B3]" /> : <Copy className="h-3.5 w-3.5" />}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleCopy}
+                  >
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-[#00F2B3]" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -203,38 +236,75 @@ function RegisterDialog({
           ) : (
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-medium text-foreground block mb-1">Agent Name *</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. HQ Primary Agent" className="h-8 text-[11px]" />
+                <label className="text-[10px] font-medium text-foreground block mb-1">
+                  Agent Name *
+                </label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. HQ Primary Agent"
+                  className="h-8 text-[11px]"
+                />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
-                  <label className="text-[10px] font-medium text-foreground block mb-1">Firewall IP / Hostname *</label>
-                  <Input value={firewallHost} onChange={(e) => setFirewallHost(e.target.value)} placeholder="192.168.1.1" className="h-8 text-[11px]" />
+                  <label className="text-[10px] font-medium text-foreground block mb-1">
+                    Firewall IP / Hostname *
+                  </label>
+                  <Input
+                    value={firewallHost}
+                    onChange={(e) => setFirewallHost(e.target.value)}
+                    placeholder="192.168.1.1"
+                    className="h-8 text-[11px]"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] font-medium text-foreground block mb-1">Port</label>
-                  <Input value={firewallPort} onChange={(e) => setFirewallPort(e.target.value)} placeholder="4444" className="h-8 text-[11px]" />
+                  <Input
+                    value={firewallPort}
+                    onChange={(e) => setFirewallPort(e.target.value)}
+                    placeholder="4444"
+                    className="h-8 text-[11px]"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] font-medium text-foreground block mb-1">Customer Name</label>
-                  <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Acme Corp" className="h-8 text-[11px]" />
+                  <label className="text-[10px] font-medium text-foreground block mb-1">
+                    Customer Name
+                  </label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Acme Corp"
+                    className="h-8 text-[11px]"
+                  />
                 </div>
                 <div>
-                  <label className="text-[10px] font-medium text-foreground block mb-1">Environment</label>
-                  <Input value={environment} onChange={(e) => setEnvironment(e.target.value)} placeholder="Production" className="h-8 text-[11px]" />
+                  <label className="text-[10px] font-medium text-foreground block mb-1">
+                    Environment
+                  </label>
+                  <Input
+                    value={environment}
+                    onChange={(e) => setEnvironment(e.target.value)}
+                    placeholder="Production"
+                    className="h-8 text-[11px]"
+                  />
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-medium text-foreground block mb-1">Schedule</label>
+                <label className="text-[10px] font-medium text-foreground block mb-1">
+                  Schedule
+                </label>
                 <select
                   value={schedule}
                   onChange={(e) => setSchedule(e.target.value)}
-                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-[11px] focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                  className="w-full rounded-xl border border-brand-accent/15 bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08] px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
                 >
                   {SCHEDULE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -243,29 +313,60 @@ function RegisterDialog({
                 onClick={() => setShowAdvanced(!showAdvanced)}
                 className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
               >
-                <ChevronRight className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`} />
+                <ChevronRight
+                  className={`h-3 w-3 transition-transform ${showAdvanced ? "rotate-90" : ""}`}
+                />
                 Advanced
               </button>
 
               {showAdvanced && (
-                <div className="space-y-2 pl-3 border-l-2 border-border">
+                <div className="space-y-2 pl-3 border-l-2 border-brand-accent/15">
                   <div>
-                    <label className="text-[10px] font-medium text-foreground block mb-1">Serial Number</label>
-                    <Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} placeholder="Optional" className="h-7 text-[10px]" />
+                    <label className="text-[10px] font-medium text-foreground block mb-1">
+                      Serial Number
+                    </label>
+                    <Input
+                      value={serialNumber}
+                      onChange={(e) => setSerialNumber(e.target.value)}
+                      placeholder="Optional"
+                      className="h-7 text-[10px]"
+                    />
                   </div>
                   <div>
-                    <label className="text-[10px] font-medium text-foreground block mb-1">Hardware Model</label>
-                    <Input value={hardwareModel} onChange={(e) => setHardwareModel(e.target.value)} placeholder="e.g. XGS 2300" className="h-7 text-[10px]" />
+                    <label className="text-[10px] font-medium text-foreground block mb-1">
+                      Hardware Model
+                    </label>
+                    <Input
+                      value={hardwareModel}
+                      onChange={(e) => setHardwareModel(e.target.value)}
+                      placeholder="e.g. XGS 2300"
+                      className="h-7 text-[10px]"
+                    />
                   </div>
                   <div>
-                    <label className="text-[10px] font-medium text-foreground block mb-1">Firmware Version Override</label>
-                    <Input value={fwOverride} onChange={(e) => setFwOverride(e.target.value)} placeholder="e.g. 2200.1" className="h-7 text-[10px]" />
+                    <label className="text-[10px] font-medium text-foreground block mb-1">
+                      Firmware Version Override
+                    </label>
+                    <Input
+                      value={fwOverride}
+                      onChange={(e) => setFwOverride(e.target.value)}
+                      placeholder="e.g. 2200.1"
+                      className="h-7 text-[10px]"
+                    />
                   </div>
                 </div>
               )}
 
-              <Button onClick={handleSubmit} disabled={loading || !name.trim() || !firewallHost.trim()} className="w-full text-[11px] h-8 gap-1.5">
-                {loading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Key className="h-3 w-3" />}
+              <Button
+                onClick={handleSubmit}
+                disabled={loading || !name.trim() || !firewallHost.trim()}
+                className="w-full text-[11px] h-8 gap-1.5"
+              >
+                {loading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Key className="h-3 w-3" />
+                )}
                 {loading ? "Registering…" : "Register Agent"}
               </Button>
             </div>
@@ -335,7 +436,10 @@ export function AgentManager() {
     if (!confirm("Delete this agent and all its submissions?")) return;
     try {
       const session = (await supabase.auth.getSession()).data.session;
-      if (!session) { toast.error("Not authenticated"); return; }
+      if (!session) {
+        toast.error("Not authenticated");
+        return;
+      }
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}`,
@@ -345,7 +449,7 @@ export function AgentManager() {
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-        }
+        },
       );
 
       if (!res.ok) {
@@ -364,7 +468,10 @@ export function AgentManager() {
   const handleRunNow = async (agentId: string) => {
     try {
       const session = (await supabase.auth.getSession()).data.session;
-      if (!session) { toast.error("Not authenticated"); return; }
+      if (!session) {
+        toast.error("Not authenticated");
+        return;
+      }
 
       setScanRequested((p) => ({ ...p, [agentId]: true }));
 
@@ -376,7 +483,7 @@ export function AgentManager() {
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-        }
+        },
       );
 
       if (!res.ok) {
@@ -428,29 +535,39 @@ export function AgentManager() {
   if (loading && !showRegister) {
     return (
       <div className="space-y-3 p-4 animate-pulse">
-        <div className="h-4 bg-muted/40 rounded w-3/4" />
-        <div className="h-20 bg-muted/40 rounded" />
+        <div className="h-4 bg-brand-accent/[0.06] dark:bg-brand-accent/[0.08] rounded-lg w-3/4" />
+        <div className="h-20 bg-brand-accent/[0.04] dark:bg-brand-accent/[0.06] rounded-xl" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4" data-tour="connector-section">
-      <RegisterDialog open={showRegister} onClose={() => setShowRegister(false)} onRegistered={loadAgents} />
+      <RegisterDialog
+        open={showRegister}
+        onClose={() => setShowRegister(false)}
+        onRegistered={loadAgents}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-foreground">Connector Agents</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {agents.length} agent{agents.length !== 1 ? "s" : ""} registered
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center shrink-0">
+            <Plug className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <p className="text-[13px] font-display font-semibold tracking-tight text-foreground">
+              Connector Agents
+            </p>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+              {agents.length} agent{agents.length !== 1 ? "s" : ""} registered
+            </p>
+          </div>
         </div>
         {canManageAgents && (
           <Button
-            variant="outline"
             size="sm"
             onClick={() => setShowRegister(true)}
-            className="gap-1.5 text-[10px] h-7"
+            className="gap-1.5 text-[10px] h-8 rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 border-0 shadow-sm"
             data-tour="connector-register"
           >
             <Plus className="h-3 w-3" />
@@ -461,12 +578,21 @@ export function AgentManager() {
 
       {/* Agent list grouped by tenant */}
       {agents.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-muted/20 py-6 text-center text-muted-foreground">
-          <Plug className="h-8 w-8 mx-auto mb-2 opacity-40" />
-          <p className="text-[11px]">No agents registered</p>
-          <p className="text-[9px] mt-1">Register an agent to start automated firewall monitoring</p>
+        <div className="rounded-[20px] border border-dashed border-brand-accent/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] py-8 text-center">
+          <Plug className="h-8 w-8 mx-auto mb-2 text-brand-accent/30" />
+          <p className="text-[11px] font-display font-semibold text-foreground">
+            No agents registered
+          </p>
+          <p className="text-[9px] text-muted-foreground/60 mt-1">
+            Register an agent to start automated firewall monitoring
+          </p>
           {canManageAgents && (
-            <Button variant="outline" size="sm" onClick={() => setShowRegister(true)} className="mt-3 gap-1.5 text-[10px] h-7" data-tour="connector-register">
+            <Button
+              size="sm"
+              onClick={() => setShowRegister(true)}
+              className="mt-3 gap-1.5 text-[10px] h-8 rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 border-0 shadow-sm"
+              data-tour="connector-register"
+            >
               <Plus className="h-3 w-3" /> Register Agent
             </Button>
           )}
@@ -482,40 +608,48 @@ export function AgentManager() {
               grouped.set(key, list);
             }
             const sorted = Array.from(grouped.entries()).sort(([a], [b]) =>
-              a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b)
+              a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b),
             );
 
             return sorted.map(([tenantName, tenantAgents]) => {
               const onlineCount = tenantAgents.filter(
-                (a) => a.status === "online" && a.last_seen_at && Date.now() - new Date(a.last_seen_at).getTime() < 30 * 60 * 1000
+                (a) =>
+                  a.status === "online" &&
+                  a.last_seen_at &&
+                  Date.now() - new Date(a.last_seen_at).getTime() < 30 * 60 * 1000,
               ).length;
               const isLinked = tenantName !== "Unassigned";
 
               return (
-                <div key={tenantName} className="rounded-xl border border-border/70 bg-card overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/20 border-b border-border">
-                    <Server className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="text-[10px] font-semibold text-foreground flex-1">{tenantName}</span>
+                <div
+                  key={tenantName}
+                  className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] overflow-hidden"
+                >
+                  <div className="flex items-center gap-2.5 px-4 py-3 bg-brand-accent/[0.03] dark:bg-brand-accent/[0.06] border-b border-brand-accent/10">
+                    <Server className="h-3.5 w-3.5 text-brand-accent/50 shrink-0" />
+                    <span className="text-[10px] font-display font-semibold text-foreground flex-1">
+                      {tenantName}
+                    </span>
                     {isLinked ? (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-medium flex items-center gap-1">
+                      <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold flex items-center gap-1">
                         <Link2 className="h-2.5 w-2.5" /> Central Linked
                       </span>
                     ) : (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium flex items-center gap-1">
+                      <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-brand-accent/[0.06] text-muted-foreground font-semibold flex items-center gap-1">
                         <Unlink className="h-2.5 w-2.5" /> Not Linked
                       </span>
                     )}
-                    <span className="text-[9px] text-muted-foreground">
+                    <span className="text-[9px] text-muted-foreground/60">
                       {tenantAgents.length} agent{tenantAgents.length !== 1 ? "s" : ""}
                     </span>
                     {onlineCount > 0 && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-medium">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold">
                         {onlineCount} online
                       </span>
                     )}
                   </div>
 
-                  <div className="divide-y divide-border/50">
+                  <div className="divide-y divide-brand-accent/[0.06]">
                     {tenantAgents.map((agent) => {
                       const isExp = expanded === agent.id;
                       const subs = submissions[agent.id] ?? [];
@@ -523,79 +657,153 @@ export function AgentManager() {
                         <div key={agent.id}>
                           <button
                             onClick={() => handleExpand(agent.id)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
+                            className="w-full px-4 py-3 text-left hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors space-y-1.5"
                           >
-                            <StatusDot status={agent.status} lastSeenAt={agent.last_seen_at} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[11px] font-medium text-foreground truncate">{agent.name}</p>
-                              <p className="text-[9px] text-muted-foreground truncate">
-                                {agent.customer_name} · {agent.firewall_host}:{agent.firewall_port}
-                              </p>
+                            <div className="flex items-center gap-2.5">
+                              <StatusDot status={agent.status} lastSeenAt={agent.last_seen_at} />
+                              <span className="text-[11px] font-display font-semibold text-foreground flex-1 min-w-0 truncate">
+                                {agent.name}
+                              </span>
+                              {agent.last_score != null && (
+                                <span className="text-[10px] font-bold text-foreground shrink-0">
+                                  {agent.last_score}
+                                  <span className="text-muted-foreground/60 font-normal">
+                                    /{agent.last_grade}
+                                  </span>
+                                </span>
+                              )}
+                              <span className="text-[9px] text-muted-foreground/50 whitespace-nowrap shrink-0">
+                                {timeAgo(agent.last_seen_at)}
+                              </span>
+                              <ChevronDown
+                                className={`h-3 w-3 text-muted-foreground/40 shrink-0 transition-transform ${isExp ? "rotate-180" : ""}`}
+                              />
                             </div>
-                            {agent.serial_number && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono shrink-0">
-                                {agent.serial_number}
+                            <div className="flex items-center gap-1.5 pl-[18px] flex-wrap">
+                              <span className="text-[9px] text-muted-foreground/70">
+                                {agent.customer_name}
                               </span>
-                            )}
-                            {agent.hardware_model && (
-                              <span className="text-[9px] text-muted-foreground shrink-0">{agent.hardware_model}</span>
-                            )}
-                            <FirmwareBadge version={agent.firmware_version} />
-                            {agent.last_score != null && (
-                              <span className="text-[10px] font-bold text-foreground">
-                                {agent.last_score}<span className="text-muted-foreground font-normal">/{agent.last_grade}</span>
+                              <span className="text-[9px] text-muted-foreground/40">·</span>
+                              <span className="text-[9px] text-muted-foreground/70 font-mono">
+                                {agent.firewall_host}:{agent.firewall_port}
                               </span>
-                            )}
-                            <span className="text-[9px] text-muted-foreground whitespace-nowrap">
-                              {timeAgo(agent.last_seen_at)}
-                            </span>
-                            <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExp ? "rotate-180" : ""}`} />
+                              {agent.serial_number && (
+                                <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-brand-accent/[0.06] text-muted-foreground/60 font-mono">
+                                  {agent.serial_number}
+                                </span>
+                              )}
+                              {agent.hardware_model && (
+                                <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-brand-accent/[0.06] text-muted-foreground/60">
+                                  {agent.hardware_model}
+                                </span>
+                              )}
+                              <FirmwareBadge version={agent.firmware_version} />
+                            </div>
                           </button>
 
                           {isExp && (
-                            <div className="border-t border-border px-3 pb-3 pt-2 space-y-3 bg-muted/5">
+                            <div className="border-t border-brand-accent/10 px-4 pb-4 pt-3 space-y-3 bg-brand-accent/[0.01] dark:bg-brand-accent/[0.03]">
                               {/* Agent details */}
                               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
-                                <div><span className="text-muted-foreground">Status:</span> <span className="font-medium text-foreground capitalize">{agent.status}</span></div>
-                                <div><span className="text-muted-foreground">Environment:</span> <span className="font-medium text-foreground">{agent.environment || "Unknown"}</span></div>
-                                <div><span className="text-muted-foreground">Schedule:</span> <span className="font-medium text-foreground">{SCHEDULE_OPTIONS.find(o => o.value === agent.schedule_cron)?.label ?? agent.schedule_cron}</span></div>
-                                <div><span className="text-muted-foreground">API Key:</span> <span className="font-mono text-foreground">{agent.api_key_prefix}…</span></div>
-                                <div><span className="text-muted-foreground">Serial:</span> <span className="font-mono text-foreground">{agent.serial_number || "—"}</span></div>
-                                <div><span className="text-muted-foreground">Model:</span> <span className="font-medium text-foreground">{agent.hardware_model || "—"}</span></div>
-                                <div><span className="text-muted-foreground">Tenant:</span> <span className="font-medium text-foreground">{agent.tenant_name || "Unassigned"}</span></div>
+                                <div>
+                                  <span className="text-muted-foreground">Status:</span>{" "}
+                                  <span className="font-medium text-foreground capitalize">
+                                    {agent.status}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Environment:</span>{" "}
+                                  <span className="font-medium text-foreground">
+                                    {agent.environment || "Unknown"}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Schedule:</span>{" "}
+                                  <span className="font-medium text-foreground">
+                                    {SCHEDULE_OPTIONS.find((o) => o.value === agent.schedule_cron)
+                                      ?.label ?? agent.schedule_cron}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">API Key:</span>{" "}
+                                  <span className="font-mono text-foreground">
+                                    {agent.api_key_prefix}…
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Serial:</span>{" "}
+                                  <span className="font-mono text-foreground">
+                                    {agent.serial_number || "—"}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Model:</span>{" "}
+                                  <span className="font-medium text-foreground">
+                                    {agent.hardware_model || "—"}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Tenant:</span>{" "}
+                                  <span className="font-medium text-foreground">
+                                    {agent.tenant_name || "Unassigned"}
+                                  </span>
+                                </div>
                                 <div>
                                   <span className="text-muted-foreground">Central:</span>{" "}
                                   {(agent as Record<string, unknown>).central_firewall_id ? (
-                                    <span className="font-medium text-[#00F2B3] dark:text-[#00F2B3]">Linked</span>
+                                    <span className="font-medium text-[#00F2B3] dark:text-[#00F2B3]">
+                                      Linked
+                                    </span>
                                   ) : (
-                                    <span className="font-medium text-muted-foreground">Not linked</span>
+                                    <span className="font-medium text-muted-foreground">
+                                      Not linked
+                                    </span>
                                   )}
                                 </div>
-                                {agent.error_message && <div className="col-span-2"><span className="text-[#EA0022]">Error:</span> <span className="text-[#EA0022]">{agent.error_message}</span></div>}
+                                {agent.error_message && (
+                                  <div className="col-span-2">
+                                    <span className="text-[#EA0022]">Error:</span>{" "}
+                                    <span className="text-[#EA0022]">{agent.error_message}</span>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Recent submissions */}
                               {subs.length > 0 && (
                                 <div>
-                                  <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Recent Submissions</p>
+                                  <p className="text-[9px] font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.08em] mb-1.5">
+                                    Recent Submissions
+                                  </p>
                                   <div className="space-y-1">
                                     {subs.map((sub) => (
-                                      <div key={sub.id} className="flex items-center gap-2 px-2 py-1 rounded bg-muted/30 text-[10px]">
-                                        <span className="font-bold text-foreground">{sub.overall_score}/{sub.overall_grade}</span>
+                                      <div
+                                        key={sub.id}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-accent/[0.03] dark:bg-brand-accent/[0.06] border border-brand-accent/[0.06] text-[10px]"
+                                      >
+                                        <span className="font-bold text-foreground">
+                                          {sub.overall_score}/{sub.overall_grade}
+                                        </span>
                                         <span className="text-muted-foreground flex-1 truncate">
                                           {(sub.finding_titles as string[]).length} findings
                                         </span>
                                         {sub.drift && (
                                           <span className="text-[9px]">
-                                            {(sub.drift as { new?: string[]; fixed?: string[] }).new?.length ? (
-                                              <span className="text-[#EA0022]">+{(sub.drift as { new: string[] }).new.length}</span>
+                                            {(sub.drift as { new?: string[]; fixed?: string[] }).new
+                                              ?.length ? (
+                                              <span className="text-[#EA0022]">
+                                                +{(sub.drift as { new: string[] }).new.length}
+                                              </span>
                                             ) : null}
                                             {(sub.drift as { fixed?: string[] }).fixed?.length ? (
-                                              <span className="text-[#00F2B3] ml-1">-{(sub.drift as { fixed: string[] }).fixed.length}</span>
+                                              <span className="text-[#00F2B3] ml-1">
+                                                -{(sub.drift as { fixed: string[] }).fixed.length}
+                                              </span>
                                             ) : null}
                                           </span>
                                         )}
-                                        <span className="text-muted-foreground whitespace-nowrap">{timeAgo(sub.created_at)}</span>
+                                        <span className="text-muted-foreground whitespace-nowrap">
+                                          {timeAgo(sub.created_at)}
+                                        </span>
                                       </div>
                                     ))}
                                   </div>
@@ -612,7 +820,15 @@ export function AgentManager() {
                                     onClick={() => handleRunNow(agent.id)}
                                     disabled={!!scanRequested[agent.id]}
                                   >
-                                    {scanRequested[agent.id] ? <><Loader2 className="h-3 w-3 animate-spin" /> Scanning…</> : <><Play className="h-3 w-3" /> Request Scan</>}
+                                    {scanRequested[agent.id] ? (
+                                      <>
+                                        <Loader2 className="h-3 w-3 animate-spin" /> Scanning…
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Play className="h-3 w-3" /> Request Scan
+                                      </>
+                                    )}
                                   </Button>
                                   <Button
                                     variant="outline"
@@ -640,19 +856,25 @@ export function AgentManager() {
 
       {/* Data retention */}
       {canManageTeam && agents.length > 0 && (
-        <div className="rounded-xl border border-border/70 bg-card p-3">
+        <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-medium text-foreground">Data Retention</p>
-              <p className="text-[9px] text-muted-foreground">How long agent submissions are kept</p>
+              <p className="text-[11px] font-display font-semibold text-foreground">
+                Data Retention
+              </p>
+              <p className="text-[9px] text-muted-foreground/60">
+                How long agent submissions are kept
+              </p>
             </div>
             <select
               value={retention}
               onChange={(e) => handleRetentionChange(Number(e.target.value))}
-              className="rounded border border-border bg-background px-2 py-1 text-[10px] focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+              className="rounded-xl border border-brand-accent/15 bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08] px-3 py-1.5 text-[10px] text-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
             >
               {RETENTION_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
           </div>
@@ -660,37 +882,74 @@ export function AgentManager() {
       )}
 
       {/* Download section */}
-      <div className="rounded-xl border border-border/70 bg-card p-3 space-y-2" data-tour="connector-download">
-        <p className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
-          <Download className="h-3 w-3" /> Download Agent
-        </p>
-        <p className="text-[9px] text-muted-foreground">
-          Download the FireComply Connector for your operating system. Install it on the same network as the firewall(s) you want to monitor.
+      <div
+        className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-4 space-y-3"
+        data-tour="connector-download"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#00F2B3] to-[#009CFB] flex items-center justify-center shrink-0">
+            <Download className="h-3 w-3 text-white" />
+          </div>
+          <p className="text-[11px] font-display font-semibold text-foreground">Download Agent</p>
+        </div>
+        <p className="text-[9px] text-muted-foreground/70">
+          Download the FireComply Connector for your operating system. Install it on the same
+          network as the firewall(s) you want to monitor.
           {agents.length === 0 && " Register an agent above to get your API key."}
         </p>
         <div className="flex gap-2">
-          <a href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector-Setup.exe" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1">
+          <a
+            href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector-Setup.exe"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[10px] h-7 gap-1 rounded-lg border-brand-accent/15 hover:bg-brand-accent/[0.06]"
+            >
               <Server className="h-3 w-3" /> Windows .exe
             </Button>
           </a>
-          <a href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector-mac.zip" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1">
+          <a
+            href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector-mac.zip"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[10px] h-7 gap-1 rounded-lg border-brand-accent/15 hover:bg-brand-accent/[0.06]"
+            >
               <Server className="h-3 w-3" /> macOS .zip
             </Button>
           </a>
-          <a href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector.AppImage" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1">
+          <a
+            href="https://github.com/joseph15562/sophos-firecomply/releases/latest/download/FireComply-Connector.AppImage"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[10px] h-7 gap-1 rounded-lg border-brand-accent/15 hover:bg-brand-accent/[0.06]"
+            >
               <Server className="h-3 w-3" /> Linux .AppImage
             </Button>
           </a>
         </div>
-        <p className="text-[8px] text-muted-foreground">
+        <p className="text-[8px] text-muted-foreground/50">
           Download the latest version.{" "}
-          <a href="https://github.com/joseph15562/sophos-firecomply/releases" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">View all releases</a>
+          <a
+            href="https://github.com/joseph15562/sophos-firecomply/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            View all releases
+          </a>
         </p>
       </div>
-
     </div>
   );
 }

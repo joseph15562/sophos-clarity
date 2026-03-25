@@ -28,6 +28,10 @@ verify_jwt = false
 verify_jwt = false
 # Mixed: cron (no JWT) + manual preview (JWT validated internally).
 
+[functions.agent-nudge]
+verify_jwt = false
+# Cron-triggered: nudges stale agents and marks offline after 48 h.
+
 [functions.regulatory-scanner]
 verify_jwt = false
 # Auth validated internally via getUser().

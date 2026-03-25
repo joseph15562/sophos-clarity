@@ -152,9 +152,9 @@ interface Props {
 function Skeleton() {
   return (
     <div className="space-y-3 p-4 animate-pulse">
-      <div className="h-4 bg-muted/40 rounded w-3/4" />
-      <div className="h-4 bg-muted/40 rounded w-1/2" />
-      <div className="h-32 bg-muted/40 rounded" />
+      <div className="h-4 bg-brand-accent/[0.06] dark:bg-brand-accent/[0.08] rounded-lg w-3/4" />
+      <div className="h-4 bg-brand-accent/[0.06] dark:bg-brand-accent/[0.08] rounded-lg w-1/2" />
+      <div className="h-32 bg-brand-accent/[0.04] dark:bg-brand-accent/[0.06] rounded-xl" />
     </div>
   );
 }
@@ -172,14 +172,14 @@ function SettingsSection({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-[24px] border border-border/70 bg-card/85 overflow-hidden shadow-sm">
+    <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] overflow-hidden shadow-[0_8px_30px_rgba(32,6,247,0.05)]">
       <button
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center gap-3.5 px-5 py-4 text-left transition-colors group ${open ? "bg-[#2006F7]/[0.03] dark:bg-brand-accent/[0.08]" : "hover:bg-muted/20"}`}
+        className={`w-full flex items-center gap-3.5 px-5 py-4 text-left transition-colors group ${open ? "bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08]" : "hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04]"}`}
       >
         {icon && (
           <div
-            className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${open ? "bg-brand-accent/10 dark:bg-[#00EDFF]/10" : "bg-muted/20 group-hover:bg-muted/30"}`}
+            className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${open ? "bg-brand-accent/10 dark:bg-[#00EDFF]/10" : "bg-brand-accent/[0.06] dark:bg-[#00EDFF]/[0.06] group-hover:bg-brand-accent/10 dark:group-hover:bg-[#00EDFF]/10"}`}
           >
             {icon}
           </div>
@@ -194,7 +194,11 @@ function SettingsSection({
           className={`h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-all duration-200 shrink-0 ${open ? "rotate-90 text-brand-accent" : ""}`}
         />
       </button>
-      {open && <div className="border-t border-border/40 bg-background/50">{children}</div>}
+      {open && (
+        <div className="border-t border-brand-accent/10 bg-background/40 dark:bg-background/20">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -643,7 +647,7 @@ export function ManagementDrawer({
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {currentTab === "dashboard" && (
-            <div className="space-y-0">
+            <div className="space-y-3 pt-3">
               <Suspense fallback={<Skeleton />}>
                 <div data-tour="tenant-dashboard">
                   <TenantDashboard />
@@ -651,7 +655,7 @@ export function ManagementDrawer({
               </Suspense>
               {!isGuest && org?.id && (
                 <Suspense fallback={<Skeleton />}>
-                  <div className="px-4 pb-2" data-tour="score-trend-chart">
+                  <div className="px-4" data-tour="score-trend-chart">
                     <ScoreTrendChart orgId={org.id} />
                   </div>
                 </Suspense>
@@ -688,7 +692,7 @@ export function ManagementDrawer({
                   />
                 </Suspense>
               ) : (
-                <div className="text-center py-12 space-y-2">
+                <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] text-center py-12 space-y-2">
                   <History className="h-8 w-8 mx-auto text-muted-foreground/30" />
                   <p className="text-xs text-muted-foreground">
                     Upload a firewall config to view assessment history.
@@ -706,7 +710,7 @@ export function ManagementDrawer({
               {onRerunSetup && <RerunSetupButton onClick={onRerunSetup} />}
 
               {/* Local Mode toggle */}
-              <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.05),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.12),rgba(0,242,179,0.04))] overflow-hidden shadow-card">
+              <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] overflow-hidden shadow-[0_8px_30px_rgba(32,6,247,0.05)]">
                 <div className="flex items-center justify-between px-5 py-4 gap-3">
                   <div className="flex items-center gap-3.5">
                     <div className="h-9 w-9 rounded-xl bg-brand-accent/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
