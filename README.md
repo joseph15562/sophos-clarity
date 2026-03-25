@@ -28,41 +28,51 @@ No firewall credentials. No API keys to Sophos Central required. No sensitive da
 ## Key Features
 
 ### Deterministic Findings Engine
+
 Rule-based analysis that surfaces real issues — duplicate/overlapping firewall rules, WAN rules without web filtering or IPS, logging gaps, broad source/destination patterns, MFA status, and SSL/TLS inspection coverage. Every finding is evidence-backed with extracted configuration facts.
 
 ### Inspection Posture Dashboard
+
 Visual coverage bars showing web filtering, IPS, and application control coverage across all WAN-facing rules. See at a glance where protection is strong and where gaps exist.
 
 ### Sophos Best Practice Checks
+
 70+ checks aligned to Sophos recommended configuration guidelines, covering network protection, web filtering, logging, admin security, VPN, wireless, and more. Results scored per-category with pass/partial/fail status and licence-aware scoping.
 
 ### Three Report Types
 
-| Report | Purpose |
-|--------|---------|
-| **Technical Report** | Per-firewall assessment: rules, NAT, interfaces, policies, security posture, and recommendations |
-| **Executive Brief** | Multi-firewall estate summary with risk matrix, cross-estate findings, and strategic recommendations |
+| Report                       | Purpose                                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Technical Report**         | Per-firewall assessment: rules, NAT, interfaces, policies, security posture, and recommendations       |
+| **Executive Brief**          | Multi-firewall estate summary with risk matrix, cross-estate findings, and strategic recommendations   |
 | **Compliance Evidence Pack** | Framework-mapped control evidence (Cyber Essentials, GDPR, PCI DSS, NIST, ISO 27001) with gap analysis |
 
 ### Compliance Heatmap
+
 Interactive matrix mapping extracted configuration facts to multiple compliance frameworks simultaneously. Each control is graded pass/partial/fail with evidence citations.
 
 ### Security Posture Scorecard
+
 Deterministic scorecard grading 9 categories — Web Filtering, Intrusion Prevention, Application Control, Authentication, Logging, Rule Hygiene, Admin Access, Anti-Malware, and Network Security — as Good / Needs Review / High Risk. Each score is evidence-based with explanations referencing extracted configuration facts. Visible in the Overview tab alongside the risk gauge.
 
 ### Risk Scoring and Estate Comparison
+
 Weighted risk scoring per firewall with category breakdowns. When multiple configs are loaded, compare firewalls side-by-side with finding deltas, score differences, and grade changes.
 
 ### Data Anonymisation
+
 Client-side replacement of IP addresses, customer names, and network identifiers with RFC 5737 TEST-NET ranges before any data reaches the AI model. Real values are restored locally in the final rendered report. Sensitive configuration data never leaves the browser.
 
 ### Multi-Format Export
+
 Word (.docx), PDF (styled HTML), PowerPoint (.pptx), and ZIP bundles with consistent formatting and branding.
 
 ### Demo Mode
+
 One-click "Try Demo Config" button on the landing page loads a synthetic Sophos XGS configuration export so evaluators and judges can explore the full analysis and reporting experience without needing their own firewall config.
 
 ### Fleet Management (SE Health Check)
+
 Purpose-built workflow for Sophos SEs to manage health check assessments at scale — upload requests, scheduled reports, saved baselines, config diff comparison, and assessment history tracking.
 
 ---
@@ -138,26 +148,26 @@ The app will be available at `http://localhost:8080`.
 
 #### Frontend (`.env`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_SUPABASE_URL` | Yes | Your Supabase project URL (`https://<project-ref>.supabase.co`) |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase anon/public key (JWT with role `anon`) |
-| `VITE_APP_VERSION` | No | Optional version string shown in reports |
+| Variable                        | Required | Description                                                     |
+| ------------------------------- | -------- | --------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`             | Yes      | Your Supabase project URL (`https://<project-ref>.supabase.co`) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes      | Supabase anon/public key (JWT with role `anon`)                 |
+| `VITE_APP_VERSION`              | No       | Optional version string shown in reports                        |
 
 #### Edge Functions (set via Supabase Dashboard → Edge Functions → Secrets)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SUPABASE_URL` | Yes | Same Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (admin access — never expose client-side) |
-| `SUPABASE_ANON_KEY` | Yes | Anon key for RLS-scoped queries |
-| `GEMINI_API_KEY` | Yes | Google Gemini API key |
-| `GEMINI_REPORT_MODEL` | No | Model for reports (default: `gemini-2.5-flash`) |
-| `GEMINI_CHAT_MODEL` | No | Model for chat (default: `gemini-2.5-flash-lite`) |
-| `RESEND_API_KEY` | No | Resend API key for email delivery |
-| `REPORT_FROM_EMAIL` | No | Sender address for emailed reports |
-| `ALLOWED_ORIGIN` | No | CORS origin restriction for edge functions |
-| `CENTRAL_ENCRYPTION_KEY` | No | Encryption key for Sophos Central integration |
+| Variable                    | Required | Description                                                |
+| --------------------------- | -------- | ---------------------------------------------------------- |
+| `SUPABASE_URL`              | Yes      | Same Supabase project URL                                  |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Service role key (admin access — never expose client-side) |
+| `SUPABASE_ANON_KEY`         | Yes      | Anon key for RLS-scoped queries                            |
+| `GEMINI_API_KEY`            | Yes      | Google Gemini API key                                      |
+| `GEMINI_REPORT_MODEL`       | No       | Model for reports (default: `gemini-2.5-flash`)            |
+| `GEMINI_CHAT_MODEL`         | No       | Model for chat (default: `gemini-2.5-flash-lite`)          |
+| `RESEND_API_KEY`            | No       | Resend API key for email delivery                          |
+| `REPORT_FROM_EMAIL`         | No       | Sender address for emailed reports                         |
+| `ALLOWED_ORIGIN`            | No       | CORS origin restriction for edge functions                 |
+| `CENTRAL_ENCRYPTION_KEY`    | No       | Encryption key for Sophos Central integration              |
 
 ### Commands
 
@@ -266,12 +276,33 @@ The entire flow from demo config to exported report takes under 2 minutes.
 
 **For an AI build competition, Sophos FireComply demonstrates:**
 
-1. **Real-world vertical AI** — not a generic chatbot wrapper, but a purpose-built tool solving a genuine MSP pain point with domain expertise
-2. **Deterministic + AI hybrid** — facts and evidence are computed deterministically; AI adds narrative, context, and recommendations on top — never the other way around
-3. **Privacy by architecture** — data anonymisation happens before AI processing, not after; the AI model never sees real customer network data
-4. **Production-grade UX** — streaming output, multi-format export, fleet management, compliance mapping, branded reports — not a prototype
-5. **Evidence-backed trust** — every finding and recommendation traces back to extracted configuration facts, not AI hallucination
-6. **Immediate value** — upload a config, get a professional assessment in minutes; zero configuration required beyond the initial setup
+1. **Privacy by architecture, not by policy** — customer IP addresses, hostnames, and identifiers are replaced with RFC 5737 documentation-range placeholders _before_ the AI model sees any data. Anonymisation is client-side and deterministic — the AI never receives real customer network information. This is a technical guarantee, not a policy promise.
+
+2. **Deterministic facts + AI narrative — never the reverse** — a rule-based findings engine (70+ checks, 21 compliance frameworks, weighted risk scoring across 6 categories) runs entirely in the browser with zero AI involvement. AI is used only to transform those evidence-backed facts into professional prose. Findings are never hallucinated because the AI is writing about data it didn't generate.
+
+3. **Real vertical AI, not a wrapper** — this is not a chatbot with a Sophos skin. It understands Sophos XGS configuration structure at the HTML-table level, extracts structured data from firmware exports, scores against Sophos-specific best practices, maps to real compliance frameworks (Cyber Essentials, PCI DSS, NIST 800-53, ISO 27001, HIPAA, NIS2, and 15 others), and produces reports that reference actual configuration evidence. The domain knowledge is in the code, not just the prompts.
+
+4. **Two complete product surfaces** — the MSP assessment workbench (`/`) and the SE Health Check (`/health-check`) share infrastructure but serve different personas with different workflows, different data models, and different Sophos Central integration patterns. This is product thinking, not feature creep.
+
+5. **Production-grade engineering** — streaming SSE with model fallback chains, AES-GCM encryption with HKDF key derivation, constant-time HMAC comparison, HTML injection prevention, CI/CD with lint + typecheck + 310 unit tests + Playwright E2E + npm audit + auto-deploy, and a desktop connector agent for automated config collection. This is not a prototype.
+
+6. **Immediate, measurable value** — upload a config, get a professional assessment in under 2 minutes. The time savings are real: what takes hours of manual review becomes a click-and-export workflow. The demo config lets judges experience this without needing their own firewall.
+
+---
+
+## What I Learned
+
+Building FireComply taught me more about AI engineering than any course or tutorial could have:
+
+**Prompt engineering is system design, not copywriting.** The biggest improvement in report quality didn't come from tweaking prompts — it came from changing _what the AI sees_. Sending anonymised, pre-structured JSON with deterministic findings already computed produced dramatically better output than sending raw config data and asking the model to "analyse" it. The lesson: the best prompt is a well-shaped input.
+
+**Streaming changes everything about UX.** The difference between waiting 60 seconds for a complete report and seeing the first paragraph appear in 2 seconds is the difference between "is it broken?" and "this is fast." Implementing SSE streaming end-to-end (Gemini API to edge function to browser with real-time de-anonymisation) was the single most impactful UX decision in the project.
+
+**Security and AI are in tension.** I wanted to use AI for everything, but the security audit I ran on my own code revealed that every data path to the AI model is a potential leak vector. Building the anonymisation pipeline forced me to think about what the AI _needs to see_ versus what it _currently sees_ — and the answer was always "less than you think." Client-side anonymisation before any API call became a core architectural principle, not an afterthought.
+
+**Building for two personas forces better architecture.** The SE Health Check and the MSP assessment started as the same codebase, but the moment I separated them into distinct workflows with distinct data models, the code quality of both improved. Shared infrastructure (auth, crypto, email, Central API) got cleaner because it had to serve two masters. Features that didn't serve either persona became obvious candidates for removal.
+
+**Kill features, don't add them.** The hardest engineering work in this project was removing code. I built and then cut an assessment scheduler, a change approval workflow, a peer benchmarking widget, and several other features that sounded good in isolation but made the product feel unfocused. Every removal made the remaining features better. The discipline to subtract is harder than the discipline to build.
 
 ---
 

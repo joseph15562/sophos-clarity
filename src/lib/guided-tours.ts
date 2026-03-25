@@ -259,16 +259,6 @@ export function startComplianceTour(cb?: TourCallbacks) {
           align: "center",
         },
       },
-      {
-        element: sel("custom-frameworks"),
-        popover: {
-          title: "Custom Frameworks",
-          description:
-            "Build your own compliance framework in Settings with custom controls and mappings.",
-          side: "top",
-          align: "center",
-        },
-      },
     ]);
     t.drive();
   }, 300);

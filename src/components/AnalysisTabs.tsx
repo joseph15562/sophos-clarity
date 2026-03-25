@@ -148,9 +148,6 @@ const CategoryTrends = lazy(() =>
 const FindingHeatmapTime = lazy(() =>
   import("@/components/FindingHeatmapTime").then((m) => ({ default: m.FindingHeatmapTime })),
 );
-const EncryptionOverview = lazy(() =>
-  import("@/components/EncryptionOverview").then((m) => ({ default: m.EncryptionOverview })),
-);
 const AdminExposureMap = lazy(() =>
   import("@/components/AdminExposureMap").then((m) => ({ default: m.AdminExposureMap })),
 );
@@ -208,9 +205,6 @@ const AssessmentPulse = lazy(() =>
 );
 const EvidenceCollection = lazy(() =>
   import("@/components/EvidenceCollection").then((m) => ({ default: m.EvidenceCollection })),
-);
-const AttestationWorkflow = lazy(() =>
-  import("@/components/AttestationWorkflow").then((m) => ({ default: m.AttestationWorkflow })),
 );
 const RegulatoryTracker = lazy(() =>
   import("@/components/RegulatoryTracker").then((m) => ({ default: m.RegulatoryTracker })),
@@ -831,23 +825,12 @@ export function AnalysisTabs({
                 </div>
               )}
 
-              {(w("encryption-overview") || w("admin-exposure-map")) && (
-                <div className="grid gap-6 lg:grid-cols-2">
-                  {w("encryption-overview") && (
-                    <SecurityWidgetShell>
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <EncryptionOverview analysisResults={analysisResult} files={files} />
-                      </Suspense>
-                    </SecurityWidgetShell>
-                  )}
-                  {w("admin-exposure-map") && (
-                    <SecurityWidgetShell>
-                      <Suspense fallback={<CardSkeleton />}>
-                        <AdminExposureMap analysisResults={analysisResult} files={files} />
-                      </Suspense>
-                    </SecurityWidgetShell>
-                  )}
-                </div>
+              {w("admin-exposure-map") && (
+                <SecurityWidgetShell>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <AdminExposureMap analysisResults={analysisResult} files={files} />
+                  </Suspense>
+                </SecurityWidgetShell>
               )}
 
               {(w("vpn-security-summary") || w("network-zone-map")) && (
@@ -1039,20 +1022,6 @@ export function AnalysisTabs({
                     <EvidenceCollection
                       analysisResults={analysisResult}
                       selectedFrameworks={branding.selectedFrameworks}
-                    />
-                  </Suspense>
-                </SecurityWidgetShell>
-              )}
-
-              {w("attestation-workflow") && (
-                <SecurityWidgetShell className="border-[#5A00FF]/10">
-                  <Suspense fallback={<CardSkeleton />}>
-                    <AttestationWorkflow
-                      frameworks={
-                        branding.selectedFrameworks.length > 0
-                          ? branding.selectedFrameworks
-                          : undefined
-                      }
                     />
                   </Suspense>
                 </SecurityWidgetShell>

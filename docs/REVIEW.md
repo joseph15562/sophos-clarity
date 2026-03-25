@@ -650,9 +650,9 @@
 | 7   | Documentation & Knowledge      | 5/10  | Good README but no CHANGELOG, no API docs, no ADRs, and stale generated types                                                                                 |
 | 8   | Developer Experience & Tooling | 7/10  | Clean setup, Prettier, Husky, CI/CD — but TypeScript strict mode off and no DB seed                                                                           |
 | 9   | Scalability & System Design    | 5/10  | Works at current scale but N+1 queries, no caching, no job queue, no observability                                                                            |
-| 10  | Product Vision & Strategic     | 7/10  | Clear value prop and polished core journey, but feature bloat and half-built features erode trust                                                             |
+| 10  | Product Vision & Strategic     | 8/10  | Clear value prop, polished core journey, half-built features removed — tighter product surface                                                                |
 
-**Weighted Overall Score: 60/100 → 64/100 (post-fix)**
+**Weighted Overall Score: 60/100 → 65/100 (post-fix)**
 
 Weights: Security (15%), Architecture (12%), Scalability (12%), Testing (12%), Performance (10%), Functionality (10%), Product (10%), DX (8%), UX (6%), Documentation (5%).
 
@@ -739,7 +739,7 @@ This is a competent solo-developer project that has outgrown its architecture. T
 
 2. **Write integration tests for every edge function route before adding any new feature.** The 8 edge functions are the security perimeter. They handle authentication, authorization, data access, email sending, and AI orchestration. Zero tests on this layer is the single biggest risk in the project. A comprehensive test suite here is worth more than 100 component tests.
 
-3. **Hire (or become) a product editor, not a product builder.** The codebase has 25+ features. Some are brilliant (compliance mapping, config diff, attack surface map). Some are unused (attestation workflow, custom framework builder, encryption overview). The discipline to remove 30% of features would make the remaining 70% dramatically better. Measure usage. Kill what is not used. Polish what is.
+3. **Hire (or become) a product editor, not a product builder.** ~~The codebase has 25+ features. Some are brilliant (compliance mapping, config diff, attack surface map). Some are unused (attestation workflow, custom framework builder, encryption overview). The discipline to remove 30% of features would make the remaining 70% dramatically better.~~ **Post-fix update:** Attestation workflow, custom framework builder, encryption overview, assessment scheduler, change approval, peer benchmarks, and compliance calendar have all been removed. Feature count is tighter. Continue measuring usage and cutting what is not used.
 
 4. **Add observability before adding scale.** You cannot scale what you cannot measure. Before pursuing Redis caching, background queues, or horizontal scaling, add structured logging, error tracking (Sentry), and latency monitoring to every edge function. This will tell you exactly where to invest engineering time — with data, not intuition.
 

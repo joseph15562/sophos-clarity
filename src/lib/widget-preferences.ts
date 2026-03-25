@@ -22,7 +22,6 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
   { id: "coverage-matrix", label: "Coverage Matrix", tab: "security", isDefault: false },
   { id: "category-trends", label: "Category Trends", tab: "security", isDefault: false },
   { id: "risk-distribution", label: "Risk Distribution", tab: "security", isDefault: false },
-  { id: "encryption-overview", label: "Encryption Overview", tab: "security", isDefault: false },
   { id: "admin-exposure-map", label: "Admin Exposure Map", tab: "security", isDefault: false },
   { id: "vpn-security-summary", label: "VPN Security Summary", tab: "security", isDefault: false },
   { id: "network-zone-map", label: "Network Zone Security", tab: "security", isDefault: false },
@@ -50,12 +49,6 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     isDefault: false,
   },
   { id: "evidence-collection", label: "Evidence Collection", tab: "compliance", isDefault: false },
-  {
-    id: "attestation-workflow",
-    label: "Attestation Workflow",
-    tab: "compliance",
-    isDefault: false,
-  },
   { id: "regulatory-tracker", label: "Regulatory Tracker", tab: "compliance", isDefault: false },
 
   // ── Optimisation ──

@@ -1530,75 +1530,6 @@ function MockWebhookPanel() {
   );
 }
 
-function MockCustomFrameworkPanel() {
-  const controls = [
-    {
-      id: "CF-01",
-      name: "Firewall Rule Hygiene",
-      desc: "No disabled or orphaned rules",
-      status: "pass",
-    },
-    {
-      id: "CF-02",
-      name: "Admin Access Policy",
-      desc: "No WAN admin services exposed",
-      status: "fail",
-    },
-    {
-      id: "CF-03",
-      name: "Encryption Standards",
-      desc: "TLS 1.2+ enforced on all VPNs",
-      status: "pass",
-    },
-    {
-      id: "CF-04",
-      name: "Logging Requirements",
-      desc: "All rule actions logged",
-      status: "partial",
-    },
-  ];
-  return (
-    <div className="space-y-2">
-      <div className="rounded-xl border border-border/70 bg-card p-3">
-        <div className="flex items-center gap-2 mb-2.5">
-          <BookOpen className="h-3.5 w-3.5 text-[#6B5BFF]" />
-          <p className="text-[10px] font-semibold text-foreground">
-            Internal Security Standard v2.1
-          </p>
-          <span className="text-[8px] px-1.5 py-0.5 rounded bg-[#6B5BFF]/10 text-[#6B5BFF] font-medium ml-auto">
-            Custom
-          </span>
-        </div>
-        <div className="space-y-1.5">
-          {controls.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center gap-2 text-[9px] rounded bg-muted/20 px-2 py-1.5"
-            >
-              <span className="font-mono text-muted-foreground w-10 shrink-0">{c.id}</span>
-              <div className="flex-1 min-w-0">
-                <span className="text-foreground font-medium">{c.name}</span>
-                <span className="text-muted-foreground ml-1">— {c.desc}</span>
-              </div>
-              <span
-                className={`font-bold ${
-                  c.status === "pass"
-                    ? "text-[#00F2B3]"
-                    : c.status === "fail"
-                      ? "text-[#EA0022]"
-                      : "text-[#F29400]"
-                }`}
-              >
-                {c.status === "pass" ? "\u2713" : c.status === "fail" ? "\u2717" : "~"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function SetupWizard({
   open,
   onClose,
@@ -3070,24 +3001,6 @@ export function SetupWizard({
                     </div>
                   </FeatureOverlay>
                 )}
-                {activeOverlay === "custom-frameworks" && (
-                  <FeatureOverlay
-                    title="Custom Compliance Frameworks"
-                    subtitle="Create your own compliance standards"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockCustomFrameworkPanel />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Build custom
-                        compliance frameworks with your own controls and assessment criteria. Define
-                        pass/fail conditions mapped to firewall configuration checks, then include
-                        them in compliance reports alongside standard frameworks like ISO 27001 and
-                        NIST CSF.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
                 {activeOverlay === "scheduled-reports" && (
                   <FeatureOverlay
                     title="Scheduled Reports"
@@ -3166,13 +3079,6 @@ export function SetupWizard({
                     desc="POST assessment data to your PSA, RMM, or ticketing system"
                     color="text-[#6B5BFF]"
                     onClick={() => setActiveOverlay("webhooks")}
-                  />
-                  <FeatureButton
-                    icon={<BookOpen className="h-4 w-4" />}
-                    title="Custom Frameworks"
-                    desc="Create your own compliance standards with custom controls"
-                    color="text-[#00F2B3]"
-                    onClick={() => setActiveOverlay("custom-frameworks")}
                   />
                 </div>
 

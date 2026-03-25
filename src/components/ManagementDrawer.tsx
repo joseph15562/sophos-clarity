@@ -82,11 +82,6 @@ const MfaEnrollment = lazy(() =>
 const PasskeyManager = lazy(() =>
   import("@/components/PasskeyManager").then((m) => ({ default: m.PasskeyManager })),
 );
-const CustomFrameworkBuilder = lazy(() =>
-  import("@/components/CustomFrameworkBuilder").then((m) => ({
-    default: m.CustomFrameworkBuilder,
-  })),
-);
 const PortalConfigurator = lazy(() =>
   import("@/components/PortalConfigurator").then((m) => ({ default: m.PortalConfigurator })),
 );
@@ -885,19 +880,6 @@ export function ManagementDrawer({
                   <div className="p-4">
                     <Suspense fallback={<Skeleton />}>
                       <ScheduledReportSettings />
-                    </Suspense>
-                  </div>
-                </SettingsSection>
-              </div>
-              <div data-tour="custom-frameworks">
-                <SettingsSection
-                  title="Custom Compliance Frameworks"
-                  icon={<ClipboardCheck className="h-3.5 w-3.5 text-[#5A00FF]" />}
-                  subtitle="Create and manage custom compliance frameworks"
-                >
-                  <div className="p-4">
-                    <Suspense fallback={<Skeleton />}>
-                      <CustomFrameworkBuilder />
                     </Suspense>
                   </div>
                 </SettingsSection>
