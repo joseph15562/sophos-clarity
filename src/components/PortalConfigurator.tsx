@@ -296,7 +296,7 @@ export function PortalConfigurator() {
 
   if (tenants.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-muted/30 p-6 text-center">
+      <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-6 text-center">
         <Building2 className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
         <p className="text-sm text-muted-foreground">
           No tenants found. Connect a FireComply Connector agent with a tenant name to create tenant
@@ -309,17 +309,19 @@ export function PortalConfigurator() {
   return (
     <div className="space-y-6">
       {/* Tenant Portal Summary */}
-      <div className="rounded-xl border border-border/70 bg-card">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">Tenant Portals</span>
+      <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] overflow-hidden">
+        <div className="px-5 py-4 border-b border-brand-accent/10">
+          <div className="flex items-center gap-2.5">
+            <Globe className="h-4 w-4 text-brand-accent/50" />
+            <span className="text-[13px] font-display font-semibold text-foreground">
+              Tenant Portals
+            </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[11px] text-muted-foreground/70 mt-1">
             Each tenant gets their own portal link showing only their firewalls' data.
           </p>
         </div>
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-brand-accent/[0.06]">
           {tenants.map((tenant) => {
             const pc = portalConfigs.find((c) => c.tenant_name === tenant);
             const url = pc?.slug ? `${window.location.origin}/portal/${pc.slug}` : null;
@@ -328,8 +330,8 @@ export function PortalConfigurator() {
             return (
               <div
                 key={tenant}
-                className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${
-                  isSelected ? "bg-muted/60" : ""
+                className={`flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors ${
+                  isSelected ? "bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08]" : ""
                 }`}
                 onClick={() => setSelectedTenant(tenant)}
               >
@@ -345,12 +347,15 @@ export function PortalConfigurator() {
                 {pc?.slug ? (
                   <Badge
                     variant="outline"
-                    className="shrink-0 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                    className="shrink-0 rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#00F2B3]/20"
                   >
                     Live
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="shrink-0 text-muted-foreground">
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 rounded-md text-muted-foreground bg-brand-accent/[0.04] border-brand-accent/10"
+                  >
                     Draft
                   </Badge>
                 )}
@@ -375,10 +380,10 @@ export function PortalConfigurator() {
 
       {/* Selected Tenant Configuration */}
       {config && (
-        <div className="rounded-xl border border-border/70 bg-card">
+        <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] overflow-hidden">
           <button
             type="button"
-            className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+            className="w-full flex items-center gap-2 px-5 py-3.5 text-left hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors"
             onClick={() => setConfigExpanded((v) => !v)}
           >
             {configExpanded ? (
@@ -398,16 +403,21 @@ export function PortalConfigurator() {
             <div className="px-4 pb-4 space-y-6 border-t border-border pt-4">
               {/* Portal Link */}
               {portalUrl && (
-                <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="rounded-xl border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">Portal Link</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs bg-background rounded px-2 py-1.5 border border-input truncate">
+                    <code className="flex-1 text-xs bg-background/60 dark:bg-background/30 rounded-lg px-3 py-2 border border-brand-accent/15 truncate font-mono">
                       {portalUrl}
                     </code>
-                    <Button variant="outline" size="sm" onClick={() => copyLink(portalUrl)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyLink(portalUrl)}
+                      className="rounded-xl border-brand-accent/15 hover:bg-brand-accent/[0.06] gap-1.5"
+                    >
                       <Copy className="h-3.5 w-3.5" />
                       Copy
                     </Button>
@@ -454,7 +464,7 @@ export function PortalConfigurator() {
                       <img
                         src={config.logo_url}
                         alt="Logo preview"
-                        className="h-12 w-auto max-w-[160px] object-contain rounded border border-border bg-white p-1"
+                        className="h-12 w-auto max-w-[160px] object-contain rounded-lg border border-brand-accent/15 bg-white p-1"
                       />
                       <button
                         type="button"
@@ -465,7 +475,7 @@ export function PortalConfigurator() {
                       </button>
                     </div>
                   ) : (
-                    <div className="h-12 w-24 rounded border border-dashed border-border flex items-center justify-center">
+                    <div className="h-12 w-24 rounded-lg border border-dashed border-brand-accent/20 flex items-center justify-center">
                       <ImageIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
                   )}
@@ -505,7 +515,7 @@ export function PortalConfigurator() {
                     id="portal-accent"
                     value={config.accent_color}
                     onChange={(e) => update({ accent_color: e.target.value })}
-                    className="h-9 w-12 rounded border border-input cursor-pointer bg-transparent p-0.5"
+                    className="h-9 w-12 rounded-lg border border-brand-accent/15 cursor-pointer bg-transparent p-0.5"
                   />
                   <Input
                     value={config.accent_color}
@@ -596,7 +606,11 @@ export function PortalConfigurator() {
 
               {/* Save */}
               <div className="flex justify-end pt-2">
-                <Button onClick={handleSave} disabled={saving || !!slugError}>
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || !!slugError}
+                  className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
+                >
                   {saving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (

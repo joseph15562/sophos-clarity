@@ -1,21 +1,50 @@
 import { useState, useEffect, useCallback } from "react";
-import { Clock, Search, ChevronDown, FileText, Shield, Users, Wifi, Upload, Trash2, Download } from "lucide-react";
+import {
+  Clock,
+  Search,
+  ChevronDown,
+  FileText,
+  Shield,
+  Users,
+  Wifi,
+  Upload,
+  Trash2,
+  Download,
+} from "lucide-react";
 import { loadAuditLog, type AuditEntry, type AuditAction } from "@/lib/audit";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; color: string }> = {
   "report.generated": { label: "Report generated", icon: FileText, color: "text-brand-accent" },
-  "report.saved": { label: "Report saved", icon: FileText, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
+  "report.saved": {
+    label: "Report saved",
+    icon: FileText,
+    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+  },
   "report.deleted": { label: "Report deleted", icon: Trash2, color: "text-[#EA0022]" },
   "config.uploaded": { label: "Config uploaded", icon: Upload, color: "text-brand-accent" },
-  "assessment.saved": { label: "Assessment saved", icon: Shield, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
+  "assessment.saved": {
+    label: "Assessment saved",
+    icon: Shield,
+    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+  },
   "central.linked": { label: "Central API linked", icon: Wifi, color: "text-[#005BC8]" },
   "central.synced": { label: "Central synced", icon: Wifi, color: "text-[#009CFB]" },
   "team.invited": { label: "Team member invited", icon: Users, color: "text-brand-accent" },
   "team.removed": { label: "Team member removed", icon: Users, color: "text-[#EA0022]" },
-  "auth.login": { label: "User signed in", icon: Shield, color: "text-[#00F2B3] dark:text-[#00F2B3]" },
+  "auth.login": {
+    label: "User signed in",
+    icon: Shield,
+    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+  },
   "auth.logout": { label: "User signed out", icon: Shield, color: "text-muted-foreground" },
 };
 
@@ -38,7 +67,9 @@ export function AuditLog() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showMore, setShowMore] = useState(false);
-  const [exportFrom, setExportFrom] = useState(() => toISODate(new Date(Date.now() - 30 * 86_400_000)));
+  const [exportFrom, setExportFrom] = useState(() =>
+    toISODate(new Date(Date.now() - 30 * 86_400_000)),
+  );
   const [exportTo, setExportTo] = useState(() => toISODate(new Date()));
   const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv");
   const [exporting, setExporting] = useState(false);
@@ -51,7 +82,9 @@ export function AuditLog() {
     setLoading(false);
   }, [org?.id, isGuest, showMore]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleExport = useCallback(async () => {
     if (!org?.id || isGuest) return;
@@ -112,37 +145,41 @@ export function AuditLog() {
 
   return (
     <div className="p-5 space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-xs min-w-[180px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search activity…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 rounded-xl border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
-          />
+      <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 max-w-xs min-w-[180px]">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-brand-accent/40" />
+            <input
+              type="text"
+              placeholder="Search activity…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 rounded-xl border border-brand-accent/15 bg-brand-accent/[0.04] text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
+            />
+          </div>
+          <span className="text-[10px] text-muted-foreground/70">
+            {filtered.length} event{filtered.length !== 1 ? "s" : ""}
+          </span>
         </div>
-        <span className="text-[10px] text-muted-foreground">{filtered.length} event{filtered.length !== 1 ? "s" : ""}</span>
 
         <div className="flex items-center gap-2 flex-wrap">
           <input
             type="date"
             value={exportFrom}
             onChange={(e) => setExportFrom(e.target.value)}
-            className="rounded-xl border border-input bg-card px-2.5 py-2 text-[11px] shadow-sm"
+            className="rounded-xl border border-brand-accent/15 bg-brand-accent/[0.04] px-2.5 py-2 text-[11px]"
             title="Export from date"
           />
-          <span className="text-[10px] text-muted-foreground">to</span>
+          <span className="text-[10px] text-muted-foreground/70">to</span>
           <input
             type="date"
             value={exportTo}
             onChange={(e) => setExportTo(e.target.value)}
-            className="rounded-xl border border-input bg-card px-2.5 py-2 text-[11px] shadow-sm"
+            className="rounded-xl border border-brand-accent/15 bg-brand-accent/[0.04] px-2.5 py-2 text-[11px]"
             title="Export to date"
           />
           <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as "csv" | "json")}>
-            <SelectTrigger className="w-[100px] h-8 text-xs">
+            <SelectTrigger className="w-[100px] h-8 text-xs rounded-xl border-brand-accent/15 bg-brand-accent/[0.04]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -150,7 +187,13 @@ export function AuditLog() {
               <SelectItem value="json">JSON</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" variant="outline" onClick={handleExport} disabled={exporting} className="gap-1.5 h-8 text-xs">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting}
+            className="gap-1.5 h-8 text-xs rounded-xl border-brand-accent/15 hover:bg-brand-accent/[0.06]"
+          >
             <Download className="h-3 w-3" />
             {exporting ? "Exporting…" : "Export"}
           </Button>
@@ -165,7 +208,7 @@ export function AuditLog() {
 
       {!loading && filtered.length === 0 && (
         <div className="text-center py-6 text-xs text-muted-foreground">
-          <Clock className="h-6 w-6 mx-auto mb-2 text-muted-foreground/40" />
+          <Clock className="h-6 w-6 mx-auto mb-2 text-brand-accent/30" />
           {entries.length === 0
             ? "No activity recorded yet. Actions like saving reports, uploading configs, and managing your team will appear here."
             : "No matching events found."}
@@ -184,17 +227,18 @@ export function AuditLog() {
             const detail = entry.resource_type
               ? `${entry.resource_type}${entry.resource_id ? ` · ${entry.resource_id}` : ""}`
               : "";
-            const metaStr = entry.metadata && Object.keys(entry.metadata).length > 0
-              ? Object.entries(entry.metadata)
-                  .filter(([, v]) => v !== undefined && v !== null && v !== "")
-                  .map(([k, v]) => `${k}: ${v}`)
-                  .join(" · ")
-              : "";
+            const metaStr =
+              entry.metadata && Object.keys(entry.metadata).length > 0
+                ? Object.entries(entry.metadata)
+                    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(" · ")
+                : "";
 
             return (
               <div
                 key={entry.id}
-                className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/30 transition-colors group"
+                className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors group"
               >
                 <div className={`mt-0.5 ${meta.color}`}>
                   <Icon className="h-3.5 w-3.5" />

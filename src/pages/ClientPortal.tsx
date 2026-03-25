@@ -29,13 +29,7 @@ import {
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -88,6 +82,109 @@ interface FrameworkCompliance {
   fail: number;
 }
 
+const FINDING_TO_CONTROL: [RegExp, string][] = [
+  [/SSL\/TLS inspection|DPI inactive/i, "dpiEngine"],
+  [/zone.*not covered.*SSL|source zone.*not covered/i, "sslInspection"],
+  [/missing web filtering/i, "webFilter"],
+  [/without IPS/i, "ips"],
+  [/without Application Control/i, "appControl"],
+  [/logging disabled/i, "logging"],
+  [/MFA|OTP/i, "mfa"],
+  [/broad source/i, "segmentation"],
+  [/"ANY" service/i, "segmentation"],
+  [/overlapping/i, "ruleHygiene"],
+  [/admin console|ssh accessible|snmp exposed|management service.*exposed/i, "adminAccess"],
+  [/DNAT|port forwarding|broad.*NAT/i, "natSecurity"],
+  [/virus scanning|sandboxing|zero-day/i, "antiMalware"],
+  [/web filter policy allows|high-risk categor/i, "webFilter"],
+  [/ips policy/i, "ips"],
+  [/vpn.*weak encryption|without.*perfect forward|pre-shared key/i, "vpnSecurity"],
+  [/dos|spoof|syn flood/i, "dosProtection"],
+  [/external.*log.*forwarding/i, "externalLogging"],
+  [/wireless.*no encryption|wireless.*weak encryption/i, "wirelessSecurity"],
+  [/snmp communit.*default|snmp communit.*weak/i, "snmpSecurity"],
+];
+
+const PORTAL_FRAMEWORKS: Record<string, string[]> = {
+  "Cyber Essentials": [
+    "dpiEngine",
+    "webFilter",
+    "mfa",
+    "segmentation",
+    "logging",
+    "adminAccess",
+    "antiMalware",
+    "vpnSecurity",
+    "wirelessSecurity",
+  ],
+  "NCSC Guidelines": [
+    "dpiEngine",
+    "webFilter",
+    "ips",
+    "logging",
+    "mfa",
+    "segmentation",
+    "sslInspection",
+    "ruleHygiene",
+    "adminAccess",
+    "antiMalware",
+    "vpnSecurity",
+    "dosProtection",
+    "externalLogging",
+    "wirelessSecurity",
+  ],
+  "ISO 27001": [
+    "dpiEngine",
+    "webFilter",
+    "ips",
+    "appControl",
+    "logging",
+    "mfa",
+    "segmentation",
+    "sslInspection",
+    "ruleHygiene",
+    "adminAccess",
+    "natSecurity",
+    "antiMalware",
+    "vpnSecurity",
+    "dosProtection",
+    "externalLogging",
+    "wirelessSecurity",
+    "snmpSecurity",
+  ],
+  GDPR: ["logging", "mfa", "segmentation", "sslInspection", "adminAccess", "externalLogging"],
+};
+
+function deriveComplianceFromFindings(
+  findingsList: Array<{ title: string; severity: string }>,
+): FrameworkCompliance[] {
+  const failedControls = new Set<string>();
+  const partialControls = new Set<string>();
+  for (const f of findingsList) {
+    for (const [re, controlKey] of FINDING_TO_CONTROL) {
+      if (re.test(f.title)) {
+        if (f.severity === "critical" || f.severity === "high") {
+          failedControls.add(controlKey);
+        } else {
+          partialControls.add(controlKey);
+        }
+      }
+    }
+  }
+
+  return Object.entries(PORTAL_FRAMEWORKS).map(([framework, controlKeys]) => {
+    let pass = 0;
+    let partial = 0;
+    let fail = 0;
+    for (const key of controlKeys) {
+      if (failedControls.has(key)) fail++;
+      else if (partialControls.has(key)) partial++;
+      else pass++;
+    }
+    return { framework, pass, partial, fail };
+  });
+}
+
 interface PortalBranding {
   logoUrl: string | null;
   companyName: string | null;
@@ -112,18 +209,11 @@ interface PortalFirewall {
   findingsRich?: PortalFindingRich[];
 }
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ── Gauge ──
 
-function arcPath(
-  cx: number,
-  cy: number,
-  r: number,
-  startDeg: number,
-  endDeg: number,
-): string {
+function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
   const rad = (d: number) => (d * Math.PI) / 180;
   const x1 = cx + r * Math.cos(rad(startDeg));
   const y1 = cy + r * Math.sin(rad(startDeg));
@@ -149,13 +239,12 @@ function ScoreGauge({
 }) {
   const cx = 110;
   const cy = 110;
-  const r = 42;
-  const strokeWidth = 6;
+  const r = 48;
+  const strokeWidth = 8;
   const filledEnd = scoreToAngle(score);
   const trackPath = arcPath(cx, cy, r, 150, 390);
   const filledPath = arcPath(cx, cy, r, 150, filledEnd);
-  const defaultColor =
-    score <= 40 ? "#EA0022" : score <= 75 ? "#F29400" : "#00F2B3";
+  const defaultColor = score <= 40 ? "#EA0022" : score <= 75 ? "#F29400" : "#00F2B3";
   const fillColor = accentColor && score > 75 ? accentColor : defaultColor;
 
   return (
@@ -164,40 +253,52 @@ function ScoreGauge({
         width={220}
         height={180}
         viewBox="0 0 220 180"
-        className="overflow-visible"
+        className="overflow-visible drop-shadow-lg"
       >
+        <defs>
+          <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={fillColor} />
+            <stop offset="100%" stopColor={fillColor} stopOpacity="0.6" />
+          </linearGradient>
+          <filter id="gaugeGlow">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         <path
           d={trackPath}
           fill="none"
-          stroke="rgb(229 231 235)"
+          stroke="currentColor"
+          className="text-border/30"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
         <path
           d={filledPath}
           fill="none"
-          stroke={fillColor}
+          stroke="url(#gaugeGrad)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
+          filter="url(#gaugeGlow)"
         />
         <text
           x={cx}
-          y={cy - 8}
+          y={cy - 10}
           textAnchor="middle"
           dominantBaseline="middle"
-          className={cn(
-            "text-2xl font-black",
-            GRADE_COLORS[grade] ?? GRADE_COLORS.C,
-          )}
+          className={cn("text-3xl font-black", GRADE_COLORS[grade] ?? GRADE_COLORS.C)}
         >
           {grade}
         </text>
         <text
           x={cx}
-          y={cy + 16}
+          y={cy + 18}
           textAnchor="middle"
           dominantBaseline="middle"
-          className="fill-muted-foreground text-sm font-medium"
+          className="fill-muted-foreground text-base font-bold tabular-nums"
         >
           {score}
         </text>
@@ -237,54 +338,54 @@ function PortalLoginForm({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sign In</CardTitle>
-        <CardDescription>
+    <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
+      <div className="mb-4">
+        <h2 className="text-lg font-display font-bold text-foreground">Sign In</h2>
+        <p className="text-xs text-muted-foreground/70 mt-0.5">
           Sign in to access your full security portal
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="portal-email">Email</Label>
-            <Input
-              id="portal-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="portal-password">Password</Label>
-            <Input
-              id="portal-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-          </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full"
-            style={accentColor ? { backgroundColor: accentColor } : undefined}
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <LogIn className="h-4 w-4" />
-            )}
-            {loading ? "Signing in..." : "Sign In"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </p>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="portal-email">Email</Label>
+          <Input
+            id="portal-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            className="rounded-xl border-brand-accent/15"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="portal-password">Password</Label>
+          <Input
+            id="portal-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            className="rounded-xl border-brand-accent/15"
+          />
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
+          style={
+            accentColor && accentColor !== "#2006F7"
+              ? { backgroundColor: accentColor, backgroundImage: "none" }
+              : undefined
+          }
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+          {loading ? "Signing in..." : "Sign In"}
+        </Button>
+      </form>
+    </div>
   );
 }
 
@@ -320,9 +421,7 @@ export default function ClientPortal() {
   const [orgId, setOrgId] = useState<string>("");
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [portalFirewalls, setPortalFirewalls] = useState<PortalFirewall[]>([]);
-  const [expandedFindingIds, setExpandedFindingIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [expandedFindingIds, setExpandedFindingIds] = useState<Set<string>>(() => new Set());
 
   // Auth state
   const [authUser, setAuthUser] = useState<{ email: string } | null>(null);
@@ -372,9 +471,7 @@ export default function ClientPortal() {
 
         if (!resp.ok) {
           const body = await resp.json().catch(() => ({}));
-          throw new Error(
-            (body as Record<string, string>).error ?? "Portal not found",
-          );
+          throw new Error((body as Record<string, string>).error ?? "Portal not found");
         }
 
         const data = await resp.json();
@@ -382,9 +479,11 @@ export default function ClientPortal() {
         setTenantName(data.tenantName ?? null);
         setCustomerName(data.tenantName ?? data.customerName ?? "Customer");
         setScoreHistory(data.scoreHistory ?? []);
-        setFindings(data.findings ?? []);
+        const portalFindings = data.findings ?? [];
+        setFindings(portalFindings);
         setBranding(data.branding ?? null);
         setPortalFirewalls(data.firewalls ?? []);
+        setFrameworks(deriveComplianceFromFindings(portalFindings));
         setVisibleSections(
           data.visibleSections ?? [
             "score",
@@ -431,30 +530,17 @@ export default function ClientPortal() {
           setVisibleSections(
             Array.isArray(config.visible_sections)
               ? config.visible_sections
-              : [
-                  "score",
-                  "history",
-                  "findings",
-                  "compliance",
-                  "reports",
-                  "feedback",
-                ],
+              : ["score", "history", "findings", "compliance", "reports", "feedback"],
           );
         }
       }
 
-      if (
-        scoreHistory.length === 0 &&
-        findings.length === 0 &&
-        frameworks.length === 0
-      ) {
+      if (scoreHistory.length === 0 && findings.length === 0 && frameworks.length === 0) {
         // Will be re-evaluated after state updates
       }
     } catch (err) {
       console.warn("[ClientPortal] load failed", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to load portal data.",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load portal data.");
     } finally {
       setLoading(false);
     }
@@ -538,20 +624,22 @@ export default function ClientPortal() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/20">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))]">
+        <span className="animate-spin h-6 w-6 border-2 border-brand-accent/30 border-t-[#5A00FF] rounded-full" />
       </div>
     );
   }
 
   if (error && scoreHistory.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-muted/20 px-4">
-        <h1 className="text-xl font-semibold text-foreground mb-2">
-          Client Portal
-        </h1>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))] px-4">
+        <h1 className="text-xl font-display font-bold text-foreground mb-2">Client Portal</h1>
         <p className="text-muted-foreground text-center">{error}</p>
-        <Button variant="outline" className="mt-4" onClick={loadData}>
+        <Button
+          variant="outline"
+          className="mt-4 rounded-xl border-brand-accent/15 hover:bg-brand-accent/[0.06]"
+          onClick={loadData}
+        >
           Retry
         </Button>
       </div>
@@ -567,14 +655,15 @@ export default function ClientPortal() {
   const showBranding = branding?.showBranding !== false;
 
   return (
-    <div className="min-h-screen bg-muted/20" style={accentStyle}>
+    <div
+      className="min-h-screen bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))]"
+      style={accentStyle}
+    >
       {/* Header */}
       <header
-        className="sticky top-0 z-40 border-b border-border bg-card"
+        className="sticky top-0 z-40 border-b border-brand-accent/10 bg-white/80 dark:bg-[#080d1c]/80 backdrop-blur-xl"
         style={
-          showBranding && branding?.logoUrl
-            ? { borderBottomColor: `${accentColor}40` }
-            : undefined
+          showBranding && branding?.logoUrl ? { borderBottomColor: `${accentColor}25` } : undefined
         }
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
@@ -586,25 +675,17 @@ export default function ClientPortal() {
                 className="h-10 w-auto max-w-[120px] object-contain"
               />
             ) : (
-              <div
-                className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: `${accentColor}15` }}
-              >
-                <span
-                  className="text-lg font-bold"
-                  style={{ color: accentColor }}
-                >
+              <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center shadow-[0_4px_16px_rgba(90,0,255,0.25)]">
+                <span className="text-lg font-bold text-white">
                   {customerName.charAt(0).toUpperCase()}
                 </span>
               </div>
             )}
             <div className="min-w-0">
               <h1 className="text-lg font-display font-bold text-foreground truncate">
-                {showBranding && branding?.companyName
-                  ? branding.companyName
-                  : customerName}
+                {showBranding && branding?.companyName ? branding.companyName : customerName}
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/70">
                 {tenantName
                   ? `${tenantName} — Security Assessment`
                   : showBranding && branding?.companyName
@@ -619,7 +700,7 @@ export default function ClientPortal() {
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="text-xs gap-1"
+                className="text-xs gap-1 rounded-xl hover:bg-brand-accent/[0.06]"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Sign Out
@@ -629,7 +710,7 @@ export default function ClientPortal() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowLogin(!showLogin)}
-                className="text-xs gap-1"
+                className="text-xs gap-1 rounded-xl hover:bg-brand-accent/[0.06]"
               >
                 <LogIn className="h-3.5 w-3.5" />
                 Sign In
@@ -638,9 +719,8 @@ export default function ClientPortal() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() =>
-                setTheme(resolvedTheme === "dark" ? "light" : "dark")
-              }
+              className="rounded-xl hover:bg-brand-accent/[0.06]"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               aria-label="Toggle theme"
             >
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -668,105 +748,104 @@ export default function ClientPortal() {
 
         {/* Welcome Message */}
         {showBranding && branding?.welcomeMessage && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <div
-                  className="shrink-0 h-8 w-8 rounded-lg flex items-center justify-center mt-0.5"
-                  style={{ backgroundColor: `${accentColor}15` }}
-                >
-                  <Info className="h-4 w-4" style={{ color: accentColor }} />
-                </div>
-                <p className="text-sm text-foreground leading-relaxed">
-                  {branding.welcomeMessage}
-                </p>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 h-9 w-9 rounded-xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center mt-0.5 shadow-[0_4px_16px_rgba(90,0,255,0.2)]">
+                <Info className="h-4 w-4 text-white" />
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-sm text-foreground leading-relaxed">{branding.welcomeMessage}</p>
+            </div>
+          </div>
         )}
 
         {/* Score Summary */}
         {sectionVisible("score") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Score Summary</CardTitle>
-              <CardDescription>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6 sm:p-8">
+            <div className="mb-4">
+              <h2 className="text-lg font-display font-bold text-foreground">Score Summary</h2>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
                 Your current security assessment score
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row items-center gap-8">
-                <ScoreGauge
-                  score={latest?.overall_score ?? 0}
-                  grade={latest?.overall_grade ?? "—"}
-                  accentColor={accentColor}
-                />
-                <div className="flex-1 text-center sm:text-left space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Latest assessment:{" "}
-                    {latest
-                      ? new Date(latest.assessed_at).toLocaleDateString(
-                          "en-GB",
-                          {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          },
-                        )
-                      : "—"}
-                  </p>
-                  {previous && latest && (
-                    <p className="text-sm">
-                      <span className="text-muted-foreground">
-                        vs previous:{" "}
-                      </span>
-                      <span
-                        className={cn(
-                          "font-medium",
-                          latest.overall_score > previous.overall_score
-                            ? "text-green-600 dark:text-green-400"
-                            : latest.overall_score < previous.overall_score
-                              ? "text-red-600 dark:text-red-400"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {latest.overall_score > previous.overall_score
-                          ? `+${latest.overall_score - previous.overall_score}`
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-8">
+              <ScoreGauge
+                score={latest?.overall_score ?? 0}
+                grade={latest?.overall_grade ?? "—"}
+                accentColor={accentColor}
+              />
+              <div className="flex-1 text-center sm:text-left space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Latest assessment:{" "}
+                  {latest
+                    ? new Date(latest.assessed_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })
+                    : "—"}
+                </p>
+                {previous && latest && (
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">vs previous: </span>
+                    <span
+                      className={cn(
+                        "font-semibold",
+                        latest.overall_score > previous.overall_score
+                          ? "text-[#00F2B3]"
                           : latest.overall_score < previous.overall_score
-                            ? latest.overall_score - previous.overall_score
-                            : "No change"}
-                      </span>
-                    </p>
-                  )}
-                </div>
+                            ? "text-[#EA0022]"
+                            : "text-muted-foreground",
+                      )}
+                    >
+                      {latest.overall_score > previous.overall_score
+                        ? `+${latest.overall_score - previous.overall_score}`
+                        : latest.overall_score < previous.overall_score
+                          ? latest.overall_score - previous.overall_score
+                          : "No change"}
+                    </span>
+                  </p>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Per-Firewall Breakdown */}
         {sectionVisible("score") && portalFirewalls.length > 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Firewall Overview</CardTitle>
-              <CardDescription>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] overflow-hidden">
+            <div className="px-6 pt-6 pb-4">
+              <h2 className="text-lg font-display font-bold text-foreground">Firewall Overview</h2>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
                 Individual firewall scores for {tenantName ?? customerName}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div className="px-6 pb-6">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Firewall</TableHead>
-                    <TableHead>Model</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead>Last Assessed</TableHead>
+                  <TableRow className="border-brand-accent/10 hover:bg-transparent">
+                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                      Firewall
+                    </TableHead>
+                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                      Model
+                    </TableHead>
+                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                      Score
+                    </TableHead>
+                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                      Grade
+                    </TableHead>
+                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                      Last Assessed
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {portalFirewalls.map((fw) => (
-                    <TableRow key={fw.agentId}>
+                    <TableRow
+                      key={fw.agentId}
+                      className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
+                    >
                       <TableCell>
                         <div>
                           <span className="font-medium text-foreground">{fw.label}</span>
@@ -780,14 +859,14 @@ export default function ClientPortal() {
                       <TableCell className="text-sm text-muted-foreground">
                         {fw.model ?? "—"}
                       </TableCell>
-                      <TableCell className="font-medium tabular-nums">
+                      <TableCell className="font-semibold tabular-nums">
                         {fw.score ?? "—"}
                       </TableCell>
                       <TableCell>
                         {fw.grade ? (
                           <span
                             className={cn(
-                              "font-bold",
+                              "font-bold text-base",
                               GRADE_COLORS[fw.grade] ?? GRADE_COLORS.C,
                             )}
                           >
@@ -810,20 +889,20 @@ export default function ClientPortal() {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Assessment History */}
         {sectionVisible("history") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Assessment History</CardTitle>
-              <CardDescription>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] overflow-hidden">
+            <div className="px-6 pt-6 pb-4">
+              <h2 className="text-lg font-display font-bold text-foreground">Assessment History</h2>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
                 Past assessments with score and finding count
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div className="px-6 pb-6">
               {historyReversed.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">
                   No assessment history yet.
@@ -831,70 +910,76 @@ export default function ClientPortal() {
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Grade</TableHead>
-                      <TableHead>Findings</TableHead>
+                    <TableRow className="border-brand-accent/10 hover:bg-transparent">
+                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                        Date
+                      </TableHead>
+                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                        Score
+                      </TableHead>
+                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                        Grade
+                      </TableHead>
+                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                        Findings
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {historyReversed.map((entry) => (
-                      <TableRow key={entry.id}>
+                      <TableRow
+                        key={entry.id}
+                        className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
+                      >
                         <TableCell>
-                          {new Date(entry.assessed_at).toLocaleDateString(
-                            "en-GB",
-                            {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            },
-                          )}
+                          {new Date(entry.assessed_at).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
                         </TableCell>
-                        <TableCell className="font-medium tabular-nums">
+                        <TableCell className="font-semibold tabular-nums">
                           {entry.overall_score}
                         </TableCell>
                         <TableCell>
                           <span
                             className={cn(
-                              "font-bold",
-                              GRADE_COLORS[entry.overall_grade] ??
-                                GRADE_COLORS.C,
+                              "font-bold text-base",
+                              GRADE_COLORS[entry.overall_grade] ?? GRADE_COLORS.C,
                             )}
                           >
                             {entry.overall_grade}
                           </span>
                         </TableCell>
-                        <TableCell>{entry.findings_count}</TableCell>
+                        <TableCell className="tabular-nums">{entry.findings_count}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Findings Summary */}
         {sectionVisible("findings") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Findings Summary</CardTitle>
-              <CardDescription>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] overflow-hidden">
+            <div className="px-6 pt-6 pb-4">
+              <h2 className="text-lg font-display font-bold text-foreground">Findings Summary</h2>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
                 Latest findings grouped by severity
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div className="px-6 pb-6">
               <div className="flex flex-wrap gap-2 mb-4">
-                {(
-                  ["critical", "high", "medium", "low", "info"] as Severity[]
-                ).map((s) => (
+                {(["critical", "high", "medium", "low", "info"] as Severity[]).map((s) => (
                   <Badge
                     key={s}
                     variant={severityFilter.has(s) ? "default" : "outline"}
                     className={cn(
-                      "cursor-pointer capitalize",
+                      "cursor-pointer capitalize rounded-lg",
                       severityFilter.has(s) && SEVERITY_COLORS[s],
+                      !severityFilter.has(s) && "border-brand-accent/15",
                     )}
                     onClick={() => toggleSeverity(s)}
                   >
@@ -903,9 +988,7 @@ export default function ClientPortal() {
                 ))}
               </div>
               {findings.length === 0 && !mergedRichFindings?.length ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  No findings data available.
-                </p>
+                <p className="text-sm text-muted-foreground py-4">No findings data available.</p>
               ) : mergedRichFindings && filteredRichFindings ? (
                 filteredRichFindings.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4">
@@ -914,25 +997,30 @@ export default function ClientPortal() {
                 ) : (
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="border-brand-accent/10 hover:bg-transparent">
                         <TableHead className="w-10" aria-hidden />
-                        <TableHead>Severity</TableHead>
-                        <TableHead>Finding</TableHead>
+                        <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                          Severity
+                        </TableHead>
+                        <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                          Finding
+                        </TableHead>
                         {portalFirewalls.length > 1 && (
-                          <TableHead>Firewall</TableHead>
+                          <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                            Firewall
+                          </TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredRichFindings.map((f) => {
                         const open = expandedFindingIds.has(f.rowKey);
-                        const colSpan =
-                          portalFirewalls.length > 1 ? 4 : 3;
+                        const colSpan = portalFirewalls.length > 1 ? 4 : 3;
                         return (
                           <Fragment key={f.rowKey}>
                             <TableRow
                               className={cn(
-                                "cursor-pointer transition-colors duration-200 hover:bg-muted/40",
+                                "cursor-pointer transition-colors duration-200 border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]",
                               )}
                               onClick={() => toggleFindingRow(f.rowKey)}
                               onKeyDown={(e) => {
@@ -957,26 +1045,20 @@ export default function ClientPortal() {
                                 <Badge
                                   className={cn(
                                     "capitalize",
-                                    SEVERITY_COLORS[f.severity] ??
-                                      SEVERITY_COLORS.info,
+                                    SEVERITY_COLORS[f.severity] ?? SEVERITY_COLORS.info,
                                   )}
                                 >
                                   {f.severity}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-sm text-foreground">
-                                {f.title}
-                              </TableCell>
+                              <TableCell className="text-sm text-foreground">{f.title}</TableCell>
                               {portalFirewalls.length > 1 && (
                                 <TableCell className="text-sm text-muted-foreground">
                                   {f.firewallLabel ?? "—"}
                                 </TableCell>
                               )}
                             </TableRow>
-                            <TableRow
-                              className="border-0 hover:bg-transparent"
-                              aria-hidden={!open}
-                            >
+                            <TableRow className="border-0 hover:bg-transparent" aria-hidden={!open}>
                               <TableCell colSpan={colSpan} className="p-0">
                                 <div
                                   className={cn(
@@ -986,15 +1068,13 @@ export default function ClientPortal() {
                                       : "max-h-0 opacity-0",
                                   )}
                                 >
-                                  <div className="rounded-md bg-muted/30 border border-border/60 p-3 mx-2 mb-2 space-y-3 text-sm transition-opacity duration-200">
+                                  <div className="rounded-xl bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] border border-brand-accent/10 p-4 mx-2 mb-2 space-y-3 text-sm transition-opacity duration-200">
                                     {f.section && (
                                       <div>
                                         <p className="text-xs text-muted-foreground mb-0.5">
                                           Section
                                         </p>
-                                        <p className="text-foreground">
-                                          {f.section}
-                                        </p>
+                                        <p className="text-foreground">{f.section}</p>
                                       </div>
                                     )}
                                     {f.detail && (
@@ -1032,9 +1112,7 @@ export default function ClientPortal() {
                                         <p className="text-xs text-muted-foreground mb-0.5">
                                           Confidence
                                         </p>
-                                        <p className="text-foreground capitalize">
-                                          {f.confidence}
-                                        </p>
+                                        <p className="text-foreground capitalize">{f.confidence}</p>
                                       </div>
                                     )}
                                   </div>
@@ -1048,9 +1126,7 @@ export default function ClientPortal() {
                   </Table>
                 )
               ) : findings.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  No findings data available.
-                </p>
+                <p className="text-sm text-muted-foreground py-4">No findings data available.</p>
               ) : filteredFindings.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4">
                   No findings match the selected filters.
@@ -1060,14 +1136,9 @@ export default function ClientPortal() {
                   {filteredFindings.map((f) => (
                     <li
                       key={f.id}
-                      className="flex items-center gap-2 py-2 border-b border-border last:border-0"
+                      className="flex items-center gap-2 py-2.5 border-b border-brand-accent/[0.06] last:border-0"
                     >
-                      <Badge
-                        className={cn(
-                          "shrink-0 capitalize",
-                          SEVERITY_COLORS[f.severity],
-                        )}
-                      >
+                      <Badge className={cn("shrink-0 capitalize", SEVERITY_COLORS[f.severity])}>
                         {f.severity}
                       </Badge>
                       <span className="text-sm text-foreground">{f.title}</span>
@@ -1075,179 +1146,179 @@ export default function ClientPortal() {
                   ))}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Compliance Status */}
         {sectionVisible("compliance") && frameworks.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Compliance Status</CardTitle>
-              <CardDescription>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-display font-bold text-foreground">Compliance Status</h2>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
                 Posture per selected framework
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {frameworks.map((fw) => (
-                  <div
-                    key={fw.framework}
-                    className="flex flex-wrap items-center gap-4"
-                  >
-                    <span className="font-medium text-foreground">
-                      {fw.framework}
-                    </span>
-                    <div className="flex gap-2">
-                      <Badge
-                        variant="outline"
-                        className="text-green-600 dark:text-green-400"
-                      >
-                        Pass: {fw.pass}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className="text-amber-600 dark:text-amber-400"
-                      >
-                        Partial: {fw.partial}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className="text-red-600 dark:text-red-400"
-                      >
-                        Fail: {fw.fail}
-                      </Badge>
-                    </div>
+              </p>
+            </div>
+            <div className="space-y-4">
+              {frameworks.map((fw) => (
+                <div
+                  key={fw.framework}
+                  className="flex flex-wrap items-center gap-4 rounded-xl bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] border border-brand-accent/[0.06] px-4 py-3"
+                >
+                  <span className="font-medium text-foreground">{fw.framework}</span>
+                  <div className="flex gap-2">
+                    <Badge
+                      variant="outline"
+                      className="rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#00F2B3]/20"
+                    >
+                      Pass: {fw.pass}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="rounded-md text-[#F8E300] bg-[#F8E300]/[0.08] border-[#F8E300]/20"
+                    >
+                      Partial: {fw.partial}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="rounded-md text-[#EA0022] bg-[#EA0022]/[0.08] border-[#EA0022]/20"
+                    >
+                      Fail: {fw.fail}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Report Downloads */}
         {sectionVisible("reports") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Report Downloads</CardTitle>
-              <CardDescription>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-display font-bold text-foreground">Report Downloads</h2>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
                 Download your assessment reports
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="outline" disabled>
-                  <Download className="h-4 w-4" />
-                  Download PDF
-                </Button>
-                <Button variant="outline" disabled>
-                  <FileText className="h-4 w-4" />
-                  Download Word
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                disabled
+                className="rounded-xl border-brand-accent/15 gap-1.5"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                disabled
+                className="rounded-xl border-brand-accent/15 gap-1.5"
+              >
+                <FileText className="h-4 w-4" />
+                Download Word
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* SLA Information */}
         {showBranding && branding?.slaInfo && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Service Level Agreement</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                {branding.slaInfo}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
+            <h2 className="text-lg font-display font-bold text-foreground mb-3">
+              Service Level Agreement
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+              {branding.slaInfo}
+            </p>
+          </div>
         )}
 
         {/* Feedback Section */}
         {sectionVisible("feedback") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Feedback</CardTitle>
-              <CardDescription>Rate your experience (1-5 stars)</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setFeedbackStars(n)}
-                    className="p-1 rounded hover:bg-muted transition-colors"
-                    aria-label={`${n} star${n > 1 ? "s" : ""}`}
-                  >
-                    <Star
-                      className={cn(
-                        "h-8 w-8 transition-colors",
-                        feedbackStars >= n
-                          ? "fill-amber-400 text-amber-400"
-                          : "text-muted-foreground",
-                      )}
-                    />
-                  </button>
-                ))}
-              </div>
-              <textarea
-                placeholder="Additional feedback (optional)"
-                value={feedbackText}
-                onChange={(e) => setFeedbackText(e.target.value)}
-                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-              <Button
-                onClick={handleFeedbackSubmit}
-                disabled={feedbackStars === 0}
-                style={accentColor !== "#2006F7" ? { backgroundColor: accentColor } : undefined}
-              >
-                <Send className="h-4 w-4" />
-                Submit Feedback
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-display font-bold text-foreground">Feedback</h2>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">
+                Rate your experience (1-5 stars)
+              </p>
+            </div>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setFeedbackStars(n)}
+                  className="p-1.5 rounded-xl hover:bg-brand-accent/[0.06] transition-colors"
+                  aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                >
+                  <Star
+                    className={cn(
+                      "h-8 w-8 transition-colors",
+                      feedbackStars >= n
+                        ? "fill-amber-400 text-amber-400 drop-shadow-[0_2px_8px_rgba(251,191,36,0.4)]"
+                        : "text-muted-foreground/30",
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
+            <textarea
+              placeholder="Additional feedback (optional)"
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              className="w-full min-h-[80px] rounded-xl border border-brand-accent/15 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
+            />
+            <Button
+              onClick={handleFeedbackSubmit}
+              disabled={feedbackStars === 0}
+              className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
+              style={
+                accentColor !== "#2006F7"
+                  ? { backgroundColor: accentColor, backgroundImage: "none" }
+                  : undefined
+              }
+            >
+              <Send className="h-4 w-4" />
+              Submit Feedback
+            </Button>
+          </div>
         )}
 
         {/* Contact Info */}
-        {showBranding &&
-          (branding?.contactEmail || branding?.contactPhone) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Your MSP</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-6">
-                  {branding.contactEmail && (
-                    <a
-                      href={`mailto:${branding.contactEmail}`}
-                      className="flex items-center gap-2 text-sm hover:underline"
-                      style={{ color: accentColor }}
-                    >
-                      <Mail className="h-4 w-4" />
-                      {branding.contactEmail}
-                    </a>
-                  )}
-                  {branding.contactPhone && (
-                    <a
-                      href={`tel:${branding.contactPhone}`}
-                      className="flex items-center gap-2 text-sm hover:underline"
-                      style={{ color: accentColor }}
-                    >
-                      <Phone className="h-4 w-4" />
-                      {branding.contactPhone}
-                    </a>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {showBranding && (branding?.contactEmail || branding?.contactPhone) && (
+          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
+            <h2 className="text-lg font-display font-bold text-foreground mb-4">
+              Contact Your MSP
+            </h2>
+            <div className="flex flex-wrap gap-6">
+              {branding.contactEmail && (
+                <a
+                  href={`mailto:${branding.contactEmail}`}
+                  className="flex items-center gap-2.5 text-sm font-medium text-brand-accent hover:underline rounded-xl bg-brand-accent/[0.04] px-4 py-2.5 border border-brand-accent/10 transition-colors hover:bg-brand-accent/[0.08]"
+                >
+                  <Mail className="h-4 w-4" />
+                  {branding.contactEmail}
+                </a>
+              )}
+              {branding.contactPhone && (
+                <a
+                  href={`tel:${branding.contactPhone}`}
+                  className="flex items-center gap-2.5 text-sm font-medium text-brand-accent hover:underline rounded-xl bg-brand-accent/[0.04] px-4 py-2.5 border border-brand-accent/10 transition-colors hover:bg-brand-accent/[0.08]"
+                >
+                  <Phone className="h-4 w-4" />
+                  {branding.contactPhone}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-          <p className="text-xs text-muted-foreground text-center">
+      <footer className="border-t border-brand-accent/10 bg-white/60 dark:bg-[#080d1c]/60 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5">
+          <p className="text-xs text-muted-foreground/60 text-center">
             {showBranding && branding?.footerText
               ? branding.footerText
               : "Powered by Sophos FireComply"}

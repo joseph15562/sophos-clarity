@@ -12,7 +12,9 @@ export function MfaEnrollment() {
   const [factorId, setFactorId] = useState<string | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
   const [enrolled, setEnrolled] = useState(false);
-  const [existingFactors, setExistingFactors] = useState<Array<{ id: string; friendly_name?: string }>>([]);
+  const [existingFactors, setExistingFactors] = useState<
+    Array<{ id: string; friendly_name?: string }>
+  >([]);
   const [loading, setLoading] = useState(false);
 
   const loadFactors = async () => {
@@ -21,7 +23,9 @@ export function MfaEnrollment() {
     setEnrolled((data?.totp?.length ?? 0) > 0);
   };
 
-  useState(() => { loadFactors(); });
+  useState(() => {
+    loadFactors();
+  });
 
   const startEnrollment = async () => {
     setEnrolling(true);
@@ -90,27 +94,42 @@ export function MfaEnrollment() {
     if (!confirm("Remove MFA? You'll no longer need a code to sign in.")) return;
     const { error } = await supabase.auth.mfa.unenroll({ factorId: id });
     if (error) toast.error(error.message);
-    else { toast.success("MFA removed"); loadFactors(); }
+    else {
+      toast.success("MFA removed");
+      loadFactors();
+    }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Shield className="h-4 w-4 text-[#2006F7]" />
-        <span className="text-xs font-semibold text-foreground">Two-Factor Authentication</span>
+      <div className="flex items-center gap-2.5">
+        <div className="h-5 w-5 rounded-md bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center">
+          <Shield className="h-3 w-3 text-white" />
+        </div>
+        <span className="text-xs font-display font-semibold text-foreground">
+          Two-Factor Authentication
+        </span>
       </div>
 
       {enrolled && !enrolling && (
         <div className="space-y-2">
           {existingFactors.map((f) => (
-            <div key={f.id} className="flex items-center justify-between rounded-xl border border-border/70 bg-card px-3 py-2">
+            <div
+              key={f.id}
+              className="flex items-center justify-between rounded-xl border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] px-3 py-2.5"
+            >
               <div className="flex items-center gap-2">
                 <Check className="h-3.5 w-3.5 text-[#00F2B3]" />
                 <span className="text-[11px] text-foreground font-medium">
                   {f.friendly_name ?? "Authenticator App"}
                 </span>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-[#EA0022]" onClick={() => unenroll(f.id)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-[#EA0022]"
+                onClick={() => unenroll(f.id)}
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -119,10 +138,17 @@ export function MfaEnrollment() {
       )}
 
       {!enrolling && !enrolled && (
-        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-4 text-center space-y-3">
-          <Key className="h-6 w-6 mx-auto text-muted-foreground/40" />
-          <p className="text-[11px] text-muted-foreground">Secure your account with an authenticator app</p>
-          <Button variant="outline" size="sm" onClick={startEnrollment} className="gap-1.5 text-[10px] h-7">
+        <div className="rounded-[20px] border border-dashed border-brand-accent/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] p-5 text-center space-y-3">
+          <Key className="h-6 w-6 mx-auto text-brand-accent/30" />
+          <p className="text-[11px] text-muted-foreground">
+            Secure your account with an authenticator app
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={startEnrollment}
+            className="gap-1.5 text-[10px] h-7 rounded-xl border-brand-accent/15 hover:bg-brand-accent/[0.06]"
+          >
             <Shield className="h-3 w-3" /> Set Up Authenticator
           </Button>
         </div>
@@ -134,16 +160,24 @@ export function MfaEnrollment() {
             Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
           </p>
           <div className="flex justify-center">
-            <img src={qrUri} alt="MFA QR Code" className="w-48 h-48 rounded-lg border border-border" />
+            <img
+              src={qrUri}
+              alt="MFA QR Code"
+              className="w-48 h-48 rounded-xl border border-brand-accent/15 shadow-[0_8px_30px_rgba(32,6,247,0.05)]"
+            />
           </div>
           {secret && (
             <div className="text-center">
               <p className="text-[9px] text-muted-foreground">Or enter manually:</p>
-              <code className="text-[10px] font-mono bg-muted px-2 py-1 rounded select-all">{secret}</code>
+              <code className="text-[10px] font-mono bg-background/60 dark:bg-background/30 px-3 py-1.5 rounded-lg border border-brand-accent/15 select-all">
+                {secret}
+              </code>
             </div>
           )}
           <div>
-            <label className="text-[10px] font-medium text-foreground block mb-1">Enter verification code</label>
+            <label className="text-[10px] font-medium text-foreground block mb-1">
+              Enter verification code
+            </label>
             <Input
               type="text"
               inputMode="numeric"
@@ -151,14 +185,25 @@ export function MfaEnrollment() {
               value={verifyCode}
               onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="000000"
-              className="h-8 text-center font-mono tracking-wider"
+              className="h-8 text-center font-mono tracking-wider rounded-xl border-brand-accent/15"
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={confirmEnrollment} disabled={loading || verifyCode.length !== 6} className="flex-1 text-[11px] h-8">
+            <Button
+              onClick={confirmEnrollment}
+              disabled={loading || verifyCode.length !== 6}
+              className="flex-1 text-[11px] h-8 rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90"
+            >
               {loading ? "Verifying…" : "Confirm"}
             </Button>
-            <Button variant="outline" onClick={() => { setEnrolling(false); setQrUri(null); }} className="text-[11px] h-8">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEnrolling(false);
+                setQrUri(null);
+              }}
+              className="text-[11px] h-8 rounded-xl border-brand-accent/15"
+            >
               Cancel
             </Button>
           </div>

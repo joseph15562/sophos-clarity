@@ -26,7 +26,9 @@ export function PasskeyManager() {
     setPasskeys(data ?? []);
   }, []);
 
-  useEffect(() => { loadPasskeys(); }, [loadPasskeys]);
+  useEffect(() => {
+    loadPasskeys();
+  }, [loadPasskeys]);
 
   const registerPasskey = async () => {
     setRegistering(true);
@@ -43,12 +45,14 @@ export function PasskeyManager() {
       // Get registration options from server
       const optionsRes = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/register-options`,
-        { method: "POST", headers: fnHeaders }
+        { method: "POST", headers: fnHeaders },
       );
 
       if (!optionsRes.ok) {
         const errBody = await optionsRes.text().catch(() => "");
-        throw new Error(`Registration options failed (${optionsRes.status}): ${errBody || optionsRes.statusText}`);
+        throw new Error(
+          `Registration options failed (${optionsRes.status}): ${errBody || optionsRes.statusText}`,
+        );
       }
       const options = await optionsRes.json();
 
@@ -61,10 +65,12 @@ export function PasskeyManager() {
             ...options.user,
             id: Uint8Array.from(atob(options.user.id), (c) => c.charCodeAt(0)),
           },
-          excludeCredentials: (options.excludeCredentials ?? []).map((c: Record<string, string>) => ({
-            ...c,
-            id: Uint8Array.from(atob(c.id), (ch) => ch.charCodeAt(0)),
-          })),
+          excludeCredentials: (options.excludeCredentials ?? []).map(
+            (c: Record<string, string>) => ({
+              ...c,
+              id: Uint8Array.from(atob(c.id), (ch) => ch.charCodeAt(0)),
+            }),
+          ),
         },
       });
 
@@ -85,18 +91,24 @@ export function PasskeyManager() {
               rawId: btoa(String.fromCharCode(...new Uint8Array(attestationResponse.rawId))),
               type: attestationResponse.type,
               response: {
-                attestationObject: btoa(String.fromCharCode(...new Uint8Array(response.attestationObject))),
-                clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(response.clientDataJSON))),
+                attestationObject: btoa(
+                  String.fromCharCode(...new Uint8Array(response.attestationObject)),
+                ),
+                clientDataJSON: btoa(
+                  String.fromCharCode(...new Uint8Array(response.clientDataJSON)),
+                ),
               },
             },
             name: newName.trim() || "Passkey",
           }),
-        }
+        },
       );
 
       if (!verifyRes.ok) {
         const verifyErr = await verifyRes.text().catch(() => "");
-        throw new Error(`Verification failed (${verifyRes.status}): ${verifyErr || verifyRes.statusText}`);
+        throw new Error(
+          `Verification failed (${verifyRes.status}): ${verifyErr || verifyRes.statusText}`,
+        );
       }
 
       toast.success("Passkey registered");
@@ -114,41 +126,61 @@ export function PasskeyManager() {
     if (!confirm("Remove this passkey?")) return;
     const { error } = await supabase.from("passkey_credentials").delete().eq("id", id);
     if (error) toast.error(error.message);
-    else { toast.success("Passkey removed"); loadPasskeys(); }
+    else {
+      toast.success("Passkey removed");
+      loadPasskeys();
+    }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />
-        <span className="text-xs font-semibold text-foreground">Passkeys</span>
+      <div className="flex items-center gap-2.5">
+        <div className="h-5 w-5 rounded-md bg-gradient-to-br from-[#6B5BFF] to-[#00EDFF] flex items-center justify-center">
+          <Fingerprint className="h-3 w-3 text-white" />
+        </div>
+        <span className="text-xs font-display font-semibold text-foreground">Passkeys</span>
       </div>
 
       {passkeys.length > 0 ? (
         <div className="space-y-2">
           {passkeys.map((pk) => (
-            <div key={pk.id} className="flex items-center justify-between rounded-xl border border-border/70 bg-card px-3 py-2">
+            <div
+              key={pk.id}
+              className="flex items-center justify-between rounded-xl border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] px-3 py-2.5"
+            >
               <div className="flex items-center gap-2 min-w-0">
                 {pk.device_type === "platform" ? (
-                  <Smartphone className="h-3.5 w-3.5 text-[#6B5BFF] shrink-0" />
+                  <Smartphone className="h-3.5 w-3.5 text-brand-accent shrink-0" />
                 ) : (
-                  <Key className="h-3.5 w-3.5 text-[#6B5BFF] shrink-0" />
+                  <Key className="h-3.5 w-3.5 text-brand-accent shrink-0" />
                 )}
                 <div className="min-w-0">
                   <p className="text-[11px] font-medium text-foreground truncate">{pk.name}</p>
                   <p className="text-[9px] text-muted-foreground">
-                    Added {new Date(pk.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    Added{" "}
+                    {new Date(pk.created_at).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-[#EA0022]" onClick={() => deletePasskey(pk.id)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-[#EA0022]"
+                onClick={() => deletePasskey(pk.id)}
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-[10px] text-muted-foreground">No passkeys registered. Add one for passwordless sign-in.</p>
+        <p className="text-[10px] text-muted-foreground">
+          No passkeys registered. Add one for passwordless sign-in.
+        </p>
       )}
 
       <div className="space-y-2">
@@ -156,9 +188,15 @@ export function PasskeyManager() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Passkey name (e.g. MacBook Pro Touch ID)"
-          className="h-8 text-[11px]"
+          className="h-8 text-[11px] rounded-xl border-brand-accent/15"
         />
-        <Button variant="outline" size="sm" onClick={registerPasskey} disabled={registering} className="gap-1.5 text-[10px] h-7 w-full">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={registerPasskey}
+          disabled={registering}
+          className="gap-1.5 text-[10px] h-8 w-full rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white border-0 hover:opacity-90"
+        >
           <Plus className="h-3 w-3" />
           {registering ? "Registering…" : "Register New Passkey"}
         </Button>
