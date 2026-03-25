@@ -2,7 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Calendar, Mail, Plus, Trash2, Send, Clock, ToggleLeft, ToggleRight, Eye } from "lucide-react";
+import {
+  Calendar,
+  Mail,
+  Plus,
+  Trash2,
+  Send,
+  Clock,
+  ToggleLeft,
+  ToggleRight,
+  Eye,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +24,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ScheduledReport {
   id: string;
@@ -157,25 +173,31 @@ export function ScheduledReportSettings() {
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from("scheduled_reports" as string).delete().eq("id", id);
+    await supabase
+      .from("scheduled_reports" as string)
+      .delete()
+      .eq("id", id);
     loadReports();
   };
 
   const handleSendNow = async (report: ScheduledReport) => {
     setSending(report.id);
     try {
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-scheduled-reports`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            apikey: anonKey,
-            Authorization: `Bearer ${anonKey}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ report_id: report.id }),
-        }
+        },
       );
       if (resp.ok) {
         loadReports();
@@ -191,7 +213,9 @@ export function ScheduledReportSettings() {
     setPreviewOpen(true);
     setPreviewLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-scheduled-reports`,
@@ -203,14 +227,14 @@ export function ScheduledReportSettings() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ report_id: report.id, preview: true }),
-        }
+        },
       );
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
         setPreviewError((err as { error?: string }).error ?? `Request failed (${resp.status})`);
         return;
       }
-      const data = await resp.json() as EmailPreview;
+      const data = (await resp.json()) as EmailPreview;
       setPreviewData(data);
     } catch (e) {
       setPreviewError(e instanceof Error ? e.message : "Preview failed");
@@ -236,7 +260,8 @@ export function ScheduledReportSettings() {
             Scheduled delivery
           </p>
           <p className="text-sm text-foreground">
-            Automatically email executive or compliance reports to client stakeholders on a recurring cadence.
+            Automatically email executive or compliance reports to client stakeholders on a
+            recurring cadence.
           </p>
         </div>
         <Button onClick={() => setShowForm(!showForm)} className="gap-1.5">
@@ -264,7 +289,9 @@ export function ScheduledReportSettings() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Schedule Name</Label>
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Schedule Name
+              </Label>
               <Input
                 type="text"
                 value={formName}
@@ -274,7 +301,9 @@ export function ScheduledReportSettings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Customer Name</Label>
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Customer Name
+              </Label>
               <Input
                 type="text"
                 value={formCustomer}
@@ -300,20 +329,26 @@ export function ScheduledReportSettings() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Frequency</Label>
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Frequency
+              </Label>
               <Select value={formSchedule} onValueChange={setFormSchedule}>
                 <SelectTrigger className="text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {SCHEDULE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Report Type</Label>
+              <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Report Type
+              </Label>
               <Select value={formReportType} onValueChange={setFormReportType}>
                 <SelectTrigger className="text-sm">
                   <SelectValue />
@@ -331,8 +366,13 @@ export function ScheduledReportSettings() {
 
           <div className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm">
             <div className="mb-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Include Sections</p>
-              <p className="text-xs text-muted-foreground">Choose the standard content blocks recipients should receive in each automated delivery.</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Include Sections
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Choose the standard content blocks recipients should receive in each automated
+                delivery.
+              </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {Object.entries(formSections).map(([key, val]) => {
@@ -345,7 +385,10 @@ export function ScheduledReportSettings() {
                     <Checkbox
                       checked={val}
                       onCheckedChange={() =>
-                        setFormSections((prev) => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))
+                        setFormSections((prev) => ({
+                          ...prev,
+                          [key]: !prev[key as keyof typeof prev],
+                        }))
                       }
                       className="mt-0.5 rounded-md border-border/80"
                     />
@@ -392,28 +435,26 @@ export function ScheduledReportSettings() {
             <div
               key={report.id}
               className={`rounded-lg border px-3 py-2.5 transition-colors ${
-                report.enabled
-                  ? "border-border bg-card"
-                  : "border-border/50 bg-muted/10 opacity-60"
+                report.enabled ? "border-border bg-card" : "border-border/50 bg-muted/10 opacity-60"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-xs font-medium text-foreground truncate">
-                      {report.name}
-                    </p>
+                    <p className="text-xs font-medium text-foreground truncate">{report.name}</p>
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
                       {report.schedule}
                     </span>
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-accent/10 text-brand-accent shrink-0">
-                      {REPORT_TYPES.find((t) => t.value === report.report_type)?.label ?? report.report_type}
+                      {REPORT_TYPES.find((t) => t.value === report.report_type)?.label ??
+                        report.report_type}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Mail className="h-3 w-3" />
-                      {report.recipients.length} recipient{report.recipients.length !== 1 ? "s" : ""}
+                      {report.recipients.length} recipient
+                      {report.recipients.length !== 1 ? "s" : ""}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -445,7 +486,9 @@ export function ScheduledReportSettings() {
                     className="p-1.5 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
                     title="Send now"
                   >
-                    <Send className={`h-3.5 w-3.5 ${sending === report.id ? "animate-pulse" : ""}`} />
+                    <Send
+                      className={`h-3.5 w-3.5 ${sending === report.id ? "animate-pulse" : ""}`}
+                    />
                   </button>
                   <button
                     onClick={() => handleToggle(report.id, report.enabled)}
@@ -481,7 +524,8 @@ export function ScheduledReportSettings() {
               Email preview
             </DialogTitle>
             <DialogDescription>
-              This is how the scheduled report email will look when sent. No email is sent when previewing.
+              This is how the scheduled report email will look when sent. No email is sent when
+              previewing.
             </DialogDescription>
           </DialogHeader>
           {previewLoading && (
@@ -489,9 +533,7 @@ export function ScheduledReportSettings() {
               <span className="animate-spin h-8 w-8 border-2 border-brand-accent/30 border-t-[#2006F7] rounded-full" />
             </div>
           )}
-          {previewError && (
-            <p className="text-sm text-destructive py-2">{previewError}</p>
-          )}
+          {previewError && <p className="text-sm text-destructive py-2">{previewError}</p>}
           {!previewLoading && previewData && (
             <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
               <div>
@@ -499,11 +541,15 @@ export function ScheduledReportSettings() {
                 <p className="text-xs text-foreground">{previewData.recipients.join(", ")}</p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Subject</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">
+                  Subject
+                </p>
                 <p className="text-sm text-foreground font-medium">{previewData.subject}</p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Body</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
+                  Body
+                </p>
                 <div
                   className="rounded-lg border border-border bg-muted/20 p-4 text-xs prose prose-sm max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewData.html) }}
