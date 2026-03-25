@@ -1,4 +1,16 @@
-import { LogIn, Play, ArrowRight, Sparkles, ShieldCheck, Clock3, Save, FileText, BarChart3, Scale, Wifi } from "lucide-react";
+import {
+  LogIn,
+  Play,
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+  Clock3,
+  Save,
+  FileText,
+  BarChart3,
+  Scale,
+  Wifi,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -27,7 +39,13 @@ export interface UploadSectionProps {
   branding: BrandingData;
   setBranding: React.Dispatch<React.SetStateAction<BrandingData>>;
   analysisResult: Record<string, AnalysisResult>;
-  configMetas: Array<{ label: string; hostname?: string; serialNumber?: string; configHash: string; fromUpload?: boolean }>;
+  configMetas: Array<{
+    label: string;
+    hostname?: string;
+    serialNumber?: string;
+    configHash: string;
+    fromUpload?: boolean;
+  }>;
   hasFiles: boolean;
   hasReports: boolean;
   reports: Array<{ id: string; label: string; markdown: string }>;
@@ -41,7 +59,13 @@ export interface UploadSectionProps {
   onGenerateCompliance: () => void;
   onGenerateAll: () => void;
   setViewingReports: (v: boolean) => void;
-  onLoadAgentAssessment: (label: string, analysis: AnalysisResult, customerName: string, rawConfig?: Record<string, unknown>, agentMeta?: { serialNumber?: string; hostname?: string; model?: string; tenantName?: string }) => void;
+  onLoadAgentAssessment: (
+    label: string,
+    analysis: AnalysisResult,
+    customerName: string,
+    rawConfig?: Record<string, unknown>,
+    agentMeta?: { serialNumber?: string; hostname?: string; model?: string; tenantName?: string },
+  ) => void;
   activeTenantName?: string;
   setCentralEnriched: (v: boolean | ((prev: boolean) => boolean)) => void;
   saveError: string;
@@ -102,25 +126,36 @@ export function UploadSection({
             </div>
 
             <h2 className="text-3xl sm:text-5xl font-display font-black text-foreground tracking-tight leading-[1.05] max-w-3xl mx-auto">
-              Turn Sophos Firewall Exports into <span className="text-brand-accent">Audit-Ready Reports</span> in Minutes
+              Turn Sophos Firewall Exports into{" "}
+              <span className="text-brand-accent">Audit-Ready Reports</span> in Minutes
             </h2>
 
             <p className="text-muted-foreground max-w-2xl mx-auto text-base leading-relaxed">
-              Upload a Sophos XGS config export and instantly get deterministic security findings, posture scoring, compliance mapping, and client-ready deliverables — before AI turns the evidence into polished reports.
+              Upload a Sophos XGS config export and instantly get deterministic security findings,
+              posture scoring, compliance mapping, and client-ready deliverables — before AI turns
+              the evidence into polished reports.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 max-w-3xl mx-auto">
             <div className="rounded-2xl border border-border bg-card/70 px-4 py-3 text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Manual review</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Manual review
+              </p>
               <p className="text-2xl font-black text-foreground mt-1">3–4 hours</p>
             </div>
             <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] px-4 py-3 text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">With FireComply</p>
-              <p className="text-2xl font-black text-[#00774a] dark:text-[#00F2B3] mt-1">Under 2 minutes</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                With FireComply
+              </p>
+              <p className="text-2xl font-black text-[#00774a] dark:text-[#00F2B3] mt-1">
+                Under 2 minutes
+              </p>
             </div>
             <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] px-4 py-3 text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Effort saved</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Effort saved
+              </p>
               <p className="text-2xl font-black text-foreground mt-1">90%+</p>
             </div>
           </div>
@@ -140,7 +175,11 @@ export function UploadSection({
               variant="outline"
               size="lg"
               className="gap-2 rounded-xl px-5 border-brand-accent/25 dark:border-[#00EDFF]/30 hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10"
-              onClick={() => document.querySelector<HTMLElement>('[data-tour="step-upload"]')?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              onClick={() =>
+                document
+                  .querySelector<HTMLElement>('[data-tour="step-upload"]')
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" })
+              }
             >
               Upload Firewall Export
               <ArrowRight className="h-4 w-4" />
@@ -150,7 +189,11 @@ export function UploadSection({
                 variant="outline"
                 size="lg"
                 className="gap-2 rounded-xl px-5 border-[#00F2B3]/25 dark:border-[#00F2B3]/30 hover:bg-[#00F2B3]/10 text-[#00774a] dark:text-[#00F2B3]"
-                onClick={() => document.getElementById("firecomply-agent-fleet-panel")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                onClick={() =>
+                  document
+                    .getElementById("firecomply-agent-fleet-panel")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
               >
                 <Wifi className="h-4 w-4" />
                 Connected Firewalls
@@ -159,11 +202,21 @@ export function UploadSection({
           </div>
 
           <div className="flex flex-wrap justify-center gap-6 pt-1 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><FileText className="h-4 w-4 text-brand-accent" /> Technical Reports</span>
-            <span className="flex items-center gap-1.5"><BarChart3 className="h-4 w-4 text-brand-accent" /> Executive Briefs</span>
-            <span className="flex items-center gap-1.5"><Scale className="h-4 w-4 text-brand-accent" /> Compliance Reports</span>
-            <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-brand-accent" /> Deterministic Findings</span>
-            <span className="flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-brand-accent" /> Export-Ready Outputs</span>
+            <span className="flex items-center gap-1.5">
+              <FileText className="h-4 w-4 text-brand-accent" /> Technical Reports
+            </span>
+            <span className="flex items-center gap-1.5">
+              <BarChart3 className="h-4 w-4 text-brand-accent" /> Executive Briefs
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Scale className="h-4 w-4 text-brand-accent" /> Compliance Reports
+            </span>
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-brand-accent" /> Deterministic Findings
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Clock3 className="h-4 w-4 text-brand-accent" /> Export-Ready Outputs
+            </span>
           </div>
 
           {onLoadDemo && (
@@ -184,7 +237,9 @@ export function UploadSection({
             document.querySelector<HTMLElement>('[data-tour="step-upload"]')?.click();
           }}
           onLoadAgent={() => {
-            document.getElementById("firecomply-agent-fleet-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            document
+              .getElementById("firecomply-agent-fleet-panel")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
         />
       )}
@@ -195,9 +250,12 @@ export function UploadSection({
             <LogIn className="h-4 w-4 text-brand-accent" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground">Sign in to unlock the full experience</p>
+            <p className="text-sm font-semibold text-foreground">
+              Sign in to unlock the full experience
+            </p>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Connect Sophos Central, use automated agents, save reports, and manage your firewall estate from a single assessment workspace.
+              Connect Sophos Central, use automated agents, save reports, and manage your firewall
+              estate from a single assessment workspace.
             </p>
           </div>
           <Button
@@ -216,33 +274,47 @@ export function UploadSection({
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">
-              <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">1</span>
+              <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">
+                1
+              </span>
               <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
                 {hasFiles ? "Firewall Configs" : "Upload Firewall Exports"}
               </h2>
               {hasFiles && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#2006F7]/10 text-[#2006F7] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]">
                   {files.length} loaded
                 </span>
               )}
             </div>
             <p className="text-base font-medium text-foreground/85 dark:text-white/75 max-w-3xl leading-relaxed">
               Upload Sophos HTML or XML exports to create a{" "}
-              <span className="text-brand-accent font-semibold">deterministic security baseline</span>, map controls, and prepare{" "}
-              <span className="text-foreground dark:text-white font-semibold">customer-ready reports</span> with{" "}
-              <span className="text-brand-accent font-semibold">evidence-backed findings</span>.
+              <span className="text-brand-accent font-semibold">
+                deterministic security baseline
+              </span>
+              , map controls, and prepare{" "}
+              <span className="text-foreground dark:text-white font-semibold">
+                customer-ready reports
+              </span>{" "}
+              with <span className="text-brand-accent font-semibold">evidence-backed findings</span>
+              .
             </p>
           </div>
 
           {!hasFiles && (
             <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[340px] lg:max-w-[420px]">
               <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Supported inputs</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Supported inputs
+                </p>
                 <p className="text-sm font-semibold text-foreground mt-1">HTML, HTM, XML</p>
               </div>
               <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best use</p>
-                <p className="text-sm font-semibold text-foreground mt-1">Single firewall or estate comparison</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Best use
+                </p>
+                <p className="text-sm font-semibold text-foreground mt-1">
+                  Single firewall or estate comparison
+                </p>
               </div>
             </div>
           )}
@@ -255,14 +327,20 @@ export function UploadSection({
                 : "Analysing configuration..."}
             </p>
             <Progress
-              value={parsingProgress.phase === "parsing"
-                ? (parsingProgress.current / parsingProgress.total) * 100
-                : 90}
+              value={
+                parsingProgress.phase === "parsing"
+                  ? (parsingProgress.current / parsingProgress.total) * 100
+                  : 90
+              }
               className="h-1.5"
             />
           </div>
         )}
-        <FileUpload files={files} onFilesChange={onFilesChange} onFirewallLinked={() => setCentralEnriched(false)} />
+        <FileUpload
+          files={files}
+          onFilesChange={onFilesChange}
+          onFirewallLinked={() => setCentralEnriched(false)}
+        />
 
         {/* Connected firewalls — add from agent fleet (authenticated only) */}
         {!isGuest && org && (
@@ -279,7 +357,9 @@ export function UploadSection({
             {!hasFiles && (
               <div className="flex items-center gap-4 py-1">
                 <div className="flex-1 border-t border-border" />
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Or</span>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Or
+                </span>
                 <div className="flex-1 border-t border-border" />
               </div>
             )}
@@ -293,46 +373,81 @@ export function UploadSection({
                     Managed estate mode
                   </div>
                   <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
-                    Connected Firewalls for <span className="text-brand-accent">live managed assessments</span>
+                    Connected Firewalls for{" "}
+                    <span className="text-brand-accent">live managed assessments</span>
                   </h3>
                   <p className="text-base font-medium text-foreground/85 dark:text-white/75 leading-relaxed">
                     Pull{" "}
-                    <span className="text-brand-accent font-semibold">fresh assessments directly from connected agents</span> to refresh customer posture, compare sites side-by-side, and{" "}
-                    <span className="text-foreground dark:text-white font-semibold">scale reviews across your managed firewall estate</span> without waiting for manual exports.
+                    <span className="text-brand-accent font-semibold">
+                      fresh assessments directly from connected agents
+                    </span>{" "}
+                    to refresh customer posture, compare sites side-by-side, and{" "}
+                    <span className="text-foreground dark:text-white font-semibold">
+                      scale reviews across your managed firewall estate
+                    </span>{" "}
+                    without waiting for manual exports.
                   </p>
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[360px] lg:max-w-[430px]">
                   <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best for</p>
-                    <p className="text-sm font-semibold text-foreground mt-1">Multi-site customers, recurring reviews, estate-wide posture</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Best for
+                    </p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      Multi-site customers, recurring reviews, estate-wide posture
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Outcome</p>
-                    <p className="text-sm font-semibold text-foreground mt-1">Fresh posture without manual export dependency</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Outcome
+                    </p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      Fresh posture without manual export dependency
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Compare</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">Rank sites and customers side-by-side</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Compare
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    Rank sites and customers side-by-side
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Refresh</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">Re-run posture checks without chasing exports</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Refresh
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    Re-run posture checks without chasing exports
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Scale</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">Turn one-off reviews into an MSP workflow</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Scale
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    Turn one-off reviews into an MSP workflow
+                  </p>
                 </div>
               </div>
 
               <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
-                <span className="font-semibold text-foreground dark:text-white">Why this matters:</span>{" "}
-                <span className="text-brand-accent font-semibold">manual upload is perfect for one-off reviews</span>; connected firewalls unlock{" "}
-                <span className="text-foreground dark:text-white font-semibold">continuous assessment across a managed estate</span>.
+                <span className="font-semibold text-foreground dark:text-white">
+                  Why this matters:
+                </span>{" "}
+                <span className="text-brand-accent font-semibold">
+                  manual upload is perfect for one-off reviews
+                </span>
+                ; connected firewalls unlock{" "}
+                <span className="text-foreground dark:text-white font-semibold">
+                  continuous assessment across a managed estate
+                </span>
+                .
               </p>
 
               <AgentFleetPanel
@@ -370,45 +485,78 @@ export function UploadSection({
                     Executive-ready setup
                   </div>
                   <h3 className="text-2xl sm:text-[1.9rem] font-display font-black text-foreground tracking-tight leading-tight">
-                    Shape the assessment into a <span className="text-brand-accent">customer-ready outcome</span>
+                    Shape the assessment into a{" "}
+                    <span className="text-brand-accent">customer-ready outcome</span>
                   </h3>
                   <p className="text-base font-medium text-foreground/85 dark:text-white/75 leading-relaxed">
-                    <span className="text-brand-accent font-semibold">Add the client context</span>, brand the output, and select the frameworks that matter so{" "}
-                    <span className="text-foreground dark:text-white font-semibold">findings, reports, and executive summaries land with the right audience</span>.
+                    <span className="text-brand-accent font-semibold">Add the client context</span>,
+                    brand the output, and select the frameworks that matter so{" "}
+                    <span className="text-foreground dark:text-white font-semibold">
+                      findings, reports, and executive summaries land with the right audience
+                    </span>
+                    .
                   </p>
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[360px] lg:max-w-[430px]">
                   <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best for</p>
-                    <p className="text-sm font-semibold text-foreground mt-1">Customer-specific reports, executive packs, compliance-aligned reviews</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Best for
+                    </p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      Customer-specific reports, executive packs, compliance-aligned reviews
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Outcome</p>
-                    <p className="text-sm font-semibold text-foreground mt-1">Sharper findings, clearer story, more credible deliverables</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Outcome
+                    </p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      Sharper findings, clearer story, more credible deliverables
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Brand</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">Tailor outputs for the customer and stakeholder audience</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Brand
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    Tailor outputs for the customer and stakeholder audience
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Align</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">Map findings to the frameworks that drive remediation</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Align
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    Map findings to the frameworks that drive remediation
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Elevate</p>
-                  <p className="text-sm font-semibold text-foreground mt-1">Turn technical output into boardroom-ready reporting</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Elevate
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-1">
+                    Turn technical output into boardroom-ready reporting
+                  </p>
                 </div>
               </div>
 
               <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
-                <span className="font-semibold text-foreground dark:text-white">Why this matters:</span>{" "}
-                <span className="text-brand-accent font-semibold">the analysis is deterministic</span>, but the context determines how clearly it speaks to{" "}
-                <span className="text-foreground dark:text-white font-semibold">customers, auditors, and executives</span>.
+                <span className="font-semibold text-foreground dark:text-white">
+                  Why this matters:
+                </span>{" "}
+                <span className="text-brand-accent font-semibold">
+                  the analysis is deterministic
+                </span>
+                , but the context determines how clearly it speaks to{" "}
+                <span className="text-foreground dark:text-white font-semibold">
+                  customers, auditors, and executives
+                </span>
+                .
               </p>
 
               <Card className="border-border/70 bg-card/80 shadow-card">
@@ -444,7 +592,10 @@ export function UploadSection({
               Data Privacy Protected
             </p>
             <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
-              All IP addresses, customer names, and firewall identifiers are automatically anonymised before being sent to the AI. Sensitive network data stays in the browser; only sanitised structural data is used for AI-assisted report generation, and real values are restored locally in the final report.
+              All IP addresses, customer names, and firewall identifiers are automatically
+              anonymised before being sent to the AI. Sensitive network data stays in the browser;
+              only sanitised structural data is used for AI-assisted report generation, and real
+              values are restored locally in the final report.
             </p>
           </div>
         </div>
@@ -455,16 +606,16 @@ export function UploadSection({
       {/* Generate Reports — AI reports disabled in local mode */}
       {hasFiles && !isGuest && (
         <div data-tour="step-reports">
-        <ReportCards
-          fileCount={files.length}
-          localMode={localMode}
-          isViewerOnly={isViewerOnly}
-          onGenerateIndividual={onGenerateIndividual}
-          onGenerateExecutive={onGenerateExecutive}
-          onGenerateExecutiveOnePager={onGenerateExecutiveOnePager}
-          onGenerateCompliance={onGenerateCompliance}
-          onGenerateAll={onGenerateAll}
-        />
+          <ReportCards
+            fileCount={files.length}
+            localMode={localMode}
+            isViewerOnly={isViewerOnly}
+            onGenerateIndividual={onGenerateIndividual}
+            onGenerateExecutive={onGenerateExecutive}
+            onGenerateExecutiveOnePager={onGenerateExecutiveOnePager}
+            onGenerateCompliance={onGenerateCompliance}
+            onGenerateAll={onGenerateAll}
+          />
         </div>
       )}
 
@@ -472,7 +623,9 @@ export function UploadSection({
       {hasFiles && isGuest && onShowAuth && (
         <section className="space-y-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">3</span>
+            <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">
+              3
+            </span>
             <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
               Generate Reports
             </h2>
@@ -484,7 +637,11 @@ export function UploadSection({
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground">Sign in to generate reports</p>
               <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
-                Create an account or sign in to generate <span className="text-brand-accent font-semibold">technical reports, executive briefs, and compliance packs</span> from your analysis.
+                Create an account or sign in to generate{" "}
+                <span className="text-brand-accent font-semibold">
+                  technical reports, executive briefs, and compliance packs
+                </span>{" "}
+                from your analysis.
               </p>
             </div>
             <Button

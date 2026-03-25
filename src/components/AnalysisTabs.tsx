@@ -343,7 +343,7 @@ export function AnalysisTabs({
               <LayoutDashboard className="h-3.5 w-3.5" />
               Overview
               {totalFindings > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#EA0022]/10 text-[#EA0022] tabular-nums">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#EA0022] text-white tabular-nums">
                   {totalFindings}
                 </span>
               )}
