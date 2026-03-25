@@ -23,7 +23,7 @@ interface RowProps {
 
 function ChecklistRow({ title, done, actionLabel, onAction, disabled }: RowProps) {
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-white/[0.06] last:border-0">
+    <div className="flex items-center gap-3 py-3 border-b border-slate-900/[0.10] dark:border-white/[0.06] last:border-0">
       <div className="shrink-0">
         {done ? (
           <CheckCircle2
@@ -42,7 +42,7 @@ function ChecklistRow({ title, done, actionLabel, onAction, disabled }: RowProps
         type="button"
         size="sm"
         variant="outline"
-        className="shrink-0 font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.08] to-transparent hover:from-brand-accent/[0.15] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
+        className="shrink-0 font-bold border-slate-900/[0.12] dark:border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.08] to-transparent hover:from-brand-accent/[0.15] hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
         disabled={disabled}
         onClick={onAction}
       >
@@ -65,7 +65,7 @@ export function QbrPackChecklist({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 shadow-card no-print transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 shadow-card no-print transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.03))" }}
     >
       <div className="absolute inset-0 pointer-events-none">

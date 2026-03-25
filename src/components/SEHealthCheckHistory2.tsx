@@ -40,7 +40,7 @@ interface HealthCheckRow {
 function gradeColor(grade: string | null): string {
   switch (grade) {
     case "A":
-      return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
+      return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
     case "B":
       return "bg-brand-accent/15 text-brand-accent/10 dark:text-[#00EDFF]";
     case "C":

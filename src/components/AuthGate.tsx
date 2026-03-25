@@ -153,8 +153,8 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
           Enterprise workspace
         </div>
-        <div className="h-14 w-14 rounded-2xl bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
-          <UserPlus className="h-7 w-7 text-[#00F2B3] dark:text-[#00F2B3]" />
+        <div className="h-14 w-14 rounded-2xl bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
+          <UserPlus className="h-7 w-7 text-[#007A5A] dark:text-[#00F2B3]" />
         </div>
         <h2 className="text-2xl font-display font-black text-foreground tracking-tight">
           Check your email

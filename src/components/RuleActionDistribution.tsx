@@ -76,66 +76,118 @@ export function RuleActionDistribution({ files }: Props) {
 
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+      <div
+        className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 shadow-card backdrop-blur-sm"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(0,242,179,0.05), rgba(32,6,247,0.03), transparent)",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(0,242,179,0.2), rgba(32,6,247,0.1), transparent)",
+          }}
+        />
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-3">
           Rule Action Distribution
         </h3>
-        <p className="text-sm text-muted-foreground">No firewall rules found</p>
+        <p className="text-sm text-foreground/45">No firewall rules found</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(0,242,179,0.05), rgba(32,6,247,0.03), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(0,242,179,0.2), rgba(32,6,247,0.1), transparent)",
+        }}
+      />
+      <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-5">
         Rule Action Distribution
       </h3>
-      <div className="relative" style={{ height: 200 }}>
-        <ResponsiveContainer width="100%" height={200}>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={50}
-              outerRadius={80}
-              paddingAngle={2}
-              dataKey="value"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-                return (
-                  <div className="rounded-md border border-border/50 bg-card px-2 py-1.5 text-xs shadow-elevated">
-                    {d.name}: {d.value} ({pct}%)
-                  </div>
-                );
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-        <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          style={{ top: 0, left: 0, right: 0, bottom: 0 }}
-        >
-          <div className="text-center">
-            <span className="text-2xl font-bold text-foreground tabular-nums">{total}</span>
-            <span className="block text-xs text-muted-foreground">rules</span>
+      <div
+        className="relative rounded-xl mx-auto max-w-md"
+        style={{
+          border: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.02)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+      >
+        <div className="relative" style={{ height: 280 }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={72}
+                outerRadius={118}
+                paddingAngle={2}
+                dataKey="value"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                  return (
+                    <div
+                      className="rounded-xl px-3 py-2 text-xs font-medium"
+                      style={{
+                        background:
+                          "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                        backdropFilter: "blur(16px)",
+                      }}
+                    >
+                      {d.name}: {d.value} ({pct}%)
+                    </div>
+                  );
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+          >
+            <div className="text-center">
+              <span
+                className="text-3xl font-black text-foreground tabular-nums"
+                style={{ textShadow: "0 0 20px rgba(0,242,179,0.15)" }}
+              >
+                {total}
+              </span>
+              <span className="block text-sm text-foreground/45 font-semibold mt-0.5">rules</span>
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
+      <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-5">
         {data.map((d) => (
-          <div key={d.name} className="flex items-center gap-1.5 text-xs">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-            <span className="text-muted-foreground">{d.name}</span>
-            <span className="font-bold tabular-nums text-foreground">{d.value}</span>
+          <div key={d.name} className="flex items-center gap-2 text-sm">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: d.color, boxShadow: `0 0 8px ${d.color}40` }}
+            />
+            <span className="text-foreground/50 font-medium">{d.name}</span>
+            <span className="font-black tabular-nums text-foreground">{d.value}</span>
           </div>
         ))}
       </div>

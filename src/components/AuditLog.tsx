@@ -27,14 +27,14 @@ const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; c
   "report.saved": {
     label: "Report saved",
     icon: FileText,
-    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+    color: "text-[#007A5A] dark:text-[#00F2B3]",
   },
   "report.deleted": { label: "Report deleted", icon: Trash2, color: "text-[#EA0022]" },
   "config.uploaded": { label: "Config uploaded", icon: Upload, color: "text-brand-accent" },
   "assessment.saved": {
     label: "Assessment saved",
     icon: Shield,
-    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+    color: "text-[#007A5A] dark:text-[#00F2B3]",
   },
   "central.linked": { label: "Central API linked", icon: Wifi, color: "text-[#005BC8]" },
   "central.synced": { label: "Central synced", icon: Wifi, color: "text-[#009CFB]" },
@@ -43,7 +43,7 @@ const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; c
   "auth.login": {
     label: "User signed in",
     icon: Shield,
-    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+    color: "text-[#007A5A] dark:text-[#00F2B3]",
   },
   "auth.logout": { label: "User signed out", icon: Shield, color: "text-muted-foreground" },
 };

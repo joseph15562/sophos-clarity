@@ -291,7 +291,7 @@ export function FirewallLinker({
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     allLinked
-                      ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+                      ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
@@ -378,7 +378,7 @@ export function FirewallLinker({
               return (
                 <div
                   key={config.configHash}
-                  className={`rounded-2xl border ${link ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.03]" : "border-border bg-card/70"} overflow-hidden shadow-sm`}
+                  className={`rounded-2xl border ${link ? "border-[#008F69]/30 dark:border-[#00F2B3]/20 dark:border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.03]" : "border-border bg-card/70"} overflow-hidden shadow-sm`}
                 >
                   {/* Config Header Row */}
                   <div className="flex items-center gap-3 px-3 py-2.5">
@@ -397,7 +397,7 @@ export function FirewallLinker({
                     {link ? (
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-[#00F2B3] dark:text-[#00F2B3]" />
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[#007A5A] dark:text-[#00F2B3]" />
                           <div className="text-right">
                             <span className="text-[10px] font-medium text-foreground block">
                               {link.firewall

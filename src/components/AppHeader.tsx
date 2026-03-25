@@ -298,15 +298,18 @@ export function AppHeader({
     <>
       <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm">
         <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-elevated shrink-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur-md shadow-elevated shrink-0 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-none">
             <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
           </div>
           <div className="mr-auto shrink-0">
             <div
-              className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1 ${isLoginShell ? "shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : ""}`}
+              className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 mb-1 backdrop-blur-xl
+                border-[#00F2B3]/45 bg-[linear-gradient(135deg,rgba(0,242,179,0.22),rgba(0,196,163,0.12))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_4px_24px_rgba(0,242,179,0.12)]
+                dark:border-white/10 dark:bg-white/[0.04] dark:[background-image:none] dark:shadow-none dark:backdrop-blur-none
+                ${isLoginShell ? "dark:shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : ""}`}
             >
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] dark:bg-[#00F2B3] dark:shadow-none" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white dark:text-[#B6C4FF]">
                 {isLoginShell ? "Firewall Compliance Workspace" : "Enterprise Firewall Compliance"}
               </span>
             </div>
@@ -326,13 +329,13 @@ export function AppHeader({
               {org && (
                 <button
                   onClick={onOrgClick}
-                  className="flex items-center gap-1.5 text-[10px] text-[#B6C4FF] hover:text-white transition-colors px-2 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                  className="flex items-center gap-1.5 text-[10px] text-white transition-colors px-2 py-1.5 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08]"
                   title="Open management panel"
                   aria-label="Open management panel"
                   data-tour="management-panel"
                 >
                   <Building2 className="h-3 w-3 shrink-0" />
-                  <span className="font-medium text-white/80 max-w-[120px] truncate hidden sm:inline">
+                  <span className="font-medium text-white dark:text-white/80 max-w-[120px] truncate hidden sm:inline">
                     {org.name}
                   </span>
                   <ChevronDown className="h-2.5 w-2.5 shrink-0" />
@@ -343,7 +346,7 @@ export function AppHeader({
               <Button
                 variant="ghost"
                 size="sm"
-                className="inline-flex h-8 px-2.5 text-[10px] text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] gap-1.5 shrink-0 max-sm:px-1.5 rounded-xl border border-white/10 bg-white/[0.04]"
+                className="inline-flex h-8 px-2.5 text-[10px] text-white gap-1.5 shrink-0 max-sm:px-1.5 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08]"
                 asChild
               >
                 <Link to="/health-check" data-tour="health-check-nav" title="SE Health Check">
@@ -352,9 +355,9 @@ export function AppHeader({
                 </Link>
               </Button>
               {notificationSlot}
-              <span className="flex items-center gap-1 text-[10px] text-[#B6C4FF] rounded-xl border border-white/10 bg-white/[0.04] px-2 py-1.5">
+              <span className="flex items-center gap-1 text-[10px] text-white rounded-xl border border-white/25 bg-white/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] px-2 py-1.5 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF]">
                 <User className="h-3 w-3 shrink-0" />
-                <span className="max-w-[100px] truncate hidden sm:inline">
+                <span className="max-w-[100px] truncate hidden sm:inline text-white dark:text-inherit">
                   {user?.email?.split("@")[0]}
                 </span>
               </span>
@@ -362,7 +365,7 @@ export function AppHeader({
                 variant="ghost"
                 size="icon"
                 onClick={signOut}
-                className="shrink-0 text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] h-8 w-8 rounded-xl border border-white/10 bg-white/[0.04]"
+                className="shrink-0 h-8 w-8 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08]"
                 aria-label="Sign out"
                 title="Sign out"
               >
@@ -374,14 +377,14 @@ export function AppHeader({
           {isGuest && (
             <div className="flex items-center gap-2 shrink-0">
               {isLoginShell && (
-                <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] text-[#B6C4FF]">
-                  <span className="inline-block h-2 w-2 rounded-full bg-[#00F2B3]" />
+                <div className="hidden md:flex items-center gap-2 rounded-xl border border-[#00F2B3]/40 bg-[linear-gradient(135deg,rgba(0,242,179,0.2),rgba(0,196,163,0.1))] backdrop-blur-xl px-3 py-1.5 text-[10px] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] dark:border-white/10 dark:bg-white/[0.04] dark:[background-image:none] dark:text-[#B6C4FF] dark:shadow-none">
+                  <span className="inline-block h-2 w-2 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.7)] dark:bg-[#00F2B3] dark:shadow-none" />
                   Boardroom-ready reporting
                 </div>
               )}
               <button
                 onClick={onOrgClick}
-                className="flex items-center gap-1.5 text-[10px] text-[#B6C4FF] hover:text-white transition-colors px-2.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                className="flex items-center gap-1.5 text-[10px] text-white transition-colors px-2.5 py-1.5 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08]"
                 title="Open settings"
                 aria-label="Open settings"
               >
@@ -398,7 +401,7 @@ export function AppHeader({
             variant="ghost"
             size="icon"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className={`shrink-0 text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] rounded-xl border border-white/10 bg-white/[0.04] ${isLoginShell ? "shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : ""}`}
+            className={`shrink-0 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08] ${isLoginShell ? "dark:shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : ""}`}
             aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             data-tour="theme-toggle"
           >
@@ -417,8 +420,8 @@ export function AppHeader({
               </span>
             )}
             {hasFiles && (
-              <span className="flex items-center gap-1 shrink-0 rounded-full border border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] px-2.5 py-1">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00F2B3] dark:bg-[#00F2B3]" />
+              <span className="flex items-center gap-1 shrink-0 rounded-full border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] px-2.5 py-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00A878] dark:bg-[#00F2B3]" />
                 {fileCount} firewall{fileCount !== 1 ? "s" : ""} loaded
               </span>
             )}

@@ -195,7 +195,7 @@ function gradeBg(grade: string): string {
   switch (grade) {
     case "A":
     case "B":
-      return "bg-[#00F2B3]/10 border-[#00F2B3]/30";
+      return "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 border-[#008F69]/35 dark:border-[#00F2B3]/30";
     case "C":
       return "bg-[#F8E300]/10 border-[#F8E300]/30";
     case "D":
@@ -394,7 +394,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
           </p>
         </div>
         {hasSimulation && (
-          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#00F2B3]/10 border border-[#00F2B3]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#00F2B3]">
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 border border-[#008F69]/35 dark:border-[#00F2B3]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#00F2B3]">
             <TrendingUp className="h-3 w-3" /> +{delta}
           </span>
         )}
@@ -439,7 +439,7 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
                     key={t.id}
                     className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-all ${
                       isActive
-                        ? "border-[#00F2B3]/40 bg-[#00F2B3]/[0.04] dark:border-[#00F2B3]/30"
+                        ? "border-[#00F2B3]/40 bg-[#00F2B3]/[0.04] dark:border-[#008F69]/35 dark:border-[#00F2B3]/30"
                         : "border-border hover:bg-muted/30 hover:border-muted-foreground/20"
                     }`}
                   >

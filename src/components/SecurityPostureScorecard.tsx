@@ -47,7 +47,7 @@ function postureStyle(p: PostureLabel): {
       return {
         icon: CheckCircle2,
         color: "text-[#00774a] dark:text-[#00F2B3]",
-        bgColor: "bg-[#00F2B3]/10",
+        bgColor: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
         hex: "#00F2B3",
       };
     case "Needs Review":
@@ -169,7 +169,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
             </p>
           </div>
           <div
-            className="relative overflow-hidden flex items-center gap-4 rounded-2xl border border-white/[0.08] px-5 py-4 shadow-elevated transition-all duration-200 hover:scale-[1.02] hover:border-white/[0.12]"
+            className="relative overflow-hidden flex items-center gap-4 rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] px-5 py-4 shadow-elevated transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
             style={{
               background: `linear-gradient(135deg, ${overallStyle.hex}14, ${overallStyle.hex}06)`,
             }}
@@ -242,7 +242,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
         {/* Summary badges */}
         <div className="flex flex-wrap gap-2 mb-1">
           {postureSummary.good > 0 && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00F2B3]/10 text-[#00774a] dark:text-[#00F2B3] font-medium">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#00774a] dark:text-[#00F2B3] font-medium">
               {postureSummary.good} Good
             </span>
           )}
@@ -265,7 +265,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
           return (
             <div
               key={cat.label}
-              className="relative overflow-hidden flex items-center gap-3.5 rounded-2xl border border-white/[0.06] px-4 py-3.5 shadow-card transition-all duration-200 hover:scale-[1.01] hover:shadow-elevated hover:border-white/[0.12]"
+              className="relative overflow-hidden flex items-center gap-3.5 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 shadow-card transition-all duration-200 hover:scale-[1.01] hover:shadow-elevated hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
               style={{ background: `linear-gradient(135deg, ${hex}10, ${hex}05)` }}
             >
               {/* Corner glow */}
@@ -287,7 +287,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
               />
 
               <div
-                className="relative h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.08]"
+                className="relative h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
                 style={{ background: `${hex}18` }}
               >
                 <Icon className="h-4 w-4" style={{ color: hex }} />
@@ -314,7 +314,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
               </div>
               {/* Score bar */}
               <div className="relative w-20 shrink-0">
-                <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-2 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{

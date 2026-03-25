@@ -52,12 +52,25 @@ export function FindingsBySection({
   const maxTotal = Math.max(...data.map((d) => d.total), 1);
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+    <div
+      className="relative rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 shadow-card transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(56,136,255,0.04), rgba(0,191,255,0.02), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(56,136,255,0.15), rgba(0,191,255,0.08), transparent)",
+        }}
+      />
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        <h3 className="text-sm font-display font-bold tracking-tight text-foreground">
           Findings by Section
         </h3>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-[10px] text-muted-foreground/70">
           {allFindings.length} total findings
         </span>
       </div>
@@ -79,30 +92,61 @@ export function FindingsBySection({
             <button
               key={d.section}
               onClick={() => setActiveSection(isActive ? null : d.section)}
-              className={`w-full flex items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-all ${
-                isActive ? "bg-muted/30 ring-1 ring-border" : "hover:bg-muted/15"
-              } ${isFaded ? "opacity-40" : ""}`}
+              className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-200 cursor-pointer ${
+                isFaded ? "opacity-30" : ""
+              }`}
+              style={{
+                background: isActive
+                  ? "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
+                  : "transparent",
+                border: isActive ? "1px solid rgba(255,255,255,0.1)" : "1px solid transparent",
+                boxShadow: isActive
+                  ? "inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.15)"
+                  : "none",
+              }}
             >
-              <span className="text-[10px] text-muted-foreground font-medium w-[110px] shrink-0 truncate text-right">
+              <span className="text-[10px] text-foreground/60 font-semibold w-[110px] shrink-0 truncate text-right">
                 {d.displaySection}
               </span>
-              <div className="flex-1 flex items-center gap-1">
-                <div className="flex-1 flex h-4 rounded overflow-hidden bg-muted/20">
+              <div className="flex-1 flex items-center gap-1.5">
+                <div
+                  className="flex-1 flex h-5 rounded-lg overflow-hidden"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.04)",
+                  }}
+                >
                   {sevs.map((s) => (
                     <div
                       key={s.key}
                       className="h-full transition-all duration-300 relative group/seg"
-                      style={{ width: `${(s.count / maxTotal) * 100}%`, backgroundColor: s.color }}
+                      style={{
+                        width: `${(s.count / maxTotal) * 100}%`,
+                        backgroundColor: s.color,
+                        boxShadow: `0 0 8px ${s.color}30`,
+                      }}
                     >
-                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 opacity-0 group-hover/seg:opacity-100 pointer-events-none transition-opacity z-30">
-                        <div className="bg-popover border border-border rounded px-1.5 py-0.5 text-[9px] text-foreground whitespace-nowrap shadow-lg">
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 opacity-0 group-hover/seg:opacity-100 pointer-events-none transition-opacity z-30">
+                        <div
+                          className="rounded-lg px-2 py-1 text-[9px] text-foreground whitespace-nowrap"
+                          style={{
+                            background:
+                              "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+                            backdropFilter: "blur(12px)",
+                          }}
+                        >
                           {s.count} {s.key}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-                <span className="text-[10px] font-bold text-foreground tabular-nums w-6 text-right">
+                <span
+                  className="text-[11px] font-display font-black tabular-nums w-6 text-right"
+                  style={{ color: sevs[0]?.color || "#fff" }}
+                >
                   {d.total}
                 </span>
               </div>
@@ -112,7 +156,7 @@ export function FindingsBySection({
       </div>
 
       {/* Severity legend */}
-      <div className="flex items-center justify-center gap-3 mt-3 pt-2 border-t border-border/50">
+      <div className="flex items-center justify-center gap-4 mt-4 pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
         {[
           { label: "Critical", color: SEVERITY_COLORS.critical },
           { label: "High", color: SEVERITY_COLORS.high },
@@ -120,10 +164,13 @@ export function FindingsBySection({
           { label: "Low", color: SEVERITY_COLORS.low },
           { label: "Info", color: SEVERITY_COLORS.info },
         ].map((s) => (
-          <span key={s.label} className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <span
+            key={s.label}
+            className="flex items-center gap-1.5 text-[9px] text-foreground/50 font-medium"
+          >
             <span
-              className="inline-block h-2 w-2 rounded-sm"
-              style={{ backgroundColor: s.color }}
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: s.color, boxShadow: `0 0 6px ${s.color}40` }}
             />
             {s.label}
           </span>
@@ -132,43 +179,70 @@ export function FindingsBySection({
 
       {/* Drill-down findings list */}
       {activeSection && drillFindings.length > 0 && (
-        <div className="mt-3 rounded-lg border border-border bg-muted/10 overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-border bg-muted/20 flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-foreground">{activeSection}</span>
+        <div
+          className="mt-4 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden"
+          style={{ background: "rgba(255,255,255,0.02)" }}
+        >
+          <div
+            className="px-3 py-2 border-b border-slate-900/[0.10] dark:border-white/[0.06] flex items-center justify-between"
+            style={{ background: "rgba(255,255,255,0.03)" }}
+          >
+            <span className="text-[10px] font-bold text-foreground">{activeSection}</span>
             <button
               onClick={() => setActiveSection(null)}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[10px] text-foreground/40 hover:text-foreground transition-colors font-medium"
             >
               Clear
             </button>
           </div>
-          <div className="max-h-48 overflow-y-auto divide-y divide-border/50">
-            {drillFindings.map((f, i) => (
-              <div key={`${f.id}-${i}`} className="px-3 py-2 hover:bg-muted/20 transition-colors">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span
-                    className="text-[8px] font-bold uppercase px-1 py-0.5 rounded"
-                    style={{
-                      backgroundColor: SEVERITY_COLORS[f.severity as Severity] + "18",
-                      color: SEVERITY_COLORS[f.severity as Severity],
-                    }}
-                  >
-                    {f.severity}
-                  </span>
-                  <span className="text-[10px] font-medium text-foreground flex-1 truncate">
-                    {f.title}
-                  </span>
-                  {Object.keys(analysisResults).length > 1 && (
-                    <span className="text-[8px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-                      {f.firewall}
+          <div className="max-h-48 overflow-y-auto">
+            {drillFindings.map((f, i) => {
+              const sevColor = SEVERITY_COLORS[f.severity as Severity];
+              return (
+                <div
+                  key={`${f.id}-${i}`}
+                  className="px-3.5 py-2.5 transition-all duration-150"
+                  style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = "";
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md tracking-wide"
+                      style={{
+                        backgroundColor: sevColor + "20",
+                        color: sevColor,
+                        boxShadow: `0 0 6px ${sevColor}15`,
+                      }}
+                    >
+                      {f.severity}
                     </span>
-                  )}
+                    <span className="text-[10px] font-semibold text-foreground/85 flex-1 truncate">
+                      {f.title}
+                    </span>
+                    {Object.keys(analysisResults).length > 1 && (
+                      <span
+                        className="text-[8px] px-1.5 py-0.5 rounded-md font-medium shrink-0"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          color: "rgba(255,255,255,0.4)",
+                          border: "1px solid rgba(255,255,255,0.06)",
+                        }}
+                      >
+                        {f.firewall}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[9px] text-foreground/40 line-clamp-2 leading-relaxed">
+                    {f.detail}
+                  </p>
                 </div>
-                <p className="text-[9px] text-muted-foreground line-clamp-2 leading-relaxed">
-                  {f.detail}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

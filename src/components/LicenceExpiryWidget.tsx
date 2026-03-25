@@ -413,7 +413,7 @@ export function LicenceExpiryWidget() {
             </span>
           )}
           {healthy > 0 && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md font-bold bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]">
               {healthy} ok
             </span>
           )}
@@ -463,7 +463,7 @@ export function LicenceExpiryWidget() {
               </p>
             </div>
             <div className="rounded-xl px-2.5 py-2.5 text-center bg-[#00F2B3]/[0.06]">
-              <p className="text-sm font-bold text-[#00F2B3] dark:text-[#00F2B3] tabular-nums">
+              <p className="text-sm font-bold text-[#007A5A] dark:text-[#00F2B3] tabular-nums">
                 {healthy}
               </p>
               <p className="text-[8px] text-muted-foreground/60 uppercase tracking-wider font-semibold">
@@ -503,7 +503,7 @@ export function LicenceExpiryWidget() {
                     ? "text-[#EA0022]"
                     : hasExpiring
                       ? "text-[#F29400]"
-                      : "text-[#00F2B3] dark:text-[#00F2B3]";
+                      : "text-[#007A5A] dark:text-[#00F2B3]";
                   const statusLabel = hasExpired
                     ? "EXPIRED"
                     : worstDays <= 90
@@ -616,7 +616,7 @@ export function LicenceExpiryWidget() {
                                     item.subscription.type === "trial"
                                       ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]"
                                       : item.subscription.perpetual
-                                        ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+                                        ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]"
                                         : "bg-muted text-muted-foreground"
                                   }`}
                                 >
@@ -637,14 +637,14 @@ export function LicenceExpiryWidget() {
                                 <span
                                   className={`text-[10px] font-bold text-right ${
                                     item.subscription.perpetual
-                                      ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                                      ? "text-[#007A5A] dark:text-[#00F2B3]"
                                       : item.daysRemaining <= 0
                                         ? "text-[#EA0022]"
                                         : item.daysRemaining <= 30
                                           ? "text-[#EA0022]"
                                           : item.daysRemaining <= 90
                                             ? "text-[#F29400]"
-                                            : "text-[#00F2B3] dark:text-[#00F2B3]"
+                                            : "text-[#007A5A] dark:text-[#00F2B3]"
                                   }`}
                                 >
                                   {item.subscription.perpetual

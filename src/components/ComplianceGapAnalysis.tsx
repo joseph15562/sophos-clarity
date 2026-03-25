@@ -25,7 +25,10 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
   const firstResult = Object.values(analysisResults)[0];
   const gaps = useMemo(() => {
     if (!firstResult) return [];
-    const fws = selectedFrameworks.length > 0 ? selectedFrameworks : ["NCSC Guidelines", "Cyber Essentials / CE+"];
+    const fws =
+      selectedFrameworks.length > 0
+        ? selectedFrameworks
+        : ["NCSC Guidelines", "Cyber Essentials / CE+"];
     const mappings = mapToAllFrameworks(fws, firstResult);
     const items: Array<{
       framework: string;
@@ -54,7 +57,9 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
       let cmp = 0;
       if (sortKey === "status") {
         const order = { fail: 0, partial: 1 };
-        cmp = (order[a.control.status as keyof typeof order] ?? 2) - (order[b.control.status as keyof typeof order] ?? 2);
+        cmp =
+          (order[a.control.status as keyof typeof order] ?? 2) -
+          (order[b.control.status as keyof typeof order] ?? 2);
       } else if (sortKey === "findings" || sortKey === "effort") {
         cmp = a.findingCount - b.findingCount;
       } else if (sortKey === "framework") {
@@ -80,58 +85,98 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
 
   if (gaps.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card">
-        <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-3">Compliance Gaps</h3>
-        <p className="text-sm text-muted-foreground/60">All mapped controls are passing</p>
+      <div
+        className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-8 shadow-card backdrop-blur-sm"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(0,242,179,0.06), rgba(32,6,247,0.03), transparent)",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(0,242,179,0.25), transparent)",
+          }}
+        />
+        <h3 className="text-lg font-display font-black tracking-tight text-foreground mb-2">
+          Compliance Gaps
+        </h3>
+        <p className="text-sm text-foreground/50">All mapped controls are passing</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card space-y-5">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-8 shadow-card backdrop-blur-sm space-y-6 transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(234,0,34,0.04), rgba(242,148,0,0.03), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(234,0,34,0.15), rgba(242,148,0,0.12), transparent)",
+        }}
+      />
       <div>
-        <h3 className="text-base font-display font-bold tracking-tight text-foreground">Compliance Gaps</h3>
-        <p className="text-[11px] text-muted-foreground/60 mt-1">
-          {gaps.length} control{gaps.length !== 1 ? "s" : ""} need attention across {frameworks.length} framework
+        <h3 className="text-lg font-display font-black tracking-tight text-foreground">
+          Compliance Gaps
+        </h3>
+        <p className="text-sm text-foreground/45 mt-1.5 font-medium">
+          {gaps.length} control{gaps.length !== 1 ? "s" : ""} need attention across{" "}
+          {frameworks.length} framework
           {frameworks.length !== 1 ? "s" : ""}
         </p>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-border/40 overflow-hidden">
-        <table className="w-full text-[11px]">
+      <div
+        className="overflow-x-auto rounded-xl overflow-hidden backdrop-blur-sm"
+        style={{
+          border: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(255,255,255,0.02)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+      >
+        <table className="w-full text-xs sm:text-sm">
           <thead>
-            <tr className="border-b border-border/40 bg-muted/15 dark:bg-muted/10">
+            <tr
+              className="border-b border-slate-900/[0.10] dark:border-white/[0.06]"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            >
               <th
-                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
+                className="text-left py-3.5 px-4 font-display font-bold text-foreground/45 uppercase tracking-[0.08em] text-[10px] sm:text-[11px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("framework")}
               >
                 Framework {sortKey === "framework" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
+                className="text-left py-3.5 px-4 font-display font-bold text-foreground/45 uppercase tracking-[0.08em] text-[10px] sm:text-[11px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("controlId")}
               >
                 Control ID {sortKey === "controlId" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
+                className="text-left py-3.5 px-4 font-display font-bold text-foreground/45 uppercase tracking-[0.08em] text-[10px] sm:text-[11px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("controlName")}
               >
                 Control Name {sortKey === "controlName" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
+                className="text-left py-3.5 px-4 font-display font-bold text-foreground/45 uppercase tracking-[0.08em] text-[10px] sm:text-[11px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("status")}
               >
                 Status {sortKey === "status" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
+                className="text-left py-3.5 px-4 font-display font-bold text-foreground/45 uppercase tracking-[0.08em] text-[10px] sm:text-[11px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("findings")}
               >
                 Linked Findings {sortKey === "findings" && (sortDir === "asc" ? "↑" : "↓")}
               </th>
               <th
-                className="text-left py-3 px-4 font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.1em] text-[10px] cursor-pointer hover:text-foreground transition-colors"
+                className="text-left py-3.5 px-4 font-display font-bold text-foreground/45 uppercase tracking-[0.08em] text-[10px] sm:text-[11px] cursor-pointer hover:text-foreground transition-colors"
                 onClick={() => handleSort("effort")}
               >
                 Effort {sortKey === "effort" && (sortDir === "asc" ? "↑" : "↓")}
@@ -140,23 +185,44 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
           </thead>
           <tbody>
             {displayed.map(({ framework, control, findingCount, effort }) => (
-              <tr key={`${framework}-${control.controlId}`} className="border-b border-border/30 last:border-b-0 hover:bg-muted/15 dark:hover:bg-muted/10 transition-colors">
-                <td className="py-3 px-4 font-display font-medium text-foreground/80">{framework}</td>
-                <td className="py-3 px-4 text-muted-foreground/70 font-mono text-[10px]">{control.controlId}</td>
-                <td className="py-3 px-4 font-display font-medium text-foreground">{control.controlName}</td>
-                <td className="py-3 px-4">
+              <tr
+                key={`${framework}-${control.controlId}`}
+                className="border-b border-slate-900/[0.08] dark:border-white/[0.04] last:border-b-0 transition-colors hover:bg-slate-950/[0.04] dark:hover:bg-white/[0.03]"
+              >
+                <td className="py-4 px-4 font-display font-semibold text-foreground/75">
+                  {framework}
+                </td>
+                <td className="py-4 px-4 text-foreground/50 font-mono text-[11px] sm:text-xs">
+                  {control.controlId}
+                </td>
+                <td className="py-4 px-4 font-display font-bold text-foreground">
+                  {control.controlName}
+                </td>
+                <td className="py-4 px-4">
                   <span
-                    className={`inline-flex px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide border ${
+                    className={`inline-flex px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider backdrop-blur-sm ${
                       control.status === "fail"
-                        ? "bg-[#EA0022]/10 text-[#EA0022] border-[#EA0022]/20"
-                        : "bg-[#F29400]/10 text-[#F29400] border-[#F29400]/20"
+                        ? "text-[#EA0022] border border-[#EA0022]/35"
+                        : "text-[#F29400] border border-[#F29400]/35"
                     }`}
+                    style={{
+                      background:
+                        control.status === "fail"
+                          ? "linear-gradient(145deg, rgba(234,0,34,0.15), rgba(234,0,34,0.05))"
+                          : "linear-gradient(145deg, rgba(242,148,0,0.15), rgba(242,148,0,0.05))",
+                      boxShadow:
+                        control.status === "fail"
+                          ? "0 0 12px rgba(234,0,34,0.12), inset 0 1px 0 rgba(255,255,255,0.06)"
+                          : "0 0 12px rgba(242,148,0,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
+                    }}
                   >
                     {control.status}
                   </span>
                 </td>
-                <td className="py-3 px-4 tabular-nums font-display font-semibold text-foreground">{findingCount}</td>
-                <td className="py-3 px-4 text-muted-foreground/60 font-medium">{effort}</td>
+                <td className="py-4 px-4 tabular-nums font-display font-black text-foreground text-base">
+                  {findingCount}
+                </td>
+                <td className="py-4 px-4 text-foreground/45 font-semibold">{effort}</td>
               </tr>
             ))}
           </tbody>
@@ -165,7 +231,7 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
       {hasMore && !showAll && (
         <button
           onClick={() => setShowAll(true)}
-          className="text-[11px] font-semibold text-brand-accent hover:underline underline-offset-2"
+          className="text-sm font-bold text-brand-accent hover:underline underline-offset-2"
         >
           Show all {sorted.length} gaps
         </button>

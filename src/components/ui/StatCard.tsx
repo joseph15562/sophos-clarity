@@ -25,7 +25,7 @@ export function StatCard({
   const accentHex = hex ?? "#2006F7";
   return (
     <Wrapper
-      className={`relative overflow-hidden rounded-xl border border-white/[0.06] p-5 flex items-center gap-4 text-left shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-white/[0.12] hover:shadow-elevated ${onClick ? "cursor-pointer" : ""}`}
+      className={`relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 flex items-center gap-4 text-left shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated ${onClick ? "cursor-pointer" : ""}`}
       style={{ background: `linear-gradient(145deg, ${accentHex}12, ${accentHex}05)` }}
       onClick={onClick}
     >
@@ -40,7 +40,7 @@ export function StatCard({
         style={{ background: `linear-gradient(90deg, transparent, ${accentHex}28, transparent)` }}
       />
       <div
-        className="relative h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.08]"
+        className="relative h-12 w-12 rounded-xl flex items-center justify-center shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
         style={{ backgroundColor: `${accentHex}18` }}
       >
         {typeof icon === "string" ? (

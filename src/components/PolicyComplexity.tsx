@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 
 type ExtractedSection = {
@@ -32,6 +32,8 @@ function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: nu
 }
 
 export function PolicyComplexity({ analysisResults, files }: Props) {
+  const glowFilterId = useId().replace(/:/g, "");
+
   const { score, label, recommendations } = useMemo(() => {
     const results = Object.values(analysisResults);
     if (results.length === 0) {
@@ -118,58 +120,105 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
   const filledPath = arcPath(cx, cy, r, startAngle, filledEndAngle);
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] p-5 sm:p-6 shadow-card backdrop-blur-sm transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(0,242,179,0.06), rgba(242,148,0,0.03), rgba(255,255,255,0.02))",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(0,242,179,0.3), rgba(242,148,0,0.15), transparent)",
+        }}
+      />
+      <h3 className="relative text-lg font-display font-black tracking-tight text-foreground mb-5">
         Policy Complexity
       </h3>
 
-      <div className="flex flex-col items-center gap-4">
-        <svg
-          width={size}
-          height={size * 0.6}
-          viewBox={`0 0 ${size} ${size * 0.6}`}
-          className="overflow-visible"
+      <div className="flex flex-col items-center gap-5">
+        <div
+          className="rounded-2xl px-4 py-3 backdrop-blur-sm w-full max-w-[200px]"
+          style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 12px 40px rgba(0,0,0,0.2)",
+          }}
         >
-          <path
-            d={trackPath}
-            fill="none"
-            stroke="hsl(var(--border))"
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-          <path
-            d={filledPath}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-          <text
-            x={cx}
-            y={cy - 8}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-foreground text-lg font-bold"
+          <svg
+            width={size}
+            height={size * 0.6}
+            viewBox={`0 0 ${size} ${size * 0.6}`}
+            className="overflow-visible mx-auto block"
           >
-            {score}
-          </text>
-          <text
-            x={cx}
-            y={cy + 12}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-muted-foreground text-[10px] font-medium"
-          >
-            {label}
-          </text>
-        </svg>
+            <defs>
+              <filter id={glowFilterId} x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="2.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <path
+              d={trackPath}
+              fill="none"
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+            />
+            <path
+              d={filledPath}
+              fill="none"
+              stroke={color}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              filter={`url(#${glowFilterId})`}
+            />
+            <text
+              x={cx}
+              y={cy - 10}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="fill-foreground text-2xl font-display font-black"
+            >
+              {score}
+            </text>
+            <text
+              x={cx}
+              y={cy + 14}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              className="fill-foreground/50 text-xs font-display font-bold"
+            >
+              {label}
+            </text>
+          </svg>
+        </div>
 
         {recommendations.length > 0 && (
-          <ul className="w-full space-y-1.5 text-[10px] text-muted-foreground">
+          <ul className="w-full space-y-2">
             {recommendations.map((rec, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <span className="text-amber-500 mt-0.5">•</span>
-                <span>{rec}</span>
+              <li
+                key={i}
+                className="flex items-start gap-3 rounded-xl px-3 py-2.5 text-sm text-foreground/70 border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm transition-colors hover:bg-slate-950/[0.04] dark:hover:bg-white/[0.03]"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(242,148,0,0.08), rgba(255,255,255,0.02))",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+                }}
+              >
+                <span
+                  className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                  style={{
+                    background: AMBER,
+                    boxShadow: `0 0 10px ${AMBER}99`,
+                  }}
+                />
+                <span className="leading-snug">{rec}</span>
               </li>
             ))}
           </ul>

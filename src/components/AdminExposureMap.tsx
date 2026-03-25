@@ -140,11 +140,30 @@ export function AdminExposureMap({
 
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">
+      <div
+        className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(234,0,34,0.04), rgba(242,148,0,0.02), transparent)",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(234,0,34,0.15), rgba(242,148,0,0.08), transparent)",
+          }}
+        />
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-4">
           Admin Access Exposure
         </h3>
-        <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
+        <div
+          className="flex items-start gap-3 rounded-xl p-4 backdrop-blur-sm"
+          style={{
+            border: "1px solid rgba(255,255,255,0.06)",
+            background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+          }}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0"
@@ -159,7 +178,7 @@ export function AdminExposureMap({
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <div className="text-[11px] text-muted-foreground space-y-0.5">
+          <div className="text-xs text-foreground/50 space-y-1">
             <p className="font-medium">Local Service ACL data not available</p>
             <p>
               Admin service exposure will appear here when the configuration includes Local Service
@@ -172,28 +191,47 @@ export function AdminExposureMap({
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(234,0,34,0.04), rgba(242,148,0,0.02), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(234,0,34,0.15), rgba(242,148,0,0.08), transparent)",
+        }}
+      />
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">
           Admin Access Exposure
         </h3>
         {warningCount > 0 && (
-          <span className="text-xs font-medium text-[#EA0022]">
+          <span className="text-xs font-bold text-[#EA0022]">
             {warningCount} service{warningCount !== 1 ? "s" : ""} exposed to untrusted zones
           </span>
         )}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
+      <div
+        className="overflow-x-auto rounded-xl"
+        style={{
+          border: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
+        <table className="w-full text-sm border-collapse">
           <thead>
-            <tr>
-              <th className="text-left py-1.5 pr-3 font-medium text-foreground border-b border-border">
+            <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+              <th className="text-left py-3 pr-4 font-bold text-foreground/80 border-b border-slate-900/[0.10] dark:border-white/[0.06]">
                 Zone
               </th>
               {services.map((s) => (
                 <th
                   key={s}
-                  className="text-left py-1.5 px-1 font-medium text-muted-foreground border-b border-border whitespace-nowrap"
+                  className="text-left py-3 px-2 font-semibold text-foreground/45 border-b border-slate-900/[0.10] dark:border-white/[0.06] whitespace-nowrap text-xs"
                 >
                   {s}
                 </th>
@@ -205,10 +243,10 @@ export function AdminExposureMap({
               const isWan = UNTRUSTED_ZONES.test(row.zone);
               const hasRisky = Object.values(row.services).some((v) => v === "risky");
               return (
-                <tr key={row.zone} className={isWan && hasRisky ? "bg-[#EA0022]/10" : ""}>
+                <tr key={row.zone} className={isWan && hasRisky ? "bg-[#EA0022]/08" : ""}>
                   <td
-                    className={`py-1.5 pr-3 font-medium border-b border-border/50 ${
-                      isWan && hasRisky ? "text-[#EA0022]" : "text-foreground"
+                    className={`py-2.5 pr-4 font-semibold border-b border-slate-900/[0.08] dark:border-white/[0.04] ${
+                      isWan && hasRisky ? "text-[#EA0022]" : "text-foreground/90"
                     }`}
                   >
                     {row.zone}
@@ -217,14 +255,14 @@ export function AdminExposureMap({
                     const state = row.services[s] ?? "disabled";
                     const bg =
                       state === "enabled"
-                        ? "bg-[#00F2B3]/30"
+                        ? "bg-[#00F2B3]/20"
                         : state === "risky"
-                          ? "bg-[#EA0022]/30"
-                          : "bg-muted/30";
+                          ? "bg-[#EA0022]/20"
+                          : "bg-white/70 dark:bg-white/[0.03]";
                     return (
                       <td
                         key={s}
-                        className={`py-1 px-1 border-b border-border/30 ${bg}`}
+                        className={`py-2 px-2 text-center font-bold border-b border-slate-900/[0.08] dark:border-white/[0.04] backdrop-blur-sm ${bg}`}
                         title={`${row.zone} / ${s}: ${
                           state === "enabled"
                             ? "enabled (internal)"

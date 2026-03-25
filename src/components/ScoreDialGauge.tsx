@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
-import { AlertTriangle, Eye, Layers, FileSearch } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, Eye, Layers, FileSearch, BarChart3 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
 import { scoreToColor } from "@/lib/design-tokens";
 
 interface ScoreDialGaugeProps {
   analysisResults: Record<string, AnalysisResult>;
+  /** When set, overlays a historical snapshot score on the gauge */
+  trendSnapshot?: { score: number; grade: string; date: string } | null;
 }
 
 function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
@@ -250,7 +252,7 @@ function GaugeSvg({
   );
 }
 
-export function ScoreDialGauge({ analysisResults }: ScoreDialGaugeProps) {
+export function ScoreDialGauge({ analysisResults, trendSnapshot }: ScoreDialGaugeProps) {
   const scores = useMemo(() => {
     const entries = Object.entries(analysisResults);
     if (entries.length === 0) return { aggregate: null, perFirewall: [] };
@@ -292,13 +294,25 @@ export function ScoreDialGauge({ analysisResults }: ScoreDialGaugeProps) {
   const aggScore = "score" in scores.aggregate ? scores.aggregate.score : 0;
   const aggGrade = "grade" in scores.aggregate ? scores.aggregate.grade : "—";
 
+  const [selectedFw, setSelectedFw] = useState<string | null>(null);
+
+  const activeFw = scores.perFirewall.find((fw) => fw.key === selectedFw) ?? null;
+  const activeScore = activeFw ? activeFw.score : aggScore;
+  const activeGrade = activeFw ? activeFw.grade : aggGrade;
+  const activeLabel = activeFw
+    ? activeFw.name
+    : isSingle
+      ? (scores.perFirewall[0]?.name ?? "Overall")
+      : "Average";
+  const activeColor = scoreToColor(activeScore);
+
   return (
-    <div className="relative overflow-hidden rounded-[20px] border border-border/30 dark:border-white/[0.06] bg-gradient-to-b from-card/80 via-card/50 to-transparent dark:from-white/[0.03] dark:via-white/[0.01] dark:to-transparent p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_50px_rgba(32,6,247,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_50px_rgba(0,0,0,0.3)] space-y-5">
+    <div className="relative overflow-hidden rounded-[20px] border border-border/30 dark:border-slate-900/[0.10] dark:border-white/[0.06] bg-gradient-to-b from-card/80 via-card/50 to-transparent dark:from-white/[0.03] dark:via-white/[0.01] dark:to-transparent p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_50px_rgba(32,6,247,0.08)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_50px_rgba(0,0,0,0.3)] space-y-5">
       {/* Ambient score glow */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center -mt-8">
         <div
-          className="h-72 w-72 rounded-full blur-[100px] opacity-[0.12]"
-          style={{ backgroundColor: scoreToColor(aggScore) }}
+          className="h-72 w-72 rounded-full blur-[100px] opacity-[0.12] transition-colors duration-500"
+          style={{ backgroundColor: activeColor }}
         />
       </div>
       {/* Top-edge shimmer */}
@@ -318,90 +332,278 @@ export function ScoreDialGauge({ analysisResults }: ScoreDialGaugeProps) {
               walkthroughs.
             </p>
           </div>
-          <div
-            className="relative overflow-hidden rounded-2xl border border-white/[0.08] px-6 py-5 text-right shadow-elevated"
-            style={{
-              background: `linear-gradient(135deg, ${scoreToColor(aggScore)}18, ${scoreToColor(aggScore)}08)`,
-            }}
-          >
-            <div className="absolute inset-0 pointer-events-none">
-              <div
-                className="absolute -top-8 -right-8 h-24 w-24 rounded-full blur-[40px] opacity-30"
-                style={{ backgroundColor: scoreToColor(aggScore) }}
-              />
-            </div>
+          <div className="flex items-center gap-3">
+            {/* Current posture box */}
             <div
-              className="absolute inset-x-0 top-0 h-px"
+              className="relative overflow-hidden rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] px-6 py-5 text-right shadow-elevated"
               style={{
-                background: `linear-gradient(90deg, transparent, ${scoreToColor(aggScore)}40, transparent)`,
+                background: `linear-gradient(135deg, ${activeColor}18, ${activeColor}08)`,
               }}
-            />
-            <p className="relative text-[9px] font-display font-semibold uppercase tracking-[0.22em] text-muted-foreground/70">
-              Current posture
-            </p>
-            <p
-              className="relative text-5xl font-display font-black tracking-tighter tabular-nums mt-2"
-              style={{ color: scoreToColor(aggScore) }}
             >
-              {aggScore}
-              <span className="text-xl font-bold text-foreground/40">/100</span>
-            </p>
-            <p
-              className="relative text-xs font-display font-bold mt-1.5 tracking-wide"
-              style={{ color: scoreToColor(aggScore) }}
-            >
-              Grade {aggGrade}
-            </p>
+              <div className="absolute inset-0 pointer-events-none">
+                <div
+                  className="absolute -top-8 -right-8 h-24 w-24 rounded-full blur-[40px] opacity-30 transition-colors duration-500"
+                  style={{ backgroundColor: activeColor }}
+                />
+              </div>
+              <div
+                className="absolute inset-x-0 top-0 h-px"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${activeColor}40, transparent)`,
+                }}
+              />
+              <p className="relative text-[9px] font-display font-semibold uppercase tracking-[0.22em] text-muted-foreground/70">
+                {activeFw ? activeFw.name : "Current posture"}
+              </p>
+              <p
+                className="relative text-5xl font-display font-black tracking-tighter tabular-nums mt-2 transition-colors duration-300"
+                style={{ color: activeColor }}
+              >
+                {activeScore}
+                <span className="text-xl font-bold text-foreground/40">/100</span>
+              </p>
+              <p
+                className="relative text-xs font-display font-bold mt-1.5 tracking-wide transition-colors duration-300"
+                style={{ color: activeColor }}
+              >
+                Grade {activeGrade}
+              </p>
+            </div>
+            {/* Average score box — only shown when multiple firewalls and one is selected */}
+            {!isSingle && scores.perFirewall.length > 1 && (
+              <div
+                className="relative overflow-hidden rounded-2xl border px-5 py-5 text-right shadow-elevated cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                style={{
+                  borderColor: !activeFw ? `${scoreToColor(aggScore)}30` : "rgba(255,255,255,0.06)",
+                  background: `linear-gradient(135deg, ${scoreToColor(aggScore)}12, ${scoreToColor(aggScore)}06)`,
+                  boxShadow: !activeFw ? `0 0 20px ${scoreToColor(aggScore)}15` : "none",
+                }}
+                onClick={() => setSelectedFw(null)}
+                title="Show average score"
+              >
+                <div className="absolute inset-0 pointer-events-none">
+                  <div
+                    className="absolute -top-6 -right-6 h-16 w-16 rounded-full blur-[30px] opacity-25"
+                    style={{ backgroundColor: scoreToColor(aggScore) }}
+                  />
+                </div>
+                <div
+                  className="absolute inset-x-0 top-0 h-px"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${scoreToColor(aggScore)}35, transparent)`,
+                  }}
+                />
+                <p className="relative text-[9px] font-display font-semibold uppercase tracking-[0.22em] text-muted-foreground/70 flex items-center justify-end gap-1">
+                  <BarChart3 className="h-3 w-3" style={{ color: scoreToColor(aggScore) }} />
+                  Fleet avg
+                </p>
+                <p
+                  className="relative text-3xl font-display font-black tracking-tighter tabular-nums mt-1.5"
+                  style={{ color: scoreToColor(aggScore) }}
+                >
+                  {aggScore}
+                  <span className="text-base font-bold text-foreground/40">/100</span>
+                </p>
+                <p
+                  className="relative text-[10px] font-display font-bold mt-1 tracking-wide"
+                  style={{ color: scoreToColor(aggScore) }}
+                >
+                  Grade {aggGrade}
+                </p>
+                <p className="relative text-[8px] text-muted-foreground/50 mt-0.5">
+                  {scores.perFirewall.length} firewall{scores.perFirewall.length > 1 ? "s" : ""}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className="relative flex flex-col items-center gap-6 pt-2">
-        {/* Main gauge */}
-        <div className="relative flex items-center justify-center" data-tour="score-dial">
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div
-              className="h-52 w-52 rounded-full blur-[60px] opacity-25"
-              style={{ backgroundColor: scoreToColor(aggScore) }}
-            />
-          </div>
-          <div
-            className="gauge-needle-mount relative"
-            style={{
-              animation: "gaugeNeedleMount 0.6s ease-out forwards",
-            }}
-          >
-            <GaugeSvg score={aggScore} size={240} showLabels label={aggGrade} />
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-sm font-display font-semibold text-foreground/80 text-center tracking-tight">
-            Your firewall scores <span className="font-black text-foreground">{aggScore}/100</span>{" "}
-            <span className="text-foreground/50">(Grade {aggGrade})</span>
-          </p>
-          <div
-            className="h-[2px] w-20 rounded-full"
-            style={{
-              background: `linear-gradient(90deg, transparent, ${scoreToColor(aggScore)}, transparent)`,
-            }}
-          />
-        </div>
-
-        {/* Mini gauges for multiple firewalls */}
-        {!isSingle && scores.perFirewall.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-4 pt-5 border-t border-border/30 w-full">
-            {scores.perFirewall.map(({ key, name, score, grade }) => (
-              <div
-                key={key}
-                className="relative flex flex-col items-center gap-1.5 rounded-2xl border border-border/30 bg-card/40 px-4 py-3 transition-all duration-200 hover:bg-card/60 hover:border-border/50"
-              >
-                <GaugeSvg score={score} size={80} showLabels label={grade} />
-                <span className="text-[10px] font-display font-medium text-muted-foreground/70 truncate max-w-[80px]">
-                  {name}
-                </span>
+        {/* Main gauge — shows trend snapshot, selected firewall, or aggregate */}
+        {(() => {
+          const displayScore = trendSnapshot ? trendSnapshot.score : activeScore;
+          const displayGrade = trendSnapshot ? trendSnapshot.grade : activeGrade;
+          const displayColor = scoreToColor(displayScore);
+          return (
+            <>
+              <div className="relative flex items-center justify-center" data-tour="score-dial">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div
+                    className="h-52 w-52 rounded-full blur-[60px] opacity-25 transition-colors duration-500"
+                    style={{ backgroundColor: displayColor }}
+                  />
+                </div>
+                <div
+                  className="gauge-needle-mount relative"
+                  style={{ animation: "gaugeNeedleMount 0.6s ease-out forwards" }}
+                  key={`${displayScore}-${displayGrade}`}
+                >
+                  <GaugeSvg score={displayScore} size={240} showLabels label={displayGrade} />
+                </div>
               </div>
-            ))}
+
+              <div className="flex flex-col items-center gap-2">
+                {trendSnapshot ? (
+                  <>
+                    <div
+                      className="relative overflow-hidden rounded-xl border px-4 py-2.5 flex items-center gap-3 transition-all duration-300"
+                      style={{
+                        borderColor: `${displayColor}25`,
+                        background: `linear-gradient(145deg, ${displayColor}12, ${displayColor}04)`,
+                      }}
+                    >
+                      <div
+                        className="absolute -top-3 -right-3 h-10 w-10 rounded-full blur-[15px] opacity-30 pointer-events-none"
+                        style={{ backgroundColor: displayColor }}
+                      />
+                      <div
+                        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                        style={{
+                          background: `linear-gradient(90deg, transparent, ${displayColor}50, transparent)`,
+                        }}
+                      />
+                      <p className="relative text-[10px] text-muted-foreground">
+                        <span className="font-black" style={{ color: displayColor }}>
+                          {trendSnapshot.score}/100
+                        </span>{" "}
+                        on <span className="font-bold text-foreground">{trendSnapshot.date}</span>
+                      </p>
+                      <div className="h-4 w-px bg-white/85 dark:bg-white/[0.08]" />
+                      <p className="relative text-[10px] text-muted-foreground">
+                        Now: <span className="font-black text-foreground">{activeScore}/100</span>
+                        {trendSnapshot.score !== activeScore && (
+                          <span
+                            className="ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-full border"
+                            style={{
+                              color: activeScore >= trendSnapshot.score ? "#00F2B3" : "#EA0022",
+                              background:
+                                activeScore >= trendSnapshot.score
+                                  ? "rgba(0,242,179,0.08)"
+                                  : "rgba(234,0,34,0.08)",
+                              borderColor:
+                                activeScore >= trendSnapshot.score
+                                  ? "rgba(0,242,179,0.15)"
+                                  : "rgba(234,0,34,0.15)",
+                            }}
+                          >
+                            {activeScore >= trendSnapshot.score ? "+" : ""}
+                            {activeScore - trendSnapshot.score}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground/50 font-medium">
+                      Showing historical snapshot — select a point on the trend chart
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-display font-semibold text-foreground/80 text-center tracking-tight">
+                      {activeFw ? (
+                        <>
+                          <span className="font-black text-foreground">{activeFw.name}</span> scores{" "}
+                          <span className="font-black text-foreground">{activeScore}/100</span>{" "}
+                          <span className="text-foreground/50">(Grade {activeGrade})</span>
+                        </>
+                      ) : (
+                        <>
+                          Your firewall{!isSingle ? "s score" : " scores"}{" "}
+                          <span className="font-black text-foreground">{activeScore}/100</span>{" "}
+                          <span className="text-foreground/50">(Grade {activeGrade})</span>
+                        </>
+                      )}
+                    </p>
+                    <div
+                      className="h-[2px] w-20 rounded-full transition-colors duration-500"
+                      style={{
+                        background: `linear-gradient(90deg, transparent, ${activeColor}, transparent)`,
+                      }}
+                    />
+                    {activeFw && (
+                      <button
+                        onClick={() => setSelectedFw(null)}
+                        className="group/back relative overflow-hidden mt-1 px-4 py-2 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-xs font-bold text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] transition-all duration-200 hover:shadow-[0_4px_16px_rgba(32,6,247,0.12)]"
+                        style={{
+                          background:
+                            "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))",
+                        }}
+                      >
+                        <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover/back:opacity-30 pointer-events-none bg-brand-accent" />
+                        ← Back to {isSingle ? "overview" : "fleet average"}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          );
+        })()}
+
+        {/* Selectable firewall gauges */}
+        {scores.perFirewall.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-4 pt-5 border-t border-slate-900/[0.10] dark:border-white/[0.06] w-full">
+            {scores.perFirewall.map(({ key, name, score, grade }) => {
+              const isSelected = selectedFw === key;
+              const fwColor = scoreToColor(score);
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedFw(isSelected ? null : key)}
+                  className="group/fw relative flex flex-col items-center gap-1.5 rounded-2xl border px-4 py-3 transition-all duration-200 hover:scale-[1.04] cursor-pointer"
+                  style={{
+                    borderColor: isSelected ? `${fwColor}40` : "rgba(255,255,255,0.06)",
+                    background: isSelected
+                      ? `linear-gradient(145deg, ${fwColor}15, ${fwColor}06)`
+                      : "linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005))",
+                    boxShadow: isSelected
+                      ? `0 0 24px ${fwColor}20, inset 0 1px 0 rgba(255,255,255,0.04)`
+                      : "inset 0 1px 0 rgba(255,255,255,0.03)",
+                  }}
+                >
+                  {/* Corner glow */}
+                  <div
+                    className="absolute -top-4 -right-4 h-12 w-12 rounded-full blur-[18px] transition-opacity duration-300 pointer-events-none"
+                    style={{
+                      backgroundColor: fwColor,
+                      opacity: isSelected ? 0.3 : 0,
+                    }}
+                  />
+                  {/* Top shimmer */}
+                  <div
+                    className="absolute inset-x-0 top-0 h-px pointer-events-none transition-opacity duration-300"
+                    style={{
+                      background: `linear-gradient(90deg, transparent, ${fwColor}40, transparent)`,
+                      opacity: isSelected ? 1 : 0,
+                    }}
+                  />
+                  {/* Selection ring */}
+                  {isSelected && (
+                    <div
+                      className="absolute inset-0 rounded-2xl pointer-events-none"
+                      style={{
+                        boxShadow: `inset 0 0 0 1.5px ${fwColor}30`,
+                      }}
+                    />
+                  )}
+                  <GaugeSvg score={score} size={80} showLabels label={grade} />
+                  <span
+                    className="text-[10px] font-display font-bold truncate max-w-[90px] transition-colors duration-200"
+                    style={{ color: isSelected ? fwColor : undefined }}
+                  >
+                    {name}
+                  </span>
+                  {isSelected && (
+                    <span
+                      className="text-[8px] font-black uppercase tracking-wider"
+                      style={{ color: fwColor }}
+                    >
+                      Selected
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -499,7 +701,7 @@ function StatStrip({ analysisResults }: { analysisResults: Record<string, Analys
         return (
           <div
             key={item.label}
-            className="relative overflow-hidden rounded-xl border border-white/[0.06] p-3.5 transition-all duration-200 hover:scale-[1.03] hover:border-white/[0.12]"
+            className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-3.5 transition-all duration-200 hover:scale-[1.03] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
             style={{ background: `linear-gradient(145deg, ${hex}14, ${hex}06)` }}
           >
             <div className="absolute inset-0 pointer-events-none">

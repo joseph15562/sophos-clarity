@@ -84,7 +84,7 @@ export function AssessmentPulse({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 shadow-card transition-all duration-200 hover:shadow-elevated hover:border-white/[0.12]"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 shadow-card transition-all duration-200 hover:shadow-elevated hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
       style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.08), rgba(32,6,247,0.02))" }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -111,7 +111,7 @@ export function AssessmentPulse({
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="text-3xl font-black tabular-nums text-foreground">{displayScore}</span>
             {displayGrade && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-md border border-white/[0.08] bg-white/[0.04] text-foreground">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-md border border-slate-900/[0.12] dark:border-white/[0.08] bg-white/75 dark:bg-white/[0.04] text-foreground">
                 {displayGrade}
               </span>
             )}

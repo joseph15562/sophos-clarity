@@ -6,14 +6,32 @@ import type { OrgRole } from "@/hooks/use-auth";
 import { logAudit } from "@/lib/audit";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
 const ROLE_OPTIONS: { value: OrgRole; label: string; description: string }[] = [
-  { value: "admin", label: "Admin", description: "Full access — manage agents, Central, team, and settings" },
-  { value: "engineer", label: "Engineer", description: "Run assessments, view reports, manage agents" },
+  {
+    value: "admin",
+    label: "Admin",
+    description: "Full access — manage agents, Central, team, and settings",
+  },
+  {
+    value: "engineer",
+    label: "Engineer",
+    description: "Run assessments, view reports, manage agents",
+  },
   { value: "member", label: "Member", description: "View assessments and reports" },
-  { value: "viewer", label: "Viewer", description: "Read-only access to reports (for client access)" },
+  {
+    value: "viewer",
+    label: "Viewer",
+    description: "Read-only access to reports (for client access)",
+  },
 ];
 
 interface Invite {
@@ -45,8 +63,16 @@ export function InviteStaff() {
   const loadData = useCallback(async () => {
     if (!org) return;
     const [inviteRes, memberRes, sessionRes] = await Promise.all([
-      supabase.from("org_invites").select("id, email, role, created_at").eq("org_id", org.id).order("created_at", { ascending: false }),
-      supabase.from("org_members").select("id, user_id, role, joined_at").eq("org_id", org.id).order("joined_at", { ascending: true }),
+      supabase
+        .from("org_invites")
+        .select("id, email, role, created_at")
+        .eq("org_id", org.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("org_members")
+        .select("id, user_id, role, joined_at")
+        .eq("org_id", org.id)
+        .order("joined_at", { ascending: true }),
       supabase.auth.getUser(),
     ]);
     if (inviteRes.data) setInvites(inviteRes.data);
@@ -54,17 +80,15 @@ export function InviteStaff() {
       const currentUser = sessionRes.data?.user;
       const enriched: Member[] = memberRes.data.map((m) => ({
         ...m,
-        email: currentUser && m.user_id === currentUser.id
-          ? currentUser.email
-          : undefined,
+        email: currentUser && m.user_id === currentUser.id ? currentUser.email : undefined,
         isYou: currentUser ? m.user_id === currentUser.id : false,
       }));
 
       if (inviteRes.data) {
         for (const m of enriched) {
           if (!m.email) {
-            const matchingInvite = inviteRes.data.find((inv) =>
-              enriched.filter((em) => em.email === inv.email).length === 0
+            const matchingInvite = inviteRes.data.find(
+              (inv) => enriched.filter((em) => em.email === inv.email).length === 0,
             );
             if (matchingInvite) m.email = matchingInvite.email;
           }
@@ -75,56 +99,74 @@ export function InviteStaff() {
     }
   }, [org]);
 
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const handleInvite = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (!email.trim() || !email.includes("@")) {
-      setError("Please enter a valid email address");
-      return;
-    }
-    if (!org) return;
-
-    setLoading(true);
-    const { error: err } = await supabase
-      .from("org_invites")
-      .insert({ org_id: org.id, email: email.trim().toLowerCase(), role: inviteRole });
-    setLoading(false);
-
-    if (err) {
-      if (err.message.includes("duplicate")) setError("This email has already been invited");
-      else setError(err.message);
-    } else {
-      setSuccess(`Invite sent to ${email.trim()}`);
-      setEmail("");
-      loadData();
-      setTimeout(() => setSuccess(null), 4000);
-      if (org?.id) {
-        logAudit(org.id, "team.invited", "org_invite", "", { email: email.trim().toLowerCase() }).catch(() => {});
-      }
-    }
-  }, [email, org, inviteRole, loadData]);
-
-  const revokeInvite = useCallback(async (id: string) => {
-    await supabase.from("org_invites").delete().eq("id", id);
+  useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const removeMember = useCallback(async (id: string, memberEmail?: string) => {
-    const { error } = await supabase.from("org_members").delete().eq("id", id);
-    if (!error && org?.id) {
-      logAudit(org.id, "team.removed", "org_member", id, { email: memberEmail }).catch(() => {});
-    }
-    loadData();
-  }, [loadData, org]);
+  const handleInvite = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setSuccess(null);
+
+      if (!email.trim() || !email.includes("@")) {
+        setError("Please enter a valid email address");
+        return;
+      }
+      if (!org) return;
+
+      setLoading(true);
+      const { error: err } = await supabase
+        .from("org_invites")
+        .insert({ org_id: org.id, email: email.trim().toLowerCase(), role: inviteRole });
+      setLoading(false);
+
+      if (err) {
+        if (err.message.includes("duplicate")) setError("This email has already been invited");
+        else setError(err.message);
+      } else {
+        setSuccess(`Invite sent to ${email.trim()}`);
+        setEmail("");
+        loadData();
+        setTimeout(() => setSuccess(null), 4000);
+        if (org?.id) {
+          logAudit(org.id, "team.invited", "org_invite", "", {
+            email: email.trim().toLowerCase(),
+          }).catch(() => {});
+        }
+      }
+    },
+    [email, org, inviteRole, loadData],
+  );
+
+  const revokeInvite = useCallback(
+    async (id: string) => {
+      await supabase.from("org_invites").delete().eq("id", id);
+      loadData();
+    },
+    [loadData],
+  );
+
+  const removeMember = useCallback(
+    async (id: string, memberEmail?: string) => {
+      const { error } = await supabase.from("org_members").delete().eq("id", id);
+      if (!error && org?.id) {
+        logAudit(org.id, "team.removed", "org_member", id, { email: memberEmail }).catch(() => {});
+      }
+      loadData();
+    },
+    [loadData, org],
+  );
 
   const [resettingMfa, setResettingMfa] = useState<string | null>(null);
 
   const resetMfa = useCallback(async (targetUserId: string, memberEmail?: string) => {
-    if (!confirm(`Reset MFA for ${memberEmail ?? "this user"}? They will need to re-enroll their authenticator on next login.`)) return;
+    if (
+      !confirm(
+        `Reset MFA for ${memberEmail ?? "this user"}? They will need to re-enroll their authenticator on next login.`,
+      )
+    )
+      return;
 
     setResettingMfa(targetUserId);
     try {
@@ -141,7 +183,7 @@ export function InviteStaff() {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({ targetUserId }),
-        }
+        },
       );
 
       if (!res.ok) {
@@ -151,7 +193,9 @@ export function InviteStaff() {
 
       const data = await res.json();
       if (data.factorsRemoved > 0) {
-        toast.success(`MFA reset for ${memberEmail ?? "user"} — ${data.factorsRemoved} factor(s) removed`);
+        toast.success(
+          `MFA reset for ${memberEmail ?? "user"} — ${data.factorsRemoved} factor(s) removed`,
+        );
       } else {
         toast.info(`${memberEmail ?? "User"} has no MFA factors enrolled`);
       }
@@ -198,15 +242,13 @@ export function InviteStaff() {
             </SelectTrigger>
             <SelectContent>
               {ROLE_OPTIONS.map((r) => (
-                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                <SelectItem key={r.value} value={r.value}>
+                  {r.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Button
-            type="submit"
-            disabled={loading}
-            className="gap-1.5 text-xs"
-          >
+          <Button type="submit" disabled={loading} className="gap-1.5 text-xs">
             <UserPlus className="h-3.5 w-3.5" />
             Invite
           </Button>
@@ -221,7 +263,7 @@ export function InviteStaff() {
       )}
 
       {success && (
-        <div className="flex items-center gap-2 text-xs text-[#00F2B3] dark:text-[#00F2B3] bg-[#00F2B3]/5 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-[#007A5A] dark:text-[#00F2B3] bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 rounded-lg px-3 py-2">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
           <span>{success}</span>
         </div>
@@ -237,12 +279,16 @@ export function InviteStaff() {
           <div className="space-y-1">
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30">
-                <Shield className={`h-3 w-3 shrink-0 ${m.role === "admin" ? "text-brand-accent" : "text-muted-foreground"}`} />
+                <Shield
+                  className={`h-3 w-3 shrink-0 ${m.role === "admin" ? "text-brand-accent" : "text-muted-foreground"}`}
+                />
                 <span className="text-xs text-foreground flex-1 truncate">
                   {m.email ?? m.user_id}
                   {m.isYou && <span className="text-[9px] text-muted-foreground ml-1">(you)</span>}
                 </span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">{m.role}</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                  {m.role}
+                </span>
                 {!m.isYou && (
                   <button
                     onClick={() => resetMfa(m.user_id, m.email)}
@@ -254,7 +300,12 @@ export function InviteStaff() {
                   </button>
                 )}
                 {m.role !== "admin" && !m.isYou && (
-                  <button onClick={() => removeMember(m.id, m.email)} className="text-muted-foreground hover:text-[#EA0022] transition-colors" title="Remove member" aria-label="Remove member">
+                  <button
+                    onClick={() => removeMember(m.id, m.email)}
+                    className="text-muted-foreground hover:text-[#EA0022] transition-colors"
+                    title="Remove member"
+                    aria-label="Remove member"
+                  >
                     <Trash2 className="h-3 w-3" />
                   </button>
                 )}
@@ -272,16 +323,29 @@ export function InviteStaff() {
           </div>
           <div className="space-y-1">
             {invites.map((inv) => (
-              <div key={inv.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F29400]/5">
+              <div
+                key={inv.id}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F29400]/5"
+              >
                 <UserPlus className="h-3 w-3 text-[#F29400] shrink-0" />
                 <span className="text-xs text-foreground flex-1 truncate">{inv.email}</span>
                 {inv.role && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">{inv.role}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                    {inv.role}
+                  </span>
                 )}
                 <span className="text-[9px] text-muted-foreground">
-                  {new Date(inv.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  {new Date(inv.created_at).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                  })}
                 </span>
-                <button onClick={() => revokeInvite(inv.id)} className="text-muted-foreground hover:text-[#EA0022] transition-colors" title="Revoke invite" aria-label="Revoke invite">
+                <button
+                  onClick={() => revokeInvite(inv.id)}
+                  className="text-muted-foreground hover:text-[#EA0022] transition-colors"
+                  title="Revoke invite"
+                  aria-label="Revoke invite"
+                >
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
@@ -291,7 +355,8 @@ export function InviteStaff() {
       )}
 
       <p className="text-[9px] text-muted-foreground">
-        Invited users will be automatically added to your organisation when they create their account with the same email.
+        Invited users will be automatically added to your organisation when they create their
+        account with the same email.
       </p>
     </div>
   );

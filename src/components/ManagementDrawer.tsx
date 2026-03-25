@@ -147,6 +147,8 @@ interface Props {
   onLocalModeChange: (enabled: boolean) => void;
   /** Optional: called when client clicks "Download Latest Report" in Client View preview */
   onDownloadReport?: () => void;
+  /** Fired when user clicks a trend chart data point to reflect on the main score dial */
+  onSelectTrendScore?: (score: number, grade: string, date: string) => void;
 }
 
 function Skeleton() {
@@ -486,6 +488,7 @@ export function ManagementDrawer({
   localMode,
   onLocalModeChange,
   onDownloadReport,
+  onSelectTrendScore,
 }: Props) {
   const { org, isViewerOnly, canManageTeam } = useAuth();
   const { logoUrl: companyLogo } = useCompanyLogo();
@@ -656,7 +659,7 @@ export function ManagementDrawer({
               {!isGuest && org?.id && (
                 <Suspense fallback={<Skeleton />}>
                   <div className="px-4" data-tour="score-trend-chart">
-                    <ScoreTrendChart orgId={org.id} />
+                    <ScoreTrendChart orgId={org.id} onSelectScore={onSelectTrendScore} />
                   </div>
                 </Suspense>
               )}

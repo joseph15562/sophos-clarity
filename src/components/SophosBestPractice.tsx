@@ -78,71 +78,235 @@ const TIER_INFO: Record<LicenceTier, { label: string; description: string }> = {
 
 const STATUS_CONFIG: Record<
   CheckStatus,
-  { icon: typeof CheckCircle2; color: string; bg: string; label: string }
+  {
+    icon: typeof CheckCircle2;
+    color: string;
+    bg: string;
+    label: string;
+    iconGlow: string;
+    rowHover: string;
+  }
 > = {
-  pass: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Pass" },
-  fail: { icon: XCircle, color: "text-red-400", bg: "bg-red-500/10", label: "Fail" },
-  warn: { icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-500/10", label: "Verify" },
-  na: { icon: MinusCircle, color: "text-muted-foreground/70", bg: "bg-muted/30", label: "N/A" },
+  pass: {
+    icon: CheckCircle2,
+    color: "text-emerald-300",
+    bg: "bg-emerald-500/15",
+    label: "Pass",
+    iconGlow: "shadow-[0_0_18px_rgba(52,211,153,0.45)]",
+    rowHover: "hover:bg-emerald-500/[0.06]",
+  },
+  fail: {
+    icon: XCircle,
+    color: "text-red-300",
+    bg: "bg-red-500/15",
+    label: "Fail",
+    iconGlow: "shadow-[0_0_18px_rgba(248,113,113,0.45)]",
+    rowHover: "hover:bg-red-500/[0.06]",
+  },
+  warn: {
+    icon: AlertTriangle,
+    color: "text-amber-300",
+    bg: "bg-amber-500/15",
+    label: "Verify",
+    iconGlow: "shadow-[0_0_16px_rgba(251,191,36,0.4)]",
+    rowHover: "hover:bg-amber-500/[0.06]",
+  },
+  na: {
+    icon: MinusCircle,
+    color: "text-muted-foreground/70",
+    bg: "bg-muted/30",
+    label: "N/A",
+    iconGlow: "",
+    rowHover: "hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02]",
+  },
   unknown: {
     icon: AlertTriangle,
     color: "text-muted-foreground",
     bg: "bg-muted/20",
     label: "Unknown",
+    iconGlow: "",
+    rowHover: "hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02]",
   },
 };
 
 const CATEGORY_THEME: Record<
   string,
-  { iconWrap: string; title: string; summary: string; pill: string }
+  {
+    iconWrap: string;
+    title: string;
+    summary: string;
+    pill: string;
+    accentBar: string;
+    cardTint: string;
+  }
 > = {
   "Device Hardening": {
-    iconWrap: "border-cyan-500/15 bg-cyan-500/10",
-    title: "text-cyan-600 dark:text-cyan-300",
-    summary: "text-cyan-700/80 dark:text-cyan-200/80",
-    pill: "border-cyan-500/15 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200",
+    iconWrap: "border-cyan-400/35 bg-cyan-500/15",
+    title: "text-cyan-600 dark:text-cyan-200",
+    summary: "text-cyan-700/80 dark:text-cyan-100/75",
+    pill: "border-cyan-400/30 bg-cyan-500/15 text-cyan-700 dark:text-cyan-100",
+    accentBar: "linear-gradient(180deg, rgba(34,211,238,0.85), rgba(6,182,212,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(34,211,238,0.14), transparent 55%)",
   },
   Authentication: {
-    iconWrap: "border-violet-500/15 bg-violet-500/10",
-    title: "text-violet-600 dark:text-violet-300",
-    summary: "text-violet-700/80 dark:text-violet-200/80",
-    pill: "border-violet-500/15 bg-violet-500/10 text-violet-700 dark:text-violet-200",
+    iconWrap: "border-violet-400/35 bg-violet-500/15",
+    title: "text-violet-600 dark:text-violet-200",
+    summary: "text-violet-700/80 dark:text-violet-100/75",
+    pill: "border-violet-400/30 bg-violet-500/15 text-violet-700 dark:text-violet-100",
+    accentBar: "linear-gradient(180deg, rgba(167,139,250,0.85), rgba(139,92,246,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(167,139,250,0.14), transparent 55%)",
   },
   Networking: {
-    iconWrap: "border-blue-500/15 bg-blue-500/10",
-    title: "text-blue-600 dark:text-blue-300",
-    summary: "text-blue-700/80 dark:text-blue-200/80",
-    pill: "border-blue-500/15 bg-blue-500/10 text-blue-700 dark:text-blue-200",
+    iconWrap: "border-blue-400/35 bg-blue-500/15",
+    title: "text-blue-600 dark:text-blue-200",
+    summary: "text-blue-700/80 dark:text-blue-100/75",
+    pill: "border-blue-400/30 bg-blue-500/15 text-blue-700 dark:text-blue-100",
+    accentBar: "linear-gradient(180deg, rgba(96,165,250,0.85), rgba(59,130,246,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(96,165,250,0.14), transparent 55%)",
   },
   VPN: {
-    iconWrap: "border-indigo-500/15 bg-indigo-500/10",
-    title: "text-indigo-600 dark:text-indigo-300",
-    summary: "text-indigo-700/80 dark:text-indigo-200/80",
-    pill: "border-indigo-500/15 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200",
+    iconWrap: "border-indigo-400/35 bg-indigo-500/15",
+    title: "text-indigo-600 dark:text-indigo-200",
+    summary: "text-indigo-700/80 dark:text-indigo-100/75",
+    pill: "border-indigo-400/30 bg-indigo-500/15 text-indigo-700 dark:text-indigo-100",
+    accentBar: "linear-gradient(180deg, rgba(129,140,248,0.85), rgba(99,102,241,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(129,140,248,0.14), transparent 55%)",
+  },
+  "VPN Security": {
+    iconWrap: "border-indigo-400/35 bg-indigo-500/15",
+    title: "text-indigo-600 dark:text-indigo-200",
+    summary: "text-indigo-700/80 dark:text-indigo-100/75",
+    pill: "border-indigo-400/30 bg-indigo-500/15 text-indigo-700 dark:text-indigo-100",
+    accentBar: "linear-gradient(180deg, rgba(129,140,248,0.85), rgba(99,102,241,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(129,140,248,0.14), transparent 55%)",
   },
   HA: {
-    iconWrap: "border-sky-500/15 bg-sky-500/10",
-    title: "text-sky-600 dark:text-sky-300",
-    summary: "text-sky-700/80 dark:text-sky-200/80",
-    pill: "border-sky-500/15 bg-sky-500/10 text-sky-700 dark:text-sky-200",
+    iconWrap: "border-sky-400/35 bg-sky-500/15",
+    title: "text-sky-600 dark:text-sky-200",
+    summary: "text-sky-700/80 dark:text-sky-100/75",
+    pill: "border-sky-400/30 bg-sky-500/15 text-sky-700 dark:text-sky-100",
+    accentBar: "linear-gradient(180deg, rgba(56,189,248,0.85), rgba(14,165,233,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(56,189,248,0.14), transparent 55%)",
   },
   Logging: {
-    iconWrap: "border-amber-500/15 bg-amber-500/10",
-    title: "text-amber-600 dark:text-amber-300",
-    summary: "text-amber-700/80 dark:text-amber-200/80",
-    pill: "border-amber-500/15 bg-amber-500/10 text-amber-700 dark:text-amber-200",
+    iconWrap: "border-amber-400/35 bg-amber-500/15",
+    title: "text-amber-600 dark:text-amber-200",
+    summary: "text-amber-700/80 dark:text-amber-100/75",
+    pill: "border-amber-400/30 bg-amber-500/15 text-amber-700 dark:text-amber-100",
+    accentBar: "linear-gradient(180deg, rgba(251,191,36,0.85), rgba(245,158,11,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(251,191,36,0.12), transparent 55%)",
   },
   Email: {
-    iconWrap: "border-rose-500/15 bg-rose-500/10",
-    title: "text-rose-600 dark:text-rose-300",
-    summary: "text-rose-700/80 dark:text-rose-200/80",
-    pill: "border-rose-500/15 bg-rose-500/10 text-rose-700 dark:text-rose-200",
+    iconWrap: "border-rose-400/35 bg-rose-500/15",
+    title: "text-rose-600 dark:text-rose-200",
+    summary: "text-rose-700/80 dark:text-rose-100/75",
+    pill: "border-rose-400/30 bg-rose-500/15 text-rose-700 dark:text-rose-100",
+    accentBar: "linear-gradient(180deg, rgba(251,113,133,0.85), rgba(244,63,94,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(251,113,133,0.12), transparent 55%)",
+  },
+  "Visibility & Monitoring": {
+    iconWrap: "border-teal-400/35 bg-teal-500/15",
+    title: "text-teal-600 dark:text-teal-200",
+    summary: "text-teal-700/80 dark:text-teal-100/75",
+    pill: "border-teal-400/30 bg-teal-500/15 text-teal-700 dark:text-teal-100",
+    accentBar: "linear-gradient(180deg, rgba(45,212,191,0.85), rgba(20,184,166,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(45,212,191,0.14), transparent 55%)",
+  },
+  "Encryption & Inspection": {
+    iconWrap: "border-fuchsia-400/35 bg-fuchsia-500/15",
+    title: "text-fuchsia-600 dark:text-fuchsia-200",
+    summary: "text-fuchsia-700/80 dark:text-fuchsia-100/75",
+    pill: "border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-100",
+    accentBar: "linear-gradient(180deg, rgba(232,121,249,0.85), rgba(217,70,239,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(232,121,249,0.12), transparent 55%)",
+  },
+  "Rule Hygiene": {
+    iconWrap: "border-orange-400/35 bg-orange-500/15",
+    title: "text-orange-600 dark:text-orange-200",
+    summary: "text-orange-700/80 dark:text-orange-100/75",
+    pill: "border-orange-400/30 bg-orange-500/15 text-orange-700 dark:text-orange-100",
+    accentBar: "linear-gradient(180deg, rgba(251,146,60,0.85), rgba(249,115,22,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(251,146,60,0.12), transparent 55%)",
+  },
+  "Network Protection": {
+    iconWrap: "border-blue-400/35 bg-blue-500/15",
+    title: "text-blue-600 dark:text-blue-200",
+    summary: "text-blue-700/80 dark:text-blue-100/75",
+    pill: "border-blue-400/30 bg-blue-500/15 text-blue-700 dark:text-blue-100",
+    accentBar: "linear-gradient(180deg, rgba(59,130,246,0.85), rgba(37,99,235,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(59,130,246,0.14), transparent 55%)",
+  },
+  "DoS & Spoof Protection": {
+    iconWrap: "border-red-400/30 bg-red-500/12",
+    title: "text-red-600 dark:text-red-200",
+    summary: "text-red-700/80 dark:text-red-100/75",
+    pill: "border-red-400/30 bg-red-500/12 text-red-700 dark:text-red-100",
+    accentBar: "linear-gradient(180deg, rgba(248,113,113,0.75), rgba(239,68,68,0.1))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(248,113,113,0.1), transparent 55%)",
+  },
+  "Active Threat Response": {
+    iconWrap: "border-emerald-400/35 bg-emerald-500/15",
+    title: "text-emerald-600 dark:text-emerald-200",
+    summary: "text-emerald-700/80 dark:text-emerald-100/75",
+    pill: "border-emerald-400/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-100",
+    accentBar: "linear-gradient(180deg, rgba(52,211,153,0.85), rgba(16,185,129,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(52,211,153,0.12), transparent 55%)",
+  },
+  "Synchronized Security": {
+    iconWrap: "border-lime-400/35 bg-lime-500/12",
+    title: "text-lime-700 dark:text-lime-200",
+    summary: "text-lime-800/80 dark:text-lime-100/75",
+    pill: "border-lime-400/30 bg-lime-500/12 text-lime-800 dark:text-lime-100",
+    accentBar: "linear-gradient(180deg, rgba(163,230,53,0.75), rgba(132,204,22,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(163,230,53,0.1), transparent 55%)",
+  },
+  "Web Protection": {
+    iconWrap: "border-cyan-400/35 bg-cyan-500/12",
+    title: "text-cyan-600 dark:text-cyan-200",
+    summary: "text-cyan-700/80 dark:text-cyan-100/75",
+    pill: "border-cyan-400/30 bg-cyan-500/12 text-cyan-700 dark:text-cyan-100",
+    accentBar: "linear-gradient(180deg, rgba(34,211,238,0.7), rgba(6,182,212,0.1))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(34,211,238,0.1), transparent 55%)",
+  },
+  "Zero-Day Protection": {
+    iconWrap: "border-purple-400/35 bg-purple-500/15",
+    title: "text-purple-600 dark:text-purple-200",
+    summary: "text-purple-700/80 dark:text-purple-100/75",
+    pill: "border-purple-400/30 bg-purple-500/15 text-purple-700 dark:text-purple-100",
+    accentBar: "linear-gradient(180deg, rgba(192,132,252,0.85), rgba(168,85,247,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(192,132,252,0.12), transparent 55%)",
+  },
+  "Central Orchestration": {
+    iconWrap: "border-[#2006F7]/40 bg-[#2006F7]/12 dark:border-[#00EDFF]/35 dark:bg-[#00EDFF]/10",
+    title: "text-[#2006F7] dark:text-[#00EDFF]",
+    summary: "text-[#2006F7]/80 dark:text-[#00EDFF]/80",
+    pill: "border-[#2006F7]/25 bg-[#2006F7]/10 text-[#2006F7] dark:border-[#00EDFF]/30 dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]",
+    accentBar: "linear-gradient(180deg, rgba(0,237,255,0.75), rgba(32,6,247,0.15))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(0,237,255,0.1), transparent 55%)",
+  },
+  "DNS Protection": {
+    iconWrap: "border-sky-400/35 bg-sky-500/12",
+    title: "text-sky-600 dark:text-sky-200",
+    summary: "text-sky-700/80 dark:text-sky-100/75",
+    pill: "border-sky-400/30 bg-sky-500/12 text-sky-700 dark:text-sky-100",
+    accentBar: "linear-gradient(180deg, rgba(14,165,233,0.8), rgba(2,132,199,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(14,165,233,0.1), transparent 55%)",
+  },
+  Resilience: {
+    iconWrap: "border-stone-400/35 bg-stone-500/12",
+    title: "text-stone-700 dark:text-stone-200",
+    summary: "text-stone-600/90 dark:text-stone-300/80",
+    pill: "border-stone-400/30 bg-stone-500/12 text-stone-700 dark:text-stone-200",
+    accentBar: "linear-gradient(180deg, rgba(168,162,158,0.7), rgba(120,113,108,0.12))",
+    cardTint: "radial-gradient(ellipse 80% 50% at 0% 0%, rgba(168,162,158,0.08), transparent 55%)",
   },
   Default: {
-    iconWrap: "border-brand-accent/15 bg-brand-accent/10",
+    iconWrap: "border-[#2006F7]/30 bg-[#2006F7]/10 dark:border-[#00EDFF]/35 dark:bg-[#00EDFF]/8",
     title: "text-foreground",
     summary: "text-muted-foreground",
-    pill: "border-border bg-background/70 text-muted-foreground",
+    pill: "border-white/15 bg-white/80 dark:bg-white/[0.06] text-foreground/80",
+    accentBar: "linear-gradient(180deg, rgba(99,102,241,0.75), rgba(32,6,247,0.12))",
+    cardTint: "radial-gradient(ellipse 90% 60% at 0% 0%, rgba(99,102,241,0.1), transparent 50%)",
   },
 };
 
@@ -457,7 +621,7 @@ export function SophosBestPractice({
   return (
     <div className="space-y-5">
       {/* Licence Picker */}
-      <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-5 sm:p-6 shadow-[0_18px_50px_rgba(32,6,247,0.08)] space-y-4">
+      <div className="rounded-[28px] border border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-md bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.92),rgba(12,18,34,0.92))] p-5 sm:p-6 shadow-[0_18px_50px_rgba(32,6,247,0.12)] space-y-4">
         <div className="flex items-start gap-3 flex-wrap">
           <div className="space-y-2 flex-1 min-w-[220px]">
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
@@ -475,7 +639,7 @@ export function SophosBestPractice({
             </p>
           </div>
           {isLocked && (
-            <span className="flex items-center gap-1 text-[10px] font-medium px-2.5 py-1 rounded-full bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
+            <span className="flex items-center gap-1 text-[10px] font-medium px-2.5 py-1 rounded-full bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]">
               <Lock className="h-2.5 w-2.5" />
               Auto-detected from Sophos Central
             </span>
@@ -528,7 +692,7 @@ export function SophosBestPractice({
                   className={`rounded-2xl border p-4 text-left transition-all shadow-sm ${
                     isSelected
                       ? isLocked
-                        ? "border-[#00F2B3] bg-[#00F2B3]/10 ring-1 ring-[#00F2B3]/30"
+                        ? "border-[#00F2B3] bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 ring-1 ring-[#00F2B3]/30"
                         : "border-[#2006F7] bg-brand-accent/10 ring-1 ring-[#2006F7]/30"
                       : isDisabled
                         ? "border-border opacity-40 cursor-not-allowed bg-card/60"
@@ -540,7 +704,7 @@ export function SophosBestPractice({
                       className={`text-xs font-semibold ${
                         isSelected
                           ? isLocked
-                            ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                            ? "text-[#007A5A] dark:text-[#00F2B3]"
                             : "text-[#2006F7] dark:text-[#6B5BFF]"
                           : "text-foreground"
                       }`}
@@ -548,7 +712,7 @@ export function SophosBestPractice({
                       {info.label}
                     </p>
                     {isSelected && isLocked && (
-                      <Lock className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" />
+                      <Lock className="h-3 w-3 text-[#007A5A] dark:text-[#00F2B3]" />
                     )}
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
@@ -604,7 +768,7 @@ export function SophosBestPractice({
       </div>
 
       {/* Score Overview */}
-      <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-5 sm:p-6 shadow-[0_18px_50px_rgba(32,6,247,0.08)] space-y-4">
+      <div className="rounded-[28px] border border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-md bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.92),rgba(12,18,34,0.92))] p-5 sm:p-6 shadow-[0_18px_50px_rgba(32,6,247,0.12)] space-y-4">
         <div className="flex items-start gap-3 flex-wrap">
           <div className="space-y-2 flex-1 min-w-[220px]">
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
@@ -662,7 +826,10 @@ export function SophosBestPractice({
 
         {/* Tabs */}
         {hasMultiple && (
-          <div className="rounded-2xl border border-border/50 bg-card/70 p-2 mb-4 overflow-x-auto">
+          <div
+            className="rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-sm bg-card/50 p-2 mb-4 overflow-x-auto"
+            style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
+          >
             <div className="flex items-center gap-2 min-w-max">
               <button
                 onClick={() => setActiveTab("overall")}
@@ -691,7 +858,10 @@ export function SophosBestPractice({
           </div>
         )}
 
-        <div className="rounded-2xl border border-border/50 bg-card/70 p-4 sm:p-5">
+        <div
+          className="rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-sm bg-card/50 p-4 sm:p-5"
+          style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
+        >
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="flex flex-col items-center gap-2">
               <GaugeRing score={currentScore.overall} grade={currentScore.grade} />
@@ -728,17 +898,55 @@ export function SophosBestPractice({
       </div>
 
       {/* Check Results by Category */}
-      <div className="space-y-3">
-        <div className="rounded-[24px] border border-border/50 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(247,249,255,0.96))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] px-5 py-4 shadow-sm">
-          <div className="flex items-start gap-3 flex-wrap">
-            <div className="space-y-1 flex-1 min-w-[220px]">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
+      <div className="space-y-4">
+        <div
+          className="relative rounded-[24px] border border-slate-900/[0.14] dark:border-white/[0.1] backdrop-blur-md overflow-hidden px-5 py-5 sm:px-7 sm:py-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-all duration-200 hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] hover:shadow-[0_24px_60px_rgba(32,6,247,0.12)]"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(247,249,255,0.92)), radial-gradient(circle at 0% 0%, rgba(32,6,247,0.08), transparent 45%)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.65)",
+          }}
+        >
+          <div
+            className="absolute inset-0 dark:block hidden pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(9,13,24,0.94), rgba(14,20,38,0.92)), radial-gradient(circle at 0% 0%, rgba(0,237,255,0.08), transparent 42%), radial-gradient(circle at 100% 100%, rgba(32,6,247,0.1), transparent 40%)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+            }}
+          />
+          <div
+            className="absolute inset-x-0 top-0 h-px pointer-events-none z-10"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent, rgba(0,237,255,0.35), rgba(32,6,247,0.25), transparent)",
+            }}
+          />
+          <div className="relative z-[1] flex items-start gap-4 flex-wrap">
+            <div
+              className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm"
+              style={{
+                border: "1px solid rgba(0,237,255,0.25)",
+                background: "linear-gradient(145deg, rgba(0,237,255,0.12), rgba(32,6,247,0.08))",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 28px rgba(0,237,255,0.15)",
+              }}
+            >
+              <Shield className="h-7 w-7 text-[#2006F7] dark:text-[#00EDFF]" />
+            </div>
+            <div className="space-y-2 flex-1 min-w-[220px]">
+              <div
+                className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] backdrop-blur-sm border border-[#00F2B3]/35 text-[#00A67A] dark:text-[#00F2B3]"
+                style={{
+                  background: "linear-gradient(145deg, rgba(0,242,179,0.14), rgba(0,242,179,0.04))",
+                  boxShadow: "0 0 20px rgba(0,242,179,0.12), inset 0 1px 0 rgba(255,255,255,0.08)",
+                }}
+              >
                 Findings by category
               </div>
-              <p className="text-sm font-display font-black text-foreground">
+              <p className="text-lg sm:text-xl font-display font-black text-foreground tracking-tight">
                 Detailed Sophos best-practice findings
               </p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <p className="text-sm text-foreground/55 dark:text-foreground/50 leading-relaxed max-w-2xl">
                 Expand each category to review evidence, remediation guidance, and any manually
                 validated controls before you present the final posture story.
               </p>
@@ -752,54 +960,115 @@ export function SophosBestPractice({
           const catFailed = checks.filter((c) => c.status === "fail").length;
           const theme = CATEGORY_THEME[category] ?? CATEGORY_THEME.Default;
 
+          const allAligned = catApplicable > 0 && catPassed === catApplicable && catFailed === 0;
+
           return (
             <div
               key={category}
-              className="rounded-[24px] border border-border/80 bg-card/90 overflow-hidden shadow-sm"
+              className="group/card relative rounded-[24px] border border-slate-900/[0.14] dark:border-white/[0.1] backdrop-blur-md overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.28)] transition-all duration-300 hover:border-slate-900/[0.20] dark:hover:border-white/[0.16] hover:shadow-[0_22px_56px_rgba(0,0,0,0.35)] hover:-translate-y-0.5"
+              style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)" }}
             >
+              <div
+                className="pointer-events-none absolute inset-0 opacity-90 dark:opacity-100"
+                style={{ background: theme.cardTint }}
+              />
+              <div
+                className="pointer-events-none absolute left-0 top-5 bottom-5 w-1 rounded-full z-[1]"
+                style={{
+                  background: theme.accentBar,
+                  boxShadow: "0 0 14px rgba(255,255,255,0.15)",
+                }}
+              />
+              <div
+                className="absolute inset-x-0 top-0 h-px z-[1] pointer-events-none opacity-70"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent)",
+                }}
+              />
               <button
                 onClick={() => toggleCategory(category)}
-                className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 text-left hover:bg-muted/20 transition-colors"
+                className="relative z-[2] w-full flex items-center gap-3 sm:gap-4 pl-5 sm:pl-6 pr-4 sm:pr-6 py-4 sm:py-5 text-left transition-all hover:bg-slate-950/[0.05] dark:hover:bg-white/[0.04]"
               >
                 <div
-                  className={`h-10 w-10 rounded-2xl border flex items-center justify-center shrink-0 ${theme.iconWrap}`}
+                  className={`h-11 w-11 sm:h-12 sm:w-12 rounded-2xl border flex items-center justify-center shrink-0 backdrop-blur-sm ${theme.iconWrap}`}
+                  style={{
+                    boxShadow:
+                      "inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 24px rgba(0,0,0,0.25), 0 0 20px rgba(0,237,255,0.1)",
+                  }}
                 >
-                  <Shield className="h-4 w-4 text-[#2006F7]" />
+                  <Shield className="h-5 w-5 text-[#2006F7] dark:text-[#00EDFF]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`text-sm font-semibold ${theme.title}`}>{category}</p>
+                    <p className={`text-base font-display font-bold ${theme.title}`}>{category}</p>
                     <span
-                      className={`px-2 py-0.5 rounded-full border text-[10px] font-medium ${theme.pill}`}
+                      className={`px-2.5 py-1 rounded-full border text-[11px] font-bold backdrop-blur-sm ${theme.pill}`}
+                      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)" }}
                     >
                       {checks.length} check{checks.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <p className={`text-[10px] mt-1 ${theme.summary}`}>
+                  <p className={`text-xs mt-1.5 font-medium ${theme.summary}`}>
                     {catPassed} aligned • {Math.max(catApplicable - catPassed, 0)} need attention
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {catFailed > 0 && (
-                    <span className="px-2 py-1 rounded-full bg-red-500/10 text-red-400 text-[10px] font-medium border border-red-500/10">
+                    <span
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-black uppercase tracking-wide text-red-400 border border-red-500/35 backdrop-blur-sm"
+                      style={{
+                        background:
+                          "linear-gradient(145deg, rgba(239,68,68,0.2), rgba(239,68,68,0.06))",
+                        boxShadow:
+                          "0 0 14px rgba(239,68,68,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
+                      }}
+                    >
                       {catFailed} fail
                     </span>
                   )}
                   {catApplicable > 0 && (
-                    <span className="px-2 py-1 rounded-full border border-border bg-background/60 text-[10px] text-muted-foreground font-medium">
+                    <span
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-black tabular-nums backdrop-blur-sm ${
+                        allAligned
+                          ? "border-emerald-400/40 text-emerald-200"
+                          : "border-slate-900/[0.16] dark:border-white/[0.12] text-foreground/85"
+                      }`}
+                      style={{
+                        background: allAligned
+                          ? "linear-gradient(145deg, rgba(52,211,153,0.22), rgba(52,211,153,0.06))"
+                          : "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))",
+                        boxShadow: allAligned
+                          ? "0 0 18px rgba(52,211,153,0.25), inset 0 1px 0 rgba(255,255,255,0.1)"
+                          : "inset 0 1px 0 rgba(255,255,255,0.06)",
+                      }}
+                    >
                       {catPassed}/{catApplicable}
                     </span>
                   )}
-                  <div className="h-8 w-8 rounded-full border border-border bg-background/70 flex items-center justify-center">
+                  <div
+                    className="h-9 w-9 rounded-full flex items-center justify-center backdrop-blur-sm border border-slate-900/[0.14] dark:border-white/[0.1]"
+                    style={{
+                      background:
+                        "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+                    }}
+                  >
                     <ChevronDown
-                      className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                      className={`h-4 w-4 text-foreground/50 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                     />
                   </div>
                 </div>
               </button>
 
               {isExpanded && (
-                <div className="border-t border-border/80 bg-muted/[0.08] divide-y divide-border/80">
+                <div
+                  className="relative z-[2] border-t border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-lg divide-y divide-white/[0.06]"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+                  }}
+                >
                   {checks.map((result) => {
                     const isOverridden = result.manualOverride === true;
                     const isWarnAndOverrideable = result.status === "warn" && result.applicable;
@@ -813,16 +1082,20 @@ export function SophosBestPractice({
                     return (
                       <div
                         key={result.check.id}
-                        className={`px-4 sm:px-5 py-4 flex items-start gap-3 ${!result.applicable ? "opacity-40" : ""}`}
+                        className={`px-4 sm:pl-6 sm:pr-6 py-4 sm:py-5 flex items-start gap-3 sm:gap-4 transition-colors ${cfg.rowHover} ${!result.applicable ? "opacity-40" : ""}`}
                       >
                         <div
-                          className={`mt-0.5 h-8 w-8 rounded-xl border border-border/60 ${cfg.bg} flex items-center justify-center shrink-0`}
+                          className={`mt-0.5 h-10 w-10 rounded-xl border border-slate-900/[0.16] dark:border-white/[0.12] ${cfg.bg} flex items-center justify-center shrink-0 backdrop-blur-sm ${cfg.iconGlow}`}
+                          style={{
+                            boxShadow:
+                              "inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 12px rgba(0,0,0,0.2)",
+                          }}
                         >
-                          <Icon className={`h-3 w-3 ${cfg.color}`} />
+                          <Icon className={`h-4 w-4 ${cfg.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-foreground">
+                            <p className="text-base font-display font-bold text-foreground leading-snug">
                               {result.check.title}
                             </p>
                             {isOverridden && (
@@ -839,12 +1112,18 @@ export function SophosBestPractice({
                                 </span>
                               )}
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                          <p className="text-sm text-foreground/55 mt-1 leading-relaxed">
                             {result.detail}
                           </p>
                           {result.status === "fail" && (
-                            <p className="text-[10px] text-amber-400/90 mt-1 leading-relaxed">
-                              <span className="font-medium">Sophos recommendation:</span>{" "}
+                            <p
+                              className="text-sm text-amber-400 mt-2 leading-relaxed rounded-lg px-3 py-2 border border-amber-500/20 backdrop-blur-sm"
+                              style={{
+                                background:
+                                  "linear-gradient(105deg, rgba(251,191,36,0.12), rgba(251,191,36,0.04))",
+                              }}
+                            >
+                              <span className="font-bold">Sophos recommendation:</span>{" "}
                               {result.check.recommendation}
                             </p>
                           )}
@@ -876,10 +1155,10 @@ export function SophosBestPractice({
                           href={result.check.reference}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-0.5 text-muted-foreground/40 hover:text-[#2006F7] transition-colors shrink-0"
+                          className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl text-foreground/35 hover:text-[#2006F7] dark:hover:text-[#00EDFF] transition-colors shrink-0 border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.05]"
                           title="View Sophos docs"
                         >
-                          <ExternalLink className="h-3 w-3" />
+                          <ExternalLink className="h-4 w-4" />
                         </a>
                       </div>
                     );

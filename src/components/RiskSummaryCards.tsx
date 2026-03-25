@@ -25,7 +25,7 @@ const COLOR_CLASSES: Record<
   { text: string; border: string; bg: string; glow: string }
 > = {
   green: {
-    text: "text-[#00F2B3] dark:text-[#00F2B3]",
+    text: "text-[#007A5A] dark:text-[#00F2B3]",
     border: "border-[#00F2B3]/25",
     bg: "bg-[#00F2B3]/[0.05]",
     glow: "shadow-[0_0_20px_-4px_rgba(0,242,179,0.15)] dark:shadow-[0_0_24px_-4px_rgba(0,242,179,0.20)]",
@@ -136,7 +136,7 @@ export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
   const trendIcon =
     previousScore != null ? (
       stats.overallScore > previousScore ? (
-        <TrendingUp className="h-3.5 w-3.5 text-[#00F2B3] dark:text-[#00F2B3]" />
+        <TrendingUp className="h-3.5 w-3.5 text-[#007A5A] dark:text-[#00F2B3]" />
       ) : stats.overallScore < previousScore ? (
         <TrendingDown className="h-3.5 w-3.5 text-[#EA0022]" />
       ) : (

@@ -5,7 +5,7 @@
 @layer base {
   :root {
     /* Sophos Brand — Light Mode */
-    --background: 220 28% 95%; /* #EDF2F9 Light Neutral */
+    --background: 218 38% 96%; /* refined cool-neutral canvas for glass surfaces */
     --foreground: 215 52% 14%; /* #001A47 Dark Blue */
 
     --card: 0 0% 100%;
@@ -17,34 +17,34 @@
     --primary: 243 95% 50%; /* #2006F7 Sophos Blue */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 28% 95%; /* #EDF2F9 Light Neutral */
+    --secondary: 220 30% 94%;
     --secondary-foreground: 215 52% 14%;
 
-    --muted: 213 27% 90%; /* #BBCFDE area */
-    --muted-foreground: 210 25% 40%; /* Darker than #6A889B for readability */
+    --muted: 216 28% 91%;
+    --muted-foreground: 214 28% 36%;
 
-    --accent: 220 28% 93%; /* Subtle highlight for dropdowns/focus */
+    --accent: 220 42% 97%;
     --accent-foreground: 215 52% 14%;
 
     --destructive: 352 100% 46%; /* #EA0022 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 213 27% 76%; /* Visible but soft on light backgrounds */
-    --input: 213 27% 76%;
+    --border: 214 24% 82%;
+    --input: 214 24% 80%;
     --ring: 243 95% 50%; /* Sophos Blue */
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 220 33% 97%;
     --sidebar-foreground: 215 52% 14%;
     --sidebar-primary: 243 95% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 28% 95%;
+    --sidebar-accent: 220 38% 94%;
     --sidebar-accent-foreground: 215 52% 14%;
-    --sidebar-border: 213 27% 80%;
+    --sidebar-border: 214 24% 84%;
     --sidebar-ring: 243 95% 50%;
 
-    --success: 160 100% 30%;
+    --success: 158 73% 31%;
     --success-foreground: 0 0% 100%;
 
     --warning: 33 100% 48%;
@@ -54,7 +54,7 @@
     --severity-critical: 352 100% 46%; /* #EA0022 */
     --severity-high: 33 100% 48%; /* #F29400 */
     --severity-medium: 52 100% 49%; /* #F8E300 */
-    --severity-low: 159 100% 47%; /* #00F2B3 */
+    --severity-low: 158 73% 36%; /* stronger light-mode green for readability */
 
     --severity-info: 206 100% 49%; /* #009CFB */
     --severity-critical-foreground: 0 0% 100%;
@@ -72,7 +72,7 @@
     --brand-navy: 215 100% 14%; /* #001A47 */
 
     /* Grade / severity text on light backgrounds */
-    --grade-a: 159 100% 47%; /* #00F2B3 */
+    --grade-a: 158 73% 33%; /* accessible light-mode green */
     --grade-b: 243 95% 50%; /* #2006F7 light / #00EDFF dark */
     --grade-c: 52 100% 49%; /* #F8E300 */
     --grade-d: 33 100% 48%; /* #F29400 */
@@ -179,8 +179,9 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(circle at top left, rgba(32, 6, 247, 0.06), transparent 28%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+      radial-gradient(circle at top left, rgba(32, 6, 247, 0.07), transparent 26%),
+      radial-gradient(circle at top right, rgba(0, 156, 251, 0.05), transparent 22%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
     background-attachment: fixed;
     font-family: "Zalando Sans", "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -232,7 +233,91 @@
   color: hsl(var(--foreground));
 }
 
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer components {
+  /* === Analysis tabs === */
+  .fc-tabs-list {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    gap: 6px;
+  }
+
+  .fc-tab {
+    color: rgba(21, 52, 95, 0.78);
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow:
+      0 8px 24px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .fc-tab:hover:not([data-state="active"]) {
+    color: hsl(var(--foreground));
+    border-color: rgba(32, 6, 247, 0.18);
+    background: rgba(255, 255, 255, 0.84);
+    transform: scale(1.02);
+    box-shadow:
+      0 12px 28px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  }
+  .fc-tab[data-state="active"] {
+    background: linear-gradient(135deg, rgba(32, 6, 247, 0.14), rgba(0, 156, 251, 0.08));
+    border-color: rgba(32, 6, 247, 0.24);
+    color: hsl(var(--foreground));
+    font-weight: 700;
+    box-shadow:
+      0 14px 34px rgba(32, 6, 247, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  }
+  .fc-tab[data-state="active"]:hover {
+    transform: scale(1.02);
+    border-color: rgba(32, 6, 247, 0.3);
+    box-shadow:
+      0 18px 38px rgba(32, 6, 247, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  }
+  .dark .fc-tab {
+    color: rgba(160, 172, 200, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: none;
+  }
+  .dark .fc-tab:hover:not([data-state="active"]) {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  }
+  .dark .fc-tab[data-state="active"] {
+    background: linear-gradient(135deg, rgba(56, 136, 255, 0.14), rgba(0, 191, 255, 0.09));
+    border-color: rgba(56, 136, 255, 0.28);
+    color: #fff;
+    box-shadow:
+      0 0 14px rgba(56, 136, 255, 0.15),
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .dark .fc-tab[data-state="active"]:hover {
+    transform: scale(1.05);
+    border-color: rgba(56, 136, 255, 0.38);
+    box-shadow:
+      0 0 20px rgba(56, 136, 255, 0.2),
+      0 4px 16px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
   .section-stack {
     @apply space-y-8 md:space-y-10;
   }
@@ -242,11 +327,11 @@
   }
 
   .panel-subtle {
-    @apply rounded-2xl border border-border/50 bg-card/95 shadow-card transition-shadow duration-200;
+    @apply rounded-2xl border border-border/60 bg-white/80 dark:bg-card/95 backdrop-blur-xl shadow-card transition-[box-shadow,border-color,background-color] duration-200;
   }
 
   .panel-elevated {
-    @apply rounded-2xl border border-border/50 bg-card/95 shadow-elevated transition-shadow duration-200 hover:shadow-panel;
+    @apply rounded-2xl border border-border/60 bg-white/82 dark:bg-card/95 backdrop-blur-xl shadow-elevated transition-[box-shadow,border-color,background-color] duration-200 hover:border-border/80 hover:shadow-panel;
   }
 
   .section-heading {
@@ -258,12 +343,12 @@
   }
 
   .widget-card {
-    @apply rounded-xl border border-border/50 bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70;
+    @apply rounded-xl border border-border/60 bg-white/78 dark:bg-card p-5 backdrop-blur-lg shadow-card transition-[box-shadow,border-color,background-color] duration-200 hover:shadow-elevated hover:border-border/80 hover:bg-white/84 dark:hover:bg-card;
   }
 
   .info-pill {
-    @apply relative overflow-hidden rounded-2xl border border-white/[0.06] px-5 py-4 shadow-card;
-    @apply transition-all duration-200 hover:scale-[1.02] hover:border-white/[0.12] hover:shadow-elevated;
+    @apply relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-5 py-4 shadow-card;
+    @apply transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated;
     background: linear-gradient(145deg, rgba(32, 6, 247, 0.07), rgba(32, 6, 247, 0.02));
   }
   .dark .info-pill {
@@ -292,7 +377,7 @@
     inset-inline: 0;
     top: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(32, 6, 247, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(32, 6, 247, 0.16), transparent);
     pointer-events: none;
   }
   .dark .info-pill::after {

@@ -71,33 +71,52 @@ export function ServiceUsage({ files }: Props) {
 
   if (topServices.length === 0) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+      <div className="rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] backdrop-blur-sm p-5">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-3">
           Service Usage
         </h3>
-        <p className="text-sm text-muted-foreground">No firewall rules found</p>
+        <p className="text-sm text-foreground/45">No firewall rules found</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    <div>
+      <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-4">
         Service Usage
       </h3>
-      <div className="space-y-2.5">
+      <div
+        className="space-y-4 rounded-xl p-4 backdrop-blur-sm flex flex-col flex-1 min-h-[240px]"
+        style={{
+          border: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
         {topServices.map(({ name, count }) => (
-          <div key={name} className="flex items-center gap-3">
-            <span className="text-xs text-foreground w-32 shrink-0 truncate" title={name}>
+          <div key={name} className="flex items-center gap-4">
+            <span
+              className="text-sm font-medium text-foreground/90 w-36 shrink-0 truncate"
+              title={name}
+            >
               {name}
             </span>
-            <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className="flex-1 h-3 rounded-full overflow-hidden"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
               <div
-                className="h-full rounded-full bg-[#2006F7] transition-all duration-500"
-                style={{ width: maxCount > 0 ? `${(count / maxCount) * 100}%` : 0 }}
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: maxCount > 0 ? `${(count / maxCount) * 100}%` : 0,
+                  background: "linear-gradient(90deg, #2006F7, #009CFB)",
+                  boxShadow: "0 0 10px rgba(32,6,247,0.35)",
+                }}
               />
             </div>
-            <span className="text-xs font-bold tabular-nums w-8 text-right">{count}</span>
+            <span className="text-sm font-black tabular-nums w-9 text-right">{count}</span>
           </div>
         ))}
       </div>

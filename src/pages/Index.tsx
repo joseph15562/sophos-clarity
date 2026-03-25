@@ -131,6 +131,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
   const [analysisTab, setAnalysisTab] = useState("overview");
   const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
+  const [trendSnapshot, setTrendSnapshot] = useState<{
+    score: number;
+    grade: string;
+    date: string;
+  } | null>(null);
   const [analysisOverride, setAnalysisOverride] = useState<Record<string, AnalysisResult> | null>(
     null,
   );
@@ -1147,6 +1152,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                     );
                   }}
                   hasReports={reports.some((r) => (r.markdown?.trim().length ?? 0) > 0)}
+                  trendSnapshot={trendSnapshot}
                 />
               </div>
             )}
@@ -1297,9 +1303,24 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         <StickyActionBar
           hasFiles={hasFiles}
           branding={branding}
-          onScrollToFindings={() => findingsRef.current?.scrollIntoView({ behavior: "smooth" })}
-          onScrollToReports={() => reportsRef.current?.scrollIntoView({ behavior: "smooth" })}
-          onScrollToContext={() => contextRef.current?.scrollIntoView({ behavior: "smooth" })}
+          onScrollToFindings={() => {
+            if (findingsRef.current) {
+              const y = findingsRef.current.getBoundingClientRect().top + window.scrollY - 70;
+              window.scrollTo({ top: y, behavior: "smooth" });
+            }
+          }}
+          onScrollToReports={() => {
+            if (reportsRef.current) {
+              const y = reportsRef.current.getBoundingClientRect().top + window.scrollY - 70;
+              window.scrollTo({ top: y, behavior: "smooth" });
+            }
+          }}
+          onScrollToContext={() => {
+            if (contextRef.current) {
+              const y = contextRef.current.getBoundingClientRect().top + window.scrollY - 70;
+              window.scrollTo({ top: y, behavior: "smooth" });
+            }
+          }}
           onGenerateAll={() => {
             setViewingReports(true);
             generateAll();
@@ -1372,6 +1393,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           }}
           localMode={localMode}
           onLocalModeChange={handleLocalModeChange}
+          onSelectTrendScore={(score, grade, date) => {
+            if (score === -1) setTrendSnapshot(null);
+            else setTrendSnapshot({ score, grade, date });
+          }}
         />
       </ErrorBoundary>
 

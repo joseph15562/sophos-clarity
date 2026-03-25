@@ -60,7 +60,7 @@ function FirmwareBadge({ version }: { version: string | null }) {
   const major = parseFloat(version.replace(/^v/i, ""));
   const color =
     major >= 21.5
-      ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+      ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]"
       : major >= 21
         ? "bg-[#009CFB]/10 text-[#009CFB]"
         : major >= 19
@@ -204,7 +204,7 @@ function RegisterDialog({
           {generatedKey ? (
             <div className="space-y-3">
               <div className="rounded-xl bg-[#00F2B3]/[0.06] border border-[#00F2B3]/15 p-4">
-                <p className="text-[11px] font-display font-semibold text-[#00F2B3] dark:text-[#00F2B3] mb-2">
+                <p className="text-[11px] font-display font-semibold text-[#007A5A] dark:text-[#00F2B3] mb-2">
                   API Key Generated
                 </p>
                 <p className="text-[10px] text-muted-foreground/70 mb-2">
@@ -631,7 +631,7 @@ export function AgentManager() {
                       {tenantName}
                     </span>
                     {isLinked ? (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold flex items-center gap-1">
+                      <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-semibold flex items-center gap-1">
                         <Link2 className="h-2.5 w-2.5" /> Central Linked
                       </span>
                     ) : (
@@ -643,7 +643,7 @@ export function AgentManager() {
                       {tenantAgents.length} agent{tenantAgents.length !== 1 ? "s" : ""}
                     </span>
                     {onlineCount > 0 && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-semibold">
                         {onlineCount} online
                       </span>
                     )}
@@ -751,7 +751,7 @@ export function AgentManager() {
                                 <div>
                                   <span className="text-muted-foreground">Central:</span>{" "}
                                   {(agent as Record<string, unknown>).central_firewall_id ? (
-                                    <span className="font-medium text-[#00F2B3] dark:text-[#00F2B3]">
+                                    <span className="font-medium text-[#007A5A] dark:text-[#00F2B3]">
                                       Linked
                                     </span>
                                   ) : (

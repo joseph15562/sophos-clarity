@@ -440,7 +440,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
         <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.05),rgba(0,242,179,0.04),transparent_70%)] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.12),rgba(0,242,179,0.06),transparent_70%)] p-4 sm:p-5 space-y-4 shadow-card">
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] dark:bg-[#00F2B3]/[0.10] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#00F2B3] dark:text-[#00F2B3]">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] dark:bg-[#00F2B3]/[0.10] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#007A5A] dark:text-[#00F2B3]">
               <Globe className="h-3 w-3" />
               Customer context
             </span>

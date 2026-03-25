@@ -21,8 +21,18 @@ type HeroAction = {
 };
 
 const GRADE_STYLE: Record<string, { ring: string; text: string; bg: string; label: string }> = {
-  A: { ring: "ring-[#00F2B3]", text: "text-[#00F2B3]", bg: "bg-[#00F2B3]/10", label: "Excellent" },
-  B: { ring: "ring-[#00F2B3]", text: "text-[#00F2B3]", bg: "bg-[#00F2B3]/10", label: "Good" },
+  A: {
+    ring: "ring-[#00F2B3]",
+    text: "text-[#00F2B3]",
+    bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
+    label: "Excellent",
+  },
+  B: {
+    ring: "ring-[#00F2B3]",
+    text: "text-[#00F2B3]",
+    bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
+    label: "Good",
+  },
   C: {
     ring: "ring-[#F29400]",
     text: "text-[#F29400]",
@@ -227,7 +237,7 @@ export function HeroOutcomePanel({
               return (
                 <div
                   key={`${action.title}-${i}`}
-                  className="group relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] px-4 py-4 space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-white/[0.12] hover:shadow-elevated"
+                  className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] px-4 py-4 space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
                   style={{
                     borderLeftColor: sevHex,
                     background: `linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
@@ -267,7 +277,7 @@ export function HeroOutcomePanel({
                     </p>
                   )}
                   <div
-                    className="relative rounded-lg border border-white/[0.06] px-3 py-2"
+                    className="relative rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-2"
                     style={{ background: `linear-gradient(135deg, ${sevHex}06, transparent)` }}
                   >
                     <p className="text-[10px] text-muted-foreground/90">
@@ -308,7 +318,7 @@ function ValueCard({
   const hex = VALUE_HEX[accent];
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-white/[0.06] px-3 py-3 transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -349,7 +359,7 @@ function StatPill({
   const hex = STAT_HEX[accent];
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-white/[0.06] px-4 py-3 transition-all duration-200 hover:border-white/[0.12]"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
       style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
     >
       <div className="absolute inset-0 pointer-events-none">

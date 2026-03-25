@@ -47,7 +47,7 @@ const SEVERITY_COLOR: Record<Severity, string> = {
   critical: "text-[#EA0022]",
   high: "text-[#c47800] dark:text-[#F29400]",
   medium: "text-[#b8a200] dark:text-[#F8E300]",
-  low: "text-[#00F2B3] dark:text-[#00F2B3]",
+  low: "text-[#007A5A] dark:text-[#00F2B3]",
   info: "text-[#0077cc] dark:text-[#009CFB]",
 };
 
@@ -83,7 +83,8 @@ export function EstateOverview({
 
   const scrollToFindings = useCallback(() => {
     if (!findingsRef.current) return;
-    findingsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    const y = findingsRef.current.getBoundingClientRect().top + window.scrollY - 70;
+    window.scrollTo({ top: y, behavior: "smooth" });
     findingsRef.current.classList.add("ring-2", "ring-[#F29400]/40");
     setTimeout(() => findingsRef.current?.classList.remove("ring-2", "ring-[#F29400]/40"), 1500);
   }, []);
@@ -175,7 +176,7 @@ export function EstateOverview({
 
       {/* No-findings banner */}
       {totalFindings === 0 && (
-        <div className="rounded-md border border-[#00F2B3]/30 dark:border-[#00F2B3]/30 bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 px-4 py-3 flex items-center gap-3 text-sm">
+        <div className="rounded-md border border-[#008F69]/35 dark:border-[#00F2B3]/30 dark:border-[#008F69]/35 dark:border-[#00F2B3]/30 bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 dark:bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 px-4 py-3 flex items-center gap-3 text-sm">
           <CheckCircle2 className="h-4 w-4 text-[#00774a] dark:text-[#00F2B3] shrink-0" />
           <span className="text-[#00774a] dark:text-[#00F2B3] font-medium">
             No issues detected in deterministic analysis.
@@ -200,58 +201,107 @@ function ParserDiagnostics({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card">
+    <div
+      className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10]"
+      style={{
+        background: "linear-gradient(145deg, rgba(0,237,255,0.04), rgba(90,0,255,0.02))",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
+      }}
+    >
+      {/* Top shimmer */}
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(0,237,255,0.2), rgba(90,0,255,0.12), transparent)",
+        }}
+      />
+
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+        className="relative w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
       >
-        <span className="font-semibold uppercase tracking-wider">Parser Diagnostics</span>
-        <span>{open ? "▼" : "▶"}</span>
+        <div
+          className="h-7 w-7 rounded-lg flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08] shrink-0"
+          style={{
+            background: "linear-gradient(135deg, rgba(0,237,255,0.12), rgba(90,0,255,0.08))",
+          }}
+        >
+          <Settings
+            className="h-3.5 w-3.5 text-[#00EDFF]"
+            style={{ filter: "drop-shadow(0 0 3px rgba(0,237,255,0.4))" }}
+          />
+        </div>
+        <span className="text-[10px] font-display font-black text-muted-foreground uppercase tracking-wider flex-1">
+          Parser Diagnostics
+        </span>
+        <ChevronRight
+          className={`h-3.5 w-3.5 text-muted-foreground/50 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+        />
       </button>
+
       {open && (
-        <div className="px-4 pb-3 space-y-3 border-t border-border text-[10px]">
-          {Object.entries(analysisResults).map(([label, r]) => (
-            <div key={label} className="space-y-1.5">
-              <p className="font-semibold text-foreground">{label}</p>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">
-                  <span className="font-medium">Sections parsed:</span>{" "}
-                  {r.stats.sectionNames.join(", ")}
+        <div className="border-t border-slate-900/[0.10] dark:border-white/[0.06] px-5 pb-4 pt-3 space-y-3 text-[10px]">
+          {Object.entries(analysisResults).map(([label, r]) => {
+            const dpiWarn =
+              !r.inspectionPosture.dpiEngineEnabled && r.inspectionPosture.totalWanRules > 0;
+            return (
+              <div
+                key={label}
+                className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-2 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10]"
+                style={{
+                  background: "linear-gradient(145deg, rgba(0,237,255,0.04), rgba(90,0,255,0.015))",
+                }}
+              >
+                <div
+                  className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, rgba(0,237,255,0.15), transparent)",
+                  }}
+                />
+                <p className="relative font-display font-bold text-[11px] text-foreground">
+                  {label}
                 </p>
-                {r.ruleColumns && r.ruleColumns.length > 0 && (
-                  <p className="text-muted-foreground">
-                    <span className="font-medium">Rule columns:</span> {r.ruleColumns.join(", ")}
+                <div className="relative space-y-1.5 text-muted-foreground/70 leading-relaxed">
+                  <p>
+                    <span className="font-bold text-muted-foreground">Sections parsed:</span>{" "}
+                    {r.stats.sectionNames.join(", ")}
                   </p>
-                )}
-                <p className="text-muted-foreground">
-                  <span className="font-medium">WAN rules:</span>{" "}
-                  {r.inspectionPosture.totalWanRules} total, {r.inspectionPosture.enabledWanRules}{" "}
-                  enabled, {r.inspectionPosture.disabledWanRules} disabled
-                </p>
-                <p className="text-muted-foreground">
-                  <span className="font-medium">Web filterable (HTTP/HTTPS/ANY):</span>{" "}
-                  {r.inspectionPosture.webFilterableRules} rules,{" "}
-                  {r.inspectionPosture.withWebFilter} with filter,{" "}
-                  {r.inspectionPosture.withoutWebFilter} without
-                </p>
-                <p
-                  className={
-                    !r.inspectionPosture.dpiEngineEnabled && r.inspectionPosture.totalWanRules > 0
-                      ? "text-[#F29400]"
-                      : "text-muted-foreground"
-                  }
-                >
-                  <span className="font-medium">SSL/TLS Inspection (DPI):</span>{" "}
-                  {r.inspectionPosture.withSslInspection === 0
-                    ? "No SSL/TLS inspection rules found — DPI is inactive"
-                    : `${r.inspectionPosture.withSslInspection} rules (${r.inspectionPosture.sslDecryptRules} Decrypt, ${r.inspectionPosture.sslExclusionRules} exclusions)${r.inspectionPosture.dpiEngineEnabled ? " — DPI active" : " — no Decrypt rules, DPI inactive"}`}
-                  {r.inspectionPosture.sslUncoveredZones.length > 0
-                    ? ` | Zone gaps: ${r.inspectionPosture.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")}`
-                    : ""}
-                </p>
+                  {r.ruleColumns && r.ruleColumns.length > 0 && (
+                    <p>
+                      <span className="font-bold text-muted-foreground">Rule columns:</span>{" "}
+                      {r.ruleColumns.join(", ")}
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-bold text-muted-foreground">WAN rules:</span>{" "}
+                    {r.inspectionPosture.totalWanRules} total, {r.inspectionPosture.enabledWanRules}{" "}
+                    enabled, {r.inspectionPosture.disabledWanRules} disabled
+                  </p>
+                  <p>
+                    <span className="font-bold text-muted-foreground">
+                      Web filterable (HTTP/HTTPS/ANY):
+                    </span>{" "}
+                    {r.inspectionPosture.webFilterableRules} rules,{" "}
+                    {r.inspectionPosture.withWebFilter} with filter,{" "}
+                    {r.inspectionPosture.withoutWebFilter} without
+                  </p>
+                  <p className={dpiWarn ? "font-bold text-[#F29400]" : ""}>
+                    <span className={dpiWarn ? "" : "font-bold text-muted-foreground"}>
+                      SSL/TLS Inspection (DPI):
+                    </span>{" "}
+                    {r.inspectionPosture.withSslInspection === 0
+                      ? "No SSL/TLS inspection rules found — DPI is inactive"
+                      : `${r.inspectionPosture.withSslInspection} rules (${r.inspectionPosture.sslDecryptRules} Decrypt, ${r.inspectionPosture.sslExclusionRules} exclusions)${r.inspectionPosture.dpiEngineEnabled ? " — DPI active" : " — no Decrypt rules, DPI inactive"}`}
+                    {r.inspectionPosture.sslUncoveredZones.length > 0
+                      ? ` | Zone gaps: ${r.inspectionPosture.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")}`
+                      : ""}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -277,7 +327,7 @@ function ExtractionCoverage({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-4 flex items-center gap-4 shadow-card transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 flex items-center gap-4 shadow-card transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{ background: `linear-gradient(135deg, ${barHex}0A, ${barHex}03)` }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -297,7 +347,7 @@ function ExtractionCoverage({
             {extractionPct}%
           </span>
         </div>
-        <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className="h-2.5 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -343,7 +393,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
     return (
       <div
         key={label}
-        className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3.5 space-y-2 transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+        className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 space-y-2 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
         style={{ background: `linear-gradient(135deg, ${hex}0C, ${hex}03)` }}
       >
         <div className="absolute inset-0 pointer-events-none">
@@ -372,7 +422,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
             </span>
           </div>
         </div>
-        <div className="relative h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className="relative h-2.5 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -388,7 +438,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
       style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.015))" }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -403,7 +453,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
       <div className="relative flex items-center gap-3">
         <div
-          className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08]"
+          className="flex items-center justify-center h-9 w-9 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08]"
           style={{ backgroundColor: "rgba(32,6,247,0.12)" }}
         >
           <ShieldCheck className="h-4.5 w-4.5 text-brand-accent" />
@@ -426,7 +476,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
       {!posture.dpiEngineEnabled && posture.totalWanRules > 0 && (
         <div
-          className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3 flex items-start gap-3"
+          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 flex items-start gap-3"
           style={{
             background: "linear-gradient(135deg, rgba(234,0,34,0.10), rgba(234,0,34,0.03))",
           }}
@@ -454,7 +504,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
       {posture.disabledWanRules > 0 && (
         <div
-          className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-2.5 flex items-center gap-2.5"
+          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 flex items-center gap-2.5"
           style={{
             background: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
           }}
@@ -474,7 +524,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
       {posture.withSslInspection > 0 && (
         <div
-          className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-2.5 space-y-1"
+          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-2.5 space-y-1"
           style={{
             background: "linear-gradient(135deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
           }}
@@ -514,7 +564,7 @@ const SEV_BADGE_INLINE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/15 text-[#EA0022] border-[#EA0022]/20",
   high: "bg-[#F29400]/15 text-[#c47800] dark:text-[#F29400] border-[#F29400]/20",
   medium: "bg-[#F8C300]/15 text-[#b8a200] dark:text-[#F8C300] border-[#F8C300]/20",
-  low: "bg-[#00F2B3]/15 text-[#00b386] dark:text-[#00F2B3] border-[#00F2B3]/20",
+  low: "bg-[#00F2B3]/15 text-[#00b386] dark:text-[#00F2B3] border-[#008F69]/30 dark:border-[#00F2B3]/20",
   info: "bg-[#009CFB]/15 text-[#0077cc] dark:text-[#009CFB] border-[#009CFB]/20",
 };
 
@@ -554,7 +604,7 @@ function FindingCard({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{
         borderLeftColor: sevHex,
         background: `linear-gradient(135deg, ${sevHex}08, ${sevHex}02)`,
@@ -569,7 +619,7 @@ function FindingCard({
       <div className="flex items-center gap-1.5">
         <button
           onClick={() => setOpen(!open)}
-          className="relative flex-1 flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors min-w-0 group"
+          className="relative flex-1 flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors min-w-0 group"
         >
           <span
             className="h-2.5 w-2.5 rounded-full shrink-0"
@@ -591,7 +641,7 @@ function FindingCard({
               {finding.severity}
             </span>
             {fileCount > 1 && (
-              <span className="text-[10px] text-muted-foreground px-2 py-0.5 rounded-md font-medium border border-white/[0.08] bg-white/[0.04]">
+              <span className="text-[10px] text-muted-foreground px-2 py-0.5 rounded-md font-medium border border-slate-900/[0.12] dark:border-white/[0.08] bg-white/75 dark:bg-white/[0.04]">
                 {label}
               </span>
             )}
@@ -629,11 +679,11 @@ function FindingCard({
         )}
       </div>
       {open && (
-        <div className="relative px-4 pb-4 pl-[3.25rem] space-y-3 border-t border-white/[0.06] pt-3">
+        <div className="relative px-4 pb-4 pl-[3.25rem] space-y-3 border-t border-slate-900/[0.10] dark:border-white/[0.06] pt-3">
           <p className="text-xs text-muted-foreground/90 leading-relaxed">{finding.detail}</p>
 
           <div
-            className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3 space-y-1.5"
+            className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 space-y-1.5"
             style={{
               background: "linear-gradient(145deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
             }}
@@ -679,7 +729,7 @@ function FindingCard({
 
           {finding.remediation && (
             <div
-              className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3"
+              className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3"
               style={{
                 background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
               }}
@@ -733,7 +783,11 @@ const SEV_BADGE: Record<Severity, { bg: string; text: string; label: string }> =
   critical: { bg: "bg-[#EA0022]/10", text: "text-[#EA0022]", label: "C" },
   high: { bg: "bg-[#F29400]/10", text: "text-[#c47800] dark:text-[#F29400]", label: "H" },
   medium: { bg: "bg-[#F8E300]/10", text: "text-[#b8a200] dark:text-[#F8E300]", label: "M" },
-  low: { bg: "bg-[#00F2B3]/10", text: "text-[#00F2B3] dark:text-[#00F2B3]", label: "L" },
+  low: {
+    bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
+    text: "text-[#007A5A] dark:text-[#00F2B3]",
+    label: "L",
+  },
   info: { bg: "bg-[#009CFB]/10", text: "text-[#0077cc] dark:text-[#009CFB]", label: "I" },
 };
 
@@ -808,7 +862,7 @@ function FindingsPanel({
 
   return (
     <section
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
       style={{ background: "linear-gradient(145deg, rgba(234,0,34,0.05), rgba(234,0,34,0.012))" }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -823,7 +877,7 @@ function FindingsPanel({
 
       <div className="relative flex items-center gap-3 flex-wrap">
         <div
-          className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08]"
+          className="flex items-center justify-center h-9 w-9 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08]"
           style={{ backgroundColor: "rgba(234,0,34,0.12)" }}
         >
           <AlertTriangle className="h-4.5 w-4.5 text-[#EA0022]" />
@@ -839,20 +893,20 @@ function FindingsPanel({
         <div className="ml-auto flex items-center gap-1.5">
           <button
             onClick={openSections.size > 0 ? collapseAll : expandAll}
-            className="text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200"
+            className="text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-slate-900/[0.12] dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.03] hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] transition-all duration-200"
           >
             {openSections.size > 0 ? "Collapse all" : "Expand all"}
           </button>
           <button
             onClick={() => downloadCsv(analysisResults)}
-            className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200"
+            className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-slate-900/[0.12] dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.03] hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] transition-all duration-200"
             title="Export findings as CSV"
           >
             <Download className="h-3 w-3 text-brand-accent" /> CSV
           </button>
           <button
             onClick={() => downloadFindingsPdf(analysisResults)}
-            className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200"
+            className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-slate-900/[0.12] dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.03] hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] transition-all duration-200"
             title="Export findings as printable PDF"
           >
             <Download className="h-3 w-3 text-brand-accent" /> PDF
@@ -869,7 +923,7 @@ function FindingsPanel({
           return (
             <div
               key={g.section}
-              className="relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+              className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
                 borderLeftColor: hex,
                 background: `linear-gradient(135deg, ${hex}08, ${hex}02)`,
@@ -887,7 +941,7 @@ function FindingsPanel({
               />
               <button
                 onClick={() => toggleSection(g.section)}
-                className="relative w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors group"
+                className="relative w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors group"
               >
                 <Icon
                   className="h-4 w-4 transition-colors shrink-0"
@@ -930,7 +984,7 @@ function FindingsPanel({
                 />
               </button>
               {isOpen && (
-                <div className="relative px-3 pb-3 space-y-1.5 border-t border-white/[0.06] pt-2.5">
+                <div className="relative px-3 pb-3 space-y-1.5 border-t border-slate-900/[0.10] dark:border-white/[0.06] pt-2.5">
                   {g.findings.map((f, i) => (
                     <FindingCard
                       key={`${f.firewall}-${f.id}-${i}`}
@@ -975,14 +1029,47 @@ function EstateRiskComparison({
   const maxScore = Math.max(1, ...Object.values(analysisResults).map(weight));
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        <GitBranch className="h-5 w-5 text-brand-accent" />
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+    <div
+      className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] hover:shadow-[0_8px_40px_rgba(32,6,247,0.12)]"
+      style={{
+        background: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
+        boxShadow: "0 12px 40px rgba(32,6,247,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
+      }}
+    >
+      {/* Corner glow */}
+      <div
+        className="absolute -top-10 -right-10 h-28 w-28 rounded-full blur-[50px] opacity-20 transition-opacity duration-300 group-hover:opacity-35 pointer-events-none"
+        style={{ background: "radial-gradient(circle, #5A00FF 0%, transparent 70%)" }}
+      />
+      {/* Top shimmer */}
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(90,0,255,0.35), rgba(0,237,255,0.2), transparent)",
+        }}
+      />
+
+      {/* Header */}
+      <div className="relative flex items-center gap-3">
+        <div
+          className="h-9 w-9 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
+          style={{
+            background: "linear-gradient(135deg, rgba(90,0,255,0.18), rgba(0,237,255,0.10))",
+          }}
+        >
+          <GitBranch
+            className="h-4 w-4 text-[#00EDFF]"
+            style={{ filter: "drop-shadow(0 0 4px rgba(0,237,255,0.5))" }}
+          />
+        </div>
+        <h3 className="text-base font-display font-black tracking-tight text-foreground">
           Estate Risk Comparison
         </h3>
       </div>
-      <div className="space-y-2">
+
+      {/* Firewall rows */}
+      <div className="relative space-y-2.5">
         {Object.entries(analysisResults)
           .sort(([, a], [, b]) => weight(b) - weight(a))
           .map(([label, result], idx) => {
@@ -990,66 +1077,134 @@ function EstateRiskComparison({
             const highs = result.findings.filter((f) => f.severity === "high").length;
             const mediums = result.findings.filter((f) => f.severity === "medium").length;
             const score = criticals * 10 + highs * 5 + mediums * 2;
+            const barHex =
+              score === 0
+                ? "#00F2B3"
+                : score <= 5
+                  ? "#F8E300"
+                  : score <= 15
+                    ? "#F29400"
+                    : "#EA0022";
+            const pct = Math.max(3, Math.round((score / maxScore) * 100));
+
             return (
-              <div key={label} className="flex items-center gap-3">
-                <span className="text-[10px] font-bold text-muted-foreground w-5 text-right">
-                  {idx + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs font-semibold text-foreground truncate">{label}</span>
-                    <div className="flex items-center gap-1.5 text-[10px] shrink-0">
-                      {criticals > 0 && (
-                        <span
-                          className="text-[#EA0022] font-bold"
-                          title={`${criticals} Critical finding${criticals !== 1 ? "s" : ""}`}
-                        >
-                          {criticals}C
-                        </span>
-                      )}
-                      {highs > 0 && (
-                        <span
-                          className="text-[#c47800] dark:text-[#F29400] font-bold"
-                          title={`${highs} High finding${highs !== 1 ? "s" : ""}`}
-                        >
-                          {highs}H
-                        </span>
-                      )}
-                      {mediums > 0 && (
-                        <span
-                          className="text-[#b8a200] dark:text-[#F8E300] font-bold"
-                          title={`${mediums} Medium finding${mediums !== 1 ? "s" : ""}`}
-                        >
-                          {mediums}M
-                        </span>
-                      )}
-                      <span
-                        className="text-muted-foreground"
-                        title={`${result.stats.totalRules} rules parsed`}
-                      >
-                        {result.stats.totalRules}r
+              <div
+                key={label}
+                className="group/row relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3.5 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated hover:scale-[1.01]"
+                style={{ background: `linear-gradient(145deg, ${barHex}0C, ${barHex}03)` }}
+              >
+                {/* Row glow */}
+                <div
+                  className="absolute -top-4 -right-4 h-12 w-12 rounded-full blur-[20px] opacity-0 transition-opacity duration-200 group-hover/row:opacity-25 pointer-events-none"
+                  style={{ backgroundColor: barHex }}
+                />
+                <div
+                  className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${barHex}25, transparent)`,
+                  }}
+                />
+
+                <div className="relative flex items-center gap-3">
+                  {/* Rank */}
+                  <span
+                    className="text-lg font-display font-black tabular-nums w-6 text-center shrink-0"
+                    style={{ color: barHex, opacity: 0.4 }}
+                  >
+                    {idx + 1}
+                  </span>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-display font-bold text-foreground truncate">
+                        {label}
                       </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {criticals > 0 && (
+                          <span
+                            className="text-[10px] font-black px-2 py-0.5 rounded-md border"
+                            style={{
+                              color: "#EA0022",
+                              backgroundColor: "rgba(234,0,34,0.12)",
+                              borderColor: "rgba(234,0,34,0.2)",
+                            }}
+                            title={`${criticals} Critical`}
+                          >
+                            {criticals}C
+                          </span>
+                        )}
+                        {highs > 0 && (
+                          <span
+                            className="text-[10px] font-black px-2 py-0.5 rounded-md border"
+                            style={{
+                              color: "#F29400",
+                              backgroundColor: "rgba(242,148,0,0.12)",
+                              borderColor: "rgba(242,148,0,0.2)",
+                            }}
+                            title={`${highs} High`}
+                          >
+                            {highs}H
+                          </span>
+                        )}
+                        {mediums > 0 && (
+                          <span
+                            className="text-[10px] font-black px-2 py-0.5 rounded-md border"
+                            style={{
+                              color: "#F8E300",
+                              backgroundColor: "rgba(248,227,0,0.10)",
+                              borderColor: "rgba(248,227,0,0.18)",
+                            }}
+                            title={`${mediums} Medium`}
+                          >
+                            {mediums}M
+                          </span>
+                        )}
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-md border border-slate-900/[0.12] dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.03] text-muted-foreground"
+                          title={`${result.stats.totalRules} rules parsed`}
+                        >
+                          {result.stats.totalRules}r
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${score === 0 ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : score <= 5 ? "bg-[#F8E300]" : score <= 15 ? "bg-[#F29400]" : "bg-[#EA0022]"}`}
-                      style={{ width: `${Math.max(3, Math.round((score / maxScore) * 100))}%` }}
-                    />
+                    {/* Risk bar */}
+                    <div className="h-2.5 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${pct}%`,
+                          background: `linear-gradient(90deg, ${barHex}90, ${barHex})`,
+                          boxShadow: `0 0 12px ${barHex}40`,
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             );
           })}
       </div>
-      <div className="text-[10px] text-muted-foreground space-y-0.5">
-        <p>
-          <span className="text-[#EA0022] font-semibold">C</span> = Critical &middot;{" "}
-          <span className="text-[#c47800] dark:text-[#F29400] font-semibold">H</span> = High
-          &middot; <span className="text-[#b8a200] dark:text-[#F8E300] font-semibold">M</span> =
-          Medium &middot; <span className="font-semibold">r</span> = rules parsed
+
+      {/* Legend */}
+      <div
+        className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 space-y-1"
+        style={{
+          background: "linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005))",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.15), transparent)",
+          }}
+        />
+        <p className="relative text-[10px] text-muted-foreground">
+          <span className="font-black text-[#EA0022]">C</span> = Critical &middot;{" "}
+          <span className="font-black text-[#F29400]">H</span> = High &middot;{" "}
+          <span className="font-black text-[#F8E300]">M</span> = Medium &middot;{" "}
+          <span className="font-bold">r</span> = rules parsed
         </p>
-        <p>
+        <p className="relative text-[10px] text-muted-foreground/60">
           Ranked by weighted risk score: Critical &times;10, High &times;5, Medium &times;2, Low
           &times;1
         </p>

@@ -28,9 +28,9 @@ const STATUS_STYLES: Record<
   pass: {
     cell: "bg-[#00F2B3]/15 dark:bg-[#00F2B3]/15 hover:bg-[#00F2B3]/25 dark:hover:bg-[#00F2B3]/25",
     label: "Pass",
-    dot: "bg-[#00F2B3] dark:bg-[#00F2B3]",
+    dot: "bg-[#00A878] dark:bg-[#00F2B3]",
     icon: "\u2713",
-    iconColor: "text-[#00F2B3] dark:text-[#00F2B3]",
+    iconColor: "text-[#007A5A] dark:text-[#00F2B3]",
     hex: "#00F2B3",
   },
   partial: {
@@ -220,7 +220,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border transition-all duration-200 ${
                 showGapsOnly
                   ? "border-[#F29400]/30 text-[#F29400] shadow-[0_0_10px_rgba(242,148,0,0.15)]"
-                  : "border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-white/[0.15]"
+                  : "border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15]"
               }`}
               style={{
                 background: showGapsOnly
@@ -232,7 +232,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             </button>
             <button
               onClick={handleExportCsv}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-white/[0.15] transition-all duration-200"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] transition-all duration-200"
               style={{
                 background: "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
               }}
@@ -290,7 +290,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
 
       {/* Legend */}
       <div
-        className="relative overflow-hidden rounded-2xl border border-white/[0.06] px-4 py-4 space-y-3"
+        className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-4 space-y-3"
         style={{ background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))" }}
       >
         <div className="absolute inset-0 pointer-events-none">
@@ -317,7 +317,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             ([status, s]) => (
               <div
                 key={status}
-                className="group relative overflow-hidden rounded-xl border border-white/[0.06] px-3.5 py-3 flex items-center gap-3 transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+                className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-3 flex items-center gap-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
                 style={{ background: `linear-gradient(145deg, ${s.hex}10, ${s.hex}04)` }}
               >
                 <div className="absolute inset-0 pointer-events-none">
@@ -327,7 +327,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   />
                 </div>
                 <span
-                  className="relative inline-flex items-center justify-center h-9 w-9 rounded-xl text-[13px] font-black shrink-0 border border-white/[0.08]"
+                  className="relative inline-flex items-center justify-center h-9 w-9 rounded-xl text-[13px] font-black shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
                   style={{ backgroundColor: `${s.hex}18`, color: s.hex }}
                 >
                   {s.icon}
@@ -352,7 +352,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
 
       {/* Heatmap grid */}
       <div
-        className="relative overflow-hidden rounded-2xl border border-white/[0.06] shadow-card"
+        className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] shadow-card"
         style={{ background: "linear-gradient(145deg, rgba(90,0,255,0.04), rgba(0,237,255,0.02))" }}
         onMouseLeave={() => setTooltip(null)}
       >
@@ -406,9 +406,12 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             </thead>
             <tbody>
               {allControls.map((controlName) => (
-                <tr key={controlName} className="hover:bg-white/[0.02] transition-colors">
+                <tr
+                  key={controlName}
+                  className="hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
+                >
                   <td
-                    className="p-2.5 text-foreground font-bold sticky left-0 z-10 border-t border-white/[0.04]"
+                    className="p-2.5 text-foreground font-bold sticky left-0 z-10 border-t border-slate-900/[0.08] dark:border-white/[0.04]"
                     style={{ background: "rgba(12,18,34,0.9)" }}
                   >
                     {controlName}
@@ -426,7 +429,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                     return (
                       <td
                         key={cellKey}
-                        className={`p-2 text-center border-t border-white/[0.04] rounded-lg transition-all duration-150 select-none ${s.cell} ${hasFindings ? "cursor-pointer" : ""} ${isSelected ? "ring-2 ring-brand-accent/60 shadow-[0_0_12px_rgba(32,6,247,0.2)]" : ""}`}
+                        className={`p-2 text-center border-t border-slate-900/[0.08] dark:border-white/[0.04] rounded-lg transition-all duration-150 select-none ${s.cell} ${hasFindings ? "cursor-pointer" : ""} ${isSelected ? "ring-2 ring-brand-accent/60 shadow-[0_0_12px_rgba(32,6,247,0.2)]" : ""}`}
                         onClick={
                           ctrl && hasFindings ? () => handleCellClick(m.framework, ctrl) : undefined
                         }
@@ -468,7 +471,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}
             >
               <div
-                className="relative overflow-hidden mb-2 p-3 rounded-xl border border-white/[0.08] backdrop-blur-xl shadow-elevated text-left min-w-[200px] max-w-[280px]"
+                className="relative overflow-hidden mb-2 p-3 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-xl shadow-elevated text-left min-w-[200px] max-w-[280px]"
                 style={{
                   background: "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26,0.98))",
                 }}
@@ -497,7 +500,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                 </p>
               </div>
               <div
-                className="w-2 h-2 rotate-45 border-b border-r border-white/[0.08] mx-auto -mt-3"
+                className="w-2 h-2 rotate-45 border-b border-r border-slate-900/[0.12] dark:border-white/[0.08] mx-auto -mt-3"
                 style={{ background: "rgba(12,18,34,0.96)" }}
               />
             </div>
@@ -507,7 +510,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       {/* Selected cell findings panel */}
       {selectedCell && selectedCell.findings.length > 0 && (
         <div
-          className="relative overflow-hidden rounded-xl border border-white/[0.06] p-4 space-y-2.5"
+          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-2.5"
           style={{
             background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
           }}
@@ -524,7 +527,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             </p>
             <button
               onClick={() => setSelectedCell(null)}
-              className="text-muted-foreground hover:text-foreground text-xs px-1.5 py-0.5 rounded-md hover:bg-white/[0.06] transition-colors"
+              className="text-muted-foreground hover:text-foreground text-xs px-1.5 py-0.5 rounded-md hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] transition-colors"
               aria-label="Close details"
             >
               ✕
@@ -546,7 +549,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             return (
               <div
                 key={f.id}
-                className="relative overflow-hidden rounded-xl border border-white/[0.06] px-3.5 py-2.5"
+                className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5"
                 style={{ background: `linear-gradient(135deg, ${fHex}08, ${fHex}02)` }}
               >
                 <div className="flex items-center gap-2">
@@ -568,7 +571,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       )}
 
       {/* Framework summary bars */}
-      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 pt-3 border-t border-white/[0.06]">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
         {mappings.map((m) => {
           const total = m.summary.pass + m.summary.partial + m.summary.fail;
           const passPct = total > 0 ? Math.round((m.summary.pass / total) * 100) : 0;
@@ -581,7 +584,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               className={`group relative overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 hover:shadow-elevated ${
                 isActive
                   ? "border-brand-accent/25 shadow-[0_0_12px_rgba(32,6,247,0.15)]"
-                  : "border-white/[0.06] hover:border-white/[0.12]"
+                  : "border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
               }`}
               style={{
                 background: isActive
@@ -599,7 +602,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                 {m.framework}
               </p>
               <div className="relative flex items-center gap-2 mt-1.5">
-                <div className="flex-1 h-2 rounded-full bg-white/[0.06] overflow-hidden flex">
+                <div className="flex-1 h-2 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden flex">
                   {m.summary.pass > 0 && (
                     <div
                       className="h-full"
@@ -653,7 +656,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
 
       {/* Detailed view for selected framework */}
       {detailMapping && (
-        <div className="pt-3 border-t border-white/[0.06] space-y-3">
+        <div className="pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06] space-y-3">
           <p className="text-xs font-black text-foreground tracking-tight">
             {detailMapping.framework} — Control Detail
           </p>
@@ -670,11 +673,11 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   return (
                     <div
                       key={c.controlId}
-                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-white/[0.04] transition-all duration-150 hover:border-white/[0.08]"
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-150 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
                       style={{ background: `linear-gradient(135deg, ${s.hex}06, transparent)` }}
                     >
                       <span
-                        className="inline-flex items-center justify-center h-6 w-6 rounded-lg text-[11px] font-black shrink-0 border border-white/[0.08]"
+                        className="inline-flex items-center justify-center h-6 w-6 rounded-lg text-[11px] font-black shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
                         style={{ backgroundColor: `${s.hex}18`, color: s.hex }}
                       >
                         {s.icon}

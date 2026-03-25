@@ -73,7 +73,7 @@ function ProtectionDot({
     return (
       <span
         title={`${label}: not applicable`}
-        className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[7px] font-bold border select-none opacity-15"
+        className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[8px] font-bold border select-none opacity-15"
         style={{ borderColor: "currentColor", color: "currentColor" }}
       >
         –
@@ -86,8 +86,14 @@ function ProtectionDot({
   return (
     <span
       title={`${label}: ${covered}/${total} rules`}
-      className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[7px] font-bold border select-none"
-      style={{ borderColor: color, color }}
+      className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[8px] font-black select-none"
+      style={{
+        borderColor: color,
+        color,
+        border: `1.5px solid ${color}`,
+        boxShadow: `0 0 6px ${color}30`,
+        background: `${color}10`,
+      }}
     >
       {label[0]}
     </span>
@@ -306,52 +312,83 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
   );
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 space-y-5 shadow-card transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(56,136,255,0.04), rgba(181,41,247,0.02), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(56,136,255,0.15), rgba(181,41,247,0.08), transparent)",
+        }}
+      />
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">
           Zone Traffic Flow
         </h3>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setProblemsOnly((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-medium rounded-md border transition-colors ${
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[11px] font-bold rounded-lg transition-all duration-200 cursor-pointer"
+            style={
               problemsOnly
-                ? "border-[#F29400]/50 bg-[#F29400]/15 text-[#F29400]"
-                : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            }`}
+                ? {
+                    background:
+                      "linear-gradient(145deg, rgba(242,148,0,0.18), rgba(242,148,0,0.08))",
+                    border: "1px solid rgba(242,148,0,0.35)",
+                    color: "#F29400",
+                    boxShadow:
+                      "0 0 12px rgba(242,148,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)",
+                  }
+                : {
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.5)",
+                  }
+            }
           >
             Problems only
           </button>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground/70">
             {zones.length} zones · {flows.length} flows
           </span>
         </div>
       </div>
 
       {/* Zone category strip */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {categories.map((cat) => {
           const zoneList = categoryMap.get(cat) ?? [];
           const ruleCount = flows
             .filter((f) => zoneList.includes(f.source) || zoneList.includes(f.dest))
             .reduce((s, f) => s + f.count, 0);
           const isActive = activeCategory === cat;
+          const catColor = ZONE_CAT_CONFIG[cat].color;
           return (
             <button
               key={cat}
               onClick={() => setActiveCategory(isActive ? null : cat)}
-              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-left transition-all ${
-                isActive
-                  ? "border-foreground/30 bg-foreground/5 ring-1 ring-foreground/10"
-                  : "border-border hover:border-foreground/20"
-              }`}
+              className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-left transition-all duration-200 cursor-pointer hover:scale-[1.04]"
+              style={{
+                border: isActive ? `1px solid ${catColor}40` : "1px solid rgba(255,255,255,0.07)",
+                background: isActive
+                  ? `linear-gradient(145deg, ${catColor}18, ${catColor}08)`
+                  : "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+                boxShadow: isActive
+                  ? `0 0 14px ${catColor}18, inset 0 1px 0 rgba(255,255,255,0.06)`
+                  : "inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 6px rgba(0,0,0,0.1)",
+              }}
             >
               <span
-                className="h-2 w-2 rounded-full shrink-0"
-                style={{ backgroundColor: ZONE_CAT_CONFIG[cat].color }}
+                className="h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: catColor, boxShadow: `0 0 6px ${catColor}40` }}
               />
-              <span className="text-[10px] font-semibold text-foreground">{cat}</span>
-              <span className="text-[9px] text-muted-foreground">
+              <span className="text-[12px] font-bold text-foreground">{cat}</span>
+              <span className="text-[10px] text-foreground/40 font-medium">
                 {zoneList.length}z · {ruleCount}r
               </span>
             </button>
@@ -360,39 +397,59 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
       </div>
 
       {/* Flow table */}
-      <div className="max-h-72 overflow-y-auto overflow-x-auto rounded-lg border border-border">
+      <div
+        className="max-h-[28rem] overflow-y-auto overflow-x-auto rounded-xl"
+        style={{
+          border: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.015)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+      >
         {filteredFlows.length === 0 && problemsOnly ? (
           <div className="flex items-center justify-center py-12 px-4">
-            <span className="inline-flex items-center gap-2 text-[11px] font-medium text-[#00F2B3] dark:text-[#00F2B3] border border-[#00F2B3]/20 bg-[#00F2B3]/5 rounded-lg px-4 py-2">
-              ✓ No problems found — all flows have web filtering and IPS where applicable
+            <span
+              className="inline-flex items-center gap-2 text-[11px] font-bold rounded-xl px-4 py-2.5"
+              style={{
+                color: "#00F2B3",
+                background: "linear-gradient(145deg, rgba(0,242,179,0.1), rgba(0,242,179,0.04))",
+                border: "1px solid rgba(0,242,179,0.2)",
+                boxShadow: "0 0 16px rgba(0,242,179,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
+              }}
+            >
+              No problems found — all flows have web filtering and IPS where applicable
             </span>
           </div>
         ) : (
-          <table className="w-full text-[10px]">
+          <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="text-left px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+              <tr
+                style={{
+                  borderBottom: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(255,255,255,0.03)",
+                }}
+              >
+                <th className="text-left px-4 py-3 text-foreground/40 font-bold uppercase tracking-wider text-[10px]">
                   Source
                 </th>
-                <th className="px-1 py-1.5 text-muted-foreground" />
-                <th className="text-left px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+                <th className="px-1 py-3 text-foreground/40" />
+                <th className="text-left px-4 py-3 text-foreground/40 font-bold uppercase tracking-wider text-[10px]">
                   Destination
                 </th>
-                <th className="text-center px-2 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+                <th className="text-center px-3 py-3 text-foreground/40 font-bold uppercase tracking-wider text-[10px]">
                   Rules
                 </th>
                 <th
-                  className="text-center px-2 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider"
+                  className="text-center px-3 py-3 text-foreground/40 font-bold uppercase tracking-wider text-[10px]"
                   title="Web Filter / IPS / App Control"
                 >
                   Protection
                 </th>
-                <th className="text-right px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+                <th className="text-right px-4 py-3 text-foreground/40 font-bold uppercase tracking-wider text-[10px]">
                   Coverage
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {filteredFlows.slice(0, 20).map((f) => {
                 const key = `${f.source}→${f.dest}`;
                 const isExpanded = expandedFlow === key;
@@ -403,35 +460,57 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                 const appPct = f.count > 0 ? f.hasAppControl / f.count : 1;
                 const coveragePct = Math.round(((wfPct + ipsPct + appPct) / 3) * 100);
                 const isUnprotectedWan = touchesWan && coveragePct < 50;
+                const coverageColor =
+                  coveragePct >= 75 ? "#00F2B3" : coveragePct >= 40 ? "#F29400" : "#EA0022";
 
                 return (
                   <tr
                     key={key}
-                    className="group/row cursor-pointer hover:bg-muted/20 transition-colors"
+                    className="cursor-pointer transition-all duration-150"
                     onClick={() => setExpandedFlow(isExpanded ? null : key)}
+                    style={{
+                      borderBottom: "1px solid rgba(255,255,255,0.04)",
+                      background: isExpanded ? "rgba(255,255,255,0.03)" : undefined,
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = isExpanded
+                        ? "rgba(255,255,255,0.03)"
+                        : "";
+                    }}
                   >
-                    <td className="px-2.5 py-2 align-top" colSpan={6}>
+                    <td className="px-4 py-3.5 align-top" colSpan={6}>
                       <div
-                        className={`flex items-center gap-2 ${isUnprotectedWan ? "border-l-2 border-[#EA0022]/60 pl-2 -ml-1" : ""}`}
+                        className={`flex items-center gap-3 ${isUnprotectedWan ? "border-l-2 border-[#EA0022]/60 pl-3 -ml-1" : ""}`}
                       >
                         <span
-                          className="font-semibold truncate max-w-[100px]"
-                          style={{ color: zoneColor(f.source) }}
+                          className="text-[13px] font-bold truncate max-w-[120px]"
+                          style={{
+                            color: zoneColor(f.source),
+                            filter: `drop-shadow(0 0 4px ${zoneColor(f.source)}30)`,
+                          }}
                           title={f.source}
                         >
                           {f.source}
                         </span>
-                        <span className="text-muted-foreground/70">→</span>
+                        <span className="text-foreground/30 font-light text-sm">&rarr;</span>
                         <span
-                          className="font-semibold truncate max-w-[100px]"
-                          style={{ color: zoneColor(f.dest) }}
+                          className="text-[13px] font-bold truncate max-w-[120px]"
+                          style={{
+                            color: zoneColor(f.dest),
+                            filter: `drop-shadow(0 0 4px ${zoneColor(f.dest)}30)`,
+                          }}
                           title={f.dest}
                         >
                           {f.dest}
                         </span>
-                        <span className="ml-auto flex items-center gap-3 shrink-0">
-                          <span className="font-bold tabular-nums text-foreground">{f.count}</span>
-                          <span className="flex items-center gap-0.5">
+                        <span className="ml-auto flex items-center gap-4 shrink-0">
+                          <span className="text-sm font-black tabular-nums text-foreground">
+                            {f.count}
+                          </span>
+                          <span className="flex items-center gap-1">
                             <ProtectionDot
                               covered={f.hasWebFilter}
                               total={f.webFilterable}
@@ -441,13 +520,11 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                             <ProtectionDot covered={f.hasAppControl} total={f.count} label="App" />
                           </span>
                           <span
-                            className={`font-bold tabular-nums w-8 text-right ${
-                              coveragePct >= 75
-                                ? "text-[#00F2B3]"
-                                : coveragePct >= 40
-                                  ? "text-[#F29400]"
-                                  : "text-[#EA0022]"
-                            }`}
+                            className="text-sm font-black tabular-nums w-12 text-right"
+                            style={{
+                              color: coverageColor,
+                              filter: `drop-shadow(0 0 4px ${coverageColor}30)`,
+                            }}
                           >
                             {coveragePct}%
                           </span>
@@ -455,63 +532,83 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                       </div>
 
                       {isExpanded && (
-                        <div className="mt-2 ml-1 space-y-0.5">
+                        <div className="mt-3 ml-1 space-y-1.5">
                           {f.rules.map((r, i) => (
                             <div
                               key={i}
-                              className="flex items-center gap-2 py-1 px-2 rounded bg-muted/20 text-[9px]"
+                              className="flex items-center gap-3 py-2 px-3 rounded-lg text-[11px]"
+                              style={{
+                                background:
+                                  "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+                                border: "1px solid rgba(255,255,255,0.05)",
+                              }}
                             >
                               <span
-                                className="font-medium text-foreground truncate max-w-[140px]"
+                                className="font-semibold text-foreground/80 truncate max-w-[160px]"
                                 title={r.name}
                               >
                                 {r.name}
                               </span>
                               <span
-                                className="text-muted-foreground truncate max-w-[100px]"
+                                className="text-foreground/35 truncate max-w-[120px]"
                                 title={r.service}
                               >
                                 {r.service}
                               </span>
-                              <span className="ml-auto flex items-center gap-1.5 shrink-0 text-[8px]">
+                              <span className="ml-auto flex items-center gap-2 shrink-0 text-[9px]">
                                 {r.needsWf ? (
                                   r.hasWf ? (
-                                    <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">
+                                    <span
+                                      className="px-2 py-0.5 rounded-md font-black"
+                                      style={{
+                                        background: "rgba(0,242,179,0.12)",
+                                        color: "#00F2B3",
+                                      }}
+                                    >
                                       WF
                                     </span>
                                   ) : (
-                                    <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">
+                                    <span
+                                      className="px-2 py-0.5 rounded-md font-black"
+                                      style={{
+                                        background: "rgba(234,0,34,0.12)",
+                                        color: "#EA0022",
+                                      }}
+                                    >
                                       WF
                                     </span>
                                   )
                                 ) : (
                                   <span
-                                    className="px-1 rounded bg-muted/40 text-muted-foreground/70"
+                                    className="px-2 py-0.5 rounded-md text-foreground/25 font-medium"
+                                    style={{ background: "rgba(255,255,255,0.03)" }}
                                     title="Non-web service — web filter not applicable"
                                   >
                                     WF n/a
                                   </span>
                                 )}
-                                {r.hasIps && (
-                                  <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">
-                                    IPS
-                                  </span>
-                                )}
-                                {!r.hasIps && (
-                                  <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">
-                                    IPS
-                                  </span>
-                                )}
-                                {r.hasApp && (
-                                  <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">
-                                    APP
-                                  </span>
-                                )}
-                                {!r.hasApp && (
-                                  <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">
-                                    APP
-                                  </span>
-                                )}
+                                <span
+                                  className="px-2 py-0.5 rounded-md font-black"
+                                  style={{
+                                    background: r.hasIps
+                                      ? "rgba(0,242,179,0.12)"
+                                      : "rgba(234,0,34,0.12)",
+                                    color: r.hasIps ? "#00F2B3" : "#EA0022",
+                                  }}
+                                >
+                                  IPS
+                                </span>
+                                <span
+                                  className="px-2 py-0.5 rounded-md font-black"
+                                  style={{
+                                    background: r.hasApp
+                                      ? "rgba(0,242,179,0.12)"
+                                      : "rgba(234,0,34,0.12)",
+                                    color: r.hasApp ? "#00F2B3" : "#EA0022",
+                                  }}
+                                >
+                                  APP
+                                </span>
                               </span>
                             </div>
                           ))}
@@ -528,22 +625,32 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
 
       {/* Insights */}
       {insights.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {insights.map((ins, i) => (
-            <span
-              key={i}
-              className={`text-[9px] font-medium px-2 py-1 rounded-md border ${
-                ins.type === "warn"
-                  ? "border-[#F29400]/20 bg-[#F29400]/5 text-[#F29400]"
-                  : ins.type === "good"
-                    ? "border-[#00F2B3]/20 bg-[#00F2B3]/5 text-[#00F2B3] dark:text-[#00F2B3]"
-                    : "border-border bg-muted/30 text-muted-foreground"
-              }`}
-            >
-              {ins.type === "warn" ? "⚠ " : ins.type === "good" ? "✓ " : ""}
-              {ins.text}
-            </span>
-          ))}
+        <div className="flex flex-wrap gap-2">
+          {insights.map((ins, i) => {
+            const insColor =
+              ins.type === "warn"
+                ? "#F29400"
+                : ins.type === "good"
+                  ? "#00F2B3"
+                  : "rgba(255,255,255,0.3)";
+            return (
+              <span
+                key={i}
+                className="text-[11px] font-bold px-3 py-2 rounded-lg transition-all duration-200"
+                style={{
+                  background:
+                    ins.type === "info"
+                      ? "rgba(255,255,255,0.04)"
+                      : `linear-gradient(145deg, ${insColor}14, ${insColor}06)`,
+                  border: `1px solid ${insColor}25`,
+                  color: insColor,
+                  boxShadow: ins.type !== "info" ? `0 0 10px ${insColor}10` : undefined,
+                }}
+              >
+                {ins.text}
+              </span>
+            );
+          })}
         </div>
       )}
     </div>

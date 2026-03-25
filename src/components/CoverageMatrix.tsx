@@ -110,21 +110,46 @@ export function CoverageMatrix({ analysisResults }: Props) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(56,136,255,0.05), rgba(0,191,255,0.03), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(56,136,255,0.2), rgba(0,191,255,0.1), transparent)",
+        }}
+      />
+      <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-5">
         Security Feature Coverage Matrix
       </h3>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[400px]">
+      <div
+        className="overflow-x-auto rounded-xl backdrop-blur-sm"
+        style={{
+          border: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.02)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+      >
+        <table className="w-full min-w-[480px]">
           <thead>
-            <tr>
-              <th className="text-[9px] uppercase tracking-wider text-muted-foreground text-left py-2 pr-3 font-medium">
+            <tr
+              style={{
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                background: "rgba(255,255,255,0.03)",
+              }}
+            >
+              <th className="text-[10px] uppercase tracking-wider text-foreground/45 text-left py-3 pr-4 font-bold">
                 Firewall
               </th>
               {columns.map((col) => (
                 <th
                   key={col}
-                  className="text-[9px] uppercase tracking-wider text-muted-foreground text-center py-2 px-1 font-medium"
+                  className="text-[10px] uppercase tracking-wider text-foreground/45 text-center py-3 px-2 font-bold"
                 >
                   {col}
                 </th>
@@ -133,8 +158,8 @@ export function CoverageMatrix({ analysisResults }: Props) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.label} className="border-t border-border/50">
-                <td className="text-[10px] py-1.5 pr-3 font-medium text-foreground truncate max-w-[120px]">
+              <tr key={row.label} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                <td className="text-xs py-3 pr-4 font-semibold text-foreground/90 truncate max-w-[140px]">
                   {row.label}
                 </td>
                 {columns.map((col) => {
@@ -142,7 +167,8 @@ export function CoverageMatrix({ analysisResults }: Props) {
                   return (
                     <td
                       key={col}
-                      className={`text-[10px] py-1.5 px-1.5 text-center rounded ${statusClass(cell.status)}`}
+                      className={`text-xs font-bold py-2.5 px-2 text-center rounded-lg backdrop-blur-sm ${statusClass(cell.status)}`}
+                      style={{ border: "1px solid rgba(255,255,255,0.06)" }}
                     >
                       {cell.display}
                     </td>

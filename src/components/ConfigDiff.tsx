@@ -37,14 +37,14 @@ const SEV_BADGE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
   medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-  low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
+  low: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]",
   info: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]",
 };
 
 const STATUS_STYLES: Record<ChangeType, { bg: string; text: string; icon: React.ReactNode }> = {
   added: {
     bg: "bg-[#00F2B3]/[0.06] dark:bg-[#00F2B3]/[0.08]",
-    text: "text-[#00F2B3] dark:text-[#00F2B3]",
+    text: "text-[#007A5A] dark:text-[#00F2B3]",
     icon: <Plus className="h-3.5 w-3.5" />,
   },
   removed: {
@@ -140,7 +140,7 @@ export function ConfigDiff({
               Before
             </p>
             <p
-              className={`text-3xl font-extrabold ${beforeScore.overall >= 70 ? "text-[#00F2B3] dark:text-[#00F2B3]" : beforeScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}
+              className={`text-3xl font-extrabold ${beforeScore.overall >= 70 ? "text-[#007A5A] dark:text-[#00F2B3]" : beforeScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}
             >
               {beforeScore.overall}
             </p>
@@ -154,7 +154,7 @@ export function ConfigDiff({
               After
             </p>
             <p
-              className={`text-3xl font-extrabold ${afterScore.overall >= 70 ? "text-[#00F2B3] dark:text-[#00F2B3]" : afterScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}
+              className={`text-3xl font-extrabold ${afterScore.overall >= 70 ? "text-[#007A5A] dark:text-[#00F2B3]" : afterScore.overall >= 40 ? "text-[#F29400]" : "text-[#EA0022]"}`}
             >
               {afterScore.overall}
             </p>
@@ -167,8 +167,8 @@ export function ConfigDiff({
             <div className="col-span-2 flex items-center justify-center gap-2 text-xs">
               {afterScore.overall > beforeScore.overall ? (
                 <>
-                  <ArrowUp className="h-4 w-4 text-[#00F2B3] dark:text-[#00F2B3]" />
-                  <span className="font-semibold text-[#00F2B3] dark:text-[#00F2B3]">
+                  <ArrowUp className="h-4 w-4 text-[#007A5A] dark:text-[#00F2B3]" />
+                  <span className="font-semibold text-[#007A5A] dark:text-[#00F2B3]">
                     +{afterScore.overall - beforeScore.overall} points improvement
                   </span>
                 </>
@@ -219,9 +219,9 @@ export function ConfigDiff({
 
       {/* Section list */}
       {visibleSections.length === 0 ? (
-        <div className="rounded-xl border border-[#00F2B3]/30 dark:border-[#00F2B3]/30 bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 p-6 text-center">
-          <Check className="h-8 w-8 text-[#00F2B3] dark:text-[#00F2B3] mx-auto mb-2" />
-          <p className="text-sm font-semibold text-[#00F2B3] dark:text-[#00F2B3]">
+        <div className="rounded-xl border border-[#008F69]/35 dark:border-[#00F2B3]/30 dark:border-[#008F69]/35 dark:border-[#00F2B3]/30 bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 dark:bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 p-6 text-center">
+          <Check className="h-8 w-8 text-[#007A5A] dark:text-[#00F2B3] mx-auto mb-2" />
+          <p className="text-sm font-semibold text-[#007A5A] dark:text-[#00F2B3]">
             Configurations are identical
           </p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -291,13 +291,13 @@ function FindingsDeltaSection({
         </div>
 
         {/* Fixed findings */}
-        <div className="rounded-xl border border-[#00F2B3]/30 dark:border-[#00F2B3]/40 bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 overflow-hidden">
+        <div className="rounded-xl border border-[#008F69]/35 dark:border-[#00F2B3]/30 dark:border-[#00F2B3]/40 bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 dark:bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 overflow-hidden">
           <button
             onClick={() => setExpandedFixed(!expandedFixed)}
             className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
           >
             <span className="text-sm font-medium text-foreground">Fixed findings</span>
-            <span className="text-xs font-semibold text-[#00F2B3] dark:text-[#00F2B3]">
+            <span className="text-xs font-semibold text-[#007A5A] dark:text-[#00F2B3]">
               {fixedFindings.length}
             </span>
             {expandedFixed ? (
@@ -337,7 +337,7 @@ function DiffSummary({ diff }: { diff: ConfigDiffResult }) {
     {
       label: "Sections Added",
       count: summary.sectionsAdded,
-      color: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
+      color: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]",
     },
     {
       label: "Sections Removed",
@@ -347,7 +347,7 @@ function DiffSummary({ diff }: { diff: ConfigDiffResult }) {
     {
       label: "Rows Added",
       count: summary.totalRowsAdded,
-      color: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
+      color: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]",
     },
     {
       label: "Rows Removed",
@@ -496,7 +496,7 @@ function DiffRow({ row, headers }: { row: RowDiff; headers: string[] }) {
                 <span className="line-through text-[#EA0022]/60 dark:text-[#EA0022]/80 mr-1">
                   {prevData[h] ?? ""}
                 </span>
-                <span className="text-[#00F2B3] dark:text-[#00F2B3]">{data[h] ?? ""}</span>
+                <span className="text-[#007A5A] dark:text-[#00F2B3]">{data[h] ?? ""}</span>
               </span>
             ) : (
               <span className={row.status === "removed" ? "text-[#EA0022]/70" : ""}>

@@ -245,7 +245,7 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 shadow-card no-print transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 shadow-card no-print transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.03))" }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -261,7 +261,7 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
       <div className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
         <div className="space-y-1.5">
           <h3 className="text-lg font-display font-black tracking-tight flex items-center gap-2 text-foreground">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.08] bg-brand-accent/[0.12]">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-900/[0.12] dark:border-white/[0.08] bg-brand-accent/[0.12]">
               <MessageSquare className="h-3.5 w-3.5 text-brand-accent" />
             </div>
             Progress narrative
@@ -278,7 +278,7 @@ export function ProgressNarrative({ orgId, currentResults, customerName }: Progr
           type="button"
           variant="outline"
           size="sm"
-          className="shrink-0 gap-1.5 font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.08] to-transparent hover:from-brand-accent/[0.15] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
+          className="shrink-0 gap-1.5 font-bold border-slate-900/[0.12] dark:border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.08] to-transparent hover:from-brand-accent/[0.15] hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
           disabled={loading || !text}
           onClick={handleCopy}
         >

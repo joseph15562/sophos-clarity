@@ -148,30 +148,63 @@ export function RuleConsolidation({ files }: Props) {
   }, [files]);
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.14] dark:border-white/[0.1] p-5 sm:p-6 shadow-card backdrop-blur-md transition-all duration-200 hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(0,156,251,0.06), rgba(32,6,247,0.05), rgba(255,255,255,0.02))",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(0,156,251,0.35), rgba(0,237,255,0.2), transparent)",
+        }}
+      />
+      <h3 className="relative text-lg font-display font-black tracking-tight text-foreground mb-4">
         Rule Consolidation
       </h3>
 
       {opportunities.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No consolidation opportunities found</p>
+        <div
+          className="relative rounded-xl px-4 py-6 text-center border border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-sm"
+          style={{
+            background: "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+          }}
+        >
+          <p className="text-sm font-medium text-foreground/55">
+            No consolidation opportunities found
+          </p>
+          <p className="text-xs text-foreground/35 mt-2 max-w-md mx-auto">
+            When rules share two dimensions but differ on the third, they will appear here as merge
+            candidates.
+          </p>
+        </div>
       ) : (
         <>
-          <p className="text-[10px] text-muted-foreground mb-4">
+          <p className="relative text-xs font-semibold text-foreground/55 mb-4">
             {opportunities.reduce((s, o) => s + o.rules.length, 0)} rules could be consolidated into{" "}
-            {totalAfter}
+            <span className="text-[#00F2B3] font-black tabular-nums">{totalAfter}</span>
           </p>
 
-          <div className="space-y-3 max-h-64 overflow-y-auto">
+          <div className="relative space-y-3 max-h-72 overflow-y-auto pr-1">
             {opportunities.slice(0, 10).map((set, idx) => (
               <div
                 key={idx}
-                className="rounded-lg border border-border bg-muted/20 p-3 text-[10px]"
+                className="rounded-xl border border-slate-900/[0.14] dark:border-white/[0.1] p-3.5 sm:p-4 text-xs backdrop-blur-sm transition-all hover:border-[#009CFB]/30 hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02]"
+                style={{
+                  background:
+                    "linear-gradient(105deg, rgba(0,156,251,0.08), rgba(255,255,255,0.02))",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 28px rgba(0,0,0,0.12)",
+                }}
               >
-                <p className="font-semibold text-foreground mb-1.5">
+                <p className="font-display font-bold text-foreground mb-2 leading-snug">
                   Rules {set.rules.map((r) => r.name).join(", ")} could be merged
                 </p>
-                <div className="space-y-1 text-muted-foreground">
+                <div className="space-y-1 text-foreground/55 leading-relaxed">
                   {set.common.source && <span>Same source: {set.common.source}</span>}
                   {set.common.destination && <span> | Same dest: {set.common.destination}</span>}
                   {set.common.service && <span> | Same service: {set.common.service}</span>}
@@ -179,7 +212,7 @@ export function RuleConsolidation({ files }: Props) {
                 {set.differs.sources?.length ||
                 set.differs.destinations?.length ||
                 set.differs.services?.length ? (
-                  <p className="mt-1.5 text-muted-foreground">
+                  <p className="mt-2 text-foreground/50 text-[11px]">
                     Differs:{" "}
                     {set.differs.services?.length && `Services: ${set.differs.services.join(", ")}`}
                     {set.differs.destinations?.length &&
@@ -187,7 +220,7 @@ export function RuleConsolidation({ files }: Props) {
                     {set.differs.sources?.length && ` Sources: ${set.differs.sources.join(", ")}`}
                   </p>
                 ) : null}
-                <p className="mt-1 text-[9px] text-muted-foreground">
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-wide text-[#009CFB]">
                   Before: {set.rules.length} rules → After: 1 rule
                 </p>
               </div>

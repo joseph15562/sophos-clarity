@@ -71,25 +71,59 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
 
   if (!hasCentralEnrichment || !hasAlerts) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
-          <Shield className="h-4 w-4 text-muted-foreground" />
+      <div
+        className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated min-h-[160px] flex flex-col"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(56,136,255,0.05), rgba(0,242,179,0.03), transparent)",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(56,136,255,0.18), rgba(0,242,179,0.1), transparent)",
+          }}
+        />
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground flex items-center gap-2">
+          <Shield className="h-5 w-5 text-[#00F2B3]" />
           Threat Intelligence Feed
         </h3>
-        <p className="mt-3 text-sm text-muted-foreground flex items-center gap-2">
-          <Shield className="h-4 w-4 opacity-50" />
-          {hasCentralEnrichment
-            ? "No recent alerts — all clear"
-            : "Link to Sophos Central to see threat intelligence"}
-        </p>
+        <div
+          className="mt-4 flex flex-1 items-center gap-4 rounded-xl p-5"
+          style={{
+            border: "1px solid rgba(255,255,255,0.06)",
+            background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+          }}
+        >
+          <Shield className="h-10 w-10 text-foreground/20 shrink-0" />
+          <p className="text-sm text-foreground/50 font-medium leading-relaxed">
+            {hasCentralEnrichment
+              ? "No recent alerts — all clear"
+              : "Link to Sophos Central to see threat intelligence"}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-4">
-        <Shield className="h-4 w-4" />
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(56,136,255,0.05), rgba(0,242,179,0.03), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(56,136,255,0.18), rgba(0,242,179,0.1), transparent)",
+        }}
+      />
+      <h3 className="text-base font-display font-bold tracking-tight text-foreground flex items-center gap-2 mb-5">
+        <Shield className="h-5 w-5 text-[#00F2B3]" />
         Threat Intelligence Feed
       </h3>
 
@@ -99,8 +133,13 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
           return (
             <div
               key={`${event.raisedAt}-${idx}`}
-              className="border-l-2 pl-4 py-2 border-border/50"
-              style={{ borderLeftColor: color }}
+              className="rounded-xl pl-4 py-3 pr-3 backdrop-blur-sm"
+              style={{
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderLeft: `3px solid ${color}`,
+                background:
+                  "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+              }}
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <span
@@ -121,7 +160,9 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
                   {formatRelativeTime(event.raisedAt)}
                 </span>
               </div>
-              <p className="text-sm text-foreground mt-1">{event.description}</p>
+              <p className="text-sm text-foreground/90 mt-2 font-medium leading-snug">
+                {event.description}
+              </p>
             </div>
           );
         })}
@@ -131,21 +172,28 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
         <button
           type="button"
           onClick={() => setShowAll(!showAll)}
-          className="mt-3 text-xs font-medium text-primary hover:underline"
+          className="mt-4 text-sm font-bold transition-opacity hover:opacity-90"
+          style={{ color: "rgba(56,136,255,0.85)" }}
         >
           {showAll ? "Show less" : `Show all (${alerts.length})`}
         </button>
       )}
 
       {mdrIndicators.length > 0 && (
-        <div className="mt-5 pt-4 border-t border-border">
-          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-2">
+        <div className="mt-6 pt-5 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
+          <h4 className="text-sm font-display font-bold tracking-tight text-foreground mb-3">
             MDR Indicators
           </h4>
           <div className="space-y-2 max-h-[200px] overflow-y-auto">
             {mdrIndicators.map((ind, idx) => (
               <div key={`${ind.indicator}-${idx}`} className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+                <span
+                  className="text-foreground/60 font-mono px-2.5 py-1 rounded-lg backdrop-blur-sm"
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(255,255,255,0.04)",
+                  }}
+                >
                   {ind.indicator}
                 </span>
                 <span className="text-muted-foreground">({ind.type})</span>

@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
-import { mapToAllFrameworks, type FrameworkMapping, type ControlMapping, type ControlStatus } from "@/lib/compliance-map";
+import {
+  mapToAllFrameworks,
+  type FrameworkMapping,
+  type ControlMapping,
+} from "@/lib/compliance-map";
 
 const STORAGE_KEY = "firecomply-evidence";
 
@@ -26,15 +30,10 @@ function loadEvidence(): EvidenceItem[] {
 function saveEvidence(items: EvidenceItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
-
-const STATUS_STYLES: Record<ControlStatus, string> = {
-  pass: "text-[#00F2B3] dark:text-[#00F2B3]",
-  partial: "text-[#F29400]",
-  fail: "text-[#EA0022]",
-  na: "text-muted-foreground/60",
-};
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -54,7 +53,10 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
   const firstResult = Object.values(analysisResults)[0];
   const mappings = useMemo<FrameworkMapping[]>(() => {
     if (!firstResult) return [];
-    const fws = selectedFrameworks.length > 0 ? selectedFrameworks : ["NCSC Guidelines", "Cyber Essentials / CE+"];
+    const fws =
+      selectedFrameworks.length > 0
+        ? selectedFrameworks
+        : ["NCSC Guidelines", "Cyber Essentials / CE+"];
     return mapToAllFrameworks(fws, firstResult);
   }, [firstResult, selectedFrameworks]);
 
@@ -105,45 +107,96 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
   if (mappings.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-7 shadow-card space-y-5">
-      <h3 className="text-base font-display font-bold tracking-tight text-foreground">Evidence Collection</h3>
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-8 shadow-card backdrop-blur-sm space-y-6 transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(234,0,34,0.05), rgba(32,6,247,0.03), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), rgba(32,6,247,0.12), transparent)",
+        }}
+      />
+      <h3 className="text-lg font-display font-black tracking-tight text-foreground">
+        Evidence Collection
+      </h3>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {Array.from(controlsWithEvidence.values()).map(({ control, framework, key }) => {
           const items = evidenceByControl.get(key) ?? [];
           const isAdding = addingFor === key;
           const borderAccent =
-            control.status === "pass" ? "border-l-[#00F2B3]" :
-            control.status === "fail" ? "border-l-[#EA0022]" :
-            control.status === "partial" ? "border-l-[#F29400]" :
-            "border-l-border";
+            control.status === "pass"
+              ? "#00F2B3"
+              : control.status === "fail"
+                ? "#EA0022"
+                : control.status === "partial"
+                  ? "#F29400"
+                  : "rgba(255,255,255,0.15)";
 
           return (
             <div
               key={key}
-              className={`rounded-xl border border-border/40 border-l-[3px] ${borderAccent} bg-muted/5 dark:bg-muted/5 p-4 transition-colors hover:bg-muted/15`}
+              className="rounded-xl p-4 sm:p-5 backdrop-blur-sm transition-all duration-200 hover:bg-slate-950/[0.04] dark:hover:bg-white/[0.03]"
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderLeftWidth: 4,
+                borderLeftColor: borderAccent,
+                background:
+                  "linear-gradient(105deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.12)",
+              }}
             >
-              <div className="flex items-center justify-between gap-3 mb-2.5">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-[13px] font-display font-semibold tracking-tight text-foreground truncate">{control.controlName}</span>
-                  <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border ${
-                    control.status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022] border-[#EA0022]/20" :
-                    control.status === "partial" ? "bg-[#F29400]/10 text-[#F29400] border-[#F29400]/20" :
-                    control.status === "pass" ? "bg-[#00F2B3]/10 text-[#00F2B3] border-[#00F2B3]/20" :
-                    "bg-muted text-muted-foreground border-border/40"
-                  }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                  <span className="text-base font-display font-bold tracking-tight text-foreground">
+                    {control.controlName}
+                  </span>
+                  <span
+                    className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg backdrop-blur-sm border ${
+                      control.status === "fail"
+                        ? "text-[#EA0022] border-[#EA0022]/35"
+                        : control.status === "partial"
+                          ? "text-[#F29400] border-[#F29400]/35"
+                          : control.status === "pass"
+                            ? "text-[#00F2B3] border-[#00F2B3]/35"
+                            : "text-muted-foreground border-white/10"
+                    }`}
+                    style={{
+                      background:
+                        control.status === "fail"
+                          ? "linear-gradient(145deg, rgba(234,0,34,0.18), rgba(234,0,34,0.06))"
+                          : control.status === "partial"
+                            ? "linear-gradient(145deg, rgba(242,148,0,0.18), rgba(242,148,0,0.06))"
+                            : control.status === "pass"
+                              ? "linear-gradient(145deg, rgba(0,242,179,0.15), rgba(0,242,179,0.05))"
+                              : "rgba(255,255,255,0.04)",
+                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+                    }}
+                  >
                     {control.status}
                   </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground/50 font-medium shrink-0">{framework}</span>
+                <span className="text-xs text-foreground/40 font-bold uppercase tracking-wide shrink-0 px-2 py-1 rounded-md border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02]">
+                  {framework}
+                </span>
               </div>
 
               {items.length > 0 && (
                 <ul className="space-y-2 mb-3">
                   {items.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-[11px] rounded-lg bg-muted/15 dark:bg-muted/10 border border-border/30 px-3.5 py-2.5">
+                    <li
+                      key={i}
+                      className="flex items-start gap-2.5 text-[11px] rounded-lg bg-muted/15 dark:bg-muted/10 border border-border/30 px-3.5 py-2.5"
+                    >
                       <div className="flex-1 min-w-0 space-y-0.5">
-                        {item.note && <p className="text-foreground/90 leading-relaxed">{item.note}</p>}
+                        {item.note && (
+                          <p className="text-foreground/90 leading-relaxed">{item.note}</p>
+                        )}
                         {item.url && (
                           <a
                             href={item.url}

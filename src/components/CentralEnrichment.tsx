@@ -82,7 +82,14 @@ export function CentralEnrichment({
       .in("config_hash", hashes);
 
     if (!links || links.length === 0) {
-      setEnrichedData([]);
+      setEnrichedData(
+        configMetas.map((c) => ({
+          configLabel: c.label ?? c.configHash,
+          firewall: null,
+          alerts: [],
+          licences: [],
+        })),
+      );
       setLoading(false);
       setLoadAttempted(true);
       return;
@@ -114,6 +121,7 @@ export function CentralEnrichment({
     }
 
     const results: LinkedFirewallData[] = [];
+    const linkedHashes = new Set(links.map((l) => l.config_hash));
 
     for (const tenantId of tenantIds) {
       const tenantLinks = links.filter((l) => l.central_tenant_id === tenantId);
@@ -149,6 +157,17 @@ export function CentralEnrichment({
       }
     }
 
+    for (const config of configMetas) {
+      if (!linkedHashes.has(config.configHash)) {
+        results.push({
+          configLabel: config.label ?? config.configHash,
+          firewall: null,
+          alerts: [],
+          licences: [],
+        });
+      }
+    }
+
     setEnrichedData(results);
     setLoading(false);
     setLoadAttempted(true);
@@ -162,7 +181,10 @@ export function CentralEnrichment({
   if (enrichedData.length === 0) return null;
 
   const totalAlerts = enrichedData.reduce((s, d) => s + d.alerts.length, 0);
-  const allConnected = enrichedData.every((d) => d.firewall?.status?.connected);
+  const linkedData = enrichedData.filter((d) => d.firewall !== null);
+  const unlinkedCount = enrichedData.length - linkedData.length;
+  const allConnected =
+    linkedData.length > 0 && linkedData.every((d) => d.firewall?.status?.connected);
 
   const timeAgo = (iso: string | undefined | null) => {
     if (!iso) return null;
@@ -172,26 +194,78 @@ export function CentralEnrichment({
     return `${Math.floor(diff / 3_600_000)}h ago`;
   };
 
+  const CYAN = "#00EDFF";
+  const statusHex = allConnected ? "#00F2B3" : "#EA0022";
+
   return (
-    <div className="rounded-lg border border-[#005BC8]/20 dark:border-[#00EDFF]/20 bg-[#005BC8]/[0.03] dark:bg-[#00EDFF]/[0.03] overflow-hidden">
+    <div
+      className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] hover:shadow-[0_8px_40px_rgba(0,237,255,0.10)]"
+      style={{
+        background: "linear-gradient(145deg, rgba(0,237,255,0.06), rgba(0,91,200,0.025))",
+        boxShadow: "0 12px 40px rgba(0,237,255,0.04), inset 0 1px 0 rgba(255,255,255,0.04)",
+      }}
+    >
+      {/* Corner glow */}
+      <div
+        className="absolute -top-10 -right-10 h-28 w-28 rounded-full blur-[50px] opacity-20 transition-opacity duration-300 group-hover:opacity-35 pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${CYAN} 0%, transparent 70%)` }}
+      />
+      {/* Top shimmer */}
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${CYAN}40, rgba(0,91,200,0.25), transparent)`,
+        }}
+      />
+
+      {/* Header bar */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+        className="relative w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
       >
-        <div className="h-6 w-6 rounded-lg bg-[#005BC8]/10 dark:bg-[#00EDFF]/10 flex items-center justify-center shrink-0">
-          <Wifi className="h-3 w-3 text-[#005BC8] dark:text-[#00EDFF]" />
+        <div
+          className="h-8 w-8 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08] shrink-0"
+          style={{ background: `linear-gradient(135deg, ${CYAN}20, rgba(0,91,200,0.12))` }}
+        >
+          <Wifi
+            className="h-3.5 w-3.5"
+            style={{ color: CYAN, filter: `drop-shadow(0 0 4px ${CYAN}60)` }}
+          />
         </div>
-        <span className="text-xs font-semibold text-foreground flex-1">
+        <span className="text-xs font-display font-black text-foreground uppercase tracking-wider flex-1">
           Sophos Central Live Data
         </span>
         <div className="flex items-center gap-2 shrink-0">
-          <span
-            className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${allConnected ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}
-          >
-            {allConnected ? "All Online" : "Offline Detected"}
-          </span>
+          {linkedData.length > 0 && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-md font-black border"
+              style={{
+                color: statusHex,
+                backgroundColor: `${statusHex}12`,
+                borderColor: `${statusHex}22`,
+              }}
+            >
+              {allConnected
+                ? linkedData.length === enrichedData.length
+                  ? "All Online"
+                  : `${linkedData.length} Online`
+                : "Offline Detected"}
+            </span>
+          )}
+          {unlinkedCount > 0 && (
+            <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-white/75 dark:bg-white/[0.04] text-muted-foreground border border-slate-900/[0.12] dark:border-white/[0.08]">
+              {unlinkedCount} Not Linked
+            </span>
+          )}
           {totalAlerts > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#F29400]/10 text-[#F29400]">
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-md font-black border"
+              style={{
+                color: "#F29400",
+                backgroundColor: "rgba(242,148,0,0.10)",
+                borderColor: "rgba(242,148,0,0.20)",
+              }}
+            >
               {totalAlerts} Alert{totalAlerts !== 1 ? "s" : ""}
             </span>
           )}
@@ -200,172 +274,264 @@ export function CentralEnrichment({
               e.stopPropagation();
               loadEnrichment();
             }}
-            className="p-0.5 hover:bg-muted/50 rounded transition-colors"
+            className="group/ref p-1.5 rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] transition-all"
+            style={{ background: "linear-gradient(145deg, rgba(0,237,255,0.04), transparent)" }}
             title="Refresh"
           >
             <RefreshCw
-              className={`h-3 w-3 text-muted-foreground ${loading ? "animate-spin" : ""}`}
+              className={`h-3 w-3 transition-colors ${loading ? "animate-spin text-[#00EDFF]" : "text-muted-foreground group-hover/ref:text-[#00EDFF]"}`}
             />
           </button>
           <ChevronDown
-            className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+            className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
           />
         </div>
       </button>
 
       {expanded && (
-        <div className="border-t border-border px-4 py-3 space-y-3">
-          {enrichedData.map((data) => (
-            <div
-              key={data.configLabel}
-              className="rounded-xl border border-border/50 bg-card p-3 space-y-2"
-            >
-              <div className="flex items-center gap-2">
-                <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-foreground">{data.configLabel}</span>
-                {data.firewall && (
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                      data.firewall.status?.connected
-                        ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
-                        : "bg-[#EA0022]/10 text-[#EA0022]"
-                    }`}
+        <div className="border-t border-slate-900/[0.10] dark:border-white/[0.06] px-5 py-4 space-y-3">
+          {enrichedData.map((data) => {
+            const isOnline = data.firewall?.status?.connected;
+            const cardHex = data.firewall ? (isOnline ? "#00F2B3" : "#EA0022") : "#888888";
+
+            return (
+              <div
+                key={data.configLabel}
+                className="group/card relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+                style={{ background: `linear-gradient(145deg, ${cardHex}08, ${cardHex}02)` }}
+              >
+                {/* Card glow */}
+                <div
+                  className="absolute -top-6 -right-6 h-16 w-16 rounded-full blur-[24px] opacity-0 transition-opacity duration-300 group-hover/card:opacity-20 pointer-events-none"
+                  style={{ backgroundColor: cardHex }}
+                />
+                <div
+                  className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${cardHex}25, transparent)`,
+                  }}
+                />
+
+                {/* Firewall header */}
+                <div className="relative flex items-center gap-2.5">
+                  <div
+                    className="h-7 w-7 rounded-lg flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
+                    style={{ background: `linear-gradient(135deg, ${cardHex}18, ${cardHex}08)` }}
                   >
-                    {data.firewall.status?.connected ? (
-                      <Wifi className="h-2.5 w-2.5" />
-                    ) : (
+                    <Server className="h-3.5 w-3.5" style={{ color: cardHex }} />
+                  </div>
+                  <span className="text-xs font-display font-bold text-foreground">
+                    {data.configLabel}
+                  </span>
+                  {data.firewall ? (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md font-bold border"
+                      style={{
+                        color: cardHex,
+                        backgroundColor: `${cardHex}12`,
+                        borderColor: `${cardHex}22`,
+                      }}
+                    >
+                      {isOnline ? (
+                        <Wifi className="h-2.5 w-2.5" />
+                      ) : (
+                        <WifiOff className="h-2.5 w-2.5" />
+                      )}
+                      {isOnline ? "Online" : "Offline"}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md font-bold bg-white/75 dark:bg-white/[0.04] text-muted-foreground border border-slate-900/[0.12] dark:border-white/[0.08]">
                       <WifiOff className="h-2.5 w-2.5" />
-                    )}
-                    {data.firewall.status?.connected ? "Online" : "Offline"}
-                  </span>
-                )}
-              </div>
-
-              {data.firewall && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div className="rounded border border-border bg-muted/30 px-2.5 py-2">
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block">
-                      Firmware
+                      Not linked
                     </span>
-                    <span className="text-xs font-mono font-medium text-foreground">
-                      {data.firewall.firmwareVersion || "—"}
-                    </span>
-                  </div>
-                  <div className="rounded border border-border bg-muted/30 px-2.5 py-2">
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block">
-                      Model
-                    </span>
-                    <span className="text-xs font-medium text-foreground truncate block">
-                      {data.firewall.model?.replace(/SFVUNL_SO01_|_SO01_/g, "") || "—"}
-                    </span>
-                  </div>
-                  <div className="rounded border border-border bg-muted/30 px-2.5 py-2">
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block">
-                      Serial
-                    </span>
-                    <span className="text-xs font-mono font-medium text-foreground">
-                      {data.firewall.serialNumber || "—"}
-                    </span>
-                  </div>
-                  <div className="rounded border border-border bg-muted/30 px-2.5 py-2">
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold block">
-                      HA
-                    </span>
-                    <span className="text-xs font-medium text-foreground">
-                      {data.firewall.cluster
-                        ? `${data.firewall.cluster.mode} (${data.firewall.cluster.status})`
-                        : "Standalone"}
-                    </span>
-                  </div>
+                  )}
                 </div>
-              )}
 
-              {data.licences.length > 0 && (
-                <div className="space-y-1.5">
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-                    <Shield className="h-3 w-3 text-[#009CFB]" /> Licences ({data.licences.length})
-                  </span>
-                  <div className="grid gap-1.5">
-                    {data.licences.map((lic, i) => {
-                      const isExpired = !lic.perpetual && lic.daysRemaining <= 0;
-                      const isExpiring =
-                        !lic.perpetual && lic.daysRemaining > 0 && lic.daysRemaining <= 90;
-                      return (
-                        <div
-                          key={`${lic.product}-${i}`}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-border bg-muted/20"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <span className="text-[10px] font-medium text-foreground block truncate">
-                              {lic.product}
-                            </span>
-                            <span className="text-[9px] text-muted-foreground">
-                              {lic.perpetual ? "Perpetual" : lic.type}
-                              {lic.endDate &&
-                                !lic.perpetual &&
-                                ` · Expires ${new Date(lic.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
-                            </span>
-                          </div>
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                              lic.perpetual
-                                ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
-                                : isExpired
-                                  ? "bg-[#EA0022]/10 text-[#EA0022]"
-                                  : isExpiring
-                                    ? "bg-[#F29400]/10 text-[#F29400]"
-                                    : "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
-                            }`}
-                          >
-                            {lic.perpetual
-                              ? "Active"
-                              : isExpired
-                                ? "EXPIRED"
-                                : `${lic.daysRemaining}d`}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {data.alerts.length > 0 && (
-                <div className="space-y-1">
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3 text-[#F29400]" /> Active Alerts (
-                    {data.alerts.length})
-                  </span>
-                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                    {data.alerts.slice(0, 5).map((a) => (
+                {/* Info grid */}
+                {data.firewall ? (
+                  <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {(
+                      [
+                        ["Firmware", data.firewall.firmwareVersion || "—", true],
+                        [
+                          "Model",
+                          data.firewall.model?.replace(/SFVUNL_SO01_|_SO01_/g, "") || "—",
+                          false,
+                        ],
+                        ["Serial", data.firewall.serialNumber || "—", true],
+                        [
+                          "HA",
+                          data.firewall.cluster
+                            ? `${data.firewall.cluster.mode} (${data.firewall.cluster.status})`
+                            : "Standalone",
+                          false,
+                        ],
+                      ] as [string, string, boolean][]
+                    ).map(([label, value, mono]) => (
                       <div
-                        key={a.id}
-                        className={`text-[10px] px-2 py-1 rounded border-l-2 ${
-                          a.severity === "high"
-                            ? "border-l-[#EA0022] bg-[#EA0022]/5"
-                            : a.severity === "medium"
-                              ? "border-l-[#F29400] bg-[#F29400]/5"
-                              : "border-l-[#F8E300] bg-[#F8E300]/5"
-                        }`}
+                        key={label}
+                        className="relative overflow-hidden rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-2.5 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
+                        style={{ background: `linear-gradient(145deg, ${CYAN}06, ${CYAN}02)` }}
                       >
-                        <span className="text-foreground font-medium">{a.description}</span>
-                        <span className="text-muted-foreground ml-1.5">{a.category}</span>
+                        <div
+                          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                          style={{
+                            background: `linear-gradient(90deg, transparent, ${CYAN}15, transparent)`,
+                          }}
+                        />
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70 font-bold block">
+                          {label}
+                        </span>
+                        <span
+                          className={`text-xs font-bold text-foreground ${mono ? "font-mono" : ""} truncate block mt-0.5`}
+                        >
+                          {value}
+                        </span>
                       </div>
                     ))}
-                    {data.alerts.length > 5 && (
-                      <p className="text-[9px] text-muted-foreground">
-                        +{data.alerts.length - 5} more alerts
-                      </p>
-                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                ) : (
+                  <div
+                    className="relative overflow-hidden rounded-xl border border-dashed border-slate-900/[0.12] dark:border-white/[0.08] px-4 py-3 flex items-center gap-3"
+                    style={{
+                      background: "linear-gradient(145deg, rgba(255,255,255,0.02), transparent)",
+                    }}
+                  >
+                    <WifiOff className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+                    <p className="text-[11px] text-muted-foreground/50 leading-relaxed">
+                      This firewall is not linked to Sophos Central. Link it via the Management
+                      panel to see live status, licences, and alerts.
+                    </p>
+                  </div>
+                )}
 
-          <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1">
-            <span className="flex items-center gap-1">
-              <Clock className="h-2.5 w-2.5" />
+                {/* Licences */}
+                {data.licences.length > 0 && (
+                  <div className="space-y-2">
+                    <span
+                      className="text-[9px] uppercase tracking-wider font-bold flex items-center gap-1.5"
+                      style={{ color: "#009CFB" }}
+                    >
+                      <Shield
+                        className="h-3 w-3"
+                        style={{ filter: "drop-shadow(0 0 3px rgba(0,156,251,0.4))" }}
+                      />
+                      Licences ({data.licences.length})
+                    </span>
+                    <div className="grid gap-1.5">
+                      {data.licences.map((lic, i) => {
+                        const isExpired = !lic.perpetual && lic.daysRemaining <= 0;
+                        const isExpiring =
+                          !lic.perpetual && lic.daysRemaining > 0 && lic.daysRemaining <= 90;
+                        const licHex = lic.perpetual
+                          ? "#00F2B3"
+                          : isExpired
+                            ? "#EA0022"
+                            : isExpiring
+                              ? "#F29400"
+                              : "#00F2B3";
+                        return (
+                          <div
+                            key={`${lic.product}-${i}`}
+                            className="relative overflow-hidden flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
+                            style={{
+                              background: `linear-gradient(145deg, ${licHex}06, ${licHex}02)`,
+                            }}
+                          >
+                            <div
+                              className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                              style={{
+                                background: `linear-gradient(90deg, transparent, ${licHex}18, transparent)`,
+                              }}
+                            />
+                            <div className="relative flex-1 min-w-0">
+                              <span className="text-[11px] font-bold text-foreground block truncate">
+                                {lic.product}
+                              </span>
+                              <span className="text-[9px] text-muted-foreground/60">
+                                {lic.perpetual ? "Perpetual" : lic.type}
+                                {lic.endDate &&
+                                  !lic.perpetual &&
+                                  ` · Expires ${new Date(lic.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+                              </span>
+                            </div>
+                            <span
+                              className="relative text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 border"
+                              style={{
+                                color: licHex,
+                                backgroundColor: `${licHex}12`,
+                                borderColor: `${licHex}22`,
+                              }}
+                            >
+                              {lic.perpetual
+                                ? "Active"
+                                : isExpired
+                                  ? "EXPIRED"
+                                  : `${lic.daysRemaining}d`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Alerts */}
+                {data.alerts.length > 0 && (
+                  <div className="space-y-2">
+                    <span
+                      className="text-[9px] uppercase tracking-wider font-bold flex items-center gap-1.5"
+                      style={{ color: "#F29400" }}
+                    >
+                      <AlertTriangle
+                        className="h-3 w-3"
+                        style={{ filter: "drop-shadow(0 0 3px rgba(242,148,0,0.4))" }}
+                      />
+                      Active Alerts ({data.alerts.length})
+                    </span>
+                    <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1 scrollbar-thin">
+                      {data.alerts.slice(0, 5).map((a) => {
+                        const alertHex =
+                          a.severity === "high"
+                            ? "#EA0022"
+                            : a.severity === "medium"
+                              ? "#F29400"
+                              : "#F8E300";
+                        return (
+                          <div
+                            key={a.id}
+                            className="relative overflow-hidden text-[10px] px-3 py-1.5 rounded-lg border-l-[3px] border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-200 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
+                            style={{
+                              borderLeftColor: alertHex,
+                              background: `linear-gradient(135deg, ${alertHex}08, ${alertHex}02)`,
+                            }}
+                          >
+                            <span className="text-foreground font-bold">{a.description}</span>
+                            <span className="text-muted-foreground/50 ml-1.5 font-medium">
+                              {a.category}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {data.alerts.length > 5 && (
+                        <p className="text-[9px] text-muted-foreground/50 font-medium pl-1">
+                          +{data.alerts.length - 5} more alerts
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Footer */}
+          <div
+            className="relative overflow-hidden rounded-lg border border-slate-900/[0.08] dark:border-white/[0.04] px-3 py-2 flex items-center justify-between"
+            style={{ background: "linear-gradient(145deg, rgba(255,255,255,0.015), transparent)" }}
+          >
+            <span className="flex items-center gap-1.5 text-[9px] text-muted-foreground/50 font-medium">
+              <Clock className="h-2.5 w-2.5" style={{ color: CYAN, opacity: 0.5 }} />
               Data from Sophos Central · Last synced {timeAgo(status?.last_synced_at) || "unknown"}
             </span>
           </div>

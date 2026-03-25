@@ -34,7 +34,9 @@ export function ScoreDeltaBanner({ analysisResults }: Props) {
     loadPreviousSnapshot(hostname).then((snap) => {
       if (!cancelled && snap) setPrevious({ score: snap.score });
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [hostname]);
 
   if (!firstEntry) return null;
@@ -50,7 +52,7 @@ export function ScoreDeltaBanner({ analysisResults }: Props) {
 
   if (delta > 0) {
     return (
-      <div className="w-full rounded-xl border p-4 flex items-center gap-3 bg-[#00F2B3]/10 border-[#00F2B3]/30">
+      <div className="w-full rounded-xl border p-4 flex items-center gap-3 bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 border-[#008F69]/35 dark:border-[#00F2B3]/30">
         <TrendingUp className="h-5 w-5 text-[#00F2B3] shrink-0" />
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-[#00F2B3]">

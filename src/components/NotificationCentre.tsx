@@ -24,8 +24,8 @@ const TYPE_STYLE: Record<NotificationType, { icon: typeof Info; color: string; b
   info: { icon: Info, color: "text-[#009CFB]", bg: "bg-[#009CFB]/10" },
   success: {
     icon: CheckCircle,
-    color: "text-[#00F2B3] dark:text-[#00F2B3]",
-    bg: "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10",
+    color: "text-[#007A5A] dark:text-[#00F2B3]",
+    bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 dark:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
   },
   warning: { icon: AlertTriangle, color: "text-[#F29400]", bg: "bg-[#F29400]/10" },
   error: { icon: XCircle, color: "text-[#EA0022]", bg: "bg-[#EA0022]/10" },

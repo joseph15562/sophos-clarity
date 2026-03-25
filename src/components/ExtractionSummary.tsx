@@ -91,7 +91,7 @@ function FileBlock({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-white/[0.06] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{ background: `linear-gradient(135deg, ${covHex}08, ${covHex}02)` }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -102,7 +102,7 @@ function FileBlock({
       </div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="relative w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/[0.02] transition-colors"
+        className="relative w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
       >
         {expanded ? (
           <ChevronDown className="h-3.5 w-3.5 text-brand-accent shrink-0" />
@@ -120,7 +120,7 @@ function FileBlock({
       </button>
 
       {expanded && (
-        <div className="relative px-3 pb-3 pt-1 border-t border-white/[0.06]">
+        <div className="relative px-3 pb-3 pt-1 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground mb-2">
             <span>{meta.totalDetected} detected</span>
             <span>{meta.totalExtracted} extracted</span>
@@ -170,7 +170,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
     <section className="space-y-3">
       <div className="flex items-center gap-2.5">
         <div
-          className="h-9 w-9 rounded-xl flex items-center justify-center border border-white/[0.08]"
+          className="h-9 w-9 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
           style={{ backgroundColor: "rgba(32,6,247,0.12)" }}
         >
           <FileText className="h-4.5 w-4.5 text-brand-accent" />
@@ -187,7 +187,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
       </div>
 
       <div
-        className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-4 space-y-3 shadow-card"
+        className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-4 space-y-3 shadow-card"
         style={{
           background: "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.025))",
         }}
@@ -206,7 +206,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
           {STAT_ITEMS.map((item) => (
             <div
               key={item.label}
-              className="relative overflow-hidden rounded-xl border border-white/[0.06] px-3.5 py-2.5 text-xs transition-all duration-200 hover:border-white/[0.12]"
+              className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5 text-xs transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
               style={{ background: `linear-gradient(145deg, ${item.hex}10, ${item.hex}04)` }}
             >
               <div className="absolute inset-0 pointer-events-none">
@@ -228,7 +228,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
           ))}
         </div>
 
-        <div className="relative h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className="relative h-2.5 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -241,7 +241,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
 
         {hasWarning && (
           <div
-            className="relative overflow-hidden flex items-start gap-2.5 rounded-xl border border-white/[0.06] px-3.5 py-2.5"
+            className="relative overflow-hidden flex items-start gap-2.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5"
             style={{
               background: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
             }}

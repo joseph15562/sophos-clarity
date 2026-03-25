@@ -293,8 +293,8 @@ export function FirewallLinkPicker({
 
   if (linked) {
     return (
-      <div className="flex items-center gap-2 mt-1 py-1 px-2 rounded bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 border border-[#00F2B3]/20 dark:border-[#00F2B3]/20">
-        <CheckCircle2 className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3] shrink-0" />
+      <div className="flex items-center gap-2 mt-1 py-1 px-2 rounded bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 dark:bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#008F69]/30 dark:border-[#00F2B3]/20 dark:border-[#008F69]/30 dark:border-[#00F2B3]/20">
+        <CheckCircle2 className="h-3 w-3 text-[#007A5A] dark:text-[#00F2B3] shrink-0" />
         <span className="text-[10px] text-foreground font-medium truncate">
           {linked.hostname || linked.serialNumber}
         </span>
@@ -447,7 +447,7 @@ export function FirewallLinkPicker({
                         <CheckCircle2 className="h-3.5 w-3.5 text-brand-accent shrink-0" />
                       )}
                       {autoMatch && (
-                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold shrink-0">
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-semibold shrink-0">
                           AUTO
                         </span>
                       )}

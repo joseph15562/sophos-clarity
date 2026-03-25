@@ -148,7 +148,7 @@ export function UploadSection({
               </p>
               <p className="text-2xl font-black text-foreground mt-1">3–4 hours</p>
             </div>
-            <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] px-4 py-3 text-left">
+            <div className="rounded-2xl border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] px-4 py-3 text-left">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 With FireComply
               </p>
@@ -192,7 +192,7 @@ export function UploadSection({
               <Button
                 variant="outline"
                 size="lg"
-                className="gap-2 rounded-xl px-5 border-[#00F2B3]/25 dark:border-[#00F2B3]/30 hover:bg-[#00F2B3]/10 text-[#00774a] dark:text-[#00F2B3]"
+                className="gap-2 rounded-xl px-5 border-[#00F2B3]/25 dark:border-[#008F69]/35 dark:border-[#00F2B3]/30 hover:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#00774a] dark:text-[#00F2B3]"
                 onClick={() =>
                   document
                     .getElementById("firecomply-agent-fleet-panel")
@@ -285,7 +285,7 @@ export function UploadSection({
                 {hasFiles ? "Firewall Configs" : "Upload Firewall Exports"}
               </h2>
               {hasFiles && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#2006F7]/10 text-[#2006F7] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]">
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#2006F7]/10 text-[#2006F7] dark:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]">
                   {files.length} loaded
                 </span>
               )}
@@ -402,7 +402,7 @@ export function UploadSection({
                       Multi-site customers, recurring reviews, estate-wide posture
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
+                  <div className="rounded-2xl border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Outcome
                     </p>
@@ -511,7 +511,7 @@ export function UploadSection({
                       Customer-specific reports, executive packs, compliance-aligned reviews
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
+                  <div className="rounded-2xl border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Outcome
                     </p>
@@ -587,8 +587,8 @@ export function UploadSection({
 
       {/* Privacy banner */}
       {hasFiles && (
-        <div className="rounded-[24px] border border-[#00F2B3]/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,255,251,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(10,26,24,0.96))] px-5 py-4 flex items-start gap-4 shadow-sm">
-          <div className="h-10 w-10 rounded-xl bg-[#00F2B3]/10 border border-[#00F2B3]/15 flex items-center justify-center shrink-0 mt-0.5">
+        <div className="rounded-[24px] border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,255,251,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(10,26,24,0.96))] px-5 py-4 flex items-start gap-4 shadow-sm">
+          <div className="h-10 w-10 rounded-xl bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 border border-[#00F2B3]/15 flex items-center justify-center shrink-0 mt-0.5">
             <ShieldCheck className="h-5 w-5 text-brand-accent" />
           </div>
           <div className="space-y-1.5">
@@ -691,7 +691,7 @@ export function UploadSection({
             className={`no-print relative overflow-hidden flex items-center gap-1.5 text-sm font-bold px-4 py-2.5 rounded-xl border transition-all duration-200 shadow-sm hover:shadow-md ${
               reportsSaved
                 ? "border-[#00F2B3]/25 text-[#00F2B3]"
-                : "border-white/[0.08] text-brand-accent hover:border-white/[0.15]"
+                : "border-slate-900/[0.12] dark:border-white/[0.08] text-brand-accent hover:border-slate-900/[0.18] dark:hover:border-white/[0.15]"
             }`}
             style={{
               background: reportsSaved

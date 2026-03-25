@@ -66,26 +66,52 @@ export function SeverityBreakdown({
   const displayPerFw = viewMode === "per-firewall" ? perFirewallData : [];
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+    <div
+      className="relative rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 space-y-4 shadow-card transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(234,0,34,0.04), rgba(242,148,0,0.02), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(234,0,34,0.15), rgba(242,148,0,0.08), transparent)",
+        }}
+      />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        <h3 className="text-sm font-display font-bold tracking-tight text-foreground">
           Finding Severity
         </h3>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground">{total} total findings</span>
+          <span className="text-[10px] text-muted-foreground/70">{total} total findings</span>
           {multipleFirewalls && (
-            <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
+            <div
+              className="flex rounded-xl p-0.5 gap-0.5"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
               <button
                 type="button"
                 onClick={() => {
                   setViewMode("all");
                   setActiveSev(null);
                 }}
-                className={`px-2 py-1 text-[10px] font-medium rounded-md transition-colors ${
+                className="px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-all duration-200 cursor-pointer"
+                style={
                   viewMode === "all"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                    ? {
+                        background:
+                          "linear-gradient(145deg, rgba(56,136,255,0.14), rgba(0,191,255,0.06))",
+                        color: "rgba(255,255,255,0.9)",
+                        boxShadow:
+                          "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.2)",
+                      }
+                    : { color: "rgba(255,255,255,0.4)" }
+                }
               >
                 All Firewalls
               </button>
@@ -95,11 +121,18 @@ export function SeverityBreakdown({
                   setViewMode("per-firewall");
                   setActiveSev(null);
                 }}
-                className={`px-2 py-1 text-[10px] font-medium rounded-md transition-colors ${
+                className="px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-all duration-200 cursor-pointer"
+                style={
                   viewMode === "per-firewall"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                    ? {
+                        background:
+                          "linear-gradient(145deg, rgba(56,136,255,0.14), rgba(0,191,255,0.06))",
+                        color: "rgba(255,255,255,0.9)",
+                        boxShadow:
+                          "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.2)",
+                      }
+                    : { color: "rgba(255,255,255,0.4)" }
+                }
               >
                 Per Firewall
               </button>
@@ -113,8 +146,11 @@ export function SeverityBreakdown({
           {/* Stacked severity bar — clickable + hoverable (All Firewalls) */}
           <div className="relative h-12">
             <div
-              className="absolute bottom-0 left-0 right-0 flex h-5 rounded-full"
-              style={{ clipPath: "inset(0 round 9999px)" }}
+              className="absolute bottom-0 left-0 right-0 flex h-5 rounded-full border border-slate-900/[0.10] dark:border-white/[0.06]"
+              style={{
+                clipPath: "inset(0 round 9999px)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.2)",
+              }}
             >
               {data.map((d) => {
                 const isDimmed = activeSev !== null && activeSev !== d.key;
@@ -158,13 +194,22 @@ export function SeverityBreakdown({
                       }}
                     />
                     <div className="opacity-0 group-hover/seg:opacity-100 absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-3 pointer-events-none transition-opacity duration-150">
-                      <div className="rounded-lg border border-border bg-popover shadow-elevated px-3 py-2 whitespace-nowrap">
+                      <div
+                        className="rounded-xl px-3 py-2 whitespace-nowrap"
+                        style={{
+                          background:
+                            "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          boxShadow:
+                            "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
+                          backdropFilter: "blur(16px)",
+                        }}
+                      >
                         <p className="text-[11px] font-bold" style={{ color: d.color }}>
                           {d.value} {d.name}
                         </p>
-                        <p className="text-[9px] text-muted-foreground">{pct}% of all findings</p>
+                        <p className="text-[9px] text-foreground/50">{pct}% of all findings</p>
                       </div>
-                      <div className="w-2 h-2 rotate-45 border-b border-r border-border bg-popover mx-auto -mt-1" />
                     </div>
                   </button>
                 );
@@ -179,47 +224,46 @@ export function SeverityBreakdown({
             {data.map((d) => {
               const isActive = activeSev === d.key;
               const isDimmed = activeSev !== null && !isActive;
-              const pct = Math.round((d.value / total) * 100);
               return (
                 <button
                   key={d.key}
                   onClick={() => handleSevClick(d.key)}
-                  className={`relative text-center rounded-lg border py-2.5 px-1 transition-all group/card ${
+                  className={`relative text-center rounded-xl border py-3 px-1 transition-all duration-200 overflow-hidden backdrop-blur-sm cursor-pointer ${
                     isActive
-                      ? "ring-1 bg-foreground/5 scale-105"
+                      ? "scale-[1.06] shadow-elevated"
                       : isDimmed
-                        ? "border-border bg-muted/10 opacity-40"
-                        : "border-border bg-muted/20 hover:bg-muted/30 hover:scale-105 hover:shadow-elevated"
+                        ? "opacity-30"
+                        : "hover:scale-[1.06] hover:shadow-elevated hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
                   }`}
-                  style={
-                    isActive
-                      ? {
-                          borderColor: d.color + "60",
-                          ["--tw-ring-color" as string]: d.color + "30",
-                        }
-                      : {}
-                  }
+                  style={{
+                    borderColor: isActive ? `${d.color}40` : "rgba(255,255,255,0.07)",
+                    background: isActive
+                      ? `linear-gradient(145deg, ${d.color}22, ${d.color}0c)`
+                      : `linear-gradient(145deg, ${d.color}12, ${d.color}06)`,
+                    boxShadow: isActive
+                      ? `0 0 20px ${d.color}20, inset 0 1px 0 rgba(255,255,255,0.08)`
+                      : `inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.15)`,
+                  }}
                 >
+                  <div
+                    className="absolute -top-3 -right-3 h-10 w-10 rounded-full blur-[14px] pointer-events-none"
+                    style={{ backgroundColor: d.color, opacity: isActive ? 0.4 : 0.25 }}
+                  />
+                  <div
+                    className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                    style={{
+                      background: `linear-gradient(90deg, transparent, ${d.color}30, transparent)`,
+                    }}
+                  />
                   <span
-                    className="text-xl font-extrabold tabular-nums block"
-                    style={{ color: d.color }}
+                    className="relative text-2xl font-display font-black tabular-nums block"
+                    style={{ color: d.color, filter: `drop-shadow(0 0 6px ${d.color}40)` }}
                   >
                     {d.value}
                   </span>
-                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">
+                  <span className="relative text-[9px] text-foreground/50 uppercase tracking-wider font-bold">
                     {d.name}
                   </span>
-                  <div className="opacity-0 group-hover/card:opacity-100 absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none transition-opacity duration-150">
-                    <div className="rounded-md border border-border bg-popover shadow-elevated px-2.5 py-1.5 whitespace-nowrap text-left">
-                      <p className="text-[10px] font-bold" style={{ color: d.color }}>
-                        {d.value} {d.name.toLowerCase()} finding{d.value !== 1 ? "s" : ""}
-                      </p>
-                      <p className="text-[9px] text-muted-foreground">
-                        {pct}% of total · Click to filter
-                      </p>
-                    </div>
-                    <div className="w-2 h-2 rotate-45 border-b border-r border-border bg-popover mx-auto -mt-1" />
-                  </div>
                 </button>
               );
             })}
@@ -235,13 +279,21 @@ export function SeverityBreakdown({
             return (
               <div
                 key={firewall}
-                className="rounded-lg border border-border bg-muted/10 p-3 space-y-2"
+                className="rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-4 space-y-2.5 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.1] hover:shadow-elevated"
+                style={{
+                  background:
+                    "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.15)",
+                }}
               >
-                <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-foreground uppercase tracking-wider">
                   {firewall}
                 </p>
                 <div className="relative h-8">
-                  <div className="absolute bottom-0 left-0 right-0 flex h-4 rounded-full overflow-hidden">
+                  <div
+                    className="absolute bottom-0 left-0 right-0 flex h-4 rounded-full overflow-hidden"
+                    style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
+                  >
                     {fwData.map((d) => (
                       <div
                         key={d.key}
@@ -255,8 +307,8 @@ export function SeverityBreakdown({
                   {fwData.map((d) => (
                     <span
                       key={d.key}
-                      className="text-[9px] px-1.5 py-0.5 rounded font-medium"
-                      style={{ backgroundColor: d.color + "30", color: d.color }}
+                      className="text-[9px] px-1.5 py-0.5 rounded-md font-semibold"
+                      style={{ backgroundColor: d.color + "20", color: d.color }}
                     >
                       {d.name}: {d.value}
                     </span>
@@ -269,48 +321,64 @@ export function SeverityBreakdown({
       )}
 
       {viewMode === "all" && filteredFindings && filteredFindings.length > 0 && (
-        <div className="space-y-1 pt-1 border-t border-border">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+        <div className="space-y-1.5 pt-2 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
+          <p className="text-[10px] font-bold text-foreground/50 uppercase tracking-wider mb-2">
             {filteredFindings.length} {activeSev} finding{filteredFindings.length !== 1 ? "s" : ""}
           </p>
-          <div className="max-h-52 overflow-y-auto space-y-1">
+          <div className="max-h-52 overflow-y-auto space-y-1.5">
             {filteredFindings.map((f, i) => {
               const uid = `sev-${f.id}-${f.firewall}-${i}`;
               const isOpen = expandedFinding === uid;
               return (
                 <div
                   key={uid}
-                  className="rounded-lg border border-border bg-muted/10 overflow-hidden"
+                  className="rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.02)" }}
                 >
                   <button
                     onClick={() => setExpandedFinding(isOpen ? null : uid)}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/20 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left transition-all duration-200 cursor-pointer"
                   >
                     <span
-                      className="h-1.5 w-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: SEVERITY_COLORS[f.severity as Severity] }}
+                      className="h-2 w-2 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: SEVERITY_COLORS[f.severity as Severity],
+                        boxShadow: `0 0 6px ${SEVERITY_COLORS[f.severity as Severity]}50`,
+                      }}
                     />
-                    <span className="text-[11px] font-medium text-foreground flex-1 truncate">
+                    <span className="text-[11px] font-semibold text-foreground/85 flex-1 truncate">
                       {f.title}
                     </span>
                     {multipleFirewalls && (
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                      <span
+                        className="text-[8px] px-1.5 py-0.5 rounded-md font-medium shrink-0"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          color: "rgba(255,255,255,0.45)",
+                          border: "1px solid rgba(255,255,255,0.06)",
+                        }}
+                      >
                         {f.firewall}
                       </span>
                     )}
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded-md font-medium shrink-0"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        color: "rgba(255,255,255,0.45)",
+                        border: "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
                       {f.section}
                     </span>
                   </button>
                   {isOpen && (
-                    <div className="px-3 pb-2.5 pt-2 border-t border-border/50 space-y-1.5">
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        {f.detail}
-                      </p>
+                    <div className="px-3.5 pb-3 pt-2.5 border-t border-slate-900/[0.10] dark:border-white/[0.06] space-y-2">
+                      <p className="text-[10px] text-foreground/50 leading-relaxed">{f.detail}</p>
                       {f.remediation && (
                         <p className="text-[10px] leading-relaxed">
-                          <span className="font-semibold text-[#F29400]">Recommendation:</span>{" "}
-                          <span className="text-foreground">{f.remediation}</span>
+                          <span className="font-bold text-[#F29400]">Recommendation:</span>{" "}
+                          <span className="text-foreground/80">{f.remediation}</span>
                         </p>
                       )}
                     </div>

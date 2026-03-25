@@ -196,10 +196,10 @@ export function ReportCards({
               return (
                 <div
                   key={card.title}
-                  className={`relative overflow-hidden rounded-[24px] border border-white/[0.06] shadow-card transition-all duration-200 flex flex-col ${
+                  className={`relative overflow-hidden rounded-[24px] border border-slate-900/[0.10] dark:border-white/[0.06] shadow-card transition-all duration-200 flex flex-col ${
                     card.disabled
                       ? "opacity-50 pointer-events-none"
-                      : "hover:scale-[1.02] hover:border-white/[0.12] hover:shadow-elevated cursor-pointer group"
+                      : "hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-pointer group"
                   }`}
                   style={{ background: `linear-gradient(145deg, ${card.hex}12, ${card.hex}04)` }}
                   onClick={card.onClick}
@@ -217,7 +217,7 @@ export function ReportCards({
                   <div className="relative p-5 flex flex-col h-full">
                     <div className="flex items-center gap-3">
                       <div
-                        className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.08] transition-transform duration-200 group-hover:scale-110"
+                        className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08] transition-transform duration-200 group-hover:scale-110"
                         style={{ backgroundColor: `${card.hex}18` }}
                       >
                         <Icon className="h-6 w-6" style={{ color: card.hex }} />
@@ -248,7 +248,7 @@ export function ReportCards({
 
           {canGenerate && (
             <div
-              className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-3 sm:p-4"
+              className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-3 sm:p-4"
               style={{
                 background: "linear-gradient(135deg, rgba(32,6,247,0.10), rgba(90,0,255,0.06))",
               }}

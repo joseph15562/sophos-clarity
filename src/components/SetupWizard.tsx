@@ -888,7 +888,7 @@ function MockSecurityPanel() {
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-border/50 bg-card p-3 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
+        <div className="h-9 w-9 rounded-lg bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
           <ShieldCheck className="h-4 w-4 text-[#00F2B3]" />
         </div>
         <div className="flex-1 min-w-0">
@@ -897,7 +897,7 @@ function MockSecurityPanel() {
             TOTP-based authenticator app verification
           </p>
         </div>
-        <div className="px-2 py-1 rounded text-[9px] font-semibold bg-[#00F2B3]/10 text-[#00F2B3]">
+        <div className="px-2 py-1 rounded text-[9px] font-semibold bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#00F2B3]">
           Enabled
         </div>
       </div>
@@ -1518,7 +1518,7 @@ function MockWebhookPanel() {
           <div className="flex items-center gap-2 mb-1.5">
             <Webhook className="h-3.5 w-3.5 text-[#6B5BFF]" />
             <p className="text-[10px] font-semibold text-foreground flex-1">{h.name}</p>
-            <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-[#00F2B3]/10 text-[#00F2B3]">
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#00F2B3]">
               Active
             </span>
           </div>
@@ -1614,7 +1614,7 @@ export function SetupWizard({
                   <div
                     className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
                       i < currentStep
-                        ? "bg-[#00F2B3] dark:bg-[#00F2B3]"
+                        ? "bg-[#00A878] dark:bg-[#00F2B3]"
                         : i === currentStep
                           ? "bg-[#2006F7]"
                           : "bg-muted"
@@ -2127,7 +2127,7 @@ export function SetupWizard({
                   />
                 </div>
 
-                <div className="rounded-lg bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
+                <div className="rounded-lg bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Why Pre-AI?</strong> The deterministic
                     analysis is repeatable and consistent — same config always gives the same score.
@@ -2497,7 +2497,7 @@ export function SetupWizard({
                   />
                 </div>
 
-                <div className="rounded-lg bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
+                <div className="rounded-lg bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Tip:</strong> The Remediation tab appears
                     when findings are detected. Use it to demonstrate ongoing security improvements
@@ -2955,7 +2955,7 @@ export function SetupWizard({
                   />
                 </div>
 
-                <div className="rounded-lg bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
+                <div className="rounded-lg bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
                   <p className="text-[10px] text-muted-foreground">
                     <strong className="text-foreground">Recommendation:</strong> Enable MFA or
                     register a passkey for your account as soon as possible. You can set these up in

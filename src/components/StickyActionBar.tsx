@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import { Eye, FileText, AlertTriangle, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,8 @@ export function StickyActionBar({
   tourSlot,
   onOpenShortcuts,
 }: StickyActionBarProps) {
+  const { resolvedTheme } = useTheme();
+  const barDark = resolvedTheme === "dark";
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
 
@@ -75,16 +78,23 @@ export function StickyActionBar({
   return (
     <>
       <div
-        className="no-print fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.08] backdrop-blur-xl"
+        className={
+          barDark
+            ? "no-print fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.08] backdrop-blur-xl"
+            : "no-print fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/90 backdrop-blur-xl"
+        }
         style={{
-          background:
-            "linear-gradient(135deg, rgba(32,6,247,0.08), rgba(0,237,255,0.04), rgba(12,18,34,0.85))",
+          background: barDark
+            ? "linear-gradient(135deg, rgba(32,6,247,0.08), rgba(0,237,255,0.04), rgba(12,18,34,0.85))"
+            : "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(247,249,255,0.98))",
         }}
       >
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.3), transparent)",
+            background: barDark
+              ? "linear-gradient(90deg, transparent, rgba(32,6,247,0.3), transparent)"
+              : "linear-gradient(90deg, transparent, rgba(32,6,247,0.12), rgba(0,237,255,0.08), transparent)",
           }}
         />
 
@@ -96,7 +106,7 @@ export function StickyActionBar({
             {onOpenShortcuts && (
               <button
                 onClick={onOpenShortcuts}
-                className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.06] text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+                className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] text-[10px] font-bold text-slate-700 hover:text-slate-900 dark:text-muted-foreground dark:hover:text-foreground transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
                 style={{
                   background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
                 }}
@@ -117,7 +127,7 @@ export function StickyActionBar({
               variant="outline"
               size="sm"
               onClick={onScrollToFindings}
-              className="gap-2 text-xs font-bold border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/[0.15] transition-all duration-200"
+              className="gap-2 text-xs font-bold text-slate-900 border-slate-900/[0.18] bg-white/90 hover:bg-white hover:text-slate-950 dark:text-foreground dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:bg-white/[0.08] hover:border-slate-900/[0.22] dark:hover:border-white/[0.15] transition-all duration-200"
             >
               <Eye className="h-3.5 w-3.5 text-brand-accent" />
               View Findings
@@ -139,7 +149,7 @@ export function StickyActionBar({
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent className="rounded-2xl border-white/[0.08] bg-card/95 backdrop-blur-xl shadow-elevated">
+        <AlertDialogContent className="rounded-2xl border-slate-900/[0.12] dark:border-white/[0.08] bg-card/95 backdrop-blur-xl shadow-elevated">
           <AlertDialogHeader>
             <div className="flex items-center gap-3">
               <div
@@ -171,7 +181,7 @@ export function StickyActionBar({
           <AlertDialogFooter className="pt-2">
             <AlertDialogCancel
               onClick={handleFillContext}
-              className="gap-2 font-bold border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08]"
+              className="gap-2 font-bold border-slate-900/[0.12] dark:border-white/[0.08] bg-white/75 dark:bg-white/[0.04] hover:bg-slate-950/[0.08] dark:hover:bg-white/[0.08]"
             >
               Fill in context
             </AlertDialogCancel>

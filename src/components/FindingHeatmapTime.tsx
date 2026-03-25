@@ -23,8 +23,8 @@ interface FindingHeatmapTimeProps {
 }
 
 const DAY_LABELS = ["M", "", "W", "", "F", "", "S"];
-const CELL_SIZE = 12;
-const GAP = 2;
+const CELL_SIZE = 14;
+const GAP = 3;
 
 export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps) {
   const [dailyCounts, setDailyCounts] = useState<Record<string, number>>({});
@@ -80,10 +80,11 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
   }, [dailyCounts]);
 
   const cellClass = (count: number): string => {
-    if (count === 0) return "bg-muted/30";
-    if (count <= 2) return "bg-[#00F2B3]/20";
-    if (count <= 5) return "bg-[#00F2B3]/40";
-    return "bg-[#00F2B3]/70";
+    if (count === 0)
+      return "bg-white/75 dark:bg-white/[0.04] border border-slate-900/[0.10] dark:border-white/[0.05]";
+    if (count <= 2) return "bg-[#00F2B3]/25 border border-[#008F69]/30 dark:border-[#00F2B3]/20";
+    if (count <= 5) return "bg-[#00F2B3]/45 border border-[#00F2B3]/25";
+    return "bg-[#00F2B3]/75 border border-[#00F2B3]/40";
   };
 
   const getDateForCell = (col: number, row: number): string => {
@@ -97,21 +98,43 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
   };
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(0,242,179,0.05), rgba(56,136,255,0.03), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(0,242,179,0.2), rgba(56,136,255,0.1), transparent)",
+        }}
+      />
+      <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-5">
         Finding Activity
       </h3>
       {!hasData ? (
-        <p className="text-xs text-muted-foreground">Assessment history builds over time</p>
+        <p className="text-sm text-foreground/45 font-medium">
+          Assessment history builds over time
+        </p>
       ) : (
-        <div className="flex gap-2">
-          <div className="flex flex-col justify-between py-0.5 text-[10px] text-muted-foreground">
+        <div
+          className="flex gap-4 justify-center sm:justify-start rounded-xl p-4 backdrop-blur-sm w-full"
+          style={{
+            border: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(255,255,255,0.02)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}
+        >
+          <div className="flex flex-col justify-between py-0.5 text-[11px] font-semibold text-foreground/40 w-4">
             {DAY_LABELS.map((l, i) => (
               <span key={i}>{l}</span>
             ))}
           </div>
           <div
-            className="rounded-sm"
+            className="rounded-lg"
             style={{
               display: "grid",
               gridTemplateColumns: `repeat(13, ${CELL_SIZE}px)`,
@@ -126,8 +149,12 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
                 return (
                   <div
                     key={`${rowIdx}-${colIdx}`}
-                    className={`rounded-sm ${cellClass(c)}`}
-                    style={{ width: CELL_SIZE, height: CELL_SIZE }}
+                    className={`rounded-md ${cellClass(c)} transition-transform hover:scale-110`}
+                    style={{
+                      width: CELL_SIZE,
+                      height: CELL_SIZE,
+                      boxShadow: c > 0 ? "0 0 8px rgba(0,242,179,0.2)" : undefined,
+                    }}
                     title={`${date}: ${c} finding${c !== 1 ? "s" : ""}`}
                   />
                 );

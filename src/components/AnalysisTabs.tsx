@@ -1,4 +1,5 @@
 import { lazy, Suspense, useRef, useEffect, useState, useCallback } from "react";
+import { useTheme } from "next-themes";
 import {
   ArrowLeftRight,
   Download,
@@ -40,6 +41,7 @@ import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { RiskScoreResult } from "@/lib/risk-score";
 import { SecurityPostureScorecard } from "@/components/SecurityPostureScorecard";
+import { cn } from "@/lib/utils";
 
 const RiskScoreDashboard = lazy(() =>
   import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })),
@@ -258,6 +260,8 @@ export interface AnalysisTabsProps {
   /** Organisation id for score-history widgets (authenticated). */
   orgId?: string;
   hasReports?: boolean;
+  /** Historical trend snapshot to show on the score dial */
+  trendSnapshot?: { score: number; grade: string; date: string } | null;
 }
 
 function fileLabel(f: ParsedFile) {
@@ -297,7 +301,10 @@ export function AnalysisTabs({
   onExplainFinding,
   orgId = "",
   hasReports = false,
+  trendSnapshot,
 }: AnalysisTabsProps) {
+  const { resolvedTheme } = useTheme();
+  const analysisTabBarDark = resolvedTheme === "dark";
   const panelRef = useRef<HTMLDivElement>(null);
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
   const w = (id: string) => isWidgetVisible(widgetPrefs, id);
@@ -329,8 +336,30 @@ export function AnalysisTabs({
         hasReports={hasReports}
       />
 
-      <div className="sticky top-[53px] z-20 mt-5 rounded-[24px] border border-border/60 bg-background/92 px-4 py-4 backdrop-blur-md shadow-sm">
-        <h2 className="text-sm font-display font-bold text-foreground tracking-tight px-1 mb-3 flex items-center gap-1.5">
+      <div
+        className={cn(
+          "sticky top-[53px] z-20 mt-5 rounded-xl px-5 py-4 backdrop-blur-xl",
+          analysisTabBarDark ? "border border-white/[0.06]" : "border border-slate-200/90",
+        )}
+        style={{
+          background: analysisTabBarDark
+            ? "linear-gradient(135deg, rgba(10,14,28,0.88), rgba(14,18,36,0.92))"
+            : "linear-gradient(135deg, rgba(255,255,255,0.97), rgba(248,250,252,0.99))",
+          boxShadow: analysisTabBarDark
+            ? "0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)"
+            : "0 4px 24px rgba(15,23,42,0.07), inset 0 1px 0 rgba(255,255,255,0.95)",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background: analysisTabBarDark
+              ? "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)"
+              : "linear-gradient(90deg, transparent, rgba(32,6,247,0.14), rgba(0,156,251,0.1), transparent)",
+          }}
+        />
+        <h2 className="relative text-sm font-semibold text-foreground tracking-tight px-1 mb-3 flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-brand-accent/70" />
           Detailed Security Analysis
           <TourHint
             tourId="analysis-tabs"
@@ -338,7 +367,10 @@ export function AnalysisTabs({
             description="Deep-dive into security analysis, compliance mapping, rule optimisation, and remediation playbooks. Click any tab to explore."
           />
         </h2>
-        <div className="overflow-x-auto">
+        <div
+          className="relative overflow-x-auto overflow-y-visible scrollbar-hide"
+          style={{ padding: "4px 4px" }}
+        >
           <TabsList
             className="flex-nowrap whitespace-nowrap w-max min-w-full inline-flex"
             data-tour="analysis-tabs"
@@ -347,7 +379,7 @@ export function AnalysisTabs({
               <LayoutDashboard className="h-3.5 w-3.5" />
               Overview
               {totalFindings > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#EA0022] text-white tabular-nums">
+                <span className="text-[10px] font-semibold min-w-[20px] text-center px-1.5 py-px rounded-full tabular-nums bg-destructive/90 text-white">
                   {totalFindings}
                 </span>
               )}
@@ -433,7 +465,7 @@ export function AnalysisTabs({
               </Suspense>
               <SecurityWidgetShell>
                 <Suspense fallback={<ChartSkeleton height={200} />}>
-                  <ScoreDialGauge analysisResults={analysisResult} />
+                  <ScoreDialGauge analysisResults={analysisResult} trendSnapshot={trendSnapshot} />
                 </Suspense>
               </SecurityWidgetShell>
 
@@ -492,48 +524,84 @@ export function AnalysisTabs({
               </SecurityWidgetShell>
 
               {totalFindings > 0 && (
-                <div className="flex flex-wrap items-center gap-2.5" data-tour="export-buttons">
+                <div
+                  className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 flex flex-wrap items-center gap-3 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10]"
+                  style={{
+                    background:
+                      "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(0,237,255,0.02))",
+                    boxShadow:
+                      "0 8px 30px rgba(32,6,247,0.05), inset 0 1px 0 rgba(255,255,255,0.04)",
+                  }}
+                  data-tour="export-buttons"
+                >
+                  {/* Shimmer */}
+                  <div
+                    className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent, rgba(32,6,247,0.25), rgba(0,237,255,0.15), transparent)",
+                    }}
+                  />
                   <TourHint
                     tourId="export-buttons"
                     title="Export Options"
                     description="Export your risk register as CSV, Excel, or interactive HTML for offline review and sharing."
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadRiskRegisterCSV(analysisResult, branding.customerName)}
-                    className="relative overflow-hidden gap-1.5 text-xs font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.06] to-transparent hover:from-brand-accent/[0.12] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
-                    data-tour="export-risk-register"
-                  >
-                    <Download className="h-3.5 w-3.5 text-brand-accent" />
-                    Export Risk Register (CSV)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadRiskRegisterExcel(analysisResult, branding.customerName)}
-                    className="relative overflow-hidden gap-1.5 text-xs font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.06] to-transparent hover:from-brand-accent/[0.12] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
-                    data-tour="export-excel"
-                  >
-                    <Download className="h-3.5 w-3.5 text-brand-accent" />
-                    Export Excel
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      downloadInteractiveHtml(analysisResult, {
-                        customerName: branding.customerName,
-                        mspName: branding.companyName,
-                        logoUrl: branding.logoUrl ?? undefined,
-                      })
-                    }
-                    className="relative overflow-hidden gap-1.5 text-xs font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.06] to-transparent hover:from-brand-accent/[0.12] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
-                    data-tour="export-interactive-html"
-                  >
-                    <Download className="h-3.5 w-3.5 text-brand-accent" />
-                    Export Interactive HTML
-                  </Button>
+                  {(
+                    [
+                      {
+                        label: "Export Risk Register (CSV)",
+                        onClick: () =>
+                          downloadRiskRegisterCSV(analysisResult, branding.customerName),
+                        tour: "export-risk-register",
+                        hex: "#2006F7",
+                      },
+                      {
+                        label: "Export Excel",
+                        onClick: () =>
+                          downloadRiskRegisterExcel(analysisResult, branding.customerName),
+                        tour: "export-excel",
+                        hex: "#5A00FF",
+                      },
+                      {
+                        label: "Export Interactive HTML",
+                        onClick: () =>
+                          downloadInteractiveHtml(analysisResult, {
+                            customerName: branding.customerName,
+                            mspName: branding.companyName,
+                            logoUrl: branding.logoUrl ?? undefined,
+                          }),
+                        tour: "export-interactive-html",
+                        hex: "#00EDFF",
+                      },
+                    ] as const
+                  ).map((btn) => (
+                    <button
+                      key={btn.tour}
+                      onClick={btn.onClick}
+                      className="group/btn relative overflow-hidden flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-xs font-bold text-foreground hover:border-slate-900/[0.20] dark:hover:border-white/[0.16] transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_4px_20px_rgba(32,6,247,0.15)]"
+                      style={{
+                        background: `linear-gradient(145deg, ${btn.hex}12, ${btn.hex}04)`,
+                      }}
+                      data-tour={btn.tour}
+                    >
+                      <div
+                        className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[12px] opacity-0 transition-opacity duration-200 group-hover/btn:opacity-35 pointer-events-none"
+                        style={{ backgroundColor: btn.hex }}
+                      />
+                      <div
+                        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                        style={{
+                          background: `linear-gradient(90deg, transparent, ${btn.hex}30, transparent)`,
+                        }}
+                      />
+                      <Download
+                        className="h-3.5 w-3.5"
+                        style={{ color: btn.hex, filter: `drop-shadow(0 0 3px ${btn.hex}50)` }}
+                      />
+                      {btn.label}
+                    </button>
+                  ))}
                 </div>
               )}
               {totalFindings > 0 && (
@@ -644,99 +712,95 @@ export function AnalysisTabs({
                 </div>
               </div>
 
-              {securityStats && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div
-                    className={`rounded-xl border bg-card p-4 ${
-                      securityStats.score >= 75
-                        ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
-                        : securityStats.score >= 50
-                          ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
-                          : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
-                    }`}
-                  >
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Score
+              {securityStats &&
+                (() => {
+                  const scoreColor =
+                    securityStats.score >= 75
+                      ? "#00F2B3"
+                      : securityStats.score >= 50
+                        ? "#F29400"
+                        : "#EA0022";
+                  const critColor = securityStats.criticalHigh === 0 ? "#00F2B3" : "#EA0022";
+                  const covColor =
+                    securityStats.coverage >= 75
+                      ? "#00F2B3"
+                      : securityStats.coverage >= 40
+                        ? "#F29400"
+                        : "#EA0022";
+                  const statCards = [
+                    {
+                      label: "Score",
+                      value: securityStats.score,
+                      color: scoreColor,
+                      suffix: "",
+                      badge: securityStats.grade,
+                    },
+                    {
+                      label: "Critical Issues",
+                      value: securityStats.criticalHigh,
+                      color: critColor,
+                      suffix: "",
+                    },
+                    {
+                      label: "Coverage",
+                      value: securityStats.coverage,
+                      color: covColor,
+                      suffix: "%",
+                    },
+                    {
+                      label: "Rules Analysed",
+                      value: securityStats.totalRules,
+                      color: "#fff",
+                      suffix: "",
+                    },
+                  ];
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {statCards.map((card) => (
+                        <div
+                          key={card.label}
+                          className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 transition-all duration-200 hover:scale-[1.03] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-default"
+                          style={{
+                            background: `linear-gradient(145deg, ${card.color}10, ${card.color}04)`,
+                          }}
+                        >
+                          <div
+                            className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                            style={{
+                              background: `linear-gradient(90deg, transparent, ${card.color}20, transparent)`,
+                            }}
+                          />
+                          <div
+                            className="absolute -top-4 -right-4 h-12 w-12 rounded-full blur-[20px] opacity-15 transition-opacity group-hover:opacity-30 pointer-events-none"
+                            style={{ backgroundColor: card.color }}
+                          />
+                          <div className="relative">
+                            <div className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                              {card.label}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span
+                                className="text-2xl font-extrabold tabular-nums"
+                                style={{ color: card.color === "#fff" ? undefined : card.color }}
+                              >
+                                {card.value}
+                                {card.suffix}
+                              </span>
+                              {card.badge && (
+                                <span
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                  style={{ background: `${card.color}15`, color: card.color }}
+                                >
+                                  {card.badge}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span
-                        className={`text-2xl font-extrabold tabular-nums ${
-                          securityStats.score >= 75
-                            ? "text-[#00F2B3] dark:text-[#00F2B3]"
-                            : securityStats.score >= 50
-                              ? "text-[#F29400]"
-                              : "text-[#EA0022]"
-                        }`}
-                      >
-                        {securityStats.score}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          securityStats.score >= 75
-                            ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]"
-                            : securityStats.score >= 50
-                              ? "bg-[#F29400]/10 text-[#F29400]"
-                              : "bg-[#EA0022]/10 text-[#EA0022]"
-                        }`}
-                      >
-                        {securityStats.grade}
-                      </span>
-                    </div>
-                  </div>
-                  <div
-                    className={`rounded-xl border border-border/50 bg-card p-4 ${
-                      securityStats.criticalHigh === 0
-                        ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
-                        : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
-                    }`}
-                  >
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Critical Issues
-                    </div>
-                    <div
-                      className={`text-2xl font-extrabold tabular-nums mt-1 ${
-                        securityStats.criticalHigh === 0
-                          ? "text-[#00F2B3] dark:text-[#00F2B3]"
-                          : "text-[#EA0022]"
-                      }`}
-                    >
-                      {securityStats.criticalHigh}
-                    </div>
-                  </div>
-                  <div
-                    className={`rounded-xl border border-border/50 bg-card p-4 ${
-                      securityStats.coverage >= 75
-                        ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
-                        : securityStats.coverage >= 40
-                          ? "border-[#F29400]/20 bg-[#F29400]/[0.04]"
-                          : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
-                    }`}
-                  >
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Coverage
-                    </div>
-                    <div
-                      className={`text-2xl font-extrabold tabular-nums mt-1 ${
-                        securityStats.coverage >= 75
-                          ? "text-[#00F2B3] dark:text-[#00F2B3]"
-                          : securityStats.coverage >= 40
-                            ? "text-[#F29400]"
-                            : "text-[#EA0022]"
-                      }`}
-                    >
-                      {securityStats.coverage}%
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-border/50 bg-card p-4">
-                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Rules Analysed
-                    </div>
-                    <div className="text-2xl font-extrabold tabular-nums mt-1 text-foreground">
-                      {securityStats.totalRules}
-                    </div>
-                  </div>
-                </div>
-              )}
+                  );
+                })()}
               <SecurityWidgetShell>
                 <Suspense fallback={<ChartSkeleton height={220} />}>
                   <RiskScoreDashboard analysisResults={analysisResult} />

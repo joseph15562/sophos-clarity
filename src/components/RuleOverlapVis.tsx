@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 type ExtractedSection = {
   tables: Array<{ headers: string[]; rows: Record<string, string>[] }>;
@@ -86,6 +86,58 @@ function overlapScore(a: RuleInfo, b: RuleInfo): { score: number; reasons: strin
   return { score, reasons };
 }
 
+const CELL = 20;
+
+function cellStyle(
+  score: number,
+  isSelf: boolean,
+  isHovered: boolean,
+  isRowOrCol: boolean,
+): CSSProperties {
+  if (isSelf) {
+    return {
+      background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+      borderColor: "rgba(255,255,255,0.12)",
+      boxShadow: isHovered
+        ? "0 0 0 2px rgba(0,237,255,0.5), 0 0 16px rgba(0,237,255,0.2)"
+        : "inset 0 1px 0 rgba(255,255,255,0.06)",
+    };
+  }
+  if (score === 3) {
+    return {
+      background: "linear-gradient(145deg, #FF3355, #EA0022)",
+      borderColor: "rgba(255,255,255,0.15)",
+      boxShadow: isHovered
+        ? "0 0 14px rgba(234,0,34,0.75), inset 0 1px 0 rgba(255,255,255,0.25)"
+        : "0 0 8px rgba(234,0,34,0.35), inset 0 1px 0 rgba(255,255,255,0.15)",
+    };
+  }
+  if (score === 2) {
+    return {
+      background: "linear-gradient(145deg, #FFB020, #F29400)",
+      borderColor: "rgba(255,255,255,0.12)",
+      boxShadow: isHovered
+        ? "0 0 14px rgba(242,148,0,0.65), inset 0 1px 0 rgba(255,255,255,0.25)"
+        : "0 0 8px rgba(242,148,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+    };
+  }
+  if (score === 1) {
+    return {
+      background: "linear-gradient(145deg, #00F2B3, #00C4A3)",
+      borderColor: "rgba(255,255,255,0.12)",
+      boxShadow: isHovered
+        ? "0 0 14px rgba(0,242,179,0.55), inset 0 1px 0 rgba(255,255,255,0.3)"
+        : "0 0 8px rgba(0,242,179,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
+    };
+  }
+  return {
+    background: "rgba(255,255,255,0.02)",
+    borderColor: "rgba(255,255,255,0.06)",
+    boxShadow: isRowOrCol ? "inset 0 0 0 1px rgba(0,237,255,0.15)" : "none",
+    filter: isRowOrCol ? "brightness(1.15)" : undefined,
+  };
+}
+
 export function RuleOverlapVis({ files }: Props) {
   const [hovered, setHovered] = useState<{ i: number; j: number } | null>(null);
 
@@ -104,158 +156,229 @@ export function RuleOverlapVis({ files }: Props) {
     return { rules, matrix, maxRules: allRules.length };
   }, [files]);
 
+  const shell = (children: ReactNode) => (
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.14] dark:border-white/[0.1] p-5 sm:p-6 shadow-card backdrop-blur-md transition-all duration-200 hover:border-slate-900/[0.18] dark:hover:border-white/[0.14] hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(234,0,34,0.05), rgba(242,148,0,0.04), rgba(0,242,179,0.03), rgba(255,255,255,0.02))",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(0,242,179,0.25), rgba(242,148,0,0.2), rgba(234,0,34,0.15), transparent)",
+        }}
+      />
+      {children}
+    </div>
+  );
+
   if (rules.length === 0) {
-    return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    return shell(
+      <>
+        <h3 className="relative text-lg font-display font-black tracking-tight text-foreground mb-3">
           Rule Overlap Matrix
         </h3>
-        <p className="text-sm text-muted-foreground">No firewall rules found</p>
-      </div>
+        <p className="relative text-sm text-foreground/50">No firewall rules found</p>
+      </>,
     );
   }
 
-  const tooltip =
-    hovered !== null
-      ? (() => {
-          const { score, reasons } = overlapScore(rules[hovered.i], rules[hovered.j]);
-          if (hovered.i === hovered.j) return `Rule ${rules[hovered.i].name} (self)`;
-          return `Rule ${rules[hovered.i].name} and Rule ${rules[hovered.j].name}: ${reasons.join(", ") || "no overlap"}`;
-        })()
-      : null;
+  const headerH = rules.length > 10 ? 76 : 60;
 
-  return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+  return shell(
+    <>
+      <h3 className="relative text-lg font-display font-black tracking-tight text-foreground mb-1">
         Rule Overlap Matrix
       </h3>
+      <p className="relative text-xs text-foreground/45 mb-4">
+        Source, destination, and service dimensions — brighter cells mean stronger overlap.
+      </p>
 
       {maxRules > 20 && (
-        <p className="text-[10px] text-muted-foreground mb-3">
+        <p className="relative text-[11px] font-semibold text-[#F29400] mb-3">
           Showing first 20 of {maxRules} rules
         </p>
       )}
 
-      <div className="overflow-x-auto">
-        <div className="inline-block min-w-0">
-          <div className="flex">
-            {/* Row labels column */}
-            <div className="shrink-0" style={{ paddingTop: rules.length > 10 ? 72 : 56 }}>
-              {rules.map((r, i) => (
-                <div
-                  key={i}
-                  className={`text-[8px] font-mono truncate pr-1.5 flex items-center transition-colors ${
-                    hovered?.i === i || hovered?.j === i
-                      ? "text-foreground font-semibold"
-                      : "text-muted-foreground"
-                  }`}
-                  style={{ height: 18, maxWidth: 80 }}
-                  title={r.name}
-                >
-                  {r.name.length > 12 ? r.name.slice(0, 11) + "…" : r.name}
-                </div>
-              ))}
-            </div>
-
-            {/* Matrix with rotated column headers */}
-            <div>
-              {/* Column headers */}
-              <div className="flex" style={{ height: rules.length > 10 ? 72 : 56 }}>
-                {rules.map((r, j) => (
-                  <div key={j} className="relative" style={{ width: 18, height: "100%" }}>
-                    <span
-                      className="absolute text-[8px] font-mono text-muted-foreground whitespace-nowrap origin-bottom-left"
-                      style={{
-                        bottom: 2,
-                        left: 10,
-                        transform: "rotate(-55deg)",
-                        maxWidth: rules.length > 10 ? 68 : 52,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                      title={r.name}
-                    >
-                      {r.name.length > 12 ? r.name.slice(0, 11) + "…" : r.name}
-                    </span>
+      <div className="relative flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-6">
+        <div
+          className="overflow-x-auto min-w-0 flex-1 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-3 backdrop-blur-sm"
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}
+        >
+          <div className="inline-block min-w-0">
+            <div className="flex">
+              <div className="shrink-0" style={{ paddingTop: headerH }}>
+                {rules.map((r, i) => (
+                  <div
+                    key={i}
+                    className={`text-[9px] font-mono truncate pr-2 flex items-center transition-all duration-150 ${
+                      hovered?.i === i || hovered?.j === i
+                        ? "text-[#00EDFF] font-bold drop-shadow-[0_0_8px_rgba(0,237,255,0.35)]"
+                        : "text-foreground/50"
+                    }`}
+                    style={{ height: CELL, maxWidth: 88 }}
+                    title={r.name}
+                  >
+                    {r.name.length > 13 ? r.name.slice(0, 12) + "…" : r.name}
                   </div>
                 ))}
               </div>
 
-              {/* Grid cells */}
-              {matrix.map((row, i) => (
-                <div key={i} className="flex">
-                  {row.map((score, j) => {
-                    const isSelf = i === j;
-                    const isHovered = hovered?.i === i && hovered?.j === j;
-                    const isRowOrCol =
-                      hovered !== null && !isHovered && (hovered.i === i || hovered.j === j);
-                    let bg = "bg-transparent";
-                    if (isSelf) bg = "bg-muted/60";
-                    else if (score === 3) bg = "bg-red-500/80";
-                    else if (score === 2) bg = "bg-amber-500/60";
-                    else if (score === 1) bg = "bg-amber-400/30";
-                    return (
-                      <div
-                        key={j}
-                        className={`border border-border/40 ${bg} transition-all duration-75 ${
-                          isHovered
-                            ? "ring-1 ring-foreground z-10"
-                            : isRowOrCol
-                              ? "brightness-125"
-                              : ""
-                        }`}
-                        style={{ width: 18, height: 18 }}
-                        onMouseEnter={() => setHovered({ i, j })}
-                        onMouseLeave={() => setHovered(null)}
-                      />
-                    );
-                  })}
+              <div>
+                <div className="flex" style={{ height: headerH }}>
+                  {rules.map((r, j) => (
+                    <div
+                      key={j}
+                      className="relative flex justify-center"
+                      style={{ width: CELL, height: "100%" }}
+                    >
+                      <span
+                        className="absolute text-[9px] font-mono text-foreground/45 whitespace-nowrap origin-bottom-left leading-none"
+                        style={{
+                          bottom: 4,
+                          left: CELL * 0.55,
+                          transform: "rotate(-52deg)",
+                          maxWidth: rules.length > 10 ? 72 : 56,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title={r.name}
+                      >
+                        {r.name.length > 13 ? r.name.slice(0, 12) + "…" : r.name}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+
+                {matrix.map((row, i) => (
+                  <div key={i} className="flex">
+                    {row.map((score, j) => {
+                      const isSelf = i === j;
+                      const isHovered = hovered?.i === i && hovered?.j === j;
+                      const isRowOrCol =
+                        hovered !== null && !isHovered && (hovered.i === i || hovered.j === j);
+                      return (
+                        <div
+                          key={j}
+                          role="presentation"
+                          className="shrink-0 rounded-[4px] border cursor-pointer transition-all duration-100 hover:z-[2] hover:scale-110"
+                          style={{
+                            width: CELL,
+                            height: CELL,
+                            ...cellStyle(score, isSelf, isHovered, isRowOrCol),
+                          }}
+                          onMouseEnter={() => setHovered({ i, j })}
+                          onMouseLeave={() => setHovered(null)}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {hovered !== null && (
-        <div className="mt-3 rounded-md bg-muted/20 border border-border/50 px-2.5 py-1.5">
-          {hovered.i === hovered.j ? (
-            <p className="text-[10px] text-muted-foreground">
-              <span className="font-medium text-foreground">{rules[hovered.i].name}</span> (self)
-            </p>
-          ) : (
-            <div className="text-[10px] text-muted-foreground space-y-0.5">
-              <p>
-                <span className="font-medium text-foreground">{rules[hovered.i].name}</span>
-                {" ↔ "}
-                <span className="font-medium text-foreground">{rules[hovered.j].name}</span>
+        <div className="w-full lg:w-[min(100%,280px)] shrink-0 flex flex-col gap-4">
+          <div
+            className="rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] p-4 min-h-[160px] backdrop-blur-sm flex flex-col justify-center"
+            style={{
+              background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+            }}
+          >
+            {hovered === null ? (
+              <p className="text-sm text-foreground/40 text-center leading-relaxed">
+                Hover a cell to see{" "}
+                <span className="text-foreground/60 font-semibold">rule pair details</span> and
+                overlap reasons.
               </p>
-              <p>
-                {(() => {
-                  const { score, reasons } = overlapScore(rules[hovered.i], rules[hovered.j]);
-                  if (score === 0) return "No overlap";
-                  return reasons.join(", ");
-                })()}
-              </p>
-            </div>
-          )}
+            ) : hovered.i === hovered.j ? (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/40">
+                  Diagonal
+                </p>
+                <p className="text-sm text-foreground/70">
+                  <span className="font-display font-bold text-foreground">
+                    {rules[hovered.i].name}
+                  </span>
+                  <span className="text-foreground/45"> — same rule (no overlap)</span>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-foreground/40">
+                  Overlap
+                </p>
+                <p className="text-sm leading-snug">
+                  <span className="font-display font-bold text-[#00EDFF]">
+                    {rules[hovered.i].name}
+                  </span>
+                  <span className="text-foreground/35 mx-1">↔</span>
+                  <span className="font-display font-bold text-[#00EDFF]">
+                    {rules[hovered.j].name}
+                  </span>
+                </p>
+                <p className="text-xs text-foreground/55">
+                  {(() => {
+                    const { score, reasons } = overlapScore(rules[hovered.i], rules[hovered.j]);
+                    if (score === 0) return "No overlap on source, destination, or service.";
+                    return reasons.join(" · ");
+                  })()}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                {
+                  n: 1,
+                  label: "1 overlap",
+                  swatch: "linear-gradient(145deg, #00F2B3, #00C4A3)",
+                  glow: "0 0 10px rgba(0,242,179,0.5)",
+                },
+                {
+                  n: 2,
+                  label: "2 overlaps",
+                  swatch: "linear-gradient(145deg, #FFB020, #F29400)",
+                  glow: "0 0 10px rgba(242,148,0,0.45)",
+                },
+                {
+                  n: 3,
+                  label: "3 overlaps",
+                  swatch: "linear-gradient(145deg, #FF3355, #EA0022)",
+                  glow: "0 0 10px rgba(234,0,34,0.5)",
+                },
+              ] as const
+            ).map((leg) => (
+              <span
+                key={leg.n}
+                className="inline-flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg text-[11px] font-bold text-foreground/70 border border-slate-900/[0.14] dark:border-white/[0.1] backdrop-blur-sm"
+                style={{
+                  background:
+                    "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}
+              >
+                <span
+                  className="h-3.5 w-3.5 rounded-md shrink-0 border border-white/20"
+                  style={{ background: leg.swatch, boxShadow: leg.glow }}
+                />
+                {leg.label}
+              </span>
+            ))}
+          </div>
         </div>
-      )}
-
-      <div className="flex gap-4 mt-3 text-[9px] text-muted-foreground">
-        <span>
-          <span className="inline-block w-3 h-3 bg-amber-400/30 rounded-sm align-middle mr-1" /> 1
-          overlap
-        </span>
-        <span>
-          <span className="inline-block w-3 h-3 bg-amber-500/60 rounded-sm align-middle mr-1" /> 2
-          overlaps
-        </span>
-        <span>
-          <span className="inline-block w-3 h-3 bg-red-500/80 rounded-sm align-middle mr-1" /> 3
-          overlaps
-        </span>
       </div>
-    </div>
+    </>,
   );
 }

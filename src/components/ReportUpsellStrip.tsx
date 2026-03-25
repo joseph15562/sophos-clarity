@@ -86,7 +86,7 @@ export function ReportUpsellStrip({
 
   return (
     <div
-      className="relative overflow-hidden w-full rounded-xl border border-white/[0.06] px-4 py-3 flex items-center gap-3 shadow-card transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative overflow-hidden w-full rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 flex items-center gap-3 shadow-card transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{ background: "linear-gradient(135deg, rgba(32,6,247,0.07), rgba(32,6,247,0.02))" }}
     >
       <div className="absolute inset-0 pointer-events-none">

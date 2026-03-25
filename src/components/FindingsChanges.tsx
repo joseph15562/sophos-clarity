@@ -187,7 +187,7 @@ export function FindingsChanges({ analysisResults }: Props) {
         <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#EA0022]/10 text-[#EA0022]">
           {diff.newFindings.length} new
         </span>
-        <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
+        <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]">
           {diff.fixedFindings.length} fixed
         </span>
         <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#F29400]/10 text-[#F29400]">
@@ -204,7 +204,7 @@ export function FindingsChanges({ analysisResults }: Props) {
         <ExpandableList
           title="Fixed findings"
           items={diff.fixedFindings}
-          colorClass="bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+          colorClass="bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]"
           titleToSeverity={titleToSeverity}
         />
         <ExpandableList

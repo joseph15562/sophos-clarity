@@ -52,9 +52,9 @@ import {
 const LBL =
   "flex items-center gap-2 px-2.5 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-brand-accent";
 const ITEM =
-  "relative rounded-xl px-2.5 py-2 text-[12px] font-medium text-foreground/90 cursor-pointer transition-all duration-150 hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-foreground";
+  "relative rounded-xl px-2.5 py-2 text-[12px] font-medium text-foreground/90 cursor-pointer transition-all duration-150 hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] focus:bg-white/80 dark:focus:bg-white/[0.06] focus:text-foreground";
 const ICON = "h-3.5 w-3.5 mr-2.5 shrink-0";
-const SEP = "my-1.5 h-px bg-white/[0.06]";
+const SEP = "my-1.5 h-px bg-white/80 dark:bg-white/[0.06]";
 
 interface Props {
   hasFiles: boolean;
@@ -70,7 +70,7 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.06] text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+          className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] text-[10px] font-bold text-slate-800 hover:text-slate-950 dark:text-muted-foreground dark:hover:text-foreground transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
           style={{
             background: "linear-gradient(145deg, rgba(0,242,179,0.06), rgba(0,242,179,0.02))",
           }}
@@ -85,7 +85,7 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
       <DropdownMenuContent
         align="end"
         side="top"
-        className="relative overflow-hidden w-64 max-h-[70vh] overflow-y-auto rounded-2xl border-white/[0.08] backdrop-blur-xl shadow-elevated p-2"
+        className="relative overflow-hidden w-64 max-h-[70vh] overflow-y-auto rounded-2xl border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-xl shadow-elevated p-2"
         style={{
           background: "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26,0.98))",
         }}

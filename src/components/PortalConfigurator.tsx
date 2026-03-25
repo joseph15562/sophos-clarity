@@ -347,7 +347,7 @@ export function PortalConfigurator() {
                 {pc?.slug ? (
                   <Badge
                     variant="outline"
-                    className="shrink-0 rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#00F2B3]/20"
+                    className="shrink-0 rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#008F69]/30 dark:border-[#00F2B3]/20"
                   >
                     Live
                   </Badge>

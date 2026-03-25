@@ -528,7 +528,7 @@ function ReportSummaryHeader({
           </div>
           <div className="flex-1 min-w-[200px] space-y-3">
             <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-lg border border-[#00F2B3]/20 bg-[#00F2B3]/5 px-3 py-2 text-center">
+              <div className="rounded-lg border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 px-3 py-2 text-center">
                 <p className="text-lg font-bold text-[#00F2B3]">{totalPass}</p>
                 <p className="text-[10px] text-muted-foreground uppercase">Pass</p>
               </div>
@@ -709,7 +709,7 @@ function ShareReportDialog({
                   Copy this customer-facing link and send it directly.
                 </p>
               </div>
-              <div className="rounded-full border border-[#00F2B3]/20 bg-[#00F2B3]/10 px-2.5 py-1 text-[10px] font-semibold text-[#00a67a] dark:text-[#00F2B3]">
+              <div className="rounded-full border border-[#008F69]/30 dark:border-[#00F2B3]/20 bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 px-2.5 py-1 text-[10px] font-semibold text-[#00a67a] dark:text-[#00F2B3]">
                 Expires{" "}
                 {new Date(expiresAt).toLocaleDateString("en-GB", {
                   day: "numeric",
@@ -954,7 +954,7 @@ function ReportContent({
                     <span key={step} className="flex items-center gap-1.5">
                       {i > 0 && (
                         <span
-                          className={`w-6 h-px ${isDone ? "bg-[#00F2B3] dark:bg-[#00F2B3]" : "bg-border"}`}
+                          className={`w-6 h-px ${isDone ? "bg-[#00A878] dark:bg-[#00F2B3]" : "bg-border"}`}
                         />
                       )}
                       <span
@@ -963,7 +963,7 @@ function ReportContent({
                         {isDone ? "✓" : i + 1}
                       </span>
                       <span
-                        className={`${isActive ? "font-semibold text-foreground" : isDone ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-muted-foreground"}`}
+                        className={`${isActive ? "font-semibold text-foreground" : isDone ? "text-[#007A5A] dark:text-[#00F2B3]" : "text-muted-foreground"}`}
                       >
                         {step}
                       </span>
@@ -1149,7 +1149,7 @@ function EvidenceVerification({
     critical: "bg-[#EA0022]/10 text-[#EA0022]",
     high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
     medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-    low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
+    low: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]",
     info: "bg-[#009CFB]/10 text-[#009CFB]",
   };
   return (

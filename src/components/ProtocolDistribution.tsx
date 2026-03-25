@@ -103,27 +103,35 @@ export function ProtocolDistribution({ files }: Props) {
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+      <div className="rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] backdrop-blur-sm p-5">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-3">
           Protocol Distribution
         </h3>
-        <p className="text-sm text-muted-foreground">No firewall rules found</p>
+        <p className="text-sm text-foreground/45">No firewall rules found</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+    <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">
           Protocol Distribution
         </h3>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-[11px] text-foreground/45 font-medium">
           {data.length} protocol{data.length !== 1 ? "s" : ""} · {total} rules
         </span>
       </div>
 
-      <div className="space-y-1.5" style={{ maxHeight: 280, overflowY: "auto" }}>
+      <div
+        className="space-y-2 rounded-xl p-3 backdrop-blur-sm"
+        style={{
+          border: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.02)",
+          maxHeight: 320,
+          overflowY: "auto",
+        }}
+      >
         {data.map((d, i) => {
           const pct = total > 0 ? (d.value / total) * 100 : 0;
           const barWidth = maxCount > 0 ? (d.value / maxCount) * 100 : 0;
@@ -132,31 +140,38 @@ export function ProtocolDistribution({ files }: Props) {
           return (
             <div
               key={d.name}
-              className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/30 cursor-default"
+              className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-all duration-200 cursor-default hover:bg-slate-950/[0.05] dark:hover:bg-white/[0.04]"
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
             >
               <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: d.color }}
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: d.color, boxShadow: `0 0 8px ${d.color}40` }}
               />
-              <span className="text-[11px] font-medium text-foreground w-24 truncate shrink-0">
+              <span className="text-sm font-semibold text-foreground/90 w-28 truncate shrink-0">
                 {d.name}
               </span>
-              <div className="flex-1 h-4 rounded-sm bg-muted/20 overflow-hidden relative">
+              <div
+                className="flex-1 h-5 rounded-full overflow-hidden relative"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
                 <div
-                  className="h-full rounded-sm transition-all duration-300"
+                  className="h-full rounded-full transition-all duration-300"
                   style={{
                     width: `${barWidth}%`,
                     backgroundColor: d.color,
-                    opacity: isHovered ? 0.9 : 0.6,
+                    opacity: isHovered ? 1 : 0.75,
+                    boxShadow: isHovered ? `0 0 12px ${d.color}35` : undefined,
                   }}
                 />
               </div>
-              <span className="text-[10px] text-muted-foreground w-7 text-right shrink-0 tabular-nums">
+              <span className="text-xs font-black text-foreground w-8 text-right shrink-0 tabular-nums">
                 {d.value}
               </span>
-              <span className="text-[9px] text-muted-foreground/60 w-9 text-right shrink-0 tabular-nums">
+              <span className="text-[11px] text-foreground/40 w-10 text-right shrink-0 tabular-nums font-medium">
                 {pct < 1 && pct > 0 ? "<1" : Math.round(pct)}%
               </span>
             </div>

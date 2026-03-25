@@ -125,10 +125,19 @@ export function ApiDocumentation() {
       <div className="rounded-lg border border-border bg-muted/20 p-3">
         <p className="text-[10px] font-semibold text-foreground mb-1">Authentication</p>
         <p className="text-[10px] text-muted-foreground leading-relaxed">
-          All endpoints require a valid JWT in the <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px]">Authorization</code> header, except <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px]">GET /api/shared/:token</code>.
+          All endpoints require a valid JWT in the{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px]">Authorization</code>{" "}
+          header, except{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px]">
+            GET /api/shared/:token
+          </code>
+          .
         </p>
         <p className="text-[9px] text-muted-foreground mt-1.5">
-          Example: <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px]">Authorization: Bearer &lt;your-jwt&gt;</code>
+          Example:{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px]">
+            Authorization: Bearer &lt;your-jwt&gt;
+          </code>
         </p>
       </div>
 
@@ -140,7 +149,7 @@ export function ApiDocumentation() {
                 <span
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                     ep.method === "GET"
-                      ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+                      ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
@@ -153,12 +162,18 @@ export function ApiDocumentation() {
               <p className="text-[10px] text-muted-foreground mb-3">{ep.description}</p>
               {ep.queryParams.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-[10px] font-semibold text-foreground mb-1.5">Query parameters</p>
+                  <p className="text-[10px] font-semibold text-foreground mb-1.5">
+                    Query parameters
+                  </p>
                   <ul className="space-y-1 text-[10px]">
                     {ep.queryParams.map((q) => (
                       <li key={q.name} className="flex gap-2">
-                        <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px] shrink-0">{q.name}</code>
-                        <span className="text-muted-foreground">({q.type}) — {q.desc}</span>
+                        <code className="rounded bg-muted px-1 py-0.5 font-mono text-[9px] shrink-0">
+                          {q.name}
+                        </code>
+                        <span className="text-muted-foreground">
+                          ({q.type}) — {q.desc}
+                        </span>
                       </li>
                     ))}
                   </ul>

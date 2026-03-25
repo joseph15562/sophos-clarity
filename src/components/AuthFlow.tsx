@@ -1,4 +1,11 @@
-import { useState, ReactNode, Children, cloneElement, isValidElement, type ReactElement } from "react";
+import {
+  useState,
+  ReactNode,
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+} from "react";
 import { AuthProvider, type AuthState } from "@/hooks/use-auth";
 import { AuthGate } from "@/components/AuthGate";
 import { OrgSetup } from "@/components/OrgSetup";
@@ -43,20 +50,31 @@ export function AuthFlow({ auth, children }: AuthFlowProps) {
                 <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/75 dark:bg-white/[0.04] px-2.5 py-1 mb-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">Firewall Compliance Workspace</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
+                    Firewall Compliance Workspace
+                  </span>
                 </div>
-                <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">Sophos FireComply</h1>
-                <p className="text-[11px] text-[#9BB0D3] max-w-2xl">Executive-ready firewall security assessments, managed reporting, and compliance deliverables.</p>
+                <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">
+                  Sophos FireComply
+                </h1>
+                <p className="text-[11px] text-[#9BB0D3] max-w-2xl">
+                  Executive-ready firewall security assessments, managed reporting, and compliance
+                  deliverables.
+                </p>
               </div>
-              <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] text-[#B6C4FF] shrink-0">
+              <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/75 dark:bg-white/[0.04] px-3 py-1.5 text-[10px] text-[#B6C4FF] shrink-0">
                 <span className="inline-block h-2 w-2 rounded-full bg-[#00F2B3]" />
                 Boardroom-ready reporting
               </div>
             </div>
           </header>
-          <AuthGate onSignIn={auth.signIn} onSignUp={auth.signUp} onSkip={() => setGuestMode(true)} />
+          <AuthGate
+            onSignIn={auth.signIn}
+            onSignUp={auth.signUp}
+            onSkip={() => setGuestMode(true)}
+          />
         </div>
       </AuthProvider>
     );
@@ -72,16 +90,27 @@ export function AuthFlow({ auth, children }: AuthFlowProps) {
                 <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/75 dark:bg-white/[0.04] px-2.5 py-1 mb-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">Workspace setup</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
+                    Workspace setup
+                  </span>
                 </div>
-                <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">Sophos FireComply</h1>
-                <p className="text-[11px] text-[#9BB0D3] max-w-2xl">Set up your organisation workspace to unlock saved assessments, team management, and managed reporting.</p>
+                <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">
+                  Sophos FireComply
+                </h1>
+                <p className="text-[11px] text-[#9BB0D3] max-w-2xl">
+                  Set up your organisation workspace to unlock saved assessments, team management,
+                  and managed reporting.
+                </p>
               </div>
             </div>
           </header>
-          <OrgSetup userEmail={auth.user?.email ?? ""} onCreateOrg={auth.createOrg} onSignOut={auth.signOut} />
+          <OrgSetup
+            userEmail={auth.user?.email ?? ""}
+            onCreateOrg={auth.createOrg}
+            onSignOut={auth.signOut}
+          />
         </div>
       </AuthProvider>
     );
@@ -97,12 +126,18 @@ export function AuthFlow({ auth, children }: AuthFlowProps) {
                 <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/75 dark:bg-white/[0.04] px-2.5 py-1 mb-1 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">Secure verification</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
+                    Secure verification
+                  </span>
                 </div>
-                <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">Sophos FireComply</h1>
-                <p className="text-[11px] text-[#9BB0D3] max-w-2xl">Complete multi-factor verification to enter your workspace securely.</p>
+                <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">
+                  Sophos FireComply
+                </h1>
+                <p className="text-[11px] text-[#9BB0D3] max-w-2xl">
+                  Complete multi-factor verification to enter your workspace securely.
+                </p>
               </div>
             </div>
           </header>

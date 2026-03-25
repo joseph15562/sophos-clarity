@@ -72,7 +72,7 @@ const SEV_COLORS: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#F29400]",
   medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-  low: "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]",
+  low: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]",
   info: "bg-[#009CFB]/10 text-[#009CFB]",
 };
 
@@ -274,7 +274,7 @@ function AgentSummaryCard({
                 </span>
               )}
               {drift.fixed && drift.fixed.length > 0 && (
-                <span className="flex items-center gap-0.5 text-[9px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">
+                <span className="flex items-center gap-0.5 text-[9px] font-medium text-[#007A5A] dark:text-[#00F2B3]">
                   <TrendingDown className="h-2.5 w-2.5" /> -{drift.fixed.length} fixed
                 </span>
               )}
@@ -290,14 +290,14 @@ function AgentSummaryCard({
             <div className="flex flex-wrap gap-1.5">
               {threatStatus.atp != null && (
                 <span
-                  className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.atp as { enabled: boolean }).enabled ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}
+                  className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.atp as { enabled: boolean }).enabled ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]" : "bg-[#EA0022]/10 text-[#EA0022]"}`}
                 >
                   ATP {(threatStatus.atp as { enabled: boolean }).enabled ? "ON" : "OFF"}
                 </span>
               )}
               {threatStatus.mdr != null && (
                 <span
-                  className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.mdr as { enabled: boolean }).enabled ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"}`}
+                  className={`text-[8px] font-semibold px-1.5 py-0.5 rounded ${(threatStatus.mdr as { enabled: boolean }).enabled ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground"}`}
                 >
                   MDR {(threatStatus.mdr as { enabled: boolean }).enabled ? "ON" : "OFF"}
                 </span>
@@ -612,7 +612,7 @@ export function AgentFleetPanel({
             <span className="text-[10px] px-2 py-1 rounded-full font-bold bg-muted text-muted-foreground">
               {agents.length} agent{agents.length !== 1 ? "s" : ""}
             </span>
-            <span className="text-[10px] px-2 py-1 rounded-full font-bold bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]">
+            <span className="text-[10px] px-2 py-1 rounded-full font-bold bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]">
               {onlineAgents} online
             </span>
           </div>
@@ -664,7 +664,7 @@ export function AgentFleetPanel({
                   {tenantAgents.length} firewall{tenantAgents.length !== 1 ? "s" : ""}
                 </span>
                 {onlineCount > 0 && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-medium">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-medium">
                     {onlineCount} online
                   </span>
                 )}
@@ -699,7 +699,7 @@ export function AgentFleetPanel({
                             </p>
                           </div>
                           {isLoaded && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-bold shrink-0">
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-bold shrink-0">
                               ✓ Loaded
                             </span>
                           )}
@@ -717,7 +717,7 @@ export function AgentFleetPanel({
                             <span
                               className={`text-[10px] font-bold shrink-0 ${
                                 headerScore >= 75
-                                  ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                                  ? "text-[#007A5A] dark:text-[#00F2B3]"
                                   : headerScore >= 50
                                     ? "text-[#F29400]"
                                     : "text-[#EA0022]"

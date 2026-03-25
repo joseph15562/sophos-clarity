@@ -86,58 +86,88 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
   }, [analysisResults, files]);
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.12] dark:border-white/[0.08] p-5 sm:p-6 shadow-card backdrop-blur-sm transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(90,0,255,0.04), rgba(255,255,255,0.02))",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(32,6,247,0.35), rgba(0,156,251,0.2), transparent)",
+        }}
+      />
+      <h3 className="relative text-lg font-display font-black tracking-tight text-foreground mb-5">
         Config Composition
       </h3>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Sections
+      <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        {(
+          [
+            { label: "Sections", value: s },
+            { label: "Rows", value: r },
+            { label: "Objects", value: o },
+            { label: "Complexity", value: c },
+          ] as const
+        ).map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-xl p-3 sm:p-3.5 backdrop-blur-sm border border-slate-900/[0.12] dark:border-white/[0.08] transition-transform hover:scale-[1.02]"
+            style={{
+              background: "linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.15)",
+            }}
+          >
+            <div className="text-[10px] font-bold text-foreground/45 uppercase tracking-[0.12em]">
+              {stat.label}
+            </div>
+            <div className="text-xl sm:text-2xl font-display font-black text-foreground mt-1 tabular-nums">
+              {stat.value}
+            </div>
           </div>
-          <div className="text-lg font-bold text-foreground mt-0.5">{s}</div>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Rows
-          </div>
-          <div className="text-lg font-bold text-foreground mt-0.5">{r}</div>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Objects
-          </div>
-          <div className="text-lg font-bold text-foreground mt-0.5">{o}</div>
-        </div>
-        <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Complexity
-          </div>
-          <div className="text-lg font-bold text-foreground mt-0.5">{c}</div>
-        </div>
+        ))}
       </div>
 
       {treemapData.length > 0 && (
-        <div className="space-y-1.5">
+        <div
+          className="relative space-y-2.5 rounded-xl p-3 backdrop-blur-sm border border-slate-900/[0.10] dark:border-white/[0.06]"
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}
+        >
           {treemapData.slice(0, 8).map((d) => {
             const maxVal = treemapData[0]?.value ?? 1;
             const pct = Math.max(4, (d.value / maxVal) * 100);
             return (
-              <div key={d.name} className="flex items-center gap-2 text-[10px]">
+              <div key={d.name} className="flex items-center gap-2 sm:gap-3 text-xs">
                 <span
-                  className="text-muted-foreground w-28 truncate shrink-0 text-right"
+                  className="text-foreground/55 w-28 sm:w-32 truncate shrink-0 text-right font-semibold"
                   title={d.name}
                 >
                   {d.name.length > 18 ? d.name.slice(0, 16) + "…" : d.name}
                 </span>
-                <div className="flex-1 h-4 bg-muted/30 rounded overflow-hidden">
+                <div
+                  className="flex-1 h-4 sm:h-4 rounded-full overflow-hidden"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    boxShadow: "inset 0 1px 3px rgba(0,0,0,0.25)",
+                  }}
+                >
                   <div
-                    className="h-full rounded transition-all"
-                    style={{ width: `${pct}%`, backgroundColor: d.color, opacity: 0.8 }}
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${pct}%`,
+                      background: `linear-gradient(90deg, ${d.color}dd, ${d.color})`,
+                      boxShadow: `0 0 12px ${d.color}66, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                    }}
                   />
                 </div>
-                <span className="text-foreground font-medium tabular-nums w-8 text-right">
+                <span className="text-foreground font-black tabular-nums w-8 text-right text-sm">
                   {d.value}
                 </span>
               </div>

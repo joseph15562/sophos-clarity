@@ -221,7 +221,7 @@ function StatusBadge({ status }: { status: LifecycleStatus }) {
       );
     case "current":
       return (
-        <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:text-[#00F2B3] border-0 text-[9px] gap-1">
+        <Badge className="bg-[#00F2B3]/15 text-[#007A5A] dark:text-[#00F2B3] border-0 text-[9px] gap-1">
           <CheckCircle2 className="h-3 w-3" />
           Current
         </Badge>

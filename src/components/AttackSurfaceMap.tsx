@@ -31,9 +31,9 @@ const RISK_COLORS: Record<string, { bg: string; border: string; text: string; fi
     fill: "#F8E300",
   },
   low: {
-    bg: "bg-[#00F2B3]/10",
-    border: "border-[#00F2B3]/30",
-    text: "text-[#00F2B3] dark:text-[#00F2B3]",
+    bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
+    border: "border-[#008F69]/35 dark:border-[#00F2B3]/30",
+    text: "text-[#007A5A] dark:text-[#00F2B3]",
     fill: "#00F2B3",
   },
 };
@@ -135,7 +135,7 @@ export function AttackSurfaceMap({ files }: Props) {
             </span>
           )}
           {counts.low > 0 && (
-            <span className="text-[10px] font-bold text-[#00F2B3] dark:text-[#00F2B3] bg-[#00F2B3]/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-[#007A5A] dark:text-[#00F2B3] bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 px-1.5 py-0.5 rounded">
               {counts.low}L
             </span>
           )}
@@ -200,7 +200,7 @@ export function AttackSurfaceMap({ files }: Props) {
                       </p>
                       <div className="flex items-center justify-center gap-1 mt-1">
                         {s.hasIps && (
-                          <span className="text-[8px] bg-[#00F2B3]/20 text-[#00F2B3] dark:text-[#00F2B3] px-1 rounded">
+                          <span className="text-[8px] bg-[#00F2B3]/20 text-[#007A5A] dark:text-[#00F2B3] px-1 rounded">
                             IPS
                           </span>
                         )}

@@ -212,14 +212,34 @@ export function VpnSecuritySummary({ files }: Props) {
 
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">
+      <div
+        className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated flex flex-col min-h-[200px]"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(0,242,179,0.04), rgba(56,136,255,0.03), transparent)",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(0,242,179,0.18), rgba(56,136,255,0.1), transparent)",
+          }}
+        />
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground mb-4">
           VPN Security Summary
         </h3>
-        <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
+        <div
+          className="flex flex-1 flex-col items-center justify-center gap-4 rounded-xl p-6 text-center backdrop-blur-sm"
+          style={{
+            border: "1px solid rgba(255,255,255,0.06)",
+            background: "linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+          }}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0"
+            className="h-8 w-8 text-foreground/30 shrink-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -231,9 +251,9 @@ export function VpnSecuritySummary({ files }: Props) {
               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
             />
           </svg>
-          <div className="text-[11px] text-muted-foreground space-y-0.5">
-            <p className="font-medium">No IPsec or SSL VPN tunnels configured</p>
-            <p>
+          <div className="text-sm text-foreground/50 space-y-2 max-w-md">
+            <p className="font-bold text-foreground/80">No IPsec or SSL VPN tunnels configured</p>
+            <p className="leading-relaxed">
               VPN tunnel encryption strength analysis will appear here when IPsec or SSL VPN
               connections are detected in the configuration.
             </p>
@@ -248,17 +268,37 @@ export function VpnSecuritySummary({ files }: Props) {
   const weakPct = total > 0 ? (weakCount / total) * 100 : 0;
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 space-y-5 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(0,242,179,0.04), rgba(56,136,255,0.03), transparent)",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(0,242,179,0.18), rgba(56,136,255,0.1), transparent)",
+        }}
+      />
+      <h3 className="text-base font-display font-bold tracking-tight text-foreground">
         VPN Security Summary
       </h3>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs font-medium text-foreground/45">
         {total} tunnel{total !== 1 ? "s" : ""} total · {strongCount} strong · {acceptableCount}{" "}
         acceptable · {weakCount} weak
       </p>
 
-      <div className="h-2 flex rounded-full overflow-hidden bg-muted/30">
+      <div
+        className="h-3 flex rounded-full overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        }}
+      >
         {strongPct > 0 && (
           <div
             className="transition-all"
@@ -280,13 +320,18 @@ export function VpnSecuritySummary({ files }: Props) {
       </div>
 
       {weak.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-foreground">Weak tunnels</p>
+        <div className="space-y-3">
+          <p className="text-sm font-bold text-foreground">Weak tunnels</p>
           <ul className="space-y-2">
             {weak.map((t, i) => (
               <li
                 key={`${t.name}-${i}`}
-                className="rounded-lg border border-[#EA0022]/30 bg-[#EA0022]/5 p-3 text-xs"
+                className="rounded-xl p-4 text-sm backdrop-blur-sm"
+                style={{
+                  border: "1px solid rgba(234,0,34,0.25)",
+                  background: "linear-gradient(145deg, rgba(234,0,34,0.1), rgba(234,0,34,0.03))",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+                }}
               >
                 <span className="font-semibold text-foreground">{t.name}</span>
                 <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground sm:grid-cols-3">

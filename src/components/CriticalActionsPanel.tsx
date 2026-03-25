@@ -27,7 +27,11 @@ const SEV_COLORS: Record<Severity, { badge: string; border: string; hex: string 
     border: "border-l-[#F8E300]",
     hex: "#F8E300",
   },
-  low: { badge: "bg-[#00F2B3]/10 text-[#00F2B3]", border: "border-l-[#00F2B3]", hex: "#00F2B3" },
+  low: {
+    badge: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#00F2B3]",
+    border: "border-l-[#00F2B3]",
+    hex: "#00F2B3",
+  },
   info: {
     badge: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]",
     border: "border-l-[#009CFB]",
@@ -95,7 +99,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-5 space-y-4 shadow-card"
+      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 space-y-4 shadow-card"
       style={{ background: "linear-gradient(145deg, rgba(234,0,34,0.06), rgba(234,0,34,0.015))" }}
     >
       <div className="absolute inset-0 pointer-events-none">
@@ -109,7 +113,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
       />
       <div className="relative flex items-center gap-2.5">
         <div
-          className="h-8 w-8 rounded-xl flex items-center justify-center border border-white/[0.08]"
+          className="h-8 w-8 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
           style={{ backgroundColor: "rgba(234,0,34,0.12)" }}
         >
           <AlertTriangle className="h-4 w-4 text-[#EA0022]" />
@@ -132,7 +136,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
           return (
             <div
               key={`${f.id}-${i}`}
-              className="relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+              className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
               style={{
                 borderLeftColor: hex,
                 background: `linear-gradient(135deg, ${hex}0C, ${hex}03)`,
@@ -150,7 +154,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
               />
               <button
                 onClick={() => setExpandedIdx(expanded ? null : i)}
-                className="relative w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors"
+                className="relative w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
               >
                 <span
                   className="shrink-0 text-xs font-black tabular-nums w-5 text-right mt-0.5"
@@ -191,7 +195,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
               </button>
 
               {expanded && (
-                <div className="relative px-4 pb-3.5 pl-12 space-y-2 border-t border-white/[0.06] pt-2.5">
+                <div className="relative px-4 pb-3.5 pl-12 space-y-2 border-t border-slate-900/[0.10] dark:border-white/[0.06] pt-2.5">
                   {f.remediation && (
                     <div>
                       <p className="text-[10px] font-bold text-brand-accent uppercase tracking-[0.18em] mb-0.5">
@@ -213,7 +217,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
                         </>
                       )}
                       {f.confidence && (
-                        <span className="ml-2 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md border border-white/[0.08] bg-white/[0.04] text-muted-foreground">
+                        <span className="ml-2 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md border border-slate-900/[0.12] dark:border-white/[0.08] bg-white/75 dark:bg-white/[0.04] text-muted-foreground">
                           {f.confidence} confidence
                         </span>
                       )}

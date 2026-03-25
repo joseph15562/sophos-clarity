@@ -68,7 +68,7 @@ const FLOW_COLORS: Record<SecurityLevel, string> = {
 };
 
 const LEVEL_BG: Record<SecurityLevel, string> = {
-  full: "bg-[#00F2B3]/10 border-[#00F2B3]/30",
+  full: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 border-[#008F69]/35 dark:border-[#00F2B3]/30",
   partial: "bg-[#F29400]/10 border-[#F29400]/30",
   none: "bg-[#EA0022]/10 border-[#EA0022]/30",
 };
@@ -232,13 +232,24 @@ export function NetworkZoneMap({ files }: Props) {
   if (allZones.length === 0 && flows.length === 0) {
     return (
       <div
-        className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+        className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 shadow-card backdrop-blur-sm"
+        style={{
+          background:
+            "linear-gradient(145deg, rgba(56,136,255,0.05), rgba(181,41,247,0.03), transparent)",
+        }}
         data-tour="zone-map"
       >
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(56,136,255,0.18), rgba(181,41,247,0.1), transparent)",
+          }}
+        />
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">
           Network Zone Map
         </h3>
-        <p className="mt-2 text-xs text-muted-foreground">No zone data available</p>
+        <p className="mt-3 text-sm text-foreground/45">No zone data available</p>
       </div>
     );
   }
@@ -255,12 +266,26 @@ export function NetworkZoneMap({ files }: Props) {
   );
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4" data-tour="zone-map">
+    <div
+      className="relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-7 space-y-5 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated"
+      style={{
+        background:
+          "linear-gradient(145deg, rgba(56,136,255,0.05), rgba(181,41,247,0.03), transparent)",
+      }}
+      data-tour="zone-map"
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(56,136,255,0.18), rgba(181,41,247,0.1), transparent)",
+        }}
+      />
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        <h3 className="text-base font-display font-bold tracking-tight text-foreground">
           Network Zone Map
         </h3>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-[11px] text-foreground/45 font-medium">
           {allZones.length} zones · {flows.length} flows
         </span>
       </div>
@@ -277,7 +302,7 @@ export function NetworkZoneMap({ files }: Props) {
       >
         {categories.map((cat) => (
           <div key={cat} className="space-y-2">
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <p className="text-[11px] font-bold text-foreground/40 uppercase tracking-wider flex items-center gap-2">
               <span>{CAT_ICONS[cat]}</span>
               {CAT_LABELS[cat]}
               <span className="text-muted-foreground/70 font-normal normal-case">
@@ -298,24 +323,39 @@ export function NetworkZoneMap({ files }: Props) {
                   <button
                     key={zone}
                     onClick={() => handleClick(zone)}
-                    className={`w-full text-left rounded-lg border px-2.5 py-1.5 transition-all duration-150 ${
+                    className={`w-full text-left rounded-xl border px-3 py-2.5 transition-all duration-200 backdrop-blur-sm hover:scale-[1.02] ${
                       isActive
-                        ? `${LEVEL_BG[level]} ring-1 ring-offset-1 ring-offset-card`
+                        ? `${LEVEL_BG[level]} ring-1 ring-offset-2 ring-offset-transparent`
                         : isDimmed
-                          ? "border-border/30 bg-card opacity-30"
-                          : "border-border/50 bg-card hover:bg-muted/20"
+                          ? "opacity-25"
+                          : ""
                     }`}
-                    style={isActive ? { ringColor: FLOW_COLORS[level] } : undefined}
+                    style={
+                      isActive
+                        ? {
+                            borderColor: `${FLOW_COLORS[level]}40`,
+                            boxShadow: `0 0 16px ${FLOW_COLORS[level]}15`,
+                          }
+                        : isDimmed
+                          ? { border: "1px solid rgba(255,255,255,0.04)" }
+                          : {
+                              border: "1px solid rgba(255,255,255,0.08)",
+                              background:
+                                "linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+                            }
+                    }
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: FLOW_COLORS[level] }}
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{
+                          backgroundColor: FLOW_COLORS[level],
+                          boxShadow: `0 0 6px ${FLOW_COLORS[level]}50`,
+                        }}
                       />
-                      <span className="text-[11px] font-medium text-foreground truncate">
-                        {zone}
-                      </span>
-                      <span className="ml-auto text-[9px] text-muted-foreground tabular-nums shrink-0">
+                      <span className="text-sm font-bold text-foreground truncate">{zone}</span>
+                      <span className="ml-auto text-[10px] text-foreground/40 tabular-nums shrink-0 font-medium">
                         {ruleCount > 0 ? `${ruleCount} rule${ruleCount !== 1 ? "s" : ""}` : "—"}
                       </span>
                     </div>
@@ -329,7 +369,14 @@ export function NetworkZoneMap({ files }: Props) {
 
       {/* Connection detail panel */}
       {activeZone && (
-        <div className="rounded-lg border border-border bg-muted/10 p-3 space-y-3">
+        <div
+          className="rounded-xl p-4 space-y-4 backdrop-blur-sm"
+          style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 20px rgba(0,0,0,0.15)",
+          }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span
@@ -415,17 +462,35 @@ export function NetworkZoneMap({ files }: Props) {
       )}
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[9px] text-muted-foreground pt-1 border-t border-border/30">
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.full }} />
+      <div className="flex flex-wrap items-center gap-5 text-[10px] text-foreground/45 font-medium pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="w-2.5 h-2.5 rounded-full"
+            style={{
+              backgroundColor: FLOW_COLORS.full,
+              boxShadow: `0 0 6px ${FLOW_COLORS.full}40`,
+            }}
+          />
           IPS + Web Filter
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.partial }} />
+        <span className="flex items-center gap-1.5">
+          <span
+            className="w-2.5 h-2.5 rounded-full"
+            style={{
+              backgroundColor: FLOW_COLORS.partial,
+              boxShadow: `0 0 6px ${FLOW_COLORS.partial}40`,
+            }}
+          />
           Partial coverage
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.none }} />
+        <span className="flex items-center gap-1.5">
+          <span
+            className="w-2.5 h-2.5 rounded-full"
+            style={{
+              backgroundColor: FLOW_COLORS.none,
+              boxShadow: `0 0 6px ${FLOW_COLORS.none}40`,
+            }}
+          />
           No IPS / WF
         </span>
       </div>

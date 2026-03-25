@@ -23,7 +23,7 @@ interface Props {
 function gradeColorClass(grade: string): string {
   switch (grade) {
     case "A":
-      return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
+      return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
     case "B":
       return "bg-brand-accent/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
     case "C":
@@ -123,7 +123,7 @@ export function SEScoreTrendChart({
   const DeltaIcon = delta > 0 ? TrendingUp : delta < 0 ? TrendingDown : Minus;
   const deltaColor =
     delta > 0
-      ? "text-[#00F2B3] dark:text-[#00F2B3]"
+      ? "text-[#007A5A] dark:text-[#00F2B3]"
       : delta < 0
         ? "text-[#EA0022]"
         : "text-muted-foreground";
@@ -347,7 +347,7 @@ export function SEScoreTrendChart({
                       <span
                         className={
                           d > 0
-                            ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                            ? "text-[#007A5A] dark:text-[#00F2B3]"
                             : d < 0
                               ? "text-[#EA0022]"
                               : "text-muted-foreground"

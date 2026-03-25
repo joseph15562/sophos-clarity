@@ -31,7 +31,7 @@ type SortDir = "asc" | "desc";
 const STALE_ASSESSMENT_MS = 60 * 24 * 60 * 60 * 1000;
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00F2B3] dark:text-[#00F2B3] bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10",
+  A: "text-[#007A5A] dark:text-[#00F2B3] bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 dark:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
   B: "text-[#009CFB] bg-[#009CFB]/10",
   C: "text-[#F8E300] bg-[#F8E300]/10",
   D: "text-[#F29400] bg-[#F29400]/10",
@@ -685,7 +685,7 @@ export function TenantDashboard() {
                 className={`group relative rounded-2xl border px-3 py-3.5 text-center flex flex-col items-center justify-between transition-all duration-200 hover:shadow-md overflow-hidden ${
                   isAlert
                     ? "border-severity-critical/30 bg-severity-critical/[0.06] dark:bg-severity-critical/[0.08] shadow-sm"
-                    : "border-border/50 bg-card/60 dark:bg-white/[0.03] shadow-sm hover:border-brand-accent/20"
+                    : "border-border/50 bg-card/60 dark:bg-white/70 dark:bg-white/[0.03] shadow-sm hover:border-brand-accent/20"
                 }`}
               >
                 <div
@@ -732,7 +732,7 @@ export function TenantDashboard() {
                 className={`rounded-xl border px-3 py-3 text-center flex flex-col items-center justify-center transition-colors ${
                   isWarn
                     ? "border-severity-high/25 bg-severity-high/[0.05]"
-                    : "border-border/40 bg-card/40 dark:bg-white/[0.02]"
+                    : "border-border/40 bg-card/40 dark:bg-white/60 dark:bg-white/[0.02]"
                 }`}
               >
                 <p

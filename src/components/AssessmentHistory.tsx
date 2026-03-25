@@ -40,7 +40,7 @@ interface Props {
 }
 
 const GRADE_COLORS: Record<string, string> = {
-  A: "text-[#00F2B3] dark:text-[#00F2B3]",
+  A: "text-[#007A5A] dark:text-[#00F2B3]",
   B: "text-[#00774a] dark:text-[#00F2B3]",
   C: "text-[#b8a200] dark:text-[#F8E300]",
   D: "text-[#c47800] dark:text-[#F29400]",
@@ -286,7 +286,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
               disabled={saving}
               className={`flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1.5 rounded-xl transition-all ${
                 justSaved
-                  ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+                  ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]"
                   : "bg-brand-accent/10 text-brand-accent hover:bg-brand-accent/20 hover:shadow-sm"
               }`}
             >
@@ -367,7 +367,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                             e.stopPropagation();
                             confirmRename();
                           }}
-                          className="p-1 rounded-md text-[#00F2B3] hover:bg-[#00F2B3]/10 transition-colors"
+                          className="p-1 rounded-md text-[#00F2B3] hover:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 transition-colors"
                           title="Save"
                         >
                           <Check className="h-3.5 w-3.5" />
@@ -414,7 +414,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                         <span
                           className={`flex items-center gap-0.5 text-[9px] font-bold ${
                             drift.scoreDelta > 0
-                              ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                              ? "text-[#007A5A] dark:text-[#00F2B3]"
                               : drift.scoreDelta < 0
                                 ? "text-[#EA0022]"
                                 : "text-muted-foreground"
@@ -490,7 +490,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                                 <div
                                   className={`text-[9px] font-bold tabular-nums ${
                                     c.pct >= 80
-                                      ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                                      ? "text-[#007A5A] dark:text-[#00F2B3]"
                                       : c.pct >= 50
                                         ? "text-[#F29400]"
                                         : "text-[#EA0022]"
@@ -517,7 +517,7 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                         {drift.improved.map((item) => (
                           <div
                             key={item}
-                            className="flex items-center gap-1.5 text-[10px] text-[#00F2B3] dark:text-[#00F2B3]"
+                            className="flex items-center gap-1.5 text-[10px] text-[#007A5A] dark:text-[#00F2B3]"
                           >
                             <TrendingUp className="h-3 w-3 shrink-0" />
                             <span>{item}</span>
