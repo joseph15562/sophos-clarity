@@ -21,7 +21,8 @@ export interface CveEntry {
 }
 
 // IPv4 regex for validation
-const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+const IPV4_REGEX =
+  /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
 
 function isValidPublicIp(ip: string): boolean {
   if (!IPV4_REGEX.test(ip)) return false;
@@ -63,7 +64,7 @@ const PORT_TO_SERVICE: Record<number, string> = {
 };
 
 /**
- * Lookup geo location for an IP using ip-api.com (free, 45 req/min).
+ * Lookup geo location for an IP using ipapi.co (free HTTPS, 1000/day).
  * Caches results to avoid re-fetching.
  */
 export async function lookupGeoIp(ip: string): Promise<GeoLocation | null> {
@@ -73,24 +74,23 @@ export async function lookupGeoIp(ip: string): Promise<GeoLocation | null> {
   if (cached !== undefined) return cached;
 
   try {
-    // ip-api.com free tier uses HTTP (no SSL)
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,query,lat,lon,country,city,isp`, {
+    const res = await fetch(`https://ipapi.co/${ip}/json/`, {
       signal: AbortSignal.timeout(5000),
     });
     const data = await res.json();
 
-    if (data.status !== "success" || data.message === "private range" || data.message === "reserved range") {
+    if (data.error || data.reserved) {
       geoCache.set(ip, null);
       return null;
     }
 
     const geo: GeoLocation = {
-      ip: data.query ?? ip,
-      lat: Number(data.lat) || 0,
-      lon: Number(data.lon) || 0,
-      country: data.country ?? "",
+      ip: data.ip ?? ip,
+      lat: Number(data.latitude) || 0,
+      lon: Number(data.longitude) || 0,
+      country: data.country_name ?? "",
       city: data.city ?? "",
-      isp: data.isp ?? "",
+      isp: data.org ?? "",
     };
     geoCache.set(ip, geo);
     return geo;
@@ -110,9 +110,8 @@ function getServiceForPort(port: number): string {
  * Returns top 5 CVEs.
  */
 export async function lookupCves(service: string, port: number): Promise<CveEntry[]> {
-  const searchTerm = service && service !== "Unknown" && service !== "Any"
-    ? service
-    : getServiceForPort(port);
+  const searchTerm =
+    service && service !== "Unknown" && service !== "Any" ? service : getServiceForPort(port);
   const cacheKey = `${searchTerm}:${port}`;
 
   const cached = cveCache.get(cacheKey);
@@ -123,7 +122,7 @@ export async function lookupCves(service: string, port: number): Promise<CveEntr
     const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`;
     const res = await fetch(url, {
       signal: AbortSignal.timeout(8000),
-      headers: { "Accept": "application/json" },
+      headers: { Accept: "application/json" },
     });
     const data = await res.json();
 
@@ -132,7 +131,10 @@ export async function lookupCves(service: string, port: number): Promise<CveEntr
         id?: string;
         descriptions?: Array<{ value?: string; lang?: string }>;
         published?: string;
-        metrics?: Record<string, Array<{ cvssData?: { baseScore?: number; baseSeverity?: string }; baseSeverity?: string }>>;
+        metrics?: Record<
+          string,
+          Array<{ cvssData?: { baseScore?: number; baseSeverity?: string }; baseSeverity?: string }>
+        >;
       };
     }>;
     const entries: CveEntry[] = vulns.slice(0, 5).map((v) => {
@@ -142,8 +144,10 @@ export async function lookupCves(service: string, port: number): Promise<CveEntr
       const v31 = metrics.cvssMetricV31?.[0];
       const v30 = metrics.cvssMetricV30?.[0];
       const v2 = metrics.cvssMetricV2?.[0];
-      const score = v31?.cvssData?.baseScore ?? v30?.cvssData?.baseScore ?? v2?.cvssData?.baseScore ?? 0;
-      const severity = v31?.cvssData?.baseSeverity ?? v30?.cvssData?.baseSeverity ?? v2?.baseSeverity ?? "UNKNOWN";
+      const score =
+        v31?.cvssData?.baseScore ?? v30?.cvssData?.baseScore ?? v2?.cvssData?.baseScore ?? 0;
+      const severity =
+        v31?.cvssData?.baseSeverity ?? v30?.cvssData?.baseSeverity ?? v2?.baseSeverity ?? "UNKNOWN";
       return {
         id: cve.id ?? "unknown",
         description: desc.slice(0, 200) + (desc.length > 200 ? "…" : ""),

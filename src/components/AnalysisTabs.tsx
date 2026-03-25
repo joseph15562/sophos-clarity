@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useEffect, useState } from "react";
+import { lazy, Suspense, useRef, useEffect, useState, useCallback } from "react";
 import {
   ArrowLeftRight,
   Download,
@@ -308,13 +308,23 @@ export function AnalysisTabs({
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
   const w = (id: string) => isWidgetVisible(widgetPrefs, id);
 
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setActiveTab(value);
+      setTimeout(() => {
+        panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    },
+    [setActiveTab],
+  );
+
   useEffect(() => {
     const t = setTimeout(() => panelRef.current?.focus(), 0);
     return () => clearTimeout(t);
   }, [activeTab]);
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab}>
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
       {/* Hero outcome summary — visible above all tabs */}
       <HeroOutcomePanel
         analysisResults={analysisResult}
@@ -396,7 +406,12 @@ export function AnalysisTabs({
         </div>
       </div>
 
-      <div ref={panelRef} tabIndex={-1} aria-live="polite" className="outline-none">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        aria-live="polite"
+        className="outline-none scroll-mt-[180px]"
+      >
         {/* Overview */}
         <TabsContent
           value="overview"
@@ -439,7 +454,7 @@ export function AnalysisTabs({
 
               {totalFindings > 0 && (
                 <button
-                  onClick={() => setActiveTab("tools")}
+                  onClick={() => handleTabChange("tools")}
                   className="w-full rounded-xl border border-dashed border-[#5A00FF]/30 dark:border-[#00EDFF]/30 bg-gradient-to-r from-[#5A00FF]/[0.03] to-[#00EDFF]/[0.03] hover:from-[#5A00FF]/[0.06] hover:to-[#00EDFF]/[0.06] transition-colors px-5 py-3.5 text-left flex items-center gap-3 group"
                   data-tour="remediation-simulator-cta"
                 >
@@ -483,7 +498,7 @@ export function AnalysisTabs({
 
               <SecurityWidgetShell>
                 <Suspense fallback={null}>
-                  <QuickActions onNavigate={setActiveTab} />
+                  <QuickActions onNavigate={handleTabChange} />
                 </Suspense>
               </SecurityWidgetShell>
 
