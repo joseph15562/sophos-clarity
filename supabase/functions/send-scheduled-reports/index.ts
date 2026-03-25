@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { escapeHtml } from "../_shared/email.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -57,8 +58,9 @@ function buildOnePagerContent(
   const highCount = findings.filter((f) => f.severity === "high").length;
   const mediumCount = findings.filter((f) => f.severity === "medium").length;
 
+  const safeName = escapeHtml(customerName || "Assessment");
   const lines: string[] = [];
-  lines.push(`# Compliance Report — ${customerName || "Assessment"}`);
+  lines.push(`# Compliance Report — ${safeName}`);
   lines.push("");
   lines.push(`**Overall Score:** ${score.overall}/100 | **Grade:** ${score.grade}`);
   lines.push("");
@@ -70,7 +72,7 @@ function buildOnePagerContent(
     lines.push("No findings identified — excellent posture.");
   } else {
     top5.forEach((f, i) => {
-      lines.push(`${i + 1}. **${f.title}** — *${f.severity}*`);
+      lines.push(`${i + 1}. **${escapeHtml(f.title)}** — *${escapeHtml(f.severity)}*`);
     });
   }
   lines.push("");
@@ -80,7 +82,7 @@ function buildOnePagerContent(
   lines.push("2. Review and remediate the top 5 risks listed above.");
   lines.push("3. Schedule a follow-up assessment after remediation.");
 
-  const subject = `${customerName || "Firewall"} Compliance Report — Score: ${score.overall}/100 (${score.grade})`;
+  const subject = `${safeName} Compliance Report — Score: ${score.overall}/100 (${score.grade})`;
   return { subject, markdown: lines.join("\n") };
 }
 
@@ -114,8 +116,9 @@ function buildEmailHtml(
   orgName: string,
   logoUrl?: string
 ): string {
+  const safeOrg = escapeHtml(orgName);
   const logo = logoUrl
-    ? `<img src="${logoUrl}" alt="${orgName}" style="max-height:40px;max-width:200px;margin-bottom:16px;" />`
+    ? `<img src="${logoUrl}" alt="${safeOrg}" style="max-height:40px;max-width:200px;margin-bottom:16px;" />`
     : "";
 
   return `<!DOCTYPE html>
@@ -125,7 +128,7 @@ function buildEmailHtml(
   <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
     <div style="background:#0a0f1e;padding:24px 32px;color:#ffffff;">
       ${logo}
-      <p style="margin:0;font-size:12px;opacity:0.7;">${orgName}</p>
+      <p style="margin:0;font-size:12px;opacity:0.7;">${safeOrg}</p>
     </div>
     <div style="padding:32px;color:#333;font-size:14px;line-height:1.6;">
       ${bodyHtml}

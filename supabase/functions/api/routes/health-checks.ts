@@ -3,6 +3,7 @@ import { adminClient, json as jsonResponse } from "../../_shared/db.ts";
 import {
   buildSophosEmailHtml,
   CONFIG_UPLOAD_FROM_EMAIL,
+  escapeHtml,
   RESEND_API_KEY,
 } from "../../_shared/email.ts";
 
@@ -126,9 +127,9 @@ export async function handleHealthCheckRoutes(
       const checkedDate = new Date(row.checked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
       const emailHtml = buildSophosEmailHtml(
         "Health Check Follow-Up Reminder",
-        `<p>Hi ${profile.display_name || "there"},</p>
-<p>It's time to follow up on the health check for <strong>${row.customer_name || "your customer"}</strong>.</p>
-<p>Last check was on <strong>${checkedDate}</strong> with a score of <strong>${row.overall_score ?? "—"}% (Grade ${row.overall_grade ?? "—"})</strong>.</p>
+        `<p>Hi ${escapeHtml(profile.display_name || "there")},</p>
+<p>It's time to follow up on the health check for <strong>${escapeHtml(row.customer_name || "your customer")}</strong>.</p>
+<p>Last check was on <strong>${escapeHtml(checkedDate)}</strong> with a score of <strong>${escapeHtml(String(row.overall_score ?? "—"))}% (Grade ${escapeHtml(String(row.overall_grade ?? "—"))})</strong>.</p>
 <p>Schedule a follow-up session to review their progress and run a new health check.</p>`,
         `${APP_URL}/health-check-2`,
         "Open FireComply",

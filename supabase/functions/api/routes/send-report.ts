@@ -1,6 +1,6 @@
 import { authenticateSE } from "../../_shared/auth.ts";
 import { json as jsonResponse } from "../../_shared/db.ts";
-import { buildSophosEmailHtml, CONFIG_UPLOAD_FROM_EMAIL, RESEND_API_KEY } from "../../_shared/email.ts";
+import { buildSophosEmailHtml, CONFIG_UPLOAD_FROM_EMAIL, escapeHtml, RESEND_API_KEY } from "../../_shared/email.ts";
 
 export async function handleSendReportRoutes(
   req: Request,
@@ -35,10 +35,10 @@ export async function handleSendReportRoutes(
   if (!pdf_base64 && !html_base64) return json({ error: "At least one of pdf_base64 or html_base64 is required" }, 400);
 
   const seName = se.seProfile.display_name || se.seProfile.email || "Your SE";
-  const recipientGreeting = prepared_for || customer_name || "Customer";
-  const signOffName = prepared_by || seName;
-  const forClause = customer_name ? ` for <strong>${customer_name}</strong>` : "";
-  const titleLine = se_title ? `<br/>${se_title}` : "";
+  const recipientGreeting = escapeHtml(prepared_for || customer_name || "Customer");
+  const signOffName = escapeHtml(prepared_by || seName);
+  const forClause = customer_name ? ` for <strong>${escapeHtml(customer_name)}</strong>` : "";
+  const titleLine = se_title ? `<br/>${escapeHtml(se_title)}` : "";
   const subjectName = customer_name || prepared_for || "Customer";
   const base = filename_base || "Sophos-Firewall-Health-Check";
 

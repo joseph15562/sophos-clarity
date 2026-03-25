@@ -1,6 +1,6 @@
 import { authenticateSE } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse } from "../../_shared/db.ts";
-import { buildSophosEmailHtml, sendConfigUploadEmail } from "../../_shared/email.ts";
+import { buildSophosEmailHtml, escapeHtml, sendConfigUploadEmail } from "../../_shared/email.ts";
 
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
 
@@ -165,7 +165,7 @@ export async function handleSeTeamRoutes(
           await sendConfigUploadEmail(
             ap.email,
             `${joinerName} joined your team "${teamInfo?.name ?? "your team"}"`,
-            buildSophosEmailHtml("New Team Member", `<p><strong>${joinerName}</strong> has joined your team <strong>${teamInfo?.name ?? "your team"}</strong> on Sophos FireComply.</p>`),
+            buildSophosEmailHtml("New Team Member", `<p><strong>${escapeHtml(joinerName)}</strong> has joined your team <strong>${escapeHtml(teamInfo?.name ?? "your team")}</strong> on Sophos FireComply.</p>`),
           );
         }
       }
@@ -277,7 +277,7 @@ export async function handleSeTeamRoutes(
       const emailHtml = buildSophosEmailHtml(
         "Team Invite",
         `<p style="margin:0 0 20px;">Hi,</p>
-<p style="margin:0 0 20px;"><strong>${inviterName}</strong> has invited you to join the <strong>${teamName}</strong> team on Sophos FireComply.</p>
+<p style="margin:0 0 20px;"><strong>${escapeHtml(inviterName)}</strong> has invited you to join the <strong>${escapeHtml(teamName)}</strong> team on Sophos FireComply.</p>
 <p style="margin:0 0 20px;">Simply click on the link below to accept the invitation and join the team.</p>`,
         joinLink,
         "Join Team",

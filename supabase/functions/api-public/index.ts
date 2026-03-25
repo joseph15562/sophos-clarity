@@ -11,6 +11,7 @@ import { adminClient, json as jsonResponse } from "../_shared/db.ts";
 import {
   buildCustomerUploadEmailHtml,
   buildSeNotificationEmailHtml,
+  escapeHtml,
   isValidSophosXml,
   MAX_CONFIG_SIZE,
   sendConfigUploadEmail,
@@ -266,7 +267,7 @@ async function handleConfigUploadPublic(
       let centralNote = "";
       if (freshRow?.central_connected_at) {
         centralNote = freshRow.central_linked_firewall_name
-          ? `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong> (linked to firewall: <strong>${freshRow.central_linked_firewall_name}</strong>).</p>`
+          ? `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong> (linked to firewall: <strong>${escapeHtml(freshRow.central_linked_firewall_name)}</strong>).</p>`
           : `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong>.</p>`;
       }
       let seName = "";
