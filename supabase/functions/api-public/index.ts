@@ -7,7 +7,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { runConfigUploadCleanup } from "../_shared/auth.ts";
-import { adminClient, json as jsonResponse } from "../_shared/db.ts";
+import { adminClient, json as jsonResponse, safeDbError, safeError } from "../_shared/db.ts";
 import {
   buildCustomerUploadEmailHtml,
   buildSeNotificationEmailHtml,
@@ -41,7 +41,7 @@ async function handleShared(token: string, corsHeaders: Record<string, string>) 
     .eq("share_token", token)
     .maybeSingle();
 
-  if (error) return json({ error: error.message }, 500, corsHeaders);
+  if (error) return json({ error: safeDbError(error) }, 500, corsHeaders);
   if (!data) return json({ error: "Report not found" }, 404, corsHeaders);
 
   const expiresAt = new Date(data.expires_at);
@@ -68,7 +68,7 @@ async function handleSharedHealthCheck(token: string, corsHeaders: Record<string
     .eq("share_token", token)
     .maybeSingle();
 
-  if (error) return json({ error: error.message }, 500, corsHeaders);
+  if (error) return json({ error: safeDbError(error) }, 500, corsHeaders);
   if (!data) return json({ error: "Health check not found" }, 404, corsHeaders);
 
   const expiresAt = new Date(data.share_expires_at);
@@ -190,7 +190,7 @@ async function handleConfigUploadPublic(
       .eq("token", token)
       .maybeSingle();
 
-    if (error) return json({ error: error.message }, 500, corsHeaders);
+    if (error) return json({ error: safeDbError(error) }, 500, corsHeaders);
     if (!data) return json({ error: "Upload link not found" }, 404, corsHeaders);
     if (new Date(data.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410, corsHeaders);
 
@@ -216,7 +216,7 @@ async function handleConfigUploadPublic(
       .eq("token", token)
       .maybeSingle();
 
-    if (fetchErr) return json({ error: fetchErr.message }, 500, corsHeaders);
+    if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500, corsHeaders);
     if (!existing) return json({ error: "Upload link not found" }, 404, corsHeaders);
     if (new Date(existing.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410, corsHeaders);
     if (existing.status === "downloaded") return json({ error: "This configuration has already been downloaded by the SE. Please request a new upload link." }, 409, corsHeaders);
@@ -256,7 +256,7 @@ async function handleConfigUploadPublic(
       })
       .eq("id", existing.id);
 
-    if (updateErr) return json({ error: updateErr.message }, 500, corsHeaders);
+    if (updateErr) return json({ error: safeDbError(updateErr) }, 500, corsHeaders);
 
     if (existing.se_email) {
       const { data: freshRow } = await db
@@ -297,7 +297,7 @@ async function handleConfigUploadPublic(
       .select("id, status, expires_at")
       .eq("token", token)
       .maybeSingle();
-    if (fetchErr) return json({ error: fetchErr.message }, 500, corsHeaders);
+    if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500, corsHeaders);
     if (!row) return json({ error: "Upload request not found" }, 404, corsHeaders);
     if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410, corsHeaders);
 
@@ -342,7 +342,7 @@ async function handleConfigUploadPublic(
         firewalls: (centralData as Record<string, unknown>).firewalls ?? null,
       }, 200, corsHeaders);
     } catch (err) {
-      return json({ error: err instanceof Error ? err.message : "Central connection failed" }, 400, corsHeaders);
+      return json({ error: safeError(err, "Central connection failed") }, 400, corsHeaders);
     }
   }
 
@@ -353,7 +353,7 @@ async function handleConfigUploadPublic(
       .select("id, expires_at, central_client_id_enc, central_client_secret_enc, central_data")
       .eq("token", token)
       .maybeSingle();
-    if (fetchErr) return json({ error: fetchErr.message }, 500, corsHeaders);
+    if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500, corsHeaders);
     if (!row) return json({ error: "Upload request not found" }, 404, corsHeaders);
     if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410, corsHeaders);
     if (!row.central_client_id_enc) return json({ error: "Central not connected yet" }, 400, corsHeaders);
@@ -378,7 +378,7 @@ async function handleConfigUploadPublic(
 
       return json({ ok: true, firewalls: fwData.firewalls }, 200, corsHeaders);
     } catch (err) {
-      return json({ error: err instanceof Error ? err.message : "Failed to fetch firewalls" }, 400, corsHeaders);
+      return json({ error: safeError(err, "Failed to fetch firewalls") }, 400, corsHeaders);
     }
   }
 
@@ -389,7 +389,7 @@ async function handleConfigUploadPublic(
       .select("id, expires_at, central_connected_at")
       .eq("token", token)
       .maybeSingle();
-    if (fetchErr) return json({ error: fetchErr.message }, 500, corsHeaders);
+    if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500, corsHeaders);
     if (!row) return json({ error: "Upload request not found" }, 404, corsHeaders);
     if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410, corsHeaders);
     if (!row.central_connected_at) return json({ error: "Central not connected yet" }, 400, corsHeaders);
@@ -457,6 +457,6 @@ serve(async (req: Request) => {
 
     return json({ error: "Not found" }, 404, corsHeaders);
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500, corsHeaders);
+    return json({ error: safeError(err) }, 500, corsHeaders);
   }
 });

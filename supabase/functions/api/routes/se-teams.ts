@@ -1,5 +1,5 @@
 import { authenticateSE } from "../../_shared/auth.ts";
-import { adminClient, json as jsonResponse } from "../../_shared/db.ts";
+import { adminClient, json as jsonResponse, safeDbError } from "../../_shared/db.ts";
 import { buildSophosEmailHtml, escapeHtml, sendConfigUploadEmail } from "../../_shared/email.ts";
 
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
@@ -27,7 +27,7 @@ export async function handleSeTeamRoutes(
       .select("id, team_id, role, is_primary, joined_at")
       .eq("se_profile_id", se.seProfile.id)
       .limit(100);
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: safeDbError(error) }, 500);
 
     if (!memberships?.length) return json({ data: [] });
 
@@ -75,7 +75,7 @@ export async function handleSeTeamRoutes(
       .insert({ name, created_by: se.seProfile.id })
       .select("id, name, created_at")
       .single();
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: safeDbError(error) }, 500);
 
     const { data: existing } = await db
       .from("se_team_members")
@@ -240,7 +240,7 @@ export async function handleSeTeamRoutes(
       const name = body.name?.trim();
       if (!name) return json({ error: "Team name is required" }, 400);
       const { error } = await db.from("se_teams").update({ name }).eq("id", teamId);
-      if (error) return json({ error: error.message }, 500);
+      if (error) return json({ error: safeDbError(error) }, 500);
       return json({ ok: true, name });
     }
 
@@ -269,7 +269,7 @@ export async function handleSeTeamRoutes(
         .insert({ team_id: teamId, invited_by: se.seProfile.id, email, expires_at: expiresAt })
         .select("id, token")
         .single();
-      if (error) return json({ error: error.message }, 500);
+      if (error) return json({ error: safeDbError(error) }, 500);
 
       const joinLink = `${APP_URL}/team-invite/${invite.token}`;
       const teamName = teamInfo?.name ?? "a team";
@@ -311,7 +311,7 @@ export async function handleSeTeamRoutes(
       if (!isAdmin) return json({ error: "Admin access required" }, 403);
       const inviteId = segments[3];
       const { error } = await db.from("se_team_invites").delete().eq("id", inviteId).eq("team_id", teamId);
-      if (error) return json({ error: error.message }, 500);
+      if (error) return json({ error: safeDbError(error) }, 500);
       return json({ ok: true });
     }
 

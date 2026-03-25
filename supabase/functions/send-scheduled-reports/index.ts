@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { escapeHtml } from "../_shared/email.ts";
+import { safeDbError, safeError } from "../_shared/db.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -171,12 +172,14 @@ async function sendEmail(
 
     if (!resp.ok) {
       const body = await resp.text();
-      return { success: false, error: `Resend ${resp.status}: ${body}` };
+      console.error("[send-scheduled-reports] Resend error:", resp.status, body);
+      return { success: false, error: "Email delivery failed" };
     }
 
     return { success: true };
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error("[send-scheduled-reports] sendEmail error:", err);
+    return { success: false, error: "Email delivery failed" };
   }
 }
 
@@ -275,7 +278,7 @@ serve(async (req: Request) => {
     .limit(500);
 
   if (queryErr) {
-    return new Response(JSON.stringify({ error: queryErr.message }), {
+    return new Response(JSON.stringify({ error: safeDbError(queryErr) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -351,7 +354,7 @@ serve(async (req: Request) => {
         error: emailResult.error,
       });
     } catch (err) {
-      results.push({ id: report.id, name: report.name, success: false, error: String(err) });
+      results.push({ id: report.id, name: report.name, success: false, error: safeError(err, "Report processing failed") });
     }
   }
 

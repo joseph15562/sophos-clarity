@@ -20,3 +20,15 @@ export function json(body: unknown, status = 200, corsHeaders: Record<string, st
     headers: { "Content-Type": "application/json", ...corsHeaders },
   });
 }
+
+/** Log the real error server-side, return a generic message for the client. */
+export function safeError(err: unknown, fallback = "Internal server error"): string {
+  console.error("[edge-fn-error]", err instanceof Error ? (err.stack ?? err.message) : err);
+  return fallback;
+}
+
+/** Log a DB/PostgREST error, return generic message. */
+export function safeDbError(err: { message: string; code?: string } | null): string {
+  if (err) console.error("[db-error]", err.message, err.code ?? "");
+  return "Database query failed";
+}

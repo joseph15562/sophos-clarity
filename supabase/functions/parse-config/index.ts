@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { safeError } from "../_shared/db.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -537,8 +538,9 @@ serve(async (req) => {
         );
       }
 
+      console.error("[parse-config] Gemini error detail:", message);
       return new Response(
-        JSON.stringify({ error: message }),
+        JSON.stringify({ error: "AI processing failed. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -608,9 +610,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("parse-config error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: safeError(e) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -1,5 +1,5 @@
 import { getOrgMembership } from "../../_shared/auth.ts";
-import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import { adminClient, json as jsonResponse, safeDbError, safeError, userClient } from "../../_shared/db.ts";
 
 export async function handleFirewallRoutes(
   req: Request,
@@ -32,7 +32,7 @@ export async function handleFirewallRoutes(
       .eq("org_id", membership.org_id)
       .limit(1000);
 
-    if (fwErr) return json({ error: fwErr.message }, 500);
+    if (fwErr) return json({ error: safeDbError(fwErr) }, 500);
 
     // Bounded by org scope; 500 covers most estates
     const { data: submissions } = await db
@@ -89,6 +89,6 @@ export async function handleFirewallRoutes(
 
     return json({ data: result });
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "Internal error" }, 500);
+    return json({ error: safeError(err) }, 500);
   }
 }

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jwtVerify } from "https://esm.sh/jose@4.15.4?target=deno";
+import { safeError } from "../_shared/db.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -744,9 +745,7 @@ serve(async (req) => {
 
     return json({ error: `Unknown mode: ${mode}` }, 400);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("sophos-central error:", message);
-    return json({ error: message }, 500);
+    return json({ error: safeError(err) }, 500);
   }
 });
 

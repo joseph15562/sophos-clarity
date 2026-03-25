@@ -89,11 +89,13 @@ export async function sendConfigUploadEmail(
     });
     if (!resp.ok) {
       const body = await resp.text();
-      return { success: false, error: `Resend ${resp.status}: ${body}` };
+      console.error("[email] Resend error:", resp.status, body);
+      return { success: false, error: "Email delivery failed" };
     }
     return { success: true };
   } catch (err) {
-    return { success: false, error: String(err) };
+    console.error("[email] sendConfigUploadEmail error:", err);
+    return { success: false, error: "Email delivery failed" };
   }
 }
 

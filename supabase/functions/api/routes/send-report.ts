@@ -1,5 +1,5 @@
 import { authenticateSE } from "../../_shared/auth.ts";
-import { json as jsonResponse } from "../../_shared/db.ts";
+import { json as jsonResponse, safeError } from "../../_shared/db.ts";
 import { buildSophosEmailHtml, CONFIG_UPLOAD_FROM_EMAIL, escapeHtml, RESEND_API_KEY } from "../../_shared/email.ts";
 
 export async function handleSendReportRoutes(
@@ -76,10 +76,11 @@ export async function handleSendReportRoutes(
     });
     if (!resp.ok) {
       const errBody = await resp.text();
-      return json({ error: `Email send failed: ${errBody}` }, 500);
+      console.error("[send-report] Resend error:", resp.status, errBody);
+      return json({ error: "Email delivery failed" }, 500);
     }
     return json({ ok: true });
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    return json({ error: safeError(err, "Email delivery failed") }, 500);
   }
 }

@@ -1,5 +1,5 @@
 import { getOrgMembership } from "../../_shared/auth.ts";
-import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
 
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return jsonResponse(body, status, corsHeaders);
@@ -44,7 +44,7 @@ export async function handleAdminRoutes(
         userId: targetUserId,
       });
 
-      if (factorsErr) return json({ error: factorsErr.message }, 500, corsHeaders);
+      if (factorsErr) return json({ error: safeDbError(factorsErr) }, 500, corsHeaders);
 
       const totp = factors?.factors?.filter((f: any) => f.factor_type === "totp") ?? [];
       for (const factor of totp) {

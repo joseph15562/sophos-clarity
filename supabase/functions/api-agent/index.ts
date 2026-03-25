@@ -7,7 +7,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { authenticateAgent } from "../_shared/auth.ts";
-import { adminClient, json as jsonResponse } from "../_shared/db.ts";
+import { adminClient, json as jsonResponse, safeDbError, safeError } from "../_shared/db.ts";
 import {
   sophosFetchFirewalls,
   sophosFetchTenants,
@@ -205,7 +205,7 @@ async function handleSubmit(
     raw_config: body.raw_config ?? null,
   });
 
-  if (subError) return json({ error: subError.message }, 500, corsHeaders);
+  if (subError) return json({ error: safeDbError(subError) }, 500, corsHeaders);
 
   await db.from("assessments").insert({
     org_id: orgId,
@@ -342,6 +342,6 @@ serve(async (req: Request) => {
 
     return json({ error: "Not found" }, 404, corsHeaders);
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500, corsHeaders);
+    return json({ error: safeError(err) }, 500, corsHeaders);
   }
 });

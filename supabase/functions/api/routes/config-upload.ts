@@ -1,6 +1,6 @@
 import { authenticateSE, runConfigUploadCleanup } from "../../_shared/auth.ts";
 import { centralDecrypt } from "../../_shared/crypto.ts";
-import { adminClient, json as jsonResponse } from "../../_shared/db.ts";
+import { adminClient, json as jsonResponse, safeDbError } from "../../_shared/db.ts";
 import {
   buildCustomerUploadEmailHtml,
   sendConfigUploadEmail,
@@ -47,7 +47,7 @@ export async function handleConfigUploadRoutes(
       .select("id, token, expires_at")
       .single();
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: safeDbError(error) }, 500);
 
     const uploadUrl = `${APP_URL}/upload/${token}`;
     let emailSent = false;
@@ -102,7 +102,7 @@ export async function handleConfigUploadRoutes(
     }
 
     const { data, error } = await query;
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: safeDbError(error) }, 500);
     return json({ data: data ?? [] });
   }
 
@@ -123,7 +123,7 @@ export async function handleConfigUploadRoutes(
         .eq("token", token)
         .maybeSingle();
 
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
       if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
       if (!row.customer_email) return json({ error: "No customer email on file" }, 400);
@@ -157,7 +157,7 @@ export async function handleConfigUploadRoutes(
         .eq("token", token)
         .maybeSingle();
 
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
 
       let hasAccess = row.se_user_id === se.seProfile.id;
@@ -192,7 +192,7 @@ export async function handleConfigUploadRoutes(
         .eq("token", token)
         .maybeSingle();
 
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
       if (!row.team_id) return json({ error: "Only team upload requests can be claimed" }, 400);
       if (row.se_user_id === se.seProfile.id) return json({ error: "You already own this request" }, 400);
@@ -209,7 +209,7 @@ export async function handleConfigUploadRoutes(
         .from("config_upload_requests")
         .update({ se_user_id: se.seProfile.id })
         .eq("id", row.id);
-      if (updateErr) return json({ error: updateErr.message }, 500);
+      if (updateErr) return json({ error: safeDbError(updateErr) }, 500);
 
       return json({ ok: true, claimed_by: se.seProfile.id });
     }
@@ -224,7 +224,7 @@ export async function handleConfigUploadRoutes(
         .select("id, se_user_id, team_id, central_data, central_connected_at, central_linked_firewall_id, central_linked_firewall_name")
         .eq("token", token)
         .maybeSingle();
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
 
       let hasAccess = row.se_user_id === se.seProfile.id;
@@ -258,7 +258,7 @@ export async function handleConfigUploadRoutes(
         .eq("token", token)
         .maybeSingle();
 
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
+      if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
       if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
 

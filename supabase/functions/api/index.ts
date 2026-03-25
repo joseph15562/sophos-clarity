@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { json as jsonResponse } from "../_shared/db.ts";
+import { json as jsonResponse, safeError } from "../_shared/db.ts";
 
 import { handleAdminRoutes } from "./routes/admin.ts";
 import { handleAgentRoutes } from "./routes/agent.ts";
@@ -89,6 +89,6 @@ serve(async (req: Request) => {
 
   return json({ error: "Not found" }, 404);
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "Internal server error" }, 500);
+    return json({ error: safeError(err) }, 500);
   }
 });

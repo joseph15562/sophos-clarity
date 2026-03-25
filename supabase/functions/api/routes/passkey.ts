@@ -1,4 +1,4 @@
-import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
@@ -83,7 +83,7 @@ export async function handlePasskeyRoutes(
       name: name ?? "Passkey",
     });
 
-    if (error) return json({ error: error.message }, 500, corsHeaders);
+    if (error) return json({ error: safeDbError(error) }, 500, corsHeaders);
     return json({ ok: true }, 200, corsHeaders);
   }
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { safeError } from "../_shared/db.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -313,8 +314,7 @@ serve(async (req) => {
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[regulatory-scanner]", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
+    return new Response(JSON.stringify({ error: safeError(err) }), {
       status: 500,
       headers: { ...cors, "Content-Type": "application/json" },
     });
