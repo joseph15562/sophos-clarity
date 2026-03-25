@@ -129,7 +129,21 @@ serve(async (req: Request) => {
     let firewallBreakdown: Array<Record<string, unknown>> = [];
 
     if (tenantName) {
-      // ── Tenant-scoped: query agents with matching tenant_name ──
+      // ── Tenant-scoped: query score_history first, then agents for firewall breakdown ──
+
+      // Primary: score_history (written by MSP dashboard assessments)
+      const { data: sh } = await admin
+        .from("score_history")
+        .select("id, overall_score, overall_grade, findings_count, assessed_at, customer_name, hostname, category_scores")
+        .eq("org_id", orgId)
+        .order("assessed_at", { ascending: false })
+        .limit(30);
+
+      if (sh && sh.length > 0) {
+        scoreHistory = sh as Array<Record<string, unknown>>;
+      }
+
+      // Also query agents for firewall breakdown & findings
       const { data: agents } = await admin
         .from("agents")
         .select("id, name, serial_number, hardware_model, tenant_name, last_seen_at")
@@ -140,7 +154,6 @@ serve(async (req: Request) => {
       if (agents && agents.length > 0) {
         const agentIds = agents.map((a: Record<string, unknown>) => a.id as string);
 
-        // Fetch latest submission per agent
         const submissionSelect = includeDetailedFindings
           ? "id, agent_id, overall_score, overall_grade, findings_summary, created_at, full_analysis"
           : "id, agent_id, overall_score, overall_grade, findings_summary, created_at";
@@ -153,7 +166,6 @@ serve(async (req: Request) => {
           .order("created_at", { ascending: false })
           .limit(1000);
 
-        // Group by agent_id — keep only latest per agent
         const latestByAgent = new Map<string, Record<string, unknown>>();
         const allSubs: Array<Record<string, unknown>> = [];
         for (const sub of (submissions ?? []) as Array<Record<string, unknown>>) {
@@ -164,19 +176,21 @@ serve(async (req: Request) => {
           allSubs.push(sub);
         }
 
-        // Build score history from all submissions (most recent first)
-        scoreHistory = allSubs.slice(0, 30).map((sub) => ({
-          id: sub.id,
-          overall_score: sub.overall_score,
-          overall_grade: sub.overall_grade,
-          findings_count: Array.isArray(sub.findings_summary)
-            ? (sub.findings_summary as unknown[]).length
-            : 0,
-          assessed_at: sub.created_at,
-          customer_name: tenantName,
-        }));
+        // Fallback: if no score_history rows, use agent_submissions
+        if (scoreHistory.length === 0 && allSubs.length > 0) {
+          scoreHistory = allSubs.slice(0, 30).map((sub) => ({
+            id: sub.id,
+            overall_score: sub.overall_score,
+            overall_grade: sub.overall_grade,
+            findings_count: Array.isArray(sub.findings_summary)
+              ? (sub.findings_summary as unknown[]).length
+              : 0,
+            assessed_at: sub.created_at,
+            customer_name: tenantName,
+          }));
+        }
 
-        // Extract findings from the latest submission across all agents
+        // Extract findings from latest submission per agent
         for (const [, sub] of latestByAgent) {
           const fs = sub.findings_summary;
           if (Array.isArray(fs)) {
@@ -190,7 +204,34 @@ serve(async (req: Request) => {
           }
         }
 
-        // Per-firewall breakdown for display
+        // Also pull findings from score_history if agent findings are empty
+        if (findings.length === 0 && scoreHistory.length > 0) {
+          const latestHistoryId = (scoreHistory[0] as Record<string, unknown>).id as string;
+          const { data: latestAssessment } = await admin
+            .from("assessments")
+            .select("firewalls")
+            .eq("org_id", orgId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (latestAssessment?.firewalls && Array.isArray(latestAssessment.firewalls)) {
+            for (const fw of latestAssessment.firewalls) {
+              const fwFindings = (fw as Record<string, unknown>)?.findings;
+              if (Array.isArray(fwFindings)) {
+                for (const f of fwFindings) {
+                  const finding = f as Record<string, unknown>;
+                  findings.push({
+                    id: String(finding.id ?? crypto.randomUUID()),
+                    title: String(finding.title ?? finding.message ?? ""),
+                    severity: String(finding.severity ?? "info"),
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        // Per-firewall breakdown
         firewallBreakdown = agents.map((agent: Record<string, unknown>) => {
           const latest = latestByAgent.get(agent.id as string);
           const base: Record<string, unknown> = {
@@ -208,6 +249,30 @@ serve(async (req: Request) => {
           }
           return base;
         });
+      } else if (scoreHistory.length > 0) {
+        // No agents but have score_history — pull findings from assessments table
+        const { data: latestAssessment } = await admin
+          .from("assessments")
+          .select("firewalls")
+          .eq("org_id", orgId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestAssessment?.firewalls && Array.isArray(latestAssessment.firewalls)) {
+          for (const fw of latestAssessment.firewalls) {
+            const fwFindings = (fw as Record<string, unknown>)?.findings;
+            if (Array.isArray(fwFindings)) {
+              for (const f of fwFindings) {
+                const finding = f as Record<string, unknown>;
+                findings.push({
+                  id: String(finding.id ?? crypto.randomUUID()),
+                  title: String(finding.title ?? finding.message ?? ""),
+                  severity: String(finding.severity ?? "info"),
+                });
+              }
+            }
+          }
+        }
       }
     } else {
       // ── Org-wide fallback: use score_history + assessments (legacy behaviour) ──
