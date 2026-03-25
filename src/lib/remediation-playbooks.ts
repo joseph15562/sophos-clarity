@@ -23,8 +23,8 @@ const DOCS_BASE =
 function isValidManagementHost(ip: string): boolean {
   const ipv4 = /^(\d{1,3}\.){3}\d{1,3}$/;
   const hostname =
-    /^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$/;
-  if (/[\s\/\?#@]/.test(ip)) return false;
+    /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  if (/[\s/#?@]/.test(ip)) return false;
   return ipv4.test(ip) || hostname.test(ip);
 }
 
