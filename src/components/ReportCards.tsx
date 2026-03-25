@@ -67,8 +67,8 @@ export function ReportCards({
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[360px] lg:max-w-[430px]">
-              <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="info-pill">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                   Best for
                 </p>
                 <p className="text-sm font-semibold text-foreground mt-1">
@@ -76,7 +76,7 @@ export function ReportCards({
                 </p>
               </div>
               <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                   Outcome
                 </p>
                 <p className="text-sm font-semibold text-foreground mt-1">
@@ -87,24 +87,24 @@ export function ReportCards({
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 Technical
               </p>
               <p className="text-sm font-semibold text-foreground mt-1">
                 Detailed evidence and remediation for engineers
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 Executive
               </p>
               <p className="text-sm font-semibold text-foreground mt-1">
                 Stakeholder-ready narrative for business decisions
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 Compliance
               </p>
               <p className="text-sm font-semibold text-foreground mt-1">

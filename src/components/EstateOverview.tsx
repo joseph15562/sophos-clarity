@@ -59,6 +59,14 @@ const SEVERITY_BORDER: Record<Severity, string> = {
   info: "border-l-[#0077cc] dark:border-l-[#009CFB]",
 };
 
+const SEV_HEX: Record<Severity, string> = {
+  critical: "#EA0022",
+  high: "#F29400",
+  medium: "#F8E300",
+  low: "#00F2B3",
+  info: "#009CFB",
+};
+
 export function EstateOverview({
   fileCount,
   analysisResults,
@@ -85,56 +93,49 @@ export function EstateOverview({
       {/* Estate summary cards */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
-          icon={<Network className="h-7 w-7 text-brand-accent" />}
+          icon={<Network className="h-7 w-7" style={{ color: "#2006F7" }} />}
           value={fileCount}
           label={`Firewall${fileCount !== 1 ? "s" : ""}`}
-          border="border-brand-accent/20 dark:border-[#00EDFF]/20"
-          bg="bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.06]"
-          iconBg="bg-brand-accent/10 dark:bg-[#00EDFF]/10"
-          valueColor="text-brand-accent"
+          hex="#2006F7"
+          border=""
+          bg=""
+          iconBg=""
+          valueColor=""
         />
         <StatCard
-          icon={<Scale className="h-7 w-7 text-brand-accent" />}
+          icon={<Scale className="h-7 w-7" style={{ color: "#5A00FF" }} />}
           value={totalRules}
           label="Rules Parsed"
-          border="border-[#10037C]/15 dark:border-brand-accent/20"
-          bg="bg-[#10037C]/[0.03] dark:bg-brand-accent/[0.06]"
-          iconBg="bg-[#10037C]/10 dark:bg-brand-accent/10"
-          valueColor="text-[#001A47] dark:text-white"
+          hex="#5A00FF"
+          border=""
+          bg=""
+          iconBg=""
+          valueColor=""
         />
         <StatCard
-          icon={<Search className="h-7 w-7 text-brand-accent" />}
+          icon={<Search className="h-7 w-7" style={{ color: "#00EDFF" }} />}
           value={totalSections}
           label="Sections"
-          border="border-[#5A00FF]/15 dark:border-[#5A00FF]/20"
-          bg="bg-[#5A00FF]/[0.03] dark:bg-[#5A00FF]/[0.06]"
-          iconBg="bg-[#5A00FF]/10 dark:bg-[#5A00FF]/10"
-          valueColor="text-[#001A47] dark:text-white"
+          hex="#00EDFF"
+          border=""
+          bg=""
+          iconBg=""
+          valueColor=""
         />
         <StatCard
-          icon={<AlertTriangle className="h-7 w-7 text-brand-accent" />}
+          icon={
+            <AlertTriangle
+              className="h-7 w-7"
+              style={{ color: totalFindings > 0 ? "#EA0022" : "#00F2B3" }}
+            />
+          }
           value={totalFindings}
           label="Issues"
-          border={
-            totalFindings > 0
-              ? "border-[#EA0022]/20 dark:border-[#F29400]/25"
-              : "border-[#00F2B3]/20 dark:border-[#00F2B3]/20"
-          }
-          bg={
-            totalFindings > 0
-              ? "bg-[#EA0022]/[0.04] dark:bg-[#F29400]/[0.06]"
-              : "bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
-          }
-          iconBg={
-            totalFindings > 0
-              ? "bg-[#EA0022]/10 dark:bg-[#F29400]/10"
-              : "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10"
-          }
-          valueColor={
-            totalFindings > 0
-              ? "text-[#EA0022] dark:text-[#F29400]"
-              : "text-[#00F2B3] dark:text-[#00F2B3]"
-          }
+          hex={totalFindings > 0 ? "#EA0022" : "#00F2B3"}
+          border=""
+          bg=""
+          iconBg=""
+          valueColor=""
           onClick={totalFindings > 0 ? scrollToFindings : undefined}
         />
       </section>
@@ -272,48 +273,55 @@ function ExtractionCoverage({
   totalNatRules: number;
   totalInterfaces: number;
 }) {
-  const barColor =
-    extractionPct >= 80
-      ? "bg-[#00F2B3] dark:bg-[#00F2B3]"
-      : extractionPct >= 50
-        ? "bg-[#b8a200] dark:bg-[#F8E300]"
-        : "bg-[#EA0022]";
-
-  const pctColor =
-    extractionPct >= 80
-      ? "text-[#00F2B3] dark:text-[#00F2B3]"
-      : extractionPct >= 50
-        ? "text-[#b8a200] dark:text-[#F8E300]"
-        : "text-[#EA0022]";
+  const barHex = extractionPct >= 80 ? "#00F2B3" : extractionPct >= 50 ? "#F8E300" : "#EA0022";
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-4 flex items-center gap-4">
-      <div className="flex-1 min-w-0">
+    <div
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-4 flex items-center gap-4 shadow-card transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      style={{ background: `linear-gradient(135deg, ${barHex}0A, ${barHex}03)` }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute -top-4 -right-4 h-12 w-12 rounded-full blur-[24px] opacity-20"
+          style={{ backgroundColor: barHex }}
+        />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{ background: `linear-gradient(90deg, transparent, ${barHex}28, transparent)` }}
+      />
+      <div className="relative flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-semibold text-foreground">Extraction Coverage</span>
-          <span className={`text-xs font-bold ${pctColor}`}>{extractionPct}%</span>
+          <span className="text-xs font-bold text-foreground">Extraction Coverage</span>
+          <span className="text-sm font-black tabular-nums" style={{ color: barHex }}>
+            {extractionPct}%
+          </span>
         </div>
-        <div className="h-2 rounded-full bg-muted overflow-hidden">
+        <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-            style={{ width: `${extractionPct}%` }}
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${extractionPct}%`,
+              background: `linear-gradient(90deg, ${barHex}90, ${barHex})`,
+              boxShadow: `0 0 10px ${barHex}40`,
+            }}
           />
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1.5">
+        <p className="text-[10px] text-muted-foreground/80 mt-1.5">
           {totalPopulated} of {totalSections} sections contain parseable data &middot; {totalRules}{" "}
           rules &middot; {totalNatRules} NAT rules &middot; {totalInterfaces} interfaces
         </p>
         {extractionPct >= 80 && totalRules > 0 && (
-          <p
-            className="text-[10px] text-[#00F2B3] dark:text-[#00F2B3] font-medium mt-1"
-            role="status"
-          >
+          <p className="text-[10px] font-bold mt-1" style={{ color: barHex }} role="status">
             Parsed {totalSections} sections, {totalRules} firewall rules successfully.
           </p>
         )}
       </div>
       {extractionPct < 80 && (
-        <div className="text-[10px] text-muted-foreground max-w-[180px] leading-tight" role="alert">
+        <div
+          className="relative text-[10px] text-muted-foreground max-w-[180px] leading-tight"
+          role="alert"
+        >
           Some sections parsed empty. This may indicate an unsupported export format or unconfigured
           areas.
         </div>
@@ -326,43 +334,52 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   const pct = (n: number) =>
     posture.totalWanRules > 0 ? Math.round((n / posture.totalWanRules) * 100) : 0;
 
-  const barColor = (value: number) =>
-    pct(value) >= 80 ? "bg-[#00F2B3]" : pct(value) >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]";
+  const barHex = (value: number) =>
+    pct(value) >= 80 ? "#00F2B3" : pct(value) >= 50 ? "#F29400" : "#EA0022";
 
-  const barGlow = (value: number) =>
-    pct(value) >= 80
-      ? "shadow-[0_0_8px_rgba(0,242,179,0.3)]"
-      : pct(value) >= 50
-        ? "shadow-[0_0_8px_rgba(242,148,0,0.3)]"
-        : "shadow-[0_0_8px_rgba(234,0,34,0.3)]";
-
-  const pctColor = (value: number) =>
-    pct(value) >= 80 ? "text-[#00F2B3]" : pct(value) >= 50 ? "text-[#F29400]" : "text-[#EA0022]";
-
-  const bar = (label: string, value: number, color: string) => {
+  const bar = (label: string, value: number) => {
     const p = pct(value);
+    const hex = barHex(value);
     return (
       <div
         key={label}
-        className="rounded-lg bg-muted/20 dark:bg-muted/10 border border-border/30 px-3.5 py-3 space-y-2"
+        className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3.5 space-y-2 transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+        style={{ background: `linear-gradient(135deg, ${hex}0C, ${hex}03)` }}
       >
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-display font-semibold tracking-tight text-foreground">
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute -top-4 -right-4 h-10 w-10 rounded-full blur-[20px] opacity-15"
+            style={{ backgroundColor: hex }}
+          />
+        </div>
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{ background: `linear-gradient(90deg, transparent, ${hex}25, transparent)` }}
+        />
+        <div className="relative flex items-center justify-between">
+          <span className="text-[11px] font-display font-bold tracking-tight text-foreground">
             {label}
           </span>
           <div className="flex items-baseline gap-1.5">
-            <span className={`text-sm font-display font-bold tabular-nums ${pctColor(value)}`}>
+            <span className="text-sm font-display font-black tabular-nums" style={{ color: hex }}>
               {value}/{posture.totalWanRules}
             </span>
-            <span className={`text-[10px] font-medium tabular-nums ${pctColor(value)}/70`}>
+            <span
+              className="text-[10px] font-medium tabular-nums"
+              style={{ color: hex, opacity: 0.7 }}
+            >
               ({p}%)
             </span>
           </div>
         </div>
-        <div className="h-2 rounded-full bg-muted/60 dark:bg-muted/40 overflow-hidden">
+        <div className="relative h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-700 ${color} ${barGlow(value)}`}
-            style={{ width: `${Math.max(2, p)}%` }}
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${Math.max(2, p)}%`,
+              background: `linear-gradient(90deg, ${hex}90, ${hex})`,
+              boxShadow: `0 0 10px ${hex}40`,
+            }}
           />
         </div>
       </div>
@@ -370,13 +387,29 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
   };
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5 sm:p-6 space-y-4 shadow-card">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-brand-accent/10 dark:bg-[#00EDFF]/10">
+    <div
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
+      style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.015))" }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full blur-[32px] opacity-15 bg-brand-accent" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.2), transparent)",
+        }}
+      />
+
+      <div className="relative flex items-center gap-3">
+        <div
+          className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08]"
+          style={{ backgroundColor: "rgba(32,6,247,0.12)" }}
+        >
           <ShieldCheck className="h-4.5 w-4.5 text-brand-accent" />
         </div>
         <div className="flex items-baseline gap-2.5">
-          <h3 className="text-base font-display font-bold tracking-tight text-foreground">
+          <h3 className="text-base font-display font-black tracking-tight text-foreground">
             Inspection Posture
           </h3>
           <span className="text-xs text-muted-foreground/70 font-medium">
@@ -385,17 +418,29 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {bar("Web Filtering", posture.withWebFilter, barColor(posture.withWebFilter))}
-        {bar("IPS / Intrusion Prevention", posture.withIps, barColor(posture.withIps))}
-        {bar("Application Control", posture.withAppControl, barColor(posture.withAppControl))}
+      <div className="relative grid gap-3 sm:grid-cols-2">
+        {bar("Web Filtering", posture.withWebFilter)}
+        {bar("IPS / Intrusion Prevention", posture.withIps)}
+        {bar("Application Control", posture.withAppControl)}
       </div>
 
       {!posture.dpiEngineEnabled && posture.totalWanRules > 0 && (
-        <div className="rounded-lg bg-[#EA0022]/8 dark:bg-[#EA0022]/10 border border-[#EA0022]/20 px-4 py-3 flex items-start gap-3">
-          <span className="mt-0.5 h-2 w-2 rounded-full bg-[#EA0022] shrink-0 animate-pulse" />
-          <div className="space-y-0.5">
-            <span className="text-[11px] font-display font-bold text-[#EA0022] uppercase tracking-wide">
+        <div
+          className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3 flex items-start gap-3"
+          style={{
+            background: "linear-gradient(135deg, rgba(234,0,34,0.10), rgba(234,0,34,0.03))",
+          }}
+        >
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-3 -left-3 h-10 w-10 rounded-full blur-[20px] opacity-20 bg-[#EA0022]" />
+          </div>
+          <div
+            className="absolute inset-x-0 top-0 h-px pointer-events-none"
+            style={{ background: "linear-gradient(90deg, rgba(234,0,34,0.3), transparent 60%)" }}
+          />
+          <span className="relative mt-0.5 h-2.5 w-2.5 rounded-full bg-[#EA0022] shrink-0 animate-pulse" />
+          <div className="relative space-y-0.5">
+            <span className="text-[11px] font-display font-black text-[#EA0022] uppercase tracking-wider">
               SSL/TLS Inspection Off
             </span>
             <p className="text-[11px] text-[#EA0022]/70 dark:text-[#EA0022]/60 leading-relaxed">
@@ -408,9 +453,18 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
       )}
 
       {posture.disabledWanRules > 0 && (
-        <div className="rounded-lg bg-[#F29400]/5 dark:bg-[#F29400]/8 border border-[#F29400]/15 px-4 py-2.5 flex items-center gap-2.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#F29400] shrink-0" />
-          <p className="text-[11px] text-[#c47800] dark:text-[#F29400] leading-relaxed">
+        <div
+          className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-2.5 flex items-center gap-2.5"
+          style={{
+            background: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
+          }}
+        >
+          <div
+            className="absolute inset-x-0 top-0 h-px pointer-events-none"
+            style={{ background: "linear-gradient(90deg, rgba(242,148,0,0.25), transparent 60%)" }}
+          />
+          <span className="relative h-2 w-2 rounded-full bg-[#F29400] shrink-0" />
+          <p className="relative text-[11px] text-[#c47800] dark:text-[#F29400] leading-relaxed">
             {posture.disabledWanRules} of {posture.totalWanRules} WAN rules are disabled — coverage
             scores based on {posture.enabledWanRules} enabled rule
             {posture.enabledWanRules !== 1 ? "s" : ""}
@@ -419,9 +473,14 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
       )}
 
       {posture.withSslInspection > 0 && (
-        <div className="rounded-lg bg-muted/20 dark:bg-muted/10 border border-border/30 px-4 py-2.5 space-y-1">
+        <div
+          className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-2.5 space-y-1"
+          style={{
+            background: "linear-gradient(135deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
+          }}
+        >
           <p
-            className={`text-[11px] leading-relaxed ${posture.dpiEngineEnabled ? "text-muted-foreground" : "text-[#c47800] dark:text-[#F29400]"}`}
+            className={`relative text-[11px] leading-relaxed ${posture.dpiEngineEnabled ? "text-muted-foreground" : "text-[#c47800] dark:text-[#F29400]"}`}
           >
             {posture.withSslInspection} SSL/TLS inspection rule
             {posture.withSslInspection !== 1 ? "s" : ""}:
@@ -432,7 +491,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
             {posture.dpiEngineEnabled ? " (DPI active)" : ""}
           </p>
           {posture.sslUncoveredZones.length > 0 && (
-            <p className="text-[11px] text-[#c47800] dark:text-[#F29400] leading-relaxed">
+            <p className="relative text-[11px] text-[#c47800] dark:text-[#F29400] leading-relaxed">
               Zone gap: {posture.sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")} → WAN
               traffic is not covered by any Decrypt rule
             </p>
@@ -485,46 +544,74 @@ function FindingCard({
   const frameworks =
     selectedFrameworks.length > 0 ? findingToFrameworks(finding.title, selectedFrameworks) : [];
 
+  const sevHex = SEV_HEX[finding.severity];
+  const confHex =
+    finding.confidence === "high"
+      ? "#00F2B3"
+      : finding.confidence === "medium"
+        ? "#F29400"
+        : "#888888";
+
   return (
     <div
-      className={`rounded-xl border border-border/50 border-l-[3px] ${SEVERITY_BORDER[finding.severity]} bg-card shadow-card overflow-hidden transition-all`}
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      style={{
+        borderLeftColor: sevHex,
+        background: `linear-gradient(135deg, ${sevHex}08, ${sevHex}02)`,
+      }}
     >
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-12"
+          style={{ backgroundColor: sevHex }}
+        />
+      </div>
       <div className="flex items-center gap-1.5">
         <button
           onClick={() => setOpen(!open)}
-          className="flex-1 flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors min-w-0 group"
+          className="relative flex-1 flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors min-w-0 group"
         >
           <span
-            className={`h-2.5 w-2.5 rounded-full ${SEV_DOT_BG[finding.severity]} shrink-0 shadow-[0_0_6px_rgba(0,0,0,0.15)]`}
+            className="h-2.5 w-2.5 rounded-full shrink-0"
+            style={{ backgroundColor: sevHex, boxShadow: `0 0 8px ${sevHex}50` }}
             title={finding.severity}
           />
           <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-            <span
-              className={`font-display font-semibold text-[13px] tracking-tight ${SEVERITY_COLOR[finding.severity]}`}
-            >
+            <span className="font-display font-bold text-[13px] tracking-tight text-foreground">
               {finding.title}
             </span>
             <span
-              className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border ${SEV_BADGE_INLINE[finding.severity]}`}
+              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border"
+              style={{
+                color: sevHex,
+                backgroundColor: `${sevHex}14`,
+                borderColor: `${sevHex}25`,
+              }}
             >
               {finding.severity}
             </span>
             {fileCount > 1 && (
-              <span className="text-[10px] text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md font-medium border border-border/40">
+              <span className="text-[10px] text-muted-foreground px-2 py-0.5 rounded-md font-medium border border-white/[0.08] bg-white/[0.04]">
                 {label}
               </span>
             )}
             {frameworks.map((fw) => (
               <span
                 key={fw}
-                className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-[#EA0022]/10 text-[#EA0022] dark:bg-[#EA0022]/15 dark:text-[#ff6b6b] border border-[#EA0022]/15"
+                className="text-[9px] font-bold px-2 py-0.5 rounded-md border"
+                style={{
+                  color: "#EA0022",
+                  backgroundColor: "rgba(234,0,34,0.12)",
+                  borderColor: "rgba(234,0,34,0.2)",
+                }}
               >
                 {fw}
               </span>
             ))}
           </div>
           <ChevronRight
-            className={`h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+            style={{ color: sevHex, opacity: 0.5 }}
           />
         </button>
         {onExplainFinding && (
@@ -533,7 +620,7 @@ function FindingCard({
               e.stopPropagation();
               onExplainFinding(finding.title);
             }}
-            className="p-2.5 mr-1 shrink-0 text-muted-foreground/50 hover:text-[#2006F7] dark:hover:text-[#00EDFF] hover:bg-muted/40 rounded-lg transition-colors"
+            className="relative p-2.5 mr-1 shrink-0 text-muted-foreground/50 hover:text-brand-accent rounded-lg transition-all duration-200 hover:bg-brand-accent/[0.08]"
             title="Explain this finding"
             aria-label="Explain this finding"
           >
@@ -542,19 +629,30 @@ function FindingCard({
         )}
       </div>
       {open && (
-        <div className="px-4 pb-4 pl-[3.25rem] space-y-3 border-t border-border/30 pt-3">
-          <p className="text-xs text-muted-foreground leading-relaxed">{finding.detail}</p>
+        <div className="relative px-4 pb-4 pl-[3.25rem] space-y-3 border-t border-white/[0.06] pt-3">
+          <p className="text-xs text-muted-foreground/90 leading-relaxed">{finding.detail}</p>
 
-          <div className="rounded-lg bg-muted/30 dark:bg-muted/20 border border-border/40 px-3.5 py-2.5 space-y-1.5">
-            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">
+          <div
+            className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3 space-y-1.5"
+            style={{
+              background: "linear-gradient(145deg, rgba(32,6,247,0.05), rgba(32,6,247,0.015))",
+            }}
+          >
+            <div
+              className="absolute inset-x-0 top-0 h-px pointer-events-none"
+              style={{
+                background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.18), transparent)",
+              }}
+            />
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-brand-accent">
               Evidence Source
             </p>
             <p className="text-[11px] text-foreground/90 leading-relaxed">
-              <span className="font-semibold">Section:</span> {finding.section}
+              <span className="font-bold">Section:</span> {finding.section}
               {finding.evidence && (
                 <>
                   <br />
-                  <span className="font-semibold">Extracted fact:</span>{" "}
+                  <span className="font-bold">Extracted fact:</span>{" "}
                   <span className="font-mono text-[10px] text-foreground/70">
                     {finding.evidence}
                   </span>
@@ -563,22 +661,16 @@ function FindingCard({
             </p>
             {finding.confidence && (
               <span
-                className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md mt-0.5 border ${
-                  finding.confidence === "high"
-                    ? "bg-[#00F2B3]/10 text-[#00b386] dark:text-[#00F2B3] border-[#00F2B3]/20"
-                    : finding.confidence === "medium"
-                      ? "bg-[#F29400]/10 text-[#F29400] border-[#F29400]/20"
-                      : "bg-muted text-muted-foreground border-border/40"
-                }`}
+                className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-md mt-0.5 border"
+                style={{
+                  color: confHex,
+                  backgroundColor: `${confHex}14`,
+                  borderColor: `${confHex}22`,
+                }}
               >
                 <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    finding.confidence === "high"
-                      ? "bg-[#00F2B3]"
-                      : finding.confidence === "medium"
-                        ? "bg-[#F29400]"
-                        : "bg-muted-foreground"
-                  }`}
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: confHex, boxShadow: `0 0 6px ${confHex}50` }}
                 />
                 {finding.confidence} confidence
               </span>
@@ -586,9 +678,21 @@ function FindingCard({
           </div>
 
           {finding.remediation && (
-            <div className="px-3.5 py-2.5 rounded-lg bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08] border border-brand-accent/15 dark:border-brand-accent/25">
-              <p className="text-[11px] text-foreground/90 leading-relaxed">
-                <span className="font-bold text-[#2006F7] dark:text-[#009CFB]">Remediation:</span>{" "}
+            <div
+              className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-3"
+              style={{
+                background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
+              }}
+            >
+              <div
+                className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(32,6,247,0.2), transparent)",
+                }}
+              />
+              <p className="relative text-[11px] text-foreground/90 leading-relaxed">
+                <span className="font-bold text-brand-accent">Remediation:</span>{" "}
                 {finding.remediation}
               </p>
             </div>
@@ -703,13 +807,29 @@ function FindingsPanel({
   const totalCount = groups.reduce((s, g) => s + g.findings.length, 0);
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-[#EA0022]/10 dark:bg-[#EA0022]/15">
+    <section
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
+      style={{ background: "linear-gradient(145deg, rgba(234,0,34,0.05), rgba(234,0,34,0.012))" }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full blur-[32px] opacity-12 bg-[#EA0022]" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), transparent)",
+        }}
+      />
+
+      <div className="relative flex items-center gap-3 flex-wrap">
+        <div
+          className="flex items-center justify-center h-9 w-9 rounded-xl border border-white/[0.08]"
+          style={{ backgroundColor: "rgba(234,0,34,0.12)" }}
+        >
           <AlertTriangle className="h-4.5 w-4.5 text-[#EA0022]" />
         </div>
         <div className="flex items-baseline gap-2.5">
-          <h3 className="text-base font-display font-bold tracking-tight text-foreground">
+          <h3 className="text-base font-display font-black tracking-tight text-foreground">
             Deterministic Findings
           </h3>
           <span className="text-xs text-muted-foreground/70 font-medium tabular-nums">
@@ -719,43 +839,61 @@ function FindingsPanel({
         <div className="ml-auto flex items-center gap-1.5">
           <button
             onClick={openSections.size > 0 ? collapseAll : expandAll}
-            className="text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/50 hover:bg-muted/50 hover:border-border transition-colors"
+            className="text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200"
           >
             {openSections.size > 0 ? "Collapse all" : "Expand all"}
           </button>
           <button
             onClick={() => downloadCsv(analysisResults)}
-            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/50 hover:bg-muted/50 hover:border-border transition-colors"
+            className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200"
             title="Export findings as CSV"
           >
-            <Download className="h-3 w-3" /> CSV
+            <Download className="h-3 w-3 text-brand-accent" /> CSV
           </button>
           <button
             onClick={() => downloadFindingsPdf(analysisResults)}
-            className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-border/50 hover:bg-muted/50 hover:border-border transition-colors"
+            className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-200"
             title="Export findings as printable PDF"
           >
-            <Download className="h-3 w-3" /> PDF
+            <Download className="h-3 w-3 text-brand-accent" /> PDF
           </button>
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="relative space-y-2">
         {groups.map((g) => {
           const isOpen = openSections.has(g.section);
           const Icon = SECTION_ICONS[g.section] ?? AlertTriangle;
           const borderSev = SEV_ORDER[g.highestSeverity] ?? "info";
+          const hex = SEV_HEX[borderSev];
           return (
             <div
               key={g.section}
-              className={`rounded-xl border border-border/60 border-l-[3px] ${SEVERITY_BORDER[borderSev]} bg-card shadow-card overflow-hidden transition-all`}
+              className="relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+              style={{
+                borderLeftColor: hex,
+                background: `linear-gradient(135deg, ${hex}08, ${hex}02)`,
+              }}
             >
+              <div className="absolute inset-0 pointer-events-none">
+                <div
+                  className="absolute -top-3 -left-3 h-8 w-8 rounded-full blur-[16px] opacity-15"
+                  style={{ backgroundColor: hex }}
+                />
+              </div>
+              <div
+                className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                style={{ background: `linear-gradient(90deg, ${hex}25, transparent 50%)` }}
+              />
               <button
                 onClick={() => toggleSection(g.section)}
-                className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-muted/30 transition-colors group"
+                className="relative w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors group"
               >
-                <Icon className="h-4 w-4 text-muted-foreground/70 group-hover:text-foreground/80 transition-colors shrink-0" />
-                <span className="text-[13px] font-display font-semibold tracking-tight text-foreground flex-1 min-w-0 truncate">
+                <Icon
+                  className="h-4 w-4 transition-colors shrink-0"
+                  style={{ color: hex, opacity: 0.7 }}
+                />
+                <span className="text-[13px] font-display font-bold tracking-tight text-foreground flex-1 min-w-0 truncate">
                   {g.section}
                 </span>
                 <span className="flex items-center gap-1.5 shrink-0">
@@ -763,10 +901,16 @@ function FindingsPanel({
                     const count = g.sevCounts[sev];
                     if (count === 0) return null;
                     const badge = SEV_BADGE[sev];
+                    const sevHex = SEV_HEX[sev];
                     return (
                       <span
                         key={sev}
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${badge.bg} ${badge.text}`}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md border"
+                        style={{
+                          color: sevHex,
+                          backgroundColor: `${sevHex}14`,
+                          borderColor: `${sevHex}25`,
+                        }}
                       >
                         {count}
                         {badge.label}
@@ -774,15 +918,19 @@ function FindingsPanel({
                     );
                   })}
                 </span>
-                <span className="text-xs font-semibold text-muted-foreground/60 tabular-nums shrink-0 w-6 text-right">
+                <span
+                  className="text-xs font-bold tabular-nums shrink-0 w-6 text-right"
+                  style={{ color: hex, opacity: 0.6 }}
+                >
                   {g.findings.length}
                 </span>
                 <ChevronRight
-                  className={`h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+                  style={{ color: hex, opacity: 0.5 }}
                 />
               </button>
               {isOpen && (
-                <div className="px-3 pb-3 space-y-1.5 border-t border-border/40 pt-2.5">
+                <div className="relative px-3 pb-3 space-y-1.5 border-t border-white/[0.06] pt-2.5">
                   {g.findings.map((f, i) => (
                     <FindingCard
                       key={`${f.firewall}-${f.id}-${i}`}

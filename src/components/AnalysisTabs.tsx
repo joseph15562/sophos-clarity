@@ -266,18 +266,12 @@ function fileLabel(f: ParsedFile) {
 
 function SecurityWidgetShell({
   children,
-  className = "",
+  className: _className = "",
 }: {
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <div
-      className={`rounded-[22px] shadow-[0_0_0_1px_rgba(32,6,247,0.06),0_12px_40px_-8px_rgba(32,6,247,0.10),0_4px_16px_-4px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(0,237,255,0.06),0_12px_40px_-8px_rgba(0,0,0,0.35),0_4px_16px_-4px_rgba(0,0,0,0.25)] ${className}`}
-    >
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }
 
 export function AnalysisTabs({
@@ -498,7 +492,7 @@ export function AnalysisTabs({
               </SecurityWidgetShell>
 
               {totalFindings > 0 && (
-                <div className="flex flex-wrap items-center gap-2" data-tour="export-buttons">
+                <div className="flex flex-wrap items-center gap-2.5" data-tour="export-buttons">
                   <TourHint
                     tourId="export-buttons"
                     title="Export Options"
@@ -508,20 +502,20 @@ export function AnalysisTabs({
                     variant="outline"
                     size="sm"
                     onClick={() => downloadRiskRegisterCSV(analysisResult, branding.customerName)}
-                    className="gap-1.5 text-xs"
+                    className="relative overflow-hidden gap-1.5 text-xs font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.06] to-transparent hover:from-brand-accent/[0.12] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
                     data-tour="export-risk-register"
                   >
-                    <Download className="h-3.5 w-3.5" />
+                    <Download className="h-3.5 w-3.5 text-brand-accent" />
                     Export Risk Register (CSV)
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => downloadRiskRegisterExcel(analysisResult, branding.customerName)}
-                    className="gap-1.5 text-xs"
+                    className="relative overflow-hidden gap-1.5 text-xs font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.06] to-transparent hover:from-brand-accent/[0.12] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
                     data-tour="export-excel"
                   >
-                    <Download className="h-3.5 w-3.5" />
+                    <Download className="h-3.5 w-3.5 text-brand-accent" />
                     Export Excel
                   </Button>
                   <Button
@@ -534,10 +528,10 @@ export function AnalysisTabs({
                         logoUrl: branding.logoUrl ?? undefined,
                       })
                     }
-                    className="gap-1.5 text-xs"
+                    className="relative overflow-hidden gap-1.5 text-xs font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.06] to-transparent hover:from-brand-accent/[0.12] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
                     data-tour="export-interactive-html"
                   >
-                    <Download className="h-3.5 w-3.5" />
+                    <Download className="h-3.5 w-3.5 text-brand-accent" />
                     Export Interactive HTML
                   </Button>
                 </div>
@@ -941,24 +935,24 @@ export function AnalysisTabs({
                   )}
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="info-pill">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Coverage
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
                       See where controls are present, partial, or missing
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="info-pill">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Priority
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
                       Focus remediation on the frameworks that matter most
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="info-pill">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Readiness
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">

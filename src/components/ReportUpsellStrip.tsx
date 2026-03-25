@@ -85,16 +85,30 @@ export function ReportUpsellStrip({
   if (!activeRule) return null;
 
   return (
-    <div className="w-full rounded-xl border border-border/50 bg-card px-4 py-2.5 flex items-center gap-3">
-      <Info className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-      <p className="text-xs sm:text-sm text-foreground flex-1 min-w-0 leading-snug">
+    <div
+      className="relative overflow-hidden w-full rounded-xl border border-white/[0.06] px-4 py-3 flex items-center gap-3 shadow-card transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      style={{ background: "linear-gradient(135deg, rgba(32,6,247,0.07), rgba(32,6,247,0.02))" }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-4 -left-4 h-12 w-12 rounded-full blur-[24px] opacity-20 bg-brand-accent" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.2), transparent)",
+        }}
+      />
+      <div className="relative flex h-7 w-7 items-center justify-center rounded-lg border border-brand-accent/20 bg-brand-accent/10 shrink-0">
+        <Info className="h-3.5 w-3.5 text-brand-accent" aria-hidden />
+      </div>
+      <p className="relative text-xs sm:text-sm font-medium text-foreground flex-1 min-w-0 leading-snug">
         {activeRule.message}
       </p>
       <Button
         type="button"
         variant="ghost"
         size="icon"
-        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+        className="relative h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
         aria-label="Dismiss"
         onClick={() => handleDismiss(activeRule.id)}
       >

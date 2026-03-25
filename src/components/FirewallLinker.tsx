@@ -334,24 +334,24 @@ export function FirewallLinker({
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 Why link
               </p>
               <p className="text-sm font-semibold text-foreground mt-1">
                 Tie exports to live managed firewalls
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 What it adds
               </p>
               <p className="text-sm font-semibold text-foreground mt-1">
                 Current device context, tenancy, and estate metadata
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 Best for
               </p>
               <p className="text-sm font-semibold text-foreground mt-1">

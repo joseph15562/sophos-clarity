@@ -83,31 +83,47 @@ export function AssessmentPulse({
   const firstOnly = history.length <= 1;
 
   return (
-    <Card className="rounded-xl border border-border/50 bg-card">
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <CardTitle className="text-base font-display">Assessment Pulse</CardTitle>
+    <div
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 shadow-card transition-all duration-200 hover:shadow-elevated hover:border-white/[0.12]"
+      style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.08), rgba(32,6,247,0.02))" }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full blur-[28px] opacity-25 bg-brand-accent" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
+        }}
+      />
+
+      <div className="relative flex items-center gap-2 mb-3">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-brand-accent/20 bg-brand-accent/10">
+          <Activity className="h-3.5 w-3.5 text-brand-accent" aria-hidden />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+        <span className="text-sm font-display font-bold tracking-tight text-foreground">
+          Assessment Pulse
+        </span>
+      </div>
+
+      <div className="relative space-y-3 text-sm">
         {displayScore !== undefined && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-2xl font-extrabold tabular-nums">{displayScore}</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="text-3xl font-black tabular-nums text-foreground">{displayScore}</span>
             {displayGrade && (
-              <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-muted text-foreground">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-md border border-white/[0.08] bg-white/[0.04] text-foreground">
                 {displayGrade}
               </span>
             )}
             {firstOnly && (
-              <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-brand-accent/20 bg-brand-accent/10 text-brand-accent">
                 First assessment
               </span>
             )}
             {!firstOnly && delta !== null && delta !== 0 && (
               <span
-                className={`inline-flex items-center gap-1 text-xs font-semibold tabular-nums ${
-                  delta > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"
+                className={`inline-flex items-center gap-1 text-xs font-bold tabular-nums ${
+                  delta > 0 ? "text-[#00F2B3]" : "text-[#EA0022]"
                 }`}
               >
                 {delta > 0 ? (
@@ -127,13 +143,13 @@ export function AssessmentPulse({
           </div>
         )}
         <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground tabular-nums">{count30}</span> assessment
+          <span className="font-bold text-foreground tabular-nums">{count30}</span> assessment
           {count30 === 1 ? "" : "s"} in the last 30 days
         </p>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
+        <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
           Keep assessing monthly to track improvement
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

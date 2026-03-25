@@ -113,8 +113,8 @@ export function RemediationRoadmap({ analysisResults }: Props) {
             </p>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card/70 px-4 py-3 text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="info-pill text-right">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
             Planned horizon
           </p>
           <p className="text-3xl font-black text-foreground mt-1">{totalWeeks}</p>

@@ -138,14 +138,14 @@ export function UploadSection({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 max-w-3xl mx-auto">
-            <div className="rounded-2xl border border-border bg-card/70 px-4 py-3 text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="info-pill text-left">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 Manual review
               </p>
               <p className="text-2xl font-black text-foreground mt-1">3–4 hours</p>
             </div>
             <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] px-4 py-3 text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 With FireComply
               </p>
               <p className="text-2xl font-black text-[#00774a] dark:text-[#00F2B3] mt-1">
@@ -153,7 +153,7 @@ export function UploadSection({
               </p>
             </div>
             <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] px-4 py-3 text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                 Effort saved
               </p>
               <p className="text-2xl font-black text-foreground mt-1">90%+</p>
@@ -302,14 +302,14 @@ export function UploadSection({
 
           {!hasFiles && (
             <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[340px] lg:max-w-[420px]">
-              <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="info-pill">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                   Supported inputs
                 </p>
                 <p className="text-sm font-semibold text-foreground mt-1">HTML, HTM, XML</p>
               </div>
               <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                   Best use
                 </p>
                 <p className="text-sm font-semibold text-foreground mt-1">
@@ -390,8 +390,8 @@ export function UploadSection({
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[360px] lg:max-w-[430px]">
-                  <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="info-pill">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Best for
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
@@ -399,7 +399,7 @@ export function UploadSection({
                     </p>
                   </div>
                   <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Outcome
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
@@ -410,24 +410,24 @@ export function UploadSection({
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="info-pill">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                     Compare
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-1">
                     Rank sites and customers side-by-side
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="info-pill">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                     Refresh
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-1">
                     Re-run posture checks without chasing exports
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="info-pill">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                     Scale
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-1">
@@ -499,8 +499,8 @@ export function UploadSection({
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2 min-w-full lg:min-w-[360px] lg:max-w-[430px]">
-                  <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="info-pill">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Best for
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
@@ -508,7 +508,7 @@ export function UploadSection({
                     </p>
                   </div>
                   <div className="rounded-2xl border border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                       Outcome
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
@@ -519,24 +519,24 @@ export function UploadSection({
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="info-pill">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                     Brand
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-1">
                     Tailor outputs for the customer and stakeholder audience
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="info-pill">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                     Align
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-1">
                     Map findings to the frameworks that drive remediation
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="info-pill">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
                     Elevate
                   </p>
                   <p className="text-sm font-semibold text-foreground mt-1">

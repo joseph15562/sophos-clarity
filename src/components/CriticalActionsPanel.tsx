@@ -11,20 +11,27 @@ interface Props {
 
 const SEV_ORDER: Record<Severity, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
-const SEV_COLORS: Record<Severity, { badge: string; border: string }> = {
-  critical: { badge: "bg-[#EA0022]/10 text-[#EA0022]", border: "border-l-[#EA0022]" },
+const SEV_COLORS: Record<Severity, { badge: string; border: string; hex: string }> = {
+  critical: {
+    badge: "bg-[#EA0022]/10 text-[#EA0022]",
+    border: "border-l-[#EA0022]",
+    hex: "#EA0022",
+  },
   high: {
     badge: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
     border: "border-l-[#F29400]",
+    hex: "#F29400",
   },
   medium: {
     badge: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
     border: "border-l-[#F8E300]",
+    hex: "#F8E300",
   },
-  low: { badge: "bg-[#00F2B3]/10 text-[#00F2B3]", border: "border-l-[#00F2B3]" },
+  low: { badge: "bg-[#00F2B3]/10 text-[#00F2B3]", border: "border-l-[#00F2B3]", hex: "#00F2B3" },
   info: {
     badge: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]",
     border: "border-l-[#009CFB]",
+    hex: "#009CFB",
   },
 };
 
@@ -87,56 +94,94 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
   if (actions.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="h-7 w-7 rounded-lg bg-[#EA0022]/10 flex items-center justify-center">
+    <div
+      className="relative overflow-hidden rounded-2xl border border-white/[0.06] p-5 space-y-4 shadow-card"
+      style={{ background: "linear-gradient(145deg, rgba(234,0,34,0.06), rgba(234,0,34,0.015))" }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full blur-[32px] opacity-15 bg-[#EA0022]" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(234,0,34,0.22), transparent)",
+        }}
+      />
+      <div className="relative flex items-center gap-2.5">
+        <div
+          className="h-8 w-8 rounded-xl flex items-center justify-center border border-white/[0.08]"
+          style={{ backgroundColor: "rgba(234,0,34,0.12)" }}
+        >
           <AlertTriangle className="h-4 w-4 text-[#EA0022]" />
         </div>
         <div>
           <h3 className="text-sm font-display tracking-tight font-bold text-foreground">
             Top {actions.length} Critical Actions
           </h3>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground/80">
             Highest-impact remediations ranked by severity and expected score improvement
           </p>
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="relative space-y-2.5">
         {actions.map((f, i) => {
           const colors = SEV_COLORS[f.severity];
+          const hex = colors.hex;
           const expanded = expandedIdx === i;
           return (
             <div
               key={`${f.id}-${i}`}
-              className={`rounded-lg border border-border border-l-[3px] ${colors.border} bg-background/50 overflow-hidden`}
+              className="relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+              style={{
+                borderLeftColor: hex,
+                background: `linear-gradient(135deg, ${hex}0C, ${hex}03)`,
+              }}
             >
+              <div className="absolute inset-0 pointer-events-none">
+                <div
+                  className="absolute -top-4 -left-4 h-10 w-10 rounded-full blur-[20px] opacity-15"
+                  style={{ backgroundColor: hex }}
+                />
+              </div>
+              <div
+                className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                style={{ background: `linear-gradient(90deg, ${hex}30, transparent 60%)` }}
+              />
               <button
                 onClick={() => setExpandedIdx(expanded ? null : i)}
-                className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                className="relative w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-white/[0.02] transition-colors"
               >
-                <span className="shrink-0 text-xs font-black text-muted-foreground tabular-nums w-5 text-right mt-0.5">
+                <span
+                  className="shrink-0 text-xs font-black tabular-nums w-5 text-right mt-0.5"
+                  style={{ color: hex }}
+                >
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${colors.badge}`}
+                      className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md border"
+                      style={{
+                        color: hex,
+                        backgroundColor: `${hex}14`,
+                        borderColor: `${hex}25`,
+                      }}
                     >
                       {f.severity}
                     </span>
-                    <span className="text-xs font-semibold text-foreground">{f.title}</span>
+                    <span className="text-xs font-bold text-foreground">{f.title}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">
                     {f.firewall}
-                    <span className="mx-1.5 text-border">·</span>
+                    <span className="mx-1.5 text-white/10">·</span>
                     Est. impact:{" "}
-                    <span className="font-semibold text-[#00F2B3]">
+                    <span className="font-bold text-[#00F2B3]">
                       {estimateImpact(f.severity, avgScore)}
                     </span>
                   </p>
                 </div>
-                <span className="shrink-0 text-muted-foreground mt-1">
+                <span className="shrink-0 mt-1" style={{ color: hex }}>
                   {expanded ? (
                     <ChevronDown className="h-3.5 w-3.5" />
                   ) : (
@@ -146,17 +191,17 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
               </button>
 
               {expanded && (
-                <div className="px-4 pb-3 pl-12 space-y-2 border-t border-border/50 pt-2.5">
+                <div className="relative px-4 pb-3.5 pl-12 space-y-2 border-t border-white/[0.06] pt-2.5">
                   {f.remediation && (
                     <div>
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
+                      <p className="text-[10px] font-bold text-brand-accent uppercase tracking-[0.18em] mb-0.5">
                         Recommended Action
                       </p>
                       <p className="text-[11px] text-foreground leading-relaxed">{f.remediation}</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                    <p className="text-[10px] font-bold text-brand-accent uppercase tracking-[0.18em] mb-0.5 flex items-center gap-1">
                       <FileSearch className="h-3 w-3" /> Evidence Source
                     </p>
                     <p className="text-[11px] text-foreground leading-relaxed">
@@ -168,7 +213,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
                         </>
                       )}
                       {f.confidence && (
-                        <span className="ml-2 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        <span className="ml-2 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md border border-white/[0.08] bg-white/[0.04] text-muted-foreground">
                           {f.confidence} confidence
                         </span>
                       )}
@@ -177,7 +222,7 @@ export function CriticalActionsPanel({ analysisResults, onExplainFinding }: Prop
                   {onExplainFinding && (
                     <button
                       onClick={() => onExplainFinding(f.title)}
-                      className="text-[10px] font-medium text-brand-accent hover:underline flex items-center gap-1"
+                      className="text-[10px] font-bold text-brand-accent hover:underline flex items-center gap-1"
                     >
                       <Shield className="h-3 w-3" /> Explain with AI
                     </button>

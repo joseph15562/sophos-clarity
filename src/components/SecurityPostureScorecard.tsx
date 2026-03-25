@@ -22,6 +22,7 @@ interface ScorecardCategory {
   icon: typeof CheckCircle2;
   color: string;
   bgColor: string;
+  hex: string;
 }
 
 function toPosture(pct: number, details: string): PostureLabel {
@@ -39,6 +40,7 @@ function postureStyle(p: PostureLabel): {
   icon: typeof CheckCircle2;
   color: string;
   bgColor: string;
+  hex: string;
 } {
   switch (p) {
     case "Good":
@@ -46,17 +48,24 @@ function postureStyle(p: PostureLabel): {
         icon: CheckCircle2,
         color: "text-[#00774a] dark:text-[#00F2B3]",
         bgColor: "bg-[#00F2B3]/10",
+        hex: "#00F2B3",
       };
     case "Needs Review":
       return {
         icon: AlertTriangle,
         color: "text-[#b8a200] dark:text-[#F8E300]",
         bgColor: "bg-[#F8E300]/10",
+        hex: "#F8E300",
       };
     case "High Risk":
-      return { icon: XCircle, color: "text-[#EA0022]", bgColor: "bg-[#EA0022]/10" };
+      return { icon: XCircle, color: "text-[#EA0022]", bgColor: "bg-[#EA0022]/10", hex: "#EA0022" };
     case "Insufficient Data":
-      return { icon: MinusCircle, color: "text-muted-foreground", bgColor: "bg-muted/20" };
+      return {
+        icon: MinusCircle,
+        color: "text-muted-foreground",
+        bgColor: "bg-muted/20",
+        hex: "#888888",
+      };
   }
 }
 
@@ -127,14 +136,14 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
   const overallStyle = postureStyle(overallPosture);
   const OverallIcon = overallStyle.icon;
 
-  const gradeColor =
+  const gradeHex =
     grade === "A" || grade === "B"
-      ? "text-[#00774a] dark:text-[#00F2B3]"
+      ? "#00F2B3"
       : grade === "C"
-        ? "text-[#b8a200] dark:text-[#F8E300]"
+        ? "#F8E300"
         : grade === "D"
-          ? "text-[#c47800] dark:text-[#F29400]"
-          : "text-[#EA0022]";
+          ? "#F29400"
+          : "#EA0022";
 
   const visibleCats = expanded ? categories : categories.slice(0, 4);
 
@@ -159,38 +168,68 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
               customer conversations, and SE-led validation.
             </p>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-card/70 px-4 py-3 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70">
-            <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-transparent ${overallStyle.bgColor}`}
-            >
-              <OverallIcon className={`h-3.5 w-3.5 ${overallStyle.color}`} />
-              <span className={`text-xs font-bold ${overallStyle.color}`}>{overallPosture}</span>
+          <div
+            className="relative overflow-hidden flex items-center gap-4 rounded-2xl border border-white/[0.08] px-5 py-4 shadow-elevated transition-all duration-200 hover:scale-[1.02] hover:border-white/[0.12]"
+            style={{
+              background: `linear-gradient(135deg, ${overallStyle.hex}14, ${overallStyle.hex}06)`,
+            }}
+          >
+            <div className="absolute inset-0 pointer-events-none">
+              <div
+                className="absolute -top-5 -right-5 h-16 w-16 rounded-full blur-[28px] opacity-25"
+                style={{ backgroundColor: overallStyle.hex }}
+              />
             </div>
-            <div className="text-right">
-              <div className={`text-3xl font-black leading-none ${gradeColor}`}>{overall}</div>
-              <div className="text-[10px] font-medium text-muted-foreground">Grade {grade}</div>
+            <div
+              className="absolute inset-x-0 top-0 h-px pointer-events-none"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${overallStyle.hex}28, transparent)`,
+              }}
+            />
+            <div
+              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full border"
+              style={{
+                backgroundColor: `${overallStyle.hex}14`,
+                borderColor: `${overallStyle.hex}25`,
+              }}
+            >
+              <OverallIcon className="h-3.5 w-3.5" style={{ color: overallStyle.hex }} />
+              <span className="text-xs font-bold" style={{ color: overallStyle.hex }}>
+                {overallPosture}
+              </span>
+            </div>
+            <div className="relative text-right">
+              <div
+                className="text-4xl font-black leading-none tabular-nums"
+                style={{ color: gradeHex }}
+              >
+                {overall}
+              </div>
+              <div className="text-[10px] font-bold text-muted-foreground/80 tracking-wide mt-0.5">
+                Grade {grade}
+              </div>
             </div>
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Score intent
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Summarise overall control health in one executive view
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Best for
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Board-ready reviews, service reporting, and technical triage
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Trust note
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
@@ -222,44 +261,73 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
         {/* Category rows */}
         {visibleCats.map((cat) => {
           const Icon = cat.icon;
+          const hex = cat.hex;
           return (
             <div
               key={cat.label}
-              className="flex items-center gap-3 rounded-2xl border border-border/50 bg-card/70 px-3.5 py-3 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70"
+              className="relative overflow-hidden flex items-center gap-3.5 rounded-2xl border border-white/[0.06] px-4 py-3.5 shadow-card transition-all duration-200 hover:scale-[1.01] hover:shadow-elevated hover:border-white/[0.12]"
+              style={{ background: `linear-gradient(135deg, ${hex}10, ${hex}05)` }}
             >
-              <div
-                className={`h-8 w-8 rounded-xl ${cat.bgColor} flex items-center justify-center shrink-0 border border-transparent`}
-              >
-                <Icon className={`h-3.5 w-3.5 ${cat.color}`} />
+              {/* Corner glow */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div
+                  className="absolute -top-4 -left-4 h-14 w-14 rounded-full blur-[24px] opacity-20"
+                  style={{ backgroundColor: hex }}
+                />
               </div>
-              <div className="flex-1 min-w-0">
+              {/* Top accent line */}
+              <div
+                className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                style={{ background: `linear-gradient(90deg, transparent, ${hex}30, transparent)` }}
+              />
+              {/* Left severity edge */}
+              <div
+                className="absolute left-0 inset-y-2 w-[3px] rounded-full"
+                style={{ backgroundColor: hex, opacity: 0.5 }}
+              />
+
+              <div
+                className="relative h-9 w-9 rounded-xl flex items-center justify-center shrink-0 border border-white/[0.08]"
+                style={{ background: `${hex}18` }}
+              >
+                <Icon className="h-4 w-4" style={{ color: hex }} />
+              </div>
+              <div className="relative flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">{cat.label}</span>
+                  <span className="text-sm font-bold text-foreground tracking-tight">
+                    {cat.label}
+                  </span>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-transparent ${cat.bgColor} ${cat.color}`}
+                    className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border"
+                    style={{
+                      color: hex,
+                      backgroundColor: `${hex}14`,
+                      borderColor: `${hex}25`,
+                    }}
                   >
                     {cat.posture}
                   </span>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{cat.details}</p>
+                <p className="text-[11px] text-muted-foreground/80 mt-0.5 truncate">
+                  {cat.details}
+                </p>
               </div>
               {/* Score bar */}
-              <div className="w-16 shrink-0">
-                <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+              <div className="relative w-20 shrink-0">
+                <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${cat.score}%`,
-                      backgroundColor:
-                        cat.posture === "Good"
-                          ? "#00F2B3"
-                          : cat.posture === "Needs Review"
-                            ? "#F8E300"
-                            : "#EA0022",
+                      background: `linear-gradient(90deg, ${hex}90, ${hex})`,
+                      boxShadow: `0 0 8px ${hex}40`,
                     }}
                   />
                 </div>
-                <span className="text-[9px] text-muted-foreground mt-0.5 block text-right">
+                <span
+                  className="text-[10px] font-bold mt-1 block text-right tabular-nums"
+                  style={{ color: hex }}
+                >
                   {cat.score}%
                 </span>
               </div>

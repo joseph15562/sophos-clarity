@@ -223,24 +223,24 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
           </div>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Pass
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Controls appear aligned in the current firewall posture
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Partial
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Controls need stronger evidence or fuller implementation
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Fail
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
@@ -273,7 +273,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       <div className="rounded-2xl border border-border/50 bg-card/60 px-4 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Status legend
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">

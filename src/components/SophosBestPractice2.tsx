@@ -496,24 +496,24 @@ export function SophosBestPractice({
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Why it matters
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Scoring should match the controls your licence actually enables
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Best use
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Validate expected protections before interpreting best-practice gaps
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Outcome
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
@@ -645,24 +645,24 @@ export function SophosBestPractice({
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Score intent
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Show how closely the firewall aligns to Sophos guidance
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Best for
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">
               Executive posture reviews and technical gap validation
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="info-pill">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
               Outcome
             </p>
             <p className="text-sm font-semibold text-foreground mt-1">

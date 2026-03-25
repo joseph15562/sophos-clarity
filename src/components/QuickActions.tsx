@@ -50,17 +50,28 @@ export function QuickActions({ onNavigate }: QuickActionsProps) {
           key={id}
           type="button"
           onClick={() => onNavigate?.(id)}
-          className="flex flex-col items-start gap-2 rounded-xl border border-border/50 bg-card p-4 text-left transition-colors hover:bg-accent/50 cursor-pointer"
+          className="group relative overflow-hidden flex flex-col items-start gap-2.5 rounded-xl border border-white/[0.06] p-4 text-left shadow-card transition-all duration-200 hover:scale-[1.03] hover:border-white/[0.12] hover:shadow-elevated cursor-pointer"
+          style={{ background: `linear-gradient(145deg, ${color}12, ${color}05)` }}
         >
+          <div className="absolute inset-0 pointer-events-none">
+            <div
+              className="absolute -top-5 -right-5 h-14 w-14 rounded-full blur-[24px] opacity-20 transition-opacity duration-200 group-hover:opacity-35"
+              style={{ backgroundColor: color }}
+            />
+          </div>
+          <div
+            className="absolute inset-x-0 top-0 h-px pointer-events-none"
+            style={{ background: `linear-gradient(90deg, transparent, ${color}28, transparent)` }}
+          />
           <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${color}20` }}
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] transition-transform duration-200 group-hover:scale-110"
+            style={{ backgroundColor: `${color}18` }}
           >
             <Icon className="h-4 w-4" style={{ color }} />
           </span>
-          <div className="space-y-0.5">
-            <p className="text-xs font-semibold text-foreground">{title}</p>
-            <p className="text-[10px] text-muted-foreground">{description}</p>
+          <div className="relative space-y-0.5">
+            <p className="text-xs font-bold text-foreground tracking-tight">{title}</p>
+            <p className="text-[10px] text-muted-foreground/80">{description}</p>
           </div>
         </button>
       ))}

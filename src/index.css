@@ -261,6 +261,44 @@
     @apply rounded-xl border border-border/50 bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70;
   }
 
+  .info-pill {
+    @apply relative overflow-hidden rounded-2xl border border-white/[0.06] px-5 py-4 shadow-card;
+    @apply transition-all duration-200 hover:scale-[1.02] hover:border-white/[0.12] hover:shadow-elevated;
+    background: linear-gradient(145deg, rgba(32, 6, 247, 0.07), rgba(32, 6, 247, 0.02));
+  }
+  .dark .info-pill {
+    background: linear-gradient(145deg, rgba(0, 237, 255, 0.09), rgba(0, 237, 255, 0.025));
+  }
+  .info-pill::before {
+    content: "";
+    position: absolute;
+    top: -1.5rem;
+    right: -1.5rem;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 9999px;
+    filter: blur(28px);
+    opacity: 0.3;
+    background: rgb(32, 6, 247);
+    pointer-events: none;
+  }
+  .dark .info-pill::before {
+    background: rgb(0, 237, 255);
+    opacity: 0.35;
+  }
+  .info-pill::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(32, 6, 247, 0.2), transparent);
+    pointer-events: none;
+  }
+  .dark .info-pill::after {
+    background: linear-gradient(90deg, transparent, rgba(0, 237, 255, 0.22), transparent);
+  }
+
   .stat-value {
     @apply text-2xl font-bold tracking-tight tabular-nums;
   }
