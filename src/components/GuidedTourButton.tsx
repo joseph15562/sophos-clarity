@@ -49,6 +49,13 @@ import {
   startPowerUserTour,
 } from "@/lib/guided-tours";
 
+const LBL =
+  "flex items-center gap-2 px-2.5 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-brand-accent";
+const ITEM =
+  "relative rounded-xl px-2.5 py-2 text-[12px] font-medium text-foreground/90 cursor-pointer transition-all duration-150 hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-foreground";
+const ICON = "h-3.5 w-3.5 mr-2.5 shrink-0";
+const SEP = "my-1.5 h-px bg-white/[0.06]";
+
 interface Props {
   hasFiles: boolean;
   hasReports: boolean;
@@ -75,49 +82,65 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
           Tours
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="top" className="w-56 max-h-[70vh] overflow-y-auto">
+      <DropdownMenuContent
+        align="end"
+        side="top"
+        className="relative overflow-hidden w-64 max-h-[70vh] overflow-y-auto rounded-2xl border-white/[0.08] backdrop-blur-xl shadow-elevated p-2"
+        style={{
+          background: "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26,0.98))",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(0,242,179,0.25), transparent)",
+          }}
+        />
+        <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full blur-[28px] opacity-15 pointer-events-none bg-[#00F2B3]" />
+
         {/* Getting Started */}
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <DropdownMenuLabel className={LBL}>
+            <Compass className="h-3 w-3 text-[#00F2B3]" />
             Getting Started
           </DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => startGettingStartedTour()}>
-            <Compass className="h-3.5 w-3.5 mr-2 shrink-0" /> Getting Started
+          <DropdownMenuItem onClick={() => startGettingStartedTour()} className={ITEM}>
+            <Compass className={ICON} style={{ color: "#00F2B3" }} /> Getting Started
           </DropdownMenuItem>
         </DropdownMenuGroup>
 
         {/* Analysis & Findings */}
         {hasFiles && (
           <>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className={SEP} />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className={LBL}>
+                <BarChart3 className="h-3 w-3 text-brand-accent" />
                 Analysis & Findings
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => startDashboardTour()}>
-                <BarChart3 className="h-3.5 w-3.5 mr-2 shrink-0" /> Dashboard Guide
+              <DropdownMenuItem onClick={() => startDashboardTour()} className={ITEM}>
+                <BarChart3 className={ICON} style={{ color: "#2006F7" }} /> Dashboard Guide
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startRiskScoreTour(cb)}>
-                <Gauge className="h-3.5 w-3.5 mr-2 shrink-0" /> Risk Score Explained
+              <DropdownMenuItem onClick={() => startRiskScoreTour(cb)} className={ITEM}>
+                <Gauge className={ICON} style={{ color: "#F29400" }} /> Risk Score Explained
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startComplianceTour(cb)}>
-                <Shield className="h-3.5 w-3.5 mr-2 shrink-0" /> Compliance Mapping
+              <DropdownMenuItem onClick={() => startComplianceTour(cb)} className={ITEM}>
+                <Shield className={ICON} style={{ color: "#00F2B3" }} /> Compliance Mapping
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startConfigDiffTour(cb)}>
-                <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Config Comparison
+              <DropdownMenuItem onClick={() => startConfigDiffTour(cb)} className={ITEM}>
+                <GitCompare className={ICON} style={{ color: "#00EDFF" }} /> Config Comparison
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startRemediationTour(cb)}>
-                <Wrench className="h-3.5 w-3.5 mr-2 shrink-0" /> Remediation Workflow
+              <DropdownMenuItem onClick={() => startRemediationTour(cb)} className={ITEM}>
+                <Wrench className={ICON} style={{ color: "#F29400" }} /> Remediation Workflow
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startBaselineTour(cb)}>
-                <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Baselines & Remediation
-                Simulator
+              <DropdownMenuItem onClick={() => startBaselineTour(cb)} className={ITEM}>
+                <GitCompare className={ICON} style={{ color: "#5A00FF" }} /> Baselines & Simulator
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startMapsTour(cb)}>
-                <Map className="h-3.5 w-3.5 mr-2 shrink-0" /> Geographic & Network Maps
+              <DropdownMenuItem onClick={() => startMapsTour(cb)} className={ITEM}>
+                <Map className={ICON} style={{ color: "#009CFB" }} /> Geographic & Network Maps
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startWidgetTour()}>
-                <LayoutGrid className="h-3.5 w-3.5 mr-2 shrink-0" /> Widget Customiser
+              <DropdownMenuItem onClick={() => startWidgetTour()} className={ITEM}>
+                <LayoutGrid className={ICON} style={{ color: "#2006F7" }} /> Widget Customiser
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>
@@ -126,16 +149,17 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
         {/* Setup & Integration */}
         {!isGuest && (
           <>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className={SEP} />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className={LBL}>
+                <Link2 className="h-3 w-3 text-[#00EDFF]" />
                 Setup & Integration
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => startCentralTour(cb)}>
-                <Link2 className="h-3.5 w-3.5 mr-2 shrink-0" /> Connect to Sophos Central
+              <DropdownMenuItem onClick={() => startCentralTour(cb)} className={ITEM}>
+                <Link2 className={ICON} style={{ color: "#00EDFF" }} /> Connect to Sophos Central
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startConnectorTour(cb)}>
-                <Download className="h-3.5 w-3.5 mr-2 shrink-0" /> Set Up Connector Agent
+              <DropdownMenuItem onClick={() => startConnectorTour(cb)} className={ITEM}>
+                <Download className={ICON} style={{ color: "#00F2B3" }} /> Set Up Connector Agent
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>
@@ -144,19 +168,20 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
         {/* Exports & Sharing */}
         {(hasReports || !isGuest) && (
           <>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className={SEP} />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className={LBL}>
+                <Share2 className="h-3 w-3 text-[#5A00FF]" />
                 Exports & Sharing
               </DropdownMenuLabel>
               {hasReports && (
-                <DropdownMenuItem onClick={() => startExportTour()}>
-                  <Download className="h-3.5 w-3.5 mr-2 shrink-0" /> How to Export
+                <DropdownMenuItem onClick={() => startExportTour()} className={ITEM}>
+                  <Download className={ICON} style={{ color: "#5A00FF" }} /> How to Export
                 </DropdownMenuItem>
               )}
               {!isGuest && (
-                <DropdownMenuItem onClick={() => startPortalTour(cb)}>
-                  <Share2 className="h-3.5 w-3.5 mr-2 shrink-0" /> Client Portal
+                <DropdownMenuItem onClick={() => startPortalTour(cb)} className={ITEM}>
+                  <Share2 className={ICON} style={{ color: "#2006F7" }} /> Client Portal
                 </DropdownMenuItem>
               )}
             </DropdownMenuGroup>
@@ -166,38 +191,40 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
         {/* Team & Settings */}
         {!isGuest && (
           <>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className={SEP} />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className={LBL}>
+                <Building2 className="h-3 w-3 text-[#F29400]" />
                 Team & Settings
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => startManagementTour(cb)}>
-                <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" /> Management Panel
+              <DropdownMenuItem onClick={() => startManagementTour(cb)} className={ITEM}>
+                <Building2 className={ICON} style={{ color: "#F29400" }} /> Management Panel
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startTeamTour(cb)}>
-                <Users className="h-3.5 w-3.5 mr-2 shrink-0" /> Team & Security
+              <DropdownMenuItem onClick={() => startTeamTour(cb)} className={ITEM}>
+                <Users className={ICON} style={{ color: "#009CFB" }} /> Team & Security
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startAlertsTour(cb)}>
-                <Bell className="h-3.5 w-3.5 mr-2 shrink-0" /> Alerts & Notifications
+              <DropdownMenuItem onClick={() => startAlertsTour(cb)} className={ITEM}>
+                <Bell className={ICON} style={{ color: "#EA0022" }} /> Alerts & Notifications
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startSchedulingTour(cb)}>
-                <Clock className="h-3.5 w-3.5 mr-2 shrink-0" /> Scheduling
+              <DropdownMenuItem onClick={() => startSchedulingTour(cb)} className={ITEM}>
+                <Clock className={ICON} style={{ color: "#00EDFF" }} /> Scheduling
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startTenantDashboardTour(cb)}>
-                <BarChart3 className="h-3.5 w-3.5 mr-2 shrink-0" /> Tenant Dashboard
+              <DropdownMenuItem onClick={() => startTenantDashboardTour(cb)} className={ITEM}>
+                <BarChart3 className={ICON} style={{ color: "#2006F7" }} /> Tenant Dashboard
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </>
         )}
 
         {/* Tips */}
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className={SEP} />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <DropdownMenuLabel className={LBL}>
+            <Zap className="h-3 w-3 text-[#F8C300]" />
             Tips
           </DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => startPowerUserTour()}>
-            <Zap className="h-3.5 w-3.5 mr-2 shrink-0" /> Power User Tips
+          <DropdownMenuItem onClick={() => startPowerUserTour()} className={ITEM}>
+            <Zap className={ICON} style={{ color: "#F8C300" }} /> Power User Tips
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
