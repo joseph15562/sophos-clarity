@@ -77,6 +77,8 @@ export interface UploadSectionProps {
   /** Rendered above the Generate Reports section */
   beforeReports?: React.ReactNode;
   onLoadDemo?: () => void;
+  contextRef?: React.RefObject<HTMLDivElement>;
+  reportsRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function UploadSection({
@@ -111,6 +113,8 @@ export function UploadSection({
   isViewerOnly = false,
   beforeReports,
   onLoadDemo,
+  contextRef,
+  reportsRef,
 }: UploadSectionProps) {
   return (
     <>
@@ -462,7 +466,7 @@ export function UploadSection({
 
       {/* Step 2 — Assessment Context (before findings so compliance tags are dynamic) */}
       {hasFiles && (
-        <section className="space-y-4" data-tour="step-context">
+        <section ref={contextRef} className="space-y-4" data-tour="step-context">
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">
               2
@@ -605,7 +609,7 @@ export function UploadSection({
 
       {/* Generate Reports — AI reports disabled in local mode */}
       {hasFiles && !isGuest && (
-        <div data-tour="step-reports">
+        <div ref={reportsRef} data-tour="step-reports">
           <ReportCards
             fileCount={files.length}
             localMode={localMode}
@@ -684,13 +688,25 @@ export function UploadSection({
           <button
             onClick={() => onSaveReports(false)}
             disabled={savingReports}
-            className={`no-print flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg border transition-colors ${
+            className={`no-print relative overflow-hidden flex items-center gap-1.5 text-sm font-bold px-4 py-2.5 rounded-xl border transition-all duration-200 shadow-sm hover:shadow-md ${
               reportsSaved
-                ? "bg-[#00F2B3]/10 border-[#00F2B3]/30 text-[#00F2B3] dark:text-[#00F2B3]"
-                : "bg-brand-accent/10 border-brand-accent/30 text-brand-accent hover:bg-brand-accent/20"
+                ? "border-[#00F2B3]/25 text-[#00F2B3]"
+                : "border-white/[0.08] text-brand-accent hover:border-white/[0.15]"
             }`}
+            style={{
+              background: reportsSaved
+                ? "linear-gradient(135deg, rgba(0,242,179,0.12), rgba(0,242,179,0.04))"
+                : "linear-gradient(135deg, rgba(32,6,247,0.10), rgba(32,6,247,0.03))",
+            }}
           >
-            <Save className="h-3.5 w-3.5" />
+            <Save
+              className="h-3.5 w-3.5"
+              style={{
+                filter: reportsSaved
+                  ? "drop-shadow(0 0 4px rgba(0,242,179,0.4))"
+                  : "drop-shadow(0 0 4px rgba(32,6,247,0.3))",
+              }}
+            />
             {reportsSaved ? "Saved!" : savingReports ? "Saving…" : "Save Assessment (Pre-AI)"}
           </button>
         </div>

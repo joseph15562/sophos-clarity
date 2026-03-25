@@ -1,0 +1,169 @@
+import { useState } from "react";
+import { Eye, FileText, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import type { BrandingData } from "@/components/BrandingSetup";
+
+export interface StickyActionBarProps {
+  hasFiles: boolean;
+  branding: BrandingData;
+  onScrollToFindings: () => void;
+  onScrollToReports: () => void;
+  onScrollToContext: () => void;
+  onGenerateAll: () => void;
+}
+
+const REQUIRED_FIELDS: { key: keyof BrandingData; label: string }[] = [
+  { key: "customerName", label: "Customer Name" },
+  { key: "preparedBy", label: "Prepared By" },
+  { key: "environment", label: "Environment" },
+  { key: "country", label: "Country" },
+];
+
+export function StickyActionBar({
+  hasFiles,
+  branding,
+  onScrollToFindings,
+  onScrollToReports,
+  onScrollToContext,
+  onGenerateAll,
+}: StickyActionBarProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+
+  if (!hasFiles) return null;
+
+  function handleGenerateClick() {
+    const missing = REQUIRED_FIELDS.filter(
+      (f) => !((branding as Record<string, unknown>)[f.key] as string)?.trim(),
+    ).map((f) => f.label);
+
+    if (missing.length === 0) {
+      onScrollToReports();
+      onGenerateAll();
+      return;
+    }
+
+    setMissingFields(missing);
+    setConfirmOpen(true);
+  }
+
+  function handleGenerateAnyway() {
+    setConfirmOpen(false);
+    onScrollToReports();
+    onGenerateAll();
+  }
+
+  function handleFillContext() {
+    setConfirmOpen(false);
+    onScrollToContext();
+  }
+
+  return (
+    <>
+      <div
+        className="no-print fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.08] backdrop-blur-xl"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(32,6,247,0.08), rgba(0,237,255,0.04), rgba(12,18,34,0.85))",
+        }}
+      >
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.3), transparent)",
+          }}
+        />
+
+        <div className="max-w-[1320px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <p className="hidden sm:block text-xs text-muted-foreground/80 font-medium">
+            Quick actions
+          </p>
+
+          <div className="flex items-center gap-2.5 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onScrollToFindings}
+              className="gap-2 text-xs font-bold border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/[0.15] transition-all duration-200"
+            >
+              <Eye className="h-3.5 w-3.5 text-brand-accent" />
+              View Findings
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={handleGenerateClick}
+              className="gap-2 text-xs font-bold text-white border-0 transition-all duration-200 shadow-[0_4px_16px_rgba(32,6,247,0.25)] hover:shadow-[0_6px_24px_rgba(32,6,247,0.35)] hover:brightness-110"
+              style={{
+                background: "linear-gradient(135deg, #2006F7, #5A00FF)",
+              }}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Generate Reports
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="rounded-2xl border-white/[0.08] bg-card/95 backdrop-blur-xl shadow-elevated">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center border border-[#F29400]/20"
+                style={{ backgroundColor: "rgba(242,148,0,0.12)" }}
+              >
+                <AlertTriangle className="h-5 w-5 text-[#F29400]" />
+              </div>
+              <AlertDialogTitle className="text-base font-display font-black tracking-tight">
+                Missing Report Context
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-sm leading-relaxed pt-2">
+              The following fields are not filled in. Reports will still generate, but they will be
+              less personalised and may lack important context.
+            </AlertDialogDescription>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {missingFields.map((field) => (
+                <span
+                  key={field}
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-[#F29400]/20 text-[#F29400]"
+                  style={{ backgroundColor: "rgba(242,148,0,0.08)" }}
+                >
+                  {field}
+                </span>
+              ))}
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-2">
+            <AlertDialogCancel
+              onClick={handleFillContext}
+              className="gap-2 font-bold border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08]"
+            >
+              Fill in context
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleGenerateAnyway}
+              className="gap-2 font-bold text-white border-0 shadow-[0_4px_16px_rgba(32,6,247,0.25)] hover:shadow-[0_6px_24px_rgba(32,6,247,0.35)] hover:brightness-110"
+              style={{
+                background: "linear-gradient(135deg, #2006F7, #5A00FF)",
+              }}
+            >
+              Generate anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

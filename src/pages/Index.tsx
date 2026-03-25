@@ -73,6 +73,7 @@ import { downloadInteractiveHtml } from "@/lib/analysis-interactive-html";
 import { ProgressNarrative } from "@/components/ProgressNarrative";
 import { QbrPackChecklist } from "@/components/QbrPackChecklist";
 import { ExtractionSummary } from "@/components/ExtractionSummary";
+import { StickyActionBar } from "@/components/StickyActionBar";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -134,6 +135,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     null,
   );
   const prevResultCountRef = useRef(0);
+  const findingsRef = useRef<HTMLDivElement>(null);
+  const contextRef = useRef<HTMLDivElement>(null);
+  const reportsRef = useRef<HTMLDivElement>(null);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
   const [parsingProgress, setParsingProgress] = useState<{
@@ -903,7 +907,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
       <main
         id="main-content"
-        className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"}`}
+        className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"} ${hasFiles && (!viewingReports || isGuest) && !isLoading && !inDiffMode ? "pb-20" : ""}`}
       >
         {/* Restored session banner */}
         {restoredSession && !viewingReports && hasReports && !isLoading && (
@@ -1026,6 +1030,8 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onShowAuth={onShowAuth}
               org={org}
               localMode={localMode}
+              contextRef={contextRef}
+              reportsRef={reportsRef}
               onGenerateIndividual={() => {
                 setViewingReports(true);
                 generateIndividual();
@@ -1112,35 +1118,37 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               </div>
             )}
             {hasFiles && (
-              <AnalysisTabs
-                analysisResult={analysisResults}
-                files={files}
-                branding={branding}
-                activeTab={analysisTab}
-                setActiveTab={setAnalysisTab}
-                totalFindings={totalFindings}
-                totalRules={totalRules}
-                totalSections={totalSections}
-                totalPopulated={totalPopulated}
-                extractionPct={extractionPct}
-                aggregatedPosture={aggregatedPosture}
-                securityStats={securityStats}
-                configMetas={configMetas}
-                diffSelection={diffSelection}
-                setDiffSelection={setDiffSelection}
-                projectedScore={projectedScore}
-                setProjectedScore={setProjectedScore}
-                isGuest={isGuest}
-                localMode={localMode}
-                orgId={org?.id ?? ""}
-                onExplainFinding={(title) => {
-                  setAiChatOpen(true);
-                  setAiChatInitialMessage(
-                    `Explain finding: ${title} and how to fix it on a Sophos XGS firewall`,
-                  );
-                }}
-                hasReports={reports.some((r) => (r.markdown?.trim().length ?? 0) > 0)}
-              />
+              <div ref={findingsRef}>
+                <AnalysisTabs
+                  analysisResult={analysisResults}
+                  files={files}
+                  branding={branding}
+                  activeTab={analysisTab}
+                  setActiveTab={setAnalysisTab}
+                  totalFindings={totalFindings}
+                  totalRules={totalRules}
+                  totalSections={totalSections}
+                  totalPopulated={totalPopulated}
+                  extractionPct={extractionPct}
+                  aggregatedPosture={aggregatedPosture}
+                  securityStats={securityStats}
+                  configMetas={configMetas}
+                  diffSelection={diffSelection}
+                  setDiffSelection={setDiffSelection}
+                  projectedScore={projectedScore}
+                  setProjectedScore={setProjectedScore}
+                  isGuest={isGuest}
+                  localMode={localMode}
+                  orgId={org?.id ?? ""}
+                  onExplainFinding={(title) => {
+                    setAiChatOpen(true);
+                    setAiChatInitialMessage(
+                      `Explain finding: ${title} and how to fix it on a Sophos XGS firewall`,
+                    );
+                  }}
+                  hasReports={reports.some((r) => (r.markdown?.trim().length ?? 0) > 0)}
+                />
+              </div>
             )}
           </>
         )}
@@ -1284,6 +1292,27 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         )}
       </main>
 
+      {/* Sticky action bar — visible on dashboard when files are loaded */}
+      {(!viewingReports || isGuest) && !isLoading && !inDiffMode && (
+        <StickyActionBar
+          hasFiles={hasFiles}
+          branding={branding}
+          onScrollToFindings={() => findingsRef.current?.scrollIntoView({ behavior: "smooth" })}
+          onScrollToReports={() => reportsRef.current?.scrollIntoView({ behavior: "smooth" })}
+          onScrollToContext={() => contextRef.current?.scrollIntoView({ behavior: "smooth" })}
+          onGenerateAll={() => {
+            setViewingReports(true);
+            generateAll();
+            if (org?.id) logAudit(org.id, "report.generated", "report", "all");
+            addNotification(
+              "info",
+              "Generating Reports",
+              `Generating all reports for ${branding.customerName || "this assessment"}…`,
+            );
+          }}
+        />
+      )}
+
       {/* AI Chat — floating panel, hidden in local mode */}
       {hasFiles && !localMode && (
         <ErrorBoundary fallbackTitle="AI Chat failed to load">
@@ -1338,7 +1367,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       </ErrorBoundary>
 
       {/* Keyboard shortcut hint + Tours */}
-      <div className="fixed bottom-4 right-4 z-10 no-print flex items-center gap-2">
+      <div
+        className={`fixed ${hasFiles && (!viewingReports || isGuest) && !isLoading && !inDiffMode ? "bottom-[68px]" : "bottom-4"} right-4 z-10 no-print flex items-center gap-2 transition-all duration-200`}
+      >
         <GuidedTourButton
           hasFiles={hasFiles}
           hasReports={hasReports}

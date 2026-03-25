@@ -86,34 +86,41 @@ function FileBlock({
   const empty = meta.sections.filter((s) => s.status === "empty");
   const totalRows = meta.sections.reduce((sum, s) => sum + s.rowCount + s.detailCount, 0);
 
+  const covHex =
+    meta.coveragePct === 100 ? "#00F2B3" : meta.coveragePct >= 70 ? "#F29400" : "#EA0022";
+
   return (
-    <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+    <div
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      style={{ background: `linear-gradient(135deg, ${covHex}08, ${covHex}02)` }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[16px] opacity-15"
+          style={{ backgroundColor: covHex }}
+        />
+      </div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
+        className="relative w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/[0.02] transition-colors"
       >
         {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <ChevronDown className="h-3.5 w-3.5 text-brand-accent shrink-0" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <ChevronRight className="h-3.5 w-3.5 text-brand-accent shrink-0" />
         )}
         <FileText className="h-3.5 w-3.5 text-brand-accent shrink-0" />
-        <span className="text-xs font-medium text-foreground truncate flex-1">{file.fileName}</span>
+        <span className="text-xs font-bold text-foreground truncate flex-1">{file.fileName}</span>
         <span
-          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-            meta.coveragePct === 100
-              ? "bg-[#00F2B3]/10 text-[#00F2B3]"
-              : meta.coveragePct >= 70
-                ? "bg-[#F29400]/10 text-[#F29400]"
-                : "bg-[#EA0022]/10 text-[#EA0022]"
-          }`}
+          className="text-[10px] font-bold px-2 py-0.5 rounded-md border"
+          style={{ color: covHex, backgroundColor: `${covHex}14`, borderColor: `${covHex}25` }}
         >
           {meta.coveragePct}%
         </span>
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-1 border-t border-border/50">
+        <div className="relative px-3 pb-3 pt-1 border-t border-white/[0.06]">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground mb-2">
             <span>{meta.totalDetected} detected</span>
             <span>{meta.totalExtracted} extracted</span>
@@ -149,64 +156,105 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
   );
   const hasWarning = totalEmpty > 0;
 
+  const covHex =
+    overallCoverage === 100 ? "#00F2B3" : overallCoverage >= 70 ? "#F29400" : "#EA0022";
+
+  const STAT_ITEMS = [
+    { label: "Sections detected", value: totalDetected, hex: "#2006F7" },
+    { label: "Extracted", value: totalExtracted, hex: "#00F2B3" },
+    { label: "Empty", value: totalEmpty, hex: totalEmpty > 0 ? "#F29400" : "#2006F7" },
+    { label: "Items parsed", value: totalRows.toLocaleString(), hex: "#00EDFF" },
+  ];
+
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2.5">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7]/20 to-[#5A00FF]/20 dark:from-[#2006F7]/25 dark:to-[#00EDFF]/20 ring-2 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 flex items-center justify-center">
+        <div
+          className="h-9 w-9 rounded-xl flex items-center justify-center border border-white/[0.08]"
+          style={{ backgroundColor: "rgba(32,6,247,0.12)" }}
+        >
           <FileText className="h-4.5 w-4.5 text-brand-accent" />
         </div>
         <h3 className="text-base sm:text-lg font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
           Extraction Summary
         </h3>
         <span
-          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-            overallCoverage === 100
-              ? "bg-[#00F2B3]/10 text-[#00F2B3]"
-              : overallCoverage >= 70
-                ? "bg-[#F29400]/10 text-[#F29400]"
-                : "bg-[#EA0022]/10 text-[#EA0022]"
-          }`}
+          className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border"
+          style={{ color: covHex, backgroundColor: `${covHex}14`, borderColor: `${covHex}25` }}
         >
           {overallCoverage}% coverage
         </span>
       </div>
 
-      <div className="rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] px-4 py-3 space-y-3 shadow-[0_12px_36px_rgba(32,6,247,0.08)]">
-        {/* Overall stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
-            <p className="text-muted-foreground">Sections detected</p>
-            <p className="font-semibold text-foreground tabular-nums">{totalDetected}</p>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
-            <p className="text-muted-foreground">Extracted</p>
-            <p className="font-semibold text-foreground tabular-nums">{totalExtracted}</p>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
-            <p className="text-muted-foreground">Empty</p>
-            <p
-              className={`font-semibold tabular-nums ${totalEmpty > 0 ? "text-[#F29400]" : "text-foreground"}`}
+      <div
+        className="relative overflow-hidden rounded-xl border border-white/[0.06] px-4 py-4 space-y-3 shadow-card"
+        style={{
+          background: "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.025))",
+        }}
+      >
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-6 -left-6 h-16 w-16 rounded-full blur-[28px] opacity-20 bg-brand-accent" />
+        </div>
+        <div
+          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
+          }}
+        />
+
+        <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {STAT_ITEMS.map((item) => (
+            <div
+              key={item.label}
+              className="relative overflow-hidden rounded-xl border border-white/[0.06] px-3.5 py-2.5 text-xs transition-all duration-200 hover:border-white/[0.12]"
+              style={{ background: `linear-gradient(145deg, ${item.hex}10, ${item.hex}04)` }}
             >
-              {totalEmpty}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
-            <p className="text-muted-foreground">Items parsed</p>
-            <p className="font-semibold text-foreground tabular-nums">
-              {totalRows.toLocaleString()}
-            </p>
-          </div>
+              <div className="absolute inset-0 pointer-events-none">
+                <div
+                  className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
+                  style={{ backgroundColor: item.hex }}
+                />
+              </div>
+              <p className="relative text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80">
+                {item.label}
+              </p>
+              <p
+                className="relative font-black text-lg tabular-nums mt-0.5"
+                style={{ color: item.hex }}
+              >
+                {item.value}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Coverage bar */}
-        <Progress value={overallCoverage} className="h-1.5" />
+        <div className="relative h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${overallCoverage}%`,
+              background: `linear-gradient(90deg, ${covHex}90, ${covHex})`,
+              boxShadow: `0 0 10px ${covHex}40`,
+            }}
+          />
+        </div>
 
-        {/* Warning banner */}
         {hasWarning && (
-          <div className="flex items-start gap-2 rounded-lg bg-[#F29400]/[0.06] border border-[#F29400]/20 px-3 py-2">
-            <AlertTriangle className="h-3.5 w-3.5 text-[#F29400] mt-0.5 shrink-0" />
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              <strong className="text-[#F29400]">
+          <div
+            className="relative overflow-hidden flex items-start gap-2.5 rounded-xl border border-white/[0.06] px-3.5 py-2.5"
+            style={{
+              background: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
+            }}
+          >
+            <div
+              className="absolute inset-x-0 top-0 h-px pointer-events-none"
+              style={{
+                background: "linear-gradient(90deg, rgba(242,148,0,0.25), transparent 60%)",
+              }}
+            />
+            <AlertTriangle className="relative h-3.5 w-3.5 text-[#F29400] mt-0.5 shrink-0" />
+            <p className="relative text-[11px] text-muted-foreground/90 leading-relaxed">
+              <strong className="text-[#F29400] font-bold">
                 {totalEmpty} section{totalEmpty !== 1 ? "s" : ""}
               </strong>{" "}
               detected in the config export but contained no parseable data. These may be empty in
@@ -216,8 +264,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
           </div>
         )}
 
-        {/* Per-file detail */}
-        <div className="space-y-2">
+        <div className="relative space-y-2">
           {files.map((file) => (
             <FileBlock key={file.fileName} file={file} defaultExpanded={false} />
           ))}

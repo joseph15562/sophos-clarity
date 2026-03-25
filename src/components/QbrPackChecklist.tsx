@@ -23,22 +23,26 @@ interface RowProps {
 
 function ChecklistRow({ title, done, actionLabel, onAction, disabled }: RowProps) {
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0">
+    <div className="flex items-center gap-3 py-3 border-b border-white/[0.06] last:border-0">
       <div className="shrink-0">
         {done ? (
-          <CheckCircle2 className="h-5 w-5 text-[#00F2B3] dark:text-[#00F2B3]" aria-hidden />
+          <CheckCircle2
+            className="h-5 w-5 text-[#00F2B3]"
+            style={{ filter: "drop-shadow(0 0 4px rgba(0,242,179,0.4))" }}
+            aria-hidden
+          />
         ) : (
-          <Circle className="h-5 w-5 text-muted-foreground/60" aria-hidden />
+          <Circle className="h-5 w-5 text-muted-foreground/40" aria-hidden />
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold tracking-tight text-foreground">{title}</p>
+        <p className="text-sm font-bold tracking-tight text-foreground">{title}</p>
       </div>
       <Button
         type="button"
         size="sm"
         variant="outline"
-        className="shrink-0 border-brand-accent/25 dark:border-[#00EDFF]/30 hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10 font-semibold"
+        className="shrink-0 font-bold border-white/[0.08] bg-gradient-to-r from-brand-accent/[0.08] to-transparent hover:from-brand-accent/[0.15] hover:border-white/[0.15] shadow-sm hover:shadow-md transition-all duration-200"
         disabled={disabled}
         onClick={onAction}
       >
@@ -60,14 +64,27 @@ export function QbrPackChecklist({
   const noFiles = fileCount === 0;
 
   return (
-    <Card className="rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] shadow-[0_12px_36px_rgba(32,6,247,0.08)] no-print">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-display font-black tracking-tight">QBR Pack</CardTitle>
-        <CardDescription className="text-sm font-medium text-foreground/80 dark:text-white/75">
+    <div
+      className="relative overflow-hidden rounded-xl border border-white/[0.06] p-5 shadow-card no-print transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.03))" }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full blur-[28px] opacity-20 bg-brand-accent" />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
+        }}
+      />
+
+      <div className="relative mb-3 space-y-1">
+        <h3 className="text-lg font-display font-black tracking-tight text-foreground">QBR Pack</h3>
+        <p className="text-sm font-medium text-foreground/80 dark:text-white/75">
           Prepare your quarterly business review materials.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-0">
+        </p>
+      </div>
+      <div className="relative">
         <ChecklistRow
           title="Executive Brief"
           done={hasReports}
@@ -96,7 +113,7 @@ export function QbrPackChecklist({
           onAction={onExportInteractiveHtml}
           disabled={noFiles}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
