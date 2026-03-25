@@ -8,9 +8,18 @@ export async function hmacHash(data: string): Promise<string> {
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 export async function hmacVerify(data: string, hash: string): Promise<boolean> {
   const computed = await hmacHash(data);
-  return computed === hash;
+  return constantTimeEqual(computed, hash);
 }
 
 export function generateApiKey(): string {
