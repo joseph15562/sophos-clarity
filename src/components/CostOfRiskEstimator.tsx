@@ -41,8 +41,7 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
   const [currency, setCurrency] = useState<string>("usd");
 
   const curr = CURRENCIES.find((c) => c.value === currency) ?? CURRENCIES[0];
-  const fmt = (n: number) =>
-    `${curr.symbol}${Math.round(n * curr.rate).toLocaleString()}`;
+  const fmt = (n: number) => `${curr.symbol}${Math.round(n * curr.rate).toLocaleString()}`;
 
   const riskExposure = useMemo(() => {
     const counts: Record<Severity, number> = {
@@ -90,11 +89,14 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
   const severities: Severity[] = ["critical", "high", "medium", "low"];
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Cost of Risk Estimator</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        Cost of Risk Estimator
+      </h3>
       <div className="mt-4 space-y-4">
         <p className="text-2xl font-bold text-destructive">
-          Estimated Annual Risk Exposure: {fmt(riskExposure.minExposure)} – {fmt(riskExposure.maxExposure)}
+          Estimated Annual Risk Exposure: {fmt(riskExposure.minExposure)} –{" "}
+          {fmt(riskExposure.maxExposure)}
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
@@ -112,7 +114,9 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Company size</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              Company size
+            </label>
             <select
               value={size}
               onChange={(e) => setSize(e.target.value)}
@@ -161,8 +165,8 @@ export function CostOfRiskEstimator({ analysisResults }: Props) {
         </div>
         {criticalSavings.count > 0 && (
           <p className="rounded-md bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
-            Resolving {criticalSavings.count} critical finding{criticalSavings.count !== 1 ? "s" : ""}{" "}
-            could reduce exposure by{" "}
+            Resolving {criticalSavings.count} critical finding
+            {criticalSavings.count !== 1 ? "s" : ""} could reduce exposure by{" "}
             <span className="font-semibold">
               {fmt(criticalSavings.min)} – {fmt(criticalSavings.max)}
             </span>

@@ -21,7 +21,7 @@ const UNTRUSTED_ZONES = /wan|any|dmz|guest|untrust|external|public/i;
 
 function findSection(
   sections: Record<string, ExtractedSection>,
-  pattern: RegExp
+  pattern: RegExp,
 ): ExtractedSection | null {
   for (const key of Object.keys(sections)) {
     if (pattern.test(key)) return sections[key];
@@ -35,7 +35,7 @@ interface ZoneServiceState {
 }
 
 function parseLocalServiceAcl(
-  files: Array<{ extractedData: Record<string, ExtractedSection> }>
+  files: Array<{ extractedData: Record<string, ExtractedSection> }>,
 ): ZoneServiceState[] {
   const zoneMap = new Map<string, Record<string, "enabled" | "disabled" | "risky">>();
   const allServices = new Set<string>();
@@ -46,7 +46,7 @@ function parseLocalServiceAcl(
 
     const acl = findSection(
       sections,
-      /local.*service.*acl|LocalServiceACL|device.*access|admin.*service/i
+      /local.*service.*acl|LocalServiceACL|device.*access|admin.*service/i,
     );
     if (!acl?.tables) continue;
 
@@ -72,9 +72,7 @@ function parseLocalServiceAcl(
             key === "Service Name"
           )
             continue;
-          const v = (val ?? "")
-            .toLowerCase()
-            .trim();
+          const v = (val ?? "").toLowerCase().trim();
           const enabled =
             v === "enable" ||
             v === "enabled" ||
@@ -89,11 +87,7 @@ function parseLocalServiceAcl(
 
           const existing = zoneMap.get(zoneNorm) ?? {};
           const isUntrusted = UNTRUSTED_ZONES.test(zoneNorm);
-          existing[serviceNorm] = enabled
-            ? isUntrusted
-              ? "risky"
-              : "enabled"
-            : "disabled";
+          existing[serviceNorm] = enabled ? (isUntrusted ? "risky" : "enabled") : "disabled";
           zoneMap.set(zoneNorm, existing);
         }
       }
@@ -112,8 +106,7 @@ function parseLocalServiceAcl(
 
   return zones.map((zone) => {
     const svc = zoneMap.get(zone) ?? {};
-    const servicesRecord: Record<string, "enabled" | "disabled" | "risky"> =
-      {};
+    const servicesRecord: Record<string, "enabled" | "disabled" | "risky"> = {};
     for (const s of services) {
       servicesRecord[s] = svc[s] ?? "disabled";
     }
@@ -127,9 +120,9 @@ export function AdminExposureMap({
 }: AdminExposureMapProps) {
   const { rows, services, warningCount, hasData } = useMemo(() => {
     const parsed = parseLocalServiceAcl(files);
-    const services = Array.from(
-      new Set(parsed.flatMap((r) => Object.keys(r.services)))
-    ).filter(Boolean).sort();
+    const services = Array.from(new Set(parsed.flatMap((r) => Object.keys(r.services))))
+      .filter(Boolean)
+      .sort();
     const rows = parsed;
     let warningCount = 0;
     for (const row of rows) {
@@ -147,15 +140,31 @@ export function AdminExposureMap({
 
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">
           Admin Access Exposure
         </h3>
         <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
           <div className="text-[11px] text-muted-foreground space-y-0.5">
             <p className="font-medium">Local Service ACL data not available</p>
-            <p>Admin service exposure will appear here when the configuration includes Local Service ACL settings (HTTPS, SSH, Ping access per zone).</p>
+            <p>
+              Admin service exposure will appear here when the configuration includes Local Service
+              ACL settings (HTTPS, SSH, Ping access per zone).
+            </p>
           </div>
         </div>
       </div>
@@ -163,15 +172,14 @@ export function AdminExposureMap({
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Admin Access Exposure
         </h3>
         {warningCount > 0 && (
           <span className="text-xs font-medium text-[#EA0022]">
-            {warningCount} service{warningCount !== 1 ? "s" : ""} exposed to
-            untrusted zones
+            {warningCount} service{warningCount !== 1 ? "s" : ""} exposed to untrusted zones
           </span>
         )}
       </div>
@@ -195,18 +203,9 @@ export function AdminExposureMap({
           <tbody>
             {rows.map((row) => {
               const isWan = UNTRUSTED_ZONES.test(row.zone);
-              const hasRisky = Object.values(row.services).some(
-                (v) => v === "risky"
-              );
+              const hasRisky = Object.values(row.services).some((v) => v === "risky");
               return (
-                <tr
-                  key={row.zone}
-                  className={
-                    isWan && hasRisky
-                      ? "bg-[#EA0022]/10"
-                      : ""
-                  }
-                >
+                <tr key={row.zone} className={isWan && hasRisky ? "bg-[#EA0022]/10" : ""}>
                   <td
                     className={`py-1.5 pr-3 font-medium border-b border-border/50 ${
                       isWan && hasRisky ? "text-[#EA0022]" : "text-foreground"

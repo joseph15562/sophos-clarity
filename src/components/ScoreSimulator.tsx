@@ -1,5 +1,13 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Shield, TrendingUp, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Zap } from "lucide-react";
+import {
+  Shield,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Zap,
+} from "lucide-react";
 import type { AnalysisResult, Finding, Severity } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 
@@ -90,7 +98,10 @@ const TOGGLES: Toggle[] = [
       c.inspectionPosture.dpiEngineEnabled = true;
       c.inspectionPosture.sslUncoveredZones = [];
       c.inspectionPosture.withSslInspection = Math.max(1, c.inspectionPosture.withSslInspection);
-      c.findings = removeFindings(c.findings, /SSL\/TLS inspection|DPI inactive|not covered by SSL/i);
+      c.findings = removeFindings(
+        c.findings,
+        /SSL\/TLS inspection|DPI inactive|not covered by SSL/i,
+      );
       return c;
     },
   },
@@ -134,7 +145,10 @@ const TOGGLES: Toggle[] = [
     matchPattern: /admin console|ssh accessible|snmp exposed|management service.*exposed/i,
     apply: (r) => {
       const c = cloneResult(r);
-      c.findings = removeFindings(c.findings, /admin console|ssh accessible|snmp exposed|management service.*exposed/i);
+      c.findings = removeFindings(
+        c.findings,
+        /admin console|ssh accessible|snmp exposed|management service.*exposed/i,
+      );
       return c;
     },
   },
@@ -150,29 +164,44 @@ function countBySeverity(findings: Finding[]): Record<Severity, number> {
 
 function sevColor(s: Severity): string {
   switch (s) {
-    case "critical": return "text-[#EA0022]";
-    case "high": return "text-[#F29400]";
-    case "medium": return "text-[#b8a200] dark:text-[#F8E300]";
-    case "low": return "text-[#00b8d4] dark:text-[#00EDFF]";
-    default: return "text-muted-foreground";
+    case "critical":
+      return "text-[#EA0022]";
+    case "high":
+      return "text-[#F29400]";
+    case "medium":
+      return "text-[#b8a200] dark:text-[#F8E300]";
+    case "low":
+      return "text-[#00b8d4] dark:text-[#00EDFF]";
+    default:
+      return "text-muted-foreground";
   }
 }
 
 function gradeColor(grade: string): string {
   switch (grade) {
-    case "A": case "B": return "text-[#00F2B3]";
-    case "C": return "text-[#b8a200] dark:text-[#F8E300]";
-    case "D": return "text-[#c47800] dark:text-[#F29400]";
-    default: return "text-[#EA0022]";
+    case "A":
+    case "B":
+      return "text-[#00F2B3]";
+    case "C":
+      return "text-[#b8a200] dark:text-[#F8E300]";
+    case "D":
+      return "text-[#c47800] dark:text-[#F29400]";
+    default:
+      return "text-[#EA0022]";
   }
 }
 
 function gradeBg(grade: string): string {
   switch (grade) {
-    case "A": case "B": return "bg-[#00F2B3]/10 border-[#00F2B3]/30";
-    case "C": return "bg-[#F8E300]/10 border-[#F8E300]/30";
-    case "D": return "bg-[#F29400]/10 border-[#F29400]/30";
-    default: return "bg-[#EA0022]/10 border-[#EA0022]/30";
+    case "A":
+    case "B":
+      return "bg-[#00F2B3]/10 border-[#00F2B3]/30";
+    case "C":
+      return "bg-[#F8E300]/10 border-[#F8E300]/30";
+    case "D":
+      return "bg-[#F29400]/10 border-[#F29400]/30";
+    default:
+      return "bg-[#EA0022]/10 border-[#EA0022]/30";
   }
 }
 
@@ -284,9 +313,15 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
     const entries = Object.values(analysisResults);
     if (entries.length === 0) return improvements;
 
-    let beforeWf = 0, afterWf = 0, totalWfRules = 0;
-    let beforeIps = 0, afterIps = 0, totalIpsRules = 0;
-    let beforeApp = 0, afterApp = 0, totalAppRules = 0;
+    let beforeWf = 0,
+      afterWf = 0,
+      totalWfRules = 0;
+    let beforeIps = 0,
+      afterIps = 0,
+      totalIpsRules = 0;
+    let beforeApp = 0,
+      afterApp = 0,
+      totalAppRules = 0;
 
     for (const ar of entries) {
       let modified = ar;
@@ -313,11 +348,23 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
     }
 
     if (totalWfRules > 0 && afterWf > beforeWf)
-      improvements.push({ label: "Web Filtering", before: Math.round((beforeWf / totalWfRules) * 100), after: Math.round((afterWf / totalWfRules) * 100) });
+      improvements.push({
+        label: "Web Filtering",
+        before: Math.round((beforeWf / totalWfRules) * 100),
+        after: Math.round((afterWf / totalWfRules) * 100),
+      });
     if (totalIpsRules > 0 && afterIps > beforeIps)
-      improvements.push({ label: "IPS", before: Math.round((beforeIps / totalIpsRules) * 100), after: Math.round((afterIps / totalIpsRules) * 100) });
+      improvements.push({
+        label: "IPS",
+        before: Math.round((beforeIps / totalIpsRules) * 100),
+        after: Math.round((afterIps / totalIpsRules) * 100),
+      });
     if (totalAppRules > 0 && afterApp > beforeApp)
-      improvements.push({ label: "App Control", before: Math.round((beforeApp / totalAppRules) * 100), after: Math.round((afterApp / totalAppRules) * 100) });
+      improvements.push({
+        label: "App Control",
+        before: Math.round((beforeApp / totalAppRules) * 100),
+        after: Math.round((afterApp / totalAppRules) * 100),
+      });
 
     return improvements;
   }, [analysisResults, active]);
@@ -327,7 +374,10 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
   const hasSimulation = active.size > 0;
 
   return (
-    <section className="rounded-xl border border-border/70 bg-card overflow-hidden" data-tour="score-simulator">
+    <section
+      className="rounded-xl border border-border/50 bg-card overflow-hidden"
+      data-tour="score-simulator"
+    >
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
@@ -336,15 +386,23 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
           <TrendingUp className="h-4.5 w-4.5 text-[#5A00FF] dark:text-[#00EDFF]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Remediation Impact Simulator</h3>
-          <p className="text-[10px] text-muted-foreground">Select recommended actions to see projected score, grade, and coverage improvements</p>
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+            Remediation Impact Simulator
+          </h3>
+          <p className="text-[10px] text-muted-foreground">
+            Select recommended actions to see projected score, grade, and coverage improvements
+          </p>
         </div>
         {hasSimulation && (
           <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#00F2B3]/10 border border-[#00F2B3]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#00F2B3]">
             <TrendingUp className="h-3 w-3" /> +{delta}
           </span>
         )}
-        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+        {open ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        )}
       </button>
 
       {open && (
@@ -356,9 +414,19 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
                 {relevantToggles.length} recommended actions based on your findings
               </p>
               <div className="flex items-center gap-2">
-                <button onClick={selectAll} className="text-[10px] text-brand-accent hover:underline font-medium">Apply all</button>
+                <button
+                  onClick={selectAll}
+                  className="text-[10px] text-brand-accent hover:underline font-medium"
+                >
+                  Apply all
+                </button>
                 <span className="text-muted-foreground text-[10px]">|</span>
-                <button onClick={clearAll} className="text-[10px] text-muted-foreground hover:underline font-medium">Reset</button>
+                <button
+                  onClick={clearAll}
+                  className="text-[10px] text-muted-foreground hover:underline font-medium"
+                >
+                  Reset
+                </button>
               </div>
             </div>
 
@@ -388,7 +456,9 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
                           {count} finding{count !== 1 ? "s" : ""}
                         </span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{t.description}</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                        {t.description}
+                      </p>
                     </div>
                     {isActive && (
                       <CheckCircle2 className="h-4 w-4 text-[#00F2B3] shrink-0 mt-0.5" />
@@ -405,19 +475,30 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
               {/* Score + Grade header */}
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 p-5">
                 <div className="text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1.5">Current</p>
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full border-2 ${gradeBg(current.grade)}`}>
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1.5">
+                    Current
+                  </p>
+                  <div
+                    className={`inline-flex items-center justify-center w-16 h-16 rounded-full border-2 ${gradeBg(current.grade)}`}
+                  >
                     <div>
-                      <p className="text-xl font-extrabold text-foreground leading-none">{current.overall}</p>
-                      <p className={`text-[10px] font-bold ${gradeColor(current.grade)}`}>{current.grade}</p>
+                      <p className="text-xl font-extrabold text-foreground leading-none">
+                        {current.overall}
+                      </p>
+                      <p className={`text-[10px] font-bold ${gradeColor(current.grade)}`}>
+                        {current.grade}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-center gap-1">
                   <div className="w-10 h-px bg-gradient-to-r from-transparent via-muted-foreground/40 to-transparent" />
-                  <div className={`text-sm font-extrabold ${delta > 0 ? "text-[#00F2B3]" : delta < 0 ? "text-[#EA0022]" : "text-muted-foreground"}`}>
-                    {delta > 0 ? "+" : ""}{delta} pts
+                  <div
+                    className={`text-sm font-extrabold ${delta > 0 ? "text-[#00F2B3]" : delta < 0 ? "text-[#EA0022]" : "text-muted-foreground"}`}
+                  >
+                    {delta > 0 ? "+" : ""}
+                    {delta} pts
                   </div>
                   {gradeChanged && (
                     <span className="text-[10px] font-bold text-[#00F2B3]">
@@ -428,11 +509,21 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
                 </div>
 
                 <div className="text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1.5">Projected</p>
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full border-2 ${gradeBg(projected.grade)}`}>
+                  <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-1.5">
+                    Projected
+                  </p>
+                  <div
+                    className={`inline-flex items-center justify-center w-16 h-16 rounded-full border-2 ${gradeBg(projected.grade)}`}
+                  >
                     <div>
-                      <p className={`text-xl font-extrabold leading-none ${gradeColor(projected.grade)}`}>{projected.overall}</p>
-                      <p className={`text-[10px] font-bold ${gradeColor(projected.grade)}`}>{projected.grade}</p>
+                      <p
+                        className={`text-xl font-extrabold leading-none ${gradeColor(projected.grade)}`}
+                      >
+                        {projected.overall}
+                      </p>
+                      <p className={`text-[10px] font-bold ${gradeColor(projected.grade)}`}>
+                        {projected.grade}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -466,12 +557,16 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
                 <div className="border-t border-border px-5 py-3">
                   <div className="flex items-center gap-2 mb-2.5">
                     <Zap className="h-3.5 w-3.5 text-[#00EDFF]" />
-                    <span className="text-xs font-semibold text-foreground">Coverage improvements</span>
+                    <span className="text-xs font-semibold text-foreground">
+                      Coverage improvements
+                    </span>
                   </div>
                   <div className="space-y-2">
                     {coverageImprovements.map((ci) => (
                       <div key={ci.label} className="flex items-center gap-3">
-                        <span className="text-[11px] text-muted-foreground w-24 shrink-0">{ci.label}</span>
+                        <span className="text-[11px] text-muted-foreground w-24 shrink-0">
+                          {ci.label}
+                        </span>
                         <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden relative">
                           <div
                             className="absolute inset-y-0 left-0 rounded-full bg-muted-foreground/20"
@@ -493,25 +588,37 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
 
               {/* Per-category score bars */}
               <div className="border-t border-border px-5 py-3">
-                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-2">Category breakdown</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider mb-2">
+                  Category breakdown
+                </p>
                 <div className="space-y-1.5">
                   {projected.categories.map((pc) => {
                     const cc = current.categories.find((c) => c.label === pc.label);
                     const d = cc ? pc.pct - cc.pct : 0;
                     return (
                       <div key={pc.label} className="flex items-center gap-2 text-[11px]">
-                        <span className="text-muted-foreground w-28 truncate shrink-0">{pc.label}</span>
+                        <span className="text-muted-foreground w-28 truncate shrink-0">
+                          {pc.label}
+                        </span>
                         <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all ${
-                              pc.pct >= 80 ? "bg-[#00F2B3]" : pc.pct >= 50 ? "bg-[#F29400]" : "bg-[#EA0022]"
+                              pc.pct >= 80
+                                ? "bg-[#00F2B3]"
+                                : pc.pct >= 50
+                                  ? "bg-[#F29400]"
+                                  : "bg-[#EA0022]"
                             }`}
                             style={{ width: `${pc.pct}%` }}
                           />
                         </div>
-                        <span className="font-bold text-foreground w-8 text-right shrink-0">{pc.pct}%</span>
+                        <span className="font-bold text-foreground w-8 text-right shrink-0">
+                          {pc.pct}%
+                        </span>
                         {d !== 0 && (
-                          <span className={`w-8 text-right font-bold shrink-0 ${d > 0 ? "text-[#00F2B3]" : "text-[#EA0022]"}`}>
+                          <span
+                            className={`w-8 text-right font-bold shrink-0 ${d > 0 ? "text-[#00F2B3]" : "text-[#EA0022]"}`}
+                          >
                             +{d}
                           </span>
                         )}
@@ -528,7 +635,8 @@ export function ScoreSimulator({ analysisResults, onProjectedChange, defaultOpen
             <div className="flex items-center gap-3 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/20 px-4 py-3">
               <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
               <p className="text-xs text-muted-foreground">
-                Select one or more actions above to see the projected impact on your risk score, grade, and security coverage.
+                Select one or more actions above to see the projected impact on your risk score,
+                grade, and security coverage.
               </p>
             </div>
           )}

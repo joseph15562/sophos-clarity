@@ -162,7 +162,7 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
 
       {open && (
         <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] overflow-hidden shadow-[0_18px_50px_rgba(32,6,247,0.08)]">
-          <div className="flex items-center justify-between p-4 border-b border-border/70 bg-card/60">
+          <div className="flex items-center justify-between p-4 border-b border-border/50 bg-card/60">
             <div>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 Team Overview
@@ -328,7 +328,7 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-card/70 p-3.5 text-center shadow-sm">
+    <div className="rounded-2xl border border-border/50 bg-card/70 p-3.5 text-center shadow-sm">
       <p className="text-2xl font-display font-black tracking-tight text-foreground">{value}</p>
       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
         {label}

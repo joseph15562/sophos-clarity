@@ -16,17 +16,16 @@ interface Props {
   }>;
 }
 
-const SOPHOS_COLORS = [
-  "#2006F7",
-  "#5A00FF",
-  "#009CFB",
-  "#00F2B3",
-  "#F29400",
-  "#EA0022",
-];
+const SOPHOS_COLORS = ["#2006F7", "#5A00FF", "#009CFB", "#00F2B3", "#F29400", "#EA0022"];
 
 export function ConfigSizeMetrics({ analysisResults, files }: Props) {
-  const { sections: s, rows: r, objects: o, complexity: c, treemapData } = useMemo(() => {
+  const {
+    sections: s,
+    rows: r,
+    objects: o,
+    complexity: c,
+    treemapData,
+  } = useMemo(() => {
     const results = Object.values(analysisResults);
     const ar = results[0];
     const stats = ar?.stats ?? { totalSections: 0, populatedSections: 0 };
@@ -87,24 +86,34 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
   }, [analysisResults, files]);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Config Composition</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Config Composition
+      </h3>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sections</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Sections
+          </div>
           <div className="text-lg font-bold text-foreground mt-0.5">{s}</div>
         </div>
         <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rows</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Rows
+          </div>
           <div className="text-lg font-bold text-foreground mt-0.5">{r}</div>
         </div>
         <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Objects</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Objects
+          </div>
           <div className="text-lg font-bold text-foreground mt-0.5">{o}</div>
         </div>
         <div className="rounded-lg border border-border bg-muted/30 p-3">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Complexity</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Complexity
+          </div>
           <div className="text-lg font-bold text-foreground mt-0.5">{c}</div>
         </div>
       </div>
@@ -116,7 +125,10 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
             const pct = Math.max(4, (d.value / maxVal) * 100);
             return (
               <div key={d.name} className="flex items-center gap-2 text-[10px]">
-                <span className="text-muted-foreground w-28 truncate shrink-0 text-right" title={d.name}>
+                <span
+                  className="text-muted-foreground w-28 truncate shrink-0 text-right"
+                  title={d.name}
+                >
                   {d.name.length > 18 ? d.name.slice(0, 16) + "…" : d.name}
                 </span>
                 <div className="flex-1 h-4 bg-muted/30 rounded overflow-hidden">
@@ -125,7 +137,9 @@ export function ConfigSizeMetrics({ analysisResults, files }: Props) {
                     style={{ width: `${pct}%`, backgroundColor: d.color, opacity: 0.8 }}
                   />
                 </div>
-                <span className="text-foreground font-medium tabular-nums w-8 text-right">{d.value}</span>
+                <span className="text-foreground font-medium tabular-nums w-8 text-right">
+                  {d.value}
+                </span>
               </div>
             );
           })}

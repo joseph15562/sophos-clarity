@@ -27,14 +27,7 @@ function pctStatus(pct: number): CellStatus {
 export function CoverageMatrix({ analysisResults }: Props) {
   const { rows, columns } = useMemo(() => {
     const firewalls = Object.keys(analysisResults);
-    const cols = [
-      "Web Filter",
-      "IPS",
-      "App Control",
-      "SSL/TLS",
-      "ATP",
-      "Logging",
-    ] as const;
+    const cols = ["Web Filter", "IPS", "App Control", "SSL/TLS", "ATP", "Logging"] as const;
 
     const rows = firewalls.map((label) => {
       const ar = analysisResults[label];
@@ -72,7 +65,7 @@ export function CoverageMatrix({ analysisResults }: Props) {
 
       // Logging: check if logging findings exist for that firewall
       const loggingFindings = ar.findings.filter((f) =>
-        f.title.toLowerCase().includes("logging disabled")
+        f.title.toLowerCase().includes("logging disabled"),
       );
       const loggingDisabledCount =
         loggingFindings.length > 0
@@ -80,18 +73,21 @@ export function CoverageMatrix({ analysisResults }: Props) {
           : 0;
       const loggingPct =
         ar.stats.totalRules > 0
-          ? Math.round(
-              ((ar.stats.totalRules - loggingDisabledCount) / ar.stats.totalRules) *
-                100
-            )
+          ? Math.round(((ar.stats.totalRules - loggingDisabledCount) / ar.stats.totalRules) * 100)
           : 100;
 
       return {
         label,
         cells: {
-          "Web Filter": { status: pctStatus(wfPct), display: ip.webFilterableRules > 0 ? `${wfPct}%` : "✓" },
+          "Web Filter": {
+            status: pctStatus(wfPct),
+            display: ip.webFilterableRules > 0 ? `${wfPct}%` : "✓",
+          },
           IPS: { status: pctStatus(ipsPct), display: ip.enabledWanRules > 0 ? `${ipsPct}%` : "✓" },
-          "App Control": { status: pctStatus(appPct), display: ip.enabledWanRules > 0 ? `${appPct}%` : "✓" },
+          "App Control": {
+            status: pctStatus(appPct),
+            display: ip.enabledWanRules > 0 ? `${appPct}%` : "✓",
+          },
           "SSL/TLS": {
             status: sslOk ? "green" : "red",
             display: sslOk ? "✓" : "✗",
@@ -114,7 +110,7 @@ export function CoverageMatrix({ analysisResults }: Props) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
         Security Feature Coverage Matrix
       </h3>

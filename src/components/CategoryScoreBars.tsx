@@ -36,8 +36,10 @@ export function CategoryScoreBars({ analysisResults }: Props) {
   }, [analysisResults]);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Category Scores</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Category Scores
+      </h3>
       <div className="space-y-3">
         {aggregated.map(({ label, pct }) => {
           const grade = gradeForScore(pct);

@@ -3,7 +3,12 @@ import { Link2, Search, Server, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthOptional } from "@/hooks/use-auth";
-import { getCachedFirewalls, getCachedTenants, getFirewallDisplayName, type CentralTenant } from "@/lib/sophos-central";
+import {
+  getCachedFirewalls,
+  getCachedTenants,
+  getFirewallDisplayName,
+  type CentralTenant,
+} from "@/lib/sophos-central";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CachedFw {
@@ -46,7 +51,14 @@ interface Props {
   onLinked?: (link: FirewallLink | null) => void;
 }
 
-export function FirewallLinkPicker({ configId, configHostname, configHash, configSerialNumber, disableAutoLink, onLinked }: Props) {
+export function FirewallLinkPicker({
+  configId,
+  configHostname,
+  configHash,
+  configSerialNumber,
+  disableAutoLink,
+  onLinked,
+}: Props) {
   const auth = useAuthOptional();
   const org = auth?.org ?? null;
   const isGuest = auth?.isGuest ?? true;
@@ -64,12 +76,14 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
 
   useEffect(() => {
     if (!orgId || isGuest) return;
-    getCachedTenants(orgId).then((t) => {
-      setTenants(t);
-      if (t.length === 1 && !selectedTenantId) {
-        setSelectedTenantId(t[0].id);
-      }
-    }).catch(() => {});
+    getCachedTenants(orgId)
+      .then((t) => {
+        setTenants(t);
+        if (t.length === 1 && !selectedTenantId) {
+          setSelectedTenantId(t[0].id);
+        }
+      })
+      .catch(() => {});
   }, [orgId, isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load existing link
@@ -104,54 +118,66 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
   }, [orgId, configHash, configId, onLinked]);
 
   // Auto-link helper: persists the link and updates state
-  const autoLink = useCallback(async (fw: CachedFw) => {
-    if (!orgId) return;
-    await supabase.from("firewall_config_links").upsert({
-      org_id: orgId,
-      config_hostname: configHostname,
-      config_hash: configHash,
-      central_firewall_id: fw.firewallId,
-      central_tenant_id: fw.centralTenantId,
-    }, { onConflict: "org_id,config_hash" });
-    const l: FirewallLink = {
-      configId,
-      firewallId: fw.firewallId,
-      tenantId: fw.centralTenantId,
-      hostname: fw.hostname,
-      serialNumber: fw.serialNumber,
-      model: fw.model,
-      firmwareVersion: fw.firmwareVersion,
-    };
-    setLinked(l);
-    setOpen(false);
-    onLinked?.(l);
-  }, [orgId, configId, configHostname, configHash, onLinked]);
+  const autoLink = useCallback(
+    async (fw: CachedFw) => {
+      if (!orgId) return;
+      await supabase.from("firewall_config_links").upsert(
+        {
+          org_id: orgId,
+          config_hostname: configHostname,
+          config_hash: configHash,
+          central_firewall_id: fw.firewallId,
+          central_tenant_id: fw.centralTenantId,
+        },
+        { onConflict: "org_id,config_hash" },
+      );
+      const l: FirewallLink = {
+        configId,
+        firewallId: fw.firewallId,
+        tenantId: fw.centralTenantId,
+        hostname: fw.hostname,
+        serialNumber: fw.serialNumber,
+        model: fw.model,
+        firmwareVersion: fw.firmwareVersion,
+      };
+      setLinked(l);
+      setOpen(false);
+      onLinked?.(l);
+    },
+    [orgId, configId, configHostname, configHash, onLinked],
+  );
 
   // Load firewalls when tenant changes
   useEffect(() => {
-    if (!orgId || !selectedTenantId) { setFirewalls([]); return; }
-    getCachedFirewalls(orgId, selectedTenantId).then((fws) => {
-      setFirewalls(fws);
-      // Auto-link by serial number only when not from manual upload (disableAutoLink)
-      if (configSerialNumber && !disableAutoLink) {
-        const match = fws.find((f) =>
-          f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase()
-        );
-        if (match) {
-          autoLink(match);
-          return;
+    if (!orgId || !selectedTenantId) {
+      setFirewalls([]);
+      return;
+    }
+    getCachedFirewalls(orgId, selectedTenantId)
+      .then((fws) => {
+        setFirewalls(fws);
+        // Auto-link by serial number only when not from manual upload (disableAutoLink)
+        if (configSerialNumber && !disableAutoLink) {
+          const match = fws.find(
+            (f) => f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase(),
+          );
+          if (match) {
+            autoLink(match);
+            return;
+          }
         }
-      }
-      if (configHostname) {
-        const match = fws.find((f) =>
-          f.hostname.toLowerCase() === configHostname.toLowerCase()
-          || f.hostname.toLowerCase().startsWith(configHostname.split(".")[0].toLowerCase())
-        );
-        if (match) {
-          setSelectedFwId(match.firewallId);
+        if (configHostname) {
+          const match = fws.find(
+            (f) =>
+              f.hostname.toLowerCase() === configHostname.toLowerCase() ||
+              f.hostname.toLowerCase().startsWith(configHostname.split(".")[0].toLowerCase()),
+          );
+          if (match) {
+            setSelectedFwId(match.firewallId);
+          }
         }
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {});
   }, [orgId, selectedTenantId, configHostname, configSerialNumber, disableAutoLink, autoLink]);
 
   const groups = useMemo(() => {
@@ -200,11 +226,12 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
     const q = search.toLowerCase();
     return list.filter((h) => {
       const allFws = [h.primary, ...h.peers];
-      return allFws.some((f) =>
-        f.hostname.toLowerCase().includes(q)
-        || f.name.toLowerCase().includes(q)
-        || f.serialNumber.toLowerCase().includes(q)
-        || f.model.toLowerCase().includes(q)
+      return allFws.some(
+        (f) =>
+          f.hostname.toLowerCase().includes(q) ||
+          f.name.toLowerCase().includes(q) ||
+          f.serialNumber.toLowerCase().includes(q) ||
+          f.model.toLowerCase().includes(q),
       );
     });
   }, [haGroups, search, selectedGroupId]);
@@ -214,7 +241,7 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
     const q = manualSerial.trim().toLowerCase();
     for (const h of haGroups) {
       const allFws = [h.primary, ...h.peers];
-      if (allFws.some(f => f.serialNumber.toLowerCase() === q)) {
+      if (allFws.some((f) => f.serialNumber.toLowerCase() === q)) {
         setSelectedFwId(h.primary.firewallId);
         return;
       }
@@ -225,13 +252,16 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
     const fw = firewalls.find((f) => f.firewallId === selectedFwId);
     if (!fw || !orgId) return;
 
-    await supabase.from("firewall_config_links").upsert({
-      org_id: orgId,
-      config_hostname: configHostname,
-      config_hash: configHash,
-      central_firewall_id: fw.firewallId,
-      central_tenant_id: fw.centralTenantId,
-    }, { onConflict: "org_id,config_hash" });
+    await supabase.from("firewall_config_links").upsert(
+      {
+        org_id: orgId,
+        config_hostname: configHostname,
+        config_hash: configHash,
+        central_firewall_id: fw.firewallId,
+        central_tenant_id: fw.centralTenantId,
+      },
+      { onConflict: "org_id,config_hash" },
+    );
 
     const l: FirewallLink = {
       configId,
@@ -249,7 +279,11 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
 
   const handleUnlink = async () => {
     if (!orgId || !configHash) return;
-    await supabase.from("firewall_config_links").delete().eq("org_id", orgId).eq("config_hash", configHash);
+    await supabase
+      .from("firewall_config_links")
+      .delete()
+      .eq("org_id", orgId)
+      .eq("config_hash", configHash);
     setLinked(null);
     setSelectedFwId("");
     onLinked?.(null);
@@ -261,9 +295,18 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
     return (
       <div className="flex items-center gap-2 mt-1 py-1 px-2 rounded bg-[#00F2B3]/5 dark:bg-[#00F2B3]/5 border border-[#00F2B3]/20 dark:border-[#00F2B3]/20">
         <CheckCircle2 className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3] shrink-0" />
-        <span className="text-[10px] text-foreground font-medium truncate">{linked.hostname || linked.serialNumber}</span>
-        <span className="text-[9px] text-muted-foreground">{linked.model} · {linked.firmwareVersion}</span>
-        <button onClick={handleUnlink} className="ml-auto text-[9px] text-muted-foreground hover:text-[#EA0022] transition-colors">Unlink</button>
+        <span className="text-[10px] text-foreground font-medium truncate">
+          {linked.hostname || linked.serialNumber}
+        </span>
+        <span className="text-[9px] text-muted-foreground">
+          {linked.model} · {linked.firmwareVersion}
+        </span>
+        <button
+          onClick={handleUnlink}
+          className="ml-auto text-[9px] text-muted-foreground hover:text-[#EA0022] transition-colors"
+        >
+          Unlink
+        </button>
       </div>
     );
   }
@@ -280,18 +323,22 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
       </button>
 
       {open && (
-        <div className="mt-2 rounded-xl border border-border/70 bg-card p-3 space-y-2.5 shadow-sm">
+        <div className="mt-2 rounded-xl border border-border/50 bg-card p-3 space-y-2.5 shadow-sm">
           {/* Tenant selector */}
           <div className="space-y-1">
-            <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Tenant</label>
+            <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Tenant
+            </label>
             <select
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
-              className="w-full rounded-xl border border-border/70 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+              className="w-full rounded-xl border border-border/50 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
             >
               <option value="">Select tenant…</option>
               {tenants.map((t) => (
-                <option key={t.id} value={t.id}>{t.name || t.id}</option>
+                <option key={t.id} value={t.id}>
+                  {t.name || t.id}
+                </option>
               ))}
             </select>
           </div>
@@ -301,7 +348,9 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
               {/* Manual serial input */}
               <div className="flex gap-1.5 items-end">
                 <div className="flex-1 space-y-1">
-                  <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Serial Number (optional)</label>
+                  <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Serial Number (optional)
+                  </label>
                   <Input
                     value={manualSerial}
                     onChange={(e) => setManualSerial(e.target.value)}
@@ -309,21 +358,32 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                     className="h-7 text-[11px] font-mono"
                   />
                 </div>
-                <Button size="sm" variant="outline" onClick={handleSerialMatch} className="h-7 text-[10px] px-2">Match</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSerialMatch}
+                  className="h-7 text-[10px] px-2"
+                >
+                  Match
+                </Button>
               </div>
 
               {/* Group filter */}
               {groups.length > 0 && (
                 <div className="space-y-1">
-                  <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Group</label>
+                  <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Group
+                  </label>
                   <select
                     value={selectedGroupId}
                     onChange={(e) => setSelectedGroupId(e.target.value)}
-                    className="w-full rounded-xl border border-border/70 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="w-full rounded-xl border border-border/50 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                   >
                     <option value="">All groups ({firewalls.length})</option>
                     {groups.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -345,7 +405,11 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                 {filtered.map((haGroup) => {
                   const allFws = [haGroup.primary, ...haGroup.peers];
                   const isSelected = allFws.some((f) => f.firewallId === selectedFwId);
-                  const autoMatch = configHostname && haGroup.primary.hostname.toLowerCase().startsWith(configHostname.split(".")[0].toLowerCase());
+                  const autoMatch =
+                    configHostname &&
+                    haGroup.primary.hostname
+                      .toLowerCase()
+                      .startsWith(configHostname.split(".")[0].toLowerCase());
 
                   return (
                     <button
@@ -355,32 +419,45 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
                         isSelected ? "bg-brand-accent/5 dark:bg-brand-accent/10" : ""
                       }`}
                     >
-                      <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                        (haGroup.primary.status as { connected?: boolean })?.connected ? "bg-[#00F2B3]" : "bg-[#EA0022]"
-                      }`} />
+                      <div
+                        className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                          (haGroup.primary.status as { connected?: boolean })?.connected
+                            ? "bg-[#00F2B3]"
+                            : "bg-[#EA0022]"
+                        }`}
+                      />
                       <Server className="h-3 w-3 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-foreground truncate">{getFirewallDisplayName(haGroup.primary)}</span>
+                          <span className="font-medium text-foreground truncate">
+                            {getFirewallDisplayName(haGroup.primary)}
+                          </span>
                           {haGroup.isHa && (
-                            <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B529F7] shrink-0">HA PAIR</span>
+                            <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B529F7] shrink-0">
+                              HA PAIR
+                            </span>
                           )}
                         </div>
                         <span className="text-[9px] text-muted-foreground block">
-                          {haGroup.primary.model} · {haGroup.primary.firmwareVersion} · {allFws.map(f => f.serialNumber).join(" / ")}
+                          {haGroup.primary.model} · {haGroup.primary.firmwareVersion} ·{" "}
+                          {allFws.map((f) => f.serialNumber).join(" / ")}
                         </span>
                       </div>
                       {isSelected && (
                         <CheckCircle2 className="h-3.5 w-3.5 text-brand-accent shrink-0" />
                       )}
                       {autoMatch && (
-                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold shrink-0">AUTO</span>
+                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3] font-semibold shrink-0">
+                          AUTO
+                        </span>
                       )}
                     </button>
                   );
                 })}
                 {filtered.length === 0 && (
-                  <p className="text-center text-[10px] text-muted-foreground py-3">No firewalls found</p>
+                  <p className="text-center text-[10px] text-muted-foreground py-3">
+                    No firewalls found
+                  </p>
                 )}
               </div>
 
@@ -398,7 +475,10 @@ export function FirewallLinkPicker({ configId, configHostname, configHash, confi
           )}
 
           {selectedTenantId && firewalls.length === 0 && (
-            <p className="text-[10px] text-muted-foreground text-center py-2">No firewalls cached for this tenant. Sync firewalls in the Sophos Central API section first.</p>
+            <p className="text-[10px] text-muted-foreground text-center py-2">
+              No firewalls cached for this tenant. Sync firewalls in the Sophos Central API section
+              first.
+            </p>
           )}
         </div>
       )}

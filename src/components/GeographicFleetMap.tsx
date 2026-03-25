@@ -55,16 +55,26 @@ export function GeographicFleetMap({ files }: Props) {
 
   if (!hasAnyIps) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="fleet-map">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Fleet Locations</h3>
+      <div
+        className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+        data-tour="fleet-map"
+      >
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          Fleet Locations
+        </h3>
         <p className="mt-3 text-sm text-muted-foreground">No external IPs detected</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="fleet-map">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Fleet Locations</h3>
+    <div
+      className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+      data-tour="fleet-map"
+    >
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        Fleet Locations
+      </h3>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -95,7 +105,7 @@ export function GeographicFleetMap({ files }: Props) {
                     No external IPs
                   </td>
                 </tr>
-              )
+              ),
             )}
           </tbody>
         </table>

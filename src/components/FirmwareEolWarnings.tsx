@@ -28,15 +28,32 @@ function lookupModel(model: string): LifecycleEntry | null {
   return null;
 }
 
-function getLifecycleStatus(entry: LifecycleEntry | null): { status: LifecycleStatus; eolDate?: string; eosDate?: string; successor?: string } {
+function getLifecycleStatus(entry: LifecycleEntry | null): {
+  status: LifecycleStatus;
+  eolDate?: string;
+  eosDate?: string;
+  successor?: string;
+} {
   if (!entry) return { status: "unknown" };
   const now = Date.now();
   const eol = entry.endOfLife ? new Date(entry.endOfLife).getTime() : null;
   const eos = entry.endOfSale ? new Date(entry.endOfSale).getTime() : null;
 
-  if (eol && now > eol) return { status: "eol", eolDate: entry.endOfLife!, successor: entry.successor ?? undefined };
-  if (eol && eol - now < TWELVE_MONTHS_MS) return { status: "eol-approaching", eolDate: entry.endOfLife!, successor: entry.successor ?? undefined };
-  if (eos && now > eos) return { status: "eos", eosDate: entry.endOfSale!, eolDate: entry.endOfLife ?? undefined, successor: entry.successor ?? undefined };
+  if (eol && now > eol)
+    return { status: "eol", eolDate: entry.endOfLife!, successor: entry.successor ?? undefined };
+  if (eol && eol - now < TWELVE_MONTHS_MS)
+    return {
+      status: "eol-approaching",
+      eolDate: entry.endOfLife!,
+      successor: entry.successor ?? undefined,
+    };
+  if (eos && now > eos)
+    return {
+      status: "eos",
+      eosDate: entry.endOfSale!,
+      eolDate: entry.endOfLife ?? undefined,
+      successor: entry.successor ?? undefined,
+    };
   return { status: "current" };
 }
 
@@ -79,10 +96,15 @@ export function FirmwareEolWarnings({ firewalls }: Props) {
 
   if (infos.length === 0) return null;
 
-  const hasWarning = infos.some((i) => i.lifecycleStatus === "eol" || i.lifecycleStatus === "eol-approaching" || i.lifecycleStatus === "eos");
+  const hasWarning = infos.some(
+    (i) =>
+      i.lifecycleStatus === "eol" ||
+      i.lifecycleStatus === "eol-approaching" ||
+      i.lifecycleStatus === "eos",
+  );
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
         <Shield className="h-3.5 w-3.5 text-primary" />
         Firmware &amp; Lifecycle
@@ -99,18 +121,27 @@ export function FirmwareEolWarnings({ firewalls }: Props) {
 
       <div className="space-y-2">
         {infos.map((info) => (
-          <div key={info.serialNumber} className="rounded-lg border border-border px-3 py-2.5 space-y-1.5">
+          <div
+            key={info.serialNumber}
+            className="rounded-lg border border-border px-3 py-2.5 space-y-1.5"
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{info.hostname}</span>
-                <span className="text-[10px] font-mono text-muted-foreground">{info.serialNumber}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {info.serialNumber}
+                </span>
               </div>
               <StatusBadge status={info.lifecycleStatus} />
             </div>
 
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>Model: <span className="text-foreground font-medium">{info.model}</span></span>
-              <span>Firmware: <span className="text-foreground font-mono">{info.firmwareVersion}</span></span>
+              <span>
+                Model: <span className="text-foreground font-medium">{info.model}</span>
+              </span>
+              <span>
+                Firmware: <span className="text-foreground font-mono">{info.firmwareVersion}</span>
+              </span>
             </div>
 
             {info.lifecycleStatus === "eol" && (
@@ -118,7 +149,12 @@ export function FirmwareEolWarnings({ firewalls }: Props) {
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 <span>
                   End of Life reached on {formatDate(info.eolDate!)}. No further updates or support.
-                  {info.successor && <> Recommended replacement: <strong>{info.successor}</strong>.</>}
+                  {info.successor && (
+                    <>
+                      {" "}
+                      Recommended replacement: <strong>{info.successor}</strong>.
+                    </>
+                  )}
                 </span>
               </div>
             )}
@@ -128,7 +164,12 @@ export function FirmwareEolWarnings({ firewalls }: Props) {
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 <span>
                   End of Life approaching on {formatDate(info.eolDate!)} (within 12 months).
-                  {info.successor && <> Consider upgrading to <strong>{info.successor}</strong>.</>}
+                  {info.successor && (
+                    <>
+                      {" "}
+                      Consider upgrading to <strong>{info.successor}</strong>.
+                    </>
+                  )}
                 </span>
               </div>
             )}
@@ -139,7 +180,12 @@ export function FirmwareEolWarnings({ firewalls }: Props) {
                 <span>
                   End of Sale since {formatDate(info.eosDate!)}.
                   {info.eolDate && <> End of Life on {formatDate(info.eolDate)}.</>}
-                  {info.successor && <> Successor: <strong>{info.successor}</strong>.</>}
+                  {info.successor && (
+                    <>
+                      {" "}
+                      Successor: <strong>{info.successor}</strong>.
+                    </>
+                  )}
                 </span>
               </div>
             )}
@@ -153,18 +199,42 @@ export function FirmwareEolWarnings({ firewalls }: Props) {
 function StatusBadge({ status }: { status: LifecycleStatus }) {
   switch (status) {
     case "eol":
-      return <Badge className="bg-red-500/15 text-red-500 border-0 text-[9px] gap-1"><AlertTriangle className="h-3 w-3" />End of Life</Badge>;
+      return (
+        <Badge className="bg-red-500/15 text-red-500 border-0 text-[9px] gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          End of Life
+        </Badge>
+      );
     case "eol-approaching":
-      return <Badge className="bg-amber-500/15 text-amber-500 border-0 text-[9px] gap-1"><AlertTriangle className="h-3 w-3" />EOL Approaching</Badge>;
+      return (
+        <Badge className="bg-amber-500/15 text-amber-500 border-0 text-[9px] gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          EOL Approaching
+        </Badge>
+      );
     case "eos":
-      return <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0 text-[9px] gap-1"><Info className="h-3 w-3" />End of Sale</Badge>;
+      return (
+        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-0 text-[9px] gap-1">
+          <Info className="h-3 w-3" />
+          End of Sale
+        </Badge>
+      );
     case "current":
-      return <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:text-[#00F2B3] border-0 text-[9px] gap-1"><CheckCircle2 className="h-3 w-3" />Current</Badge>;
+      return (
+        <Badge className="bg-[#00F2B3]/15 text-[#00F2B3] dark:text-[#00F2B3] border-0 text-[9px] gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          Current
+        </Badge>
+      );
     default:
       return <Badge className="bg-muted text-muted-foreground border-0 text-[9px]">Unknown</Badge>;
   }
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }

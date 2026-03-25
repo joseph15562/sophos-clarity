@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
+const CARD_CLASS =
+  "rounded-xl border border-border/50 bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70";
 const STORAGE_KEY = "firecomply-slack-config";
 
 interface SlackConfig {

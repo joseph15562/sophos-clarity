@@ -48,7 +48,7 @@ export function WidgetCustomiser({ tab, prefs, onChange }: Props) {
         type="button"
         data-tour="widget-customiser"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-xl border border-border/70 bg-card text-muted-foreground hover:text-foreground hover:border-brand-accent/30 dark:hover:border-[#00EDFF]/30 transition-colors"
+        className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-xl border border-border/50 bg-card text-muted-foreground hover:text-foreground hover:border-brand-accent/30 dark:hover:border-[#00EDFF]/30 transition-colors"
       >
         <LayoutGrid className="h-3 w-3" />
         Widgets
@@ -68,9 +68,14 @@ export function WidgetCustomiser({ tab, prefs, onChange }: Props) {
                 <div className="flex items-center justify-center h-6 w-6 rounded-md bg-brand-accent/10 dark:bg-[#00EDFF]/10">
                   <LayoutGrid className="h-3.5 w-3.5 text-brand-accent" />
                 </div>
-                <span className="text-sm font-display font-semibold tracking-tight text-foreground">Optional Widgets</span>
+                <span className="text-sm font-display font-semibold tracking-tight text-foreground">
+                  Optional Widgets
+                </span>
               </div>
-              <button onClick={() => setOpen(false)} className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -83,11 +88,12 @@ export function WidgetCustomiser({ tab, prefs, onChange }: Props) {
                     key={w.id}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${checked ? "bg-[#2006F7]/[0.04] dark:bg-[#00EDFF]/[0.04] hover:bg-brand-accent/[0.08] dark:hover:bg-[#00EDFF]/[0.08]" : "hover:bg-muted/40"}`}
                   >
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={() => toggle(w.id)}
-                    />
-                    <span className={`text-[13px] select-none transition-colors ${checked ? "font-medium text-foreground" : "text-muted-foreground"}`}>{w.label}</span>
+                    <Checkbox checked={checked} onCheckedChange={() => toggle(w.id)} />
+                    <span
+                      className={`text-[13px] select-none transition-colors ${checked ? "font-medium text-foreground" : "text-muted-foreground"}`}
+                    >
+                      {w.label}
+                    </span>
                   </label>
                 );
               })}

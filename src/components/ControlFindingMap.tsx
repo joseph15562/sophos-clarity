@@ -46,10 +46,12 @@ export function ControlFindingMap({ analysisResults, selectedFrameworks }: Props
 
   const filteredMappings = useMemo(() => {
     if (filter === "all") return mappings;
-    return mappings.map((m) => ({
-      ...m,
-      controls: m.controls.filter((c) => c.status === filter),
-    })).filter((m) => m.controls.length > 0);
+    return mappings
+      .map((m) => ({
+        ...m,
+        controls: m.controls.filter((c) => c.status === filter),
+      }))
+      .filter((m) => m.controls.length > 0);
   }, [mappings, filter]);
 
   const toggleRow = (key: string) => {
@@ -72,18 +74,24 @@ export function ControlFindingMap({ analysisResults, selectedFrameworks }: Props
 
   if (selectedFrameworks.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Control-to-Finding Mapping</h3>
-        <p className="text-sm text-muted-foreground">Select compliance frameworks to see control mapping</p>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+          Control-to-Finding Mapping
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Select compliance frameworks to see control mapping
+        </p>
       </div>
     );
   }
   if (mappings.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between gap-2 mb-4">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Control-to-Finding Mapping</h3>
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          Control-to-Finding Mapping
+        </h3>
         <div className="flex gap-1">
           {(["all", "fail", "partial", "pass"] as const).map((f) => (
             <button
@@ -140,14 +148,18 @@ export function ControlFindingMap({ analysisResults, selectedFrameworks }: Props
                           ) : (
                             <span className="w-3" />
                           )}
-                          <span className="font-mono text-muted-foreground min-w-[4rem]">{control.controlId}</span>
+                          <span className="font-mono text-muted-foreground min-w-[4rem]">
+                            {control.controlId}
+                          </span>
                           <span className="flex-1 truncate">{control.controlName}</span>
                           <span
                             className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-medium shrink-0 ${STATUS_STYLES[control.status]}`}
                           >
                             {control.status}
                           </span>
-                          <span className="tabular-nums text-muted-foreground">{findings.length} findings</span>
+                          <span className="tabular-nums text-muted-foreground">
+                            {findings.length} findings
+                          </span>
                         </button>
                         {isExpanded && findings.length > 0 && (
                           <div className="px-3 py-2 pl-8 bg-muted/10 space-y-1.5">

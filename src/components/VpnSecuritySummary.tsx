@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
-const VPN_SECTION_PATTERN = /ipsec|site.?to.?site|vpn.*connection|vpn.*tunnel|ssl.*vpn|remote.*access.*vpn|VPNIPSecConnection|VPNProfile|SSLVPNPolicy/i;
+const VPN_SECTION_PATTERN =
+  /ipsec|site.?to.?site|vpn.*connection|vpn.*tunnel|ssl.*vpn|remote.*access.*vpn|VPNIPSecConnection|VPNProfile|SSLVPNPolicy/i;
 
 const WEAK_CIPHERS = /3des|des(?!3)|rc4|null|blowfish|cast/i;
 const WEAK_AUTH = /md5|sha1(?![\d])/i;
@@ -39,7 +40,7 @@ interface Props {
 
 function findSection(
   sections: Record<string, ExtractedSection>,
-  pattern: RegExp
+  pattern: RegExp,
 ): { key: string; data: ExtractedSection } | null {
   for (const key of Object.keys(sections)) {
     if (pattern.test(key)) return { key, data: sections[key] };
@@ -58,7 +59,7 @@ function categorizeTunnel(
   enc: string,
   auth: string,
   dh: string,
-  pfs: string
+  pfs: string,
 ): { category: TunnelCategory; reasons: string[] } {
   const reasons: string[] = [];
   const encL = enc.toLowerCase().trim();
@@ -105,7 +106,10 @@ function extractTunnels(files: Props["files"]): VpnTunnel[] {
 
   for (const file of files) {
     const sections = file.extractedData;
-    const ipsecConn = findSection(sections, /vpn\s*ipsec\s*connection|ipsec\s*vpn\s*connection|ipsec\s*connection|VPNIPSecConnection|site.?to.?site/i);
+    const ipsecConn = findSection(
+      sections,
+      /vpn\s*ipsec\s*connection|ipsec\s*vpn\s*connection|ipsec\s*connection|VPNIPSecConnection|site.?to.?site/i,
+    );
     const profileSection = findSection(sections, /vpn\s*profile|VPNProfile|ipsec\s*profile/i);
 
     const profileByName = new Map<string, Record<string, string>>();
@@ -138,15 +142,10 @@ function extractTunnels(files: Props["files"]): VpnTunnel[] {
           profile?.["IKE Encryption"] ??
           profile?.["ESP Encryption"] ??
           "";
-        const p1Auth =
-          profile?.["Phase 1 Auth"] ?? profile?.["IKE Auth"] ?? "";
-        const p2Auth =
-          profile?.["Phase 2 Auth"] ?? profile?.["ESP Auth"] ?? "";
+        const p1Auth = profile?.["Phase 1 Auth"] ?? profile?.["IKE Auth"] ?? "";
+        const p2Auth = profile?.["Phase 2 Auth"] ?? profile?.["ESP Auth"] ?? "";
         const profileAuth = p1Auth || p2Auth || auth;
-        const dh =
-          profile?.["Phase 1 DH Groups"] ??
-          profile?.["DH Group"] ??
-          "";
+        const dh = profile?.["Phase 1 DH Groups"] ?? profile?.["DH Group"] ?? "";
         const pfs = profile?.["Phase 2 PFS"] ?? profile?.["PFS"] ?? "";
 
         const { category, reasons } = categorizeTunnel(enc, profileAuth, dh, pfs);
@@ -213,13 +212,31 @@ export function VpnSecuritySummary({ files }: Props) {
 
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">VPN Security Summary</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">
+          VPN Security Summary
+        </h3>
         <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
+          </svg>
           <div className="text-[11px] text-muted-foreground space-y-0.5">
             <p className="font-medium">No IPsec or SSL VPN tunnels configured</p>
-            <p>VPN tunnel encryption strength analysis will appear here when IPsec or SSL VPN connections are detected in the configuration.</p>
+            <p>
+              VPN tunnel encryption strength analysis will appear here when IPsec or SSL VPN
+              connections are detected in the configuration.
+            </p>
           </div>
         </div>
       </div>
@@ -231,11 +248,14 @@ export function VpnSecuritySummary({ files }: Props) {
   const weakPct = total > 0 ? (weakCount / total) * 100 : 0;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">VPN Security Summary</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        VPN Security Summary
+      </h3>
 
       <p className="text-xs text-muted-foreground">
-        {total} tunnel{total !== 1 ? "s" : ""} total · {strongCount} strong · {acceptableCount} acceptable · {weakCount} weak
+        {total} tunnel{total !== 1 ? "s" : ""} total · {strongCount} strong · {acceptableCount}{" "}
+        acceptable · {weakCount} weak
       </p>
 
       <div className="h-2 flex rounded-full overflow-hidden bg-muted/30">
@@ -276,9 +296,7 @@ export function VpnSecuritySummary({ files }: Props) {
                   <span>PFS: {t.pfs}</span>
                 </div>
                 {t.reasons.length > 0 && (
-                  <p className="mt-1.5 text-[#EA0022] font-medium">
-                    {t.reasons.join("; ")}
-                  </p>
+                  <p className="mt-1.5 text-[#EA0022] font-medium">{t.reasons.join("; ")}</p>
                 )}
               </li>
             ))}

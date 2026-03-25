@@ -1,11 +1,5 @@
 import { useMemo } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 type ExtractedSection = {
   tables: Array<{ headers: string[]; rows: Record<string, string>[] }>;
@@ -33,13 +27,7 @@ function isFirewallRulesSection(key: string): boolean {
 }
 
 function getActionValue(row: Record<string, string>): string {
-  return (
-    row["Action"] ??
-    row["Rule Action"] ??
-    row["Policy"] ??
-    row["action"] ??
-    ""
-  )
+  return (row["Action"] ?? row["Rule Action"] ?? row["Policy"] ?? row["action"] ?? "")
     .toLowerCase()
     .trim();
 }
@@ -88,16 +76,20 @@ export function RuleActionDistribution({ files }: Props) {
 
   if (total === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Action Distribution</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+          Rule Action Distribution
+        </h3>
         <p className="text-sm text-muted-foreground">No firewall rules found</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Action Distribution</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Rule Action Distribution
+      </h3>
       <div className="relative" style={{ height: 200 }}>
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
@@ -120,7 +112,7 @@ export function RuleActionDistribution({ files }: Props) {
                 const d = payload[0].payload;
                 const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
                 return (
-                  <div className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-xs shadow-elevated">
+                  <div className="rounded-md border border-border/50 bg-card px-2 py-1.5 text-xs shadow-elevated">
                     {d.name}: {d.value} ({pct}%)
                   </div>
                 );
@@ -141,10 +133,7 @@ export function RuleActionDistribution({ files }: Props) {
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-3">
         {data.map((d) => (
           <div key={d.name} className="flex items-center gap-1.5 text-xs">
-            <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: d.color }}
-            />
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
             <span className="text-muted-foreground">{d.name}</span>
             <span className="font-bold tabular-nums text-foreground">{d.value}</span>
           </div>

@@ -23,7 +23,7 @@ interface RowProps {
 
 function ChecklistRow({ title, done, actionLabel, onAction, disabled }: RowProps) {
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-border/70 last:border-0">
+    <div className="flex items-center gap-3 py-2.5 border-b border-border/50 last:border-0">
       <div className="shrink-0">
         {done ? (
           <CheckCircle2 className="h-5 w-5 text-[#00F2B3] dark:text-[#00F2B3]" aria-hidden />
@@ -34,7 +34,14 @@ function ChecklistRow({ title, done, actionLabel, onAction, disabled }: RowProps
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold tracking-tight text-foreground">{title}</p>
       </div>
-      <Button type="button" size="sm" variant="outline" className="shrink-0 border-brand-accent/25 dark:border-[#00EDFF]/30 hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10 font-semibold" disabled={disabled} onClick={onAction}>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="shrink-0 border-brand-accent/25 dark:border-[#00EDFF]/30 hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/10 font-semibold"
+        disabled={disabled}
+        onClick={onAction}
+      >
         {actionLabel}
       </Button>
     </div>
@@ -56,7 +63,9 @@ export function QbrPackChecklist({
     <Card className="rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] shadow-[0_12px_36px_rgba(32,6,247,0.08)] no-print">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-display font-black tracking-tight">QBR Pack</CardTitle>
-        <CardDescription className="text-sm font-medium text-foreground/80 dark:text-white/75">Prepare your quarterly business review materials.</CardDescription>
+        <CardDescription className="text-sm font-medium text-foreground/80 dark:text-white/75">
+          Prepare your quarterly business review materials.
+        </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         <ChecklistRow

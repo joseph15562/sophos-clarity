@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
+const CARD_CLASS =
+  "rounded-xl border border-border/50 bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70";
 const STORAGE_KEY = "firecomply-sla-tiers";
 
 type SlaTier = "gold" | "silver" | "bronze";
@@ -71,19 +72,23 @@ export function SlaManagement() {
     setNewCustomer("");
   }, [assignments, newCustomer, newTier]);
 
-  const updateTier = useCallback((customerId: string, tier: SlaTier) => {
-    const next = assignments.map((a) =>
-      a.customerId === customerId ? { ...a, tier } : a
-    );
-    setAssignments(next);
-    saveAssignments(next);
-  }, [assignments]);
+  const updateTier = useCallback(
+    (customerId: string, tier: SlaTier) => {
+      const next = assignments.map((a) => (a.customerId === customerId ? { ...a, tier } : a));
+      setAssignments(next);
+      saveAssignments(next);
+    },
+    [assignments],
+  );
 
-  const removeAssignment = useCallback((customerId: string) => {
-    const next = assignments.filter((a) => a.customerId !== customerId);
-    setAssignments(next);
-    saveAssignments(next);
-  }, [assignments]);
+  const removeAssignment = useCallback(
+    (customerId: string) => {
+      const next = assignments.filter((a) => a.customerId !== customerId);
+      setAssignments(next);
+      saveAssignments(next);
+    },
+    [assignments],
+  );
 
   return (
     <div className={CARD_CLASS}>
@@ -97,7 +102,9 @@ export function SlaManagement() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div>
-          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">Tier definitions</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">
+            Tier definitions
+          </h4>
           <div className="space-y-2">
             {TIERS.map((t) => (
               <div
@@ -110,9 +117,7 @@ export function SlaManagement() {
               >
                 <div>
                   <span className="font-semibold text-sm">{t.label}</span>
-                  <p className="text-[10px] text-muted-foreground">
-                    Critical: {t.critical}
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">Critical: {t.critical}</p>
                 </div>
                 <span
                   className="h-3 w-3 rounded-full shrink-0"
@@ -124,7 +129,9 @@ export function SlaManagement() {
         </div>
 
         <div>
-          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">Assign tier</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">
+            Assign tier
+          </h4>
           <div className="flex gap-2">
             <div className="flex-1">
               <Input
@@ -190,7 +197,9 @@ export function SlaManagement() {
       </div>
 
       <div className="mt-5">
-        <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">SLA performance by tier</h4>
+        <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-3">
+          SLA performance by tier
+        </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {performance.map((p) => {
             const tierInfo = TIERS.find((t) => t.id === p.tier)!;
@@ -219,12 +228,8 @@ export function SlaManagement() {
                     )}
                     <span>Breaches: {p.breachCount}</span>
                   </div>
-                  <p className="text-muted-foreground">
-                    Avg resolution: {p.avgResolutionHours}h
-                  </p>
-                  <p className="text-muted-foreground">
-                    Resolved: {p.totalResolved}
-                  </p>
+                  <p className="text-muted-foreground">Avg resolution: {p.avgResolutionHours}h</p>
+                  <p className="text-muted-foreground">Resolved: {p.totalResolved}</p>
                 </div>
               </div>
             );

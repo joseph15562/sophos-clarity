@@ -21,7 +21,12 @@ function countLast30Days(entries: ScoreHistoryEntry[]): number {
   }).length;
 }
 
-export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: AssessmentPulseProps) {
+export function AssessmentPulse({
+  orgId,
+  currentScore,
+  currentGrade,
+  isGuest,
+}: AssessmentPulseProps) {
   const [loading, setLoading] = useState(!isGuest && !!orgId);
   const [history, setHistory] = useState<ScoreHistoryEntry[]>([]);
 
@@ -45,7 +50,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
 
   if (isGuest) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 flex items-start gap-3">
+      <div className="rounded-xl border border-border/50 bg-card p-5 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70 flex items-start gap-3">
         <LogIn className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
         <p className="text-sm text-muted-foreground">Sign in to track score history</p>
       </div>
@@ -56,7 +61,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 space-y-3">
+      <div className="rounded-xl border border-border/50 bg-card p-5 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70 space-y-3">
         <div className="flex items-center gap-2">
           <Skeleton className="h-4 w-4 rounded" />
           <Skeleton className="h-4 w-40" />
@@ -78,7 +83,7 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
   const firstOnly = history.length <= 1;
 
   return (
-    <Card className="rounded-xl border border-border/70 bg-card">
+    <Card className="rounded-xl border border-border/50 bg-card">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -90,7 +95,9 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-2xl font-extrabold tabular-nums">{displayScore}</span>
             {displayGrade && (
-              <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-muted text-foreground">{displayGrade}</span>
+              <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-muted text-foreground">
+                {displayGrade}
+              </span>
             )}
             {firstOnly && (
               <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent">
@@ -103,13 +110,19 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
                   delta > 0 ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#EA0022]"
                 }`}
               >
-                {delta > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                {delta > 0 ? (
+                  <TrendingUp className="h-3.5 w-3.5" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5" />
+                )}
                 {delta > 0 ? "+" : ""}
                 {delta} vs previous
               </span>
             )}
             {!firstOnly && delta === 0 && (
-              <span className="text-xs text-muted-foreground tabular-nums">No change vs previous</span>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                No change vs previous
+              </span>
             )}
           </div>
         )}
@@ -117,7 +130,9 @@ export function AssessmentPulse({ orgId, currentScore, currentGrade, isGuest }: 
           <span className="font-medium text-foreground tabular-nums">{count30}</span> assessment
           {count30 === 1 ? "" : "s"} in the last 30 days
         </p>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">Keep assessing monthly to track improvement</p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Keep assessing monthly to track improvement
+        </p>
       </CardContent>
     </Card>
   );

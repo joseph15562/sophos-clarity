@@ -23,9 +23,19 @@ type HeroAction = {
 const GRADE_STYLE: Record<string, { ring: string; text: string; bg: string; label: string }> = {
   A: { ring: "ring-[#00F2B3]", text: "text-[#00F2B3]", bg: "bg-[#00F2B3]/10", label: "Excellent" },
   B: { ring: "ring-[#00F2B3]", text: "text-[#00F2B3]", bg: "bg-[#00F2B3]/10", label: "Good" },
-  C: { ring: "ring-[#F29400]", text: "text-[#F29400]", bg: "bg-[#F29400]/10", label: "Needs Improvement" },
+  C: {
+    ring: "ring-[#F29400]",
+    text: "text-[#F29400]",
+    bg: "bg-[#F29400]/10",
+    label: "Needs Improvement",
+  },
   D: { ring: "ring-[#EA0022]", text: "text-[#EA0022]", bg: "bg-[#EA0022]/10", label: "At Risk" },
-  F: { ring: "ring-[#EA0022]", text: "text-[#EA0022]", bg: "bg-[#EA0022]/10", label: "Critical Risk" },
+  F: {
+    ring: "ring-[#EA0022]",
+    text: "text-[#EA0022]",
+    bg: "bg-[#EA0022]/10",
+    label: "Critical Risk",
+  },
 };
 
 const IMPACT_COPY = {
@@ -39,7 +49,14 @@ function trimEvidence(evidence?: string, max = 88) {
   return evidence.length > max ? `${evidence.slice(0, max)}…` : evidence;
 }
 
-export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, extractionPct, hasComplianceFrameworks, hasReports }: Props) {
+export function HeroOutcomePanel({
+  analysisResults,
+  totalFindings,
+  fileCount,
+  extractionPct,
+  hasComplianceFrameworks,
+  hasReports,
+}: Props) {
   const { score, grade, critCount, highCount, topActions, coveragePct } = useMemo(() => {
     const entries = Object.entries(analysisResults);
     if (entries.length === 0) {
@@ -83,7 +100,16 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
     }
 
     const avgScore = Math.round(totalScore / entries.length);
-    const g = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+    const g =
+      avgScore >= 90
+        ? "A"
+        : avgScore >= 75
+          ? "B"
+          : avgScore >= 60
+            ? "C"
+            : avgScore >= 40
+              ? "D"
+              : "F";
 
     let covTotal = 0;
     let covCount = 0;
@@ -112,9 +138,13 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-center gap-5 min-w-0">
-          <div className={`shrink-0 h-24 w-24 rounded-[22px] ring-2 ${gs.ring} ${gs.bg} flex flex-col items-center justify-center shadow-sm`}>
+          <div
+            className={`shrink-0 h-24 w-24 rounded-[22px] ring-2 ${gs.ring} ${gs.bg} flex flex-col items-center justify-center shadow-sm`}
+          >
             <span className={`text-4xl font-black tabular-nums ${gs.text}`}>{score}</span>
-            <span className={`text-[10px] font-bold uppercase tracking-[0.22em] ${gs.text}`}>{grade}</span>
+            <span className={`text-[10px] font-bold uppercase tracking-[0.22em] ${gs.text}`}>
+              {grade}
+            </span>
           </div>
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-accent">
@@ -125,15 +155,31 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
               Security Posture: <span className={gs.text}>{gs.label}</span>
             </h3>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-2xl">
-              {fileCount} firewall{fileCount > 1 ? "s" : ""} assessed with {extractionPct}% extraction coverage. FireComply converts raw Sophos exports into deterministic findings, priority actions, and client-ready reports in minutes.
+              {fileCount} firewall{fileCount > 1 ? "s" : ""} assessed with {extractionPct}%
+              extraction coverage. FireComply converts raw Sophos exports into deterministic
+              findings, priority actions, and client-ready reports in minutes.
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2.5 min-w-full sm:min-w-[340px] lg:max-w-[380px]">
-          <ValueCard label="Manual review" value={IMPACT_COPY.manualHours} sublabel="Typical MSP effort" />
-          <ValueCard label="With FireComply" value={IMPACT_COPY.withFireComply} sublabel="Demo-ready outcome" accent="primary" />
-          <ValueCard label="Effort saved" value={IMPACT_COPY.effortSaved} sublabel="Assessment & reporting" accent="success" />
+          <ValueCard
+            label="Manual review"
+            value={IMPACT_COPY.manualHours}
+            sublabel="Typical MSP effort"
+          />
+          <ValueCard
+            label="With FireComply"
+            value={IMPACT_COPY.withFireComply}
+            sublabel="Demo-ready outcome"
+            accent="primary"
+          />
+          <ValueCard
+            label="Effort saved"
+            value={IMPACT_COPY.effortSaved}
+            sublabel="Assessment & reporting"
+            accent="success"
+          />
         </div>
       </div>
 
@@ -165,33 +211,48 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
       </div>
 
       {topActions.length > 0 && (
-        <div className="rounded-2xl border border-border/60 bg-card/70 backdrop-blur-sm p-4 sm:p-5 space-y-3">
+        <div className="rounded-2xl border border-[#F29400]/20 bg-[linear-gradient(135deg,rgba(242,148,0,0.04),rgba(234,0,34,0.02),transparent_60%)] dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.08),rgba(234,0,34,0.04),transparent_60%)] backdrop-blur-sm p-4 sm:p-5 space-y-4 shadow-card">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.24em] flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-[#F29400]" /> Top Actions to Improve Score
+            <p className="inline-flex items-center gap-2 rounded-full border border-[#F29400]/20 bg-[#F29400]/[0.08] dark:bg-[#F29400]/[0.12] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#F29400]">
+              <Zap className="h-3 w-3" /> Top Actions to Improve Score
             </p>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <Clock3 className="h-3.5 w-3.5" /> Deterministic findings before AI reporting
             </p>
           </div>
           <div className="grid gap-3 lg:grid-cols-3">
-            {topActions.map((action, i) => (
-              <div key={`${action.title}-${i}`} className="rounded-xl border border-border bg-background/70 px-4 py-3 space-y-1.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${action.severity === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : "bg-[#F29400]/10 text-[#F29400]"}`}>
-                    {action.severity}
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">{action.title}</span>
+            {topActions.map((action, i) => {
+              const isCrit = action.severity === "critical";
+              const borderColor = isCrit ? "border-[#EA0022]/25" : "border-[#F29400]/25";
+              const leftBorder = isCrit ? "border-l-[#EA0022]" : "border-l-[#F29400]";
+              return (
+                <div
+                  key={`${action.title}-${i}`}
+                  className={`rounded-xl border ${borderColor} border-l-[3px] ${leftBorder} bg-card/80 dark:bg-card/60 px-4 py-3.5 space-y-2 shadow-card transition-shadow duration-200 hover:shadow-elevated`}
+                >
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span
+                      className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider ${isCrit ? "bg-[#EA0022]/15 text-[#EA0022] ring-1 ring-[#EA0022]/20" : "bg-[#F29400]/15 text-[#F29400] ring-1 ring-[#F29400]/20"}`}
+                    >
+                      {action.severity}
+                    </span>
+                    <span className="text-sm font-semibold text-foreground leading-tight">
+                      {action.title}
+                    </span>
+                  </div>
+                  {action.remediation && (
+                    <p className="text-[11px] text-foreground/85 leading-relaxed">
+                      {action.remediation}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
+                    <span className="font-semibold text-foreground/70">Evidence source:</span>{" "}
+                    {action.section}
+                    {action.evidence ? ` · ${action.evidence}` : ""}
+                  </p>
                 </div>
-                {action.remediation && (
-                  <p className="text-[11px] text-foreground leading-relaxed">{action.remediation}</p>
-                )}
-                <p className="text-[10px] text-muted-foreground">
-                  <span className="font-medium text-foreground">Evidence source:</span> {action.section}
-                  {action.evidence ? ` · ${action.evidence}` : ""}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -199,7 +260,17 @@ export function HeroOutcomePanel({ analysisResults, totalFindings, fileCount, ex
   );
 }
 
-function ValueCard({ label, value, sublabel, accent = "neutral" }: { label: string; value: string; sublabel: string; accent?: "neutral" | "primary" | "success" }) {
+function ValueCard({
+  label,
+  value,
+  sublabel,
+  accent = "neutral",
+}: {
+  label: string;
+  value: string;
+  sublabel: string;
+  accent?: "neutral" | "primary" | "success";
+}) {
   const styles = {
     neutral: "border-border bg-card/70 text-foreground",
     primary: "border-brand-accent/20 bg-brand-accent/[0.05] text-brand-accent",
@@ -207,14 +278,26 @@ function ValueCard({ label, value, sublabel, accent = "neutral" }: { label: stri
   } as const;
   return (
     <div className={`rounded-2xl border px-3 py-3 ${styles[accent]}`}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </p>
       <p className="mt-1 text-xl font-black tracking-tight">{value}</p>
       <p className="text-[10px] text-muted-foreground mt-0.5">{sublabel}</p>
     </div>
   );
 }
 
-function StatPill({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: "red" | "amber" | "green" | "neutral" }) {
+function StatPill({
+  icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  accent: "red" | "amber" | "green" | "neutral";
+}) {
   const colors = {
     red: "border-[#EA0022]/20 bg-[#EA0022]/[0.04] text-[#EA0022]",
     amber: "border-[#F29400]/20 bg-[#F29400]/[0.04] text-[#F29400]",
@@ -226,7 +309,9 @@ function StatPill({ icon, label, value, accent }: { icon: React.ReactNode; label
       <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
         {icon} {label}
       </div>
-      <p className={`text-2xl font-black mt-1 tabular-nums ${accent !== "neutral" ? colors[accent].split(" ").pop() : "text-foreground"}`}>
+      <p
+        className={`text-2xl font-black mt-1 tabular-nums ${accent !== "neutral" ? colors[accent].split(" ").pop() : "text-foreground"}`}
+      >
         {value}
       </p>
     </div>

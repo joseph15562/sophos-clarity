@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,7 +8,9 @@ interface Props {
 }
 
 async function getOrgId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("org_members")
@@ -113,12 +108,14 @@ export function RemediationVelocity({ analysisResults }: Props) {
         setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 animate-pulse">
+      <div className="rounded-xl border border-border/50 bg-card p-5 animate-pulse">
         <div className="h-4 bg-muted/40 rounded w-1/3 mb-3" />
         <div className="h-40 bg-muted/40 rounded" />
       </div>
@@ -128,8 +125,10 @@ export function RemediationVelocity({ analysisResults }: Props) {
   const hasData = weeklyData.some((w) => w.count > 0);
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">Remediation Velocity</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">
+          Remediation Velocity
+        </h3>
         <p className="text-sm text-muted-foreground">
           No remediation history yet. Complete playbook items to see velocity.
         </p>
@@ -139,15 +138,15 @@ export function RemediationVelocity({ analysisResults }: Props) {
 
   const total = weeklyData.reduce((s, w) => s + w.count, 0);
   const avg = total / 8;
-  const first4Avg =
-    weeklyData.slice(0, 4).reduce((s, w) => s + w.count, 0) / 4;
-  const last4Avg =
-    weeklyData.slice(4, 8).reduce((s, w) => s + w.count, 0) / 4;
+  const first4Avg = weeklyData.slice(0, 4).reduce((s, w) => s + w.count, 0) / 4;
+  const last4Avg = weeklyData.slice(4, 8).reduce((s, w) => s + w.count, 0) / 4;
   const improving = last4Avg > first4Avg;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">Remediation Velocity</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-3">
+        Remediation Velocity
+      </h3>
       <div className="h-40">
         <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={weeklyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -157,12 +156,7 @@ export function RemediationVelocity({ analysisResults }: Props) {
                 <stop offset="100%" stopColor="#00F2B3" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <XAxis
-              dataKey="label"
-              tick={{ fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-            />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
             <YAxis
               tick={{ fontSize: 10 }}
               axisLine={false}
@@ -174,8 +168,9 @@ export function RemediationVelocity({ analysisResults }: Props) {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-xs shadow-elevated">
-                    Week {d.label.replace("W", "")}: {d.count} finding{d.count === 1 ? "" : "s"} resolved
+                  <div className="rounded-md border border-border/50 bg-card px-2 py-1.5 text-xs shadow-elevated">
+                    Week {d.label.replace("W", "")}: {d.count} finding{d.count === 1 ? "" : "s"}{" "}
+                    resolved
                   </div>
                 );
               }}
@@ -191,9 +186,7 @@ export function RemediationVelocity({ analysisResults }: Props) {
         </ResponsiveContainer>
       </div>
       <div className="flex items-center justify-between mt-2 text-xs">
-        <span className="text-muted-foreground">
-          Avg {avg.toFixed(1)} findings/week
-        </span>
+        <span className="text-muted-foreground">Avg {avg.toFixed(1)} findings/week</span>
         <span
           className={
             improving

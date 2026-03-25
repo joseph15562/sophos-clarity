@@ -21,7 +21,7 @@ export function ConsistencyChecker({ analysisResults }: Props) {
   if (Object.keys(analysisResults).length < 2 || gaps.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-border/70 bg-card overflow-hidden">
+    <section className="rounded-xl border border-border/50 bg-card overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors"
@@ -30,9 +30,12 @@ export function ConsistencyChecker({ analysisResults }: Props) {
           <span className="text-lg">⚖️</span>
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Multi-Firewall Consistency</h3>
+          <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+            Multi-Firewall Consistency
+          </h3>
           <p className="text-[10px] text-muted-foreground">
-            {gaps.length} policy discrepanc{gaps.length !== 1 ? "ies" : "y"} across {Object.keys(analysisResults).length} firewalls
+            {gaps.length} policy discrepanc{gaps.length !== 1 ? "ies" : "y"} across{" "}
+            {Object.keys(analysisResults).length} firewalls
           </p>
         </div>
         <span className="text-muted-foreground text-xs">{open ? "▼" : "▶"}</span>
@@ -55,15 +58,21 @@ function GapCard({ gap }: { gap: ConsistencyGap }) {
   return (
     <div className="rounded-lg border border-border p-3 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${style.badge}`}>{gap.severity}</span>
+        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${style.badge}`}>
+          {gap.severity}
+        </span>
         <span className="text-xs font-semibold text-foreground">{gap.metric}</span>
-        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{gap.category}</span>
+        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          {gap.category}
+        </span>
       </div>
 
       <div className="space-y-1">
         {gap.firewalls.map((fw) => (
           <div key={fw.label} className="flex items-center gap-2 text-[10px]">
-            <span className="text-muted-foreground font-medium w-24 truncate shrink-0">{fw.label}</span>
+            <span className="text-muted-foreground font-medium w-24 truncate shrink-0">
+              {fw.label}
+            </span>
             <span className="text-foreground">{fw.value}</span>
           </div>
         ))}

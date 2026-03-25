@@ -43,7 +43,13 @@ function getRules(files: Props["files"]): RuleInfo[] {
             index: rules.length,
             name: extractField(row, "Rule Name", "Name", "Rule") || `R${rules.length + 1}`,
             source: extractField(row, "Source Networks", "Source", "Source Zone", "Src Networks"),
-            destination: extractField(row, "Destination Networks", "Destination", "Destination Zone", "Dest Networks"),
+            destination: extractField(
+              row,
+              "Destination Networks",
+              "Destination",
+              "Destination Zone",
+              "Dest Networks",
+            ),
             service: extractField(row, "Service", "Services", "Services/Ports"),
           });
         });
@@ -100,8 +106,10 @@ export function RuleOverlapVis({ files }: Props) {
 
   if (rules.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Overlap Matrix</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+          Rule Overlap Matrix
+        </h3>
         <p className="text-sm text-muted-foreground">No firewall rules found</p>
       </div>
     );
@@ -117,8 +125,10 @@ export function RuleOverlapVis({ files }: Props) {
       : null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Overlap Matrix</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Rule Overlap Matrix
+      </h3>
 
       {maxRules > 20 && (
         <p className="text-[10px] text-muted-foreground mb-3">
@@ -152,11 +162,7 @@ export function RuleOverlapVis({ files }: Props) {
               {/* Column headers */}
               <div className="flex" style={{ height: rules.length > 10 ? 72 : 56 }}>
                 {rules.map((r, j) => (
-                  <div
-                    key={j}
-                    className="relative"
-                    style={{ width: 18, height: "100%" }}
-                  >
+                  <div key={j} className="relative" style={{ width: 18, height: "100%" }}>
                     <span
                       className="absolute text-[8px] font-mono text-muted-foreground whitespace-nowrap origin-bottom-left"
                       style={{
@@ -182,9 +188,7 @@ export function RuleOverlapVis({ files }: Props) {
                     const isSelf = i === j;
                     const isHovered = hovered?.i === i && hovered?.j === j;
                     const isRowOrCol =
-                      hovered !== null &&
-                      !isHovered &&
-                      (hovered.i === i || hovered.j === j);
+                      hovered !== null && !isHovered && (hovered.i === i || hovered.j === j);
                     let bg = "bg-transparent";
                     if (isSelf) bg = "bg-muted/60";
                     else if (score === 3) bg = "bg-red-500/80";
@@ -239,9 +243,18 @@ export function RuleOverlapVis({ files }: Props) {
       )}
 
       <div className="flex gap-4 mt-3 text-[9px] text-muted-foreground">
-        <span><span className="inline-block w-3 h-3 bg-amber-400/30 rounded-sm align-middle mr-1" /> 1 overlap</span>
-        <span><span className="inline-block w-3 h-3 bg-amber-500/60 rounded-sm align-middle mr-1" /> 2 overlaps</span>
-        <span><span className="inline-block w-3 h-3 bg-red-500/80 rounded-sm align-middle mr-1" /> 3 overlaps</span>
+        <span>
+          <span className="inline-block w-3 h-3 bg-amber-400/30 rounded-sm align-middle mr-1" /> 1
+          overlap
+        </span>
+        <span>
+          <span className="inline-block w-3 h-3 bg-amber-500/60 rounded-sm align-middle mr-1" /> 2
+          overlaps
+        </span>
+        <span>
+          <span className="inline-block w-3 h-3 bg-red-500/80 rounded-sm align-middle mr-1" /> 3
+          overlaps
+        </span>
       </div>
     </div>
   );

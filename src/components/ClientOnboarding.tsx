@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
+const CARD_CLASS =
+  "rounded-xl border border-border/50 bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70";
 const STORAGE_KEY = "firecomply-onboarding";
 
 interface OnboardingData {
@@ -97,7 +98,9 @@ export function ClientOnboarding() {
 
   return (
     <div className={CARD_CLASS}>
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Client Onboarding Wizard</h3>
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        Client Onboarding Wizard
+      </h3>
       <p className="text-[10px] text-muted-foreground mt-1">
         Step-by-step setup for new customers.
       </p>
@@ -119,9 +122,7 @@ export function ClientOnboarding() {
                 {s.title}
               </span>
             </div>
-            {i < STEPS.length - 1 && (
-              <div className="flex-1 h-0.5 mx-1 bg-border min-w-[8px]" />
-            )}
+            {i < STEPS.length - 1 && <div className="flex-1 h-0.5 mx-1 bg-border min-w-[8px]" />}
           </div>
         ))}
       </div>
@@ -151,7 +152,9 @@ export function ClientOnboarding() {
               >
                 <option value="">Select...</option>
                 {ENV_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </select>
             </div>
@@ -179,7 +182,8 @@ export function ClientOnboarding() {
               Agent Setup
             </h4>
             <p className="text-xs text-muted-foreground">
-              Install the FireComply connector agent on the customer network to collect firewall configs automatically.
+              Install the FireComply connector agent on the customer network to collect firewall
+              configs automatically.
             </p>
             <ol className="list-decimal list-inside space-y-2 text-xs text-muted-foreground">
               <li>Download the agent package from the Management portal</li>
@@ -212,7 +216,8 @@ export function ClientOnboarding() {
               First Assessment
             </h4>
             <p className="text-xs text-muted-foreground">
-              Upload a config export from Sophos Config Viewer, or trigger the agent to run the first assessment.
+              Upload a config export from Sophos Config Viewer, or trigger the agent to run the
+              first assessment.
             </p>
             <p className="text-xs text-muted-foreground">
               Once complete, the customer dashboard will show the initial risk score and findings.

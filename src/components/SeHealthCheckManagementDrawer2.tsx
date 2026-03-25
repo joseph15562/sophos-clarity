@@ -1,10 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
-import { Crown, Loader2, LogOut, Mail, PanelRight, Plus, Send, Star, Trash2, UserMinus, Users, X, XCircle } from "lucide-react";
+import {
+  Crown,
+  Loader2,
+  LogOut,
+  Mail,
+  PanelRight,
+  Plus,
+  Send,
+  Star,
+  Trash2,
+  UserMinus,
+  Users,
+  X,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useSEAuth, type SEProfile } from "@/hooks/use-se-auth";
 import { useActiveTeam, type SETeam } from "@/hooks/use-active-team";
@@ -36,7 +56,9 @@ interface PendingInvite {
 }
 
 async function apiCall(path: string, method: string, body?: unknown) {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) throw new Error("Not authenticated");
   const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/${path}`, {
     method,
@@ -90,7 +112,14 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     setDraft(defaultDraftFromProfile(seProfile));
     setTitleDraft(seProfile.seTitle?.trim() || "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, seProfile?.id, seProfile?.healthCheckPreparedBy, seProfile?.displayName, seProfile?.email, seProfile?.seTitle]);
+  }, [
+    open,
+    seProfile?.id,
+    seProfile?.healthCheckPreparedBy,
+    seProfile?.displayName,
+    seProfile?.email,
+    seProfile?.seTitle,
+  ]);
 
   const handleSave = async () => {
     if (!seProfile) return;
@@ -99,7 +128,10 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     try {
       const { error } = await supabase
         .from("se_profiles")
-        .update({ health_check_prepared_by: trimmed || null, se_title: titleDraft.trim() || null } as Record<string, unknown>)
+        .update({
+          health_check_prepared_by: trimmed || null,
+          se_title: titleDraft.trim() || null,
+        } as Record<string, unknown>)
         .eq("id", seProfile.id);
       if (error) throw error;
       await reloadSeProfile();
@@ -150,129 +182,158 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     }
   }, []);
 
-  const toggleExpand = useCallback((team: SETeam) => {
-    if (expandedTeamId === team.id) {
-      setExpandedTeamId(null);
-    } else {
-      setExpandedTeamId(team.id);
-      setRenameDraft(team.name);
-      setInviteEmail("");
-      void fetchMembers(team.id);
-      if (team.role === "admin") void fetchPendingInvites(team.id);
-    }
-  }, [expandedTeamId, fetchMembers, fetchPendingInvites]);
+  const toggleExpand = useCallback(
+    (team: SETeam) => {
+      if (expandedTeamId === team.id) {
+        setExpandedTeamId(null);
+      } else {
+        setExpandedTeamId(team.id);
+        setRenameDraft(team.name);
+        setInviteEmail("");
+        void fetchMembers(team.id);
+        if (team.role === "admin") void fetchPendingInvites(team.id);
+      }
+    },
+    [expandedTeamId, fetchMembers, fetchPendingInvites],
+  );
 
-  const handleSetPrimary = useCallback(async (teamId: string) => {
-    setBusy(true);
-    try {
-      await apiCall(`se-teams/${teamId}/set-primary`, "POST");
-      toast.success("Primary team updated.");
-      await reloadTeams();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed.");
-    } finally {
-      setBusy(false);
-    }
-  }, [reloadTeams]);
+  const handleSetPrimary = useCallback(
+    async (teamId: string) => {
+      setBusy(true);
+      try {
+        await apiCall(`se-teams/${teamId}/set-primary`, "POST");
+        toast.success("Primary team updated.");
+        await reloadTeams();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [reloadTeams],
+  );
 
-  const handleLeaveTeam = useCallback(async (teamId: string) => {
-    setBusy(true);
-    try {
-      await apiCall(`se-teams/${teamId}/leave`, "POST");
-      toast.success("Left team.");
-      setExpandedTeamId(null);
-      await reloadTeams();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not leave team.");
-    } finally {
-      setBusy(false);
-    }
-  }, [reloadTeams]);
+  const handleLeaveTeam = useCallback(
+    async (teamId: string) => {
+      setBusy(true);
+      try {
+        await apiCall(`se-teams/${teamId}/leave`, "POST");
+        toast.success("Left team.");
+        setExpandedTeamId(null);
+        await reloadTeams();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not leave team.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [reloadTeams],
+  );
 
-  const handleRenameTeam = useCallback(async (teamId: string) => {
-    if (!renameDraft.trim()) return;
-    setRenaming(true);
-    try {
-      await apiCall(`se-teams/${teamId}`, "PATCH", { name: renameDraft.trim() });
-      toast.success("Team renamed.");
-      await reloadTeams();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Rename failed.");
-    } finally {
-      setRenaming(false);
-    }
-  }, [renameDraft, reloadTeams]);
+  const handleRenameTeam = useCallback(
+    async (teamId: string) => {
+      if (!renameDraft.trim()) return;
+      setRenaming(true);
+      try {
+        await apiCall(`se-teams/${teamId}`, "PATCH", { name: renameDraft.trim() });
+        toast.success("Team renamed.");
+        await reloadTeams();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Rename failed.");
+      } finally {
+        setRenaming(false);
+      }
+    },
+    [renameDraft, reloadTeams],
+  );
 
-  const handleSendInvite = useCallback(async (teamId: string) => {
-    if (!inviteEmail.trim()) return;
-    setSendingInvite(true);
-    try {
-      await apiCall(`se-teams/${teamId}/invite`, "POST", { email: inviteEmail.trim() });
-      toast.success(`Invite sent to ${inviteEmail.trim()}`);
-      setInviteEmail("");
-      void fetchPendingInvites(teamId);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to send invite.");
-    } finally {
-      setSendingInvite(false);
-    }
-  }, [inviteEmail, fetchPendingInvites]);
+  const handleSendInvite = useCallback(
+    async (teamId: string) => {
+      if (!inviteEmail.trim()) return;
+      setSendingInvite(true);
+      try {
+        await apiCall(`se-teams/${teamId}/invite`, "POST", { email: inviteEmail.trim() });
+        toast.success(`Invite sent to ${inviteEmail.trim()}`);
+        setInviteEmail("");
+        void fetchPendingInvites(teamId);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to send invite.");
+      } finally {
+        setSendingInvite(false);
+      }
+    },
+    [inviteEmail, fetchPendingInvites],
+  );
 
-  const handleRevokeInvite = useCallback(async (teamId: string, inviteId: string) => {
-    setBusy(true);
-    try {
-      await apiCall(`se-teams/${teamId}/invites/${inviteId}`, "DELETE");
-      toast.success("Invite revoked.");
-      void fetchPendingInvites(teamId);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to revoke.");
-    } finally {
-      setBusy(false);
-    }
-  }, [fetchPendingInvites]);
+  const handleRevokeInvite = useCallback(
+    async (teamId: string, inviteId: string) => {
+      setBusy(true);
+      try {
+        await apiCall(`se-teams/${teamId}/invites/${inviteId}`, "DELETE");
+        toast.success("Invite revoked.");
+        void fetchPendingInvites(teamId);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Failed to revoke.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [fetchPendingInvites],
+  );
 
-  const handleTransferAdmin = useCallback(async (teamId: string, targetProfileId: string) => {
-    setBusy(true);
-    try {
-      await apiCall(`se-teams/${teamId}/transfer-admin`, "POST", { target_se_profile_id: targetProfileId });
-      toast.success("Admin role transferred.");
-      await reloadTeams();
-      void fetchMembers(teamId);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Transfer failed.");
-    } finally {
-      setBusy(false);
-    }
-  }, [reloadTeams, fetchMembers]);
+  const handleTransferAdmin = useCallback(
+    async (teamId: string, targetProfileId: string) => {
+      setBusy(true);
+      try {
+        await apiCall(`se-teams/${teamId}/transfer-admin`, "POST", {
+          target_se_profile_id: targetProfileId,
+        });
+        toast.success("Admin role transferred.");
+        await reloadTeams();
+        void fetchMembers(teamId);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Transfer failed.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [reloadTeams, fetchMembers],
+  );
 
-  const handleRemoveMember = useCallback(async (teamId: string, memberId: string) => {
-    setBusy(true);
-    try {
-      await apiCall(`se-teams/${teamId}/members/${memberId}`, "DELETE");
-      toast.success("Member removed.");
-      void fetchMembers(teamId);
-      await reloadTeams();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Remove failed.");
-    } finally {
-      setBusy(false);
-    }
-  }, [fetchMembers, reloadTeams]);
+  const handleRemoveMember = useCallback(
+    async (teamId: string, memberId: string) => {
+      setBusy(true);
+      try {
+        await apiCall(`se-teams/${teamId}/members/${memberId}`, "DELETE");
+        toast.success("Member removed.");
+        void fetchMembers(teamId);
+        await reloadTeams();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Remove failed.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [fetchMembers, reloadTeams],
+  );
 
-  const handleDeleteTeam = useCallback(async (teamId: string) => {
-    if (!confirm("Delete this team? This cannot be undone.")) return;
-    setBusy(true);
-    try {
-      await apiCall(`se-teams/${teamId}`, "DELETE");
-      toast.success("Team deleted.");
-      setExpandedTeamId(null);
-      await reloadTeams();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed.");
-    } finally {
-      setBusy(false);
-    }
-  }, [reloadTeams]);
+  const handleDeleteTeam = useCallback(
+    async (teamId: string) => {
+      if (!confirm("Delete this team? This cannot be undone.")) return;
+      setBusy(true);
+      try {
+        await apiCall(`se-teams/${teamId}`, "DELETE");
+        toast.success("Team deleted.");
+        setExpandedTeamId(null);
+        await reloadTeams();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Delete failed.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [reloadTeams],
+  );
 
   if (!open) return null;
 
@@ -290,7 +351,9 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-display font-bold text-foreground truncate">Management</h2>
-            <p className="text-[10px] text-muted-foreground">Report defaults &amp; team management</p>
+            <p className="text-[10px] text-muted-foreground">
+              Report defaults &amp; team management
+            </p>
           </div>
           <button
             type="button"
@@ -321,8 +384,8 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                   disabled={saving}
                 />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Stored in your FireComply profile and used for PDF, HTML, and history exports. Leave blank to fall back to
-                  your account display name or email.
+                  Stored in your FireComply profile and used for PDF, HTML, and history exports.
+                  Leave blank to fall back to your account display name or email.
                 </p>
 
                 <Label htmlFor="se-mgmt-title" className="text-xs font-semibold pt-2">
@@ -330,14 +393,18 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                 </Label>
                 <Select
                   value={SE_TITLE_PRESETS.includes(titleDraft) ? titleDraft : "__custom__"}
-                  onValueChange={(v) => { if (v !== "__custom__") setTitleDraft(v); }}
+                  onValueChange={(v) => {
+                    if (v !== "__custom__") setTitleDraft(v);
+                  }}
                 >
                   <SelectTrigger className="rounded-lg text-sm h-10">
                     <SelectValue placeholder="Select a title…" />
                   </SelectTrigger>
                   <SelectContent>
                     {SE_TITLE_PRESETS.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
                     ))}
                     <SelectItem value="__custom__">Custom…</SelectItem>
                   </SelectContent>
@@ -382,7 +449,10 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                     {teams.map((team) => {
                       const expanded = expandedTeamId === team.id;
                       return (
-                        <div key={team.id} className="rounded-xl border border-border/70 bg-card overflow-hidden">
+                        <div
+                          key={team.id}
+                          className="rounded-xl border border-border/50 bg-card overflow-hidden"
+                        >
                           <button
                             type="button"
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
@@ -393,15 +463,26 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                             <Badge variant="secondary" className="text-[10px] shrink-0">
                               {team.role === "admin" ? "Admin" : "Member"}
                             </Badge>
-                            <span className="text-[10px] text-muted-foreground shrink-0">{team.member_count} member{team.member_count !== 1 ? "s" : ""}</span>
-                            {team.is_primary && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
+                            <span className="text-[10px] text-muted-foreground shrink-0">
+                              {team.member_count} member{team.member_count !== 1 ? "s" : ""}
+                            </span>
+                            {team.is_primary && (
+                              <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                            )}
                           </button>
 
                           {expanded && (
                             <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
                               {/* Set primary */}
                               {!team.is_primary && (
-                                <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={busy} onClick={() => void handleSetPrimary(team.id)}>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1"
+                                  disabled={busy}
+                                  onClick={() => void handleSetPrimary(team.id)}
+                                >
                                   <Star className="h-3 w-3" /> Set as default
                                 </Button>
                               )}
@@ -410,10 +491,27 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                               {team.role === "admin" && (
                                 <div className="space-y-3">
                                   <div className="flex items-center gap-2">
-                                    <Input className="h-8 text-xs flex-1" value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)} />
-                                    <Button type="button" size="sm" className="h-8 text-xs" disabled={renaming || !renameDraft.trim() || renameDraft.trim() === team.name}
-                                      onClick={() => void handleRenameTeam(team.id)}>
-                                      {renaming ? <Loader2 className="h-3 w-3 animate-spin" /> : "Rename"}
+                                    <Input
+                                      className="h-8 text-xs flex-1"
+                                      value={renameDraft}
+                                      onChange={(e) => setRenameDraft(e.target.value)}
+                                    />
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="h-8 text-xs"
+                                      disabled={
+                                        renaming ||
+                                        !renameDraft.trim() ||
+                                        renameDraft.trim() === team.name
+                                      }
+                                      onClick={() => void handleRenameTeam(team.id)}
+                                    >
+                                      {renaming ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        "Rename"
+                                      )}
                                     </Button>
                                   </div>
 
@@ -429,11 +527,22 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                                         type="email"
                                         value={inviteEmail}
                                         onChange={(e) => setInviteEmail(e.target.value)}
-                                        onKeyDown={(e) => e.key === "Enter" && void handleSendInvite(team.id)}
+                                        onKeyDown={(e) =>
+                                          e.key === "Enter" && void handleSendInvite(team.id)
+                                        }
                                       />
-                                      <Button type="button" size="sm" className="h-8 text-xs gap-1" disabled={sendingInvite || !inviteEmail.trim()}
-                                        onClick={() => void handleSendInvite(team.id)}>
-                                        {sendingInvite ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        className="h-8 text-xs gap-1"
+                                        disabled={sendingInvite || !inviteEmail.trim()}
+                                        onClick={() => void handleSendInvite(team.id)}
+                                      >
+                                        {sendingInvite ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <Send className="h-3 w-3" />
+                                        )}
                                         Send
                                       </Button>
                                     </div>
@@ -442,25 +551,46 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                                   {/* Pending invites */}
                                   {loadingInvites ? (
                                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                  ) : pendingInvites.length > 0 && (
-                                    <div className="space-y-1">
-                                      <Label className="text-[10px] text-muted-foreground">Pending invites</Label>
-                                      {pendingInvites.map((inv) => (
-                                        <div key={inv.id} className="flex items-center gap-2 text-xs py-1">
-                                          <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
-                                          <span className="flex-1 truncate">{inv.email}</span>
-                                          <Button type="button" variant="ghost" size="sm" className="h-6 px-1 text-destructive" disabled={busy}
-                                            title="Revoke invite"
-                                            onClick={() => void handleRevokeInvite(team.id, inv.id)}>
-                                            <XCircle className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      ))}
-                                    </div>
+                                  ) : (
+                                    pendingInvites.length > 0 && (
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px] text-muted-foreground">
+                                          Pending invites
+                                        </Label>
+                                        {pendingInvites.map((inv) => (
+                                          <div
+                                            key={inv.id}
+                                            className="flex items-center gap-2 text-xs py-1"
+                                          >
+                                            <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                                            <span className="flex-1 truncate">{inv.email}</span>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 px-1 text-destructive"
+                                              disabled={busy}
+                                              title="Revoke invite"
+                                              onClick={() =>
+                                                void handleRevokeInvite(team.id, inv.id)
+                                              }
+                                            >
+                                              <XCircle className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
                                   )}
 
-                                  <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1 text-destructive hover:text-destructive" disabled={busy}
-                                    onClick={() => void handleDeleteTeam(team.id)}>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-[10px] gap-1 text-destructive hover:text-destructive"
+                                    disabled={busy}
+                                    onClick={() => void handleDeleteTeam(team.id)}
+                                  >
                                     <Trash2 className="h-3 w-3" /> Delete team
                                   </Button>
                                 </div>
@@ -474,25 +604,52 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                                 ) : (
                                   <div className="space-y-1">
                                     {teamMembers.map((m) => (
-                                      <div key={m.id} className="flex items-center gap-2 text-xs py-1">
-                                        <span className="flex-1 truncate">{m.display_name || m.email || m.se_profile_id}</span>
-                                        <Badge variant="secondary" className="text-[9px]">{m.role}</Badge>
-                                        {team.role === "admin" && m.se_profile_id !== seProfile?.id && (
-                                          <div className="flex gap-1">
-                                            {m.role !== "admin" && (
-                                              <Button type="button" variant="ghost" size="sm" className="h-6 px-1" disabled={busy}
-                                                title="Transfer admin"
-                                                onClick={() => void handleTransferAdmin(team.id, m.se_profile_id)}>
-                                                <Crown className="h-3 w-3" />
+                                      <div
+                                        key={m.id}
+                                        className="flex items-center gap-2 text-xs py-1"
+                                      >
+                                        <span className="flex-1 truncate">
+                                          {m.display_name || m.email || m.se_profile_id}
+                                        </span>
+                                        <Badge variant="secondary" className="text-[9px]">
+                                          {m.role}
+                                        </Badge>
+                                        {team.role === "admin" &&
+                                          m.se_profile_id !== seProfile?.id && (
+                                            <div className="flex gap-1">
+                                              {m.role !== "admin" && (
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-6 px-1"
+                                                  disabled={busy}
+                                                  title="Transfer admin"
+                                                  onClick={() =>
+                                                    void handleTransferAdmin(
+                                                      team.id,
+                                                      m.se_profile_id,
+                                                    )
+                                                  }
+                                                >
+                                                  <Crown className="h-3 w-3" />
+                                                </Button>
+                                              )}
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-1 text-destructive"
+                                                disabled={busy}
+                                                title="Remove member"
+                                                onClick={() =>
+                                                  void handleRemoveMember(team.id, m.id)
+                                                }
+                                              >
+                                                <UserMinus className="h-3 w-3" />
                                               </Button>
-                                            )}
-                                            <Button type="button" variant="ghost" size="sm" className="h-6 px-1 text-destructive" disabled={busy}
-                                              title="Remove member"
-                                              onClick={() => void handleRemoveMember(team.id, m.id)}>
-                                              <UserMinus className="h-3 w-3" />
-                                            </Button>
-                                          </div>
-                                        )}
+                                            </div>
+                                          )}
                                       </div>
                                     ))}
                                   </div>
@@ -500,8 +657,14 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                               </div>
 
                               {/* Leave */}
-                              <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1" disabled={busy}
-                                onClick={() => void handleLeaveTeam(team.id)}>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                disabled={busy}
+                                onClick={() => void handleLeaveTeam(team.id)}
+                              >
                                 <LogOut className="h-3 w-3" /> Leave team
                               </Button>
                             </div>
@@ -511,12 +674,16 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                     })}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground">You are not in any teams yet. Create one or ask a team admin to invite you.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    You are not in any teams yet. Create one or ask a team admin to invite you.
+                  </p>
                 )}
 
                 {/* Create team */}
                 <div className="space-y-2">
-                  <Label className="text-[10px] text-muted-foreground font-semibold">Create team</Label>
+                  <Label className="text-[10px] text-muted-foreground font-semibold">
+                    Create team
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       className="h-8 text-xs flex-1"
@@ -525,8 +692,18 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                       onChange={(e) => setNewTeamName(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && void handleCreateTeam()}
                     />
-                    <Button type="button" size="sm" className="h-8 text-xs gap-1" disabled={creatingTeam || !newTeamName.trim()} onClick={() => void handleCreateTeam()}>
-                      {creatingTeam ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      disabled={creatingTeam || !newTeamName.trim()}
+                      onClick={() => void handleCreateTeam()}
+                    >
+                      {creatingTeam ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Plus className="h-3 w-3" />
+                      )}
                       Create
                     </Button>
                   </div>

@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowUp, ArrowDown, Minus, GitCompareArrows } from "lucide-react";
 import { computeRiskScore } from "@/lib/risk-score";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const SEV_BADGE: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
@@ -67,9 +73,13 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
 
   if (labels.length < 2) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">Fleet Comparison</h3>
-        <p className="text-sm text-muted-foreground">Upload 2+ configurations to compare firewalls</p>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">
+          Fleet Comparison
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Upload 2+ configurations to compare firewalls
+        </p>
       </div>
     );
   }
@@ -78,45 +88,57 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
     categories.find((c) => c.label === label)?.pct ?? 0;
 
   return (
-    <div className="rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-card">
+    <div className="rounded-3xl border border-border/50 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-card">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="mb-1 flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-brand-accent/10 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]">
               <GitCompareArrows className="h-4 w-4" />
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fleet comparison</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Fleet comparison
+            </p>
           </div>
-          <h3 className="text-lg font-display font-semibold tracking-tight text-foreground">Compare posture, scoring, and deltas side-by-side</h3>
+          <h3 className="text-lg font-display font-semibold tracking-tight text-foreground">
+            Compare posture, scoring, and deltas side-by-side
+          </h3>
         </div>
-        <div className="rounded-2xl border border-border/70 bg-card/80 px-3 py-2 text-[11px] text-muted-foreground shadow-sm">
+        <div className="rounded-2xl border border-border/50 bg-card/80 px-3 py-2 text-[11px] text-muted-foreground shadow-sm">
           Best used after uploading two or more customer firewall exports.
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 mb-6">
         <div className="space-y-1.5">
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Firewall A</label>
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Firewall A
+          </label>
           <Select value={firewallA} onValueChange={setFirewallA}>
             <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {selectLabels.map((l) => (
-                <SelectItem key={l} value={l} disabled={l === firewallB}>{l}</SelectItem>
+                <SelectItem key={l} value={l} disabled={l === firewallB}>
+                  {l}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Firewall B</label>
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Firewall B
+          </label>
           <Select value={firewallB} onValueChange={setFirewallB}>
             <SelectTrigger className="text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {selectLabels.map((l) => (
-                <SelectItem key={l} value={l} disabled={l === firewallA}>{l}</SelectItem>
+                <SelectItem key={l} value={l} disabled={l === firewallA}>
+                  {l}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -125,22 +147,42 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
 
       <div className="grid gap-6 sm:grid-cols-2 mb-6">
         <div className="rounded-lg border border-border bg-muted/30 p-4">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{firewallA}</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            {firewallA}
+          </div>
           {scoreA ? (
             <div className="flex items-center gap-3">
-              <span className={`text-2xl font-extrabold tabular-nums ${gradeColorClass(scoreA.grade)}`}>{scoreA.overall}</span>
-              <span className={`text-sm font-bold px-2 py-0.5 rounded ${gradeColorClass(scoreA.grade)}`}>{scoreA.grade}</span>
+              <span
+                className={`text-2xl font-extrabold tabular-nums ${gradeColorClass(scoreA.grade)}`}
+              >
+                {scoreA.overall}
+              </span>
+              <span
+                className={`text-sm font-bold px-2 py-0.5 rounded ${gradeColorClass(scoreA.grade)}`}
+              >
+                {scoreA.grade}
+              </span>
             </div>
           ) : (
             <span className="text-sm text-muted-foreground">—</span>
           )}
         </div>
         <div className="rounded-lg border border-border bg-muted/30 p-4">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{firewallB}</div>
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            {firewallB}
+          </div>
           {scoreB ? (
             <div className="flex items-center gap-3">
-              <span className={`text-2xl font-extrabold tabular-nums ${gradeColorClass(scoreB.grade)}`}>{scoreB.overall}</span>
-              <span className={`text-sm font-bold px-2 py-0.5 rounded ${gradeColorClass(scoreB.grade)}`}>{scoreB.grade}</span>
+              <span
+                className={`text-2xl font-extrabold tabular-nums ${gradeColorClass(scoreB.grade)}`}
+              >
+                {scoreB.overall}
+              </span>
+              <span
+                className={`text-sm font-bold px-2 py-0.5 rounded ${gradeColorClass(scoreB.grade)}`}
+              >
+                {scoreB.grade}
+              </span>
             </div>
           ) : (
             <span className="text-sm text-muted-foreground">—</span>
@@ -155,20 +197,36 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
           const pctB = getCategoryScore(categoriesB, label);
           const delta = pctA - pctB;
           const deltaIcon =
-            delta > 0 ? <ArrowUp className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" /> : delta < 0 ? <ArrowDown className="h-3 w-3 text-[#EA0022]" /> : <Minus className="h-3 w-3 text-muted-foreground" />;
+            delta > 0 ? (
+              <ArrowUp className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" />
+            ) : delta < 0 ? (
+              <ArrowDown className="h-3 w-3 text-[#EA0022]" />
+            ) : (
+              <Minus className="h-3 w-3 text-muted-foreground" />
+            );
           return (
             <div key={label} className="flex items-center gap-2">
               <span className="text-xs text-foreground w-32 shrink-0">{label}</span>
               <div className="flex-1 flex gap-1 items-center">
                 <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden min-w-0">
-                  <div className={`h-full rounded-full ${barColorClass(pctA)}`} style={{ width: `${pctA}%` }} />
+                  <div
+                    className={`h-full rounded-full ${barColorClass(pctA)}`}
+                    style={{ width: `${pctA}%` }}
+                  />
                 </div>
-                <span className="text-[10px] font-bold tabular-nums w-6 text-right shrink-0">{pctA}%</span>
+                <span className="text-[10px] font-bold tabular-nums w-6 text-right shrink-0">
+                  {pctA}%
+                </span>
                 {deltaIcon}
                 <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden min-w-0">
-                  <div className={`h-full rounded-full ${barColorClass(pctB)}`} style={{ width: `${pctB}%` }} />
+                  <div
+                    className={`h-full rounded-full ${barColorClass(pctB)}`}
+                    style={{ width: `${pctB}%` }}
+                  />
                 </div>
-                <span className="text-[10px] font-bold tabular-nums w-6 text-right shrink-0">{pctB}%</span>
+                <span className="text-[10px] font-bold tabular-nums w-6 text-right shrink-0">
+                  {pctB}%
+                </span>
               </div>
             </div>
           );
@@ -189,7 +247,9 @@ export function FleetComparison({ analysisResults, files }: FleetComparisonProps
             </div>
             <div>
               <div className="font-semibold text-muted-foreground mb-1">Common findings</div>
-              <span className="text-foreground font-bold tabular-nums">{findingDelta.commonCount}</span>
+              <span className="text-foreground font-bold tabular-nums">
+                {findingDelta.commonCount}
+              </span>
             </div>
           </div>
         </div>
@@ -206,7 +266,9 @@ function FindingList({ findings }: { findings: Finding[] }) {
       ) : (
         findings.map((f) => (
           <li key={f.id} className="flex items-start gap-1.5">
-            <span className={`shrink-0 text-[8px] font-bold px-1 py-0.5 rounded uppercase ${SEV_BADGE[f.severity] ?? "bg-muted text-muted-foreground"}`}>
+            <span
+              className={`shrink-0 text-[8px] font-bold px-1 py-0.5 rounded uppercase ${SEV_BADGE[f.severity] ?? "bg-muted text-muted-foreground"}`}
+            >
               {f.severity}
             </span>
             <span className="text-foreground truncate">{f.title}</span>

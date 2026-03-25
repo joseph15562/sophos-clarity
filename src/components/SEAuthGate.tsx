@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  onSignUp: (email: string, password: string, fullName?: string) => Promise<{ error: string | null }>;
+  onSignUp: (
+    email: string,
+    password: string,
+    fullName?: string,
+  ) => Promise<{ error: string | null }>;
 }
 
 const SOPHOS_DOMAIN_RE = /@sophos\.com$/i;
@@ -20,64 +24,74 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
 
-    const trimmedEmail = email.trim();
+      const trimmedEmail = email.trim();
 
-    if (!trimmedEmail || !password.trim()) {
-      setError("Email and password are required");
-      return;
-    }
+      if (!trimmedEmail || !password.trim()) {
+        setError("Email and password are required");
+        return;
+      }
 
-    if (!SOPHOS_DOMAIN_RE.test(trimmedEmail)) {
-      setError("Only @sophos.com email addresses are allowed. Please use your Sophos corporate email.");
-      return;
-    }
+      if (!SOPHOS_DOMAIN_RE.test(trimmedEmail)) {
+        setError(
+          "Only @sophos.com email addresses are allowed. Please use your Sophos corporate email.",
+        );
+        return;
+      }
 
-    if (mode === "signup" && password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+      if (mode === "signup" && password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
 
-    if (mode === "signup" && !fullName.trim()) {
-      setError("Full name is required");
-      return;
-    }
+      if (mode === "signup" && !fullName.trim()) {
+        setError("Full name is required");
+        return;
+      }
 
-    if (mode === "signup" && password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
+      if (mode === "signup" && password.length < 8) {
+        setError("Password must be at least 8 characters");
+        return;
+      }
 
-    setLoading(true);
-    const result = mode === "signin"
-      ? await onSignIn(trimmedEmail, password)
-      : await onSignUp(trimmedEmail, password, fullName.trim());
-    setLoading(false);
+      setLoading(true);
+      const result =
+        mode === "signin"
+          ? await onSignIn(trimmedEmail, password)
+          : await onSignUp(trimmedEmail, password, fullName.trim());
+      setLoading(false);
 
-    if (result.error) {
-      setError(result.error);
-    } else if (mode === "signup") {
-      setSignupSuccess(true);
-    }
-  }, [email, fullName, password, confirmPassword, mode, onSignIn, onSignUp]);
+      if (result.error) {
+        setError(result.error);
+      } else if (mode === "signup") {
+        setSignupSuccess(true);
+      }
+    },
+    [email, fullName, password, confirmPassword, mode, onSignIn, onSignUp],
+  );
 
   if (signupSuccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <div className="max-w-md w-full rounded-xl border border-border/70 bg-card p-8 text-center space-y-4">
+        <div className="max-w-md w-full rounded-xl border border-border/50 bg-card p-8 text-center space-y-4">
           <div className="h-12 w-12 rounded-full bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
             <UserPlus className="h-6 w-6 text-[#00F2B3] dark:text-[#00F2B3]" />
           </div>
           <h2 className="text-lg font-display font-bold text-foreground">Check your email</h2>
           <p className="text-sm text-muted-foreground">
-            We've sent a confirmation link to <span className="font-medium text-foreground">{email}</span>.
-            Click the link to activate your account, then sign in.
+            We've sent a confirmation link to{" "}
+            <span className="font-medium text-foreground">{email}</span>. Click the link to activate
+            your account, then sign in.
           </p>
           <button
-            onClick={() => { setMode("signin"); setSignupSuccess(false); }}
+            onClick={() => {
+              setMode("signin");
+              setSignupSuccess(false);
+            }}
             className="text-sm text-brand-accent hover:underline"
           >
             Back to sign in
@@ -113,21 +127,28 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
             </div>
             <h2 className="text-xl font-display font-bold text-foreground">SE Sign In</h2>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              This tool is restricted to Sophos employees. Please use your <span className="font-medium text-foreground">@sophos.com</span> email address.
+              This tool is restricted to Sophos employees. Please use your{" "}
+              <span className="font-medium text-foreground">@sophos.com</span> email address.
             </p>
           </div>
 
-          <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
+          <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
             <div className="flex border-b border-border">
               <button
-                onClick={() => { setMode("signin"); setError(null); }}
+                onClick={() => {
+                  setMode("signin");
+                  setError(null);
+                }}
                 className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${mode === "signin" ? "text-foreground border-b-2 border-[#2006F7] dark:border-[#00EDFF]" : "text-muted-foreground hover:text-foreground"}`}
               >
                 <LogIn className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
                 Sign In
               </button>
               <button
-                onClick={() => { setMode("signup"); setError(null); }}
+                onClick={() => {
+                  setMode("signup");
+                  setError(null);
+                }}
                 className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${mode === "signup" ? "text-foreground border-b-2 border-[#2006F7] dark:border-[#00EDFF]" : "text-muted-foreground hover:text-foreground"}`}
               >
                 <UserPlus className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
@@ -203,11 +224,7 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
                 </div>
               )}
 
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full gap-2"
-              >
+              <Button type="submit" disabled={loading} className="w-full gap-2">
                 {loading ? (
                   <span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                 ) : (
@@ -221,8 +238,8 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
           </div>
 
           <p className="text-center text-[10px] text-muted-foreground">
-            Your SE account is separate from the MSP FireComply platform.
-            Sophos employees can use both independently.
+            Your SE account is separate from the MSP FireComply platform. Sophos employees can use
+            both independently.
           </p>
         </div>
       </div>

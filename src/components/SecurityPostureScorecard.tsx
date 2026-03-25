@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import { Shield, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, XCircle, MinusCircle } from "lucide-react";
+import {
+  Shield,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  MinusCircle,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore, type CategoryScore, type RiskScoreResult } from "@/lib/risk-score";
@@ -17,19 +25,34 @@ interface ScorecardCategory {
 }
 
 function toPosture(pct: number, details: string): PostureLabel {
-  if (details.toLowerCase().includes("no enabled") || details.toLowerCase().includes("no management"))
+  if (
+    details.toLowerCase().includes("no enabled") ||
+    details.toLowerCase().includes("no management")
+  )
     if (pct === 100) return "Good";
   if (pct >= 80) return "Good";
   if (pct >= 50) return "Needs Review";
   return "High Risk";
 }
 
-function postureStyle(p: PostureLabel): { icon: typeof CheckCircle2; color: string; bgColor: string } {
+function postureStyle(p: PostureLabel): {
+  icon: typeof CheckCircle2;
+  color: string;
+  bgColor: string;
+} {
   switch (p) {
     case "Good":
-      return { icon: CheckCircle2, color: "text-[#00774a] dark:text-[#00F2B3]", bgColor: "bg-[#00F2B3]/10" };
+      return {
+        icon: CheckCircle2,
+        color: "text-[#00774a] dark:text-[#00F2B3]",
+        bgColor: "bg-[#00F2B3]/10",
+      };
     case "Needs Review":
-      return { icon: AlertTriangle, color: "text-[#b8a200] dark:text-[#F8E300]", bgColor: "bg-[#F8E300]/10" };
+      return {
+        icon: AlertTriangle,
+        color: "text-[#b8a200] dark:text-[#F8E300]",
+        bgColor: "bg-[#F8E300]/10",
+      };
     case "High Risk":
       return { icon: XCircle, color: "text-[#EA0022]", bgColor: "bg-[#EA0022]/10" };
     case "Insufficient Data":
@@ -52,23 +75,40 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
 
   const { categories, overall, grade, postureSummary } = useMemo(() => {
     const labels = Object.keys(analysisResults);
-    if (labels.length === 0) return { categories: [], overall: 0, grade: "F" as const, postureSummary: { good: 0, review: 0, risk: 0 } };
+    if (labels.length === 0)
+      return {
+        categories: [],
+        overall: 0,
+        grade: "F" as const,
+        postureSummary: { good: 0, review: 0, risk: 0 },
+      };
 
     let merged: RiskScoreResult;
     if (labels.length === 1) {
       merged = computeRiskScore(analysisResults[labels[0]]);
     } else {
-      const allCats: CategoryScore[][] = labels.map((l) => computeRiskScore(analysisResults[l]).categories);
+      const allCats: CategoryScore[][] = labels.map(
+        (l) => computeRiskScore(analysisResults[l]).categories,
+      );
       const avgCats: CategoryScore[] = allCats[0].map((cat, idx) => {
         const avgPct = Math.round(allCats.reduce((s, c) => s + c[idx].pct, 0) / allCats.length);
-        const details = labels.length > 1
-          ? allCats.map((c, fi) => `${labels[fi]}: ${c[idx].pct}%`).join(" · ")
-          : cat.details;
+        const details =
+          labels.length > 1
+            ? allCats.map((c, fi) => `${labels[fi]}: ${c[idx].pct}%`).join(" · ")
+            : cat.details;
         return { ...cat, pct: avgPct, score: avgPct, details };
       });
       const avgOverall = Math.round(avgCats.reduce((s, c) => s + c.pct, 0) / avgCats.length);
       const g: RiskScoreResult["grade"] =
-        avgOverall >= 90 ? "A" : avgOverall >= 75 ? "B" : avgOverall >= 60 ? "C" : avgOverall >= 40 ? "D" : "F";
+        avgOverall >= 90
+          ? "A"
+          : avgOverall >= 75
+            ? "B"
+            : avgOverall >= 60
+              ? "C"
+              : avgOverall >= 40
+                ? "D"
+                : "F";
       merged = { overall: avgOverall, grade: g, categories: avgCats };
     }
 
@@ -88,10 +128,13 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
   const OverallIcon = overallStyle.icon;
 
   const gradeColor =
-    grade === "A" || grade === "B" ? "text-[#00774a] dark:text-[#00F2B3]"
-    : grade === "C" ? "text-[#b8a200] dark:text-[#F8E300]"
-    : grade === "D" ? "text-[#c47800] dark:text-[#F29400]"
-    : "text-[#EA0022]";
+    grade === "A" || grade === "B"
+      ? "text-[#00774a] dark:text-[#00F2B3]"
+      : grade === "C"
+        ? "text-[#b8a200] dark:text-[#F8E300]"
+        : grade === "D"
+          ? "text-[#c47800] dark:text-[#F29400]"
+          : "text-[#EA0022]";
 
   const visibleCats = expanded ? categories : categories.slice(0, 4);
 
@@ -107,14 +150,19 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
               <div className="h-9 w-9 rounded-xl bg-brand-accent/10 dark:bg-brand-accent/20 flex items-center justify-center border border-brand-accent/15">
                 <Shield className="h-4 w-4 text-brand-accent" />
               </div>
-              <CardTitle className="text-lg font-display font-black tracking-tight">Security Posture Scorecard</CardTitle>
+              <CardTitle className="text-lg font-display font-black tracking-tight">
+                Security Posture Scorecard
+              </CardTitle>
             </div>
             <p className="text-[11px] text-muted-foreground max-w-2xl leading-relaxed">
-              Deterministic assessment based on extracted firewall evidence to support MSP reviews, customer conversations, and SE-led validation.
+              Deterministic assessment based on extracted firewall evidence to support MSP reviews,
+              customer conversations, and SE-led validation.
             </p>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3">
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-transparent ${overallStyle.bgColor}`}>
+          <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-card/70 px-4 py-3 transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70">
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-transparent ${overallStyle.bgColor}`}
+            >
               <OverallIcon className={`h-3.5 w-3.5 ${overallStyle.color}`} />
               <span className={`text-xs font-bold ${overallStyle.color}`}>{overallPosture}</span>
             </div>
@@ -126,16 +174,28 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Score intent</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Summarise overall control health in one executive view</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Score intent
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Summarise overall control health in one executive view
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best for</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Board-ready reviews, service reporting, and technical triage</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Best for
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Board-ready reviews, service reporting, and technical triage
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Trust note</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Evidence-led scoring, not a black-box AI rating</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Trust note
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Evidence-led scoring, not a black-box AI rating
+            </p>
           </div>
         </div>
       </CardHeader>
@@ -163,14 +223,21 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
         {visibleCats.map((cat) => {
           const Icon = cat.icon;
           return (
-            <div key={cat.label} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/70 px-3.5 py-3 shadow-card">
-              <div className={`h-8 w-8 rounded-xl ${cat.bgColor} flex items-center justify-center shrink-0 border border-transparent`}>
+            <div
+              key={cat.label}
+              className="flex items-center gap-3 rounded-2xl border border-border/50 bg-card/70 px-3.5 py-3 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70"
+            >
+              <div
+                className={`h-8 w-8 rounded-xl ${cat.bgColor} flex items-center justify-center shrink-0 border border-transparent`}
+              >
                 <Icon className={`h-3.5 w-3.5 ${cat.color}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-foreground">{cat.label}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-transparent ${cat.bgColor} ${cat.color}`}>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border border-transparent ${cat.bgColor} ${cat.color}`}
+                  >
                     {cat.posture}
                   </span>
                 </div>
@@ -183,11 +250,18 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
                     className="h-full rounded-full transition-all duration-700"
                     style={{
                       width: `${cat.score}%`,
-                      backgroundColor: cat.posture === "Good" ? "#00F2B3" : cat.posture === "Needs Review" ? "#F8E300" : "#EA0022",
+                      backgroundColor:
+                        cat.posture === "Good"
+                          ? "#00F2B3"
+                          : cat.posture === "Needs Review"
+                            ? "#F8E300"
+                            : "#EA0022",
                     }}
                   />
                 </div>
-                <span className="text-[9px] text-muted-foreground mt-0.5 block text-right">{cat.score}%</span>
+                <span className="text-[9px] text-muted-foreground mt-0.5 block text-right">
+                  {cat.score}%
+                </span>
               </div>
             </div>
           );

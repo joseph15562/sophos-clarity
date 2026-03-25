@@ -10,7 +10,11 @@ interface Props {
   onChange: (names: string[]) => void;
 }
 
-export function WebFilterRuleExclusionBar({ candidateRuleNames, exemptRuleNames, onChange }: Props) {
+export function WebFilterRuleExclusionBar({
+  candidateRuleNames,
+  exemptRuleNames,
+  onChange,
+}: Props) {
   const unique = useMemo(
     () => [...new Set(candidateRuleNames.filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [candidateRuleNames],
@@ -31,19 +35,25 @@ export function WebFilterRuleExclusionBar({ candidateRuleNames, exemptRuleNames,
   if (unique.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card px-4 py-3 space-y-2">
+    <div className="rounded-xl border border-border/50 bg-card px-4 py-3 space-y-2">
       <div className="flex items-center gap-2 text-sm font-medium">
         <Filter className="h-4 w-4 text-muted-foreground" />
         Web filter rule scope
         <span className="text-[11px] text-muted-foreground font-normal">
-          Exclude rule names from the &quot;missing web filtering&quot; check when agreed with the customer (e.g. infrastructure, out-of-scope).
+          Exclude rule names from the &quot;missing web filtering&quot; check when agreed with the
+          customer (e.g. infrastructure, out-of-scope).
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2 max-h-32 overflow-y-auto">
         {unique.map((name) => {
           const isExempt = exemptRuleNames.some((n) => n.toLowerCase() === name.toLowerCase());
           return (
-            <button key={name} type="button" onClick={() => toggle(name)} className="focus:outline-none">
+            <button
+              key={name}
+              type="button"
+              onClick={() => toggle(name)}
+              className="focus:outline-none"
+            >
               <Badge
                 variant={isExempt ? "default" : "outline"}
                 className={`cursor-pointer text-xs transition-colors max-w-[220px] truncate ${

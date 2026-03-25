@@ -22,7 +22,8 @@ interface ZoneFlow {
   rules: RuleDetail[];
 }
 
-const NON_WEB_SERVICES = /^(dns|ntp|smtp|smtps|snmp|syslog|ldap|ldaps|radius|ssh|telnet|icmp|ping|ftp|sip|imap|imaps|pop3|pop3s|bgp|ospf|rip|dhcp|tftp|kerberos|nfs|smb|cifs|ipsec|gre|l2tp|pptp|netbios)$/i;
+const NON_WEB_SERVICES =
+  /^(dns|ntp|smtp|smtps|snmp|syslog|ldap|ldaps|radius|ssh|telnet|icmp|ping|ftp|sip|imap|imaps|pop3|pop3s|bgp|ospf|rip|dhcp|tftp|kerberos|nfs|smb|cifs|ipsec|gre|l2tp|pptp|netbios)$/i;
 
 function isWebTraffic(service: string): boolean {
   const svc = service.toLowerCase().trim();
@@ -36,17 +37,20 @@ function isWebTraffic(service: string): boolean {
 type ZoneCategory = "WAN" | "LAN" | "DMZ" | "VPN" | "Guest" | "Other";
 
 const ZONE_CAT_CONFIG: Record<ZoneCategory, { color: string; match: (z: string) => boolean }> = {
-  WAN:   { color: SEVERITY_COLORS.critical, match: (z) => z.includes("wan") },
-  LAN:   { color: SEVERITY_COLORS.low, match: (z) => z.includes("lan") || z.includes("server") },
-  DMZ:   { color: SEVERITY_COLORS.high, match: (z) => z.includes("dmz") },
-  VPN:   { color: BRAND.blue, match: (z) => z.includes("vpn") },
+  WAN: { color: SEVERITY_COLORS.critical, match: (z) => z.includes("wan") },
+  LAN: { color: SEVERITY_COLORS.low, match: (z) => z.includes("lan") || z.includes("server") },
+  DMZ: { color: SEVERITY_COLORS.high, match: (z) => z.includes("dmz") },
+  VPN: { color: BRAND.blue, match: (z) => z.includes("vpn") },
   Guest: { color: "#B529F7", match: (z) => z.includes("guest") || z.includes("wifi") },
   Other: { color: "#6A889B", match: () => true },
 };
 
 function classifyZone(z: string): ZoneCategory {
   const lz = z.toLowerCase();
-  for (const [cat, cfg] of Object.entries(ZONE_CAT_CONFIG) as [ZoneCategory, typeof ZONE_CAT_CONFIG.WAN][]) {
+  for (const [cat, cfg] of Object.entries(ZONE_CAT_CONFIG) as [
+    ZoneCategory,
+    typeof ZONE_CAT_CONFIG.WAN,
+  ][]) {
     if (cat !== "Other" && cfg.match(lz)) return cat;
   }
   return "Other";
@@ -56,7 +60,15 @@ function zoneColor(z: string): string {
   return ZONE_CAT_CONFIG[classifyZone(z)].color;
 }
 
-function ProtectionDot({ covered, total, label }: { covered: number; total: number; label: string }) {
+function ProtectionDot({
+  covered,
+  total,
+  label,
+}: {
+  covered: number;
+  total: number;
+  label: string;
+}) {
   if (total === 0) {
     return (
       <span
@@ -69,7 +81,8 @@ function ProtectionDot({ covered, total, label }: { covered: number; total: numb
     );
   }
   const ratio = covered / total;
-  const color = ratio >= 1 ? SEVERITY_COLORS.low : ratio > 0 ? SEVERITY_COLORS.high : SEVERITY_COLORS.critical;
+  const color =
+    ratio >= 1 ? SEVERITY_COLORS.low : ratio > 0 ? SEVERITY_COLORS.high : SEVERITY_COLORS.critical;
   return (
     <span
       title={`${label}: ${covered}/${total} rules`}
@@ -114,32 +127,77 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
     for (const file of files) {
       const sections = file.extractedData;
       const fwSection =
-        sections["FirewallRules"] ?? sections["Firewall Rules"] ??
-        sections["Firewall rules"] ?? sections["firewallRules"];
+        sections["FirewallRules"] ??
+        sections["Firewall Rules"] ??
+        sections["Firewall rules"] ??
+        sections["firewallRules"];
       if (!fwSection) continue;
 
       for (const table of fwSection.tables) {
         for (const row of table.rows) {
-          const srcZone = (row["Source Zone"] ?? row["Source Zones"] ?? row["Src Zone"] ?? "").trim();
-          const dstZone = (row["Destination Zone"] ?? row["Destination Zones"] ?? row["Dest Zone"] ?? row["DestZone"] ?? "").trim();
+          const srcZone = (
+            row["Source Zone"] ??
+            row["Source Zones"] ??
+            row["Src Zone"] ??
+            ""
+          ).trim();
+          const dstZone = (
+            row["Destination Zone"] ??
+            row["Destination Zones"] ??
+            row["Dest Zone"] ??
+            row["DestZone"] ??
+            ""
+          ).trim();
           if (!srcZone || !dstZone) continue;
 
           const status = (row["Status"] ?? row["status"] ?? "").toLowerCase();
           if (status === "disabled" || status === "disable") continue;
 
           const ruleName = row["Rule Name"] ?? row["Name"] ?? row["Rule"] ?? row["#"] ?? "Unnamed";
-          const service = row["Service"] ?? row["Services"] ?? row["Services/Ports"] ?? row["service"] ?? "";
+          const service =
+            row["Service"] ?? row["Services"] ?? row["Services/Ports"] ?? row["service"] ?? "";
 
           const wf = row["Web Filter"] ?? row["Web Filter Policy"] ?? row["WebFilter"] ?? "";
-          const hasWf = !!(wf && wf.toLowerCase() !== "none" && wf.toLowerCase() !== "not specified" && wf.toLowerCase() !== "-" && wf.toLowerCase() !== "n/a");
+          const hasWf = !!(
+            wf &&
+            wf.toLowerCase() !== "none" &&
+            wf.toLowerCase() !== "not specified" &&
+            wf.toLowerCase() !== "-" &&
+            wf.toLowerCase() !== "n/a"
+          );
           const ips = row["IPS"] ?? row["Intrusion Prevention"] ?? "";
-          const hasIps = !!(ips && ips.toLowerCase() !== "none" && ips.toLowerCase() !== "off" && ips.toLowerCase() !== "-" && ips.toLowerCase() !== "n/a" && ips.toLowerCase() !== "disabled");
-          const app = row["Application Control"] ?? row["App Control"] ?? row["AppControl"] ?? row["Application Filter"] ?? "";
-          const hasApp = !!(app && app.toLowerCase() !== "none" && app.toLowerCase() !== "off" && app.toLowerCase() !== "-" && app.toLowerCase() !== "n/a" && app.toLowerCase() !== "disabled");
+          const hasIps = !!(
+            ips &&
+            ips.toLowerCase() !== "none" &&
+            ips.toLowerCase() !== "off" &&
+            ips.toLowerCase() !== "-" &&
+            ips.toLowerCase() !== "n/a" &&
+            ips.toLowerCase() !== "disabled"
+          );
+          const app =
+            row["Application Control"] ??
+            row["App Control"] ??
+            row["AppControl"] ??
+            row["Application Filter"] ??
+            "";
+          const hasApp = !!(
+            app &&
+            app.toLowerCase() !== "none" &&
+            app.toLowerCase() !== "off" &&
+            app.toLowerCase() !== "-" &&
+            app.toLowerCase() !== "n/a" &&
+            app.toLowerCase() !== "disabled"
+          );
           const needsWf = isWebTraffic(service || "Any");
 
-          const src = srcZone.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
-          const dst = dstZone.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+          const src = srcZone
+            .split(/[,;]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const dst = dstZone
+            .split(/[,;]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
 
           for (const s of src) {
             zoneSet.add(s);
@@ -147,7 +205,14 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
               zoneSet.add(d);
               const key = `${s}→${d}`;
               const existing = flowMap.get(key);
-              const detail: RuleDetail = { name: ruleName, service: service || "Any", needsWf, hasWf, hasIps, hasApp };
+              const detail: RuleDetail = {
+                name: ruleName,
+                service: service || "Any",
+                needsWf,
+                hasWf,
+                hasIps,
+                hasApp,
+              };
               if (existing) {
                 existing.count++;
                 if (needsWf) existing.webFilterable++;
@@ -157,9 +222,13 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                 existing.rules.push(detail);
               } else {
                 flowMap.set(key, {
-                  source: s, dest: d, count: 1,
+                  source: s,
+                  dest: d,
+                  count: 1,
                   webFilterable: needsWf ? 1 : 0,
-                  hasWebFilter: hasWf ? 1 : 0, hasIps: hasIps ? 1 : 0, hasAppControl: hasApp ? 1 : 0,
+                  hasWebFilter: hasWf ? 1 : 0,
+                  hasIps: hasIps ? 1 : 0,
+                  hasAppControl: hasApp ? 1 : 0,
                   rules: [detail],
                 });
               }
@@ -198,28 +267,50 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
 
   const insights = useMemo(() => {
     const msgs: { text: string; type: "warn" | "good" | "info" }[] = [];
-    const wanFlows = flows.filter((f) => classifyZone(f.source) === "WAN" || classifyZone(f.dest) === "WAN");
+    const wanFlows = flows.filter(
+      (f) => classifyZone(f.source) === "WAN" || classifyZone(f.dest) === "WAN",
+    );
     const wanNeedsWf = wanFlows.filter((f) => f.webFilterable > 0);
     const wanNoWf = wanNeedsWf.filter((f) => f.hasWebFilter < f.webFilterable);
     const wanNoIps = wanFlows.filter((f) => f.hasIps === 0);
-    const internalOnly = flows.filter((f) => classifyZone(f.source) !== "WAN" && classifyZone(f.dest) !== "WAN");
+    const internalOnly = flows.filter(
+      (f) => classifyZone(f.source) !== "WAN" && classifyZone(f.dest) !== "WAN",
+    );
 
-    if (wanNoWf.length > 0) msgs.push({ text: `${wanNoWf.length} WAN flow${wanNoWf.length > 1 ? "s" : ""} missing web filtering`, type: "warn" });
-    if (wanNoIps.length > 0) msgs.push({ text: `${wanNoIps.length} WAN flow${wanNoIps.length > 1 ? "s" : ""} without IPS`, type: "warn" });
-    if (wanNoWf.length === 0 && wanNeedsWf.length > 0) msgs.push({ text: "All WAN web traffic has web filtering", type: "good" });
-    if (wanNoIps.length === 0 && wanFlows.length > 0) msgs.push({ text: "All WAN flows have IPS", type: "good" });
-    if (internalOnly.length > 0) msgs.push({ text: `${internalOnly.length} internal-only flow${internalOnly.length > 1 ? "s" : ""} (no WAN exposure)`, type: "info" });
+    if (wanNoWf.length > 0)
+      msgs.push({
+        text: `${wanNoWf.length} WAN flow${wanNoWf.length > 1 ? "s" : ""} missing web filtering`,
+        type: "warn",
+      });
+    if (wanNoIps.length > 0)
+      msgs.push({
+        text: `${wanNoIps.length} WAN flow${wanNoIps.length > 1 ? "s" : ""} without IPS`,
+        type: "warn",
+      });
+    if (wanNoWf.length === 0 && wanNeedsWf.length > 0)
+      msgs.push({ text: "All WAN web traffic has web filtering", type: "good" });
+    if (wanNoIps.length === 0 && wanFlows.length > 0)
+      msgs.push({ text: "All WAN flows have IPS", type: "good" });
+    if (internalOnly.length > 0)
+      msgs.push({
+        text: `${internalOnly.length} internal-only flow${internalOnly.length > 1 ? "s" : ""} (no WAN exposure)`,
+        type: "info",
+      });
     return msgs.slice(0, 3);
   }, [flows]);
 
   if (flows.length === 0) return null;
 
-  const categories = (["WAN", "LAN", "DMZ", "VPN", "Guest", "Other"] as ZoneCategory[]).filter((c) => categoryMap.has(c));
+  const categories = (["WAN", "LAN", "DMZ", "VPN", "Guest", "Other"] as ZoneCategory[]).filter(
+    (c) => categoryMap.has(c),
+  );
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Zone Traffic Flow</h3>
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          Zone Traffic Flow
+        </h3>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setProblemsOnly((v) => !v)}
@@ -231,7 +322,9 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
           >
             Problems only
           </button>
-          <span className="text-[10px] text-muted-foreground">{zones.length} zones · {flows.length} flows</span>
+          <span className="text-[10px] text-muted-foreground">
+            {zones.length} zones · {flows.length} flows
+          </span>
         </div>
       </div>
 
@@ -253,9 +346,14 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                   : "border-border hover:border-foreground/20"
               }`}
             >
-              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: ZONE_CAT_CONFIG[cat].color }} />
+              <span
+                className="h-2 w-2 rounded-full shrink-0"
+                style={{ backgroundColor: ZONE_CAT_CONFIG[cat].color }}
+              />
               <span className="text-[10px] font-semibold text-foreground">{cat}</span>
-              <span className="text-[9px] text-muted-foreground">{zoneList.length}z · {ruleCount}r</span>
+              <span className="text-[9px] text-muted-foreground">
+                {zoneList.length}z · {ruleCount}r
+              </span>
             </button>
           );
         })}
@@ -270,87 +368,161 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
             </span>
           </div>
         ) : (
-        <table className="w-full text-[10px]">
-          <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">Source</th>
-              <th className="px-1 py-1.5 text-muted-foreground" />
-              <th className="text-left px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">Destination</th>
-              <th className="text-center px-2 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">Rules</th>
-              <th className="text-center px-2 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider" title="Web Filter / IPS / App Control">Protection</th>
-              <th className="text-right px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">Coverage</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filteredFlows.slice(0, 20).map((f) => {
-              const key = `${f.source}→${f.dest}`;
-              const isExpanded = expandedFlow === key;
-              const touchesWan = classifyZone(f.source) === "WAN" || classifyZone(f.dest) === "WAN";
-              const wfPct = f.webFilterable > 0 ? f.hasWebFilter / f.webFilterable : 1;
-              const ipsPct = f.count > 0 ? f.hasIps / f.count : 1;
-              const appPct = f.count > 0 ? f.hasAppControl / f.count : 1;
-              const coveragePct = Math.round(((wfPct + ipsPct + appPct) / 3) * 100);
-              const isUnprotectedWan = touchesWan && coveragePct < 50;
-
-              return (
-                <tr
-                  key={key}
-                  className="group/row cursor-pointer hover:bg-muted/20 transition-colors"
-                  onClick={() => setExpandedFlow(isExpanded ? null : key)}
+          <table className="w-full text-[10px]">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+                  Source
+                </th>
+                <th className="px-1 py-1.5 text-muted-foreground" />
+                <th className="text-left px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+                  Destination
+                </th>
+                <th className="text-center px-2 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+                  Rules
+                </th>
+                <th
+                  className="text-center px-2 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider"
+                  title="Web Filter / IPS / App Control"
                 >
-                  <td className="px-2.5 py-2 align-top" colSpan={6}>
-                    <div className={`flex items-center gap-2 ${isUnprotectedWan ? "border-l-2 border-[#EA0022]/60 pl-2 -ml-1" : ""}`}>
-                      <span className="font-semibold truncate max-w-[100px]" style={{ color: zoneColor(f.source) }} title={f.source}>
-                        {f.source}
-                      </span>
-                      <span className="text-muted-foreground/70">→</span>
-                      <span className="font-semibold truncate max-w-[100px]" style={{ color: zoneColor(f.dest) }} title={f.dest}>
-                        {f.dest}
-                      </span>
-                      <span className="ml-auto flex items-center gap-3 shrink-0">
-                        <span className="font-bold tabular-nums text-foreground">{f.count}</span>
-                        <span className="flex items-center gap-0.5">
-                          <ProtectionDot covered={f.hasWebFilter} total={f.webFilterable} label="WF" />
-                          <ProtectionDot covered={f.hasIps} total={f.count} label="IPS" />
-                          <ProtectionDot covered={f.hasAppControl} total={f.count} label="App" />
-                        </span>
-                        <span className={`font-bold tabular-nums w-8 text-right ${
-                          coveragePct >= 75 ? "text-[#00F2B3]" : coveragePct >= 40 ? "text-[#F29400]" : "text-[#EA0022]"
-                        }`}>
-                          {coveragePct}%
-                        </span>
-                      </span>
-                    </div>
+                  Protection
+                </th>
+                <th className="text-right px-2.5 py-1.5 text-muted-foreground font-semibold uppercase tracking-wider">
+                  Coverage
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filteredFlows.slice(0, 20).map((f) => {
+                const key = `${f.source}→${f.dest}`;
+                const isExpanded = expandedFlow === key;
+                const touchesWan =
+                  classifyZone(f.source) === "WAN" || classifyZone(f.dest) === "WAN";
+                const wfPct = f.webFilterable > 0 ? f.hasWebFilter / f.webFilterable : 1;
+                const ipsPct = f.count > 0 ? f.hasIps / f.count : 1;
+                const appPct = f.count > 0 ? f.hasAppControl / f.count : 1;
+                const coveragePct = Math.round(((wfPct + ipsPct + appPct) / 3) * 100);
+                const isUnprotectedWan = touchesWan && coveragePct < 50;
 
-                    {isExpanded && (
-                      <div className="mt-2 ml-1 space-y-0.5">
-                        {f.rules.map((r, i) => (
-                          <div key={i} className="flex items-center gap-2 py-1 px-2 rounded bg-muted/20 text-[9px]">
-                            <span className="font-medium text-foreground truncate max-w-[140px]" title={r.name}>{r.name}</span>
-                            <span className="text-muted-foreground truncate max-w-[100px]" title={r.service}>{r.service}</span>
-                            <span className="ml-auto flex items-center gap-1.5 shrink-0 text-[8px]">
-                              {r.needsWf ? (
-                                r.hasWf
-                                  ? <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">WF</span>
-                                  : <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">WF</span>
-                              ) : (
-                                <span className="px-1 rounded bg-muted/40 text-muted-foreground/70" title="Non-web service — web filter not applicable">WF n/a</span>
-                              )}
-                              {r.hasIps && <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">IPS</span>}
-                              {!r.hasIps && <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">IPS</span>}
-                              {r.hasApp && <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">APP</span>}
-                              {!r.hasApp && <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">APP</span>}
-                            </span>
-                          </div>
-                        ))}
+                return (
+                  <tr
+                    key={key}
+                    className="group/row cursor-pointer hover:bg-muted/20 transition-colors"
+                    onClick={() => setExpandedFlow(isExpanded ? null : key)}
+                  >
+                    <td className="px-2.5 py-2 align-top" colSpan={6}>
+                      <div
+                        className={`flex items-center gap-2 ${isUnprotectedWan ? "border-l-2 border-[#EA0022]/60 pl-2 -ml-1" : ""}`}
+                      >
+                        <span
+                          className="font-semibold truncate max-w-[100px]"
+                          style={{ color: zoneColor(f.source) }}
+                          title={f.source}
+                        >
+                          {f.source}
+                        </span>
+                        <span className="text-muted-foreground/70">→</span>
+                        <span
+                          className="font-semibold truncate max-w-[100px]"
+                          style={{ color: zoneColor(f.dest) }}
+                          title={f.dest}
+                        >
+                          {f.dest}
+                        </span>
+                        <span className="ml-auto flex items-center gap-3 shrink-0">
+                          <span className="font-bold tabular-nums text-foreground">{f.count}</span>
+                          <span className="flex items-center gap-0.5">
+                            <ProtectionDot
+                              covered={f.hasWebFilter}
+                              total={f.webFilterable}
+                              label="WF"
+                            />
+                            <ProtectionDot covered={f.hasIps} total={f.count} label="IPS" />
+                            <ProtectionDot covered={f.hasAppControl} total={f.count} label="App" />
+                          </span>
+                          <span
+                            className={`font-bold tabular-nums w-8 text-right ${
+                              coveragePct >= 75
+                                ? "text-[#00F2B3]"
+                                : coveragePct >= 40
+                                  ? "text-[#F29400]"
+                                  : "text-[#EA0022]"
+                            }`}
+                          >
+                            {coveragePct}%
+                          </span>
+                        </span>
                       </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+
+                      {isExpanded && (
+                        <div className="mt-2 ml-1 space-y-0.5">
+                          {f.rules.map((r, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 py-1 px-2 rounded bg-muted/20 text-[9px]"
+                            >
+                              <span
+                                className="font-medium text-foreground truncate max-w-[140px]"
+                                title={r.name}
+                              >
+                                {r.name}
+                              </span>
+                              <span
+                                className="text-muted-foreground truncate max-w-[100px]"
+                                title={r.service}
+                              >
+                                {r.service}
+                              </span>
+                              <span className="ml-auto flex items-center gap-1.5 shrink-0 text-[8px]">
+                                {r.needsWf ? (
+                                  r.hasWf ? (
+                                    <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">
+                                      WF
+                                    </span>
+                                  ) : (
+                                    <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">
+                                      WF
+                                    </span>
+                                  )
+                                ) : (
+                                  <span
+                                    className="px-1 rounded bg-muted/40 text-muted-foreground/70"
+                                    title="Non-web service — web filter not applicable"
+                                  >
+                                    WF n/a
+                                  </span>
+                                )}
+                                {r.hasIps && (
+                                  <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">
+                                    IPS
+                                  </span>
+                                )}
+                                {!r.hasIps && (
+                                  <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">
+                                    IPS
+                                  </span>
+                                )}
+                                {r.hasApp && (
+                                  <span className="px-1 rounded bg-[#00F2B3]/15 text-[#00F2B3] font-bold">
+                                    APP
+                                  </span>
+                                )}
+                                {!r.hasApp && (
+                                  <span className="px-1 rounded bg-[#EA0022]/10 text-[#EA0022] font-bold">
+                                    APP
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
 
@@ -368,7 +540,8 @@ export function ZoneTrafficFlow({ files }: { files: ParsedFile[] }) {
                     : "border-border bg-muted/30 text-muted-foreground"
               }`}
             >
-              {ins.type === "warn" ? "⚠ " : ins.type === "good" ? "✓ " : ""}{ins.text}
+              {ins.type === "warn" ? "⚠ " : ins.type === "good" ? "✓ " : ""}
+              {ins.text}
             </span>
           ))}
         </div>

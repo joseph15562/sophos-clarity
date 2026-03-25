@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-xl border border-border/70 bg-card p-6 text-center space-y-3">
+        <div className="rounded-xl border border-border/50 bg-card p-6 text-center space-y-3">
           <div className="flex justify-center">
             <div className="h-10 w-10 rounded-full bg-severity-high/10 flex items-center justify-center">
               <AlertTriangle className="h-5 w-5 text-severity-high" />
@@ -40,14 +40,20 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.props.fallbackTitle ?? "Something went wrong"}
           </h3>
           <p className="text-xs text-muted-foreground max-w-md mx-auto">
-            This section encountered an error. Your data is safe — try refreshing this section or reload the page.
+            This section encountered an error. Your data is safe — try refreshing this section or
+            reload the page.
           </p>
           {this.state.error && (
             <p className="text-[10px] font-mono text-muted-foreground/60 max-w-md mx-auto truncate">
               {this.state.error.message}
             </p>
           )}
-          <Button variant="outline" size="sm" onClick={this.handleRetry} className="gap-1.5 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={this.handleRetry}
+            className="gap-1.5 text-xs"
+          >
             <RotateCcw className="h-3 w-3" /> Try Again
           </Button>
         </div>

@@ -55,20 +55,35 @@ export function BaselineManager({ analysisResults }: BaselineManagerProps) {
   }, []);
 
   const baselineResult = baselineLabel ? analysisResults[baselineLabel] : null;
-  const otherLabels = useMemo(() => labels.filter((l) => l !== baselineLabel), [labels, baselineLabel]);
+  const otherLabels = useMemo(
+    () => labels.filter((l) => l !== baselineLabel),
+    [labels, baselineLabel],
+  );
 
   if (labels.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="baseline-manager">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Configuration Baseline</h3>
+    <div
+      className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+      data-tour="baseline-manager"
+    >
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Configuration Baseline
+      </h3>
 
       {!baselineLabel ? (
-        <p className="text-sm text-muted-foreground mb-4">Select a well-configured firewall as your baseline</p>
+        <p className="text-sm text-muted-foreground mb-4">
+          Select a well-configured firewall as your baseline
+        </p>
       ) : (
         <div className="mb-4 flex items-center gap-2">
           <span className="text-sm font-medium text-foreground">Baseline: {baselineLabel}</span>
-          <Button variant="ghost" size="sm" onClick={handleClearBaseline} className="gap-1 text-xs h-7">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearBaseline}
+            className="gap-1 text-xs h-7"
+          >
             <Trash2 className="h-3 w-3" />
             Clear Baseline
           </Button>
@@ -137,8 +152,10 @@ function BaselineComparison({
     <div className="space-y-2 text-xs">
       <p className="text-foreground">
         <span className="font-semibold">{firewallLabel}</span> is{" "}
-        <span className="font-bold text-[#00F2B3] dark:text-[#00F2B3]">{comparison.alignmentPct}%</span> aligned with
-        baseline
+        <span className="font-bold text-[#00F2B3] dark:text-[#00F2B3]">
+          {comparison.alignmentPct}%
+        </span>{" "}
+        aligned with baseline
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -162,7 +179,9 @@ function FindingList({ findings }: { findings: Finding[] }) {
       ) : (
         findings.map((f) => (
           <li key={f.id} className="flex items-start gap-1.5">
-            <span className={`shrink-0 text-[8px] font-bold px-1 py-0.5 rounded uppercase ${SEV_BADGE[f.severity] ?? "bg-muted text-muted-foreground"}`}>
+            <span
+              className={`shrink-0 text-[8px] font-bold px-1 py-0.5 rounded uppercase ${SEV_BADGE[f.severity] ?? "bg-muted text-muted-foreground"}`}
+            >
               {f.severity}
             </span>
             <span className="text-foreground truncate">{f.title}</span>

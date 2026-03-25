@@ -15,10 +15,14 @@ export function ComplianceGapWidget({ analysisResults, selectedFrameworks }: Pro
     <div className="space-y-4">
       <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] p-4 shadow-sm space-y-3">
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Compliance workflow</p>
-          <p className="text-sm font-semibold text-foreground">Switch between framework gap analysis and control-to-finding mapping</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">
+            Compliance workflow
+          </p>
+          <p className="text-sm font-semibold text-foreground">
+            Switch between framework gap analysis and control-to-finding mapping
+          </p>
         </div>
-        <div className="flex gap-2 p-1.5 bg-card/70 rounded-2xl border border-border/70 w-fit">
+        <div className="flex gap-2 p-1.5 bg-card/70 rounded-2xl border border-border/50 w-fit">
           <button
             onClick={() => setView("gaps")}
             className={`px-4 py-2 text-xs font-semibold rounded-xl transition-colors ${
@@ -42,9 +46,15 @@ export function ComplianceGapWidget({ analysisResults, selectedFrameworks }: Pro
         </div>
       </div>
       {view === "gaps" ? (
-        <ComplianceGapAnalysis analysisResults={analysisResults} selectedFrameworks={selectedFrameworks} />
+        <ComplianceGapAnalysis
+          analysisResults={analysisResults}
+          selectedFrameworks={selectedFrameworks}
+        />
       ) : (
-        <ControlFindingMap analysisResults={analysisResults} selectedFrameworks={selectedFrameworks} />
+        <ControlFindingMap
+          analysisResults={analysisResults}
+          selectedFrameworks={selectedFrameworks}
+        />
       )}
     </div>
   );

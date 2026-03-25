@@ -57,7 +57,7 @@ export function ClientPortalView({
 
       <main id="main-content" className="max-w-2xl mx-auto px-6 py-8 space-y-8">
         {/* Score display */}
-        <section className="rounded-xl border border-border/70 bg-card p-8 text-center">
+        <section className="rounded-xl border border-border/50 bg-card p-8 text-center">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             Overall Security Score
           </p>
@@ -77,7 +77,12 @@ export function ClientPortalView({
           </div>
           {latest && (
             <p className="text-xs text-muted-foreground mt-2">
-              As of {new Date(latest.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+              As of{" "}
+              {new Date(latest.date).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
             </p>
           )}
         </section>
@@ -85,13 +90,16 @@ export function ClientPortalView({
         {/* Score trend */}
         {(scoreHistory.length > 0 || orgId) && (
           <section>
-            <ScoreTrendChart orgId={orgId} data={scoreHistory.length > 0 ? scoreHistory : undefined} />
+            <ScoreTrendChart
+              orgId={orgId}
+              data={scoreHistory.length > 0 ? scoreHistory : undefined}
+            />
           </section>
         )}
 
         {/* Recent assessments */}
         {assessments.length > 0 && (
-          <section className="rounded-xl border border-border/70 bg-card p-6">
+          <section className="rounded-xl border border-border/50 bg-card p-6">
             <h2 className="text-sm font-semibold text-foreground mb-4">Recent Assessments</h2>
             <ul className="space-y-3">
               {assessments.slice(0, 10).map((a) => (

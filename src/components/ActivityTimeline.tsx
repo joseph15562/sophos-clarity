@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
+const CARD_CLASS =
+  "rounded-xl border border-border/50 bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70";
 const STORAGE_KEY = "firecomply-audit-log";
 
 export type AuditActionType =
@@ -97,9 +98,7 @@ function loadAuditEvents(): AuditEvent[] {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
       return seed;
     }
-    return events.sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+    return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   } catch {
     return [];
   }
@@ -141,11 +140,7 @@ export function ActivityTimeline() {
           </SelectTrigger>
           <SelectContent>
             {actionTypes.map((t) => (
-              <SelectItem
-                key={t}
-                value={t}
-                className="text-xs"
-              >
+              <SelectItem key={t} value={t} className="text-xs">
                 {t === "all" ? "All actions" : ACTION_LABELS[t]}
               </SelectItem>
             ))}

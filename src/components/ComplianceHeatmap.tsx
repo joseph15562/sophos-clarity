@@ -1,14 +1,23 @@
 import { useState, useMemo, useRef, useCallback } from "react";
 import { Download, Scale } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { mapToAllFrameworks, CONTROL_CATEGORIES, type FrameworkMapping, type ControlMapping, type ControlStatus } from "@/lib/compliance-map";
+import {
+  mapToAllFrameworks,
+  CONTROL_CATEGORIES,
+  type FrameworkMapping,
+  type ControlMapping,
+  type ControlStatus,
+} from "@/lib/compliance-map";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
   selectedFrameworks: string[];
 }
 
-const STATUS_STYLES: Record<ControlStatus, { cell: string; label: string; dot: string; icon: string; iconColor: string }> = {
+const STATUS_STYLES: Record<
+  ControlStatus,
+  { cell: string; label: string; dot: string; icon: string; iconColor: string }
+> = {
   pass: {
     cell: "bg-[#00F2B3]/15 dark:bg-[#00F2B3]/15 hover:bg-[#00F2B3]/25 dark:hover:bg-[#00F2B3]/25",
     label: "Pass",
@@ -48,29 +57,48 @@ const STATUS_LABELS: Record<ControlStatus, string> = {
 
 export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props) {
   const [selectedFw, setSelectedFw] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<{ controlName: string; evidence: string; status: ControlStatus; x: number; y: number } | null>(null);
-  const [selectedCell, setSelectedCell] = useState<{ framework: string; control: ControlMapping; findings: Finding[] } | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    controlName: string;
+    evidence: string;
+    status: ControlStatus;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{
+    framework: string;
+    control: ControlMapping;
+    findings: Finding[];
+  } | null>(null);
   const [showGapsOnly, setShowGapsOnly] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const showTooltip = useCallback((e: React.MouseEvent<HTMLTableCellElement>, ctrl: { controlName: string; evidence: string; status: ControlStatus }) => {
-    const card = cardRef.current;
-    if (!card) return;
-    const cardRect = card.getBoundingClientRect();
-    const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setTooltip({
-      controlName: ctrl.controlName,
-      evidence: ctrl.evidence,
-      status: ctrl.status,
-      x: cellRect.left + cellRect.width / 2 - cardRect.left,
-      y: cellRect.top - cardRect.top,
-    });
-  }, []);
+  const showTooltip = useCallback(
+    (
+      e: React.MouseEvent<HTMLTableCellElement>,
+      ctrl: { controlName: string; evidence: string; status: ControlStatus },
+    ) => {
+      const card = cardRef.current;
+      if (!card) return;
+      const cardRect = card.getBoundingClientRect();
+      const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setTooltip({
+        controlName: ctrl.controlName,
+        evidence: ctrl.evidence,
+        status: ctrl.status,
+        x: cellRect.left + cellRect.width / 2 - cardRect.left,
+        y: cellRect.top - cardRect.top,
+      });
+    },
+    [],
+  );
 
   const firstResult = Object.values(analysisResults)[0];
   const mappings = useMemo<FrameworkMapping[]>(() => {
     if (!firstResult) return [];
-    const fws = selectedFrameworks.length > 0 ? selectedFrameworks : ["NCSC Guidelines", "Cyber Essentials / CE+"];
+    const fws =
+      selectedFrameworks.length > 0
+        ? selectedFrameworks
+        : ["NCSC Guidelines", "Cyber Essentials / CE+"];
     return mapToAllFrameworks(fws, firstResult);
   }, [firstResult, selectedFrameworks]);
 
@@ -82,23 +110,29 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
     return map;
   }, [analysisResults]);
 
-  const handleCellClick = useCallback((framework: string, ctrl: ControlMapping) => {
-    if (ctrl.relatedFindings.length === 0) {
-      setSelectedCell(null);
-      return;
-    }
-    const findings = ctrl.relatedFindings
-      .map((id) => findingsById.get(id))
-      .filter((f): f is Finding => !!f);
-    if (selectedCell?.framework === framework && selectedCell?.control.controlId === ctrl.controlId) {
-      setSelectedCell(null);
-    } else {
-      setSelectedCell({ framework, control: ctrl, findings });
-    }
-  }, [findingsById, selectedCell]);
+  const handleCellClick = useCallback(
+    (framework: string, ctrl: ControlMapping) => {
+      if (ctrl.relatedFindings.length === 0) {
+        setSelectedCell(null);
+        return;
+      }
+      const findings = ctrl.relatedFindings
+        .map((id) => findingsById.get(id))
+        .filter((f): f is Finding => !!f);
+      if (
+        selectedCell?.framework === framework &&
+        selectedCell?.control.controlId === ctrl.controlId
+      ) {
+        setSelectedCell(null);
+      } else {
+        setSelectedCell({ framework, control: ctrl, findings });
+      }
+    },
+    [findingsById, selectedCell],
+  );
 
   const allControlsRaw = Array.from(
-    new Set(mappings.flatMap((m) => m.controls.map((c) => c.controlName)))
+    new Set(mappings.flatMap((m) => m.controls.map((c) => c.controlName))),
   );
 
   const allControls = useMemo(() => {
@@ -116,7 +150,9 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
     const header = ["Control Name", "Category", ...mappings.map((m) => m.framework)];
     const rows: string[][] = [header];
     for (const controlName of allControlsRaw) {
-      const firstCtrl = mappings.flatMap((m) => m.controls).find((c) => c.controlName === controlName);
+      const firstCtrl = mappings
+        .flatMap((m) => m.controls)
+        .find((c) => c.controlName === controlName);
       const category = firstCtrl?.category ?? "";
       const statuses = mappings.map((m) => {
         const ctrl = m.controls.find((c) => c.controlName === controlName);
@@ -125,7 +161,9 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       });
       rows.push([controlName, category, ...statuses]);
     }
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -140,7 +178,10 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
   const detailMapping = selectedFw ? mappings.find((m) => m.framework === selectedFw) : null;
 
   return (
-    <section ref={cardRef} className="rounded-[28px] border border-[#5A00FF]/15 bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,246,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(12,15,30,0.98),rgba(18,14,34,0.98))] p-5 sm:p-6 space-y-5 relative shadow-[0_20px_55px_rgba(90,0,255,0.10)] overflow-hidden">
+    <section
+      ref={cardRef}
+      className="rounded-[28px] border border-[#5A00FF]/15 bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,246,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(12,15,30,0.98),rgba(18,14,34,0.98))] p-5 sm:p-6 space-y-5 relative shadow-[0_20px_55px_rgba(90,0,255,0.10)] overflow-hidden"
+    >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00EDFF]" />
       <div>
         <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -150,11 +191,16 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <Scale className="h-5 w-5 text-brand-accent" />
-              <h3 className="text-lg font-display font-black text-foreground tracking-tight">Compliance Heatmap</h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">{mappings.length} framework{mappings.length !== 1 ? "s" : ""}</span>
+              <h3 className="text-lg font-display font-black text-foreground tracking-tight">
+                Compliance Heatmap
+              </h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
+                {mappings.length} framework{mappings.length !== 1 ? "s" : ""}
+              </span>
             </div>
             <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
-              Visualize where controls are covered, partially met, or missing so audit conversations and remediation priorities are immediately clearer.
+              Visualize where controls are covered, partially met, or missing so audit conversations
+              and remediation priorities are immediately clearer.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -178,19 +224,34 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Pass</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Controls appear aligned in the current firewall posture</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Pass
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Controls appear aligned in the current firewall posture
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Partial</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Controls need stronger evidence or fuller implementation</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Partial
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Controls need stronger evidence or fuller implementation
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Fail</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Controls show material compliance gaps or missing safeguards</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Fail
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Controls show material compliance gaps or missing safeguards
+            </p>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">Indicative mapping based on firewall configuration controls. A full compliance audit requires additional evidence beyond firewall configuration.</p>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Indicative mapping based on firewall configuration controls. A full compliance audit
+          requires additional evidence beyond firewall configuration.
+        </p>
         {mappings.length > 0 && (
           <div className="mt-2 space-y-0.5">
             {mappings.map((m) => {
@@ -198,7 +259,9 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               const total = scorable + m.summary.na;
               return (
                 <p key={m.framework} className="text-[9px] text-muted-foreground">
-                  <span className="font-medium text-foreground">{m.framework}</span>: Covers {scorable} of {total} mapped controls. A full {m.framework} audit requires evidence beyond firewall configuration.
+                  <span className="font-medium text-foreground">{m.framework}</span>: Covers{" "}
+                  {scorable} of {total} mapped controls. A full {m.framework} audit requires
+                  evidence beyond firewall configuration.
                 </p>
               );
             })}
@@ -207,36 +270,52 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       </div>
 
       {/* Legend */}
-      <div className="rounded-2xl border border-border/70 bg-card/60 px-4 py-4 space-y-3">
+      <div className="rounded-2xl border border-border/50 bg-card/60 px-4 py-4 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status legend</p>
-            <p className="text-[11px] text-muted-foreground mt-1">Use this to read control alignment at a glance across every mapped framework.</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Status legend
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Use this to read control alignment at a glance across every mapped framework.
+            </p>
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-[10px]">
-          {(Object.entries(STATUS_STYLES) as [ControlStatus, typeof STATUS_STYLES.pass][]).map(([status, s]) => (
-            <div key={status} className="rounded-xl border border-border bg-background/70 px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
-              <span className={`inline-flex items-center justify-center h-8 w-8 rounded-xl text-[11px] font-bold shrink-0 ${s.cell} ${s.iconColor}`}>{s.icon}</span>
-              <div className="min-w-0">
-                <p className="font-semibold text-foreground">{s.label}</p>
-                <p className="text-muted-foreground leading-relaxed">
-                  {status === "pass"
-                    ? "Control appears aligned in the current firewall posture."
-                    : status === "partial"
-                      ? "Control is only partly evidenced or needs strengthening."
-                      : status === "fail"
-                        ? "Control gap is visible and likely needs remediation."
-                        : "Control is not applicable or not assessable from this config."}
-                </p>
+          {(Object.entries(STATUS_STYLES) as [ControlStatus, typeof STATUS_STYLES.pass][]).map(
+            ([status, s]) => (
+              <div
+                key={status}
+                className="rounded-xl border border-border bg-background/70 px-3 py-2.5 flex items-center gap-2.5 shadow-sm"
+              >
+                <span
+                  className={`inline-flex items-center justify-center h-8 w-8 rounded-xl text-[11px] font-bold shrink-0 ${s.cell} ${s.iconColor}`}
+                >
+                  {s.icon}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground">{s.label}</p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {status === "pass"
+                      ? "Control appears aligned in the current firewall posture."
+                      : status === "partial"
+                        ? "Control is only partly evidenced or needs strengthening."
+                        : status === "fail"
+                          ? "Control gap is visible and likely needs remediation."
+                          : "Control is not applicable or not assessable from this config."}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       </div>
 
       {/* Heatmap grid */}
-      <div className="overflow-x-auto -mx-2 px-2 rounded-2xl border border-border/70 bg-card/80 p-2 shadow-sm" onMouseLeave={() => setTooltip(null)}>
+      <div
+        className="overflow-x-auto -mx-2 px-2 rounded-2xl border border-border/50 bg-card/80 p-2 shadow-sm"
+        onMouseLeave={() => setTooltip(null)}
+      >
         <table className="w-full min-w-max border-separate border-spacing-0 text-[11px]">
           <thead>
             <tr>
@@ -252,14 +331,27 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                     className="p-2 text-center text-foreground/75 font-semibold cursor-pointer hover:text-foreground transition-colors min-w-[100px]"
                     onClick={() => setSelectedFw(selectedFw === m.framework ? null : m.framework)}
                   >
-                    <span className={selectedFw === m.framework ? "text-brand-accent underline underline-offset-2 font-bold" : ""}>
+                    <span
+                      className={
+                        selectedFw === m.framework
+                          ? "text-brand-accent underline underline-offset-2 font-bold"
+                          : ""
+                      }
+                    >
                       {m.framework.length > 20 ? m.framework.slice(0, 18) + "…" : m.framework}
                     </span>
                     {scorable > 0 && (
-                      <span className={`block text-[10px] font-bold tabular-nums mt-0.5 ${
-                        pct >= 80 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
-                        pct >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
-                      }`}>{pct}%</span>
+                      <span
+                        className={`block text-[10px] font-bold tabular-nums mt-0.5 ${
+                          pct >= 80
+                            ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                            : pct >= 50
+                              ? "text-[#F29400]"
+                              : "text-[#EA0022]"
+                        }`}
+                      >
+                        {pct}%
+                      </span>
                     )}
                   </th>
                 );
@@ -279,16 +371,31 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   const cellKey = `${m.framework}-${controlName}`;
 
                   const hasFindings = ctrl && ctrl.relatedFindings.length > 0;
-                  const isSelected = selectedCell?.framework === m.framework && selectedCell?.control.controlId === ctrl?.controlId;
+                  const isSelected =
+                    selectedCell?.framework === m.framework &&
+                    selectedCell?.control.controlId === ctrl?.controlId;
                   return (
                     <td
                       key={cellKey}
                       className={`p-2 text-center border-t border-border/50 rounded-md transition-colors select-none ${s.cell} ${hasFindings ? "cursor-pointer" : ""} ${isSelected ? "ring-2 ring-[#2006F7]/60 shadow-[0_0_0_1px_rgba(32,6,247,0.18)]" : ""}`}
-                      onClick={ctrl && hasFindings ? () => handleCellClick(m.framework, ctrl) : undefined}
-                      onMouseEnter={ctrl ? (e) => showTooltip(e, { controlName: ctrl.controlName, evidence: ctrl.evidence, status }) : undefined}
+                      onClick={
+                        ctrl && hasFindings ? () => handleCellClick(m.framework, ctrl) : undefined
+                      }
+                      onMouseEnter={
+                        ctrl
+                          ? (e) =>
+                              showTooltip(e, {
+                                controlName: ctrl.controlName,
+                                evidence: ctrl.evidence,
+                                status,
+                              })
+                          : undefined
+                      }
                       onMouseLeave={() => setTooltip(null)}
                     >
-                      <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-[12px] font-black ${s.iconColor}`}>
+                      <span
+                        className={`inline-flex items-center justify-center h-6 w-6 rounded text-[12px] font-black ${s.iconColor}`}
+                      >
                         {s.icon}
                       </span>
                     </td>
@@ -308,14 +415,21 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
         >
           <div className="mb-2 p-2.5 rounded-lg border border-border bg-popover shadow-elevated text-left min-w-[200px] max-w-[280px]">
             <p className="font-semibold text-foreground text-[11px]">{tooltip.controlName}</p>
-            <p className="text-muted-foreground mt-0.5 text-[10px]">{tooltip.evidence || "No evidence gathered"}</p>
+            <p className="text-muted-foreground mt-0.5 text-[10px]">
+              {tooltip.evidence || "No evidence gathered"}
+            </p>
             <p className="mt-1">
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                tooltip.status === "pass" ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" :
-                tooltip.status === "partial" ? "bg-[#F29400]/10 text-[#F29400]" :
-                tooltip.status === "fail" ? "bg-[#EA0022]/10 text-[#EA0022]" :
-                "bg-muted text-muted-foreground"
-              }`}>
+              <span
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                  tooltip.status === "pass"
+                    ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
+                    : tooltip.status === "partial"
+                      ? "bg-[#F29400]/10 text-[#F29400]"
+                      : tooltip.status === "fail"
+                        ? "bg-[#EA0022]/10 text-[#EA0022]"
+                        : "bg-muted text-muted-foreground"
+                }`}
+              >
                 {STATUS_STYLES[tooltip.status].icon} {STATUS_STYLES[tooltip.status].label}
               </span>
             </p>
@@ -331,18 +445,34 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             <p className="text-xs font-semibold text-foreground">
               {selectedCell.control.controlName} — {selectedCell.framework}
             </p>
-            <button onClick={() => setSelectedCell(null)} className="text-muted-foreground hover:text-foreground text-xs" aria-label="Close details">✕</button>
+            <button
+              onClick={() => setSelectedCell(null)}
+              className="text-muted-foreground hover:text-foreground text-xs"
+              aria-label="Close details"
+            >
+              ✕
+            </button>
           </div>
-          <p className="text-[10px] text-muted-foreground">{selectedCell.findings.length} related finding{selectedCell.findings.length !== 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {selectedCell.findings.length} related finding
+            {selectedCell.findings.length !== 1 ? "s" : ""}
+          </p>
           {selectedCell.findings.map((f) => (
-            <div key={f.id} className="rounded-md border border-border/70 bg-card px-3 py-2">
+            <div key={f.id} className="rounded-md border border-border/50 bg-card px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                  f.severity === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" :
-                  f.severity === "high" ? "bg-[#F29400]/10 text-[#F29400]" :
-                  f.severity === "medium" ? "bg-amber-500/10 text-amber-600" :
-                  "bg-muted text-muted-foreground"
-                }`}>{f.severity}</span>
+                <span
+                  className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                    f.severity === "critical"
+                      ? "bg-[#EA0022]/10 text-[#EA0022]"
+                      : f.severity === "high"
+                        ? "bg-[#F29400]/10 text-[#F29400]"
+                        : f.severity === "medium"
+                          ? "bg-amber-500/10 text-amber-600"
+                          : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {f.severity}
+                </span>
                 <span className="text-xs font-medium text-foreground">{f.title}</span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">{f.detail}</p>
@@ -352,7 +482,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       )}
 
       {/* Framework summary bars */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 pt-2 border-t border-border/70">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 pt-2 border-t border-border/50">
         {mappings.map((m) => {
           const total = m.summary.pass + m.summary.partial + m.summary.fail;
           const passPct = total > 0 ? Math.round((m.summary.pass / total) * 100) : 0;
@@ -370,19 +500,35 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden flex">
                   {m.summary.pass > 0 && (
-                    <div className="h-full bg-[#00F2B3] dark:bg-[#00F2B3]" style={{ width: `${(m.summary.pass / total) * 100}%` }} />
+                    <div
+                      className="h-full bg-[#00F2B3] dark:bg-[#00F2B3]"
+                      style={{ width: `${(m.summary.pass / total) * 100}%` }}
+                    />
                   )}
                   {m.summary.partial > 0 && (
-                    <div className="h-full bg-[#F29400]" style={{ width: `${(m.summary.partial / total) * 100}%` }} />
+                    <div
+                      className="h-full bg-[#F29400]"
+                      style={{ width: `${(m.summary.partial / total) * 100}%` }}
+                    />
                   )}
                   {m.summary.fail > 0 && (
-                    <div className="h-full bg-[#EA0022]" style={{ width: `${(m.summary.fail / total) * 100}%` }} />
+                    <div
+                      className="h-full bg-[#EA0022]"
+                      style={{ width: `${(m.summary.fail / total) * 100}%` }}
+                    />
                   )}
                 </div>
-                <span className={`text-[10px] font-bold tabular-nums ${
-                  passPct >= 80 ? "text-[#00F2B3] dark:text-[#00F2B3]" :
-                  passPct >= 50 ? "text-[#F29400]" : "text-[#EA0022]"
-                }`}>{passPct}%</span>
+                <span
+                  className={`text-[10px] font-bold tabular-nums ${
+                    passPct >= 80
+                      ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                      : passPct >= 50
+                        ? "text-[#F29400]"
+                        : "text-[#EA0022]"
+                  }`}
+                >
+                  {passPct}%
+                </span>
               </div>
               <div className="flex gap-2 mt-1 text-[9px] text-muted-foreground">
                 <span>{m.summary.pass} pass</span>
@@ -397,25 +543,36 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       {/* Detailed view for selected framework */}
       {detailMapping && (
         <div className="pt-3 border-t border-border space-y-3">
-          <p className="text-xs font-semibold text-foreground">{detailMapping.framework} — Control Detail</p>
+          <p className="text-xs font-semibold text-foreground">
+            {detailMapping.framework} — Control Detail
+          </p>
           {CONTROL_CATEGORIES.map((cat) => {
             const catControls = detailMapping.controls.filter((c) => c.category === cat);
             if (catControls.length === 0) return null;
             return (
               <div key={cat} className="space-y-1.5">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cat}</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {cat}
+                </p>
                 {catControls.map((c) => {
                   const s = STATUS_STYLES[c.status];
                   return (
-                    <div key={c.controlId} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/30">
-                      <span className={`inline-flex items-center justify-center h-5 w-5 rounded text-[11px] font-bold shrink-0 ${s.iconColor} ${s.cell}`}>
+                    <div
+                      key={c.controlId}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/30"
+                    >
+                      <span
+                        className={`inline-flex items-center justify-center h-5 w-5 rounded text-[11px] font-bold shrink-0 ${s.iconColor} ${s.cell}`}
+                      >
                         {s.icon}
                       </span>
                       <div className="flex-1 min-w-0">
                         <span className="text-xs font-medium text-foreground">{c.controlName}</span>
                         <p className="text-[10px] text-muted-foreground mt-0.5">{c.evidence}</p>
                       </div>
-                      <span className={`text-[10px] font-bold shrink-0 ${s.iconColor}`}>{s.label.toUpperCase()}</span>
+                      <span className={`text-[10px] font-bold shrink-0 ${s.iconColor}`}>
+                        {s.label.toUpperCase()}
+                      </span>
                     </div>
                   );
                 })}

@@ -28,9 +28,7 @@ function ToggleRow({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {items.map((item) => {
-        const isExcluded = excluded.some(
-          (e) => e.toLowerCase() === item.toLowerCase(),
-        );
+        const isExcluded = excluded.some((e) => e.toLowerCase() === item.toLowerCase());
         return (
           <button
             key={item}
@@ -101,7 +99,7 @@ export function DpiExclusionBar({
   if (userZones.length === 0 && userNetworks.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card px-4 py-3 space-y-2">
+    <div className="rounded-xl border border-border/50 bg-card px-4 py-3 space-y-2">
       <div className="flex items-center gap-2 text-sm font-medium">
         <ShieldOff className="h-4 w-4 text-muted-foreground" />
         DPI Exclusions
@@ -112,7 +110,9 @@ export function DpiExclusionBar({
 
       {userZones.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Zones</p>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Zones
+          </p>
           <ToggleRow items={userZones} excluded={excludedZones} onToggle={toggleZone} uppercase />
         </div>
       )}

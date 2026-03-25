@@ -1,10 +1,4 @@
-import {
-  FileText,
-  Download,
-  ArrowLeftRight,
-  Wrench,
-  ClipboardCheck,
-} from "lucide-react";
+import { FileText, Download, ArrowLeftRight, Wrench, ClipboardCheck } from "lucide-react";
 
 const ACTIONS = [
   {
@@ -56,7 +50,7 @@ export function QuickActions({ onNavigate }: QuickActionsProps) {
           key={id}
           type="button"
           onClick={() => onNavigate?.(id)}
-          className="flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card p-4 text-left transition-colors hover:bg-accent/50 cursor-pointer"
+          className="flex flex-col items-start gap-2 rounded-xl border border-border/50 bg-card p-4 text-left transition-colors hover:bg-accent/50 cursor-pointer"
         >
           <span
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"

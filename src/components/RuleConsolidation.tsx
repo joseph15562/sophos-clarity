@@ -43,7 +43,13 @@ function getRules(files: Props["files"]): RuleRow[] {
             index: rules.length,
             name: extractField(row, "Rule Name", "Name", "Rule") || `Rule ${rules.length + 1}`,
             source: extractField(row, "Source Networks", "Source", "Source Zone", "Src Networks"),
-            destination: extractField(row, "Destination Networks", "Destination", "Destination Zone", "Dest Networks"),
+            destination: extractField(
+              row,
+              "Destination Networks",
+              "Destination",
+              "Destination Zone",
+              "Dest Networks",
+            ),
             service: extractField(row, "Service", "Services", "Services/Ports"),
           });
         });
@@ -142,8 +148,10 @@ export function RuleConsolidation({ files }: Props) {
   }, [files]);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Rule Consolidation</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Rule Consolidation
+      </h3>
 
       {opportunities.length === 0 ? (
         <p className="text-sm text-muted-foreground">No consolidation opportunities found</p>
@@ -164,21 +172,18 @@ export function RuleConsolidation({ files }: Props) {
                   Rules {set.rules.map((r) => r.name).join(", ")} could be merged
                 </p>
                 <div className="space-y-1 text-muted-foreground">
-                  {set.common.source && (
-                    <span>Same source: {set.common.source}</span>
-                  )}
-                  {set.common.destination && (
-                    <span> | Same dest: {set.common.destination}</span>
-                  )}
-                  {set.common.service && (
-                    <span> | Same service: {set.common.service}</span>
-                  )}
+                  {set.common.source && <span>Same source: {set.common.source}</span>}
+                  {set.common.destination && <span> | Same dest: {set.common.destination}</span>}
+                  {set.common.service && <span> | Same service: {set.common.service}</span>}
                 </div>
-                {(set.differs.sources?.length || set.differs.destinations?.length || set.differs.services?.length) ? (
+                {set.differs.sources?.length ||
+                set.differs.destinations?.length ||
+                set.differs.services?.length ? (
                   <p className="mt-1.5 text-muted-foreground">
                     Differs:{" "}
                     {set.differs.services?.length && `Services: ${set.differs.services.join(", ")}`}
-                    {set.differs.destinations?.length && ` Destinations: ${set.differs.destinations.join(", ")}`}
+                    {set.differs.destinations?.length &&
+                      ` Destinations: ${set.differs.destinations.join(", ")}`}
                     {set.differs.sources?.length && ` Sources: ${set.differs.sources.join(", ")}`}
                   </p>
                 ) : null}

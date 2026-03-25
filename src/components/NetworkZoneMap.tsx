@@ -27,7 +27,7 @@ type ZoneCategory = "external" | "perimeter" | "internal";
 
 function findSection(
   sections: Record<string, ExtractedSection>,
-  pattern: RegExp
+  pattern: RegExp,
 ): ExtractedSection | null {
   for (const key of Object.keys(sections)) {
     if (pattern.test(key)) return sections[key];
@@ -57,8 +57,7 @@ function getZoneSecurityLevel(flows: ZoneFlow[], zone: string): SecurityLevel {
   if (zoneFlows.length === 0) return "none";
   const levels = zoneFlows.map((f) => getFlowSecurityLevel(f));
   if (levels.every((l) => l === "full")) return "full";
-  if (levels.some((l) => l === "full") || levels.some((l) => l === "partial"))
-    return "partial";
+  if (levels.some((l) => l === "full") || levels.some((l) => l === "partial")) return "partial";
   return "none";
 }
 
@@ -98,8 +97,7 @@ function categorizeZone(name: string): ZoneCategory {
   if (z.includes("dmz")) return "external";
   if (z.includes("guest")) return "perimeter";
   if (z.includes("vpn")) return "perimeter";
-  if (z.includes("wifi") || z.includes("wlan") || z.includes("wireless"))
-    return "perimeter";
+  if (z.includes("wifi") || z.includes("wlan") || z.includes("wireless")) return "perimeter";
   if (z.includes("red")) return "perimeter";
   if (z.includes("discover")) return "perimeter";
   return "internal";
@@ -138,9 +136,7 @@ export function NetworkZoneMap({ files }: Props) {
         sections["Firewall Rules"] ??
         sections["firewallRules"];
       const zoneSection =
-        findSection(sections, /^zones?$/i) ??
-        sections["Zone"] ??
-        sections["zones"];
+        findSection(sections, /^zones?$/i) ?? sections["Zone"] ?? sections["zones"];
 
       if (zoneSection) {
         for (const t of zoneSection.tables) {
@@ -172,17 +168,10 @@ export function NetworkZoneMap({ files }: Props) {
             const status = (row["Status"] ?? row["status"] ?? "").toLowerCase();
             if (status === "disabled" || status === "disable") continue;
 
-            const wf =
-              row["Web Filter"] ??
-              row["Web Filter Policy"] ??
-              row["WebFilter"] ??
-              "";
+            const wf = row["Web Filter"] ?? row["Web Filter Policy"] ?? row["WebFilter"] ?? "";
             const hasWf = !!(wf && !/none|not specified|-|n\/a/i.test(wf));
             const ips =
-              row["IPS"] ??
-              row["Intrusion Prevention"] ??
-              row["IntrusionPrevention"] ??
-              "";
+              row["IPS"] ?? row["Intrusion Prevention"] ?? row["IntrusionPrevention"] ?? "";
             const hasIps = !!(ips && !/none|off|-|n\/a|disabled/i.test(ips));
             const service = row["Service"] ?? row["Services"] ?? "Any";
             const needsWf = isWebTraffic(service);
@@ -224,9 +213,7 @@ export function NetworkZoneMap({ files }: Props) {
       }
     }
 
-    const zoneList = [...zoneSet].sort(
-      (a, b) => zoneSortKey(a) - zoneSortKey(b)
-    );
+    const zoneList = [...zoneSet].sort((a, b) => zoneSortKey(a) - zoneSortKey(b));
 
     const grouped: Record<ZoneCategory, string[]> = {
       internal: [],
@@ -240,42 +227,35 @@ export function NetworkZoneMap({ files }: Props) {
     return { flows: [...flowMap.values()], grouped };
   }, [files]);
 
-  const allZones = [
-    ...grouped.internal,
-    ...grouped.perimeter,
-    ...grouped.external,
-  ];
+  const allZones = [...grouped.internal, ...grouped.perimeter, ...grouped.external];
 
   if (allZones.length === 0 && flows.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="zone-map">
+      <div
+        className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+        data-tour="zone-map"
+      >
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Network Zone Map
         </h3>
-        <p className="mt-2 text-xs text-muted-foreground">
-          No zone data available
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground">No zone data available</p>
       </div>
     );
   }
 
   const activeFlows = activeZone
-    ? flows.filter(
-        (f) =>
-          (f.source === activeZone || f.dest === activeZone) &&
-          f.source !== f.dest
-      )
+    ? flows.filter((f) => (f.source === activeZone || f.dest === activeZone) && f.source !== f.dest)
     : [];
   const outbound = activeFlows.filter((f) => f.source === activeZone);
   const inbound = activeFlows.filter((f) => f.dest === activeZone);
   const connectedSet = new Set(activeFlows.flatMap((f) => [f.source, f.dest]));
 
-  const categories = (
-    ["internal", "perimeter", "external"] as ZoneCategory[]
-  ).filter((cat) => grouped[cat].length > 0);
+  const categories = (["internal", "perimeter", "external"] as ZoneCategory[]).filter(
+    (cat) => grouped[cat].length > 0,
+  );
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4" data-tour="zone-map">
+    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-4" data-tour="zone-map">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Network Zone Map
@@ -308,18 +288,11 @@ export function NetworkZoneMap({ files }: Props) {
               {grouped[cat].map((zone) => {
                 const level = getZoneSecurityLevel(flows, zone);
                 const ruleCount = flows
-                  .filter(
-                    (f) =>
-                      (f.source === zone || f.dest === zone) &&
-                      f.source !== f.dest
-                  )
+                  .filter((f) => (f.source === zone || f.dest === zone) && f.source !== f.dest)
                   .reduce((s, f) => s + f.count, 0);
                 const isActive = activeZone === zone;
-                const isConnected = activeZone
-                  ? connectedSet.has(zone)
-                  : false;
-                const isDimmed =
-                  activeZone !== null && !isActive && !isConnected;
+                const isConnected = activeZone ? connectedSet.has(zone) : false;
+                const isDimmed = activeZone !== null && !isActive && !isConnected;
 
                 return (
                   <button
@@ -332,11 +305,7 @@ export function NetworkZoneMap({ files }: Props) {
                           ? "border-border/30 bg-card opacity-30"
                           : "border-border/50 bg-card hover:bg-muted/20"
                     }`}
-                    style={
-                      isActive
-                        ? { ringColor: FLOW_COLORS[level] }
-                        : undefined
-                    }
+                    style={isActive ? { ringColor: FLOW_COLORS[level] } : undefined}
                   >
                     <div className="flex items-center gap-2">
                       <span
@@ -347,9 +316,7 @@ export function NetworkZoneMap({ files }: Props) {
                         {zone}
                       </span>
                       <span className="ml-auto text-[9px] text-muted-foreground tabular-nums shrink-0">
-                        {ruleCount > 0
-                          ? `${ruleCount} rule${ruleCount !== 1 ? "s" : ""}`
-                          : "—"}
+                        {ruleCount > 0 ? `${ruleCount} rule${ruleCount !== 1 ? "s" : ""}` : "—"}
                       </span>
                     </div>
                   </button>
@@ -368,14 +335,10 @@ export function NetworkZoneMap({ files }: Props) {
               <span
                 className="w-2.5 h-2.5 rounded-full"
                 style={{
-                  backgroundColor: FLOW_COLORS[
-                    getZoneSecurityLevel(flows, activeZone)
-                  ],
+                  backgroundColor: FLOW_COLORS[getZoneSecurityLevel(flows, activeZone)],
                 }}
               />
-              <span className="text-xs font-semibold text-foreground">
-                {activeZone}
-              </span>
+              <span className="text-xs font-semibold text-foreground">{activeZone}</span>
               <span className="text-[10px] text-muted-foreground">
                 {LEVEL_LABELS[getZoneSecurityLevel(flows, activeZone)]}
               </span>
@@ -397,8 +360,7 @@ export function NetworkZoneMap({ files }: Props) {
               {outbound.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                    Outbound →{" "}
-                    {outbound.reduce((s, f) => s + f.count, 0)} rules
+                    Outbound → {outbound.reduce((s, f) => s + f.count, 0)} rules
                   </p>
                   <div className="space-y-0.5">
                     {outbound
@@ -406,17 +368,12 @@ export function NetworkZoneMap({ files }: Props) {
                       .map((f) => {
                         const lvl = getFlowSecurityLevel(f);
                         return (
-                          <div
-                            key={f.dest}
-                            className="flex items-center gap-1.5 text-[10px]"
-                          >
+                          <div key={f.dest} className="flex items-center gap-1.5 text-[10px]">
                             <span
                               className="w-1.5 h-1.5 rounded-full shrink-0"
                               style={{ backgroundColor: FLOW_COLORS[lvl] }}
                             />
-                            <span className="truncate text-foreground">
-                              {f.dest}
-                            </span>
+                            <span className="truncate text-foreground">{f.dest}</span>
                             <span className="ml-auto text-muted-foreground tabular-nums shrink-0">
                               {f.count}
                             </span>
@@ -429,8 +386,7 @@ export function NetworkZoneMap({ files }: Props) {
               {inbound.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
-                    ← Inbound{" "}
-                    {inbound.reduce((s, f) => s + f.count, 0)} rules
+                    ← Inbound {inbound.reduce((s, f) => s + f.count, 0)} rules
                   </p>
                   <div className="space-y-0.5">
                     {inbound
@@ -438,17 +394,12 @@ export function NetworkZoneMap({ files }: Props) {
                       .map((f) => {
                         const lvl = getFlowSecurityLevel(f);
                         return (
-                          <div
-                            key={f.source}
-                            className="flex items-center gap-1.5 text-[10px]"
-                          >
+                          <div key={f.source} className="flex items-center gap-1.5 text-[10px]">
                             <span
                               className="w-1.5 h-1.5 rounded-full shrink-0"
                               style={{ backgroundColor: FLOW_COLORS[lvl] }}
                             />
-                            <span className="truncate text-foreground">
-                              {f.source}
-                            </span>
+                            <span className="truncate text-foreground">{f.source}</span>
                             <span className="ml-auto text-muted-foreground tabular-nums shrink-0">
                               {f.count}
                             </span>
@@ -466,24 +417,15 @@ export function NetworkZoneMap({ files }: Props) {
       {/* Legend */}
       <div className="flex items-center gap-4 text-[9px] text-muted-foreground pt-1 border-t border-border/30">
         <span className="flex items-center gap-1">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: FLOW_COLORS.full }}
-          />
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.full }} />
           IPS + Web Filter
         </span>
         <span className="flex items-center gap-1">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: FLOW_COLORS.partial }}
-          />
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.partial }} />
           Partial coverage
         </span>
         <span className="flex items-center gap-1">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ backgroundColor: FLOW_COLORS.none }}
-          />
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: FLOW_COLORS.none }} />
           No IPS / WF
         </span>
       </div>

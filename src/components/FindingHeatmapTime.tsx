@@ -5,7 +5,9 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
 
 async function getOrgId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("org_members")
@@ -51,7 +53,9 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
       }
       setDailyCounts(counts);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { grid, hasData } = useMemo(() => {
@@ -93,8 +97,10 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
   };
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Finding Activity</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Finding Activity
+      </h3>
       {!hasData ? (
         <p className="text-xs text-muted-foreground">Assessment history builds over time</p>
       ) : (
@@ -125,7 +131,7 @@ export function FindingHeatmapTime({ analysisResults }: FindingHeatmapTimeProps)
                     title={`${date}: ${c} finding${c !== 1 ? "s" : ""}`}
                   />
                 );
-              })
+              }),
             )}
           </div>
         </div>

@@ -39,9 +39,20 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
     if (!latest) return null;
     const score = latest.overall_score;
     const grade = latest.overall_grade;
-    const posture = score >= 90 ? "Excellent posture" : score >= 75 ? "Strong baseline" : score >= 60 ? "Improvement opportunity" : "Needs attention";
-    const delta = score >= 80 ? "Keep momentum with another assessment" : "Run another assessment to uncover the fastest gains";
-    const accent = score >= 80 ? "text-[#00F2B3]" : score >= 60 ? "text-[#F29400]" : "text-[#EA0022]";
+    const posture =
+      score >= 90
+        ? "Excellent posture"
+        : score >= 75
+          ? "Strong baseline"
+          : score >= 60
+            ? "Improvement opportunity"
+            : "Needs attention";
+    const delta =
+      score >= 80
+        ? "Keep momentum with another assessment"
+        : "Run another assessment to uncover the fastest gains";
+    const accent =
+      score >= 80 ? "text-[#00F2B3]" : score >= 60 ? "text-[#F29400]" : "text-[#EA0022]";
     return { score, grade, posture, delta, accent };
   }, [latest]);
 
@@ -84,23 +95,43 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
               <Sparkles className="h-3.5 w-3.5" />
               Welcome back
             </div>
-            <CardTitle className="text-2xl font-display font-black tracking-tight">Your last assessment is ready to build on</CardTitle>
+            <CardTitle className="text-2xl font-display font-black tracking-tight">
+              Your last assessment is ready to build on
+            </CardTitle>
             <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-              Last assessed on <span className="font-medium text-foreground">{dateLabel}</span>. FireComply can take you from your previous posture to a fresh, client-ready assessment in under two minutes.
+              Last assessed on <span className="font-medium text-foreground">{dateLabel}</span>.
+              FireComply can take you from your previous posture to a fresh, client-ready assessment
+              in under two minutes.
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-5 py-4 text-center min-w-[110px]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Last score</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Last score
+            </p>
             <p className={`text-4xl font-black mt-1 ${summary.accent}`}>{summary.score}</p>
-            <p className="text-[11px] font-semibold text-foreground mt-0.5">Grade {summary.grade}</p>
+            <p className="text-[11px] font-semibold text-foreground mt-0.5">
+              Grade {summary.grade}
+            </p>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-5 pb-6">
         <div className="grid gap-3 sm:grid-cols-3">
-          <MetricCard icon={<ShieldCheck className="h-4 w-4 text-brand-accent" />} label="Posture" value={summary.posture} />
-          <MetricCard icon={<TrendingUp className="h-4 w-4 text-[#00F2B3]" />} label="Next best move" value={summary.delta} />
-          <MetricCard icon={<Clock3 className="h-4 w-4 text-[#F29400]" />} label="Expected effort" value="Fresh review in under 2 minutes" />
+          <MetricCard
+            icon={<ShieldCheck className="h-4 w-4 text-brand-accent" />}
+            label="Posture"
+            value={summary.posture}
+          />
+          <MetricCard
+            icon={<TrendingUp className="h-4 w-4 text-[#00F2B3]" />}
+            label="Next best move"
+            value={summary.delta}
+          />
+          <MetricCard
+            icon={<Clock3 className="h-4 w-4 text-[#F29400]" />}
+            label="Expected effort"
+            value="Fresh review in under 2 minutes"
+          />
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -108,7 +139,13 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
             <Upload className="h-4 w-4" />
             Upload New Config
           </Button>
-          <Button type="button" variant="outline" size="lg" className="gap-2 rounded-xl px-5" onClick={onLoadAgent}>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="gap-2 rounded-xl px-5"
+            onClick={onLoadAgent}
+          >
             <RefreshCw className="h-4 w-4" />
             Load from Agent
           </Button>
@@ -118,9 +155,17 @@ export function WelcomeBackCard({ orgId, onUpload, onLoadAgent }: WelcomeBackCar
   );
 }
 
-function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function MetricCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="rounded-[24px] border border-border/70 bg-card/70 px-4 py-3.5 shadow-sm">
+    <div className="rounded-[24px] border border-border/50 bg-card/70 px-4 py-3.5 shadow-sm transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70">
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         {icon}
         {label}

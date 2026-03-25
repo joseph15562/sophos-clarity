@@ -273,7 +273,7 @@ function SecurityWidgetShell({
 }) {
   return (
     <div
-      className={`rounded-[26px] border border-brand-accent/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(247,249,255,0.88))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.84),rgba(14,20,34,0.84))] shadow-card p-1.5 ${className}`}
+      className={`rounded-[22px] shadow-[0_0_0_1px_rgba(32,6,247,0.06),0_12px_40px_-8px_rgba(32,6,247,0.10),0_4px_16px_-4px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(0,237,255,0.06),0_12px_40px_-8px_rgba(0,0,0,0.35),0_4px_16px_-4px_rgba(0,0,0,0.25)] ${className}`}
     >
       {children}
     </div>
@@ -440,11 +440,6 @@ export function AnalysisTabs({
               <SecurityWidgetShell>
                 <Suspense fallback={<ChartSkeleton height={200} />}>
                   <ScoreDialGauge analysisResults={analysisResult} />
-                </Suspense>
-              </SecurityWidgetShell>
-              <SecurityWidgetShell>
-                <Suspense fallback={<StatGridSkeleton count={6} />}>
-                  <RiskSummaryCards analysisResults={analysisResult} />
                 </Suspense>
               </SecurityWidgetShell>
 
@@ -695,7 +690,7 @@ export function AnalysisTabs({
                     </div>
                   </div>
                   <div
-                    className={`rounded-xl border border-border/70 bg-card p-4 ${
+                    className={`rounded-xl border border-border/50 bg-card p-4 ${
                       securityStats.criticalHigh === 0
                         ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
                         : "border-[#EA0022]/20 bg-[#EA0022]/[0.04]"
@@ -715,7 +710,7 @@ export function AnalysisTabs({
                     </div>
                   </div>
                   <div
-                    className={`rounded-xl border border-border/70 bg-card p-4 ${
+                    className={`rounded-xl border border-border/50 bg-card p-4 ${
                       securityStats.coverage >= 75
                         ? "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] dark:bg-[#00F2B3]/[0.06]"
                         : securityStats.coverage >= 40
@@ -738,7 +733,7 @@ export function AnalysisTabs({
                       {securityStats.coverage}%
                     </div>
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-card p-4">
+                  <div className="rounded-xl border border-border/50 bg-card p-4">
                     <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                       Rules Analysed
                     </div>
@@ -1216,7 +1211,7 @@ export function AnalysisTabs({
                     Before (baseline)
                   </label>
                   <select
-                    className="w-full rounded-xl border border-border/70 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="w-full rounded-xl border border-border/50 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                     value={diffSelection?.beforeIdx ?? 0}
                     data-tour="compare-before"
                     onChange={(e) =>
@@ -1238,7 +1233,7 @@ export function AnalysisTabs({
                     After (current)
                   </label>
                   <select
-                    className="w-full rounded-xl border border-border/70 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="w-full rounded-xl border border-border/50 bg-card px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                     value={diffSelection?.afterIdx ?? Math.min(1, files.length - 1)}
                     data-tour="compare-after"
                     onChange={(e) =>

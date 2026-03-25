@@ -17,7 +17,8 @@ const FALLBACK_UPDATES: Omit<RegulatoryUpdate, "id" | "created_at">[] = [
   {
     source: "PCI SSC",
     title: "PCI DSS v4.0.1",
-    summary: "Updated multi-factor authentication requirements and new guidance on passwordless authentication.",
+    summary:
+      "Updated multi-factor authentication requirements and new guidance on passwordless authentication.",
     link: "https://www.pcisecuritystandards.org/document_library/",
     framework: "PCI DSS",
     published_at: null,
@@ -25,7 +26,8 @@ const FALLBACK_UPDATES: Omit<RegulatoryUpdate, "id" | "created_at">[] = [
   {
     source: "NCSC",
     title: "Cyber Essentials — Updated technical controls 2025",
-    summary: "Revised technical control themes including cloud services, home working, and multi-factor authentication.",
+    summary:
+      "Revised technical control themes including cloud services, home working, and multi-factor authentication.",
     link: "https://www.ncsc.gov.uk/cyberessentials/overview",
     framework: "Cyber Essentials",
     published_at: null,
@@ -33,7 +35,8 @@ const FALLBACK_UPDATES: Omit<RegulatoryUpdate, "id" | "created_at">[] = [
   {
     source: "EU Commission",
     title: "GDPR — Enhanced data breach notification requirements",
-    summary: "Clarified 72-hour breach notification timelines and documentation expectations for supervisory authorities.",
+    summary:
+      "Clarified 72-hour breach notification timelines and documentation expectations for supervisory authorities.",
     link: "https://commission.europa.eu/law/law-topic/data-protection_en",
     framework: "GDPR",
     published_at: null,
@@ -84,7 +87,9 @@ export function RegulatoryTracker() {
     setScanning(true);
     setScanResult(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
       const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/regulatory-scanner`;
@@ -110,14 +115,15 @@ export function RegulatoryTracker() {
     }
   }, [fetchUpdates]);
 
-  const displayItems = updates.length > 0
-    ? updates
-    : FALLBACK_UPDATES.map((u, i) => ({ ...u, id: `fallback-${i}`, created_at: "" }));
+  const displayItems =
+    updates.length > 0
+      ? updates
+      : FALLBACK_UPDATES.map((u, i) => ({ ...u, id: `fallback-${i}`, created_at: "" }));
 
   const isLiveData = updates.length > 0;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
@@ -134,7 +140,7 @@ export function RegulatoryTracker() {
           type="button"
           onClick={handleScan}
           disabled={scanning}
-          className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-xl border border-border/70 bg-card text-muted-foreground hover:text-foreground hover:border-brand-accent/30 dark:hover:border-[#00EDFF]/30 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-xl border border-border/50 bg-card text-muted-foreground hover:text-foreground hover:border-brand-accent/30 dark:hover:border-[#00EDFF]/30 transition-colors disabled:opacity-50"
         >
           {scanning ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -163,14 +169,13 @@ export function RegulatoryTracker() {
       ) : (
         <div className="space-y-3">
           {displayItems.map((u) => (
-            <div
-              key={u.id}
-              className="rounded-lg border border-border bg-muted/10 p-3"
-            >
+            <div key={u.id} className="rounded-lg border border-border bg-muted/10 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-xs font-display font-semibold tracking-tight text-foreground">{u.title}</h4>
+                    <h4 className="text-xs font-display font-semibold tracking-tight text-foreground">
+                      {u.title}
+                    </h4>
                     {u.framework && (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] whitespace-nowrap">
                         {u.framework}
@@ -180,7 +185,9 @@ export function RegulatoryTracker() {
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-muted-foreground">{u.source}</span>
                     {u.published_at && (
-                      <span className="text-[10px] text-muted-foreground/60">{timeAgo(u.published_at)}</span>
+                      <span className="text-[10px] text-muted-foreground/60">
+                        {timeAgo(u.published_at)}
+                      </span>
                     )}
                   </div>
                 </div>

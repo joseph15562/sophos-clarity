@@ -565,7 +565,7 @@ export function ManagementDrawer({
       {/* Drawer */}
       <div className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-lg border-l border-brand-accent/10 bg-[radial-gradient(circle_at_top_right,rgba(32,6,247,0.08),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,251,255,0.98))] dark:bg-[radial-gradient(circle_at_top_right,rgba(32,6,247,0.16),transparent_26%),linear-gradient(180deg,rgba(9,13,24,0.99),rgba(12,17,30,0.99))] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {/* Header */}
-        <div className="relative overflow-hidden border-b border-border/70 shrink-0">
+        <div className="relative overflow-hidden border-b border-border/50 shrink-0">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
           <div className="flex items-center gap-3 px-5 py-4 bg-card/70 backdrop-blur-sm">
             {companyLogo && (
@@ -624,7 +624,7 @@ export function ManagementDrawer({
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-border/70 bg-card/60 shrink-0 px-3 py-2">
+        <div className="border-b border-border/50 bg-card/60 shrink-0 px-3 py-2">
           <div className="flex gap-2 rounded-2xl bg-muted/30 p-1">
             {visibleTabs.map((tab) => (
               <button
@@ -741,7 +741,7 @@ export function ManagementDrawer({
                   </button>
                 </div>
                 {localMode && (
-                  <div className="border-t border-border/70 px-4 py-3 bg-[#F29400]/5 dark:bg-[#F29400]/10">
+                  <div className="border-t border-border/50 px-4 py-3 bg-[#F29400]/5 dark:bg-[#F29400]/10">
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
                       <strong className="text-foreground">Local mode enabled.</strong> AI report
                       generation and Sophos Central integration are disabled. All analysis, scoring,

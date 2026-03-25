@@ -46,7 +46,12 @@ function extractReferencedObjects(files: Props["files"]): Set<string> {
       for (const table of section.tables ?? []) {
         for (const row of table.rows ?? []) {
           const src = (row["Source Networks"] ?? row["Source"] ?? row["Src Networks"] ?? "").trim();
-          const dst = (row["Destination Networks"] ?? row["Destination"] ?? row["Dest Networks"] ?? "").trim();
+          const dst = (
+            row["Destination Networks"] ??
+            row["Destination"] ??
+            row["Dest Networks"] ??
+            ""
+          ).trim();
           const svc = (row["Service"] ?? row["Services"] ?? row["Services/Ports"] ?? "").trim();
           for (const v of [src, dst, svc].flatMap((s) => s.split(/[,;]/).map((x) => x.trim()))) {
             if (v) refs.add(v.toLowerCase());
@@ -102,8 +107,10 @@ export function UnusedObjects({ files }: Props) {
   const displayObjects = showAll ? objects : objects.filter((o) => !o.referenced);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Unused Objects</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Unused Objects
+      </h3>
 
       {unusedCount > 0 ? (
         <p className="text-[10px] text-muted-foreground mb-3">

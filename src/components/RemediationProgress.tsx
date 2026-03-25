@@ -26,7 +26,9 @@ function getCustomerHash(analysisResults: Record<string, AnalysisResult>): strin
 }
 
 async function loadCompleted(customerHash: string): Promise<Set<string>> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (user) {
     const { data: orgData } = await supabase
       .from("org_members")
@@ -75,7 +77,8 @@ export function RemediationProgress({ analysisResults }: Props) {
   }, [customerHash]);
 
   const { playbooks, bySection, totalCompleted, totalFindings, hoursRemaining } = useMemo(() => {
-    const list: { findingId: string; title: string; section: string; estimatedMinutes: number }[] = [];
+    const list: { findingId: string; title: string; section: string; estimatedMinutes: number }[] =
+      [];
     for (const result of Object.values(analysisResults)) {
       for (const finding of result.findings) {
         const pb = generatePlaybook(finding);
@@ -111,9 +114,9 @@ export function RemediationProgress({ analysisResults }: Props) {
 
     const totalCompleted = list.filter((p) => completed.has(p.findingId)).length;
     const totalFindings = list.length;
-    const hoursRemaining = list
-      .filter((p) => !completed.has(p.findingId))
-      .reduce((s, p) => s + p.estimatedMinutes, 0) / 60;
+    const hoursRemaining =
+      list.filter((p) => !completed.has(p.findingId)).reduce((s, p) => s + p.estimatedMinutes, 0) /
+      60;
 
     return {
       playbooks: list,
@@ -126,8 +129,13 @@ export function RemediationProgress({ analysisResults }: Props) {
 
   if (playbooks.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="remediation-progress">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">Remediation Progress</h3>
+      <div
+        className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+        data-tour="remediation-progress"
+      >
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">
+          Remediation Progress
+        </h3>
         <p className="text-sm text-muted-foreground">No findings to remediate</p>
       </div>
     );
@@ -137,8 +145,13 @@ export function RemediationProgress({ analysisResults }: Props) {
   const weeksEstimate = hoursRemaining > 0 ? Math.ceil(hoursRemaining / 8) : 0;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="remediation-progress">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Remediation Progress</h3>
+    <div
+      className="rounded-xl border border-border/50 bg-card p-5 shadow-card"
+      data-tour="remediation-progress"
+    >
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Remediation Progress
+      </h3>
 
       <div className="mb-4">
         <div className="flex items-center justify-between text-xs mb-1">
@@ -182,7 +195,8 @@ export function RemediationProgress({ analysisResults }: Props) {
 
       <div className="text-xs text-muted-foreground space-y-1">
         <p>
-          Estimated <span className="font-semibold text-foreground">{hoursRemaining.toFixed(1)}</span> hours
+          Estimated{" "}
+          <span className="font-semibold text-foreground">{hoursRemaining.toFixed(1)}</span> hours
           remaining
         </p>
         {weeksEstimate > 0 && (

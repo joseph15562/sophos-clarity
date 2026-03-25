@@ -1,10 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Moon, Sun, LogOut, Building2, User, Wifi, WifiOff, RefreshCw, ChevronDown, SlidersHorizontal, Cpu, Shield } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  LogOut,
+  Building2,
+  User,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  ChevronDown,
+  SlidersHorizontal,
+  Cpu,
+  Shield,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { getCentralStatus, syncTenants, syncFirewalls, type CentralStatus } from "@/lib/sophos-central";
+import {
+  getCentralStatus,
+  syncTenants,
+  syncFirewalls,
+  type CentralStatus,
+} from "@/lib/sophos-central";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AppHeaderProps {
@@ -41,7 +59,11 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     try {
       const tenants = await syncTenants(orgId);
       for (const t of tenants) {
-        try { await syncFirewalls(orgId, t.id); } catch (err) { console.warn("[refresh] syncFirewalls best-effort", err); }
+        try {
+          await syncFirewalls(orgId, t.id);
+        } catch (err) {
+          console.warn("[refresh] syncFirewalls best-effort", err);
+        }
       }
       const s = await getCentralStatus(orgId);
       setStatus(s);
@@ -52,7 +74,9 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     setRefreshing(false);
   }, [orgId]);
 
-  useEffect(() => { loadStatus(); }, [loadStatus]);
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
 
   // Refetch when user opens the popover so we show current state after connecting in Settings
   useEffect(() => {
@@ -61,7 +85,9 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
 
   // Refetch when tab becomes visible so we pick up connection changes from another tab/settings
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === "visible" && orgId) loadStatus(); };
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && orgId) loadStatus();
+    };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [orgId, loadStatus]);
@@ -78,22 +104,25 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     }
 
     const delay = STALE_MS - age + 500;
-    const timer = setTimeout(() => { refresh(); }, delay);
+    const timer = setTimeout(() => {
+      refresh();
+    }, delay);
     return () => clearTimeout(timer);
   }, [status?.connected, status?.last_synced_at, refreshing, refresh]);
 
   if (!status) return null;
 
-  const isStale = status.connected && status.last_synced_at
-    ? (Date.now() - new Date(status.last_synced_at).getTime()) > 15 * 60 * 1000
-    : false;
+  const isStale =
+    status.connected && status.last_synced_at
+      ? Date.now() - new Date(status.last_synced_at).getTime() > 15 * 60 * 1000
+      : false;
 
-  const dotColor = status.connected
-    ? isStale ? "bg-[#F29400]" : "bg-[#00F2B3]"
-    : "bg-[#6A889B]";
+  const dotColor = status.connected ? (isStale ? "bg-[#F29400]" : "bg-[#00F2B3]") : "bg-[#6A889B]";
 
   const label = status.connected
-    ? isStale ? "Central (stale)" : "Central"
+    ? isStale
+      ? "Central (stale)"
+      : "Central"
     : "Central (not linked)";
 
   const timeAgo = (iso: string | null | undefined) => {
@@ -113,13 +142,15 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
         title={label}
         aria-label={label}
       >
-        <span className={`inline-block w-2 h-2 rounded-full ${dotColor} ${status.connected && !isStale ? "animate-pulse" : ""}`} />
+        <span
+          className={`inline-block w-2 h-2 rounded-full ${dotColor} ${status.connected && !isStale ? "animate-pulse" : ""}`}
+        />
         {status.connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
       </button>
       {showPopover && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowPopover(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border border-border/70 bg-card shadow-lg p-3 space-y-2">
+          <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border border-border/50 bg-card shadow-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
               <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor}`} />
               <span className="text-xs font-semibold text-foreground">
@@ -129,12 +160,22 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
             {status.connected && (
               <>
                 <div className="text-[10px] text-muted-foreground space-y-0.5">
-                  <p>Type: <span className="text-foreground font-medium">{status.partner_type}</span></p>
-                  <p>Last synced: <span className="text-foreground font-medium">{timeAgo(status.last_synced_at)}</span></p>
+                  <p>
+                    Type: <span className="text-foreground font-medium">{status.partner_type}</span>
+                  </p>
+                  <p>
+                    Last synced:{" "}
+                    <span className="text-foreground font-medium">
+                      {timeAgo(status.last_synced_at)}
+                    </span>
+                  </p>
                   {isStale && <p className="text-[#F29400] font-medium">Auto-refreshing...</p>}
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); refresh(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    refresh();
+                  }}
                   disabled={refreshing}
                   className="w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-brand-accent hover:bg-muted/50 rounded px-2 py-1.5 transition-colors"
                 >
@@ -144,7 +185,9 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
               </>
             )}
             {!status.connected && (
-              <p className="text-[10px] text-muted-foreground">Link your Sophos Central account in the Multi-Tenant Dashboard settings.</p>
+              <p className="text-[10px] text-muted-foreground">
+                Link your Sophos Central account in the Multi-Tenant Dashboard settings.
+              </p>
             )}
           </div>
         </>
@@ -163,7 +206,10 @@ function ConnectorStatus({ orgId, onOpenSetup }: { orgId: string; onOpenSetup?: 
     let cancelled = false;
     (async () => {
       try {
-        const { count } = await supabase.from("agents").select("id", { count: "exact", head: true }).eq("org_id", orgId);
+        const { count } = await supabase
+          .from("agents")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", orgId);
         if (cancelled) return;
         setAgentCount(count ?? 0);
         if ((count ?? 0) > 0) {
@@ -182,7 +228,9 @@ function ConnectorStatus({ orgId, onOpenSetup }: { orgId: string; onOpenSetup?: 
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [orgId]);
 
   if (loading || (agentCount === 0 && !lastRunAt)) {
@@ -221,13 +269,25 @@ function ConnectorStatus({ orgId, onOpenSetup }: { orgId: string; onOpenSetup?: 
       aria-label={`Connector: ${agentCount} agents, last run ${timeAgo(lastRunAt)}`}
     >
       <Cpu className="h-3 w-3" />
-      <span className="hidden sm:inline">Connector: {agentCount} agent{agentCount !== 1 ? "s" : ""}</span>
+      <span className="hidden sm:inline">
+        Connector: {agentCount} agent{agentCount !== 1 ? "s" : ""}
+      </span>
       {lastRunAt && <span className="hidden md:inline opacity-70">· {timeAgo(lastRunAt)}</span>}
     </button>
   );
 }
 
-export function AppHeader({ hasFiles, fileCount, customerName, environment, selectedFrameworks, reportCount, notificationSlot, onOrgClick, localMode }: AppHeaderProps) {
+export function AppHeader({
+  hasFiles,
+  fileCount,
+  customerName,
+  environment,
+  selectedFrameworks,
+  reportCount,
+  notificationSlot,
+  onOrgClick,
+  localMode,
+}: AppHeaderProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { user, org, isGuest, signOut } = useAuth();
 
@@ -242,7 +302,9 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
             <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
           </div>
           <div className="mr-auto shrink-0">
-            <div className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1 ${isLoginShell ? "shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : ""}`}>
+            <div
+              className={`inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1 ${isLoginShell ? "shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : ""}`}
+            >
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
               <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
                 {isLoginShell ? "Firewall Compliance Workspace" : "Enterprise Firewall Compliance"}
@@ -252,7 +314,9 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               Sophos FireComply
             </h1>
             <p className="text-[11px] text-[#9BB0D3] hidden sm:block">
-              {isLoginShell ? "Executive-ready firewall security assessments and compliance reporting" : "Firewall Configuration Assessment & Compliance Reporting"}
+              {isLoginShell
+                ? "Executive-ready firewall security assessments and compliance reporting"
+                : "Firewall Configuration Assessment & Compliance Reporting"}
             </p>
           </div>
 
@@ -268,13 +332,20 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                   data-tour="management-panel"
                 >
                   <Building2 className="h-3 w-3 shrink-0" />
-                  <span className="font-medium text-white/80 max-w-[120px] truncate hidden sm:inline">{org.name}</span>
+                  <span className="font-medium text-white/80 max-w-[120px] truncate hidden sm:inline">
+                    {org.name}
+                  </span>
                   <ChevronDown className="h-2.5 w-2.5 shrink-0" />
                 </button>
               )}
               {org && !localMode && <CentralStatusDot orgId={org.id} />}
               {org && !localMode && <ConnectorStatus orgId={org.id} onOpenSetup={onOrgClick} />}
-              <Button variant="ghost" size="sm" className="inline-flex h-8 px-2.5 text-[10px] text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] gap-1.5 shrink-0 max-sm:px-1.5 rounded-xl border border-white/10 bg-white/[0.04]" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="inline-flex h-8 px-2.5 text-[10px] text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] gap-1.5 shrink-0 max-sm:px-1.5 rounded-xl border border-white/10 bg-white/[0.04]"
+                asChild
+              >
                 <Link to="/health-check" data-tour="health-check-nav" title="SE Health Check">
                   <Shield className="h-3 w-3 shrink-0" />
                   <span className="hidden sm:inline">SE Health Check</span>
@@ -283,7 +354,9 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               {notificationSlot}
               <span className="flex items-center gap-1 text-[10px] text-[#B6C4FF] rounded-xl border border-white/10 bg-white/[0.04] px-2 py-1.5">
                 <User className="h-3 w-3 shrink-0" />
-                <span className="max-w-[100px] truncate hidden sm:inline">{user?.email?.split("@")[0]}</span>
+                <span className="max-w-[100px] truncate hidden sm:inline">
+                  {user?.email?.split("@")[0]}
+                </span>
               </span>
               <Button
                 variant="ghost"
@@ -313,7 +386,9 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
                 aria-label="Open settings"
               >
                 <SlidersHorizontal className="h-3 w-3 shrink-0" />
-                <span className="font-medium hidden sm:inline">{isLoginShell ? "Workspace options" : "Settings"}</span>
+                <span className="font-medium hidden sm:inline">
+                  {isLoginShell ? "Workspace options" : "Settings"}
+                </span>
                 <ChevronDown className="h-2.5 w-2.5 shrink-0" />
               </button>
             </div>
@@ -333,10 +408,10 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
       </header>
 
       {showContext && (
-        <div className="border-b border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.92),rgba(14,20,34,0.92))] no-print hidden sm:block backdrop-blur-sm">
+        <div className="border-b border-border/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.92),rgba(14,20,34,0.92))] no-print hidden sm:block backdrop-blur-sm">
           <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-2 flex items-center gap-4 text-[11px] text-muted-foreground overflow-x-auto">
             {customerName && (
-              <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
+              <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/50 bg-card/70 px-2.5 py-1">
                 <span className="font-semibold text-foreground">{customerName}</span>
                 {environment && <span className="opacity-60">· {environment}</span>}
               </span>
@@ -348,10 +423,13 @@ export function AppHeader({ hasFiles, fileCount, customerName, environment, sele
               </span>
             )}
             {selectedFrameworks.length > 0 && (
-              <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/70 bg-card/70 px-2.5 py-1">
+              <span className="flex items-center gap-1.5 shrink-0 rounded-full border border-border/50 bg-card/70 px-2.5 py-1">
                 <span className="opacity-60">Frameworks:</span>
                 {selectedFrameworks.map((fw) => (
-                  <span key={fw} className="px-1.5 py-0.5 rounded bg-brand-accent/10 dark:bg-brand-accent/20 text-[#10037C] dark:text-[#009CFB] font-medium">
+                  <span
+                    key={fw}
+                    className="px-1.5 py-0.5 rounded bg-brand-accent/10 dark:bg-brand-accent/20 text-[#10037C] dark:text-[#009CFB] font-medium"
+                  >
                     {fw}
                   </span>
                 ))}

@@ -20,26 +20,33 @@ interface Props {
 
 type ColorScheme = "green" | "amber" | "red" | "neutral";
 
-const COLOR_CLASSES: Record<ColorScheme, { text: string; border: string; bg: string }> = {
+const COLOR_CLASSES: Record<
+  ColorScheme,
+  { text: string; border: string; bg: string; glow: string }
+> = {
   green: {
     text: "text-[#00F2B3] dark:text-[#00F2B3]",
-    border: "border-[#00F2B3]/20",
-    bg: "bg-[#00F2B3]/[0.04]",
+    border: "border-[#00F2B3]/25",
+    bg: "bg-[#00F2B3]/[0.05]",
+    glow: "shadow-[0_0_20px_-4px_rgba(0,242,179,0.15)] dark:shadow-[0_0_24px_-4px_rgba(0,242,179,0.20)]",
   },
   amber: {
     text: "text-[#F29400]",
-    border: "border-[#F29400]/20",
-    bg: "bg-[#F29400]/[0.04]",
+    border: "border-[#F29400]/25",
+    bg: "bg-[#F29400]/[0.05]",
+    glow: "shadow-[0_0_20px_-4px_rgba(242,148,0,0.15)] dark:shadow-[0_0_24px_-4px_rgba(242,148,0,0.20)]",
   },
   red: {
     text: "text-[#EA0022]",
-    border: "border-[#EA0022]/20",
-    bg: "bg-[#EA0022]/[0.04]",
+    border: "border-[#EA0022]/25",
+    bg: "bg-[#EA0022]/[0.05]",
+    glow: "shadow-[0_0_20px_-4px_rgba(234,0,34,0.15)] dark:shadow-[0_0_24px_-4px_rgba(234,0,34,0.20)]",
   },
   neutral: {
     text: "text-foreground",
-    border: "border-border",
+    border: "border-border/50",
     bg: "bg-card",
+    glow: "shadow-card",
   },
 };
 
@@ -92,21 +99,22 @@ export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
     }
 
     const denom = sumWebFilterableRules * 3;
-    const coverage = denom > 0
-      ? Math.round(((sumWebFilter + sumIps + sumAppControl) / denom) * 100)
-      : 0;
+    const coverage =
+      denom > 0 ? Math.round(((sumWebFilter + sumIps + sumAppControl) / denom) * 100) : 0;
 
     // Overall score: average across firewalls (like PeerBenchmark)
     const scores = entries.map((e) => computeRiskScore(e));
-    const overallScore = Math.round(
-      scores.reduce((sum, s) => sum + s.overall, 0) / scores.length
-    );
+    const overallScore = Math.round(scores.reduce((sum, s) => sum + s.overall, 0) / scores.length);
     const grade =
-      overallScore >= 90 ? "A"
-      : overallScore >= 75 ? "B"
-      : overallScore >= 60 ? "C"
-      : overallScore >= 40 ? "D"
-      : "F";
+      overallScore >= 90
+        ? "A"
+        : overallScore >= 75
+          ? "B"
+          : overallScore >= 60
+            ? "C"
+            : overallScore >= 40
+              ? "D"
+              : "F";
 
     return {
       overallScore,
@@ -137,14 +145,6 @@ export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
     ) : null;
 
   const cards = [
-    {
-      label: "Overall Score",
-      value: `${stats.overallScore}`,
-      badge: stats.grade,
-      scheme: scoreScheme,
-      icon: Shield,
-      trend: trendIcon,
-    },
     {
       label: "Critical Findings",
       value: String(stats.criticalFindings),
@@ -178,29 +178,29 @@ export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {cards.map((card) => {
         const c = COLOR_CLASSES[card.scheme];
         const Icon = card.icon;
         return (
           <div
             key={card.label}
-            className={`rounded-xl border bg-card p-3 ${c.border} ${c.bg}`}
+            className={`relative overflow-hidden rounded-xl border p-3.5 transition-all duration-200 hover:scale-[1.02] ${c.border} ${c.bg} ${c.glow}`}
           >
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <Icon className={`h-3.5 w-3.5 shrink-0 ${c.text}`} />
+            <div className="flex items-center justify-between gap-1 mb-1.5">
+              <Icon className={`h-4 w-4 shrink-0 ${c.text}`} />
               {card.trend}
             </div>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
               {card.label}
             </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`text-xl font-extrabold tabular-nums ${c.text}`}>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-2xl font-black tabular-nums tracking-tight ${c.text}`}>
                 {card.value}
               </span>
               {card.badge != null && (
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${c.text} ${c.bg} border ${c.border}`}
+                  className={`text-[10px] font-black px-2 py-0.5 rounded-md ${c.text} ${c.bg} border ${c.border}`}
                 >
                   {card.badge}
                 </span>

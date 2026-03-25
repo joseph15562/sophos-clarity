@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Bell, CheckCheck, X, Trash2, AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
+import {
+  Bell,
+  CheckCheck,
+  X,
+  Trash2,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import type { AppNotification, NotificationType } from "@/hooks/use-notifications";
 
 interface Props {
@@ -13,7 +22,11 @@ interface Props {
 
 const TYPE_STYLE: Record<NotificationType, { icon: typeof Info; color: string; bg: string }> = {
   info: { icon: Info, color: "text-[#009CFB]", bg: "bg-[#009CFB]/10" },
-  success: { icon: CheckCircle, color: "text-[#00F2B3] dark:text-[#00F2B3]", bg: "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10" },
+  success: {
+    icon: CheckCircle,
+    color: "text-[#00F2B3] dark:text-[#00F2B3]",
+    bg: "bg-[#00F2B3]/10 dark:bg-[#00F2B3]/10",
+  },
   warning: { icon: AlertTriangle, color: "text-[#F29400]", bg: "bg-[#F29400]/10" },
   error: { icon: XCircle, color: "text-[#EA0022]", bg: "bg-[#EA0022]/10" },
 };
@@ -26,7 +39,14 @@ function timeAgo(ts: number): string {
   return `${Math.floor(diff / 86_400_000)}d ago`;
 }
 
-export function NotificationCentre({ notifications, unreadCount, onMarkRead, onMarkAllRead, onDismiss, onClearAll }: Props) {
+export function NotificationCentre({
+  notifications,
+  unreadCount,
+  onMarkRead,
+  onMarkAllRead,
+  onDismiss,
+  onClearAll,
+}: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -49,7 +69,7 @@ export function NotificationCentre({ notifications, unreadCount, onMarkRead, onM
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-30 w-80 rounded-xl border border-border/70 bg-card shadow-xl overflow-hidden">
+          <div className="absolute right-0 top-full mt-1 z-30 w-80 rounded-xl border border-border/50 bg-card shadow-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
               <span className="text-xs font-semibold text-foreground">Notifications</span>
               <div className="flex items-center gap-1.5">
@@ -91,23 +111,36 @@ export function NotificationCentre({ notifications, unreadCount, onMarkRead, onM
                     className={`flex items-start gap-2.5 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer ${
                       !n.read ? "bg-[#2006F7]/[0.03] dark:bg-brand-accent/[0.06]" : ""
                     }`}
-                    onClick={() => { if (!n.read) onMarkRead(n.id); }}
+                    onClick={() => {
+                      if (!n.read) onMarkRead(n.id);
+                    }}
                   >
                     <div className={`mt-0.5 p-1 rounded ${style.bg} ${style.color} shrink-0`}>
                       <Icon className="h-3 w-3" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={`text-xs font-medium truncate ${!n.read ? "text-foreground" : "text-muted-foreground"}`}>
+                        <p
+                          className={`text-xs font-medium truncate ${!n.read ? "text-foreground" : "text-muted-foreground"}`}
+                        >
                           {n.title}
                         </p>
-                        {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#2006F7] dark:bg-[#00EDFF] shrink-0" />}
+                        {!n.read && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#2006F7] dark:bg-[#00EDFF] shrink-0" />
+                        )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{n.message}</p>
-                      <span className="text-[9px] text-muted-foreground/60 mt-1 block">{timeAgo(n.timestamp)}</span>
+                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                        {n.message}
+                      </p>
+                      <span className="text-[9px] text-muted-foreground/60 mt-1 block">
+                        {timeAgo(n.timestamp)}
+                      </span>
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); onDismiss(n.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDismiss(n.id);
+                      }}
                       className="text-muted-foreground/40 hover:text-muted-foreground shrink-0 mt-0.5"
                       title="Dismiss"
                     >

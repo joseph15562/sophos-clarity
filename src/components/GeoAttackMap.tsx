@@ -18,7 +18,6 @@ function latLonToXY(lat: number, lon: number): { x: number; y: number } {
   return { x: lon, y: -lat };
 }
 
-
 export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
   const [data, setData] = useState<IpWithGeo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,18 +72,23 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
     };
 
     run();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalIps.join(","), exposedServices.length]);
 
   const pointsWithCoords = data.filter((d) => d.geo) as Array<IpWithGeo & { geo: GeoLocation }>;
 
-  const getDotColor = (d: IpWithGeo) => d.cves.length > 0 ? "#EA0022" : "#F29400";
+  const getDotColor = (d: IpWithGeo) => (d.cves.length > 0 ? "#EA0022" : "#F29400");
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 rounded-xl border border-border/70 bg-card p-4">
+    <div className="flex flex-col sm:flex-row gap-4 rounded-xl border border-border/50 bg-card p-4">
       <div className="flex-1 min-w-0">
-        <div className="rounded-lg overflow-hidden border border-border" style={{ aspectRatio: "2/1" }}>
+        <div
+          className="rounded-lg overflow-hidden border border-border"
+          style={{ aspectRatio: "2/1" }}
+        >
           <svg
             viewBox="-180 -90 360 180"
             className="w-full h-full"
@@ -119,7 +123,9 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
                 <g key={d.ip}>
                   <circle cx={x} cy={y} r={14} fill={`url(#${glowId})`} />
                   <circle
-                    cx={x} cy={y} r={4}
+                    cx={x}
+                    cy={y}
+                    r={4}
                     fill={getDotColor(d)}
                     stroke="#0a1628"
                     strokeWidth="1.5"
@@ -130,8 +136,10 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
           </svg>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">
-          <span className="inline-block w-2 h-2 rounded-full bg-[#F29400] mr-1 align-middle" /> Exposed
-          <span className="inline-block w-2 h-2 rounded-full bg-[#EA0022] ml-3 mr-1 align-middle" /> Has CVEs
+          <span className="inline-block w-2 h-2 rounded-full bg-[#F29400] mr-1 align-middle" />{" "}
+          Exposed
+          <span className="inline-block w-2 h-2 rounded-full bg-[#EA0022] ml-3 mr-1 align-middle" />{" "}
+          Has CVEs
         </p>
       </div>
       <div className="w-full sm:w-64 shrink-0 sm:border-l border-border sm:pl-4 pt-4 sm:pt-0 space-y-3 max-h-64 overflow-y-auto">
@@ -145,12 +153,11 @@ export function GeoAttackMap({ externalIps, exposedServices = [] }: Props) {
             className="rounded-lg border border-border bg-background/50 px-2.5 py-2 text-[10px]"
           >
             <p className="font-mono font-medium text-foreground">{d.ip}</p>
-            {d.status === "loading" && (
-              <p className="text-muted-foreground mt-0.5">Resolving…</p>
-            )}
+            {d.status === "loading" && <p className="text-muted-foreground mt-0.5">Resolving…</p>}
             {d.geo && (
               <p className="text-muted-foreground mt-0.5">
-                {d.geo.city && `${d.geo.city}, `}{d.geo.country}
+                {d.geo.city && `${d.geo.city}, `}
+                {d.geo.country}
                 {d.geo.isp && ` · ${d.geo.isp}`}
               </p>
             )}

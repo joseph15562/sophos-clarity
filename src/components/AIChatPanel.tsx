@@ -29,7 +29,7 @@ const STORAGE_PREFIX = "firecomply_chat_";
 function getCustomerHash(
   customerName?: string,
   environment?: string,
-  analysisResults?: Record<string, AnalysisResult>
+  analysisResults?: Record<string, AnalysisResult>,
 ): string {
   const parts: string[] = [];
   if (customerName) parts.push(customerName);
@@ -69,14 +69,17 @@ const EXECUTIVE_SUMMARY_PROMPT =
 const TAB_SUGGESTIONS: Record<string, string[]> = {
   overview: ["What's my overall security posture?", "What are the top priorities?"],
   security: ["Which rules need IPS enabled?", "How do I improve web filtering coverage?"],
-  compliance: ["Which compliance frameworks have the most gaps?", "How do I improve my PCI DSS score?"],
+  compliance: [
+    "Which compliance frameworks have the most gaps?",
+    "How do I improve my PCI DSS score?",
+  ],
   optimisation: ["What rules can be consolidated?", "How do I reduce my attack surface?"],
   remediation: ["What should I fix first?", "How long will remediation take?"],
 };
 
 function getSuggestedQuestions(
   analysisResults: Record<string, AnalysisResult>,
-  analysisTab?: string
+  analysisTab?: string,
 ): string[] {
   const tabQuestions = analysisTab ? TAB_SUGGESTIONS[analysisTab] : [];
   const questions: string[] = [...(tabQuestions ?? [])];
@@ -93,10 +96,14 @@ function getSuggestedQuestions(
     if (result.inspectionPosture?.withoutWebFilter > 0) webFilteringLow = true;
   }
 
-  if (hasCritical && !questions.some((q) => q.toLowerCase().includes("critical"))) questions.push("What are the most critical security issues?");
-  if (webFilteringLow && !questions.some((q) => q.toLowerCase().includes("web filter"))) questions.push("How do I enable web filtering on my Sophos XGS?");
-  if (mfaDisabled && !questions.some((q) => q.toLowerCase().includes("mfa"))) questions.push("How do I configure MFA/OTP on Sophos Firewall?");
-  if (!questions.some((q) => q.toLowerCase().includes("summary"))) questions.push("Give me a plain-English summary of this assessment");
+  if (hasCritical && !questions.some((q) => q.toLowerCase().includes("critical")))
+    questions.push("What are the most critical security issues?");
+  if (webFilteringLow && !questions.some((q) => q.toLowerCase().includes("web filter")))
+    questions.push("How do I enable web filtering on my Sophos XGS?");
+  if (mfaDisabled && !questions.some((q) => q.toLowerCase().includes("mfa")))
+    questions.push("How do I configure MFA/OTP on Sophos Firewall?");
+  if (!questions.some((q) => q.toLowerCase().includes("summary")))
+    questions.push("Give me a plain-English summary of this assessment");
 
   return questions.slice(0, 4);
 }
@@ -114,7 +121,7 @@ export function AIChatPanel({
 }: Props) {
   const customerHash = useMemo(
     () => getCustomerHash(customerName, environment, analysisResults),
-    [customerName, environment, analysisResults]
+    [customerName, environment, analysisResults],
   );
   const storageKey = useMemo(() => getStorageKey(customerHash), [customerHash]);
 
@@ -126,7 +133,7 @@ export function AIChatPanel({
       if (isControlled) onOpenChange?.(value);
       else setInternalOpen(value);
     },
-    [isControlled, onOpenChange]
+    [isControlled, onOpenChange],
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastActive, setLastActive] = useState<number | null>(null);
@@ -137,7 +144,7 @@ export function AIChatPanel({
 
   const suggestedQuestions = useMemo(
     () => getSuggestedQuestions(analysisResults, analysisTab),
-    [analysisResults, analysisTab]
+    [analysisResults, analysisTab],
   );
 
   const didLoadFromStorage = useRef(false);
@@ -204,11 +211,16 @@ export function AIChatPanel({
 
   const buildContext = useCallback(() => {
     const findings = Object.entries(analysisResults)
-      .flatMap(([label, r]) => r.findings.map((f) => `[${label}] ${f.severity}: ${f.title} — ${f.detail}`))
+      .flatMap(([label, r]) =>
+        r.findings.map((f) => `[${label}] ${f.severity}: ${f.title} — ${f.detail}`),
+      )
       .join("\n");
 
     const stats = Object.entries(analysisResults)
-      .map(([label, r]) => `${label}: ${r.stats.totalRules} rules, ${r.findings.length} findings, WAN rules: ${r.inspectionPosture.totalWanRules}`)
+      .map(
+        ([label, r]) =>
+          `${label}: ${r.stats.totalRules} rules, ${r.findings.length} findings, WAN rules: ${r.inspectionPosture.totalWanRules}`,
+      )
       .join("\n");
 
     const reportSummary = reports
@@ -229,67 +241,63 @@ GENERATED REPORTS:
 ${reportSummary}`;
   }, [analysisResults, reports, customerName, environment]);
 
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isStreaming) return;
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isStreaming) return;
 
-    const userMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      role: "user",
-      content: text.trim(),
-      timestamp: Date.now(),
-    };
+      const userMsg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        role: "user",
+        content: text.trim(),
+        timestamp: Date.now(),
+      };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsStreaming(true);
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setIsStreaming(true);
 
-    const assistantId = `msg-${Date.now() + 1}`;
-    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "", timestamp: Date.now() }]);
+      const assistantId = `msg-${Date.now() + 1}`;
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantId, role: "assistant", content: "", timestamp: Date.now() },
+      ]);
 
-    const context = buildContext();
-    const conversationHistory = messages
-      .slice(-6)
-      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
-      .join("\n\n");
+      const context = buildContext();
+      const conversationHistory = messages
+        .slice(-6)
+        .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+        .join("\n\n");
 
-    const chatContext = `${context}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nUSER QUESTION:\n${text.trim()}`;
+      const chatContext = `${context}\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nUSER QUESTION:\n${text.trim()}`;
 
-    try {
-      await streamChat({
-        chatContext,
-        onDelta: (chunk) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: m.content + chunk }
-                : m
-            )
-          );
-        },
-        onDone: () => setIsStreaming(false),
-        onError: (error) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: `Error: ${error}` }
-                : m
-            )
-          );
-          setIsStreaming(false);
-        },
-      });
-    } catch (err) {
-      console.warn("[sendMessage]", err);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId
-            ? { ...m, content: "Failed to connect to AI service." }
-            : m
-        )
-      );
-      setIsStreaming(false);
-    }
-  }, [isStreaming, messages, buildContext]);
+      try {
+        await streamChat({
+          chatContext,
+          onDelta: (chunk) => {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m)),
+            );
+          },
+          onDone: () => setIsStreaming(false),
+          onError: (error) => {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, content: `Error: ${error}` } : m)),
+            );
+            setIsStreaming(false);
+          },
+        });
+      } catch (err) {
+        console.warn("[sendMessage]", err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: "Failed to connect to AI service." } : m,
+          ),
+        );
+        setIsStreaming(false);
+      }
+    },
+    [isStreaming, messages, buildContext],
+  );
 
   // When opened with initialMessage, send it and notify parent
   useEffect(() => {
@@ -329,7 +337,7 @@ ${reportSummary}`;
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="no-print fixed bottom-20 right-6 z-50 w-[380px] max-h-[600px] rounded-2xl border border-border/70 bg-card shadow-2xl flex flex-col overflow-hidden">
+        <div className="no-print fixed bottom-20 right-6 z-50 w-[380px] max-h-[600px] rounded-2xl border border-border/50 bg-card shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#001A47] text-white">
             <div className="flex items-center gap-2">
@@ -355,7 +363,11 @@ ${reportSummary}`;
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               )}
-              <button onClick={() => setIsOpen(false)} aria-label="Close chat" className="p-1.5 rounded-md hover:bg-white/10 transition-colors">
+              <button
+                onClick={() => setIsOpen(false)}
+                aria-label="Close chat"
+                className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -369,10 +381,16 @@ ${reportSummary}`;
           )}
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px] max-h-[420px]">
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px] max-h-[420px]"
+          >
             {messages.length === 0 && (
               <div className="space-y-3">
-                <p className="text-xs text-muted-foreground text-center">Ask questions about your firewall assessment. The AI has full context of your analysis results and reports.</p>
+                <p className="text-xs text-muted-foreground text-center">
+                  Ask questions about your firewall assessment. The AI has full context of your
+                  analysis results and reports.
+                </p>
                 <div className="space-y-1.5">
                   {suggestedQuestions.map((q) => (
                     <button
@@ -391,11 +409,13 @@ ${reportSummary}`;
                 key={msg.id}
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-[#2006F7] text-white"
-                    : "bg-muted/50 text-foreground border border-border"
-                }`}>
+                <div
+                  className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-[#2006F7] text-white"
+                      : "bg-muted/50 text-foreground border border-border"
+                  }`}
+                >
                   {msg.role === "assistant" && msg.content ? (
                     <div
                       className="prose prose-xs dark:prose-invert max-w-none [&_p]:text-xs [&_p]:my-1 [&_ul]:text-xs [&_li]:text-xs [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_code]:text-[10px]"
@@ -433,7 +453,11 @@ ${reportSummary}`;
                 aria-label="Send message"
                 className="h-9 w-9 rounded-lg bg-[#2006F7] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[#10037C] transition-colors shrink-0"
               >
-                {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isStreaming ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </button>
             </div>
           </div>

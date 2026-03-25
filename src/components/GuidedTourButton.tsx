@@ -1,4 +1,22 @@
-import { HelpCircle, Compass, BarChart3, Shield, GitCompare, Wrench, Map, LayoutGrid, Link2, Download, Share2, Users, Bell, Clock, Building2, Zap, Gauge } from "lucide-react";
+import {
+  HelpCircle,
+  Compass,
+  BarChart3,
+  Shield,
+  GitCompare,
+  Wrench,
+  Map,
+  LayoutGrid,
+  Link2,
+  Download,
+  Share2,
+  Users,
+  Bell,
+  Clock,
+  Building2,
+  Zap,
+  Gauge,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +63,7 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/70 bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
           title="Guided tours"
           aria-label="Guided tours"
         >
@@ -56,7 +74,9 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
       <DropdownMenuContent align="end" side="top" className="w-56 max-h-[70vh] overflow-y-auto">
         {/* Getting Started */}
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Getting Started</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Getting Started
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => startGettingStartedTour()}>
             <Compass className="h-3.5 w-3.5 mr-2 shrink-0" /> Getting Started
           </DropdownMenuItem>
@@ -67,7 +87,9 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Analysis & Findings</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Analysis & Findings
+              </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => startDashboardTour()}>
                 <BarChart3 className="h-3.5 w-3.5 mr-2 shrink-0" /> Dashboard Guide
               </DropdownMenuItem>
@@ -84,7 +106,8 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
                 <Wrench className="h-3.5 w-3.5 mr-2 shrink-0" /> Remediation Workflow
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => startBaselineTour(cb)}>
-                <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Baselines & Remediation Simulator
+                <GitCompare className="h-3.5 w-3.5 mr-2 shrink-0" /> Baselines & Remediation
+                Simulator
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => startMapsTour(cb)}>
                 <Map className="h-3.5 w-3.5 mr-2 shrink-0" /> Geographic & Network Maps
@@ -101,7 +124,9 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Setup & Integration</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Setup & Integration
+              </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => startCentralTour(cb)}>
                 <Link2 className="h-3.5 w-3.5 mr-2 shrink-0" /> Connect to Sophos Central
               </DropdownMenuItem>
@@ -117,7 +142,9 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Exports & Sharing</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Exports & Sharing
+              </DropdownMenuLabel>
               {hasReports && (
                 <DropdownMenuItem onClick={() => startExportTour()}>
                   <Download className="h-3.5 w-3.5 mr-2 shrink-0" /> How to Export
@@ -137,7 +164,9 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Team & Settings</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Team & Settings
+              </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => startManagementTour(cb)}>
                 <Building2 className="h-3.5 w-3.5 mr-2 shrink-0" /> Management Panel
               </DropdownMenuItem>
@@ -160,7 +189,9 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
         {/* Tips */}
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Tips</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Tips
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => startPowerUserTour()}>
             <Zap className="h-3.5 w-3.5 mr-2 shrink-0" /> Power User Tips
           </DropdownMenuItem>

@@ -9,7 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 
 async function getOrgId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("org_members")
@@ -64,7 +66,9 @@ export function CategoryTrends({ analysisResults }: CategoryTrendsProps) {
       const entries = await loadScoreHistory(orgId, hostname, 30);
       if (!cancelled) setHistory(entries);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [hostname]);
 
   const hasTrends = history.length >= 2;
@@ -90,8 +94,10 @@ export function CategoryTrends({ analysisResults }: CategoryTrendsProps) {
   };
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Category Trends</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Category Trends
+      </h3>
       {aggregated.length === 0 ? (
         <p className="text-xs text-muted-foreground">No analysis data</p>
       ) : (
@@ -141,7 +147,10 @@ export function CategoryTrends({ analysisResults }: CategoryTrendsProps) {
                         />
                       </svg>
                       {trend === "up" && (
-                        <ArrowUp className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" aria-hidden />
+                        <ArrowUp
+                          className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]"
+                          aria-hidden
+                        />
                       )}
                       {trend === "down" && (
                         <ArrowDown className="h-3 w-3 text-[#EA0022]" aria-hidden />

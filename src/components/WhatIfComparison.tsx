@@ -41,7 +41,7 @@ export function WhatIfComparison({ analysisResults }: Props) {
     findings.sort(
       (a, b) =>
         SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) ||
-        a.title.localeCompare(b.title)
+        a.title.localeCompare(b.title),
     );
     return { allFindings: findings, firstResult: first };
   }, [analysisResults]);
@@ -72,8 +72,10 @@ export function WhatIfComparison({ analysisResults }: Props) {
 
   if (!firstResult || allFindings.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">What-If Analysis</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          What-If Analysis
+        </h3>
         <p className="mt-3 text-sm text-muted-foreground">No findings to analyse</p>
       </div>
     );
@@ -82,8 +84,10 @@ export function WhatIfComparison({ analysisResults }: Props) {
   const improved = currentScore && projectedScore && projectedScore.overall > currentScore.overall;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card" data-tour="what-if">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">What-If Analysis</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card" data-tour="what-if">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        What-If Analysis
+      </h3>
       <div className="mt-4 flex flex-wrap items-center gap-6">
         <div className="flex flex-col items-center rounded-lg border border-border bg-muted/30 px-6 py-4">
           <span className="text-xs font-medium text-muted-foreground">Current</span>
@@ -98,8 +102,7 @@ export function WhatIfComparison({ analysisResults }: Props) {
           <ArrowRight className="h-6 w-6" />
           {improved && (
             <span className="mt-1 flex items-center gap-0.5 text-xs font-medium text-green-600 dark:text-green-400">
-              <ChevronUp className="h-3 w-3" />
-              +{projectedScore!.overall - currentScore!.overall}
+              <ChevronUp className="h-3 w-3" />+{projectedScore!.overall - currentScore!.overall}
             </span>
           )}
         </div>

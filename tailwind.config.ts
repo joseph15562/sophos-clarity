@@ -97,9 +97,9 @@ export default {
         },
       },
       boxShadow: {
-        card: "0 1px 3px rgba(15,23,42,0.05), 0 4px 14px rgba(15,23,42,0.04)",
-        elevated: "0 4px 16px rgba(15,23,42,0.07), 0 12px 32px rgba(15,23,42,0.05)",
-        panel: "0 8px 30px rgba(15,23,42,0.08), 0 20px 50px rgba(15,23,42,0.05)",
+        card: "var(--shadow-card)",
+        elevated: "var(--shadow-elevated)",
+        panel: "var(--shadow-panel)",
       },
       borderRadius: {
         lg: "var(--radius)",

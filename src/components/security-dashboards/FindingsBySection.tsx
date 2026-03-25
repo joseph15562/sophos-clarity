@@ -4,7 +4,11 @@ import { type Severity, SEVERITY_COLORS, SEVERITY_ORDER } from "@/lib/design-tok
 
 const SEVERITY_KEYS: Severity[] = ["critical", "high", "medium", "low", "info"];
 
-export function FindingsBySection({ analysisResults }: { analysisResults: Record<string, AnalysisResult> }) {
+export function FindingsBySection({
+  analysisResults,
+}: {
+  analysisResults: Record<string, AnalysisResult>;
+}) {
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const allFindings = useMemo(() => {
@@ -48,10 +52,14 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
   const maxTotal = Math.max(...data.map((d) => d.total), 1);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Findings by Section</h3>
-        <span className="text-[10px] text-muted-foreground">{allFindings.length} total findings</span>
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          Findings by Section
+        </h3>
+        <span className="text-[10px] text-muted-foreground">
+          {allFindings.length} total findings
+        </span>
       </div>
 
       {/* Custom interactive bar chart */}
@@ -59,7 +67,9 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
         {data.map((d) => {
           const isActive = activeSection === d.section;
           const isFaded = activeSection !== null && !isActive;
-          const sevs: { key: Severity; count: number; color: string }[] = SEVERITY_KEYS.filter((key) => d[key] > 0).map((key) => ({
+          const sevs: { key: Severity; count: number; color: string }[] = SEVERITY_KEYS.filter(
+            (key) => d[key] > 0,
+          ).map((key) => ({
             key,
             count: d[key],
             color: SEVERITY_COLORS[key],
@@ -73,7 +83,9 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
                 isActive ? "bg-muted/30 ring-1 ring-border" : "hover:bg-muted/15"
               } ${isFaded ? "opacity-40" : ""}`}
             >
-              <span className="text-[10px] text-muted-foreground font-medium w-[110px] shrink-0 truncate text-right">{d.displaySection}</span>
+              <span className="text-[10px] text-muted-foreground font-medium w-[110px] shrink-0 truncate text-right">
+                {d.displaySection}
+              </span>
               <div className="flex-1 flex items-center gap-1">
                 <div className="flex-1 flex h-4 rounded overflow-hidden bg-muted/20">
                   {sevs.map((s) => (
@@ -90,7 +102,9 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
                     </div>
                   ))}
                 </div>
-                <span className="text-[10px] font-bold text-foreground tabular-nums w-6 text-right">{d.total}</span>
+                <span className="text-[10px] font-bold text-foreground tabular-nums w-6 text-right">
+                  {d.total}
+                </span>
               </div>
             </button>
           );
@@ -107,7 +121,10 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
           { label: "Info", color: SEVERITY_COLORS.info },
         ].map((s) => (
           <span key={s.label} className="flex items-center gap-1 text-[9px] text-muted-foreground">
-            <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: s.color }} />
+            <span
+              className="inline-block h-2 w-2 rounded-sm"
+              style={{ backgroundColor: s.color }}
+            />
             {s.label}
           </span>
         ))}
@@ -118,21 +135,38 @@ export function FindingsBySection({ analysisResults }: { analysisResults: Record
         <div className="mt-3 rounded-lg border border-border bg-muted/10 overflow-hidden">
           <div className="px-3 py-1.5 border-b border-border bg-muted/20 flex items-center justify-between">
             <span className="text-[10px] font-semibold text-foreground">{activeSection}</span>
-            <button onClick={() => setActiveSection(null)} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">Clear</button>
+            <button
+              onClick={() => setActiveSection(null)}
+              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
           </div>
           <div className="max-h-48 overflow-y-auto divide-y divide-border/50">
             {drillFindings.map((f, i) => (
               <div key={`${f.id}-${i}`} className="px-3 py-2 hover:bg-muted/20 transition-colors">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[8px] font-bold uppercase px-1 py-0.5 rounded" style={{ backgroundColor: SEVERITY_COLORS[f.severity as Severity] + "18", color: SEVERITY_COLORS[f.severity as Severity] }}>
+                  <span
+                    className="text-[8px] font-bold uppercase px-1 py-0.5 rounded"
+                    style={{
+                      backgroundColor: SEVERITY_COLORS[f.severity as Severity] + "18",
+                      color: SEVERITY_COLORS[f.severity as Severity],
+                    }}
+                  >
                     {f.severity}
                   </span>
-                  <span className="text-[10px] font-medium text-foreground flex-1 truncate">{f.title}</span>
+                  <span className="text-[10px] font-medium text-foreground flex-1 truncate">
+                    {f.title}
+                  </span>
                   {Object.keys(analysisResults).length > 1 && (
-                    <span className="text-[8px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{f.firewall}</span>
+                    <span className="text-[8px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                      {f.firewall}
+                    </span>
                   )}
                 </div>
-                <p className="text-[9px] text-muted-foreground line-clamp-2 leading-relaxed">{f.detail}</p>
+                <p className="text-[9px] text-muted-foreground line-clamp-2 leading-relaxed">
+                  {f.detail}
+                </p>
               </div>
             ))}
           </div>

@@ -55,18 +55,23 @@ export function ReportUpsellStrip({
     }
 
     if (fileCount === 1 && !isRuleDismissed("single-firewall")) {
-      return { id: "single-firewall", message: "Add a second firewall to unlock the Executive Summary." };
+      return {
+        id: "single-firewall",
+        message: "Add a second firewall to unlock the Executive Summary.",
+      };
     }
     if (fileCount >= 2 && !hasComplianceFrameworks && !isRuleDismissed("compliance-frameworks")) {
       return {
         id: "compliance-frameworks",
-        message: "Select compliance frameworks in Assessment Context to generate a Compliance Report.",
+        message:
+          "Select compliance frameworks in Assessment Context to generate a Compliance Report.",
       };
     }
     if (averageScore !== undefined && averageScore < 75 && !isRuleDismissed("low-score")) {
       return {
         id: "low-score",
-        message: "Score below 75 — an Executive + Compliance report helps prioritise remediation for leadership.",
+        message:
+          "Score below 75 — an Executive + Compliance report helps prioritise remediation for leadership.",
       };
     }
     return null;
@@ -80,9 +85,11 @@ export function ReportUpsellStrip({
   if (!activeRule) return null;
 
   return (
-    <div className="w-full rounded-xl border border-border/70 bg-card px-4 py-2.5 flex items-center gap-3">
+    <div className="w-full rounded-xl border border-border/50 bg-card px-4 py-2.5 flex items-center gap-3">
       <Info className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-      <p className="text-xs sm:text-sm text-foreground flex-1 min-w-0 leading-snug">{activeRule.message}</p>
+      <p className="text-xs sm:text-sm text-foreground flex-1 min-w-0 leading-snug">
+        {activeRule.message}
+      </p>
       <Button
         type="button"
         variant="ghost"

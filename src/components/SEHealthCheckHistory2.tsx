@@ -58,12 +58,22 @@ type Props = {
   seProfileId: string;
   refreshTrigger?: number;
   preparedBy: string;
-  onRestoreSnapshot?: (snapshot: SeHealthCheckSnapshotV1, meta?: { checkId: string; followupAt?: string | null }) => void;
+  onRestoreSnapshot?: (
+    snapshot: SeHealthCheckSnapshotV1,
+    meta?: { checkId: string; followupAt?: string | null },
+  ) => void;
   activeTeamId?: string | null;
   teams?: SETeam[];
 };
 
-export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, preparedBy, onRestoreSnapshot, activeTeamId, teams }: Props) {
+export function SEHealthCheckHistory({
+  seProfileId,
+  refreshTrigger = 0,
+  preparedBy,
+  onRestoreSnapshot,
+  activeTeamId,
+  teams,
+}: Props) {
   const [rows, setRows] = useState<HealthCheckRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -77,12 +87,17 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     setLoading(true);
     let query = supabase
       .from("se_health_checks")
-      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, se_user_id, team_id, followup_at, se_profiles(display_name)")
+      .select(
+        "id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, se_user_id, team_id, followup_at, se_profiles(display_name)",
+      )
       .order("checked_at", { ascending: false })
       .limit(50);
 
     if (viewMode === "all" && teams && teams.length > 0) {
-      query = query.in("team_id", teams.map((t) => t.id));
+      query = query.in(
+        "team_id",
+        teams.map((t) => t.id),
+      );
     } else if (activeTeamId) {
       query = query.eq("team_id", activeTeamId);
       if (viewMode === "mine") {
@@ -104,15 +119,20 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     void load();
   }, [load, refreshTrigger]);
 
-  const fetchSnapshot = useCallback(async (rowId: string): Promise<SeHealthCheckSnapshotV1 | null> => {
-    const { data, error } = await supabase
-      .from("se_health_checks")
-      .select("summary_json")
-      .eq("id", rowId)
-      .single();
-    if (error || !data) return null;
-    return parseSeHealthCheckSnapshotFromSummaryJson(data.summary_json as Record<string, unknown> | null);
-  }, []);
+  const fetchSnapshot = useCallback(
+    async (rowId: string): Promise<SeHealthCheckSnapshotV1 | null> => {
+      const { data, error } = await supabase
+        .from("se_health_checks")
+        .select("summary_json")
+        .eq("id", rowId)
+        .single();
+      if (error || !data) return null;
+      return parseSeHealthCheckSnapshotFromSummaryJson(
+        data.summary_json as Record<string, unknown> | null,
+      );
+    },
+    [],
+  );
 
   const runExport = useCallback(
     async (row: HealthCheckRow, kind: "pdf" | "html") => {
@@ -122,19 +142,34 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
       try {
         const snapshot = await fetchSnapshot(id);
         if (!snapshot) {
-          toast.error("This save has no full snapshot — save the health check again from a current session to enable reopen and export.");
+          toast.error(
+            "This save has no full snapshot — save the health check again from a current session to enable reopen and export.",
+          );
           return;
         }
         const generatedAt = new Date(row.checked_at);
-        const { reportParams, branding } = buildSeHealthCheckExportBundle(snapshot, preparedBy, generatedAt);
-        const customerPart = row.customer_name?.trim() || snapshot.customerName.trim() || "health-check";
+        const { reportParams, branding } = buildSeHealthCheckExportBundle(
+          snapshot,
+          preparedBy,
+          generatedAt,
+        );
+        const customerPart =
+          row.customer_name?.trim() || snapshot.customerName.trim() || "health-check";
         if (kind === "pdf") {
           const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download-v2");
-          await runHealthCheckPdfDownload({ reportParams, branding, filenameCustomerPart: customerPart });
+          await runHealthCheckPdfDownload({
+            reportParams,
+            branding,
+            filenameCustomerPart: customerPart,
+          });
           toast.success("PDF downloaded.");
         } else {
           const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download-v2");
-          await runHealthCheckHtmlDownload({ reportParams, branding, filenameCustomerPart: customerPart });
+          await runHealthCheckHtmlDownload({
+            reportParams,
+            branding,
+            filenameCustomerPart: customerPart,
+          });
           toast.success("HTML downloaded.");
         }
       } catch (e) {
@@ -148,69 +183,80 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
     [preparedBy, fetchSnapshot],
   );
 
-  const handleMoveToTeam = useCallback(async (checkId: string, targetTeamId: string | null) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/${checkId}/team`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Content-Type": "application/json",
+  const handleMoveToTeam = useCallback(
+    async (checkId: string, targetTeamId: string | null) => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/${checkId}/team`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ team_id: targetTeamId }),
           },
-          body: JSON.stringify({ team_id: targetTeamId }),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Move failed");
+        );
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Move failed");
+        }
+        toast.success("Health check moved.");
+        void load();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not move health check.");
       }
-      toast.success("Health check moved.");
-      void load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not move health check.");
-    }
-  }, [load]);
+    },
+    [load],
+  );
 
-  const handleBulkMove = useCallback(async (targetTeamId: string | null) => {
-    if (selectedIds.size === 0) return;
-    setMovingBulk(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/bulk-team`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Content-Type": "application/json",
+  const handleBulkMove = useCallback(
+    async (targetTeamId: string | null) => {
+      if (selectedIds.size === 0) return;
+      setMovingBulk(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/bulk-team`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ ids: [...selectedIds], team_id: targetTeamId }),
           },
-          body: JSON.stringify({ ids: [...selectedIds], team_id: targetTeamId }),
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Bulk move failed");
+        );
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Bulk move failed");
+        }
+        const result = await res.json();
+        toast.success(`Moved ${result.updated} health check${result.updated !== 1 ? "s" : ""}.`);
+        void load();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Bulk move failed.");
+      } finally {
+        setMovingBulk(false);
       }
-      const result = await res.json();
-      toast.success(`Moved ${result.updated} health check${result.updated !== 1 ? "s" : ""}.`);
-      void load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Bulk move failed.");
-    } finally {
-      setMovingBulk(false);
-    }
-  }, [selectedIds, load]);
+    },
+    [selectedIds, load],
+  );
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
@@ -252,12 +298,14 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
       </button>
 
       {open && (
-        <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
+        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
           <div className="flex items-center justify-between p-2 border-b border-border gap-2">
             <div className="flex items-center gap-2">
               {selectedIds.size > 0 && moveTargets.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground">{selectedIds.size} selected</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {selectedIds.size} selected
+                  </span>
                   {moveTargets.map((t) => (
                     <Button
                       key={t.id}
@@ -290,7 +338,10 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                     className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${viewMode === "team" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                     onClick={() => setViewMode("team")}
                   >
-                    <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />Team</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      Team
+                    </span>
                   </button>
                   {(teams?.length ?? 0) > 1 && (
                     <button
@@ -303,7 +354,14 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                   )}
                 </div>
               )}
-              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => void load()}
+                disabled={loading}
+              >
                 <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
@@ -313,7 +371,8 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
           {rows.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              No health checks saved yet. Run a check and click &quot;Save health check&quot; to start building your history.
+              No health checks saved yet. Run a check and click &quot;Save health check&quot; to
+              start building your history.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -325,7 +384,11 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                         <input
                           type="checkbox"
                           className="rounded border-border"
-                          checked={selectedIds.size > 0 && selectedIds.size === rows.filter((r) => r.se_user_id === seProfileId).length}
+                          checked={
+                            selectedIds.size > 0 &&
+                            selectedIds.size ===
+                              rows.filter((r) => r.se_user_id === seProfileId).length
+                          }
                           onChange={toggleSelectAll}
                         />
                       </th>
@@ -347,7 +410,10 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                     const busyHtml = exportingId === row.id && exportingKind === "html";
                     const isOwn = row.se_user_id === seProfileId;
                     return (
-                      <tr key={row.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <tr
+                        key={row.id}
+                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                      >
                         {(teams?.length ?? 0) > 0 && (
                           <td className="px-2 py-2.5">
                             {isOwn ? (
@@ -358,18 +424,23 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                                 onChange={() => toggleSelect(row.id)}
                               />
                             ) : (
-                              <Users className="h-3.5 w-3.5 text-muted-foreground" title="Teammate's check" />
+                              <Users
+                                className="h-3.5 w-3.5 text-muted-foreground"
+                                title="Teammate's check"
+                              />
                             )}
                           </td>
                         )}
                         <td className="px-4 py-2.5">
                           <span className="font-medium truncate block max-w-[160px]">
-                            {row.customer_name || <span className="text-muted-foreground italic">—</span>}
+                            {row.customer_name || (
+                              <span className="text-muted-foreground italic">—</span>
+                            )}
                           </span>
                         </td>
                         {viewMode !== "mine" && (
                           <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                            {isOwn ? "You" : (row.se_profiles?.display_name || "—")}
+                            {isOwn ? "You" : row.se_profiles?.display_name || "—"}
                           </td>
                         )}
                         {viewMode === "all" && (
@@ -377,24 +448,37 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                             {(row.team_id && teamNameMap.get(row.team_id)) || "—"}
                           </td>
                         )}
-                        <td className="px-4 py-2.5 font-mono text-xs">{row.overall_score ?? "—"}%</td>
+                        <td className="px-4 py-2.5 font-mono text-xs">
+                          {row.overall_score ?? "—"}%
+                        </td>
                         <td className="px-4 py-2.5">
-                          <Badge className={`${gradeColor(row.overall_grade)} border-0 text-xs font-bold`}>
+                          <Badge
+                            className={`${gradeColor(row.overall_grade)} border-0 text-xs font-bold`}
+                          >
                             {row.overall_grade ?? "—"}
                           </Badge>
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">{row.findings_count ?? 0}</td>
-                        <td className="px-4 py-2.5 text-muted-foreground">{row.firewall_count ?? 0}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">
+                          {row.findings_count ?? 0}
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">
+                          {row.firewall_count ?? 0}
+                        </td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
-                          <span>{new Date(row.checked_at).toLocaleDateString(undefined, {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}</span>
+                          <span>
+                            {new Date(row.checked_at).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
                           {row.followup_at && new Date(row.followup_at) > new Date() && (
-                            <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-primary" title={`Follow-up: ${new Date(row.followup_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}>
+                            <span
+                              className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-primary"
+                              title={`Follow-up: ${new Date(row.followup_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+                            >
                               <CalendarClock className="h-3 w-3" />
                             </span>
                           )}
@@ -411,8 +495,15 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                               onClick={async () => {
                                 if (!onRestoreSnapshot) return;
                                 const snap = await fetchSnapshot(row.id);
-                                if (snap) onRestoreSnapshot(snap, { checkId: row.id, followupAt: row.followup_at });
-                                else toast.error("No snapshot found — re-save from a current session.");
+                                if (snap)
+                                  onRestoreSnapshot(snap, {
+                                    checkId: row.id,
+                                    followupAt: row.followup_at,
+                                  });
+                                else
+                                  toast.error(
+                                    "No snapshot found — re-save from a current session.",
+                                  );
                               }}
                             >
                               <FolderOpen className="h-3.5 w-3.5" />
@@ -427,7 +518,11 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                               title="Download PDF"
                               onClick={() => void runExport(row, "pdf")}
                             >
-                              {busyPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                              {busyPdf ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <FileText className="h-3.5 w-3.5" />
+                              )}
                               PDF
                             </Button>
                             <Button
@@ -439,7 +534,11 @@ export function SEHealthCheckHistory({ seProfileId, refreshTrigger = 0, prepared
                               title="Download HTML"
                               onClick={() => void runExport(row, "html")}
                             >
-                              {busyHtml ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                              {busyHtml ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <FileText className="h-3.5 w-3.5" />
+                              )}
                               HTML
                             </Button>
                           </div>

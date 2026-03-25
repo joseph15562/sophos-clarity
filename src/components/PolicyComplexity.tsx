@@ -20,13 +20,7 @@ const GREEN = "#00F2B3";
 const AMBER = "#F29400";
 const RED = "#EA0022";
 
-function arcPath(
-  cx: number,
-  cy: number,
-  r: number,
-  startDeg: number,
-  endDeg: number
-): string {
+function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
   const rad = (d: number) => (d * Math.PI) / 180;
   const x1 = cx + r * Math.cos(rad(startDeg));
   const y1 = cy + r * Math.sin(rad(startDeg));
@@ -71,9 +65,7 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
 
     // Count findings matching "ANY" service: +10 per finding (max 20)
     const anyFindings = findings.filter(
-      (f) =>
-        /ANY|any service/i.test(f.title) ||
-        /using "ANY" service/i.test(f.title)
+      (f) => /ANY|any service/i.test(f.title) || /using "ANY" service/i.test(f.title),
     );
     const anyCount = Math.min(anyFindings.length * 10, 20);
     if (anyCount > 0) {
@@ -83,8 +75,8 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
     }
 
     // Count findings matching "overlapping": +10
-    const overlapFindings = findings.filter((f) =>
-      /overlapping/i.test(f.title) || /overlapping/i.test(f.detail)
+    const overlapFindings = findings.filter(
+      (f) => /overlapping/i.test(f.title) || /overlapping/i.test(f.detail),
     );
     if (overlapFindings.length > 0) {
       raw += 10;
@@ -93,8 +85,8 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
     }
 
     // Count findings matching "broad source": +10
-    const broadFindings = findings.filter((f) =>
-      /broad source/i.test(f.title) || /broad source/i.test(f.detail)
+    const broadFindings = findings.filter(
+      (f) => /broad source/i.test(f.title) || /broad source/i.test(f.detail),
     );
     if (broadFindings.length > 0) {
       raw += 10;
@@ -126,8 +118,10 @@ export function PolicyComplexity({ analysisResults, files }: Props) {
   const filledPath = arcPath(cx, cy, r, startAngle, filledEndAngle);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Policy Complexity</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Policy Complexity
+      </h3>
 
       <div className="flex flex-col items-center gap-4">
         <svg

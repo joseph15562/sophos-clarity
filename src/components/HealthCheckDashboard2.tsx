@@ -39,7 +39,15 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
       role="img"
       aria-label={`Sophos best practice score: ${score}, grade ${grade}`}
     >
-      <circle cx="60" cy="60" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
+      <circle
+        cx="60"
+        cy="60"
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="6"
+        className="text-muted/20"
+      />
       <circle
         cx="60"
         cy="60"
@@ -53,10 +61,26 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
         transform="rotate(-90 60 60)"
         className="transition-all duration-700"
       />
-      <text x="60" y="54" textAnchor="middle" fill={color} fontSize="28" fontWeight="700" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>
+      <text
+        x="60"
+        y="54"
+        textAnchor="middle"
+        fill={color}
+        fontSize="28"
+        fontWeight="700"
+        style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
+      >
         {score}
       </text>
-      <text x="60" y="72" textAnchor="middle" fill={color} fontSize="12" fontWeight="600" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>
+      <text
+        x="60"
+        y="72"
+        textAnchor="middle"
+        fill={color}
+        fontSize="12"
+        fontWeight="600"
+        style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
+      >
         Grade {grade}
       </text>
     </svg>
@@ -118,12 +142,18 @@ function FindingRow({ finding: f }: { finding: Finding }) {
           {f.detail ? <p className="text-xs text-muted-foreground mt-1">{f.detail}</p> : null}
           {f.section ? (
             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-              <ChevronDown className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`}
+                aria-hidden
+              />
               {f.section}
             </p>
           ) : hasExtra ? (
             <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
-              <ChevronDown className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${open ? "" : "-rotate-90"}`}
+                aria-hidden
+              />
               Details
             </p>
           ) : null}
@@ -133,14 +163,20 @@ function FindingRow({ finding: f }: { finding: Finding }) {
         <div className="ml-7 mt-2 space-y-2 border-l-2 border-border pl-3 pb-1">
           {f.remediation && (
             <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Remediation</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
+                Remediation
+              </p>
               <p className="text-xs text-foreground/80">{f.remediation}</p>
             </div>
           )}
           {f.evidence && (
             <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Evidence</p>
-              <p className="text-xs text-foreground/80 font-mono whitespace-pre-wrap">{f.evidence}</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
+                Evidence
+              </p>
+              <p className="text-xs text-foreground/80 font-mono whitespace-pre-wrap">
+                {f.evidence}
+              </p>
             </div>
           )}
         </div>
@@ -149,10 +185,14 @@ function FindingRow({ finding: f }: { finding: Finding }) {
   );
 }
 
-function findingsToCsv(rows: { firewall: string; severity: string; title: string; section: string }[]): string {
+function findingsToCsv(
+  rows: { firewall: string; severity: string; title: string; section: string }[],
+): string {
   const header = "firewall,severity,title,section";
   const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
-  const lines = rows.map((r) => [esc(r.firewall), esc(r.severity), esc(r.title), esc(r.section)].join(","));
+  const lines = rows.map((r) =>
+    [esc(r.firewall), esc(r.severity), esc(r.title), esc(r.section)].join(","),
+  );
   return [header, ...lines].join("\n");
 }
 
@@ -209,11 +249,27 @@ export function HealthCheckDashboard({
           hideSophosBpCard && seCentralSession
             ? seCentralAutoForLabel(seCentralSession, label, haLabelsForBp)
             : undefined;
-        m[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+        m[label] = computeSophosBPScore(
+          ar,
+          licence,
+          manualOverrides,
+          centralAuto,
+          seThreatResponseAck,
+          seExcludedBpChecks,
+        );
       }
     }
     return m;
-  }, [analysisResults, labels, licence, hideSophosBpCard, seCentralSession, haLabelsForBp, seThreatResponseAck, seExcludedBpChecks]);
+  }, [
+    analysisResults,
+    labels,
+    licence,
+    hideSophosBpCard,
+    seCentralSession,
+    haLabelsForBp,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+  ]);
 
   const activeResult = analysisResults[activeLabel];
   const activeBp = bpByLabel[activeLabel];
@@ -221,7 +277,7 @@ export function HealthCheckDashboard({
 
   if (!activeResult || !activeBp) {
     return (
-      <Card className="rounded-xl border border-border/70 bg-card">
+      <Card className="rounded-xl border border-border/50 bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-5 w-5 text-brand-accent" />
@@ -256,33 +312,42 @@ export function HealthCheckDashboard({
 
       <div className={`grid gap-4 ${hideSophosBpCard ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
         {!hideSophosBpCard && (
-          <Card className="rounded-xl border border-border/70 bg-card">
+          <Card className="rounded-xl border border-border/50 bg-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Shield className="h-5 w-5 text-brand-accent" />
                 Sophos best practices
               </CardTitle>
-              <CardDescription>Weighted checks from official Sophos hardening guidance (not a compliance framework).</CardDescription>
+              <CardDescription>
+                Weighted checks from official Sophos hardening guidance (not a compliance
+                framework).
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col sm:flex-row gap-6 items-center">
               <GaugeRing score={activeBp.overall} grade={activeBp.grade} />
               <div className="flex-1 space-y-2 text-sm">
                 <p className="text-muted-foreground">
-                  <span className="text-[#00F2B3] dark:text-[#00F2B3] font-semibold">{activeBp.passed}</span> pass ·{" "}
-                  <span className="text-red-500 font-semibold">{activeBp.failed}</span> fail ·{" "}
-                  <span className="text-amber-500 font-semibold">{activeBp.warnings}</span> verify
+                  <span className="text-[#00F2B3] dark:text-[#00F2B3] font-semibold">
+                    {activeBp.passed}
+                  </span>{" "}
+                  pass · <span className="text-red-500 font-semibold">{activeBp.failed}</span> fail
+                  · <span className="text-amber-500 font-semibold">{activeBp.warnings}</span> verify
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Licence assumption: {licence.tier === "xstream" ? "Xstream Protection" : licence.tier === "standard" ? "Standard Protection" : "Individual modules"}
+                  Licence assumption:{" "}
+                  {licence.tier === "xstream"
+                    ? "Xstream Protection"
+                    : licence.tier === "standard"
+                      ? "Standard Protection"
+                      : "Individual modules"}
                 </p>
               </div>
             </CardContent>
           </Card>
         )}
-
       </div>
 
-      <Card className="rounded-xl border border-border/70 bg-card">
+      <Card className="rounded-xl border border-border/50 bg-card">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle className="text-base">Findings</CardTitle>
@@ -297,15 +362,12 @@ export function HealthCheckDashboard({
               size="sm"
               className="rounded-lg gap-1.5"
               onClick={() =>
-                downloadJson(
-                  `sophos-health-check-${activeLabel.replace(/\s+/g, "-")}.json`,
-                  {
-                    firewall: activeLabel,
-                    bestPractice: activeBp,
-                    baseline: activeBaseline,
-                    analysis: activeResult,
-                  },
-                )
+                downloadJson(`sophos-health-check-${activeLabel.replace(/\s+/g, "-")}.json`, {
+                  firewall: activeLabel,
+                  bestPractice: activeBp,
+                  baseline: activeBaseline,
+                  analysis: activeResult,
+                })
               }
             >
               <Download className="h-4 w-4" />
@@ -342,7 +404,9 @@ export function HealthCheckDashboard({
         </CardHeader>
         <CardContent>
           {findings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No findings reported for this configuration.</p>
+            <p className="text-sm text-muted-foreground">
+              No findings reported for this configuration.
+            </p>
           ) : (
             <ul className="space-y-3">
               {findings.map((f) => (

@@ -247,7 +247,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
-        <div className="rounded-2xl border border-border/70 bg-card/75 p-4 space-y-4">
+        <div className="rounded-2xl border border-border/50 bg-card/75 p-4 space-y-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Email

@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  AlertTriangle,
-  CheckCircle,
-  TrendingUp,
-  TrendingDown,
-  Shield,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Shield } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { Severity } from "@/lib/analyse-config";
 import { loadPreviousSnapshot, diffFindings } from "@/lib/finding-snapshots";
@@ -109,7 +103,9 @@ export function AlertFeed({ analysisResults }: AlertFeedProps) {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [analysisResults]);
 
   const filteredEvents =
@@ -150,8 +146,10 @@ export function AlertFeed({ analysisResults }: AlertFeedProps) {
   };
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Activity Feed</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        Activity Feed
+      </h3>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {(["all", "new", "fixed"] as const).map((f) => (
@@ -173,9 +171,7 @@ export function AlertFeed({ analysisResults }: AlertFeedProps) {
       <div className="mt-3 max-h-64 overflow-y-auto space-y-2">
         {filteredEvents.length === 0 ? (
           <p className="py-6 text-xs text-muted-foreground text-center">
-            {events.length === 0
-              ? "No activity history yet"
-              : `No ${filter} events`}
+            {events.length === 0 ? "No activity history yet" : `No ${filter} events`}
           </p>
         ) : (
           filteredEvents.map((e) => (

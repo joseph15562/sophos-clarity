@@ -55,7 +55,7 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
     }
 
     const sorted = [...allAlerts].sort(
-      (a, b) => new Date(b.raisedAt).getTime() - new Date(a.raisedAt).getTime()
+      (a, b) => new Date(b.raisedAt).getTime() - new Date(a.raisedAt).getTime(),
     );
 
     return {
@@ -71,7 +71,7 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
 
   if (!hasCentralEnrichment || !hasAlerts) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
           Threat Intelligence Feed
@@ -87,7 +87,7 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <h3 className="text-sm font-display font-semibold tracking-tight text-foreground flex items-center gap-2 mb-4">
         <Shield className="h-4 w-4" />
         Threat Intelligence Feed
@@ -139,13 +139,12 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
 
       {mdrIndicators.length > 0 && (
         <div className="mt-5 pt-4 border-t border-border">
-          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-2">MDR Indicators</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground mb-2">
+            MDR Indicators
+          </h4>
           <div className="space-y-2 max-h-[200px] overflow-y-auto">
             {mdrIndicators.map((ind, idx) => (
-              <div
-                key={`${ind.indicator}-${idx}`}
-                className="flex items-center gap-2 text-xs"
-              >
+              <div key={`${ind.indicator}-${idx}`} className="flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
                   {ind.indicator}
                 </span>

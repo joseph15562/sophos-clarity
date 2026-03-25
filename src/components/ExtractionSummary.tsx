@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, Table2, FileText } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  CheckCircle2,
+  AlertTriangle,
+  Table2,
+  FileText,
+} from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { ExtractionMeta, SectionMeta } from "@/lib/extract-sections";
 
@@ -35,14 +42,20 @@ function SectionRow({ section }: { section: SectionMeta }) {
       ) : (
         <AlertTriangle className="h-3.5 w-3.5 text-[#F29400] shrink-0" />
       )}
-      <span className={`flex-1 truncate ${isExtracted ? "text-foreground" : "text-muted-foreground"}`}>
+      <span
+        className={`flex-1 truncate ${isExtracted ? "text-foreground" : "text-muted-foreground"}`}
+      >
         {section.displayName}
       </span>
       {section.plainTextFallback && (
-        <span className="text-[9px] px-1 py-0.5 rounded bg-[#F29400]/10 text-[#F29400] font-medium">text</span>
+        <span className="text-[9px] px-1 py-0.5 rounded bg-[#F29400]/10 text-[#F29400] font-medium">
+          text
+        </span>
       )}
       {isDiscovered && (
-        <span className="text-[9px] px-1 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-medium">{methodLabel}</span>
+        <span className="text-[9px] px-1 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-medium">
+          {methodLabel}
+        </span>
       )}
       {isExtracted && itemCount > 0 && (
         <span className="text-[10px] text-muted-foreground tabular-nums">
@@ -55,14 +68,18 @@ function SectionRow({ section }: { section: SectionMeta }) {
           {section.tableCount}
         </span>
       )}
-      {!isExtracted && (
-        <span className="text-[10px] text-[#F29400] font-medium">empty</span>
-      )}
+      {!isExtracted && <span className="text-[10px] text-[#F29400] font-medium">empty</span>}
     </div>
   );
 }
 
-function FileBlock({ file, defaultExpanded }: { file: FileExtractionInfo; defaultExpanded: boolean }) {
+function FileBlock({
+  file,
+  defaultExpanded,
+}: {
+  file: FileExtractionInfo;
+  defaultExpanded: boolean;
+}) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const { meta } = file;
   const extracted = meta.sections.filter((s) => s.status === "extracted");
@@ -70,7 +87,7 @@ function FileBlock({ file, defaultExpanded }: { file: FileExtractionInfo; defaul
   const totalRows = meta.sections.reduce((sum, s) => sum + s.rowCount + s.detailCount, 0);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card/50 overflow-hidden">
+    <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors"
@@ -81,16 +98,16 @@ function FileBlock({ file, defaultExpanded }: { file: FileExtractionInfo; defaul
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         )}
         <FileText className="h-3.5 w-3.5 text-brand-accent shrink-0" />
-        <span className="text-xs font-medium text-foreground truncate flex-1">
-          {file.fileName}
-        </span>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-          meta.coveragePct === 100
-            ? "bg-[#00F2B3]/10 text-[#00F2B3]"
-            : meta.coveragePct >= 70
-              ? "bg-[#F29400]/10 text-[#F29400]"
-              : "bg-[#EA0022]/10 text-[#EA0022]"
-        }`}>
+        <span className="text-xs font-medium text-foreground truncate flex-1">{file.fileName}</span>
+        <span
+          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+            meta.coveragePct === 100
+              ? "bg-[#00F2B3]/10 text-[#00F2B3]"
+              : meta.coveragePct >= 70
+                ? "bg-[#F29400]/10 text-[#F29400]"
+                : "bg-[#EA0022]/10 text-[#EA0022]"
+          }`}
+        >
           {meta.coveragePct}%
         </span>
       </button>
@@ -104,8 +121,12 @@ function FileBlock({ file, defaultExpanded }: { file: FileExtractionInfo; defaul
             <span>{totalRows.toLocaleString()} total items</span>
           </div>
           <div className="space-y-0.5">
-            {extracted.map((s) => <SectionRow key={s.key} section={s} />)}
-            {empty.map((s) => <SectionRow key={s.key} section={s} />)}
+            {extracted.map((s) => (
+              <SectionRow key={s.key} section={s} />
+            ))}
+            {empty.map((s) => (
+              <SectionRow key={s.key} section={s} />
+            ))}
           </div>
         </div>
       )}
@@ -120,7 +141,8 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
   const totalDetected = allMetas.reduce((s, m) => s + m.totalDetected, 0);
   const totalExtracted = allMetas.reduce((s, m) => s + m.totalExtracted, 0);
   const totalEmpty = allMetas.reduce((s, m) => s + m.totalEmpty, 0);
-  const overallCoverage = totalDetected > 0 ? Math.round((totalExtracted / totalDetected) * 100) : 0;
+  const overallCoverage =
+    totalDetected > 0 ? Math.round((totalExtracted / totalDetected) * 100) : 0;
   const totalRows = allMetas.reduce(
     (s, m) => s + m.sections.reduce((rs, sec) => rs + sec.rowCount + sec.detailCount, 0),
     0,
@@ -136,13 +158,15 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
         <h3 className="text-base sm:text-lg font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
           Extraction Summary
         </h3>
-        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-          overallCoverage === 100
-            ? "bg-[#00F2B3]/10 text-[#00F2B3]"
-            : overallCoverage >= 70
-              ? "bg-[#F29400]/10 text-[#F29400]"
-              : "bg-[#EA0022]/10 text-[#EA0022]"
-        }`}>
+        <span
+          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+            overallCoverage === 100
+              ? "bg-[#00F2B3]/10 text-[#00F2B3]"
+              : overallCoverage >= 70
+                ? "bg-[#F29400]/10 text-[#F29400]"
+                : "bg-[#EA0022]/10 text-[#EA0022]"
+          }`}
+        >
           {overallCoverage}% coverage
         </span>
       </div>
@@ -150,21 +174,27 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
       <div className="rounded-xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] px-4 py-3 space-y-3 shadow-[0_12px_36px_rgba(32,6,247,0.08)]">
         {/* Overall stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
             <p className="text-muted-foreground">Sections detected</p>
             <p className="font-semibold text-foreground tabular-nums">{totalDetected}</p>
           </div>
-          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
             <p className="text-muted-foreground">Extracted</p>
             <p className="font-semibold text-foreground tabular-nums">{totalExtracted}</p>
           </div>
-          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
             <p className="text-muted-foreground">Empty</p>
-            <p className={`font-semibold tabular-nums ${totalEmpty > 0 ? "text-[#F29400]" : "text-foreground"}`}>{totalEmpty}</p>
+            <p
+              className={`font-semibold tabular-nums ${totalEmpty > 0 ? "text-[#F29400]" : "text-foreground"}`}
+            >
+              {totalEmpty}
+            </p>
           </div>
-          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2 text-xs">
+          <div className="rounded-lg border border-border/50 bg-card/70 px-3 py-2 text-xs">
             <p className="text-muted-foreground">Items parsed</p>
-            <p className="font-semibold text-foreground tabular-nums">{totalRows.toLocaleString()}</p>
+            <p className="font-semibold text-foreground tabular-nums">
+              {totalRows.toLocaleString()}
+            </p>
           </div>
         </div>
 
@@ -176,9 +206,12 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
           <div className="flex items-start gap-2 rounded-lg bg-[#F29400]/[0.06] border border-[#F29400]/20 px-3 py-2">
             <AlertTriangle className="h-3.5 w-3.5 text-[#F29400] mt-0.5 shrink-0" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              <strong className="text-[#F29400]">{totalEmpty} section{totalEmpty !== 1 ? "s" : ""}</strong> detected in the config export but contained no parseable data.
-              These may be empty in the firewall configuration or use an unsupported layout.
-              The AI report will note any gaps.
+              <strong className="text-[#F29400]">
+                {totalEmpty} section{totalEmpty !== 1 ? "s" : ""}
+              </strong>{" "}
+              detected in the config export but contained no parseable data. These may be empty in
+              the firewall configuration or use an unsupported layout. The AI report will note any
+              gaps.
             </p>
           </div>
         )}
@@ -186,11 +219,7 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
         {/* Per-file detail */}
         <div className="space-y-2">
           {files.map((file) => (
-            <FileBlock
-              key={file.fileName}
-              file={file}
-              defaultExpanded={false}
-            />
+            <FileBlock key={file.fileName} file={file} defaultExpanded={false} />
           ))}
         </div>
       </div>

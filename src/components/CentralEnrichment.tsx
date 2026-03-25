@@ -218,7 +218,7 @@ export function CentralEnrichment({
           {enrichedData.map((data) => (
             <div
               key={data.configLabel}
-              className="rounded-xl border border-border/70 bg-card p-3 space-y-2"
+              className="rounded-xl border border-border/50 bg-card p-3 space-y-2"
             >
               <div className="flex items-center gap-2">
                 <Server className="h-3.5 w-3.5 text-muted-foreground" />

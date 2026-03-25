@@ -22,7 +22,9 @@ interface SlaComplianceGaugeProps {
 }
 
 async function getOrgId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("org_members")
@@ -37,7 +39,12 @@ function loadSlaConfig(): Record<string, number> {
   try {
     const raw = localStorage.getItem("sophos-sla-config");
     if (!raw) return { ...DEFAULT_SLA };
-    const parsed = JSON.parse(raw) as { critical?: number; high?: number; medium?: number; low?: number };
+    const parsed = JSON.parse(raw) as {
+      critical?: number;
+      high?: number;
+      medium?: number;
+      low?: number;
+    };
     return {
       critical: parsed.critical ?? DEFAULT_SLA.critical,
       high: parsed.high ?? DEFAULT_SLA.high,
@@ -76,7 +83,9 @@ export function SlaComplianceGauge({ analysisResults }: SlaComplianceGaugeProps)
         setLoaded(true);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [pairs]);
 
   const slaConfig = useMemo(loadSlaConfig, []);
@@ -118,8 +127,10 @@ export function SlaComplianceGauge({ analysisResults }: SlaComplianceGaugeProps)
 
   if (!loaded || !hasHistoricalData) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">SLA Compliance</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          SLA Compliance
+        </h3>
         <p className="mt-4 text-sm text-muted-foreground text-center">
           SLA tracking requires assessment history
         </p>
@@ -136,19 +147,14 @@ export function SlaComplianceGauge({ analysisResults }: SlaComplianceGaugeProps)
   const breachedLen = totalFindings > 0 ? (breached / totalFindings) * circumference : 0;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">SLA Compliance</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        SLA Compliance
+      </h3>
 
       <div className="mt-4 flex flex-col items-center">
         <svg width={200} height={200} viewBox="0 0 200 200" className="overflow-visible">
-          <circle
-            cx={100}
-            cy={100}
-            r={r}
-            fill="none"
-            stroke="rgb(229 231 235)"
-            strokeWidth={16}
-          />
+          <circle cx={100} cy={100} r={r} fill="none" stroke="rgb(229 231 235)" strokeWidth={16} />
           {onTrackLen > 0 && (
             <circle
               cx={100}

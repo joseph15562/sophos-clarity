@@ -1,13 +1,5 @@
 import { useMemo } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
 
@@ -50,7 +42,7 @@ export function RiskDistribution({ analysisResults }: Props) {
   }, [analysisResults]);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
         Score Distribution
       </h3>
@@ -63,10 +55,7 @@ export function RiskDistribution({ analysisResults }: Props) {
 
       <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{ top: 8, right: 8, bottom: 24, left: 24 }}
-          >
+          <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 24, left: 24 }}>
             <XAxis
               dataKey="range"
               tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
@@ -85,9 +74,9 @@ export function RiskDistribution({ analysisResults }: Props) {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-xs shadow-elevated">
-                    <span className="font-medium">{d.range}</span>: {d.count}{" "}
-                    firewall{d.count !== 1 ? "s" : ""}
+                  <div className="rounded-md border border-border/50 bg-card px-2 py-1.5 text-xs shadow-elevated">
+                    <span className="font-medium">{d.range}</span>: {d.count} firewall
+                    {d.count !== 1 ? "s" : ""}
                   </div>
                 );
               }}

@@ -2,7 +2,12 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { acceptFinding, loadAcceptedFindings, isAccepted, type AcceptedFinding } from "@/lib/accepted-findings";
+import {
+  acceptFinding,
+  loadAcceptedFindings,
+  isAccepted,
+  type AcceptedFinding,
+} from "@/lib/accepted-findings";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -12,13 +17,17 @@ function loadPlanIds(): Set<string> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PLAN);
     return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-  } catch { return new Set(); }
+  } catch {
+    return new Set();
+  }
 }
 
 function savePlanIds(ids: Set<string>): void {
   try {
     localStorage.setItem(STORAGE_KEY_PLAN, JSON.stringify([...ids]));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function findingKey(label: string, f: Finding): string {
@@ -44,11 +53,14 @@ export function FindingsBulkView({ analysisResults }: Props) {
 
   const allFindings = useMemo(() => {
     const out: { key: string; label: string; finding: Finding }[] = [];
-    const results = analysisResults && typeof analysisResults === "object" && !Array.isArray(analysisResults)
-      ? analysisResults
-      : {};
+    const results =
+      analysisResults && typeof analysisResults === "object" && !Array.isArray(analysisResults)
+        ? analysisResults
+        : {};
     for (const [label, ar] of Object.entries(results)) {
-      const findings = Array.isArray((ar as AnalysisResult)?.findings) ? (ar as AnalysisResult).findings : [];
+      const findings = Array.isArray((ar as AnalysisResult)?.findings)
+        ? (ar as AnalysisResult).findings
+        : [];
       for (const f of findings) {
         out.push({ key: findingKey(label, f), label, finding: f });
       }
@@ -65,7 +77,10 @@ export function FindingsBulkView({ analysisResults }: Props) {
 
   useEffect(() => {
     loadAccepted();
-    const onStorage = () => { loadAccepted(); setPlanIds(loadPlanIds()); };
+    const onStorage = () => {
+      loadAccepted();
+      setPlanIds(loadPlanIds());
+    };
     window.addEventListener("accepted-findings-changed", onStorage);
     return () => window.removeEventListener("accepted-findings-changed", onStorage);
   }, [loadAccepted]);
@@ -126,20 +141,43 @@ export function FindingsBulkView({ analysisResults }: Props) {
   if (allFindings.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-4" data-tour="findings-bulk">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Findings — bulk actions</h3>
+    <div
+      className="rounded-xl border border-border/50 bg-card p-5 space-y-4"
+      data-tour="findings-bulk"
+    >
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        Findings — bulk actions
+      </h3>
       <p className="text-[11px] text-muted-foreground">
         Select findings to mark as accepted risk, add to remediation plan, or export as CSV.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={handleMarkAccepted} disabled={selected.size === 0} className="gap-1.5 text-xs">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleMarkAccepted}
+          disabled={selected.size === 0}
+          className="gap-1.5 text-xs"
+        >
           Mark as accepted risk
         </Button>
-        <Button size="sm" variant="outline" onClick={handleExportSelected} disabled={selected.size === 0} className="gap-1.5 text-xs">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleExportSelected}
+          disabled={selected.size === 0}
+          className="gap-1.5 text-xs"
+        >
           Export selected (CSV)
         </Button>
-        <Button size="sm" variant="outline" onClick={handleAddToPlan} disabled={selected.size === 0} className="gap-1.5 text-xs">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleAddToPlan}
+          disabled={selected.size === 0}
+          className="gap-1.5 text-xs"
+        >
           Add to remediation plan
         </Button>
         {selected.size > 0 && (
@@ -181,7 +219,9 @@ export function FindingsBulkView({ analysisResults }: Props) {
                     </td>
                     <td className="p-2 text-muted-foreground">{label}</td>
                     <td className="p-2">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${SEV_STYLE[finding.severity] ?? ""}`}>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${SEV_STYLE[finding.severity] ?? ""}`}
+                      >
                         {finding.severity}
                       </span>
                     </td>

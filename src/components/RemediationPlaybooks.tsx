@@ -1,5 +1,18 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { ChevronDown, ChevronRight, Clock, CheckCircle2, Wrench, ExternalLink, Settings2, Zap, ShieldOff, ShieldCheck, Download, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  Wrench,
+  ExternalLink,
+  Settings2,
+  Zap,
+  ShieldOff,
+  ShieldCheck,
+  Download,
+  X,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
@@ -7,19 +20,16 @@ import { generatePlaybook, type Playbook } from "@/lib/remediation-playbooks";
 import { computeRiskScore } from "@/lib/risk-score";
 import { supabase } from "@/integrations/supabase/client";
 import { getFirstDetectedAtBatch } from "@/lib/finding-snapshots";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getAvailableRemediations } from "@/lib/auto-remediate";
-import { loadAcceptedFindings, acceptFinding, unacceptFinding, isAccepted, type AcceptedFinding } from "@/lib/accepted-findings";
+import {
+  loadAcceptedFindings,
+  acceptFinding,
+  unacceptFinding,
+  isAccepted,
+  type AcceptedFinding,
+} from "@/lib/accepted-findings";
 import { SEVERITY_ORDER } from "@/lib/design-tokens";
 
 interface Props {
@@ -47,7 +57,9 @@ function getCustomerHash(analysisResults: Record<string, AnalysisResult>): strin
 }
 
 async function getOrgId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("org_members")
@@ -63,13 +75,13 @@ function getSophosConsoleLink(findingSection: string): string {
     "Firewall Rules": "/protect/rules/firewall",
     "NAT Rules": "/protect/rules/nat",
     "Web Filtering": "/protect/web/policies",
-    "IPS": "/protect/intrusion-prevention",
+    IPS: "/protect/intrusion-prevention",
     "SSL/TLS Inspection": "/protect/rules/ssl-tls-inspection",
-    "Authentication": "/configure/authentication/services",
+    Authentication: "/configure/authentication/services",
     "Admin Access": "/system/administration/device-access",
-    "VPN": "/configure/vpn",
-    "Wireless": "/protect/wireless",
-    "Logging": "/system/system-services/log-settings",
+    VPN: "/configure/vpn",
+    Wireless: "/protect/wireless",
+    Logging: "/system/system-services/log-settings",
   };
   for (const [key, path] of Object.entries(linkMap)) {
     if (findingSection.toLowerCase().includes(key.toLowerCase())) return path;
@@ -103,7 +115,9 @@ function loadSlaConfig(): SlaConfig {
 function saveSlaConfig(config: SlaConfig): void {
   try {
     localStorage.setItem(SLA_STORAGE_KEY, JSON.stringify(config));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 type SlaStatus = "resolved" | "breached" | "due";
@@ -111,7 +125,7 @@ type SlaStatus = "resolved" | "breached" | "due";
 function computeSlaStatus(
   firstDetectedAt: string,
   slaDays: number,
-  isCompleted: boolean
+  isCompleted: boolean,
 ): { status: SlaStatus; daysOverdue?: number; daysUntilDue?: number } {
   const deadline = new Date(firstDetectedAt);
   deadline.setDate(deadline.getDate() + slaDays);
@@ -149,16 +163,30 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   const customerHash = useMemo(() => getCustomerHash(analysisResults), [analysisResults]);
 
   const playbooks = useMemo(() => {
-    const list: (Playbook & { fwLabel: string; findingSection: string; findingTitle: string; hostname: string })[] = [];
+    const list: (Playbook & {
+      fwLabel: string;
+      findingSection: string;
+      findingTitle: string;
+      hostname: string;
+    })[] = [];
     for (const [label, result] of Object.entries(analysisResults)) {
       const hostname = result.hostname ?? label;
       const mgmtIp = result.managementIp;
       for (const finding of result.findings) {
         const pb = generatePlaybook(finding, mgmtIp);
-        if (pb) list.push({ ...pb, fwLabel: label, findingSection: finding.section, findingTitle: finding.title, hostname });
+        if (pb)
+          list.push({
+            ...pb,
+            fwLabel: label,
+            findingSection: finding.section,
+            findingTitle: finding.title,
+            hostname,
+          });
       }
     }
-    list.sort((a, b) => SEVERITY_ORDER[a.severity as Severity] - SEVERITY_ORDER[b.severity as Severity]);
+    list.sort(
+      (a, b) => SEVERITY_ORDER[a.severity as Severity] - SEVERITY_ORDER[b.severity as Severity],
+    );
     return list;
   }, [analysisResults]);
 
@@ -203,43 +231,56 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
               setCompleted(new Set(arr));
             }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [customerHash]);
 
-  const persistCompleted = useCallback(async (next: Set<string>, prev: Set<string>) => {
-    const orgId = orgIdRef.current;
-    if (!orgId) {
-      try { localStorage.setItem(`${STORAGE_PREFIX}${customerHash}`, JSON.stringify([...next])); } catch { /* ignore */ }
-      return;
-    }
+  const persistCompleted = useCallback(
+    async (next: Set<string>, prev: Set<string>) => {
+      const orgId = orgIdRef.current;
+      if (!orgId) {
+        try {
+          localStorage.setItem(`${STORAGE_PREFIX}${customerHash}`, JSON.stringify([...next]));
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
 
-    const added = [...next].filter((id) => !prev.has(id));
-    const removed = [...prev].filter((id) => !next.has(id));
+      const added = [...next].filter((id) => !prev.has(id));
+      const removed = [...prev].filter((id) => !next.has(id));
 
-    if (added.length > 0) {
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from("remediation_status").upsert(
-        added.map((playbook_id) => ({
-          org_id: orgId,
-          playbook_id,
-          customer_hash: customerHash,
-          completed_by: user?.id ?? null,
-        })),
-        { onConflict: "org_id,customer_hash,playbook_id" }
-      );
-    }
-    if (removed.length > 0) {
-      await supabase
-        .from("remediation_status")
-        .delete()
-        .eq("org_id", orgId)
-        .eq("customer_hash", customerHash)
-        .in("playbook_id", removed);
-    }
-  }, [customerHash]);
+      if (added.length > 0) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        await supabase.from("remediation_status").upsert(
+          added.map((playbook_id) => ({
+            org_id: orgId,
+            playbook_id,
+            customer_hash: customerHash,
+            completed_by: user?.id ?? null,
+          })),
+          { onConflict: "org_id,customer_hash,playbook_id" },
+        );
+      }
+      if (removed.length > 0) {
+        await supabase
+          .from("remediation_status")
+          .delete()
+          .eq("org_id", orgId)
+          .eq("customer_hash", customerHash)
+          .in("playbook_id", removed);
+      }
+    },
+    [customerHash],
+  );
 
   // Load first-detected timestamps for SLA tracking
   useEffect(() => {
@@ -253,10 +294,14 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
       const map = await getFirstDetectedAtBatch(orgId, pairs);
       if (!cancelled) setFirstDetectedMap(map);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [playbooks]);
 
-  const totalMinutes = playbooks.filter((p) => !completed.has(p.findingId)).reduce((s, p) => s + p.estimatedMinutes, 0);
+  const totalMinutes = playbooks
+    .filter((p) => !completed.has(p.findingId))
+    .reduce((s, p) => s + p.estimatedMinutes, 0);
 
   const slaStats = useMemo(() => {
     let resolvedWithinSla = 0;
@@ -277,7 +322,9 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
 
   if (playbooks.length === 0) return null;
 
-  function getProjectedScore(pb: Playbook & { fwLabel: string }): { current: number; projected: number } | null {
+  function getProjectedScore(
+    pb: Playbook & { fwLabel: string },
+  ): { current: number; projected: number } | null {
     const result = analysisResults[pb.fwLabel];
     if (!result) return null;
     const current = computeRiskScore(result).overall;
@@ -292,7 +339,8 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   const toggle = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -300,7 +348,8 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   const markComplete = (id: string) => {
     setCompleted((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       if (!skipNextSaveRef.current) {
         persistCompleted(next, prev);
       } else {
@@ -325,23 +374,37 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   function renderSlaStatus(pb: (typeof playbooks)[0]) {
     const isDone = completed.has(pb.findingId);
     const sev = pb.severity as Severity;
-    const firstAt = firstDetectedMap.get(`${pb.hostname}:${pb.findingTitle}`) ?? new Date().toISOString();
+    const firstAt =
+      firstDetectedMap.get(`${pb.hostname}:${pb.findingTitle}`) ?? new Date().toISOString();
     const slaDays = slaConfig[sev] ?? 90;
     const { status, daysOverdue, daysUntilDue } = computeSlaStatus(firstAt, slaDays, isDone);
     if (status === "resolved") {
-      return <span className="text-[10px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">Resolved within SLA</span>;
+      return (
+        <span className="text-[10px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">
+          Resolved within SLA
+        </span>
+      );
     }
     if (status === "breached" && daysOverdue != null) {
-      return <span className="text-[10px] font-medium text-[#EA0022]">SLA Breached ({daysOverdue} overdue)</span>;
+      return (
+        <span className="text-[10px] font-medium text-[#EA0022]">
+          SLA Breached ({daysOverdue} overdue)
+        </span>
+      );
     }
     if (status === "due" && daysUntilDue != null) {
-      return <span className="text-[10px] font-medium text-[#F29400]">Due in {daysUntilDue} days</span>;
+      return (
+        <span className="text-[10px] font-medium text-[#F29400]">Due in {daysUntilDue} days</span>
+      );
     }
     return null;
   }
 
   return (
-    <section className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-5 sm:p-6 space-y-4 shadow-[0_18px_50px_rgba(32,6,247,0.08)] overflow-hidden" data-tour="remediation-playbooks">
+    <section
+      className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-5 sm:p-6 space-y-4 shadow-[0_18px_50px_rgba(32,6,247,0.08)] overflow-hidden"
+      data-tour="remediation-playbooks"
+    >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
@@ -349,24 +412,32 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Wrench className="h-5 w-5 text-brand-accent" />
-            <h3 className="text-lg font-display font-black tracking-tight text-foreground">Remediation Playbooks</h3>
+            <h3 className="text-lg font-display font-black tracking-tight text-foreground">
+              Remediation Playbooks
+            </h3>
             <span className="text-[10px] text-muted-foreground">
-              {playbooks.length} playbook{playbooks.length !== 1 ? "s" : ""} &middot; Sophos XGS step-by-step
+              {playbooks.length} playbook{playbooks.length !== 1 ? "s" : ""} &middot; Sophos XGS
+              step-by-step
             </span>
           </div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed">Structured, engineer-friendly steps for closing findings with clear effort, SLA context, and Sophos console guidance.</p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Structured, engineer-friendly steps for closing findings with clear effort, SLA context,
+            and Sophos console guidance.
+          </p>
           <Popover>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="p-2 rounded-xl border border-border/70 bg-card/70 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+                className="p-2 rounded-xl border border-border/50 bg-card/70 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
                 aria-label="SLA settings"
               >
                 <Settings2 className="h-3.5 w-3.5" />
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-3" align="start">
-              <p className="text-[10px] font-semibold text-foreground mb-2">SLA days per severity</p>
+              <p className="text-[10px] font-semibold text-foreground mb-2">
+                SLA days per severity
+              </p>
               <div className="space-y-2 text-[10px]">
                 {(["critical", "high", "medium", "low"] as Severity[]).map((sev) => (
                   <div key={sev} className="flex items-center justify-between gap-2">
@@ -396,28 +467,34 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           <Clock className="h-3.5 w-3.5" />
           <span>~{totalMinutes} min remaining</span>
           {completed.size > 0 && (
-            <span className="ml-1 text-[#00F2B3] dark:text-[#00F2B3] font-bold">{completed.size}/{playbooks.length} done</span>
+            <span className="ml-1 text-[#00F2B3] dark:text-[#00F2B3] font-bold">
+              {completed.size}/{playbooks.length} done
+            </span>
           )}
         </div>
       </div>
 
       {slaStats.totalWithSla > 0 && (
-        <div className="rounded-2xl border border-border/70 bg-card/70 px-4 py-3 shadow-sm">
+        <div className="rounded-2xl border border-border/50 bg-card/70 px-4 py-3 shadow-sm">
           <div className="flex items-center justify-between text-[10px] mb-1">
             <span className="text-muted-foreground">SLA progress</span>
-            <span className="font-medium text-foreground">{slaStats.resolvedWithinSla} of {slaStats.totalWithSla} findings resolved within SLA</span>
+            <span className="font-medium text-foreground">
+              {slaStats.resolvedWithinSla} of {slaStats.totalWithSla} findings resolved within SLA
+            </span>
           </div>
           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-[#00F2B3] dark:bg-[#00F2B3] transition-all"
-              style={{ width: `${slaStats.totalWithSla > 0 ? (100 * slaStats.resolvedWithinSla / slaStats.totalWithSla) : 0}%` }}
+              style={{
+                width: `${slaStats.totalWithSla > 0 ? (100 * slaStats.resolvedWithinSla) / slaStats.totalWithSla : 0}%`,
+              }}
             />
           </div>
         </div>
       )}
 
       {/* Select All header */}
-      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-border/70 bg-card/70 shadow-sm">
+      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-border/50 bg-card/70 shadow-sm">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             ref={selectAllRef}
@@ -445,12 +522,12 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           const consolePath = getSophosConsoleLink(pb.findingSection);
 
           return (
-            <div key={pb.findingId} className={`rounded-[24px] border ${accepted ? "border-muted-foreground/20 bg-muted/[0.04] opacity-60" : isDone ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.02] dark:bg-[#00F2B3]/[0.02]" : "border-border/70 bg-card/85"} transition-colors shadow-sm`}>
+            <div
+              key={pb.findingId}
+              className={`rounded-[24px] border ${accepted ? "border-muted-foreground/20 bg-muted/[0.04] opacity-60" : isDone ? "border-[#00F2B3]/20 dark:border-[#00F2B3]/20 bg-[#00F2B3]/[0.02] dark:bg-[#00F2B3]/[0.02]" : "border-border/50 bg-card/85"} transition-colors shadow-sm`}
+            >
               <div className="flex items-center gap-3 px-4 py-3">
-                <label
-                  className="shrink-0 cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <label className="shrink-0 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={checkedIds.has(pb.findingId)}
@@ -470,48 +547,65 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                   onClick={() => toggle(pb.findingId)}
                   className="flex-1 flex items-center gap-3 text-left min-w-0"
                 >
-                {isOpen
-                  ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                  : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                }
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-xs font-medium ${accepted ? "line-through text-muted-foreground" : isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>{pb.title}</span>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ring-1 ${SEV_BADGE[sev]}`}>{sev}</span>
-                    {accepted && (
-                      <span className="text-[9px] font-medium px-1.5 py-0.5 rounded ring-1 ring-muted-foreground/20 bg-muted text-muted-foreground">Accepted Risk</span>
-                    )}
-                    {Object.keys(analysisResults).length > 1 && (
-                      <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{pb.fwLabel}</span>
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); copyConsolePath(consolePath); }}
-                      className="inline-flex items-center gap-1 text-[9px] text-muted-foreground hover:text-[#2006F7] dark:hover:text-[#00EDFF] transition-colors"
-                      title="Copy console path to clipboard"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Open in Sophos console
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {!accepted && sev !== "info" && renderSlaStatus(pb)}
-                  {!accepted && (() => {
-                    const proj = getProjectedScore(pb);
-                    if (proj && proj.projected > proj.current) {
-                      const diff = proj.projected - proj.current;
-                      return (
-                        <span className="text-[10px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">
-                          Score: {proj.current} → {proj.projected} (+{diff})
+                  {isOpen ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`text-xs font-medium ${accepted ? "line-through text-muted-foreground" : isDone ? "line-through text-muted-foreground" : "text-foreground"}`}
+                      >
+                        {pb.title}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded ring-1 ${SEV_BADGE[sev]}`}
+                      >
+                        {sev}
+                      </span>
+                      {accepted && (
+                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded ring-1 ring-muted-foreground/20 bg-muted text-muted-foreground">
+                          Accepted Risk
                         </span>
-                      );
-                    }
-                    return null;
-                  })()}
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {pb.estimatedMinutes}m
-                  </span>
-                </div>
+                      )}
+                      {Object.keys(analysisResults).length > 1 && (
+                        <span className="text-[9px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          {pb.fwLabel}
+                        </span>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyConsolePath(consolePath);
+                        }}
+                        className="inline-flex items-center gap-1 text-[9px] text-muted-foreground hover:text-[#2006F7] dark:hover:text-[#00EDFF] transition-colors"
+                        title="Copy console path to clipboard"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Open in Sophos console
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!accepted && sev !== "info" && renderSlaStatus(pb)}
+                    {!accepted &&
+                      (() => {
+                        const proj = getProjectedScore(pb);
+                        if (proj && proj.projected > proj.current) {
+                          const diff = proj.projected - proj.current;
+                          return (
+                            <span className="text-[10px] font-medium text-[#00F2B3] dark:text-[#00F2B3]">
+                              Score: {proj.current} → {proj.projected} (+{diff})
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> {pb.estimatedMinutes}m
+                    </span>
+                  </div>
                 </button>
               </div>
 
@@ -521,9 +615,18 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                     <div className="ml-7 rounded-lg bg-muted/30 border border-muted-foreground/10 px-3 py-2">
                       <p className="text-[10px] text-muted-foreground leading-relaxed">
                         <ShieldCheck className="h-3.5 w-3.5 inline mr-1 -mt-0.5" />
-                        <span className="font-semibold">Risk accepted</span> — this finding is suppressed from the Priority Matrix and analysis views.
-                        {acceptedList.find((a) => a.findingTitle === pb.findingTitle)?.acceptedBy && (
-                          <> by {acceptedList.find((a) => a.findingTitle === pb.findingTitle)!.acceptedBy}</>
+                        <span className="font-semibold">Risk accepted</span> — this finding is
+                        suppressed from the Priority Matrix and analysis views.
+                        {acceptedList.find((a) => a.findingTitle === pb.findingTitle)
+                          ?.acceptedBy && (
+                          <>
+                            {" "}
+                            by{" "}
+                            {
+                              acceptedList.find((a) => a.findingTitle === pb.findingTitle)!
+                                .acceptedBy
+                            }
+                          </>
                         )}
                       </p>
                     </div>
@@ -536,7 +639,9 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                           const isUrl = s.path?.startsWith("https://");
                           return (
                             <li key={s.step} className="text-xs leading-relaxed">
-                              <span className="inline-flex items-center justify-center h-4.5 w-4.5 rounded-full bg-brand-accent/10 text-brand-accent text-[9px] font-bold mr-2">{s.step}</span>
+                              <span className="inline-flex items-center justify-center h-4.5 w-4.5 rounded-full bg-brand-accent/10 text-brand-accent text-[9px] font-bold mr-2">
+                                {s.step}
+                              </span>
                               <span className="text-foreground">{s.action}</span>
                               {s.path && isUrl ? (
                                 <a
@@ -549,7 +654,9 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                                   <ExternalLink className="h-2.5 w-2.5" />
                                 </a>
                               ) : s.path ? (
-                                <span className="block ml-6 mt-0.5 text-[10px] text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded">{s.path}</span>
+                                <span className="block ml-6 mt-0.5 text-[10px] text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded">
+                                  {s.path}
+                                </span>
                               ) : null}
                             </li>
                           );
@@ -558,12 +665,17 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
 
                       <div className="ml-7 rounded-lg bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08] border border-brand-accent/10 px-3 py-2">
                         <p className="text-[10px] text-foreground leading-relaxed">
-                          <span className="font-semibold text-[#10037C] dark:text-[#009CFB]">Verify:</span> {pb.verifyStep}
+                          <span className="font-semibold text-[#10037C] dark:text-[#009CFB]">
+                            Verify:
+                          </span>{" "}
+                          {pb.verifyStep}
                         </p>
                       </div>
 
                       {pb.notes && (
-                        <p className="ml-7 text-[10px] text-muted-foreground leading-relaxed italic">{pb.notes}</p>
+                        <p className="ml-7 text-[10px] text-muted-foreground leading-relaxed italic">
+                          {pb.notes}
+                        </p>
                       )}
                     </>
                   )}
@@ -590,7 +702,10 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                     )}
                     {!accepted && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); markComplete(pb.findingId); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markComplete(pb.findingId);
+                        }}
                         className={`flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-md transition-colors ${isDone ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-muted text-muted-foreground hover:text-foreground"}`}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
@@ -598,10 +713,17 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                       </button>
                     )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); toggleAccept(pb.findingTitle); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleAccept(pb.findingTitle);
+                      }}
                       className={`flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-md transition-colors ${accepted ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : "bg-muted text-muted-foreground hover:text-foreground"}`}
                     >
-                      {accepted ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldOff className="h-3.5 w-3.5" />}
+                      {accepted ? (
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                      ) : (
+                        <ShieldOff className="h-3.5 w-3.5" />
+                      )}
                       {accepted ? "Restore Finding" : "Accept Risk"}
                     </button>
                   </div>
@@ -618,8 +740,8 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
           <span className="text-xs font-medium text-foreground">
             <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full bg-brand-accent/10 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF] font-bold">
               {checkedIds.size}
-            </span>
-            {" "}selected
+            </span>{" "}
+            selected
           </span>
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -651,7 +773,9 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
                 const updated = await loadAcceptedFindings();
                 setAcceptedList(updated);
                 setCheckedIds(new Set());
-                toast.success(`Accepted risk for ${selected.length} finding${selected.length !== 1 ? "s" : ""}`);
+                toast.success(
+                  `Accepted risk for ${selected.length} finding${selected.length !== 1 ? "s" : ""}`,
+                );
               }}
               className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1.5 rounded-md bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -662,15 +786,24 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
               type="button"
               onClick={() => {
                 const selected = playbooks.filter((p) => checkedIds.has(p.findingId));
-                const headers = ["Finding", "Severity", "Firewall", "Section", "Est. Minutes", "Status"];
-                const rows = selected.map((p) => [
-                  `"${(p.title ?? "").replace(/"/g, '""')}"`,
-                  p.severity,
-                  `"${(p.fwLabel ?? "").replace(/"/g, '""')}"`,
-                  `"${(p.findingSection ?? "").replace(/"/g, '""')}"`,
-                  p.estimatedMinutes,
-                  completed.has(p.findingId) ? "Done" : "Pending",
-                ].join(","));
+                const headers = [
+                  "Finding",
+                  "Severity",
+                  "Firewall",
+                  "Section",
+                  "Est. Minutes",
+                  "Status",
+                ];
+                const rows = selected.map((p) =>
+                  [
+                    `"${(p.title ?? "").replace(/"/g, '""')}"`,
+                    p.severity,
+                    `"${(p.fwLabel ?? "").replace(/"/g, '""')}"`,
+                    `"${(p.findingSection ?? "").replace(/"/g, '""')}"`,
+                    p.estimatedMinutes,
+                    completed.has(p.findingId) ? "Done" : "Pending",
+                  ].join(","),
+                );
                 const csv = [headers.join(","), ...rows].join("\n");
                 const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
                 const url = URL.createObjectURL(blob);

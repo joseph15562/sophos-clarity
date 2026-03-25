@@ -48,7 +48,10 @@ export function ServiceUsage({ files }: Props) {
             const raw = getServiceValue(row);
             if (!raw) continue;
 
-            const services = raw.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+            const services = raw
+              .split(/[,;]/)
+              .map((s) => s.trim())
+              .filter(Boolean);
             for (const svc of services) {
               const name = svc || "Any";
               counts.set(name, (counts.get(name) ?? 0) + 1);
@@ -68,16 +71,20 @@ export function ServiceUsage({ files }: Props) {
 
   if (topServices.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Service Usage</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+          Service Usage
+        </h3>
         <p className="text-sm text-muted-foreground">No firewall rules found</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Service Usage</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Service Usage
+      </h3>
       <div className="space-y-2.5">
         {topServices.map(({ name, count }) => (
           <div key={name} className="flex items-center gap-3">

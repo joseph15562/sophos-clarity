@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-3">
+    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-3">
       <div className="flex items-center gap-3">
         <Skeleton className="h-7 w-7 rounded-lg" />
         <div className="space-y-1.5 flex-1">
@@ -21,7 +21,7 @@ export function CardSkeleton() {
 
 export function ChartSkeleton({ height = 180 }: { height?: number }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-3">
+    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-3">
       <div className="flex items-center gap-2">
         <Skeleton className="h-4 w-4 rounded" />
         <Skeleton className="h-4 w-40" />
@@ -38,7 +38,7 @@ export function ChartSkeleton({ height = 180 }: { height?: number }) {
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 space-y-3">
+    <div className="rounded-xl border border-border/50 bg-card p-5 space-y-3">
       <div className="flex items-center gap-2 mb-4">
         <Skeleton className="h-4 w-4 rounded" />
         <Skeleton className="h-4 w-36" />
@@ -65,7 +65,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
 
 export function StatGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <div className="flex items-center gap-2 mb-4">
         <Skeleton className="h-4 w-4 rounded" />
         <Skeleton className="h-4 w-32" />

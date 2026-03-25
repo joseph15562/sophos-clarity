@@ -630,13 +630,13 @@ export function TenantDashboard() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={exportFleetCsv}
-            className="flex items-center gap-1.5 text-[11px] font-semibold px-3.5 py-2 rounded-xl border border-border/70 bg-card/70 hover:bg-muted/40 hover:border-brand-accent/15 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 text-[11px] font-semibold px-3.5 py-2 rounded-xl border border-border/50 bg-card/70 hover:bg-muted/40 hover:border-brand-accent/15 transition-colors shadow-sm"
           >
             <Download className="h-3 w-3" /> Export Fleet Report (CSV)
           </button>
           <button
             onClick={() => setNocMode(true)}
-            className="flex items-center gap-1.5 text-[11px] font-semibold px-3.5 py-2 rounded-xl border border-border/70 bg-card/70 hover:bg-muted/40 hover:border-brand-accent/15 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 text-[11px] font-semibold px-3.5 py-2 rounded-xl border border-border/50 bg-card/70 hover:bg-muted/40 hover:border-brand-accent/15 transition-colors shadow-sm"
             title="Fullscreen NOC view"
           >
             <Maximize2 className="h-3 w-3" /> NOC Mode

@@ -436,7 +436,7 @@ export function UploadSection({
                 </div>
               </div>
 
-              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/50 bg-card/60 px-4 py-3 leading-relaxed">
                 <span className="font-semibold text-foreground dark:text-white">
                   Why this matters:
                 </span>{" "}
@@ -545,7 +545,7 @@ export function UploadSection({
                 </div>
               </div>
 
-              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/60 bg-card/60 px-4 py-3 leading-relaxed">
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 rounded-xl border border-border/50 bg-card/60 px-4 py-3 leading-relaxed">
                 <span className="font-semibold text-foreground dark:text-white">
                   Why this matters:
                 </span>{" "}
@@ -559,7 +559,7 @@ export function UploadSection({
                 .
               </p>
 
-              <Card className="border-border/70 bg-card/80 shadow-card">
+              <Card className="border-border/50 bg-card/80 shadow-card">
                 <CardContent className="pt-6">
                   <BrandingSetup branding={branding} onChange={setBranding} />
                 </CardContent>

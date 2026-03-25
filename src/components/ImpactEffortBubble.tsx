@@ -83,8 +83,10 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
   const padding = maxEffort * 0.1;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">Impact vs Effort</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
+        Impact vs Effort
+      </h3>
       <div className="relative" style={{ height: 280 }}>
         <ResponsiveContainer width="100%" height={280}>
           <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
@@ -124,15 +126,19 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
               tickFormatter={(v) => ["", "Info", "Low", "Med", "High", "Crit"][v] ?? ""}
             />
             <ZAxis type="number" dataKey="size" range={[50, 400]} />
-            <ReferenceLine x={midEffort} stroke="currentColor" strokeOpacity={0.3} strokeDasharray="3 3" />
-            <ReferenceLine y={midImpact} stroke="currentColor" strokeOpacity={0.3} strokeDasharray="3 3" />
-            <ReferenceArea
-              x1={0}
-              x2={midEffort}
-              y1={midImpact}
-              y2={5.5}
-              fill="url(#quadQuick)"
+            <ReferenceLine
+              x={midEffort}
+              stroke="currentColor"
+              strokeOpacity={0.3}
+              strokeDasharray="3 3"
             />
+            <ReferenceLine
+              y={midImpact}
+              stroke="currentColor"
+              strokeOpacity={0.3}
+              strokeDasharray="3 3"
+            />
+            <ReferenceArea x1={0} x2={midEffort} y1={midImpact} y2={5.5} fill="url(#quadQuick)" />
             <ReferenceArea
               x1={midEffort}
               x2={maxEffort + padding}
@@ -140,13 +146,7 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
               y2={5.5}
               fill="url(#quadStrategic)"
             />
-            <ReferenceArea
-              x1={0}
-              x2={midEffort}
-              y1={0.5}
-              y2={midImpact}
-              fill="url(#quadLow)"
-            />
+            <ReferenceArea x1={0} x2={midEffort} y1={0.5} y2={midImpact} fill="url(#quadLow)" />
             <ReferenceArea
               x1={midEffort}
               x2={maxEffort + padding}
@@ -165,7 +165,7 @@ export function ImpactEffortBubble({ analysisResults }: Props) {
                 if (!active || !payload?.length) return null;
                 const p = payload[0].payload as ScatterPoint;
                 return (
-                  <div className="rounded-md border border-border/70 bg-card px-3 py-2 text-xs shadow-elevated">
+                  <div className="rounded-md border border-border/50 bg-card px-3 py-2 text-xs shadow-elevated">
                     <p className="font-semibold text-foreground">{p.title}</p>
                     <p className="text-muted-foreground mt-0.5">
                       Severity: {p.severity} · ~{p.effort} min

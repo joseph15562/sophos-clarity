@@ -1,5 +1,20 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Shield, CheckCircle2, XCircle, AlertTriangle, MinusCircle, ExternalLink, ChevronDown, ChevronRight, UserCheck, Undo2, Lock, HelpCircle, StickyNote, Wrench } from "lucide-react";
+import {
+  Shield,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  MinusCircle,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  UserCheck,
+  Undo2,
+  Lock,
+  HelpCircle,
+  StickyNote,
+  Wrench,
+} from "lucide-react";
 import kbLinksData from "@/data/sophos-bp-kb-links.json";
 import { ScoringMethodology } from "./ScoringMethodology";
 import type { AnalysisResult } from "@/lib/analyse-config";
@@ -69,15 +84,26 @@ const TIER_INFO: Record<LicenceTier, { label: string; description: string }> = {
   },
 };
 
-const STATUS_CONFIG: Record<CheckStatus, { icon: typeof CheckCircle2; color: string; bg: string; label: string }> = {
+const STATUS_CONFIG: Record<
+  CheckStatus,
+  { icon: typeof CheckCircle2; color: string; bg: string; label: string }
+> = {
   pass: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Pass" },
   fail: { icon: XCircle, color: "text-red-400", bg: "bg-red-500/10", label: "Fail" },
   warn: { icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-500/10", label: "Verify" },
   na: { icon: MinusCircle, color: "text-muted-foreground/70", bg: "bg-muted/30", label: "N/A" },
-  unknown: { icon: AlertTriangle, color: "text-muted-foreground", bg: "bg-muted/20", label: "Unknown" },
+  unknown: {
+    icon: AlertTriangle,
+    color: "text-muted-foreground",
+    bg: "bg-muted/20",
+    label: "Unknown",
+  },
 };
 
-const CATEGORY_THEME: Record<string, { iconWrap: string; title: string; summary: string; pill: string }> = {
+const CATEGORY_THEME: Record<
+  string,
+  { iconWrap: string; title: string; summary: string; pill: string }
+> = {
   "Device Hardening": {
     iconWrap: "border-cyan-500/15 bg-cyan-500/10",
     title: "text-cyan-600 dark:text-cyan-300",
@@ -135,15 +161,57 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
   const color = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
 
   return (
-    <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label={`Best practice score: ${score}, grade ${grade}`}>
-      <circle cx="60" cy="60" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
+    <svg
+      width="120"
+      height="120"
+      viewBox="0 0 120 120"
+      role="img"
+      aria-label={`Best practice score: ${score}, grade ${grade}`}
+    >
       <circle
-        cx="60" cy="60" r={r} fill="none" stroke={color} strokeWidth="6"
-        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
-        transform="rotate(-90 60 60)" className="transition-all duration-700"
+        cx="60"
+        cy="60"
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="6"
+        className="text-muted/20"
       />
-      <text x="60" y="54" textAnchor="middle" fill={color} fontSize="28" fontWeight="700" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>{score}</text>
-      <text x="60" y="72" textAnchor="middle" fill={color} fontSize="12" fontWeight="600" style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}>Grade {grade}</text>
+      <circle
+        cx="60"
+        cy="60"
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth="6"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform="rotate(-90 60 60)"
+        className="transition-all duration-700"
+      />
+      <text
+        x="60"
+        y="54"
+        textAnchor="middle"
+        fill={color}
+        fontSize="28"
+        fontWeight="700"
+        style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
+      >
+        {score}
+      </text>
+      <text
+        x="60"
+        y="72"
+        textAnchor="middle"
+        fill={color}
+        fontSize="12"
+        fontWeight="600"
+        style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
+      >
+        Grade {grade}
+      </text>
     </svg>
   );
 }
@@ -187,7 +255,10 @@ export function SophosBestPractice({
 
   const storageKey = overridesStorageKey ?? OVERRIDES_KEY_DEFAULT;
 
-  const detectedTier = useMemo(() => detectBpLicenceTierFromCentral(centralLicences), [centralLicences]);
+  const detectedTier = useMemo(
+    () => detectBpLicenceTierFromCentral(centralLicences),
+    [centralLicences],
+  );
   const isLocked = detectedTier !== null;
 
   const isControlled = licenceFromParent !== undefined;
@@ -198,7 +269,9 @@ export function SophosBestPractice({
     "webProtection",
   ]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [manualOverrides, setManualOverrides] = useState<Set<string>>(() => loadOverrides(storageKey));
+  const [manualOverrides, setManualOverrides] = useState<Set<string>>(() =>
+    loadOverrides(storageKey),
+  );
   const manualOverridesHydrated = useRef(false);
   const [centralLinked, setCentralLinked] = useState(false);
   const [activeTab, setActiveTab] = useState("overall");
@@ -253,7 +326,9 @@ export function SophosBestPractice({
         console.warn("[SophosBestPractice] getCentralStatus", err);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [orgId, isGuest]);
 
   const licence: LicenceSelection = useMemo(
@@ -275,7 +350,8 @@ export function SophosBestPractice({
   const toggleCategory = useCallback((cat: string) => {
     setExpandedCategories((prev) => {
       const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
       return next;
     });
   }, []);
@@ -283,7 +359,8 @@ export function SophosBestPractice({
   const toggleOverride = useCallback((checkId: string) => {
     setManualOverrides((prev) => {
       const next = new Set(prev);
-      if (next.has(checkId)) next.delete(checkId); else next.add(checkId);
+      if (next.has(checkId)) next.delete(checkId);
+      else next.add(checkId);
       return next;
     });
   }, []);
@@ -316,8 +393,26 @@ export function SophosBestPractice({
     const auto = hasMultiple
       ? centralAutoOverall
       : seCentralAutoForLabel(centralSessionActive, firewallLabels[0] ?? "", haLabels);
-    return computeSophosBPScore(aggregateResult, licence, manualOverrides, auto, seThreatResponseAck, seExcludedBpChecks);
-  }, [aggregateResult, licence, manualOverrides, centralAutoOverall, hasMultiple, centralSessionActive, firewallLabels, haLabels, seThreatResponseAck, seExcludedBpChecks]);
+    return computeSophosBPScore(
+      aggregateResult,
+      licence,
+      manualOverrides,
+      auto,
+      seThreatResponseAck,
+      seExcludedBpChecks,
+    );
+  }, [
+    aggregateResult,
+    licence,
+    manualOverrides,
+    centralAutoOverall,
+    hasMultiple,
+    centralSessionActive,
+    firewallLabels,
+    haLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+  ]);
 
   const perFirewallScores = useMemo(() => {
     if (!hasMultiple) return {};
@@ -333,7 +428,16 @@ export function SophosBestPractice({
       );
     }
     return result;
-  }, [hasMultiple, analysisResults, licence, manualOverrides, centralSessionActive, haLabels, seThreatResponseAck, seExcludedBpChecks]);
+  }, [
+    hasMultiple,
+    analysisResults,
+    licence,
+    manualOverrides,
+    centralSessionActive,
+    haLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+  ]);
 
   const perFwCheckStatus = useMemo(() => {
     if (!hasMultiple) return new Map<string, string[]>();
@@ -374,10 +478,13 @@ export function SophosBestPractice({
             </div>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-[#2006F7]" />
-              <h3 className="text-base font-display font-black text-foreground tracking-tight">Sophos Licence Selection</h3>
+              <h3 className="text-base font-display font-black text-foreground tracking-tight">
+                Sophos Licence Selection
+              </h3>
             </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Select the protection tier that best matches the firewall so best-practice scoring reflects the controls that should reasonably be available.
+              Select the protection tier that best matches the firewall so best-practice scoring
+              reflects the controls that should reasonably be available.
             </p>
           </div>
           {isLocked && (
@@ -390,63 +497,93 @@ export function SophosBestPractice({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Why it matters</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Scoring should match the controls your licence actually enables</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Why it matters
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Scoring should match the controls your licence actually enables
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best use</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Validate expected protections before interpreting best-practice gaps</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Best use
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Validate expected protections before interpreting best-practice gaps
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Outcome</p>
-            <p className="text-sm font-semibold text-foreground mt-1">More credible posture scoring and cleaner customer conversations</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Outcome
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              More credible posture scoring and cleaner customer conversations
+            </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          {(Object.entries(TIER_INFO) as [LicenceTier, typeof TIER_INFO.standard][]).map(([key, info]) => {
-            const isSelected = tier === key;
-            const isDisabled = isLocked && !isSelected;
-            return (
-              <button
-                key={key}
-                onClick={() =>
-                  !isLocked &&
-                  setLicenceSelection({ tier: key, modules: key === "individual" ? individualModules : [] })
-                }
-                disabled={isLocked}
-                className={`rounded-2xl border p-4 text-left transition-all shadow-sm ${
-                  isSelected
-                    ? isLocked
-                      ? "border-[#00F2B3] bg-[#00F2B3]/10 ring-1 ring-[#00F2B3]/30"
-                      : "border-[#2006F7] bg-brand-accent/10 ring-1 ring-[#2006F7]/30"
-                    : isDisabled
-                      ? "border-border opacity-40 cursor-not-allowed bg-card/60"
-                      : "border-border bg-card/70 hover:border-muted-foreground/30 hover:shadow-md"
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <p className={`text-xs font-semibold ${
+          {(Object.entries(TIER_INFO) as [LicenceTier, typeof TIER_INFO.standard][]).map(
+            ([key, info]) => {
+              const isSelected = tier === key;
+              const isDisabled = isLocked && !isSelected;
+              return (
+                <button
+                  key={key}
+                  onClick={() =>
+                    !isLocked &&
+                    setLicenceSelection({
+                      tier: key,
+                      modules: key === "individual" ? individualModules : [],
+                    })
+                  }
+                  disabled={isLocked}
+                  className={`rounded-2xl border p-4 text-left transition-all shadow-sm ${
                     isSelected
-                      ? isLocked ? "text-[#00F2B3] dark:text-[#00F2B3]" : "text-[#2006F7] dark:text-[#6B5BFF]"
-                      : "text-foreground"
-                  }`}>
-                    {info.label}
+                      ? isLocked
+                        ? "border-[#00F2B3] bg-[#00F2B3]/10 ring-1 ring-[#00F2B3]/30"
+                        : "border-[#2006F7] bg-brand-accent/10 ring-1 ring-[#2006F7]/30"
+                      : isDisabled
+                        ? "border-border opacity-40 cursor-not-allowed bg-card/60"
+                        : "border-border bg-card/70 hover:border-muted-foreground/30 hover:shadow-md"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <p
+                      className={`text-xs font-semibold ${
+                        isSelected
+                          ? isLocked
+                            ? "text-[#00F2B3] dark:text-[#00F2B3]"
+                            : "text-[#2006F7] dark:text-[#6B5BFF]"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {info.label}
+                    </p>
+                    {isSelected && isLocked && (
+                      <Lock className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" />
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                    {info.description}
                   </p>
-                  {isSelected && isLocked && <Lock className="h-3 w-3 text-[#00F2B3] dark:text-[#00F2B3]" />}
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{info.description}</p>
-              </button>
-            );
-          })}
+                </button>
+              );
+            },
+          )}
         </div>
 
         {/* Individual module checkboxes */}
         {tier === "individual" && (
           <div className="border border-border rounded-2xl bg-card/70 p-4 space-y-3 shadow-sm">
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">Select Licensed Modules</p>
-            {(Object.values(MODULES)).map((mod) => (
-              <label key={mod.id} className="flex items-start gap-2.5 cursor-pointer group rounded-xl border border-border/70 bg-background/60 px-3 py-2.5 hover:bg-muted/40 transition-colors">
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-2">
+              Select Licensed Modules
+            </p>
+            {Object.values(MODULES).map((mod) => (
+              <label
+                key={mod.id}
+                className="flex items-start gap-2.5 cursor-pointer group rounded-xl border border-border/50 bg-background/60 px-3 py-2.5 hover:bg-muted/40 transition-colors"
+              >
                 <input
                   type="checkbox"
                   checked={individualModules.includes(mod.id)}
@@ -454,8 +591,12 @@ export function SophosBestPractice({
                   className="mt-0.5 h-3.5 w-3.5 rounded border-border accent-[#2006F7] cursor-pointer"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground group-hover:text-[#2006F7] transition-colors">{mod.label}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">{mod.description}</p>
+                  <p className="text-xs font-medium text-foreground group-hover:text-[#2006F7] transition-colors">
+                    {mod.label}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    {mod.description}
+                  </p>
                 </div>
               </label>
             ))}
@@ -465,7 +606,10 @@ export function SophosBestPractice({
         {/* Active modules summary */}
         <div className="mt-3 flex flex-wrap gap-1.5">
           {activeModules.map((modId) => (
-            <span key={modId} className="px-2.5 py-1 rounded-full bg-brand-accent/10 text-[#2006F7] dark:text-[#6B5BFF] text-[10px] font-medium border border-brand-accent/10">
+            <span
+              key={modId}
+              className="px-2.5 py-1 rounded-full bg-brand-accent/10 text-[#2006F7] dark:text-[#6B5BFF] text-[10px] font-medium border border-brand-accent/10"
+            >
               {MODULES[modId].label}
             </span>
           ))}
@@ -481,13 +625,20 @@ export function SophosBestPractice({
             </div>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-[#2006F7]" />
-              <h3 className="text-base font-display font-black text-foreground tracking-tight">Sophos Best Practice Score</h3>
-              <button onClick={() => setShowHelp(!showHelp)} aria-label="How scoring works" className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
+              <h3 className="text-base font-display font-black text-foreground tracking-tight">
+                Sophos Best Practice Score
+              </h3>
+              <button
+                onClick={() => setShowHelp(!showHelp)}
+                aria-label="How scoring works"
+                className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+              >
                 <HelpCircle className="h-3.5 w-3.5" />
               </button>
             </div>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Benchmark the firewall against Sophos best-practice guidance so you can separate expected protections from meaningful posture gaps.
+              Benchmark the firewall against Sophos best-practice guidance so you can separate
+              expected protections from meaningful posture gaps.
             </p>
           </div>
           <span className="text-[10px] text-muted-foreground">based on Sophos documentation</span>
@@ -495,16 +646,28 @@ export function SophosBestPractice({
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Score intent</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Show how closely the firewall aligns to Sophos guidance</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Score intent
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Show how closely the firewall aligns to Sophos guidance
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Best for</p>
-            <p className="text-sm font-semibold text-foreground mt-1">Executive posture reviews and technical gap validation</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Best for
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              Executive posture reviews and technical gap validation
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Outcome</p>
-            <p className="text-sm font-semibold text-foreground mt-1">A clearer story around what is misconfigured, missing, or manually verified</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Outcome
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-1">
+              A clearer story around what is misconfigured, missing, or manually verified
+            </p>
           </div>
         </div>
 
@@ -512,7 +675,7 @@ export function SophosBestPractice({
 
         {/* Tabs */}
         {hasMultiple && (
-          <div className="rounded-2xl border border-border/70 bg-card/70 p-2 mb-4 overflow-x-auto">
+          <div className="rounded-2xl border border-border/50 bg-card/70 p-2 mb-4 overflow-x-auto">
             <div className="flex items-center gap-2 min-w-max">
               <button
                 onClick={() => setActiveTab("overall")}
@@ -541,7 +704,7 @@ export function SophosBestPractice({
           </div>
         )}
 
-        <div className="rounded-2xl border border-border/70 bg-card/70 p-4 sm:p-5">
+        <div className="rounded-2xl border border-border/50 bg-card/70 p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="flex flex-col items-center gap-2">
               <GaugeRing score={currentScore.overall} grade={currentScore.grade} />
@@ -567,7 +730,9 @@ export function SophosBestPractice({
                 <p className="text-[10px] text-muted-foreground">Verify</p>
               </div>
               <div className="rounded-2xl border border-border bg-background/60 p-3 text-center">
-                <p className="text-2xl font-bold text-muted-foreground/70">{currentScore.notApplicable}</p>
+                <p className="text-2xl font-bold text-muted-foreground/70">
+                  {currentScore.notApplicable}
+                </p>
                 <p className="text-[10px] text-muted-foreground">N/A</p>
               </div>
             </div>
@@ -577,15 +742,18 @@ export function SophosBestPractice({
 
       {/* Check Results by Category */}
       <div className="space-y-3">
-        <div className="rounded-[24px] border border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(247,249,255,0.96))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] px-5 py-4 shadow-sm">
+        <div className="rounded-[24px] border border-border/50 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(247,249,255,0.96))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.96),rgba(12,18,34,0.96))] px-5 py-4 shadow-sm">
           <div className="flex items-start gap-3 flex-wrap">
             <div className="space-y-1 flex-1 min-w-[220px]">
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
                 Findings by category
               </div>
-              <p className="text-sm font-display font-black text-foreground">Detailed Sophos best-practice findings</p>
+              <p className="text-sm font-display font-black text-foreground">
+                Detailed Sophos best-practice findings
+              </p>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Expand each category to review evidence, remediation guidance, and any manually validated controls before you present the final posture story.
+                Expand each category to review evidence, remediation guidance, and any manually
+                validated controls before you present the final posture story.
               </p>
             </div>
           </div>
@@ -598,22 +766,31 @@ export function SophosBestPractice({
           const theme = CATEGORY_THEME[category] ?? CATEGORY_THEME.Default;
 
           return (
-            <div key={category} className="rounded-[24px] border border-border/80 bg-card/90 overflow-hidden shadow-sm">
+            <div
+              key={category}
+              className="rounded-[24px] border border-border/80 bg-card/90 overflow-hidden shadow-sm"
+            >
               <button
                 onClick={() => toggleCategory(category)}
                 className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 text-left hover:bg-muted/20 transition-colors"
               >
-                <div className={`h-10 w-10 rounded-2xl border flex items-center justify-center shrink-0 ${theme.iconWrap}`}>
+                <div
+                  className={`h-10 w-10 rounded-2xl border flex items-center justify-center shrink-0 ${theme.iconWrap}`}
+                >
                   <Shield className="h-4 w-4 text-[#2006F7]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className={`text-sm font-semibold ${theme.title}`}>{category}</p>
-                    <span className={`px-2 py-0.5 rounded-full border text-[10px] font-medium ${theme.pill}`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full border text-[10px] font-medium ${theme.pill}`}
+                    >
                       {checks.length} check{checks.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <p className={`text-[10px] mt-1 ${theme.summary}`}>{catPassed} aligned • {Math.max(catApplicable - catPassed, 0)} need attention</p>
+                  <p className={`text-[10px] mt-1 ${theme.summary}`}>
+                    {catPassed} aligned • {Math.max(catApplicable - catPassed, 0)} need attention
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {catFailed > 0 && (
@@ -627,7 +804,9 @@ export function SophosBestPractice({
                     </span>
                   )}
                   <div className="h-8 w-8 rounded-full border border-border bg-background/70 flex items-center justify-center">
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    />
                   </div>
                 </div>
               </button>
@@ -638,40 +817,59 @@ export function SophosBestPractice({
                     const isOverridden = result.manualOverride === true;
                     const isWarnAndOverrideable = result.status === "warn" && result.applicable;
                     const skipManualComply =
-                      isSeHealthCheckBp && SE_HEALTH_CHECK_BP_NO_MANUAL_COMPLY_IDS.has(result.check.id);
+                      isSeHealthCheckBp &&
+                      SE_HEALTH_CHECK_BP_NO_MANUAL_COMPLY_IDS.has(result.check.id);
                     const showManualOverrideButton =
                       (!skipManualComply && isWarnAndOverrideable) || isOverridden;
                     const cfg = STATUS_CONFIG[result.status];
                     const Icon = cfg.icon;
                     return (
-                      <div key={result.check.id} className={`px-4 sm:px-5 py-4 flex items-start gap-3 ${!result.applicable ? "opacity-40" : ""}`}>
-                        <div className={`mt-0.5 h-8 w-8 rounded-xl border border-border/60 ${cfg.bg} flex items-center justify-center shrink-0`}>
+                      <div
+                        key={result.check.id}
+                        className={`px-4 sm:px-5 py-4 flex items-start gap-3 ${!result.applicable ? "opacity-40" : ""}`}
+                      >
+                        <div
+                          className={`mt-0.5 h-8 w-8 rounded-xl border border-border/60 ${cfg.bg} flex items-center justify-center shrink-0`}
+                        >
                           <Icon className={`h-3 w-3 ${cfg.color}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-semibold text-foreground">{result.check.title}</p>
+                            <p className="text-sm font-semibold text-foreground">
+                              {result.check.title}
+                            </p>
                             {isOverridden && (
                               <span className="px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/10">
                                 Manual
                               </span>
                             )}
-                            {activeTab === "overall" && hasMultiple && (result.status === "fail" || result.status === "warn") && perFwCheckStatus.has(result.check.id) && (
-                              <span className="px-2 py-0.5 rounded-full text-[8px] font-medium bg-muted text-muted-foreground border border-border">
-                                {perFwCheckStatus.get(result.check.id)!.join(", ")}
-                              </span>
-                            )}
+                            {activeTab === "overall" &&
+                              hasMultiple &&
+                              (result.status === "fail" || result.status === "warn") &&
+                              perFwCheckStatus.has(result.check.id) && (
+                                <span className="px-2 py-0.5 rounded-full text-[8px] font-medium bg-muted text-muted-foreground border border-border">
+                                  {perFwCheckStatus.get(result.check.id)!.join(", ")}
+                                </span>
+                              )}
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{result.detail}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                            {result.detail}
+                          </p>
                           {result.status === "fail" && (
                             <p className="text-[10px] text-amber-400/90 mt-1 leading-relaxed">
-                              <span className="font-medium">Sophos recommendation:</span> {result.check.recommendation}
+                              <span className="font-medium">Sophos recommendation:</span>{" "}
+                              {result.check.recommendation}
                             </p>
                           )}
 
                           {/* KB / remediation guide */}
                           {(() => {
-                            const kb = (kbLinksData.checks as Record<string, { kbUrl: string; consolePath: string; howToFix: string }>)[result.check.id];
+                            const kb = (
+                              kbLinksData.checks as Record<
+                                string,
+                                { kbUrl: string; consolePath: string; howToFix: string }
+                              >
+                            )[result.check.id];
                             if (!kb) return null;
                             const isKbOpen = expandedKb.has(result.check.id);
                             return (
@@ -679,13 +877,20 @@ export function SophosBestPractice({
                                 <button
                                   type="button"
                                   className="inline-flex items-center gap-1 rounded-xl border border-brand-accent/10 bg-brand-accent/10 px-2.5 py-1 text-[10px] font-medium text-brand-accent hover:bg-brand-accent/15 transition-colors"
-                                  onClick={() => setExpandedKb((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(result.check.id)) next.delete(result.check.id); else next.add(result.check.id);
-                                    return next;
-                                  })}
+                                  onClick={() =>
+                                    setExpandedKb((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(result.check.id)) next.delete(result.check.id);
+                                      else next.add(result.check.id);
+                                      return next;
+                                    })
+                                  }
                                 >
-                                  {isKbOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                  {isKbOpen ? (
+                                    <ChevronDown className="h-3 w-3" />
+                                  ) : (
+                                    <ChevronRight className="h-3 w-3" />
+                                  )}
                                   <Wrench className="h-3 w-3" />
                                   How to fix
                                 </button>
@@ -693,7 +898,8 @@ export function SophosBestPractice({
                                   <div className="mt-2 ml-5 rounded-2xl bg-muted/40 border border-border px-3 py-2.5 space-y-1.5 text-[10px] shadow-sm">
                                     <p className="text-foreground">{kb.howToFix}</p>
                                     <p className="text-muted-foreground">
-                                      <span className="font-medium">Console path:</span> {kb.consolePath}
+                                      <span className="font-medium">Console path:</span>{" "}
+                                      {kb.consolePath}
                                     </p>
                                     <a
                                       href={kb.kbUrl}
@@ -750,28 +956,43 @@ export function SophosBestPractice({
                                   <button
                                     type="button"
                                     className="text-[10px] font-medium text-primary hover:underline shrink-0"
-                                    onClick={() => { onFindingNoteChange(result.check.id, noteDraft.trim()); setEditingNoteId(null); }}
-                                  >Save</button>
+                                    onClick={() => {
+                                      onFindingNoteChange(result.check.id, noteDraft.trim());
+                                      setEditingNoteId(null);
+                                    }}
+                                  >
+                                    Save
+                                  </button>
                                   <button
                                     type="button"
                                     className="text-[10px] text-muted-foreground hover:underline shrink-0"
                                     onClick={() => setEditingNoteId(null)}
-                                  >Cancel</button>
+                                  >
+                                    Cancel
+                                  </button>
                                 </div>
                               ) : findingNotes?.[result.check.id] ? (
                                 <button
                                   type="button"
                                   className="flex items-start gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-                                  onClick={() => { setNoteDraft(findingNotes[result.check.id]); setEditingNoteId(result.check.id); }}
+                                  onClick={() => {
+                                    setNoteDraft(findingNotes[result.check.id]);
+                                    setEditingNoteId(result.check.id);
+                                  }}
                                 >
                                   <StickyNote className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
-                                  <span className="text-left italic">{findingNotes[result.check.id]}</span>
+                                  <span className="text-left italic">
+                                    {findingNotes[result.check.id]}
+                                  </span>
                                 </button>
                               ) : (
                                 <button
                                   type="button"
                                   className="flex items-center gap-1 text-[10px] text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-                                  onClick={() => { setNoteDraft(""); setEditingNoteId(result.check.id); }}
+                                  onClick={() => {
+                                    setNoteDraft("");
+                                    setEditingNoteId(result.check.id);
+                                  }}
                                 >
                                   <StickyNote className="h-3 w-3" />
                                   Add note

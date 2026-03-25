@@ -1,7 +1,19 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, ImageIcon, Globe, Landmark, User, ShieldCheck, Plus, ChevronDown, Filter } from "lucide-react";
+import {
+  Building2,
+  ImageIcon,
+  Globe,
+  Landmark,
+  User,
+  ShieldCheck,
+  Plus,
+  ChevronDown,
+  Filter,
+  FileText,
+  Scale,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,7 +27,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadSavedReportsCloud, loadSavedReportsLocal } from "@/lib/saved-reports";
-import { getCachedTenants, getEffectiveTenantDisplayName, type CentralTenant } from "@/lib/sophos-central";
+import {
+  getCachedTenants,
+  getEffectiveTenantDisplayName,
+  type CentralTenant,
+} from "@/lib/sophos-central";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 
 export const ENVIRONMENT_TYPES = [
@@ -51,15 +67,57 @@ export const COUNTRIES = [
 ] as const;
 
 export const US_STATES = [
-  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
-  "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia",
-  "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
-  "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
-  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
-  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
-  "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
-  "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
-  "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
+  "Alabama",
+  "Alaska",
+  "Arizona",
+  "Arkansas",
+  "California",
+  "Colorado",
+  "Connecticut",
+  "Delaware",
+  "District of Columbia",
+  "Florida",
+  "Georgia",
+  "Hawaii",
+  "Idaho",
+  "Illinois",
+  "Indiana",
+  "Iowa",
+  "Kansas",
+  "Kentucky",
+  "Louisiana",
+  "Maine",
+  "Maryland",
+  "Massachusetts",
+  "Michigan",
+  "Minnesota",
+  "Mississippi",
+  "Missouri",
+  "Montana",
+  "Nebraska",
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio",
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
 ] as const;
 
 export const ALL_FRAMEWORKS = [
@@ -89,7 +147,11 @@ export const ALL_FRAMEWORKS = [
 export type ComplianceFramework = (typeof ALL_FRAMEWORKS)[number];
 
 /** Returns default frameworks for a given environment + country + state combo */
-function getDefaultFrameworks(environment: string, country: string, state?: string): ComplianceFramework[] {
+function getDefaultFrameworks(
+  environment: string,
+  country: string,
+  state?: string,
+): ComplianceFramework[] {
   const fw: ComplianceFramework[] = [];
   const isUK = country === "United Kingdom";
   const isUS = country === "United States";
@@ -185,7 +247,9 @@ export function BrandingSetup({ branding, onChange }: Props) {
   // Auto-fill company name from org when logged in
   useEffect(() => {
     if (!isGuest && org) {
-      onChange((prev) => prev.companyName === org.name ? prev : { ...prev, companyName: org.name });
+      onChange((prev) =>
+        prev.companyName === org.name ? prev : { ...prev, companyName: org.name },
+      );
     }
   }, [isGuest, org, onChange]);
 
@@ -199,8 +263,12 @@ export function BrandingSetup({ branding, onChange }: Props) {
           useCloud ? loadSavedReportsCloud() : loadSavedReportsLocal(),
         ]);
         const allNames = new Set<string>();
-        history.forEach((h) => { if (h.customerName && h.customerName !== "Unnamed") allNames.add(h.customerName); });
-        savedReports.forEach((r) => { if (r.customerName && r.customerName !== "Unnamed") allNames.add(r.customerName); });
+        history.forEach((h) => {
+          if (h.customerName && h.customerName !== "Unnamed") allNames.add(h.customerName);
+        });
+        savedReports.forEach((r) => {
+          if (r.customerName && r.customerName !== "Unnamed") allNames.add(r.customerName);
+        });
         const names = [...allNames].sort((a, b) => a.localeCompare(b));
         setKnownCustomers(names);
 
@@ -226,10 +294,13 @@ export function BrandingSetup({ branding, onChange }: Props) {
     load();
   }, [isGuest, org]);
 
-  const selectCustomer = useCallback((name: string) => {
-    onChange({ ...branding, customerName: name });
-    setAddingNew(false);
-  }, [branding, onChange]);
+  const selectCustomer = useCallback(
+    (name: string) => {
+      onChange({ ...branding, customerName: name });
+      setAddingNew(false);
+    },
+    [branding, onChange],
+  );
 
   useEffect(() => {
     if (userTouchedFrameworks.current) return;
@@ -252,27 +323,37 @@ export function BrandingSetup({ branding, onChange }: Props) {
   const toggleFramework = (fw: ComplianceFramework) => {
     userTouchedFrameworks.current = true;
     const current = branding.selectedFrameworks;
-    const next = current.includes(fw)
-      ? current.filter((f) => f !== fw)
-      : [...current, fw];
+    const next = current.includes(fw) ? current.filter((f) => f !== fw) : [...current, fw];
     onChange({ ...branding, selectedFrameworks: next });
   };
 
   return (
     <div className="space-y-5">
       <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="rounded-2xl border border-border bg-card/70 p-4 sm:p-5 space-y-4">
+        <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(145deg,rgba(32,6,247,0.04),rgba(90,0,255,0.02),transparent_60%)] dark:bg-[linear-gradient(145deg,rgba(32,6,247,0.10),rgba(90,0,255,0.05),transparent_60%)] p-4 sm:p-5 space-y-4 shadow-card">
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Report identity</p>
-            <h4 className="text-base font-display font-bold tracking-tight text-foreground">Set how the assessment appears in reports</h4>
-            <p className="text-xs text-muted-foreground">These fields control the report header, attribution, and exported delivery details.</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-accent/20 bg-brand-accent/[0.06] dark:bg-brand-accent/[0.10] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
+              <FileText className="h-3 w-3" />
+              Report identity
+            </span>
+            <h4 className="text-base font-display font-bold tracking-tight text-foreground mt-2">
+              Set how the assessment appears in reports
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              These fields control the report header, attribution, and exported delivery details.
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="company" className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground">
+            <Label
+              htmlFor="company"
+              className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
+            >
               <Building2 className="h-4 w-4" /> Company Name
               {!isGuest && org && (
-                <span className="text-[9px] text-muted-foreground font-normal ml-1">(from organization)</span>
+                <span className="text-[9px] text-muted-foreground font-normal ml-1">
+                  (from organization)
+                </span>
               )}
             </Label>
             <Input
@@ -283,11 +364,16 @@ export function BrandingSetup({ branding, onChange }: Props) {
               readOnly={!isGuest && !!org}
               className={!isGuest && org ? "bg-muted/50 cursor-default" : "bg-background/80"}
             />
-            <p className="text-[11px] text-muted-foreground">Displayed on exported reports and customer-facing deliverables.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Displayed on exported reports and customer-facing deliverables.
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="logo" className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground">
+            <Label
+              htmlFor="logo"
+              className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
+            >
               <ImageIcon className="h-4 w-4" /> Company Logo
             </Label>
             <div className="flex flex-wrap items-center gap-4">
@@ -314,7 +400,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="preparedBy" className="flex items-center gap-2 text-xs font-display font-semibold tracking-tight text-foreground">
+              <Label
+                htmlFor="preparedBy"
+                className="flex items-center gap-2 text-xs font-display font-semibold tracking-tight text-foreground"
+              >
                 <User className="h-3.5 w-3.5" /> Prepared By
               </Label>
               <Input
@@ -324,10 +413,15 @@ export function BrandingSetup({ branding, onChange }: Props) {
                 onChange={(e) => onChange({ ...branding, preparedBy: e.target.value })}
                 className="text-sm bg-background/80"
               />
-              <p className="text-[11px] text-muted-foreground">Used for report attribution and delivery ownership.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Used for report attribution and delivery ownership.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="footerText" className="flex items-center gap-2 text-xs font-display font-semibold tracking-tight text-foreground">
+              <Label
+                htmlFor="footerText"
+                className="flex items-center gap-2 text-xs font-display font-semibold tracking-tight text-foreground"
+              >
                 <Building2 className="h-3.5 w-3.5" /> Report Footer Text
               </Label>
               <Input
@@ -337,20 +431,33 @@ export function BrandingSetup({ branding, onChange }: Props) {
                 onChange={(e) => onChange({ ...branding, footerText: e.target.value })}
                 className="text-sm bg-background/80"
               />
-              <p className="text-[11px] text-muted-foreground">Ideal for confidentiality wording, engagement notes, or internal-only disclaimers.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Ideal for confidentiality wording, engagement notes, or internal-only disclaimers.
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] p-4 sm:p-5 space-y-4">
+        <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.05),rgba(0,242,179,0.04),transparent_70%)] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.12),rgba(0,242,179,0.06),transparent_70%)] p-4 sm:p-5 space-y-4 shadow-card">
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Customer context</p>
-            <h4 className="text-base font-display font-bold tracking-tight text-foreground">Anchor the assessment to the right customer and scope</h4>
-            <p className="text-xs text-muted-foreground">Customer, geography, and sector settings influence defaults and how findings are framed.</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#00F2B3]/20 bg-[#00F2B3]/[0.06] dark:bg-[#00F2B3]/[0.10] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#00F2B3] dark:text-[#00F2B3]">
+              <Globe className="h-3 w-3" />
+              Customer context
+            </span>
+            <h4 className="text-base font-display font-bold tracking-tight text-foreground mt-2">
+              Anchor the assessment to the right customer and scope
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Customer, geography, and sector settings influence defaults and how findings are
+              framed.
+            </p>
           </div>
 
-          <div className="space-y-2 rounded-xl border border-border/70 bg-card/80 p-4">
-            <Label htmlFor="customerName" className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground">
+          <div className="space-y-2 rounded-xl border border-border/50 bg-card/80 p-4">
+            <Label
+              htmlFor="customerName"
+              className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
+            >
               <User className="h-4 w-4" /> Customer Name
             </Label>
 
@@ -381,7 +488,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                     <Plus className="h-2.5 w-2.5" /> Adding new customer.
                     <button
-                      onClick={() => { setAddingNew(false); onChange({ ...branding, customerName: "" }); }}
+                      onClick={() => {
+                        setAddingNew(false);
+                        onChange({ ...branding, customerName: "" });
+                      }}
                       className="text-brand-accent hover:underline ml-1"
                     >
                       Back to list
@@ -407,16 +517,26 @@ export function BrandingSetup({ branding, onChange }: Props) {
                   </SelectTrigger>
                   <SelectContent>
                     {branding.customerName &&
-                      !centralTenants.some((t) => getEffectiveTenantDisplayName(t, branding.customerName) === branding.customerName || t.name === branding.customerName) &&
+                      !centralTenants.some(
+                        (t) =>
+                          getEffectiveTenantDisplayName(t, branding.customerName) ===
+                            branding.customerName || t.name === branding.customerName,
+                      ) &&
                       !knownCustomers.includes(branding.customerName) && (
-                      <SelectItem value={branding.customerName}>
-                        {branding.customerName} (from connector)
-                      </SelectItem>
-                    )}
+                        <SelectItem value={branding.customerName}>
+                          {branding.customerName} (from connector)
+                        </SelectItem>
+                      )}
                     {centralTenants
-                      .filter((t) => !knownCustomers.includes(getEffectiveTenantDisplayName(t, branding.customerName)))
+                      .filter(
+                        (t) =>
+                          !knownCustomers.includes(
+                            getEffectiveTenantDisplayName(t, branding.customerName),
+                          ),
+                      )
                       .map((t) => {
-                        const displayName = getEffectiveTenantDisplayName(t, branding.customerName) || t.name;
+                        const displayName =
+                          getEffectiveTenantDisplayName(t, branding.customerName) || t.name;
                         return (
                           <SelectItem key={`central-${t.id}`} value={displayName}>
                             {displayName} {t.dataRegion ? `(${t.dataRegion})` : ""}
@@ -425,7 +545,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
                       })}
                     {knownCustomers.map((name) => (
                       <SelectItem key={name} value={name}>
-                        {name}{customerReportCounts[name] > 0 ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})` : ""}
+                        {name}
+                        {customerReportCounts[name] > 0
+                          ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})`
+                          : ""}
                       </SelectItem>
                     ))}
                     <SelectItem value="__new__">＋ Add New Customer</SelectItem>
@@ -441,7 +564,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="environment" className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground">
+              <Label
+                htmlFor="environment"
+                className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
+              >
                 <Landmark className="h-4 w-4" /> Environment Type
               </Label>
               <Select
@@ -463,11 +589,16 @@ export function BrandingSetup({ branding, onChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground">Best practice recommendations align with this sector.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Best practice recommendations align with this sector.
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="country" className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground">
+              <Label
+                htmlFor="country"
+                className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
+              >
                 <Globe className="h-4 w-4" /> Country
               </Label>
               <Select
@@ -476,7 +607,12 @@ export function BrandingSetup({ branding, onChange }: Props) {
                   userTouchedFrameworks.current = false;
                   const newState = v === "United States" ? branding.state : undefined;
                   const defaults = getDefaultFrameworks(branding.environment, v, newState);
-                  onChange((prev) => ({ ...prev, country: v, state: newState, selectedFrameworks: defaults }));
+                  onChange((prev) => ({
+                    ...prev,
+                    country: v,
+                    state: newState,
+                    selectedFrameworks: defaults,
+                  }));
                 }}
               >
                 <SelectTrigger id="country" className="bg-background/80">
@@ -490,13 +626,18 @@ export function BrandingSetup({ branding, onChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground">Regional frameworks and compliance defaults are applied from here.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Regional frameworks and compliance defaults are applied from here.
+              </p>
             </div>
           </div>
 
           {branding.country === "United States" && (
             <div className="space-y-2 max-w-xs">
-              <Label htmlFor="state" className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground">
+              <Label
+                htmlFor="state"
+                className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
+              >
                 <Globe className="h-4 w-4" /> State
               </Label>
               <Select
@@ -518,21 +659,34 @@ export function BrandingSetup({ branding, onChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-muted-foreground">State-specific frameworks such as Ohio DPA are auto-selected when relevant.</p>
+              <p className="text-[11px] text-muted-foreground">
+                State-specific frameworks such as Ohio DPA are auto-selected when relevant.
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card/70 p-4 sm:p-5 space-y-4">
+      <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(160deg,rgba(90,0,255,0.04),rgba(32,6,247,0.03),transparent_50%)] dark:bg-[linear-gradient(160deg,rgba(90,0,255,0.08),rgba(32,6,247,0.06),transparent_50%)] p-4 sm:p-5 space-y-4 shadow-card">
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-accent">Compliance alignment</p>
-          <h4 className="text-base font-display font-bold tracking-tight text-foreground">Tune scope and framework mapping</h4>
-          <p className="text-xs text-muted-foreground">Select the frameworks that should shape findings, executive summaries, and compliance reporting.</p>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-violet/20 bg-brand-violet/[0.06] dark:bg-brand-violet/[0.10] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-violet">
+            <Scale className="h-3 w-3" />
+            Compliance alignment
+          </span>
+          <h4 className="text-base font-display font-bold tracking-tight text-foreground mt-2">
+            Tune scope and framework mapping
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            Select the frameworks that should shape findings, executive summaries, and compliance
+            reporting.
+          </p>
         </div>
 
         <div className="space-y-2 max-w-xl">
-          <Label htmlFor="web-filter-compliance" className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground">
+          <Label
+            htmlFor="web-filter-compliance"
+            className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
+          >
             <Filter className="h-4 w-4" /> Web filter compliance
           </Label>
           <Select
@@ -553,7 +707,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            <strong>Strict</strong> (default): WAN rules without web filtering are flagged as higher-severity findings. <strong>Informational</strong>: the same checks are applied at lower severity for scoped assessments; compliance wording avoids overstating regulatory risk unless a selected framework explicitly requires it.
+            <strong>Strict</strong> (default): WAN rules without web filtering are flagged as
+            higher-severity findings. <strong>Informational</strong>: the same checks are applied at
+            lower severity for scoped assessments; compliance wording avoids overstating regulatory
+            risk unless a selected framework explicitly requires it.
           </p>
         </div>
 
@@ -563,7 +720,10 @@ export function BrandingSetup({ branding, onChange }: Props) {
               <Label className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4" /> Compliance Frameworks
               </Label>
-              <p className="text-xs text-muted-foreground mt-1">Frameworks are automatically selected from customer context. Add or remove frameworks to tailor the assessment scope.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Frameworks are automatically selected from customer context. Add or remove
+                frameworks to tailor the assessment scope.
+              </p>
             </div>
             <div className="text-[11px] font-medium text-muted-foreground rounded-full border border-border px-3 py-1 bg-background/70">
               {branding.selectedFrameworks.length} selected
@@ -576,13 +736,14 @@ export function BrandingSetup({ branding, onChange }: Props) {
               return (
                 <label
                   key={fw}
-                  className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm cursor-pointer transition-all ${checked ? "border-brand-accent/30 bg-brand-accent/[0.06] dark:bg-[#00EDFF]/[0.08] shadow-sm" : "border-border bg-background/70 hover:bg-muted/50"}`}
+                  className={`group flex items-center gap-3 rounded-xl border px-3.5 py-3 text-sm cursor-pointer transition-all duration-200 ${checked ? "border-brand-accent/30 bg-brand-accent/[0.07] dark:bg-brand-accent/[0.10] shadow-[0_0_16px_-4px] shadow-brand-accent/15 dark:shadow-brand-accent/20 ring-1 ring-brand-accent/10" : "border-border/50 bg-card/60 hover:bg-card hover:border-border/70 hover:shadow-card"}`}
                 >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={() => toggleFramework(fw)}
-                  />
-                  <span className={`select-none leading-snug ${checked ? "font-semibold text-foreground" : "text-foreground/90"}`}>{fw}</span>
+                  <Checkbox checked={checked} onCheckedChange={() => toggleFramework(fw)} />
+                  <span
+                    className={`select-none leading-snug ${checked ? "font-semibold text-foreground" : "text-foreground/80 group-hover:text-foreground"}`}
+                  >
+                    {fw}
+                  </span>
                 </label>
               );
             })}

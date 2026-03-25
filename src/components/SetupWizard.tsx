@@ -152,7 +152,7 @@ function GuideStep({
   color: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-border/70 bg-card p-3">
+    <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-card p-3">
       <div className="flex items-center gap-2 shrink-0">
         <span className="flex items-center justify-center h-5 w-5 rounded-full bg-[#2006F7] text-white text-[9px] font-bold">
           {number}
@@ -199,7 +199,7 @@ function SetupPreviewFrame({
           <p className="text-sm font-semibold text-foreground mt-1">{title}</p>
           <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
         </div>
-        <div className="rounded-2xl border border-border/70 bg-card/70 p-3">{children}</div>
+        <div className="rounded-2xl border border-border/50 bg-card/70 p-3">{children}</div>
       </div>
     </div>
   );
@@ -254,7 +254,7 @@ function FeatureButton({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 text-left hover:border-brand-accent/30 hover:bg-muted/30 transition-all group"
+      className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-card p-3 text-left hover:border-brand-accent/30 hover:bg-muted/30 transition-all group"
     >
       <div
         className={`h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 ${color} group-hover:scale-110 transition-transform`}
@@ -571,15 +571,15 @@ function MockReportViewer({ type }: { type: "individual" | "executive" | "compli
           <>
             <p className="text-[10px] font-semibold text-foreground">Executive Summary</p>
             <div className="grid grid-cols-3 gap-2 my-2">
-              <div className="rounded border border-border/70 bg-card p-2 text-center">
+              <div className="rounded border border-border/50 bg-card p-2 text-center">
                 <p className="text-lg font-bold text-[#F29400]">54</p>
                 <p className="text-[8px] text-muted-foreground">Risk Score</p>
               </div>
-              <div className="rounded border border-border/70 bg-card p-2 text-center">
+              <div className="rounded border border-border/50 bg-card p-2 text-center">
                 <p className="text-lg font-bold text-[#EA0022]">32</p>
                 <p className="text-[8px] text-muted-foreground">Findings</p>
               </div>
-              <div className="rounded border border-border/70 bg-card p-2 text-center">
+              <div className="rounded border border-border/50 bg-card p-2 text-center">
                 <p className="text-lg font-bold text-[#00F2B3]">8</p>
                 <p className="text-[8px] text-muted-foreground">Recommendations</p>
               </div>
@@ -645,7 +645,7 @@ function MockTenantDashboard() {
       {customers.map((c) => (
         <div
           key={c.name}
-          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
         >
           <div className="h-8 w-8 rounded-lg bg-muted/30 flex items-center justify-center">
             <span className="text-sm font-bold" style={{ color: c.color }}>
@@ -821,7 +821,7 @@ function MockSettingsPanel() {
       ].map((s) => (
         <div
           key={s.title}
-          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
         >
           <div className="h-6 w-6 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
             {s.icon}
@@ -848,7 +848,7 @@ function MockTeamPanel() {
       {members.map((m) => (
         <div
           key={m.email}
-          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
         >
           <div className="h-8 w-8 rounded-full bg-brand-accent/10 flex items-center justify-center shrink-0">
             <span className="text-[11px] font-bold text-[#2006F7]">
@@ -887,7 +887,7 @@ function MockTeamPanel() {
 function MockSecurityPanel() {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-border/70 bg-card p-3 flex items-center gap-3">
+      <div className="rounded-xl border border-border/50 bg-card p-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-[#00F2B3]/10 flex items-center justify-center shrink-0">
           <ShieldCheck className="h-4 w-4 text-[#00F2B3]" />
         </div>
@@ -901,7 +901,7 @@ function MockSecurityPanel() {
           Enabled
         </div>
       </div>
-      <div className="rounded-xl border border-border/70 bg-card p-3 flex items-center gap-3">
+      <div className="rounded-xl border border-border/50 bg-card p-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-lg bg-[#6B5BFF]/10 flex items-center justify-center shrink-0">
           <Fingerprint className="h-4 w-4 text-[#6B5BFF]" />
         </div>
@@ -945,7 +945,7 @@ function MockAlertPanel() {
       {rules.map((r) => (
         <div
           key={r.name}
-          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
         >
           <div
             className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0"
@@ -1050,7 +1050,7 @@ function MockRuleOptimiser() {
       {rules.map((r) => (
         <div
           key={r.id}
-          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
         >
           <span className="text-[9px] font-mono text-muted-foreground w-8 shrink-0">{r.id}</span>
           <div className="flex-1 min-w-0">
@@ -1086,7 +1086,7 @@ function MockPolicyComplexity() {
         {metrics.map((m) => (
           <div
             key={m.label}
-            className="rounded-xl border border-border/70 bg-card p-2.5 text-center"
+            className="rounded-xl border border-border/50 bg-card p-2.5 text-center"
           >
             <p className="text-lg font-bold text-foreground">{m.value}</p>
             <p className="text-[9px] font-medium text-foreground">{m.label}</p>
@@ -1130,11 +1130,11 @@ function MockUnusedObjects() {
   return (
     <div className="space-y-2">
       <div className="flex gap-3 text-center mb-2">
-        <div className="flex-1 rounded border border-border/70 bg-card p-2">
+        <div className="flex-1 rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-[#F29400]">12</p>
           <p className="text-[8px] text-muted-foreground">Unused Objects</p>
         </div>
-        <div className="flex-1 rounded border border-border/70 bg-card p-2">
+        <div className="flex-1 rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-[#00F2B3]">89</p>
           <p className="text-[8px] text-muted-foreground">Active Objects</p>
         </div>
@@ -1142,7 +1142,7 @@ function MockUnusedObjects() {
       {objects.map((o) => (
         <div
           key={o.name}
-          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2"
+          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2"
         >
           <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
             {o.icon}
@@ -1170,15 +1170,15 @@ function MockRemediationProgress() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded border border-border/70 bg-card p-2">
+        <div className="rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-[#00F2B3]">21</p>
           <p className="text-[8px] text-muted-foreground">Fixed</p>
         </div>
-        <div className="rounded border border-border/70 bg-card p-2">
+        <div className="rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-[#F29400]">8</p>
           <p className="text-[8px] text-muted-foreground">In Progress</p>
         </div>
-        <div className="rounded border border-border/70 bg-card p-2">
+        <div className="rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-muted-foreground">3</p>
           <p className="text-[8px] text-muted-foreground">Remaining</p>
         </div>
@@ -1229,7 +1229,7 @@ function MockRemediationRoadmap() {
   return (
     <div className="space-y-2">
       {phases.map((p) => (
-        <div key={p.phase} className="rounded-xl border border-border/70 bg-card p-3">
+        <div key={p.phase} className="rounded-xl border border-border/50 bg-card p-3">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="h-3 w-3 text-muted-foreground" />
             <span className="text-[10px] font-semibold text-foreground">{p.phase}</span>
@@ -1257,7 +1257,7 @@ function MockRemediationRoadmap() {
 function MockPlaybooks() {
   return (
     <div className="space-y-2">
-      <div className="rounded-xl border border-border/70 bg-card p-3">
+      <div className="rounded-xl border border-border/50 bg-card p-3">
         <div className="flex items-center gap-2 mb-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#EA0022]" />
           <p className="text-[10px] font-semibold text-foreground">Disable WAN Admin Services</p>
@@ -1281,7 +1281,7 @@ function MockPlaybooks() {
           ))}
         </div>
       </div>
-      <div className="rounded-xl border border-border/70 bg-card p-3">
+      <div className="rounded-xl border border-border/50 bg-card p-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#F29400]" />
           <p className="text-[10px] font-semibold text-foreground">Enable IPS on WAN Rules</p>
@@ -1291,7 +1291,7 @@ function MockPlaybooks() {
         </div>
         <p className="text-[9px] text-muted-foreground mt-1 pl-5">4 steps · ~10 min per rule</p>
       </div>
-      <div className="rounded-xl border border-border/70 bg-card p-3">
+      <div className="rounded-xl border border-border/50 bg-card p-3">
         <div className="flex items-center gap-2">
           <ClipboardList className="h-3.5 w-3.5 text-[#F8E300]" />
           <p className="text-[10px] font-semibold text-foreground">Enforce TLS 1.2+ on VPNs</p>
@@ -1380,15 +1380,15 @@ function MockAttackSurface() {
         ))}
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded border border-border/70 bg-card p-2">
+        <div className="rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-[#EA0022]">5</p>
           <p className="text-[8px] text-muted-foreground">Exposed Services</p>
         </div>
-        <div className="rounded border border-border/70 bg-card p-2">
+        <div className="rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-[#F29400]">2</p>
           <p className="text-[8px] text-muted-foreground">High Risk</p>
         </div>
-        <div className="rounded border border-border/70 bg-card p-2">
+        <div className="rounded border border-border/50 bg-card p-2">
           <p className="text-lg font-bold text-foreground">3</p>
           <p className="text-[8px] text-muted-foreground">Zones</p>
         </div>
@@ -1408,12 +1408,12 @@ function MockConfigCompare() {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3 mb-2">
-        <div className="flex-1 rounded border border-border/70 bg-card p-2 text-center">
+        <div className="flex-1 rounded border border-border/50 bg-card p-2 text-center">
           <p className="text-[9px] text-muted-foreground">Before</p>
           <p className="text-sm font-bold text-[#F29400]">Score 54</p>
         </div>
         <ArrowLeftRight className="h-4 w-4 text-muted-foreground shrink-0" />
-        <div className="flex-1 rounded border border-border/70 bg-card p-2 text-center">
+        <div className="flex-1 rounded border border-border/50 bg-card p-2 text-center">
           <p className="text-[9px] text-muted-foreground">After</p>
           <p className="text-sm font-bold text-[#00F2B3]">Score 78</p>
         </div>
@@ -1474,7 +1474,7 @@ function MockScheduledReports() {
       {schedules.map((s) => (
         <div
           key={s.customer}
-          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5"
+          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
         >
           <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
             <Calendar className="h-3.5 w-3.5 text-[#2006F7]" />
@@ -1514,7 +1514,7 @@ function MockWebhookPanel() {
   return (
     <div className="space-y-2">
       {hooks.map((h) => (
-        <div key={h.name} className="rounded-xl border border-border/70 bg-card p-3">
+        <div key={h.name} className="rounded-xl border border-border/50 bg-card p-3">
           <div className="flex items-center gap-2 mb-1.5">
             <Webhook className="h-3.5 w-3.5 text-[#6B5BFF]" />
             <p className="text-[10px] font-semibold text-foreground flex-1">{h.name}</p>
@@ -1869,7 +1869,7 @@ export function SetupWizard({
                 </div>
 
                 {/* Mock agent card */}
-                <div className="rounded-xl border border-border/70 bg-card p-3 space-y-2">
+                <div className="rounded-xl border border-border/50 bg-card p-3 space-y-2">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                     What you'll see in the dashboard
                   </p>
@@ -2030,7 +2030,7 @@ export function SetupWizard({
                       ].map((f) => (
                         <div
                           key={f.title}
-                          className="flex items-center gap-2 rounded border border-border/70 bg-card p-2"
+                          className="flex items-center gap-2 rounded border border-border/50 bg-card p-2"
                         >
                           <span
                             className="px-1.5 py-0.5 rounded text-[8px] font-bold"
@@ -2307,11 +2307,11 @@ export function SetupWizard({
                   >
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-2 text-center">
-                        <div className="rounded border border-border/70 bg-card p-2">
+                        <div className="rounded border border-border/50 bg-card p-2">
                           <p className="text-lg font-bold text-[#00F2B3]">87%</p>
                           <p className="text-[8px] text-muted-foreground">Consistency Score</p>
                         </div>
-                        <div className="rounded border border-border/70 bg-card p-2">
+                        <div className="rounded border border-border/50 bg-card p-2">
                           <p className="text-lg font-bold text-[#F29400]">4</p>
                           <p className="text-[8px] text-muted-foreground">Inconsistencies</p>
                         </div>
@@ -2334,7 +2334,7 @@ export function SetupWizard({
                       ].map((r) => (
                         <div
                           key={r.rule}
-                          className="flex items-center gap-2 rounded-xl border border-border/70 bg-card p-2.5 text-[9px]"
+                          className="flex items-center gap-2 rounded-xl border border-border/50 bg-card p-2.5 text-[9px]"
                         >
                           <span
                             className={`h-2 w-2 rounded-full shrink-0 ${r.status === "match" ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`}
@@ -2584,7 +2584,7 @@ export function SetupWizard({
                       ].map((f) => (
                         <div
                           key={f.format}
-                          className="flex items-center gap-3 rounded-xl border border-border/70 bg-card p-2.5"
+                          className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-2.5"
                         >
                           <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
                             {f.icon}
@@ -2893,7 +2893,7 @@ export function SetupWizard({
                           </p>
                         </div>
                       </div>
-                      <div className="rounded-xl border border-border/70 bg-card p-3">
+                      <div className="rounded-xl border border-border/50 bg-card p-3">
                         <p className="text-[10px] font-semibold text-foreground mb-2">
                           Registered Passkeys
                         </p>
@@ -3106,7 +3106,7 @@ export function SetupWizard({
                     your first security assessment.
                   </p>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-card p-4 text-left space-y-2">
+                <div className="rounded-xl border border-border/50 bg-card p-4 text-left space-y-2">
                   <p className="text-xs font-semibold text-foreground">What's next?</p>
                   <ul className="space-y-1.5">
                     <li className="flex items-start gap-2 text-[11px] text-muted-foreground">

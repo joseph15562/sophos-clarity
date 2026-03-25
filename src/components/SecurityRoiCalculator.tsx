@@ -45,8 +45,10 @@ export function SecurityRoiCalculator({ analysisResults }: Props) {
   }, [analysisResults, hourlyRate]);
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">Security Investment ROI</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        Security Investment ROI
+      </h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -101,7 +103,11 @@ export function SecurityRoiCalculator({ analysisResults }: Props) {
       </div>
       <div className="mt-4" style={{ height: 160 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
+          >
             <XAxis type="number" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
             <YAxis type="category" dataKey="name" width={100} />
             <Bar dataKey="value" radius={4}>

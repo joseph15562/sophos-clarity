@@ -62,14 +62,14 @@ export function MdrStatus({ analysisResults, files }: MdrStatusProps) {
     });
   }, [analysisResults, files]);
 
-  const hasAnyMdrData = perFileData.some(
-    (d) => d.hasMdrConfig || d.mdrFeedCount > 0
-  );
+  const hasAnyMdrData = perFileData.some((d) => d.hasMdrConfig || d.mdrFeedCount > 0);
 
   if (!hasAnyMdrData) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">MDR Integration</h3>
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+          MDR Integration
+        </h3>
         <p className="mt-3 text-sm text-muted-foreground">
           MDR status not available. Check firewall configuration.
         </p>
@@ -81,8 +81,10 @@ export function MdrStatus({ analysisResults, files }: MdrStatusProps) {
   const primary = perFileData[0];
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
-      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">MDR Integration</h3>
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
+      <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
+        MDR Integration
+      </h3>
 
       {singleFile ? (
         <div className="mt-4 space-y-4">
@@ -124,9 +126,7 @@ export function MdrStatus({ analysisResults, files }: MdrStatusProps) {
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span>Enabled: {d.enabled ? "Yes" : "No"}</span>
                 <span>Connected: {d.connected ? "Yes" : "No"}</span>
-                {d.mdrFeedCount > 0 && (
-                  <span>{d.mdrFeedCount} indicators</span>
-                )}
+                {d.mdrFeedCount > 0 && <span>{d.mdrFeedCount} indicators</span>}
               </div>
             </div>
           ))}

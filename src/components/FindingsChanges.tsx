@@ -29,7 +29,7 @@ interface AggregatedDiff {
 }
 
 async function aggregateDiffs(
-  analysisResults: Record<string, AnalysisResult>
+  analysisResults: Record<string, AnalysisResult>,
 ): Promise<AggregatedDiff> {
   const newFindings: string[] = [];
   const fixedFindings: string[] = [];
@@ -48,8 +48,7 @@ async function aggregateDiffs(
     regressed.push(...diff.regressed);
   }
 
-  const hasChanges =
-    newFindings.length > 0 || fixedFindings.length > 0 || regressed.length > 0;
+  const hasChanges = newFindings.length > 0 || fixedFindings.length > 0 || regressed.length > 0;
 
   return { newFindings, fixedFindings, regressed, hasChanges, hasPrevious };
 }
@@ -91,7 +90,10 @@ function ExpandableList({
                 {sev && (
                   <span
                     className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
-                    style={{ backgroundColor: `${SEV_COLORS[sev] ?? "#999"}30`, color: SEV_COLORS[sev] ?? "#666" }}
+                    style={{
+                      backgroundColor: `${SEV_COLORS[sev] ?? "#999"}30`,
+                      color: SEV_COLORS[sev] ?? "#666",
+                    }}
                   >
                     {sev}
                   </span>
@@ -106,13 +108,17 @@ function ExpandableList({
   );
 }
 
-function buildTitleToSeverity(analysisResults: Record<string, AnalysisResult>): Map<string, string> {
+function buildTitleToSeverity(
+  analysisResults: Record<string, AnalysisResult>,
+): Map<string, string> {
   const map = new Map<string, string>();
   for (const ar of Object.values(analysisResults)) {
     for (const f of ar.findings) {
       const existing = map.get(f.title);
       const idxNew = SEV_ORDER.indexOf(f.severity as (typeof SEV_ORDER)[number]);
-      const idxExisting = existing ? SEV_ORDER.indexOf(existing as (typeof SEV_ORDER)[number]) : 999;
+      const idxExisting = existing
+        ? SEV_ORDER.indexOf(existing as (typeof SEV_ORDER)[number])
+        : 999;
       if (!existing || (idxNew >= 0 && idxNew < idxExisting)) {
         map.set(f.title, f.severity);
       }
@@ -131,7 +137,9 @@ export function FindingsChanges({ analysisResults }: Props) {
     aggregateDiffs(analysisResults).then((d) => {
       if (!cancelled) setDiff(d);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [analysisResults]);
 
   const handleExportCsv = useCallback(() => {
@@ -146,7 +154,9 @@ export function FindingsChanges({ analysisResults }: Props) {
     for (const t of diff.regressed) {
       rows.push(["Regressed", t, titleToSeverity.get(t) ?? ""]);
     }
-    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = rows
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -159,7 +169,7 @@ export function FindingsChanges({ analysisResults }: Props) {
   if (!diff || !diff.hasPrevious || !diff.hasChanges) return null;
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Changes since last assessment

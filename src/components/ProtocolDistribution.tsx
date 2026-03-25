@@ -30,10 +30,7 @@ const COLORS = [
 
 function isFirewallRulesSection(key: string): boolean {
   const k = key.toLowerCase();
-  return (
-    /firewall\s*rules?/.test(k) ||
-    (k.includes("firewall") && k.includes("rule"))
-  );
+  return /firewall\s*rules?/.test(k) || (k.includes("firewall") && k.includes("rule"));
 }
 
 function getServiceColumn(row: Record<string, string>): string {
@@ -106,7 +103,7 @@ export function ProtocolDistribution({ files }: Props) {
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+      <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-4">
           Protocol Distribution
         </h3>
@@ -116,7 +113,7 @@ export function ProtocolDistribution({ files }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
+    <div className="rounded-xl border border-border/50 bg-card p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Protocol Distribution

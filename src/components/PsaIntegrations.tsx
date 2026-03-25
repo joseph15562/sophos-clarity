@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const CARD_CLASS = "rounded-xl border border-border/70 bg-card p-5 shadow-card";
+const CARD_CLASS =
+  "rounded-xl border border-border/50 bg-card p-5 shadow-card transition-[box-shadow,border-color] duration-200 hover:shadow-elevated hover:border-border/70";
 const STORAGE_KEY = "firecomply-psa-config";
 
 type PsaType = "connectwise" | "autotask" | "jira" | "servicenow";
@@ -69,24 +70,24 @@ export function PsaIntegrations() {
     saveConfig(config);
   }, [config]);
 
-  const updatePsa = useCallback(
-    (key: PsaType, patch: Partial<PsaConfig>) => {
-      setConfig((c) => ({
-        ...c,
-        [key]: { ...c[key], ...patch },
-      }));
-    },
-    []
-  );
+  const updatePsa = useCallback((key: PsaType, patch: Partial<PsaConfig>) => {
+    setConfig((c) => ({
+      ...c,
+      [key]: { ...c[key], ...patch },
+    }));
+  }, []);
 
-  const handleTestConnection = useCallback((key: PsaType) => {
-    const cfg = config[key];
-    if (!cfg.apiUrl?.trim() || !cfg.apiKey?.trim()) {
-      updatePsa(key, { connected: false });
-      return;
-    }
-    updatePsa(key, { connected: true });
-  }, [config, updatePsa]);
+  const handleTestConnection = useCallback(
+    (key: PsaType) => {
+      const cfg = config[key];
+      if (!cfg.apiUrl?.trim() || !cfg.apiKey?.trim()) {
+        updatePsa(key, { connected: false });
+        return;
+      }
+      updatePsa(key, { connected: true });
+    },
+    [config, updatePsa],
+  );
 
   return (
     <div className={CARD_CLASS}>
@@ -101,7 +102,8 @@ export function PsaIntegrations() {
       <div className="mt-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 flex items-start gap-2">
         <Info className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
         <p className="text-xs text-amber-800 dark:text-amber-200">
-          Note: PSA integrations require backend proxy for OAuth. Configure API credentials below for future backend wiring.
+          Note: PSA integrations require backend proxy for OAuth. Configure API credentials below
+          for future backend wiring.
         </p>
       </div>
 
