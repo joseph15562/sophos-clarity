@@ -1,280 +1,364 @@
 /**
- * Deterministic config analysis — ported from the FireComply web app.
- *
- * This is a simplified version that covers the core analysis checks.
- * The full analysis logic (1000+ lines) should be copied from
- * src/lib/analyse-config.ts in the web app with import paths adjusted.
- *
- * For now, this provides the essential structure and key checks
- * so the agent can produce meaningful scores and findings.
+ * Deterministic pre-AI analysis of extracted Sophos firewall config.
+ * Synced from the web app (src/lib/analyse-config.ts).
  */
 
-import type { ExtractedSections, AnalysisResult, Finding, ConfigStats, InspectionPosture } from "./types";
+import type { ExtractedSections } from "./types";
+import type {
+  ConfigStats,
+  InspectionPosture,
+  Finding,
+  AnalysisResult,
+  AnalyseOptions,
+} from "./types";
 
-let findingCounter = 0;
-function nextId(): string {
-  return `f-${++findingCounter}`;
-}
+import {
+  isWanDest,
+  isWebService,
+  hasWebFilter,
+  isAllowAllWebPolicy,
+  getWebFilterPolicyDisplayName,
+  isLoggingOff,
+  isRuleDisabled,
+  isAnyService,
+  isBroadSource,
+  isBroadDest,
+  ruleName,
+  hasAppControl,
+  hasIps,
+  ruleSignature,
+} from "./rule-predicates";
+import {
+  findFirewallRulesTable,
+  countRows,
+  countInterfaceRows,
+  extractHostname,
+  extractManagementIp,
+} from "./section-meta";
+import { parseSslTlsRules, findUncoveredZones, findUncoveredNetworks } from "./ssl-tls-inspection";
+import {
+  extractAtpStatus,
+  analyseATP,
+  analyseMdrFeed,
+  analyseNdrEssentials,
+  analyseSecurityHeartbeat,
+  analyseSyncAppControl,
+} from "./domains/atp-services";
+import { analyseNatRules as analyseNatRulesDomain } from "./domains/nat";
+import { analyseLocalServiceAcl, analyseWebFilterPolicies } from "./domains/web-filter";
+import { analyseIpsPolicies, analyseVirusScanning } from "./domains/ips-av";
+import {
+  analyseAdminSettings,
+  analyseBackupRestore,
+  analyseNotificationSettings,
+  analysePatternDownload,
+  analyseTimeSettings,
+  analyseAuthServers,
+  analyseHotfix,
+  analyseOtpSettings,
+  analyseAdminProfiles,
+} from "./domains/admin-hardening";
+import {
+  analyseVpnSecurity,
+  analyseDoSProtection,
+  analyseSyslogServers,
+  analyseWirelessSecurity,
+  analyseSnmpCommunity,
+  analyseDnsSecurity,
+  analyseRedSecurity,
+} from "./domains/vpn-network";
+import {
+  analyseRuleOrdering,
+  analyseUserGroupRules,
+  analyseWafPolicies,
+  analyseAppFilterPolicies,
+} from "./domains/rules-waf";
+import {
+  analyseCertificates,
+  analyseHotspots,
+  analyseInterfaceSecurity,
+  analyseZtna,
+  analyseFirmwareVersion,
+  analyseLicenceUsage,
+} from "./domains/infra";
+import { analyseHA } from "./domains/ha";
 
-function getRows(sections: ExtractedSections, name: string): Record<string, string>[] {
-  return sections[name]?.tables?.[0]?.rows ?? [];
-}
+export { analyseThreatStatus } from "./threat-status-findings";
 
-function getHeaders(sections: ExtractedSections, name: string): string[] {
-  return sections[name]?.tables?.[0]?.headers ?? [];
-}
+export function analyseConfig(
+  sections: ExtractedSections,
+  options?: AnalyseOptions,
+): AnalysisResult {
+  const findings: Finding[] = [];
+  let fid = 0;
 
-function getDetails(sections: ExtractedSections, name: string): Array<{ title: string; fields: Record<string, string> }> {
-  return sections[name]?.details ?? [];
-}
+  const sectionNames = Object.keys(sections);
+  const totalSections = sectionNames.length;
+  const rulesTable = findFirewallRulesTable(sections);
+  const totalRules = rulesTable ? rulesTable.rows.length : 0;
+  const totalHosts = countRows(sections, /hosts?|networks?/i, /wireless|groups?/i);
+  const totalNatRules = countRows(sections, /nat/i);
+  const interfaces = countInterfaceRows(sections);
 
-function isAnyService(row: Record<string, string>): boolean {
-  const svc = (row["Service"] ?? row["Services"] ?? "").toLowerCase().trim();
-  return svc === "any";
-}
-
-function isBroadSource(row: Record<string, string>): boolean {
-  const raw = row["Source Networks"] ?? row["Source"];
-  if (raw === undefined) return false;
-  return raw.toLowerCase().trim() === "any";
-}
-
-function isBroadDest(row: Record<string, string>): boolean {
-  const raw = row["Destination Networks"] ?? row["Destination"];
-  if (raw === undefined) return false;
-  return raw.toLowerCase().trim() === "any";
-}
-
-function ruleName(row: Record<string, string>): string {
-  return row["Rule Name"] ?? row["Name"] ?? row["Rule"] ?? "Unnamed";
-}
-
-function isRuleDisabled(row: Record<string, string>): boolean {
-  const status = (row["Status"] ?? "").toLowerCase().trim();
-  return status.includes("off") || status.includes("disable") || status.includes("inactive") || status === "no" || status === "false" || status === "0";
-}
-
-function isLoggingOff(row: Record<string, string>): boolean {
-  const log = (row["Log"] ?? row["Log Traffic"] ?? "").toLowerCase().trim();
-  return log === "disabled" || log === "off" || log === "disable" || log === "no";
-}
-
-function hasAppControl(row: Record<string, string>): boolean {
-  const ac = (row["Application Control"] ?? row["App Control"] ?? row["Application Filter"] ?? "").toLowerCase().trim();
-  return ac !== "" && ac !== "none" && ac !== "not specified" && ac !== "-" && ac !== "n/a";
-}
-
-function hasIps(row: Record<string, string>): boolean {
-  const ips = (row["IPS"] ?? row["IPS Policy"] ?? row["Intrusion Prevention"] ?? "").toLowerCase().trim();
-  return ips !== "" && ips !== "none" && ips !== "not specified" && ips !== "-" && !ips.includes("disable") && ips !== "off" && ips !== "n/a";
-}
-
-function hasWebFilter(row: Record<string, string>): boolean {
-  const wf = (row["Web Filter"] ?? "").toLowerCase().trim();
-  return wf !== "" && wf !== "none" && wf !== "not specified" && wf !== "-" && wf !== "n/a";
-}
-
-function isWebService(row: Record<string, string>): boolean {
-  const svc = (row["Service"] ?? "").toLowerCase().trim();
-  return /http|https|any|web/i.test(svc);
-}
-
-function ruleSignature(row: Record<string, string>): string {
-  const src = (row["Source Networks"] ?? row["Source"] ?? "").toLowerCase().trim();
-  const dst = (row["Destination Networks"] ?? row["Destination"] ?? "").toLowerCase().trim();
-  const svc = (row["Service"] ?? "").toLowerCase().trim();
-  const srcZ = (row["Source Zone"] ?? row["Source Zones"] ?? "").toLowerCase().trim();
-  const dstZ = (row["Destination Zone"] ?? row["Destination Zones"] ?? "").toLowerCase().trim();
-  return `${srcZ}|${src}|${dstZ}|${dst}|${svc}`;
-}
-
-interface SslTlsRule {
-  name: string;
-  action: string;
-  enabled: boolean;
-  sourceZones: string[];
-  destZones: string[];
-}
-
-function splitZones(raw: string): string[] {
-  return raw.split(/[,;]/).map((z) => z.trim().toLowerCase()).filter(Boolean);
-}
-
-function parseSslRules(sections: ExtractedSections): SslTlsRule[] {
-  const sslRows = getRows(sections, "SSL/TLS Inspection Rules");
-  return sslRows.map((row) => {
-    const action = (row["Action"] ?? row["Decrypt Action"] ?? "").toLowerCase();
-    const status = (row["Status"] ?? "").toLowerCase();
-    const srcZ = row["Source Zone"] ?? row["Source Zones"] ?? "";
-    const dstZ = row["Destination Zone"] ?? row["Destination Zones"] ?? "";
-    return {
-      name: row["Name"] ?? row["Rule Name"] ?? "",
-      action: action.includes("decrypt") ? "decrypt" : action.includes("exclude") ? "exclude" : action,
-      enabled: !status.includes("off") && !status.includes("disable") && status !== "0",
-      sourceZones: splitZones(srcZ),
-      destZones: splitZones(dstZ),
-    };
-  });
-}
-
-function findUncoveredZones(
-  wanRules: Record<string, string>[],
-  sslRules: SslTlsRule[],
-): string[] {
-  const decryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled);
-  if (decryptRules.length === 0) return [];
-
-  const fwSourceZones = new Set<string>();
-  for (const row of wanRules) {
-    if (isRuleDisabled(row)) continue;
-    const sz = (row["Source Zone"] ?? row["Source Zones"] ?? "").toLowerCase().trim();
-    if (sz && sz !== "any") {
-      sz.split(/[,;]/).forEach((z) => {
-        const trimmed = z.trim();
-        if (trimmed) fwSourceZones.add(trimmed);
-      });
+  let populatedSections = 0;
+  let emptySectionCount = 0;
+  for (const data of Object.values(sections)) {
+    if (data.tables.length > 0 || data.details.length > 0 || data.text) {
+      populatedSections++;
+    } else {
+      emptySectionCount++;
     }
   }
-  if (fwSourceZones.size === 0) return [];
-
-  const uncovered: string[] = [];
-  for (const zone of Array.from(fwSourceZones)) {
-    const isCovered = decryptRules.some((r) => {
-      const srcMatch = r.sourceZones.includes("any") || r.sourceZones.includes(zone);
-      const dstMatch = r.destZones.includes("any") || r.destZones.some((d) => d.includes("wan"));
-      return srcMatch && dstMatch;
-    });
-    if (!isCovered) uncovered.push(zone);
-  }
-  return uncovered;
-}
-
-export function analyseConfig(sections: ExtractedSections): AnalysisResult {
-  findingCounter = 0;
-  const findings: Finding[] = [];
-  const sectionNames = Object.keys(sections);
-
-  const fwRules = getRows(sections, "Firewall Rules");
-  const natRules = getRows(sections, "NAT Rules");
-  const hosts = getRows(sections, "Networks");
-  const zones = getRows(sections, "Zones");
-  const interfaces = getRows(sections, "Interfaces & Ports");
 
   const stats: ConfigStats = {
-    totalRules: fwRules.length,
-    totalSections: sectionNames.length,
-    totalHosts: hosts.length,
-    totalNatRules: natRules.length,
-    interfaces: interfaces.length,
-    populatedSections: sectionNames.filter((n) => {
-      const s = sections[n];
-      return (s.tables[0]?.rows.length ?? 0) > 0 || s.text.length > 0 || s.details.length > 0;
-    }).length,
-    emptySections: 0,
+    totalRules,
+    totalSections,
+    totalHosts,
+    totalNatRules,
+    interfaces,
+    populatedSections,
+    emptySections: emptySectionCount,
     sectionNames,
   };
-  stats.emptySections = stats.totalSections - stats.populatedSections;
 
-  // Identify WAN-bound rules
-  const wanZones = new Set(["WAN", "wan"]);
-  const wanRules = fwRules.filter((r) => {
-    const dest = r["Destination Zone"] ?? "";
-    return wanZones.has(dest) || dest.toLowerCase().includes("wan");
-  });
+  const emptyPosture: InspectionPosture = {
+    totalWanRules: 0,
+    enabledWanRules: 0,
+    disabledWanRules: 0,
+    webFilterableRules: 0,
+    withWebFilter: 0,
+    withoutWebFilter: 0,
+    withAppControl: 0,
+    withIps: 0,
+    withSslInspection: 0,
+    sslDecryptRules: 0,
+    sslExclusionRules: 0,
+    sslRules: [],
+    sslUncoveredZones: [],
+    sslUncoveredNetworks: [],
+    allWanSourceZones: [],
+    allWanSourceNetworks: [],
+    wanRuleNames: [],
+    wanWebServiceRuleNames: [],
+    wanMissingWebFilterRuleNames: [],
+    totalDisabledRules: 0,
+    dpiEngineEnabled: false,
+  };
 
-  const enabledWan = wanRules.filter((r) => !isRuleDisabled(r));
-  const disabledWanRules = wanRules.filter((r) => isRuleDisabled(r));
-  const disabledRules = fwRules.filter((r) => isRuleDisabled(r));
+  if (!rulesTable || totalRules === 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: "info",
+      title: "No firewall rules found",
+      detail: "The parser did not extract any firewall rules from this configuration export.",
+      section: "Firewall Rules",
+      confidence: "medium",
+      evidence: "No table matching 'firewall rules' section found in parsed HTML",
+    });
+    return {
+      stats,
+      findings,
+      inspectionPosture: emptyPosture,
+      ruleColumns: [],
+      hostname: extractHostname(sections),
+      managementIp: extractManagementIp(sections),
+      atpStatus: extractAtpStatus(sections),
+    };
+  }
 
-  const webFilterable = enabledWan.filter((r) => isWebService(r));
-  const withWebFilter = webFilterable.filter((r) => hasWebFilter(r));
-  const withIps = enabledWan.filter((r) => hasIps(r));
-  const withAppControl = enabledWan.filter((r) => hasAppControl(r));
+  let totalDisabledRules = 0;
+  for (const row of rulesTable.rows) {
+    if (isRuleDisabled(row)) totalDisabledRules++;
+  }
 
-  // SSL/TLS inspection
-  const sslRules = parseSslRules(sections);
-  const sslDecryptCount = sslRules.filter((r) => r.action === "decrypt" && r.enabled).length;
-  const sslExclusionCount = sslRules.filter((r) => r.action === "exclude").length;
-  const dpiEngineEnabled = sslDecryptCount > 0;
-  const sslUncoveredZones = findUncoveredZones(wanRules, sslRules);
+  const wanRules: Array<{ name: string; row: Record<string, string>; enabled: boolean }> = [];
+  for (const row of rulesTable.rows) {
+    if (isWanDest(row)) {
+      wanRules.push({ name: ruleName(row), row, enabled: !isRuleDisabled(row) });
+    }
+  }
+  const enabledWanRules = wanRules.filter((r) => r.enabled);
+  const disabledWanRules = wanRules.filter((r) => !r.enabled);
+
+  const wfExempt = new Set(
+    (options?.webFilterExemptRuleNames ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
+  );
+
+  let webFilterableRules = 0,
+    withWebFilter = 0,
+    withoutWebFilter = 0;
+  let withAppControl = 0,
+    withIps = 0,
+    withSslInspection = 0;
+  for (const { name, row, enabled } of wanRules) {
+    if (!enabled) continue;
+    if (isWebService(row)) {
+      if (!wfExempt.has(name.toLowerCase().trim())) {
+        webFilterableRules++;
+        if (hasWebFilter(row)) withWebFilter++;
+        else withoutWebFilter++;
+      }
+    }
+    if (hasAppControl(row)) withAppControl++;
+    if (hasIps(row)) withIps++;
+  }
+
+  const sslRules = parseSslTlsRules(sections);
+  withSslInspection = sslRules.length;
+  const sslDecryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled).length;
+  const sslExclusionRules = sslRules.filter((r) => r.action === "exclude").length;
+  const dpiEngineEnabled = sslDecryptRules > 0;
+  const { uncovered: sslUncoveredZones, allWanSourceZones } = findUncoveredZones(
+    wanRules,
+    sslRules,
+    options?.dpiExemptZones,
+  );
+  const { uncoveredNetworks: sslUncoveredNetworks, allWanSourceNetworks } = findUncoveredNetworks(
+    wanRules,
+    sslRules,
+    options?.dpiExemptNetworks,
+  );
+
+  const wfMode = options?.webFilterComplianceMode ?? "strict";
+
+  const wanMissingWebFilterRuleNames = wanRules
+    .filter((w) => w.enabled && isWebService(w.row) && !hasWebFilter(w.row))
+    .map((w) => w.name);
 
   const inspectionPosture: InspectionPosture = {
     totalWanRules: wanRules.length,
-    enabledWanRules: enabledWan.length,
+    enabledWanRules: enabledWanRules.length,
     disabledWanRules: disabledWanRules.length,
-    webFilterableRules: webFilterable.length,
-    withWebFilter: withWebFilter.length,
-    withoutWebFilter: webFilterable.length - withWebFilter.length,
-    withAppControl: withAppControl.length,
-    withIps: withIps.length,
-    withSslInspection: sslRules.length,
-    sslDecryptRules: sslDecryptCount,
-    sslExclusionRules: sslExclusionCount,
-    sslRules: [],
+    webFilterableRules,
+    withWebFilter,
+    withoutWebFilter,
+    withAppControl,
+    withIps,
+    withSslInspection,
+    sslDecryptRules,
+    sslExclusionRules,
+    sslRules,
     sslUncoveredZones,
-    wanRuleNames: enabledWan.map((r) => r["Rule Name"] ?? ""),
-    totalDisabledRules: disabledRules.length,
+    sslUncoveredNetworks,
+    allWanSourceZones,
+    allWanSourceNetworks,
+    wanRuleNames: wanRules.map((w) => w.name),
+    wanWebServiceRuleNames: wanRules
+      .filter((w) => w.enabled && isWebService(w.row))
+      .map((w) => w.name),
+    wanMissingWebFilterRuleNames,
+    totalDisabledRules,
     dpiEngineEnabled,
   };
 
-  // ── Disabled WAN rules ──
   if (disabledWanRules.length > 0) {
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: "medium",
       title: `${disabledWanRules.length} WAN rule${disabledWanRules.length > 1 ? "s" : ""} disabled`,
-      detail: `Disabled WAN-facing rules: ${disabledWanRules.map((r) => ruleName(r)).slice(0, 6).join(", ")}${disabledWanRules.length > 6 ? ` (+${disabledWanRules.length - 6} more)` : ""}. These rules provide no protection — verify if they should be re-enabled or removed.`,
+      detail: `Disabled WAN-facing rules: ${disabledWanRules
+        .map((r) => r.name)
+        .slice(0, 6)
+        .join(
+          ", ",
+        )}${disabledWanRules.length > 6 ? ` (+${disabledWanRules.length - 6} more)` : ""}. These rules provide no protection — verify if they should be re-enabled or removed.`,
       section: "Firewall Rules",
+      remediation:
+        "Go to Rules and policies > Firewall rules. Review disabled WAN rules — if no longer needed, delete them. If they should be active, re-enable them and configure web filtering, IPS, and app control.",
       confidence: "high",
+      evidence: `Rules with Status=Off/Disabled and Destination Zone=WAN: ${disabledWanRules
+        .map((r) => r.name)
+        .slice(0, 4)
+        .join(", ")}`,
     });
   }
 
-  // ── Disabled rules estate-wide ──
-  if (disabledRules.length > 0 && disabledRules.length !== disabledWanRules.length) {
-    const nonWanDisabled = disabledRules.length - disabledWanRules.length;
+  if (totalDisabledRules > 0 && totalDisabledRules !== disabledWanRules.length) {
+    const nonWanDisabled = totalDisabledRules - disabledWanRules.length;
     if (nonWanDisabled > 0) {
       findings.push({
-        id: nextId(),
+        id: `f${++fid}`,
         severity: "info",
-        title: `${disabledRules.length} total rule${disabledRules.length > 1 ? "s" : ""} disabled across all zones`,
-        detail: `${disabledRules.length} firewall rules are in disabled state (${disabledWanRules.length} WAN, ${nonWanDisabled} other). Disabled rules add no security value.`,
+        title: `${totalDisabledRules} total rule${totalDisabledRules > 1 ? "s" : ""} disabled across all zones`,
+        detail: `${totalDisabledRules} firewall rules are in disabled state (${disabledWanRules.length} WAN, ${nonWanDisabled} other). Disabled rules add no security value and may indicate abandoned policy or incomplete changes.`,
         section: "Firewall Rules",
         confidence: "high",
+        evidence: `${totalDisabledRules} rules with Status=Off/Disabled in firewall rules table`,
       });
     }
   }
 
-  // ── WAN rules missing web filtering ──
-  if (inspectionPosture.withoutWebFilter > 0) {
-    const noFilterNames = webFilterable.filter((r) => !hasWebFilter(r)).map((r) => ruleName(r));
+  const wanNoFilter: string[] = [];
+  for (const { name, row, enabled } of wanRules) {
+    if (!enabled || !isWebService(row) || hasWebFilter(row)) continue;
+    if (wfExempt.has(name.toLowerCase().trim())) continue;
+    wanNoFilter.push(name);
+  }
+  if (wanNoFilter.length > 0) {
+    const exemptNote =
+      (options?.webFilterExemptRuleNames ?? []).filter(Boolean).length > 0
+        ? ` MSP excluded ${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).length} rule name(s) from this check: ${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).slice(0, 6).join(", ")}${(options?.webFilterExemptRuleNames ?? []).filter(Boolean).length > 6 ? "…" : ""}.`
+        : "";
+    const baseDetail = `Active rules with Destination Zone WAN and Service HTTP/HTTPS/ANY have no Web Filter applied: ${wanNoFilter.slice(0, 8).join(", ")}${wanNoFilter.length > 8 ? ` (+${wanNoFilter.length - 8} more)` : ""}.`;
     findings.push({
-      id: nextId(),
-      severity: "critical",
-      title: `${inspectionPosture.withoutWebFilter} enabled WAN rule${inspectionPosture.withoutWebFilter > 1 ? "s" : ""} missing web filtering`,
-      detail: `Active rules with Destination Zone WAN and HTTP/HTTPS/ANY have no Web Filter applied: ${noFilterNames.slice(0, 8).join(", ")}${noFilterNames.length > 8 ? ` (+${noFilterNames.length - 8} more)` : ""}.`,
+      id: `f${++fid}`,
+      severity: wfMode === "informational" ? "info" : "critical",
+      title: `${wanNoFilter.length} enabled WAN rule${wanNoFilter.length > 1 ? "s" : ""} missing web filtering`,
+      detail:
+        wfMode === "informational"
+          ? `${baseDetail} Web filter compliance mode is set to Informational — this is shown for visibility; it is not framed as a default regulatory failure. Review scope with the customer.${exemptNote}`
+          : `${baseDetail} This is a KCSIE/DfE compliance gap.${exemptNote}`,
       section: "Firewall Rules",
+      remediation:
+        "Go to Rules and policies > Firewall rules. Edit each affected rule → expand Web filtering → set a Web policy. Manage policies under Web > Policies. Ensure the policy blocks inappropriate content for your environment.",
       confidence: "high",
+      evidence: `Rules ${wanNoFilter.slice(0, 3).join(", ")} have Web Filter=none/empty with Service=HTTP/HTTPS/ANY`,
     });
   }
 
-  // ── Logging disabled ──
-  const loggingOff = fwRules.filter((r) => isLoggingOff(r));
+  const wanAllowAllWeb: string[] = [];
+  for (const { name, row, enabled } of wanRules) {
+    if (!enabled || !isWebService(row) || !hasWebFilter(row)) continue;
+    if (isAllowAllWebPolicy(getWebFilterPolicyDisplayName(row))) wanAllowAllWeb.push(name);
+  }
+  if (wanAllowAllWeb.length > 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: wfMode === "informational" ? "info" : "medium",
+      title: `${wanAllowAllWeb.length} WAN rule${wanAllowAllWeb.length > 1 ? "s" : ""} use an "allow all" style web policy`,
+      detail: `These enabled WAN rules have a web filter policy attached, but the policy name indicates all categories are allowed — there is no meaningful URL/category restriction for compliance purposes: ${wanAllowAllWeb.slice(0, 8).join(", ")}${wanAllowAllWeb.length > 8 ? ` (+${wanAllowAllWeb.length - 8} more)` : ""}.`,
+      section: "Firewall Rules",
+      remediation:
+        "Go to Web > Policies and either use a restrictive policy on these rules, or remove the web policy from the rule if inspection is not required.",
+      confidence: "high",
+      evidence: `Rules ${wanAllowAllWeb.slice(0, 4).join(", ")} use Allow All / Permit All style web policy names`,
+    });
+  }
+
+  const loggingOff: string[] = [];
+  for (const row of rulesTable.rows) {
+    if (isLoggingOff(row)) loggingOff.push(ruleName(row));
+  }
   if (loggingOff.length > 0) {
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: "high",
       title: `${loggingOff.length} rule${loggingOff.length > 1 ? "s" : ""} with logging disabled`,
-      detail: `Logging is turned off on: ${loggingOff.map((r) => ruleName(r)).slice(0, 8).join(", ")}${loggingOff.length > 8 ? ` (+${loggingOff.length - 8} more)` : ""}. Disabled logging creates gaps in audit trails.`,
+      detail: `Logging is turned off on: ${loggingOff.slice(0, 8).join(", ")}${loggingOff.length > 8 ? ` (+${loggingOff.length - 8} more)` : ""}. Disabled logging creates gaps in audit trails and monitoring.`,
       section: "Firewall Rules",
+      remediation:
+        "Go to Rules and policies > Firewall rules. Edit each affected rule → tick 'Log firewall traffic' (near the top, below the Action setting). To send logs externally, configure System services > Log settings.",
       confidence: "high",
+      evidence: `Rules ${loggingOff.slice(0, 3).join(", ")} have Log=disabled/off`,
     });
   }
 
-  // ── Classify rules by openness: fully open vs ANY service only vs broad network only ──
+  const KNOWN_SYSTEM_RULES =
+    /^(allow dns requests|auto added firewall policy for mta|auto added rule for mta)$/i;
   const fullyOpen: string[] = [];
   const anySvcOnly: string[] = [];
   const broadNetOnly: string[] = [];
-  for (const row of fwRules) {
+  for (const row of rulesTable.rows) {
     const anyService = isAnyService(row);
     const broadNet = isBroadSource(row) && isBroadDest(row);
     const name = ruleName(row);
@@ -282,398 +366,228 @@ export function analyseConfig(sections: ExtractedSections): AnalysisResult {
       fullyOpen.push(name);
     } else if (anyService) {
       anySvcOnly.push(name);
-    } else if (broadNet) {
+    } else if (broadNet && !KNOWN_SYSTEM_RULES.test(name)) {
       broadNetOnly.push(name);
     }
   }
 
   if (fullyOpen.length > 0) {
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: "critical",
       title: `${fullyOpen.length} fully open rule${fullyOpen.length > 1 ? "s" : ""} (any source, destination, and service)`,
       detail: `These rules permit all traffic from any source to any destination on any service: ${fullyOpen.slice(0, 6).join(", ")}${fullyOpen.length > 6 ? ` (+${fullyOpen.length - 6} more)` : ""}. Fully open rules effectively bypass firewall protection.`,
       section: "Firewall Rules",
+      remediation:
+        "Review each rule under Rules and policies > Firewall rules. Restrict source/destination to specific network objects and replace 'Any' service with specific protocols.",
       confidence: "high",
+      evidence: `Rules ${fullyOpen.slice(0, 3).join(", ")} have Source=Any, Destination=Any, Service=ANY`,
     });
   }
 
   if (anySvcOnly.length > 0) {
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: "medium",
       title: `${anySvcOnly.length} rule${anySvcOnly.length > 1 ? "s" : ""} using "ANY" service`,
-      detail: `Rules permitting all services but with specific source/destination: ${anySvcOnly.slice(0, 8).join(", ")}${anySvcOnly.length > 8 ? ` (+${anySvcOnly.length - 8} more)` : ""}. Broad service rules increase attack surface.`,
+      detail: `Rules permitting all services but with specific source/destination: ${anySvcOnly.slice(0, 8).join(", ")}${anySvcOnly.length > 8 ? ` (+${anySvcOnly.length - 8} more)` : ""}.`,
       section: "Firewall Rules",
+      remediation:
+        "Review traffic logs via the Log viewer to identify which protocols are in use. Edit each rule to replace 'Any' with specific services.",
       confidence: "high",
+      evidence: `Rules ${anySvcOnly.slice(0, 3).join(", ")} have Service=ANY`,
     });
   }
 
   if (broadNetOnly.length > 0) {
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: "medium",
       title: `${broadNetOnly.length} rule${broadNetOnly.length > 1 ? "s" : ""} with broad source and destination`,
-      detail: `Rules with both Source and Destination set to "Any" but with specific services: ${broadNetOnly.slice(0, 6).join(", ")}${broadNetOnly.length > 6 ? ` (+${broadNetOnly.length - 6} more)` : ""}. Consider restricting to specific networks.`,
+      detail: `Rules with both Source and Destination set to "Any" but with specific services: ${broadNetOnly.slice(0, 6).join(", ")}${broadNetOnly.length > 6 ? ` (+${broadNetOnly.length - 6} more)` : ""}.`,
       section: "Firewall Rules",
       confidence: "high",
+      evidence: `Rules ${broadNetOnly.slice(0, 3).join(", ")} have Source=Any and Destination=Any`,
     });
   }
 
-  // ── Duplicate / overlapping rules ──
+  analyseOtpSettings(sections, findings, () => ++fid);
+
   const sigMap = new Map<string, string[]>();
-  for (const row of fwRules) {
+  for (const row of rulesTable.rows) {
     const sig = ruleSignature(row);
-    if (!sig || sig === "||||") continue;
+    if (!sig || sig === "||||" || sig === "*|*|*|*|*") continue;
     const name = ruleName(row);
     const existing = sigMap.get(sig);
     if (existing) existing.push(name);
     else sigMap.set(sig, [name]);
   }
-  const duplicateGroups = Array.from(sigMap.values()).filter((g) => g.length > 1);
+  const duplicateGroups = [...sigMap.values()].filter((g) => g.length > 1);
   if (duplicateGroups.length > 0) {
     const totalDupes = duplicateGroups.reduce((s, g) => s + g.length, 0);
-    const examples = duplicateGroups.slice(0, 3).map((g) => g.join(" / ")).join("; ");
+    const examples = duplicateGroups
+      .slice(0, 3)
+      .map((g) => g.join(" / "))
+      .join("; ");
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: "medium",
       title: `${totalDupes} rules in ${duplicateGroups.length} overlapping group${duplicateGroups.length > 1 ? "s" : ""}`,
-      detail: `Rules with identical source zone, source network, destination zone, destination network, and service: ${examples}${duplicateGroups.length > 3 ? ` (+${duplicateGroups.length - 3} more groups)` : ""}. Overlapping rules may cause shadowing.`,
+      detail: `Rules with identical source zone, source network, destination zone, destination network, and service: ${examples}${duplicateGroups.length > 3 ? ` (+${duplicateGroups.length - 3} more groups)` : ""}.`,
       section: "Firewall Rules",
       confidence: "high",
+      evidence: `Identical rule signatures: ${duplicateGroups
+        .slice(0, 2)
+        .map((g) => g.join("/"))
+        .join("; ")}`,
     });
   }
 
-  // ── WAN rules without IPS ──
-  const wanNoIps = enabledWan.filter((r) => !hasIps(r));
-  if (wanNoIps.length > 0 && enabledWan.length > 0) {
-    const pct = Math.round((wanNoIps.length / enabledWan.length) * 100);
+  const wanNoIps: string[] = [];
+  for (const { name, row, enabled } of wanRules) {
+    if (enabled && !hasIps(row)) wanNoIps.push(name);
+  }
+  if (wanNoIps.length > 0 && enabledWanRules.length > 0) {
+    const pct = Math.round((wanNoIps.length / enabledWanRules.length) * 100);
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: pct > 50 ? "high" : "low",
-      title: `${wanNoIps.length} enabled WAN rule${wanNoIps.length > 1 ? "s" : ""} without IPS (${pct}%)`,
-      detail: `IPS not applied on: ${wanNoIps.map((r) => ruleName(r)).slice(0, 6).join(", ")}${wanNoIps.length > 6 ? ` (+${wanNoIps.length - 6} more)` : ""}.`,
+      title: `${wanNoIps.length} enabled WAN rule${wanNoIps.length > 1 ? "s" : ""} without IPS`,
+      detail: `Intrusion Prevention is not applied on active rules: ${wanNoIps.slice(0, 6).join(", ")}${wanNoIps.length > 6 ? ` (+${wanNoIps.length - 6} more)` : ""}.`,
       section: "Intrusion Prevention",
       confidence: "high",
+      evidence: `Rules ${wanNoIps.slice(0, 3).join(", ")} have IPS=none/empty`,
     });
   }
 
-  // ── WAN rules without Application Control ──
-  const wanNoApp = enabledWan.filter((r) => !hasAppControl(r));
-  if (wanNoApp.length > 0 && enabledWan.length > 0) {
-    const pct = Math.round((wanNoApp.length / enabledWan.length) * 100);
+  const wanNoApp: string[] = [];
+  for (const { name, row, enabled } of wanRules) {
+    if (enabled && !hasAppControl(row)) wanNoApp.push(name);
+  }
+  if (wanNoApp.length > 0 && enabledWanRules.length > 0) {
+    const pct = Math.round((wanNoApp.length / enabledWanRules.length) * 100);
     findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: pct > 75 ? "medium" : "low",
-      title: `${wanNoApp.length} enabled WAN rule${wanNoApp.length > 1 ? "s" : ""} without Application Control (${pct}%)`,
-      detail: `Application Control is not enabled on: ${wanNoApp.map((r) => ruleName(r)).slice(0, 6).join(", ")}${wanNoApp.length > 6 ? ` (+${wanNoApp.length - 6} more)` : ""}.`,
+      title: `${wanNoApp.length} enabled WAN rule${wanNoApp.length > 1 ? "s" : ""} without Application Control`,
+      detail: `Application Control is not enabled on active rules: ${wanNoApp.slice(0, 6).join(", ")}${wanNoApp.length > 6 ? ` (+${wanNoApp.length - 6} more)` : ""}.`,
       section: "Application Control",
       confidence: "high",
+      evidence: `Rules ${wanNoApp.slice(0, 3).join(", ")} have Application Control=none/empty`,
     });
   }
 
-  // ── NAT: DNAT exposing services ──
-  const dnatRules = natRules.filter((r) => (r["Rule Type"] ?? "").toLowerCase().includes("dnat"));
-  if (dnatRules.length > 0) {
+  if (withSslInspection === 0 && wanRules.length > 0) {
     findings.push({
-      id: nextId(),
-      severity: "medium",
-      title: `${dnatRules.length} DNAT rule${dnatRules.length > 1 ? "s" : ""} exposing services to WAN`,
-      detail: `DNAT rules expose internal services to the internet. Ensure IPS is applied to corresponding firewall rules.`,
-      section: "NAT Rules",
-      confidence: "medium",
-    });
-  }
-
-  // ── SSL/TLS inspection ──
-  if (sslRules.length === 0 && enabledWan.length > 0) {
-    findings.push({
-      id: nextId(),
+      id: `f${++fid}`,
       severity: "critical",
       title: "No SSL/TLS inspection rules configured (DPI inactive)",
-      detail: "No SSL/TLS inspection rules were found. Without DPI, the firewall cannot decrypt and inspect HTTPS traffic for threats.",
+      detail:
+        "No SSL/TLS inspection rules were found. Without DPI, the firewall cannot decrypt and inspect HTTPS traffic for threats.",
       section: "SSL/TLS Inspection",
-      confidence: "high",
-    });
-  } else if (sslRules.length > 0 && sslDecryptCount === 0 && enabledWan.length > 0) {
-    findings.push({
-      id: nextId(),
-      severity: "high",
-      title: `${sslRules.length} SSL/TLS rule${sslRules.length > 1 ? "s" : ""} but none set to Decrypt`,
-      detail: "SSL/TLS rules exist but none actively decrypt traffic. All rules are set to exclude or passthrough.",
-      section: "SSL/TLS Inspection",
-      confidence: "high",
-    });
-  }
-
-  if (sslUncoveredZones.length > 0) {
-    findings.push({
-      id: nextId(),
-      severity: "medium",
-      title: `SSL/TLS zone gaps: ${sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")}`,
-      detail: `Firewall rules from these source zones route to WAN but are not covered by an SSL/TLS Decrypt rule: ${sslUncoveredZones.map((z) => z.toUpperCase()).join(", ")}.`,
-      section: "SSL/TLS Inspection",
-      confidence: "high",
-    });
-  }
-
-  // Local Service ACL — admin exposure
-  const aclRows = getRows(sections, "Local Service ACL");
-  const exposedAdmin = aclRows.filter((r) => {
-    const service = (r["Service"] ?? r["ServiceType"] ?? "").toLowerCase();
-    const zone = (r["Zone"] ?? r["SourceZone"] ?? "").toLowerCase();
-    return (service.includes("https") || service.includes("ssh")) && zone.includes("wan");
-  });
-  if (exposedAdmin.length > 0) {
-    findings.push({
-      id: nextId(),
-      severity: "critical",
-      title: "Admin services (HTTPS/SSH) exposed to WAN",
-      detail: `${exposedAdmin.length} local service ACL rule${exposedAdmin.length > 1 ? "s" : ""} allow admin access from the WAN zone.`,
-      section: "Local Service ACL",
-      confidence: "high",
-    });
-  }
-
-  // ── Admin / authentication checks ──
-
-  const adminDetails = getDetails(sections, "Admin Settings");
-  if (adminDetails.length) {
-    const admin = adminDetails[0].fields;
-    const loginSecurity = (admin["LoginSecurity"] ?? admin["WebAdminSettings.LoginSecurity"] ?? "").toLowerCase();
-    if (!loginSecurity || loginSecurity === "none" || loginSecurity === "disable") {
-      findings.push({
-        id: nextId(),
-        severity: "high",
-        title: "Admin login security (CAPTCHA/lockout) not enabled",
-        detail: "Without login security, the admin portal is vulnerable to brute-force attacks. Enable CAPTCHA or account lockout.",
-        section: "Admin Settings",
-        confidence: "medium",
-      });
-    }
-  }
-
-  // OTP / MFA checks
-  const otpDetails = getDetails(sections, "OTP / MFA Settings");
-  if (otpDetails.length) {
-    const otp = otpDetails[0].fields;
-    const otpEnabled = (otp["OTPEnabled"] ?? otp["Status"] ?? "").toLowerCase();
-    if (otpEnabled === "disable" || otpEnabled === "off" || otpEnabled === "false") {
-      findings.push({
-        id: nextId(),
-        severity: "high",
-        title: "Multi-factor authentication (OTP) is disabled",
-        detail: "MFA adds a critical layer of authentication security. Enable OTP for admin and VPN users.",
-        section: "OTP / MFA Settings",
-        confidence: "high",
-      });
-    }
-  } else {
-    findings.push({
-      id: nextId(),
-      severity: "medium",
-      title: "OTP / MFA configuration not found",
-      detail: "Could not determine MFA status. Verify that OTP is enabled for admin and VPN portal authentication.",
-      section: "OTP / MFA Settings",
-      confidence: "low",
-    });
-  }
-
-  // ── DNS checks ──
-
-  const dnsDetails = getDetails(sections, "DNS Configuration");
-  if (dnsDetails.length) {
-    const dns = dnsDetails[0].fields;
-    const dns1 = dns["DNS1"] ?? dns["PrimaryDNS"] ?? "";
-    const dns2 = dns["DNS2"] ?? dns["SecondaryDNS"] ?? "";
-    if (!dns1 && !dns2) {
-      findings.push({
-        id: nextId(),
-        severity: "medium",
-        title: "No DNS servers configured",
-        detail: "The firewall has no DNS servers configured, which may affect name resolution for security services.",
-        section: "DNS Configuration",
-        confidence: "medium",
-      });
-    }
-  }
-
-  // ── Syslog / logging checks ──
-
-  const syslogRows = getRows(sections, "Syslog Servers");
-  if (syslogRows.length === 0 && !sections["Syslog Servers"]) {
-    findings.push({
-      id: nextId(),
-      severity: "medium",
-      title: "No syslog server configured",
-      detail: "Without centralised logging, security events may be lost if the firewall is compromised or logs rotate. Configure an external syslog server.",
-      section: "Syslog Servers",
       confidence: "medium",
+      evidence: "No SSL/TLS inspection rules section found in parsed config",
+    });
+  } else if (withSslInspection > 0 && sslDecryptRules === 0 && wanRules.length > 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: "critical",
+      title: `${withSslInspection} SSL/TLS rule${withSslInspection !== 1 ? "s" : ""} but none decrypt traffic (DPI inactive)`,
+      detail: `All ${withSslInspection} SSL/TLS inspection rules are exclusions. Without at least one Decrypt rule, no encrypted traffic is being inspected.`,
+      section: "SSL/TLS Inspection",
+      confidence: "medium",
+      evidence: `All ${withSslInspection} SSL/TLS rules have Action=Do-not-decrypt`,
     });
   }
 
-  // ── Backup checks ──
-
-  const backupDetails = getDetails(sections, "Backup & Restore");
-  if (backupDetails.length) {
-    const backup = backupDetails[0].fields;
-    const schedMode = (backup["Mode"] ?? backup["BackupMode"] ?? backup["ScheduleBackup"] ?? "").toLowerCase();
-    if (schedMode === "disable" || schedMode === "off" || schedMode === "manual" || !schedMode) {
-      findings.push({
-        id: nextId(),
-        severity: "medium",
-        title: "Automated backups not configured",
-        detail: "Without scheduled backups, configuration recovery after failure requires manual reconfiguration. Enable scheduled backups to a remote location.",
-        section: "Backup & Restore",
-        confidence: "medium",
-      });
-    }
-  }
-
-  // ── VPN checks ──
-
-  const vpnConns = getRows(sections, "IPSec VPN Connections");
-  if (vpnConns.length) {
-    const weakCrypto = vpnConns.filter((r) => {
-      const enc = (r["EncryptionAlgorithm"] ?? r["Encryption"] ?? "").toLowerCase();
-      return enc.includes("des") && !enc.includes("3des") && !enc.includes("aes");
+  if (sslUncoveredZones.length > 0 && sslDecryptRules > 0) {
+    const zoneList = sslUncoveredZones.map((z) => z.toUpperCase()).join(", ");
+    findings.push({
+      id: `f${++fid}`,
+      severity: "high",
+      title: `${sslUncoveredZones.length} managed zone${sslUncoveredZones.length > 1 ? "s" : ""} not covered by SSL/TLS Decrypt rules`,
+      detail: `Firewall rules send traffic from ${zoneList} to WAN, but no SSL/TLS Decrypt rule covers ${sslUncoveredZones.length > 1 ? "these zones" : "this zone"}.`,
+      section: "SSL/TLS Inspection",
+      confidence: "high",
+      evidence: `WAN rules from zones ${zoneList} have no matching SSL/TLS Decrypt rule`,
     });
-    if (weakCrypto.length > 0) {
-      findings.push({
-        id: nextId(),
-        severity: "high",
-        title: `${weakCrypto.length} IPSec VPN connection${weakCrypto.length > 1 ? "s" : ""} using weak encryption (DES)`,
-        detail: "DES encryption is considered broken. Upgrade to AES-256 or AES-128 at minimum.",
-        section: "IPSec VPN Connections",
-        confidence: "medium",
-      });
-    }
+  }
 
-    const disabledPfs = vpnConns.filter((r) => {
-      const pfs = (r["PFS"] ?? r["PerfectForwardSecrecy"] ?? "").toLowerCase();
-      return pfs === "disable" || pfs === "off" || pfs === "no" || pfs === "false";
+  if (sslUncoveredNetworks.length > 0 && sslDecryptRules > 0) {
+    const netList = sslUncoveredNetworks.join(", ");
+    findings.push({
+      id: `f${++fid}`,
+      severity: "medium",
+      title: `${sslUncoveredNetworks.length} source network${sslUncoveredNetworks.length > 1 ? "s" : ""} not covered by SSL/TLS Decrypt rules`,
+      detail: `DPI is active but SSL/TLS Decrypt rules specify source networks that do not cover: ${netList}.`,
+      section: "SSL/TLS Inspection",
+      confidence: "medium",
+      evidence: `WAN rules reference source networks ${netList} with no matching SSL/TLS Decrypt rule coverage`,
     });
-    if (disabledPfs.length > 0) {
-      findings.push({
-        id: nextId(),
-        severity: "medium",
-        title: `${disabledPfs.length} IPSec VPN${disabledPfs.length > 1 ? "s" : ""} without Perfect Forward Secrecy`,
-        detail: "PFS ensures that past sessions cannot be decrypted if keys are later compromised. Enable PFS on all VPN connections.",
-        section: "IPSec VPN Connections",
-        confidence: "medium",
-      });
-    }
   }
 
-  const sslVpn = getRows(sections, "SSL VPN Policies");
-  if (sslVpn.length) {
-    const fullTunnel = sslVpn.filter((r) => {
-      const policy = (r["PolicyType"] ?? r["Policy"] ?? "").toLowerCase();
-      return policy.includes("full") || policy.includes("tunnel");
+  analyseLocalServiceAcl(sections, findings, () => ++fid);
+  analyseNatRulesDomain(sections, findings, () => ++fid);
+  analyseWebFilterPolicies(sections, findings, () => ++fid);
+  analyseIpsPolicies(sections, findings, () => ++fid);
+  analyseVirusScanning(sections, findings, () => ++fid);
+  analyseAdminSettings(sections, findings, () => ++fid);
+  analyseBackupRestore(sections, findings, () => ++fid);
+  analyseNotificationSettings(sections, findings, () => ++fid);
+  analysePatternDownload(sections, findings, () => ++fid);
+  analyseTimeSettings(sections, findings, () => ++fid);
+  analyseAuthServers(sections, findings, () => ++fid);
+  analyseHotfix(sections, findings, () => ++fid);
+  analyseSyncAppControl(sections, findings, () => ++fid);
+  analyseATP(sections, findings, () => ++fid);
+  analyseMdrFeed(sections, findings, () => ++fid);
+  analyseNdrEssentials(sections, findings, () => ++fid);
+  analyseSecurityHeartbeat(sections, findings, () => ++fid, rulesTable);
+  analyseVpnSecurity(sections, findings, () => ++fid);
+  analyseSyslogServers(sections, findings, () => ++fid, options);
+  analyseWirelessSecurity(sections, findings, () => ++fid);
+  analyseSnmpCommunity(sections, findings, () => ++fid);
+  analyseDnsSecurity(sections, findings, () => ++fid);
+  analyseRedSecurity(sections, findings, () => ++fid);
+  analyseDoSProtection(sections, findings, () => ++fid);
+  analyseCertificates(sections, findings, () => ++fid);
+  analyseHotspots(sections, findings, () => ++fid);
+  analyseAppFilterPolicies(sections, findings, () => ++fid);
+  analyseInterfaceSecurity(sections, findings, () => ++fid);
+  analyseRuleOrdering(sections, findings, () => ++fid);
+  analyseUserGroupRules(sections, findings, () => ++fid);
+  analyseWafPolicies(sections, findings, () => ++fid);
+  analyseZtna(sections, findings, () => ++fid);
+  analyseFirmwareVersion(sections, findings, () => ++fid);
+  analyseLicenceUsage(sections, findings, () => ++fid, options);
+
+  const emptySections: string[] = [];
+  for (const [key, data] of Object.entries(sections)) {
+    if (data.tables.length === 0 && data.details.length === 0 && !data.text) {
+      emptySections.push(key);
+    }
+  }
+  if (emptySections.length > 0) {
+    findings.push({
+      id: `f${++fid}`,
+      severity: "info",
+      title: `${emptySections.length} section${emptySections.length > 1 ? "s" : ""} extracted with no data`,
+      detail: `These sections were found but contained no parseable data: ${emptySections.join(", ")}.`,
+      section: "Extraction",
+      confidence: "medium",
+      evidence: `Sections ${emptySections.slice(0, 5).join(", ")} have no tables/details/text`,
     });
-    if (fullTunnel.length === 0) {
-      findings.push({
-        id: nextId(),
-        severity: "low",
-        title: "No full-tunnel SSL VPN policies detected",
-        detail: "Split-tunnel VPN allows some traffic to bypass the firewall's security controls. Consider full-tunnel for remote workers.",
-        section: "SSL VPN Policies",
-        confidence: "low",
-      });
-    }
   }
 
-  // ── DoS protection ──
+  const atpStatus = extractAtpStatus(sections);
 
-  const dosDetails = getDetails(sections, "DoS Protection");
-  if (dosDetails.length) {
-    const dos = dosDetails[0].fields;
-    const synFlood = (dos["SYNFloodProtection"] ?? dos["SynFlood"] ?? dos["Status"] ?? "").toLowerCase();
-    if (synFlood === "disable" || synFlood === "off") {
-      findings.push({
-        id: nextId(),
-        severity: "medium",
-        title: "SYN flood protection is disabled",
-        detail: "SYN flood attacks can exhaust connection state tables. Enable SYN flood protection in DoS settings.",
-        section: "DoS Protection",
-        confidence: "medium",
-      });
-    }
-  }
-
-  // ── ATP (Advanced Threat Protection) ──
-
-  const atpDetails = getDetails(sections, "Advanced Threat Protection");
-  if (atpDetails.length) {
-    const atp = atpDetails[0].fields;
-    const atpStatus = (atp["Status"] ?? atp["ATPStatus"] ?? "").toLowerCase();
-    if (atpStatus === "disable" || atpStatus === "off") {
-      findings.push({
-        id: nextId(),
-        severity: "high",
-        title: "Advanced Threat Protection (ATP) is disabled",
-        detail: "ATP provides real-time threat intelligence and botnet/C2 detection. Enable ATP to protect against advanced threats.",
-        section: "Advanced Threat Protection",
-        confidence: "high",
-      });
-    }
-  }
-
-  // ── Zero Day Protection ──
-
-  const zdDetails = getDetails(sections, "Zero Day Protection");
-  if (zdDetails.length) {
-    const zd = zdDetails[0].fields;
-    const zdStatus = (zd["Status"] ?? zd["SandstormEnabled"] ?? "").toLowerCase();
-    if (zdStatus === "disable" || zdStatus === "off" || zdStatus === "false") {
-      findings.push({
-        id: nextId(),
-        severity: "medium",
-        title: "Zero Day Protection (Sandstorm) is disabled",
-        detail: "Zero Day Protection sends suspicious files to Sophos cloud sandboxing. Enable it for enhanced malware detection.",
-        section: "Zero Day Protection",
-        confidence: "medium",
-      });
-    }
-  }
-
-  // ── Spoof Prevention ──
-
-  const spoofDetails = getDetails(sections, "Spoof Prevention");
-  if (spoofDetails.length) {
-    const spoof = spoofDetails[0].fields;
-    const spoofStatus = (spoof["Status"] ?? spoof["IPSpoofPrevention"] ?? "").toLowerCase();
-    if (spoofStatus === "disable" || spoofStatus === "off") {
-      findings.push({
-        id: nextId(),
-        severity: "medium",
-        title: "IP spoof prevention is disabled",
-        detail: "IP spoofing allows attackers to masquerade as trusted sources. Enable spoof prevention on all zones.",
-        section: "Spoof Prevention",
-        confidence: "medium",
-      });
-    }
-  }
-
-  // ── Wireless security ──
-
-  const wirelessRows = getRows(sections, "Wireless Networks");
-  if (wirelessRows.length) {
-    const weakWifi = wirelessRows.filter((r) => {
-      const enc = (r["EncryptionMode"] ?? r["SecurityMode"] ?? r["Encryption"] ?? "").toLowerCase();
-      return enc.includes("wep") || enc.includes("wpa ") || (enc.includes("wpa") && !enc.includes("wpa2") && !enc.includes("wpa3"));
-    });
-    if (weakWifi.length > 0) {
-      findings.push({
-        id: nextId(),
-        severity: "high",
-        title: `${weakWifi.length} wireless network${weakWifi.length > 1 ? "s" : ""} using weak encryption (WEP/WPA)`,
-        detail: "WEP and WPA are considered insecure. Upgrade all wireless networks to WPA2 or WPA3.",
-        section: "Wireless Networks",
-        confidence: "medium",
-      });
-    }
-  }
-
-  return { stats, findings, inspectionPosture, ruleColumns: getHeaders(sections, "Firewall Rules") };
+  return {
+    stats,
+    findings,
+    inspectionPosture,
+    ruleColumns: rulesTable.headers,
+    hostname: extractHostname(sections),
+    managementIp: extractManagementIp(sections),
+    atpStatus,
+  };
 }

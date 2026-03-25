@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu } from "electron";
 import path from "node:path";
 import { setupTray } from "./tray";
 import { registerIpcHandlers } from "./ipc-handlers";
+import { initAutoUpdater } from "./auto-updater";
 import { BackgroundService } from "./service";
 import { loadConfig, type AppConfig } from "../config";
 import { initLogger } from "../logger";
@@ -57,8 +58,13 @@ app.whenReady().then(() => {
   }
 
   createWindow();
-  setupTray(mainWindow!, () => service?.runNow(), () => service?.togglePause());
+  setupTray(
+    mainWindow!,
+    () => service?.runNow(),
+    () => service?.togglePause(),
+  );
   registerIpcHandlers(CONFIG_PATH, () => service, startService);
+  if (!isDev) initAutoUpdater(mainWindow!);
 
   if (config) {
     startService(config);

@@ -1,7 +1,13 @@
 appId: com.firecomply.connector
 productName: FireComply Connector
-publish: null
 copyright: "Copyright © 2026 FireComply"
+
+publish:
+  provider: github
+  owner: joseph15562
+  repo: sophos-firecomply
+  releaseType: release
+
 directories:
   output: release
   buildResources: assets
@@ -20,6 +26,7 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  allowElevation: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   artifactName: "FireComply-Connector-Setup.${ext}"

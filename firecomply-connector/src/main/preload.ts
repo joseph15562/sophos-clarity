@@ -15,6 +15,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openUrl: (url: string) => ipcRenderer.invoke("app:open-url", url),
   getLogs: () => ipcRenderer.invoke("logs:get"),
 
+  updaterCheck: () => ipcRenderer.invoke("updater:check"),
+  updaterDownload: () => ipcRenderer.invoke("updater:download"),
+  updaterInstall: () => ipcRenderer.invoke("updater:install"),
+  onUpdaterStatus: (callback: (status: unknown) => void) => {
+    ipcRenderer.on("updater:status", (_event, status) => callback(status));
+  },
+
   onStatusUpdate: (callback: (status: unknown) => void) => {
     ipcRenderer.on("status-update", (_event, status) => callback(status));
   },

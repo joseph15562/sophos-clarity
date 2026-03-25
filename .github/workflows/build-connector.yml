@@ -72,13 +72,19 @@ jobs:
         include:
           - os: windows-latest
             dist_script: dist:win
-            artifact_pattern: "firecomply-connector/release/*.exe"
+            artifact_pattern: |
+              firecomply-connector/release/*.exe
+              firecomply-connector/release/latest.yml
           - os: macos-latest
             dist_script: dist:mac
-            artifact_pattern: "firecomply-connector/release/*.zip"
+            artifact_pattern: |
+              firecomply-connector/release/*.zip
+              firecomply-connector/release/latest-mac.yml
           - os: ubuntu-latest
             dist_script: dist:linux
-            artifact_pattern: "firecomply-connector/release/*.AppImage"
+            artifact_pattern: |
+              firecomply-connector/release/*.AppImage
+              firecomply-connector/release/latest-linux.yml
 
     runs-on: ${{ matrix.os }}
 
@@ -130,7 +136,7 @@ jobs:
           merge-multiple: true
 
       - name: List artifacts
-        run: find artifacts -type f | head -20
+        run: find artifacts -type f | head -30
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -140,15 +146,12 @@ jobs:
           body: |
             ## FireComply Connector v${{ needs.prepare.outputs.version }}
 
-            Download the installer for your operating system:
-            - **Windows**: `.exe` installer
-            - **macOS**: `.dmg` disk image
-            - **Linux**: `.AppImage` portable binary
+            **Auto-update:** Existing installations will receive this update automatically.
 
-            ### Setup
-            1. Register an agent in the FireComply web app (Settings > FireComply Connector Agents)
-            2. Copy your API key
-            3. Run the installer and follow the setup wizard
+            Manual download:
+            - **Windows**: `.exe` installer
+            - **macOS**: `.zip` archive
+            - **Linux**: `.AppImage` portable binary
           files: artifacts/**/*
           draft: false
           prerelease: false
