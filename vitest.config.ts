@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: ["src/lib/**"],
+      include: ["src/lib/**", "src/components/**", "src/hooks/**", "src/pages/**"],
     },
   },
   resolve: {

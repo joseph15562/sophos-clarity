@@ -54,7 +54,6 @@ import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBa
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory2";
 import { SeHealthCheckManagementDrawer } from "@/components/SeHealthCheckManagementDrawer2";
-import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,84 +115,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type ActiveStep = "landing" | "analyzing" | "results";
-
-type EphemeralCentralCreds = {
-  clientId: string;
-  clientSecret: string;
-  tenantId: string;
-};
-
-type GuestTenantRow = { id: string; name: string; apiHost?: string };
-
-/** Sophos Licensing API row (guest_health_firewall_licenses / firewall-licenses). */
-type GuestFirewallLicenseApiRow = {
-  serialNumber?: string;
-  licenses?: Array<{
-    licenseIdentifier?: string;
-    product?: { code?: string; name?: string };
-    endDate?: string;
-    type?: string;
-  }>;
-};
-
-function mapGuestFirewallLicencesToBpRows(
-  rows: GuestFirewallLicenseApiRow[],
-): Array<{ product: string; endDate: string; type: string }> {
-  const out: Array<{ product: string; endDate: string; type: string }> = [];
-  for (const row of rows) {
-    for (const lic of row.licenses ?? []) {
-      const product = lic.product?.name ?? lic.product?.code ?? lic.licenseIdentifier ?? "";
-      out.push({
-        product,
-        endDate: typeof lic.endDate === "string" ? lic.endDate : "",
-        type: typeof lic.type === "string" ? lic.type : "",
-      });
-    }
-  }
-  return out;
-}
-
-const CENTRAL_MATCH_NONE = "__none__";
-
-/** Match file serial to any node in an HA group (same as MSP serial search across HA). */
-function guestFirewallMatchValueForFile(file: ParsedFile, groups: GuestHaGroup[]): string {
-  const sn = file.serialNumber?.trim();
-  if (!sn) return CENTRAL_MATCH_NONE;
-  for (const g of groups) {
-    const all = [g.primary, ...g.peers];
-    if (all.some((fw) => (fw.serialNumber || "").trim().toLowerCase() === sn.toLowerCase())) {
-      return guestHaGroupSelectValue(g);
-    }
-  }
-  return CENTRAL_MATCH_NONE;
-}
-
-async function callGuestCentral<T extends Record<string, unknown>>(body: Record<string, unknown>): Promise<T> {
-  const resolved = getSupabasePublicEdgeAuth();
-  const url = `${resolved.url.replace(/\/$/, "")}/functions/v1/sophos-central`;
-  const key = resolved.anonKey.trim();
-  const jwtRole = readJwtPayloadClaim(key, "role");
-  if (jwtRole === "service_role") {
-    throw new Error(
-      "Wrong Supabase key: use the anon (publishable) key in VITE_SUPABASE_PUBLISHABLE_KEY, not the service_role secret.",
-    );
-  }
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-      apikey: key,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = (await res.json()) as { error?: string } & T;
-  if (!res.ok || data.error) {
-    throw new Error(typeof data.error === "string" ? data.error : `Request failed (${res.status})`);
-  }
-  return data as T;
-}
+import type {
+  ActiveStep,
+  EphemeralCentralCreds,
+  GuestFirewallLicenseApiRow,
+  GuestTenantRow,
+} from "./health-check/types";
+import { useConfigUpload, type ConfigUploadCentralApiPayload } from "./health-check/use-config-upload";
+import { buildHealthCheckReportParams, validateRequiredFields } from "./health-check/build-report-params";
+import {
+  CENTRAL_MATCH_NONE,
+  mapGuestFirewallLicencesToBpRows,
+  guestFirewallMatchValueForFile,
+  callGuestCentral,
+} from "./health-check/guest-central-api";
+import { CompleteProfileGate } from "./health-check/CompleteProfileGate";
+import { useHealthCheckSharing } from "./health-check/use-health-check-sharing";
 
 const SOPHOS_BP_TEMPLATE = BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
 
@@ -564,6 +501,218 @@ function HealthCheckInner() {
     [files],
   );
 
+  const onLoadConfigFromUpload = useCallback(
+    async (
+      uploaded: UploadedFile,
+      requestCustomerName: string | null | undefined,
+      requestCustomerEmail: string | null | undefined,
+      requestContactName: string | null | undefined,
+      centralPayload: ConfigUploadCentralApiPayload | null | undefined,
+    ) => {
+      await handleFilesChange([...uploadedForPicker, uploaded]);
+      if (requestCustomerName && !customerName.trim()) {
+        setCustomerName(requestCustomerName);
+      }
+      if (requestCustomerEmail && !customerEmail.trim()) {
+        setCustomerEmail(requestCustomerEmail);
+      }
+      if (requestContactName && !preparedFor.trim()) {
+        setPreparedFor(requestContactName);
+      }
+      toast.success(`Config loaded: ${uploaded.fileName}`);
+
+      try {
+        if (centralPayload?.central_connected && centralPayload.central_data) {
+          centralFromUploadRef.current = true;
+          setCentralValidated(true);
+          setReplayCentralLinked(false);
+          const cd = centralPayload.central_data;
+          if (cd.licenses && Array.isArray(cd.licenses)) {
+            setGuestFirewallLicenseItems(cd.licenses as GuestFirewallLicenseApiRow[]);
+          }
+          if (cd.firewalls && Array.isArray(cd.firewalls)) {
+            setFirewallOptions(cd.firewalls as GuestFirewallRow[]);
+          }
+          if (cd.tenants && Array.isArray(cd.tenants)) {
+            setTenantOptions(cd.tenants as GuestTenantRow[]);
+            if ((cd.tenants as GuestTenantRow[]).length > 0) {
+              setCentralCreds((c) => ({ ...c, tenantId: (cd.tenants as GuestTenantRow[])[0].id }));
+            }
+          }
+          const fwCount = Array.isArray(cd.firewalls) ? (cd.firewalls as unknown[]).length : 0;
+          const linkedName = centralPayload.linked_firewall_name;
+          const parts = [`Central data loaded (${fwCount} firewall${fwCount !== 1 ? "s" : ""})`];
+          if (linkedName) parts.push(`linked to ${linkedName}`);
+          toast.success(parts.join(" — "));
+
+          const linkedFwId = centralPayload.linked_firewall_id;
+          if (linkedFwId && Array.isArray(cd.firewalls)) {
+            const fwList = cd.firewalls as GuestFirewallRow[];
+            const linkedFw = fwList.find((fw) => fw.id === linkedFwId);
+            if (linkedFw?.serialNumber) {
+              const sn = linkedFw.serialNumber;
+              const label = (linkedFw.hostname || linkedFw.name || "").trim();
+              setFiles((prev) =>
+                prev.map((f) => ({
+                  ...f,
+                  serialNumber: sn,
+                  ...(label ? { label } : {}),
+                })),
+              );
+            }
+          }
+        }
+      } catch {
+        /* Central data is optional enrichment */
+      }
+    },
+    [handleFilesChange, uploadedForPicker, customerName, customerEmail, preparedFor],
+  );
+
+  const {
+    configUploadDialogOpen,
+    setConfigUploadDialogOpen,
+    configUploadCustomerName,
+    setConfigUploadCustomerName,
+    configUploadContactName,
+    setConfigUploadContactName,
+    configUploadCustomerEmail,
+    setConfigUploadCustomerEmail,
+    configUploadDays,
+    setConfigUploadDays,
+    configUploadCreating,
+    configUploadToken,
+    setConfigUploadToken,
+    configUploadUrl,
+    setConfigUploadUrl,
+    configUploadEmailSent,
+    setConfigUploadEmailSent,
+    configUploadStatus,
+    setConfigUploadStatus,
+    configUploadResending,
+    configUploadLoading,
+    configUploadRequests,
+    configUploadRequestsOpen,
+    setConfigUploadRequestsOpen,
+    configUploadListLoading,
+    resendingUploadToken,
+    handleCreateConfigUploadRequest,
+    handleResendConfigUploadEmail,
+    handleResendUploadEmail,
+    handleLoadConfigFromUpload,
+    handleRevokeConfigUpload,
+    handleClaimConfigUpload,
+  } = useConfigUpload({
+    seProfile: seAuth.seProfile,
+    activeTeamId,
+    onLoadConfig: onLoadConfigFromUpload,
+  });
+
+  const [savedCheckId, setSavedCheckId] = useState<string | null>(null);
+
+  const buildSharedHtml = useCallback(async () => {
+    const labels = files
+      .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
+      .filter((l) => analysisResults[l]);
+    if (labels.length === 0) throw new Error("No analysed configurations.");
+
+    const manualOverrides = loadSeHealthCheckBpOverrides();
+    const bpByLabel: Record<string, SophosBPScore> = {};
+    for (const label of labels) {
+      const ar = analysisResults[label];
+      if (ar) {
+        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      }
+    }
+
+    const reportParams = {
+      labels,
+      files,
+      analysisResults,
+      baselineResults,
+      bpByLabel,
+      licence,
+      customerName,
+      preparedFor: preparedFor.trim() || customerName.trim() || undefined,
+      preparedBy: effectivePreparedBy,
+      dpiExemptZones,
+      dpiExemptNetworks,
+      webFilterComplianceMode,
+      webFilterExemptRuleNames,
+      seAckMdrThreatFeeds: seMdrThreatFeedsAck,
+      seAckNdrEssentials: seNdrEssentialsAck,
+      seAckDnsProtection: seDnsProtectionAck,
+      seExcludeSecurityHeartbeat,
+      centralValidated: centralLinkedForAnalysis,
+      generatedAt: new Date(),
+      appVersion:
+        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
+      seNotes: seNotes.trim() || undefined,
+    };
+
+    const { buildSeHealthCheckBrowserHtmlDocument } = await import("@/lib/se-health-check-browser-html-v2");
+    return buildSeHealthCheckBrowserHtmlDocument(reportParams);
+  }, [
+    files,
+    analysisResults,
+    baselineResults,
+    licence,
+    customerName,
+    preparedFor,
+    effectivePreparedBy,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+    seNotes,
+  ]);
+
+  const {
+    shareDialogOpen,
+    setShareDialogOpen,
+    shareToken,
+    setShareToken,
+    shareExpiry,
+    setShareExpiry,
+    sharing,
+    shareDays,
+    setShareDays,
+    followupAt,
+    setFollowupAt,
+    settingFollowup,
+    recheckSearchOpen,
+    setRecheckSearchOpen,
+    recheckQuery,
+    setRecheckQuery,
+    recheckResults,
+    setRecheckResults,
+    recheckSearching,
+    handleRecheckSearch,
+    handleRecheckSelect,
+    handleSetFollowup,
+    handleShareHealthCheck,
+    handleRevokeShare,
+    shareUrl,
+  } = useHealthCheckSharing({
+    seProfile: seAuth.seProfile,
+    savedCheckId,
+    buildSharedHtml,
+    onRecheckSelected: (result) => {
+      setConfigUploadCustomerName(result.customer_name);
+      setConfigUploadCustomerEmail(result.customer_email ?? "");
+      setConfigUploadDialogOpen(true);
+    },
+  });
+
   const connectCentral = useCallback(async () => {
     setCentralBusy(true);
     try {
@@ -712,43 +861,8 @@ function HealthCheckInner() {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
-  const [savedCheckId, setSavedCheckId] = useState<string | null>(null);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [shareToken, setShareToken] = useState<string | null>(null);
-  const [shareExpiry, setShareExpiry] = useState<string | null>(null);
-  const [sharing, setSharing] = useState(false);
-  const [shareDays, setShareDays] = useState(7);
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useState(false);
-  const [followupAt, setFollowupAt] = useState<string | null>(null);
-  const [settingFollowup, setSettingFollowup] = useState(false);
-  const [recheckSearchOpen, setRecheckSearchOpen] = useState(false);
-  const [recheckQuery, setRecheckQuery] = useState("");
-  const [recheckResults, setRecheckResults] = useState<Array<{ id: string; customer_name: string; overall_score: number | null; overall_grade: string | null; checked_at: string; customer_email?: string; serialNumbers: string[] }>>([]);
-  const [recheckSearching, setRecheckSearching] = useState(false);
 
-  // Config upload request state
-  const [configUploadDialogOpen, setConfigUploadDialogOpen] = useState(false);
-  const [configUploadCustomerName, setConfigUploadCustomerName] = useState("");
-  const [configUploadContactName, setConfigUploadContactName] = useState("");
-  const [configUploadCustomerEmail, setConfigUploadCustomerEmail] = useState("");
-  const [configUploadDays, setConfigUploadDays] = useState(7);
-  const [configUploadCreating, setConfigUploadCreating] = useState(false);
-  const [configUploadToken, setConfigUploadToken] = useState<string | null>(null);
-  const [configUploadUrl, setConfigUploadUrl] = useState<string | null>(null);
-  const [configUploadEmailSent, setConfigUploadEmailSent] = useState(false);
-  const [configUploadStatus, setConfigUploadStatus] = useState<string | null>(null);
-  const [configUploadResending, setConfigUploadResending] = useState(false);
-  const [configUploadLoading, setConfigUploadLoading] = useState(false);
-  const [configUploadRequests, setConfigUploadRequests] = useState<Array<{
-    id: string; token: string; customer_name: string | null; contact_name?: string | null; customer_email: string | null;
-    status: string; expires_at: string; email_sent: boolean; uploaded_at: string | null;
-    downloaded_at: string | null; created_at: string; se_user_id?: string; team_id?: string | null;
-    central_connected_at?: string | null;
-  }>>([]);
-  const [configUploadRequestsOpen, setConfigUploadRequestsOpen] = useState(false);
-  const [configUploadListLoading, setConfigUploadListLoading] = useState(false);
-  const [resendingUploadToken, setResendingUploadToken] = useState<string | null>(null);
-  const configUploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const centralFromUploadRef = useRef(false);
 
   useEffect(() => {
@@ -1028,545 +1142,17 @@ function HealthCheckInner() {
     toast.success("Findings CSV downloaded.");
   }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes]);
 
-  const recheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const recheckVersionRef = useRef(0);
-
-  const handleRecheckSearch = useCallback((query: string) => {
-    setRecheckQuery(query);
-    if (recheckTimerRef.current) clearTimeout(recheckTimerRef.current);
-    if (!query.trim() || !seAuth.seProfile) {
-      setRecheckResults([]);
-      setRecheckSearching(false);
-      return;
-    }
-    setRecheckSearching(true);
-    recheckTimerRef.current = setTimeout(async () => {
-      const version = ++recheckVersionRef.current;
-      try {
-        const profileId = seAuth.seProfile!.id;
-        let q = supabase
-          .from("se_health_checks")
-          .select("id, customer_name, overall_score, overall_grade, checked_at, summary_json")
-          .ilike("customer_name", `%${query.trim()}%`)
-          .order("checked_at", { ascending: false })
-          .limit(10);
-        if (activeTeamId) q = q.eq("team_id", activeTeamId);
-        else q = q.eq("se_user_id", profileId);
-        const { data, error } = await q;
-        if (version !== recheckVersionRef.current) return;
-        if (error) { console.error("[recheck-search]", error); setRecheckResults([]); return; }
-        const allRows = (data ?? []).map((row: Record<string, unknown>) => {
-          const sj = row.summary_json as Record<string, unknown> | null;
-          const snap = sj?.snapshot as Record<string, unknown> | undefined;
-          const snapFiles = (snap?.files as Array<{ serialNumber?: string }>) ?? [];
-          const serialNumbers = snapFiles.map((f) => f.serialNumber).filter(Boolean) as string[];
-          return {
-            id: row.id as string,
-            customer_name: (row.customer_name as string) ?? "",
-            overall_score: row.overall_score as number,
-            overall_grade: row.overall_grade as string,
-            checked_at: row.checked_at as string,
-            customer_email: (snap as Record<string, unknown>)?.customerEmail as string | undefined,
-            serialNumbers,
-          };
-        });
-        const seen = new Set<string>();
-        const results = allRows.filter((r) => {
-          const key = `${r.customer_name.toLowerCase()}|${[...r.serialNumbers].sort().join(",")}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        setRecheckResults(results);
-      } catch (err) {
-        console.error("[recheck-search]", err);
-        if (version === recheckVersionRef.current) setRecheckResults([]);
-      } finally {
-        if (version === recheckVersionRef.current) setRecheckSearching(false);
-      }
-    }, 300);
-  }, [seAuth.seProfile, activeTeamId]);
-
-  const handleRecheckSelect = useCallback((result: typeof recheckResults[0]) => {
-    setConfigUploadCustomerName(result.customer_name);
-    setConfigUploadCustomerEmail(result.customer_email ?? "");
-    setRecheckSearchOpen(false);
-    setConfigUploadDialogOpen(true);
-  }, []);
-
-  const handleSetFollowup = useCallback(async (months: number | null) => {
-    if (!savedCheckId) {
-      toast.error("Save the health check first.");
-      return;
-    }
-    setSettingFollowup(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-      let followupDate: string | null = null;
-      if (months) {
-        const d = new Date();
-        d.setMonth(d.getMonth() + months);
-        followupDate = d.toISOString();
-      }
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/${savedCheckId}/followup`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ followup_at: followupDate }),
-        },
-      );
-      if (!res.ok) throw new Error((await res.json()).error || "Failed");
-      setFollowupAt(followupDate);
-      toast.success(months ? `Follow-up reminder set for ${months} months from now.` : "Follow-up reminder cancelled.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not set follow-up.");
-    } finally {
-      setSettingFollowup(false);
-    }
-  }, [savedCheckId]);
-
-  const handleShareHealthCheck = useCallback(async () => {
-    if (!savedCheckId) {
-      toast.error("Save the health check first before sharing.");
-      return;
-    }
-    setSharing(true);
-    try {
-      const labels = files
-        .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
-        .filter((l) => analysisResults[l]);
-      if (labels.length === 0) throw new Error("No analysed configurations.");
-
-      const manualOverrides = loadSeHealthCheckBpOverrides();
-      const bpByLabel: Record<string, SophosBPScore> = {};
-      for (const label of labels) {
-        const ar = analysisResults[label];
-        if (ar) {
-          const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-          bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-        }
-      }
-
-      const reportParams = {
-        labels,
-        files,
-        analysisResults,
-        baselineResults,
-        bpByLabel,
-        licence,
-        customerName,
-        preparedFor: preparedFor.trim() || customerName.trim() || undefined,
-        preparedBy: effectivePreparedBy,
-        dpiExemptZones,
-        dpiExemptNetworks,
-        webFilterComplianceMode,
-        webFilterExemptRuleNames,
-        seAckMdrThreatFeeds: seMdrThreatFeedsAck,
-        seAckNdrEssentials: seNdrEssentialsAck,
-        seAckDnsProtection: seDnsProtectionAck,
-        seExcludeSecurityHeartbeat,
-        centralValidated: centralLinkedForAnalysis,
-        generatedAt: new Date(),
-        appVersion:
-          typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
-        seNotes: seNotes.trim() || undefined,
-      };
-
-      const { buildSeHealthCheckBrowserHtmlDocument } = await import("@/lib/se-health-check-browser-html-v2");
-      const html = buildSeHealthCheckBrowserHtmlDocument(reportParams);
-
-      const token = crypto.randomUUID();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + shareDays);
-
-      const { error } = await supabase
-        .from("se_health_checks")
-        .update({
-          share_token: token,
-          share_expires_at: expiresAt.toISOString(),
-          shared_html: html,
-        } as Record<string, unknown>)
-        .eq("id", savedCheckId);
-
-      if (error) throw error;
-
-      setShareToken(token);
-      setShareExpiry(expiresAt.toISOString());
-      toast.success("Share link created.");
-    } catch (err) {
-      console.warn("[health-check] share failed", err);
-      toast.error(err instanceof Error ? err.message : "Could not create share link.");
-    } finally {
-      setSharing(false);
-    }
-  }, [
-    savedCheckId, files, analysisResults, baselineResults, licence, customerName,
-    preparedFor, effectivePreparedBy, dpiExemptZones, dpiExemptNetworks,
-    webFilterComplianceMode, webFilterExemptRuleNames, seMdrThreatFeedsAck,
-    seNdrEssentialsAck, seDnsProtectionAck, seExcludeSecurityHeartbeat,
-    centralLinkedForAnalysis, seCentralHaLabels, seThreatResponseAck,
-    seExcludedBpChecks, seNotes, shareDays,
-  ]);
-
-  const handleRevokeShare = useCallback(async () => {
-    if (!savedCheckId) return;
-    try {
-      await supabase
-        .from("se_health_checks")
-        .update({
-          share_token: null,
-          share_expires_at: null,
-          shared_html: null,
-        } as Record<string, unknown>)
-        .eq("id", savedCheckId);
-      setShareToken(null);
-      setShareExpiry(null);
-      toast.success("Share link revoked.");
-    } catch {
-      toast.error("Could not revoke share link.");
-    }
-  }, [savedCheckId]);
-
-  const shareUrl = useMemo(() => {
-    if (!shareToken) return null;
-    return `${window.location.origin}/health-check/shared/${shareToken}`;
-  }, [shareToken]);
-
-  // ── Config upload request handlers ──
-
-  const fetchConfigUploadRequests = useCallback(async () => {
-    if (!seAuth.seProfile) return;
-    setConfigUploadListLoading(true);
-    try {
-      const params = activeTeamId ? `?team_id=${activeTeamId}` : "";
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-requests${params}`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setConfigUploadRequests(json.data ?? []);
-      }
-    } catch {
-      /* silent */
-    } finally {
-      setConfigUploadListLoading(false);
-    }
-  }, [seAuth.seProfile, activeTeamId]);
-
-  const handleCreateConfigUploadRequest = useCallback(async () => {
-    if (!seAuth.seProfile) return;
-    setConfigUploadCreating(true);
-    try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-request`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customer_name: configUploadCustomerName.trim() || undefined,
-          contact_name: configUploadContactName.trim() || undefined,
-          customer_email: configUploadCustomerEmail.trim() || undefined,
-          expires_in_days: configUploadDays,
-          team_id: activeTeamId ?? undefined,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to create upload request");
-
-      setConfigUploadToken(json.token);
-      setConfigUploadUrl(json.url);
-      setConfigUploadEmailSent(json.email_sent);
-      setConfigUploadStatus("pending");
-
-      if (json.email_sent) {
-        toast.success(`Upload link sent to ${configUploadCustomerEmail.trim()}`);
-      } else if (configUploadCustomerEmail.trim()) {
-        toast.warning("Upload link created but email could not be sent — share the link manually.");
-      } else {
-        toast.success("Upload link created — copy and share it with the customer.");
-      }
-
-      void fetchConfigUploadRequests();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create upload request.");
-    } finally {
-      setConfigUploadCreating(false);
-    }
-  }, [seAuth.seProfile, configUploadCustomerName, configUploadContactName, configUploadCustomerEmail, configUploadDays, fetchConfigUploadRequests, activeTeamId]);
-
-  const handleResendConfigUploadEmail = useCallback(async () => {
-    if (!configUploadToken) return;
-    setConfigUploadResending(true);
-    try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${configUploadToken}/resend`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-      const json = await res.json();
-      if (json.email_sent) {
-        toast.success("Email resent to customer.");
-      } else {
-        toast.error(json.error || "Could not resend email.");
-      }
-    } catch {
-      toast.error("Could not resend email.");
-    } finally {
-      setConfigUploadResending(false);
-    }
-  }, [configUploadToken]);
-
-  const handleResendUploadEmail = useCallback(async (token: string) => {
-    setResendingUploadToken(token);
-    try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/resend`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-      const json = await res.json();
-      if (json.email_sent) {
-        toast.success("Email resent to customer.");
-      } else {
-        toast.error(json.error || "Could not resend email.");
-      }
-    } catch {
-      toast.error("Could not resend email.");
-    } finally {
-      setResendingUploadToken(null);
-    }
-  }, []);
-
-  const handleLoadConfigFromUpload = useCallback(async (token: string) => {
-    setConfigUploadLoading(true);
-    try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/download`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error || "Download failed");
-      }
-      const json = await res.json();
-      const fileName = json.file_name || "entities.xml";
-      const uploaded: UploadedFile = {
-        id: crypto.randomUUID(),
-        fileName,
-        content: json.config_xml,
-        label: fileName.replace(/\.(xml|html|htm)$/i, ""),
-      };
-      await handleFilesChange([...uploadedForPicker, uploaded]);
-      const matchedReq = configUploadRequests.find((r) => r.token === token);
-      if (matchedReq?.customer_name && !customerName.trim()) {
-        setCustomerName(matchedReq.customer_name);
-      }
-      if (matchedReq?.customer_email && !customerEmail.trim()) {
-        setCustomerEmail(matchedReq.customer_email);
-      }
-      if (matchedReq?.contact_name && !preparedFor.trim()) {
-        setPreparedFor(matchedReq.contact_name);
-      }
-      toast.success(`Config loaded: ${fileName}`);
-      setConfigUploadDialogOpen(false);
-      setConfigUploadRequestsOpen(false);
-      void fetchConfigUploadRequests();
-
-      // Fetch Central data if customer connected it
-      try {
-        const centralUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-data`;
-        const centralRes = await fetch(centralUrl, {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            authorization: `Bearer ${session?.access_token}`,
-          },
-        });
-        if (centralRes.ok) {
-          const centralJson = await centralRes.json();
-          if (centralJson.central_connected && centralJson.central_data) {
-            centralFromUploadRef.current = true;
-            setCentralValidated(true);
-            setReplayCentralLinked(false);
-            const cd = centralJson.central_data as Record<string, unknown>;
-            if (cd.licenses && Array.isArray(cd.licenses)) {
-              setGuestFirewallLicenseItems(cd.licenses as GuestFirewallLicenseApiRow[]);
-            }
-            if (cd.firewalls && Array.isArray(cd.firewalls)) {
-              setFirewallOptions(cd.firewalls as GuestFirewallRow[]);
-            }
-            if (cd.tenants && Array.isArray(cd.tenants)) {
-              setTenantOptions(cd.tenants as GuestTenantRow[]);
-              if ((cd.tenants as GuestTenantRow[]).length > 0) {
-                setCentralCreds((c) => ({ ...c, tenantId: (cd.tenants as GuestTenantRow[])[0].id }));
-              }
-            }
-            const fwCount = Array.isArray(cd.firewalls) ? (cd.firewalls as unknown[]).length : 0;
-            const linkedName = centralJson.linked_firewall_name;
-            const parts = [`Central data loaded (${fwCount} firewall${fwCount !== 1 ? "s" : ""})`];
-            if (linkedName) parts.push(`linked to ${linkedName}`);
-            toast.success(parts.join(" — "));
-
-            // Auto-link the uploaded file to the firewall the customer chose
-            const linkedFwId = centralJson.linked_firewall_id as string | undefined;
-            if (linkedFwId && Array.isArray(cd.firewalls)) {
-              const fwList = cd.firewalls as GuestFirewallRow[];
-              const linkedFw = fwList.find((fw) => fw.id === linkedFwId);
-              if (linkedFw?.serialNumber) {
-                const sn = linkedFw.serialNumber;
-                const label = (linkedFw.hostname || linkedFw.name || "").trim();
-                setFiles((prev) =>
-                  prev.map((f) => ({
-                    ...f,
-                    serialNumber: sn,
-                    ...(label ? { label } : {}),
-                  })),
-                );
-              }
-            }
-          }
-        }
-      } catch { /* Central data is optional enrichment */ }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not load config.");
-    } finally {
-      setConfigUploadLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleFilesChange, uploadedForPicker, fetchConfigUploadRequests, configUploadRequests, customerName, customerEmail]);
-
-  const handleRevokeConfigUpload = useCallback(async (token: string) => {
-    try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}`;
-      const { data: { session } } = await supabase.auth.getSession();
-      await fetch(url, {
-        method: "DELETE",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-      toast.success("Upload request revoked.");
-      if (configUploadToken === token) {
-        setConfigUploadToken(null);
-        setConfigUploadUrl(null);
-        setConfigUploadStatus(null);
-      }
-      void fetchConfigUploadRequests();
-    } catch {
-      toast.error("Could not revoke upload request.");
-    }
-  }, [configUploadToken, fetchConfigUploadRequests]);
-
-  const handleClaimConfigUpload = useCallback(async (token: string) => {
-    try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/claim`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error || "Claim failed");
-      }
-      toast.success("Upload request claimed — it's now yours.");
-      void fetchConfigUploadRequests();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not claim upload request.");
-    }
-  }, [fetchConfigUploadRequests]);
-
-  // Poll for upload status when a request is pending
-  useEffect(() => {
-    if (!configUploadToken || configUploadStatus !== "pending") {
-      if (configUploadPollRef.current) clearInterval(configUploadPollRef.current);
-      return;
-    }
-    const poll = async () => {
-      try {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${configUploadToken}`;
-        const res = await fetch(url, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.status === "uploaded") {
-            setConfigUploadStatus("uploaded");
-            toast.success("Customer has uploaded their configuration!");
-            void fetchConfigUploadRequests();
-          }
-        }
-      } catch { /* silent */ }
-    };
-    configUploadPollRef.current = setInterval(poll, 10_000);
-    return () => { if (configUploadPollRef.current) clearInterval(configUploadPollRef.current); };
-  }, [configUploadToken, configUploadStatus, fetchConfigUploadRequests]);
-
-  // Fetch upload requests on mount when SE is authenticated
-  useEffect(() => {
-    if (seAuth.seProfile) void fetchConfigUploadRequests();
-  }, [seAuth.seProfile, fetchConfigUploadRequests]);
-
   const handleDownloadHealthCheckPdf = useCallback(async () => {
-    const missing: string[] = [];
-    if (!customerName.trim()) missing.push("Customer Name");
-    if (!customerEmail.trim()) missing.push("Customer Email");
-    if (!preparedFor.trim()) missing.push("Prepared For");
+    const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
     if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
-    const labels = files
-      .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
-      .filter((l) => analysisResults[l]);
-    if (labels.length === 0) {
-      toast.error("No analysed configurations to include in the report.");
-      return;
-    }
-    const manualOverrides = loadSeHealthCheckBpOverrides();
-    const bpByLabel: Record<string, SophosBPScore> = {};
-    for (const label of labels) {
-      const ar = analysisResults[label];
-      if (ar) {
-        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-      }
-    }
-    const reportParams = {
-      labels,
+    const { reportParams, branding, labels } = buildHealthCheckReportParams({
       files,
       analysisResults,
       baselineResults,
-      bpByLabel,
       licence,
       customerName,
-      preparedFor: preparedFor.trim() || customerName.trim() || undefined,
+      preparedFor,
       preparedBy: effectivePreparedBy,
       dpiExemptZones,
       dpiExemptNetworks,
@@ -1577,21 +1163,15 @@ function HealthCheckInner() {
       seAckDnsProtection: seDnsProtectionAck,
       seExcludeSecurityHeartbeat,
       centralValidated: centralLinkedForAnalysis,
-      generatedAt: new Date(),
-      appVersion:
-        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
-      seNotes: seNotes.trim() || undefined,
-    };
-    const branding: BrandingData = {
-      companyName: "Sophos FireComply",
-      customerName: customerName.trim(),
-      logoUrl: null,
-      environment: "",
-      country: "",
-      selectedFrameworks: [],
-      preparedBy: effectivePreparedBy,
-      confidential: true,
-    };
+      seCentralHaLabels,
+      seThreatResponseAck,
+      seExcludedBpChecks,
+      seNotes,
+    });
+    if (labels.length === 0) {
+      toast.error("No analysed configurations to include in the report.");
+      return;
+    }
     setPdfBusy(true);
     try {
       const { runHealthCheckPdfDownload } = await import("@/lib/health-check-pdf-download-v2");
@@ -1633,37 +1213,16 @@ function HealthCheckInner() {
   ]);
 
   const handleDownloadHealthCheckHtml = useCallback(async () => {
-    const missing: string[] = [];
-    if (!customerName.trim()) missing.push("Customer Name");
-    if (!customerEmail.trim()) missing.push("Customer Email");
-    if (!preparedFor.trim()) missing.push("Prepared For");
+    const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
     if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
-    const labels = files
-      .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
-      .filter((l) => analysisResults[l]);
-    if (labels.length === 0) {
-      toast.error("No analysed configurations to include in the report.");
-      return;
-    }
-    const manualOverrides = loadSeHealthCheckBpOverrides();
-    const bpByLabel: Record<string, SophosBPScore> = {};
-    for (const label of labels) {
-      const ar = analysisResults[label];
-      if (ar) {
-        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-      }
-    }
-    const reportParams = {
-      labels,
+    const { reportParams, branding, labels } = buildHealthCheckReportParams({
       files,
       analysisResults,
       baselineResults,
-      bpByLabel,
       licence,
       customerName,
-      preparedFor: preparedFor.trim() || customerName.trim() || undefined,
+      preparedFor,
       preparedBy: effectivePreparedBy,
       dpiExemptZones,
       dpiExemptNetworks,
@@ -1674,21 +1233,15 @@ function HealthCheckInner() {
       seAckDnsProtection: seDnsProtectionAck,
       seExcludeSecurityHeartbeat,
       centralValidated: centralLinkedForAnalysis,
-      generatedAt: new Date(),
-      appVersion:
-        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
-      seNotes: seNotes.trim() || undefined,
-    };
-    const branding: BrandingData = {
-      companyName: "Sophos FireComply",
-      customerName: customerName.trim(),
-      logoUrl: null,
-      environment: "",
-      country: "",
-      selectedFrameworks: [],
-      preparedBy: effectivePreparedBy,
-      confidential: true,
-    };
+      seCentralHaLabels,
+      seThreatResponseAck,
+      seExcludedBpChecks,
+      seNotes,
+    });
+    if (labels.length === 0) {
+      toast.error("No analysed configurations to include in the report.");
+      return;
+    }
     try {
       const { runHealthCheckHtmlDownload } = await import("@/lib/health-check-pdf-download-v2");
       const htmlFilename = await runHealthCheckHtmlDownload({
@@ -1727,37 +1280,16 @@ function HealthCheckInner() {
   ]);
 
   const handleDownloadHealthCheckZip = useCallback(async () => {
-    const missing: string[] = [];
-    if (!customerName.trim()) missing.push("Customer Name");
-    if (!customerEmail.trim()) missing.push("Customer Email");
-    if (!preparedFor.trim()) missing.push("Prepared For");
+    const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
     if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
-    const labels = files
-      .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
-      .filter((l) => analysisResults[l]);
-    if (labels.length === 0) {
-      toast.error("No analysed configurations to include in the report.");
-      return;
-    }
-    const manualOverrides = loadSeHealthCheckBpOverrides();
-    const bpByLabel: Record<string, SophosBPScore> = {};
-    for (const label of labels) {
-      const ar = analysisResults[label];
-      if (ar) {
-        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-      }
-    }
-    const reportParams = {
-      labels,
+    const { reportParams, branding, labels } = buildHealthCheckReportParams({
       files,
       analysisResults,
       baselineResults,
-      bpByLabel,
       licence,
       customerName,
-      preparedFor: preparedFor.trim() || customerName.trim() || undefined,
+      preparedFor,
       preparedBy: effectivePreparedBy,
       dpiExemptZones,
       dpiExemptNetworks,
@@ -1768,21 +1300,15 @@ function HealthCheckInner() {
       seAckDnsProtection: seDnsProtectionAck,
       seExcludeSecurityHeartbeat,
       centralValidated: centralLinkedForAnalysis,
-      generatedAt: new Date(),
-      appVersion:
-        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
-      seNotes: seNotes.trim() || undefined,
-    };
-    const branding: BrandingData = {
-      companyName: "Sophos FireComply",
-      customerName: customerName.trim(),
-      logoUrl: null,
-      environment: "",
-      country: "",
-      selectedFrameworks: [],
-      preparedBy: effectivePreparedBy,
-      confidential: true,
-    };
+      seCentralHaLabels,
+      seThreatResponseAck,
+      seExcludedBpChecks,
+      seNotes,
+    });
+    if (labels.length === 0) {
+      toast.error("No analysed configurations to include in the report.");
+      return;
+    }
     setPdfBusy(true);
     try {
       const { runHealthCheckZipDownload } = await import("@/lib/health-check-pdf-download-v2");
@@ -1820,10 +1346,7 @@ function HealthCheckInner() {
   ]);
 
   const handleSendReportToCustomer = useCallback(async () => {
-    const missing: string[] = [];
-    if (!customerName.trim()) missing.push("Customer Name");
-    if (!customerEmail.trim()) missing.push("Customer Email");
-    if (!preparedFor.trim()) missing.push("Prepared For");
+    const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
     if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
     void saveHealthCheck();
     if (!files.length || Object.keys(analysisResults).length === 0) {
@@ -1836,27 +1359,13 @@ function HealthCheckInner() {
       const { buildSeHealthCheckBrowserHtmlDocument } = await import("@/lib/se-health-check-browser-html-v2");
       const { sanitizePdfFilenamePart } = await import("@/lib/html-document-to-pdf-blob");
 
-      const labels = files
-        .map((f) => f.label || f.fileName.replace(/\.(html|htm|xml)$/i, ""))
-        .filter((l) => analysisResults[l]);
-      const manualOverrides = loadSeHealthCheckBpOverrides();
-      const bpByLabel: Record<string, SophosBPScore> = {};
-      for (const label of labels) {
-        const ar = analysisResults[label];
-        if (ar) {
-          const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-          bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-        }
-      }
-      const reportParams = {
-        labels,
+      const { reportParams } = buildHealthCheckReportParams({
         files,
         analysisResults,
         baselineResults,
-        bpByLabel,
         licence,
         customerName,
-        preparedFor: preparedFor.trim() || customerName.trim() || undefined,
+        preparedFor,
         preparedBy: effectivePreparedBy,
         dpiExemptZones,
         dpiExemptNetworks,
@@ -1867,11 +1376,11 @@ function HealthCheckInner() {
         seAckDnsProtection: seDnsProtectionAck,
         seExcludeSecurityHeartbeat,
         centralValidated: centralLinkedForAnalysis,
-        generatedAt: new Date(),
-        appVersion:
-          typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
-        seNotes: seNotes.trim() || undefined,
-      };
+        seCentralHaLabels,
+        seThreatResponseAck,
+        seExcludedBpChecks,
+        seNotes,
+      });
 
       const [pdfBlob, html] = await Promise.all([
         buildSeHealthCheckPdfBlob(reportParams),
@@ -3336,76 +2845,4 @@ export default function HealthCheck() {
   );
 }
 
-function CompleteProfileGate({ seAuth }: { seAuth: ReturnType<typeof import("@/hooks/use-se-auth").useSEAuthProvider> }) {
-  const suggestedName = seAuth.seProfile?.healthCheckPreparedBy || seAuth.user?.user_metadata?.full_name as string || seAuth.user?.user_metadata?.name as string || "";
-  const [name, setName] = useState(suggestedName);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSave = useCallback(async () => {
-    const trimmed = name.trim();
-    if (!trimmed) { setError("Please enter your name"); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      const { error: metaErr } = await supabase.auth.updateUser({ data: { full_name: trimmed } });
-      if (metaErr) throw metaErr;
-      const { error: dbErr } = await supabase
-        .from("se_profiles")
-        .update({ display_name: trimmed, profile_completed: true } as Record<string, unknown>)
-        .eq("id", seAuth.seProfile!.id);
-      if (dbErr) throw dbErr;
-      await seAuth.reloadSeProfile();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
-  }, [name, seAuth]);
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <Card className="max-w-md w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <UserCheck className="h-5 w-5 text-[#2006F7]" />
-            Complete your profile
-          </CardTitle>
-          <CardDescription>
-            Please enter your name so it can be used in emails and reports.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Full Name
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Joseph McDonald"
-              autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); }}
-            />
-          </div>
-          {error && (
-            <p className="text-xs text-[#EA0022]">{error}</p>
-          )}
-          <Button
-            className="w-full bg-[#2006F7] hover:bg-[#10037C] text-white"
-            disabled={saving || !name.trim()}
-            onClick={() => void handleSave()}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
-          </Button>
-          <button
-            onClick={() => void seAuth.signOut()}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Sign out
-          </button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+// CompleteProfileGate extracted to ./health-check/CompleteProfileGate.tsx

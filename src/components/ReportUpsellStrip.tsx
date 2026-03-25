@@ -11,7 +11,7 @@ export interface ReportUpsellStripProps {
   isGuest: boolean;
 }
 
-type RuleId = "single-firewall" | "compliance-frameworks" | "low-score";
+type RuleId = "guest" | "single-firewall" | "compliance-frameworks" | "low-score";
 
 function dismissKey(ruleId: RuleId): string {
   return `firecomply-upsell-dismiss-${ruleId}`;
@@ -42,9 +42,17 @@ export function ReportUpsellStrip({
   const [dismissed, setDismissed] = useState<Partial<Record<RuleId, boolean>>>({});
 
   const activeRule = useMemo((): { id: RuleId; message: string } | null => {
-    if (isGuest) return null;
-
     const isRuleDismissed = (id: RuleId) => dismissed[id] || readDismissed(id);
+
+    if (isGuest) {
+      if (!isRuleDismissed("guest")) {
+        return {
+          id: "guest",
+          message: "Sign in or create an account to save reports and unlock the Executive Summary.",
+        };
+      }
+      return null;
+    }
 
     if (fileCount === 1 && !isRuleDismissed("single-firewall")) {
       return { id: "single-firewall", message: "Add a second firewall to unlock the Executive Summary." };
