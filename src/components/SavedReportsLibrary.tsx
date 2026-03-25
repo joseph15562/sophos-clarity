@@ -1,7 +1,18 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { FileText, Trash2, Search, ArrowUpDown, ChevronDown, Cloud, HardDrive, Cpu, Sparkles, ExternalLink } from "lucide-react";
+import {
+  FileText,
+  Trash2,
+  Search,
+  ArrowUpDown,
+  ChevronDown,
+  Cloud,
+  HardDrive,
+  Cpu,
+  Sparkles,
+  ExternalLink,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { Input } from "@/components/ui/input";
+
 import { Button } from "@/components/ui/button";
 import {
   loadSavedReportsCloud,
@@ -36,9 +47,14 @@ interface Props {
 type SortField = "customer" | "type" | "score" | "date";
 type SortDir = "asc" | "desc";
 
-
 function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(ts).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
@@ -63,35 +79,58 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
     setLoading(false);
   }, [useCloud]);
 
-  useEffect(() => { refresh(); }, [refresh, refreshTrigger]);
+  useEffect(() => {
+    refresh();
+  }, [refresh, refreshTrigger]);
 
-  const handleDelete = useCallback(async (pkg: SavedReportPackage) => {
-    if (useCloud) await deleteSavedReportCloud(pkg.id);
-    else await deleteSavedReportLocal(pkg.id);
-    setPackages((prev) => prev.filter((p) => p.id !== pkg.id));
-    if (org?.id) {
-      logAudit(org.id, "report.deleted", "report", pkg.id, { customerName: pkg.customerName }).catch(() => {});
-    }
-  }, [useCloud, org]);
+  const handleDelete = useCallback(
+    async (pkg: SavedReportPackage) => {
+      if (useCloud) await deleteSavedReportCloud(pkg.id);
+      else await deleteSavedReportLocal(pkg.id);
+      setPackages((prev) => prev.filter((p) => p.id !== pkg.id));
+      if (org?.id) {
+        logAudit(org.id, "report.deleted", "report", pkg.id, {
+          customerName: pkg.customerName,
+        }).catch(() => {});
+      }
+    },
+    [useCloud, org],
+  );
 
-  const toggleSort = useCallback((field: SortField) => {
-    if (sortField === field) setSortDir((d) => d === "asc" ? "desc" : "asc");
-    else { setSortField(field); setSortDir(field === "date" ? "desc" : "asc"); }
-  }, [sortField]);
+  const toggleSort = useCallback(
+    (field: SortField) => {
+      if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      else {
+        setSortField(field);
+        setSortDir(field === "date" ? "desc" : "asc");
+      }
+    },
+    [sortField],
+  );
 
   const filtered = useMemo(() => {
     let list = packages;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
-      list = list.filter((p) => p.customerName.toLowerCase().includes(q) || p.environment.toLowerCase().includes(q));
+      list = list.filter(
+        (p) => p.customerName.toLowerCase().includes(q) || p.environment.toLowerCase().includes(q),
+      );
     }
     list = [...list].sort((a, b) => {
       let cmp = 0;
       switch (sortField) {
-        case "customer": cmp = a.customerName.localeCompare(b.customerName); break;
-        case "type": cmp = a.reportType.localeCompare(b.reportType); break;
-        case "score": cmp = a.analysisSummary.overallScore - b.analysisSummary.overallScore; break;
-        case "date": cmp = a.createdAt - b.createdAt; break;
+        case "customer":
+          cmp = a.customerName.localeCompare(b.customerName);
+          break;
+        case "type":
+          cmp = a.reportType.localeCompare(b.reportType);
+          break;
+        case "score":
+          cmp = a.analysisSummary.overallScore - b.analysisSummary.overallScore;
+          break;
+        case "date":
+          cmp = a.createdAt - b.createdAt;
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -108,150 +147,204 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
 
   if (packages.length === 0) {
     return (
-      <div className="p-5 text-center space-y-2">
-        <FileText className="h-8 w-8 mx-auto text-muted-foreground/40" />
+      <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-8 text-center space-y-2">
+        <FileText className="h-8 w-8 mx-auto text-brand-accent/30" />
         <p className="text-xs text-muted-foreground">
-          No saved reports yet. Generate reports for a customer and click "Save Reports" to store them here.
+          No saved reports yet. Generate reports for a customer and click "Save Reports" to store
+          them here.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="space-y-4">
       {/* Storage badge + search */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/70 bg-card/90 px-4 py-3 shadow-sm">
-        <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold shrink-0 ${useCloud ? "bg-brand-accent/10 text-brand-accent" : "bg-muted text-muted-foreground"}`}>
+      <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] px-4 py-3.5">
+        <span
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold shrink-0 ${useCloud ? "bg-brand-accent/10 text-brand-accent" : "bg-brand-accent/[0.06] text-muted-foreground"}`}
+        >
           {useCloud ? <Cloud className="h-3 w-3" /> : <HardDrive className="h-3 w-3" />}
           {useCloud ? "Cloud Library" : "Local Library"}
         </span>
-        <span className="text-[11px] text-muted-foreground">{packages.length} saved package{packages.length !== 1 ? "s" : ""}</span>
+        <span className="text-[11px] text-muted-foreground/60">
+          {packages.length} saved package{packages.length !== 1 ? "s" : ""}
+        </span>
         <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-brand-accent/40" />
+          <input
             type="text"
             placeholder="Search saved reports…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 text-sm"
+            className="w-full rounded-xl border border-brand-accent/15 bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08] pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
           />
         </div>
       </div>
 
-      {/* Table header */}
-      <div className="rounded-t-lg border border-border overflow-hidden">
-        <div className="grid grid-cols-[3fr_70px_50px_1fr_40px] gap-3 px-4 py-2 bg-muted/30 text-[8px] font-bold text-muted-foreground uppercase tracking-wider">
-          <button className="flex items-center gap-1 text-left" onClick={() => toggleSort("customer")}>
+      {/* Table */}
+      <div className="rounded-[20px] border border-brand-accent/15 overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)]">
+        <div className="grid grid-cols-[3fr_70px_50px_1fr_40px] gap-3 px-4 py-2.5 bg-brand-accent/[0.03] dark:bg-brand-accent/[0.06] text-[8px] font-display font-bold text-muted-foreground/60 uppercase tracking-[0.08em] border-b border-brand-accent/10">
+          <button
+            className="flex items-center gap-1 text-left hover:text-foreground transition-colors"
+            onClick={() => toggleSort("customer")}
+          >
             Customer <ArrowUpDown className="h-2.5 w-2.5" />
           </button>
-          <button className="flex items-center gap-1" onClick={() => toggleSort("type")}>
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => toggleSort("type")}
+          >
             Type <ArrowUpDown className="h-2.5 w-2.5" />
           </button>
-          <button className="flex items-center gap-1" onClick={() => toggleSort("score")}>
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => toggleSort("score")}
+          >
             Score <ArrowUpDown className="h-2.5 w-2.5" />
           </button>
-          <button className="flex items-center gap-1" onClick={() => toggleSort("date")}>
+          <button
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+            onClick={() => toggleSort("date")}
+          >
             Date <ArrowUpDown className="h-2.5 w-2.5" />
           </button>
           <span />
         </div>
-      </div>
-
-      {/* Rows */}
-      <div className="rounded-b-lg border border-t-0 border-border overflow-hidden divide-y divide-border">
-        {filtered.map((pkg) => {
-          const isExpanded = expanded === pkg.id;
-          const score = pkg.analysisSummary.overallScore;
-          const color = scoreToColor(score);
-          const grade = gradeForScore(score);
-          return (
-            <div key={pkg.id} className="bg-card">
-              <button
-                onClick={() => setExpanded(isExpanded ? null : pkg.id)}
-                className="w-full grid grid-cols-[3fr_70px_50px_1fr_40px] gap-3 px-4 py-2.5 items-center text-left hover:bg-muted/20 transition-colors"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{pkg.customerName}</p>
-                    {pkg.environment && <p className="text-[9px] text-muted-foreground truncate">{pkg.environment}</p>}
-                  </div>
-                </div>
-                <span className={`flex items-center gap-1 text-[10px] font-medium ${pkg.reportType === "full" ? "text-brand-accent" : "text-muted-foreground"}`}>
-                  {pkg.reportType === "full" ? <Sparkles className="h-3 w-3" /> : <Cpu className="h-3 w-3" />}
-                  {pkg.reportType === "full" ? "Full" : "Pre-AI"}
-                </span>
-                <span
-                  className="inline-flex items-center justify-center text-[11px] font-display font-bold tabular-nums h-7 w-10 rounded-md"
-                  style={{ color, backgroundColor: hexToRgba(color, 0.18) }}
-                  title={`Grade ${grade}`}
+        <div className="divide-y divide-brand-accent/[0.06]">
+          {filtered.map((pkg) => {
+            const isExpanded = expanded === pkg.id;
+            const score = pkg.analysisSummary.overallScore;
+            const color = scoreToColor(score);
+            const grade = gradeForScore(score);
+            return (
+              <div key={pkg.id}>
+                <button
+                  onClick={() => setExpanded(isExpanded ? null : pkg.id)}
+                  className="w-full grid grid-cols-[3fr_70px_50px_1fr_40px] gap-3 px-4 py-3 items-center text-left hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors"
                 >
-                  {score}
-                </span>
-                <span className="text-[10px] text-muted-foreground">{formatDate(pkg.createdAt)}</span>
-                <div className="flex items-center gap-1 justify-end">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(pkg); }}
-                    className="h-7 w-7 text-muted-foreground hover:text-severity-critical"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </button>
-
-              {isExpanded && (
-                <div className="px-3 pb-3 pt-1 border-t border-border space-y-3">
-                  {/* Summary chips */}
-                  <div className="flex flex-wrap gap-2">
-                    <span className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground">
-                      {pkg.analysisSummary.totalFindings} findings
-                    </span>
-                    <span className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground">
-                      {pkg.analysisSummary.totalRules} rules
-                    </span>
-                    {pkg.analysisSummary.categories.map((c) => (
-                      <span key={c.label} className={`text-[10px] px-2 py-1 rounded-md ${c.pct >= 80 ? "bg-severity-low/10 text-severity-low" : c.pct >= 50 ? "bg-severity-high/10 text-severity-high" : "bg-severity-critical/10 text-severity-critical"}`}>
-                        {c.label}: {c.pct}%
-                      </span>
-                    ))}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ChevronDown
+                      className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">
+                        {pkg.customerName}
+                      </p>
+                      {pkg.environment && (
+                        <p className="text-[9px] text-muted-foreground truncate">
+                          {pkg.environment}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  <span
+                    className={`flex items-center gap-1 text-[10px] font-medium ${pkg.reportType === "full" ? "text-brand-accent" : "text-muted-foreground"}`}
+                  >
+                    {pkg.reportType === "full" ? (
+                      <Sparkles className="h-3 w-3" />
+                    ) : (
+                      <Cpu className="h-3 w-3" />
+                    )}
+                    {pkg.reportType === "full" ? "Full" : "Pre-AI"}
+                  </span>
+                  <span
+                    className="inline-flex items-center justify-center text-[11px] font-display font-bold tabular-nums h-7 w-10 rounded-md"
+                    style={{ color, backgroundColor: hexToRgba(color, 0.18) }}
+                    title={`Grade ${grade}`}
+                  >
+                    {score}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatDate(pkg.createdAt)}
+                  </span>
+                  <div className="flex items-center gap-1 justify-end">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(pkg);
+                      }}
+                      className="h-7 w-7 text-muted-foreground hover:text-severity-critical"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </button>
 
-                  {/* Report list */}
-                  {pkg.reports.length > 0 ? (
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Reports ({pkg.reports.length})</p>
-                      {pkg.reports.map((r) => (
-                        <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-muted/30">
-                          <FileText className="h-3 w-3 text-brand-accent shrink-0" />
-                          <span className="text-[10px] font-medium text-foreground flex-1 truncate">{r.label}</span>
-                          <span className="text-[9px] text-muted-foreground">{Math.round(r.markdown.length / 1024)}KB</span>
-                        </div>
+                {isExpanded && (
+                  <div className="px-4 pb-4 pt-2 border-t border-brand-accent/10 space-y-3 bg-brand-accent/[0.01] dark:bg-brand-accent/[0.03]">
+                    {/* Summary chips */}
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-[10px] px-2 py-1 rounded-md bg-brand-accent/[0.06] text-muted-foreground font-medium">
+                        {pkg.analysisSummary.totalFindings} findings
+                      </span>
+                      <span className="text-[10px] px-2 py-1 rounded-md bg-brand-accent/[0.06] text-muted-foreground font-medium">
+                        {pkg.analysisSummary.totalRules} rules
+                      </span>
+                      {pkg.analysisSummary.categories.map((c) => (
+                        <span
+                          key={c.label}
+                          className={`text-[10px] px-2 py-1 rounded-md ${c.pct >= 80 ? "bg-severity-low/10 text-severity-low" : c.pct >= 50 ? "bg-severity-high/10 text-severity-high" : "bg-severity-critical/10 text-severity-critical"}`}
+                        >
+                          {c.label}: {c.pct}%
+                        </span>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-[10px] text-muted-foreground">Pre-AI assessment only (no generated reports).</p>
-                  )}
 
-                  {/* Load button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onLoadReports({ reports: pkg.reports, customerName: pkg.customerName, environment: pkg.environment, analysisSummary: pkg.analysisSummary })}
-                    className="gap-1.5 text-[11px]"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {pkg.reports.length > 0 ? "Load Reports into Viewer" : "View Assessment"}
-                  </Button>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                    {/* Report list */}
+                    {pkg.reports.length > 0 ? (
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-display font-bold text-muted-foreground/60 uppercase tracking-[0.08em]">
+                          Reports ({pkg.reports.length})
+                        </p>
+                        {pkg.reports.map((r) => (
+                          <div
+                            key={r.id}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-accent/[0.03] dark:bg-brand-accent/[0.06] border border-brand-accent/[0.06]"
+                          >
+                            <FileText className="h-3 w-3 text-brand-accent shrink-0" />
+                            <span className="text-[10px] font-medium text-foreground flex-1 truncate">
+                              {r.label}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground">
+                              {Math.round(r.markdown.length / 1024)}KB
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground">
+                        Pre-AI assessment only (no generated reports).
+                      </p>
+                    )}
+
+                    {/* Load button */}
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() =>
+                        onLoadReports({
+                          reports: pkg.reports,
+                          customerName: pkg.customerName,
+                          environment: pkg.environment,
+                          analysisSummary: pkg.analysisSummary,
+                        })
+                      }
+                      className="gap-1.5 text-[11px] rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 border-0 shadow-sm"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      {pkg.reports.length > 0 ? "Load Reports into Viewer" : "View Assessment"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
