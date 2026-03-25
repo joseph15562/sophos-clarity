@@ -12,12 +12,11 @@ export default defineConfig({
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-  ],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run dev",
+    command: process.env.CI ? "npx vite preview --port 5173" : "npm run dev",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
   },
 });
