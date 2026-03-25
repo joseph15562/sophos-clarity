@@ -363,8 +363,12 @@ async function handleConfigUploadPublic(
     if (!tenant_id?.trim()) return json({ error: "tenant_id is required" }, 400, corsHeaders);
 
     try {
-      const clientId = await centralDecrypt(row.central_client_id_enc);
-      const clientSecret = await centralDecrypt(row.central_client_secret_enc);
+      const clientId = await centralDecrypt(row.central_client_id_enc, async (re) => {
+        await db.from("config_upload_requests").update({ central_client_id_enc: re }).eq("id", row.id);
+      });
+      const clientSecret = await centralDecrypt(row.central_client_secret_enc, async (re) => {
+        await db.from("config_upload_requests").update({ central_client_secret_enc: re }).eq("id", row.id);
+      });
       const accessToken = await sophosGetToken(clientId, clientSecret);
       const identity = await sophosWhoAmI(accessToken);
       const tenants = (row.central_data as Record<string, unknown>)?.tenants as Array<{ id: string; apiHost?: string }> ?? [];

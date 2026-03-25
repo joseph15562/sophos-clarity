@@ -31,34 +31,89 @@ export function generateApiKey(): string {
   return `ck_${hex}`;
 }
 
-async function centralDeriveKey(): Promise<CryptoKey> {
+async function centralDeriveKeyHkdf(): Promise<CryptoKey> {
+  if (!CENTRAL_ENCRYPTION_KEY) throw new Error("CENTRAL_ENCRYPTION_KEY not configured");
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(CENTRAL_ENCRYPTION_KEY),
+    "HKDF",
+    false,
+    ["deriveKey"],
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: enc.encode("firecomply-central-v1"),
+      info: enc.encode("aes-gcm-key"),
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+/** Legacy key derivation — kept for decrypting data encrypted before HKDF migration. */
+async function centralDeriveKeyLegacy(): Promise<CryptoKey> {
   if (!CENTRAL_ENCRYPTION_KEY) throw new Error("CENTRAL_ENCRYPTION_KEY not configured");
   const enc = new TextEncoder();
   return crypto.subtle.importKey(
-    "raw", enc.encode(CENTRAL_ENCRYPTION_KEY.padEnd(32, "0").slice(0, 32)),
-    { name: "AES-GCM" }, false, ["encrypt", "decrypt"],
+    "raw",
+    enc.encode(CENTRAL_ENCRYPTION_KEY.padEnd(32, "0").slice(0, 32)),
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"],
   );
 }
 
-export async function centralEncrypt(plaintext: string): Promise<string> {
-  const key = await centralDeriveKey();
+function encryptWithKey(key: CryptoKey, plaintext: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext),
+  return crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext)).then(
+    (ciphertext) => {
+      const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+      combined.set(iv);
+      combined.set(new Uint8Array(ciphertext), iv.length);
+      return btoa(String.fromCharCode(...combined));
+    },
   );
-  const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
-  combined.set(iv);
-  combined.set(new Uint8Array(ciphertext), iv.length);
-  return btoa(String.fromCharCode(...combined));
 }
 
-export async function centralDecrypt(encoded: string): Promise<string> {
-  const key = await centralDeriveKey();
+function decryptWithKey(key: CryptoKey, encoded: string): Promise<string> {
   const raw = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
   const iv = raw.slice(0, 12);
   const ciphertext = raw.slice(12);
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv }, key, ciphertext,
+  return crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext).then(
+    (decrypted) => new TextDecoder().decode(decrypted),
   );
-  return new TextDecoder().decode(decrypted);
+}
+
+/** Encrypt using HKDF-derived key (all new encryptions use this). */
+export async function centralEncrypt(plaintext: string): Promise<string> {
+  const key = await centralDeriveKeyHkdf();
+  return encryptWithKey(key, plaintext);
+}
+
+/**
+ * Decrypt: try HKDF key first, fall back to legacy padEnd key.
+ * Callers can pass an optional callback to re-encrypt the value with
+ * the new key derivation when the legacy path is used.
+ */
+export async function centralDecrypt(
+  encoded: string,
+  onLegacyDecrypt?: (reEncrypted: string) => void | Promise<void>,
+): Promise<string> {
+  try {
+    const key = await centralDeriveKeyHkdf();
+    return await decryptWithKey(key, encoded);
+  } catch {
+    const legacyKey = await centralDeriveKeyLegacy();
+    const plaintext = await decryptWithKey(legacyKey, encoded);
+    if (onLegacyDecrypt) {
+      const reEncrypted = await encryptWithKey(await centralDeriveKeyHkdf(), plaintext);
+      await onLegacyDecrypt(reEncrypted);
+    }
+    return plaintext;
+  }
 }
