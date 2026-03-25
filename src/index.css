@@ -5,8 +5,8 @@
 @layer base {
   :root {
     /* Sophos Brand — Light Mode */
-    --background: 220 28% 95%;       /* #EDF2F9 Light Neutral */
-    --foreground: 215 52% 14%;       /* #001A47 Dark Blue */
+    --background: 220 28% 95%; /* #EDF2F9 Light Neutral */
+    --foreground: 215 52% 14%; /* #001A47 Dark Blue */
 
     --card: 0 0% 100%;
     --card-foreground: 215 52% 14%;
@@ -14,24 +14,24 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 52% 14%;
 
-    --primary: 243 95% 50%;          /* #2006F7 Sophos Blue */
+    --primary: 243 95% 50%; /* #2006F7 Sophos Blue */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 28% 95%;        /* #EDF2F9 Light Neutral */
+    --secondary: 220 28% 95%; /* #EDF2F9 Light Neutral */
     --secondary-foreground: 215 52% 14%;
 
-    --muted: 213 27% 90%;            /* #BBCFDE area */
+    --muted: 213 27% 90%; /* #BBCFDE area */
     --muted-foreground: 210 25% 40%; /* Darker than #6A889B for readability */
 
-    --accent: 220 28% 93%;           /* Subtle highlight for dropdowns/focus */
+    --accent: 220 28% 93%; /* Subtle highlight for dropdowns/focus */
     --accent-foreground: 215 52% 14%;
 
-    --destructive: 352 100% 46%;     /* #EA0022 */
+    --destructive: 352 100% 46%; /* #EA0022 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 213 27% 76%;           /* Visible but soft on light backgrounds */
+    --border: 213 27% 76%; /* Visible but soft on light backgrounds */
     --input: 213 27% 76%;
-    --ring: 243 95% 50%;             /* Sophos Blue */
+    --ring: 243 95% 50%; /* Sophos Blue */
 
     --radius: 0.5rem;
 
@@ -51,48 +51,61 @@
     --warning-foreground: 0 0% 100%;
 
     /* Severity scale — used for findings, badges, charts */
-    --severity-critical: 352 100% 46%;    /* #EA0022 */
-    --severity-high: 33 100% 48%;         /* #F29400 */
-    --severity-medium: 52 100% 49%;       /* #F8E300 */
-    --severity-low: 159 100% 47%;         /* #00F2B3 */
+    --severity-critical: 352 100% 46%; /* #EA0022 */
+    --severity-high: 33 100% 48%; /* #F29400 */
+    --severity-medium: 52 100% 49%; /* #F8E300 */
+    --severity-low: 159 100% 47%; /* #00F2B3 */
 
-    --severity-info: 206 100% 49%;         /* #009CFB */
+    --severity-info: 206 100% 49%; /* #009CFB */
     --severity-critical-foreground: 0 0% 100%;
     --severity-high-foreground: 0 0% 100%;
     --severity-medium-foreground: 0 0% 10%;
     --severity-low-foreground: 0 0% 10%;
 
     /* Brand accent — switches from blue (light) to cyan (dark) */
-    --brand-accent: 243 95% 50%;           /* #2006F7 */
+    --brand-accent: 243 95% 50%; /* #2006F7 */
+
+    /* Extended palette — commonly used brand hex values */
+    --brand-violet: 264 100% 50%; /* #5A00FF */
+    --brand-indigo: 248 100% 67%; /* #6B5BFF */
+    --brand-deep-blue: 243 97% 25%; /* #10037C */
+    --brand-navy: 215 100% 14%; /* #001A47 */
+
+    /* Grade / severity text on light backgrounds */
+    --grade-a: 159 100% 47%; /* #00F2B3 */
+    --grade-b: 243 95% 50%; /* #2006F7 light / #00EDFF dark */
+    --grade-c: 52 100% 49%; /* #F8E300 */
+    --grade-d: 33 100% 48%; /* #F29400 */
+    --grade-f: 352 100% 46%; /* #EA0022 */
   }
 
   .dark {
     /* Sophos Brand — Dark Mode (high contrast) */
-    --background: 216 100% 8%;       /* Deep navy — darker than #001A47 */
-    --foreground: 0 0% 96%;          /* Near-white for max readability */
+    --background: 216 100% 8%; /* Deep navy — darker than #001A47 */
+    --foreground: 0 0% 96%; /* Near-white for max readability */
 
-    --card: 215 60% 14%;             /* #001A47-ish — distinct from background */
+    --card: 215 60% 14%; /* #001A47-ish — distinct from background */
     --card-foreground: 0 0% 96%;
 
     --popover: 215 60% 14%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 243 100% 62%;         /* Sophos Blue — bright on dark */
+    --primary: 243 100% 62%; /* Sophos Blue — bright on dark */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 50% 20%;        /* Lighter than card for secondary elements */
+    --secondary: 215 50% 20%; /* Lighter than card for secondary elements */
     --secondary-foreground: 0 0% 92%;
 
     --muted: 215 45% 20%;
     --muted-foreground: 210 20% 65%; /* Brighter muted text */
 
-    --accent: 215 45% 25%;           /* Subtle highlight for dropdowns/focus */
+    --accent: 215 45% 25%; /* Subtle highlight for dropdowns/focus */
     --accent-foreground: 0 0% 96%;
 
     --destructive: 352 90% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 40% 25%;           /* More visible borders */
+    --border: 215 40% 25%; /* More visible borders */
     --input: 215 40% 25%;
     --ring: 243 100% 62%;
 
@@ -122,7 +135,18 @@
     --severity-medium-foreground: 0 0% 10%;
     --severity-low-foreground: 0 0% 100%;
 
-    --brand-accent: 186 100% 50%;          /* #00EDFF */
+    --brand-accent: 186 100% 50%; /* #00EDFF */
+
+    --brand-violet: 264 100% 63%; /* brighter in dark */
+    --brand-indigo: 248 100% 73%;
+    --brand-deep-blue: 243 100% 45%;
+    --brand-navy: 215 52% 14%;
+
+    --grade-a: 159 100% 47%;
+    --grade-b: 186 100% 50%; /* cyan in dark */
+    --grade-c: 52 100% 52%;
+    --grade-d: 33 100% 52%;
+    --grade-f: 352 90% 50%;
   }
 }
 
@@ -135,33 +159,42 @@
     @apply bg-background text-foreground;
     background-image:
       radial-gradient(circle at top left, rgba(32, 6, 247, 0.06), transparent 28%),
-      linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
+      linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
     background-attachment: fixed;
-    font-family: 'Zalando Sans', 'Inter', system-ui, sans-serif;
+    font-family: "Zalando Sans", "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  input, textarea, select, button {
+  input,
+  textarea,
+  select,
+  button {
     font-family: inherit;
   }
 
   svg text {
-    font-family: 'Zalando Sans', system-ui, sans-serif;
+    font-family: "Zalando Sans", system-ui, sans-serif;
   }
 
   .dark body {
     background-image:
       radial-gradient(circle at top left, rgba(32, 6, 247, 0.14), transparent 30%),
-      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Zalando Sans Expanded', 'Zalando Sans', system-ui, sans-serif;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Zalando Sans Expanded", "Zalando Sans", system-ui, sans-serif;
   }
 
-  code, pre {
-    font-family: 'JetBrains Mono', monospace;
+  code,
+  pre {
+    font-family: "JetBrains Mono", monospace;
   }
 }
 

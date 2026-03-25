@@ -134,7 +134,8 @@ serve(async (req: Request) => {
         .from("agents")
         .select("id, name, serial_number, hardware_model, tenant_name, last_seen_at")
         .eq("org_id", orgId)
-        .eq("tenant_name", tenantName);
+        .eq("tenant_name", tenantName)
+        .limit(500);
 
       if (agents && agents.length > 0) {
         const agentIds = agents.map((a: Record<string, unknown>) => a.id as string);
@@ -149,7 +150,8 @@ serve(async (req: Request) => {
           .select(submissionSelect)
           .eq("org_id", orgId)
           .in("agent_id", agentIds)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(1000);
 
         // Group by agent_id — keep only latest per agent
         const latestByAgent = new Map<string, Record<string, unknown>>();

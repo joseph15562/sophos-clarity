@@ -14,7 +14,7 @@ interface SharedHealthCheckData {
 type LoadState = "loading" | "loaded" | "expired" | "not-found" | "error";
 
 async function fetchSharedHealthCheck(token: string): Promise<SharedHealthCheckData | null> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/shared-health-check/${token}`;
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-public/shared-health-check/${token}`;
   const res = await fetch(url, {
     headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
   });
@@ -48,7 +48,9 @@ const SharedHealthCheck = () => {
         if (cancelled) return;
         setState(e instanceof Error && e.message === "not-found" ? "not-found" : "error");
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   if (state === "loading") {
@@ -81,8 +83,8 @@ const SharedHealthCheck = () => {
           <Shield className="h-10 w-10 text-white/30 mx-auto" />
           <h1 className="text-xl font-bold text-white">This report has expired</h1>
           <p className="text-white/50 text-sm">
-            Shared health check reports are available for a limited time.
-            Please ask your Sophos SE for a new link.
+            Shared health check reports are available for a limited time. Please ask your Sophos SE
+            for a new link.
           </p>
         </div>
       </div>
@@ -105,10 +107,14 @@ const SharedHealthCheck = () => {
 
   const customerLabel = data.customer_name?.trim() || "Health Check";
   const checkedDate = new Date(data.checked_at).toLocaleDateString("en-GB", {
-    day: "numeric", month: "short", year: "numeric",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   });
   const expiresDate = new Date(data.expires_at).toLocaleDateString("en-GB", {
-    day: "numeric", month: "short", year: "numeric",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 
   const handleDownloadHtml = () => {

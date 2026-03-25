@@ -2,8 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PageSkeleton } from "@/components/PageSkeleton";
@@ -18,11 +18,38 @@ const ConfigUpload = lazy(() => import("./pages/ConfigUpload"));
 const TeamInviteAccept = lazy(() => import("./pages/TeamInviteAccept"));
 const ThemePreview = lazy(() => import("./pages/ThemePreview"));
 
-const queryClient = new QueryClient();
+function FocusReset() {
+  const location = useLocation();
+  useEffect(() => {
+    const main = document.getElementById("main-content");
+    if (main) {
+      main.focus({ preventScroll: true });
+    } else {
+      document.body.focus({ preventScroll: true });
+    }
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="sophos-firecomply-theme">
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="sophos-firecomply-theme"
+    >
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -34,6 +61,7 @@ const App = () => (
             Skip to main content
           </a>
           <BrowserRouter>
+            <FocusReset />
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/" element={<Index />} />

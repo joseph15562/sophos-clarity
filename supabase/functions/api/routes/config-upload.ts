@@ -1,19 +1,10 @@
 import { authenticateSE, runConfigUploadCleanup } from "../../_shared/auth.ts";
-import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
+import { centralDecrypt } from "../../_shared/crypto.ts";
 import { adminClient, json as jsonResponse } from "../../_shared/db.ts";
 import {
   buildCustomerUploadEmailHtml,
-  buildSeNotificationEmailHtml,
-  isValidSophosXml,
-  MAX_CONFIG_SIZE,
   sendConfigUploadEmail,
 } from "../../_shared/email.ts";
-import {
-  sophosFetchFirewalls,
-  sophosFetchTenants,
-  sophosGetToken,
-  sophosWhoAmI,
-} from "../../_shared/sophos-central-api.ts";
 
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
 
@@ -80,7 +71,7 @@ export async function handleConfigUploadRoutes(
     return json({ id: row.id, token, url: uploadUrl, expires_at: row.expires_at, email_sent: emailSent }, 201);
   }
 
-  // GET /api/config-upload-requests — list requests (JWT required). ?team_id= to filter by team.
+  // GET /api/config-upload-requests — list requests (JWT required)
   if (req.method === "GET" && segments[0] === "config-upload-requests" && segments.length === 1) {
     const se = await authenticateSE(req);
     if (!se) return json({ error: "Unauthorized" }, 401);
@@ -115,123 +106,13 @@ export async function handleConfigUploadRoutes(
     return json({ data: data ?? [] });
   }
 
-  // Config upload token routes (config-upload/:token/...)
+  // JWT-authenticated config-upload/:token sub-routes
   if (segments[0] === "config-upload" && segments.length >= 2) {
     const token = segments[1];
     const subRoute = segments[2] ?? null;
     const db = adminClient();
 
-    // GET /api/config-upload/:token — public status check
-    if (req.method === "GET" && !subRoute) {
-      await runConfigUploadCleanup();
-
-      const { data, error } = await db
-        .from("config_upload_requests")
-        .select("status, customer_name, expires_at, file_name, central_connected_at, central_data, central_linked_firewall_id, central_linked_firewall_name")
-        .eq("token", token)
-        .maybeSingle();
-
-      if (error) return json({ error: error.message }, 500);
-      if (!data) return json({ error: "Upload link not found" }, 404);
-      if (new Date(data.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
-
-      return json({
-        status: data.status,
-        customer_name: data.customer_name,
-        expires_at: data.expires_at,
-        file_name: data.file_name,
-        central_connected: !!data.central_connected_at,
-        central_tenants: data.central_data ? (data.central_data as Record<string, unknown>).tenants ?? null : null,
-        central_firewalls: data.central_data ? (data.central_data as Record<string, unknown>).firewalls ?? null : null,
-        central_account_type: data.central_data ? (data.central_data as Record<string, unknown>).accountType ?? null : null,
-        central_linked_firewall_id: data.central_linked_firewall_id,
-        central_linked_firewall_name: data.central_linked_firewall_name,
-      });
-    }
-
-    // POST /api/config-upload/:token — customer uploads XML (public)
-    if (req.method === "POST" && !subRoute) {
-      const { data: existing, error: fetchErr } = await db
-        .from("config_upload_requests")
-        .select("id, status, expires_at, se_email, customer_name, se_user_id")
-        .eq("token", token)
-        .maybeSingle();
-
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
-      if (!existing) return json({ error: "Upload link not found" }, 404);
-      if (new Date(existing.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
-      if (existing.status === "downloaded") return json({ error: "This configuration has already been downloaded by the SE. Please request a new upload link." }, 409);
-
-      const contentType = req.headers.get("content-type") ?? "";
-      let xmlContent = "";
-      let fileName = "entities.xml";
-
-      if (contentType.includes("multipart/form-data")) {
-        const formData = await req.formData();
-        const file = formData.get("file");
-        if (!file || !(file instanceof File)) return json({ error: "No file provided" }, 400);
-        if (file.size > MAX_CONFIG_SIZE) return json({ error: "File exceeds 10 MB limit" }, 413);
-        fileName = file.name || "entities.xml";
-        xmlContent = await file.text();
-      } else {
-        const contentLength = parseInt(req.headers.get("content-length") ?? "0");
-        if (contentLength > MAX_CONFIG_SIZE) return json({ error: "File exceeds 10 MB limit" }, 413);
-        xmlContent = await req.text();
-      }
-
-      if (!xmlContent.trim()) return json({ error: "Empty file" }, 400);
-
-      if (!isValidSophosXml(xmlContent)) {
-        return json({
-          error: "This doesn't appear to be a Sophos firewall configuration export. Please export your entities.xml from Sophos Firewall and try again.",
-        }, 422);
-      }
-
-      const { error: updateErr } = await db
-        .from("config_upload_requests")
-        .update({
-          config_xml: xmlContent,
-          file_name: fileName,
-          status: "uploaded",
-          uploaded_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id);
-
-      if (updateErr) return json({ error: updateErr.message }, 500);
-
-      if (existing.se_email) {
-        const { data: freshRow } = await db
-          .from("config_upload_requests")
-          .select("central_connected_at, central_linked_firewall_name")
-          .eq("id", existing.id)
-          .maybeSingle();
-        let centralNote = "";
-        if (freshRow?.central_connected_at) {
-          centralNote = freshRow.central_linked_firewall_name
-            ? `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong> (linked to firewall: <strong>${freshRow.central_linked_firewall_name}</strong>).</p>`
-            : `<p style="margin:0 0 12px;">The customer also connected <strong>Sophos Central</strong>.</p>`;
-        }
-        let seName = "";
-        if (existing.se_user_id) {
-          const { data: seProfile } = await db
-            .from("se_profiles")
-            .select("display_name, health_check_prepared_by")
-            .eq("id", existing.se_user_id)
-            .maybeSingle();
-          seName = seProfile?.display_name || seProfile?.health_check_prepared_by || "";
-        }
-        const notifHtml = buildSeNotificationEmailHtml(existing.customer_name ?? "", `${APP_URL}/health-check-2`, centralNote, seName);
-        await sendConfigUploadEmail(
-          existing.se_email,
-          `Config received${existing.customer_name ? ` from ${existing.customer_name}` : ""}`,
-          notifHtml,
-        );
-      }
-
-      return json({ ok: true, message: "Configuration uploaded successfully" });
-    }
-
-    // POST /api/config-upload/:token/resend — SE re-sends email (JWT required)
+    // POST /api/config-upload/:token/resend — SE re-sends email
     if (req.method === "POST" && subRoute === "resend") {
       const se = await authenticateSE(req);
       if (!se) return json({ error: "Unauthorized" }, 401);
@@ -265,7 +146,7 @@ export async function handleConfigUploadRoutes(
       return json({ email_sent: result.success, error: result.error ?? undefined });
     }
 
-    // GET /api/config-upload/:token/download — SE downloads the XML (JWT required, owner or teammate)
+    // GET /api/config-upload/:token/download — SE downloads the XML
     if (req.method === "GET" && subRoute === "download") {
       const se = await authenticateSE(req);
       if (!se) return json({ error: "Unauthorized" }, 401);
@@ -300,7 +181,7 @@ export async function handleConfigUploadRoutes(
       return json({ config_xml: row.config_xml, file_name: row.file_name });
     }
 
-    // POST /api/config-upload/:token/claim — teammate claims the request (JWT required, team member)
+    // POST /api/config-upload/:token/claim — teammate claims the request
     if (req.method === "POST" && subRoute === "claim") {
       const se = await authenticateSE(req);
       if (!se) return json({ error: "Unauthorized" }, 401);
@@ -333,126 +214,7 @@ export async function handleConfigUploadRoutes(
       return json({ ok: true, claimed_by: se.seProfile.id });
     }
 
-    // POST /api/config-upload/:token/central-connect — customer connects Sophos Central (public, apikey)
-    if (req.method === "POST" && subRoute === "central-connect") {
-      const { data: row, error: fetchErr } = await db
-        .from("config_upload_requests")
-        .select("id, status, expires_at")
-        .eq("token", token)
-        .maybeSingle();
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
-      if (!row) return json({ error: "Upload request not found" }, 404);
-      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
-
-      const body = await req.json();
-      const { client_id, client_secret } = body as { client_id?: string; client_secret?: string };
-      if (!client_id?.trim() || !client_secret?.trim()) {
-        return json({ error: "Client ID and Client Secret are required" }, 400);
-      }
-
-      try {
-        const accessToken = await sophosGetToken(client_id.trim(), client_secret.trim());
-        const identity = await sophosWhoAmI(accessToken);
-        const tenants = await sophosFetchTenants(accessToken, identity);
-
-        let centralData: Record<string, unknown> = {
-          accountType: identity.idType,
-          tenants,
-        };
-
-        if (tenants.length === 1) {
-          const fwData = await sophosFetchFirewalls(accessToken, identity, tenants[0].id, tenants);
-          centralData = { ...centralData, ...fwData, selectedTenantId: tenants[0].id };
-        }
-
-        const encClientId = await centralEncrypt(client_id.trim());
-        const encClientSecret = await centralEncrypt(client_secret.trim());
-
-        await db
-          .from("config_upload_requests")
-          .update({
-            central_client_id_enc: encClientId,
-            central_client_secret_enc: encClientSecret,
-            central_data: centralData,
-            central_connected_at: new Date().toISOString(),
-          })
-          .eq("id", row.id);
-
-        return json({
-          ok: true,
-          account_type: identity.idType,
-          tenants: tenants.map((t) => ({ id: t.id, name: t.name })),
-          firewalls: (centralData as Record<string, unknown>).firewalls ?? null,
-        });
-      } catch (err) {
-        return json({ error: err instanceof Error ? err.message : "Central connection failed" }, 400);
-      }
-    }
-
-    // POST /api/config-upload/:token/central-firewalls — fetch firewalls for a selected tenant (public, apikey)
-    if (req.method === "POST" && subRoute === "central-firewalls") {
-      const { data: row, error: fetchErr } = await db
-        .from("config_upload_requests")
-        .select("id, expires_at, central_client_id_enc, central_client_secret_enc, central_data")
-        .eq("token", token)
-        .maybeSingle();
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
-      if (!row) return json({ error: "Upload request not found" }, 404);
-      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
-      if (!row.central_client_id_enc) return json({ error: "Central not connected yet" }, 400);
-
-      const body = await req.json();
-      const { tenant_id } = body as { tenant_id?: string };
-      if (!tenant_id?.trim()) return json({ error: "tenant_id is required" }, 400);
-
-      try {
-        const clientId = await centralDecrypt(row.central_client_id_enc);
-        const clientSecret = await centralDecrypt(row.central_client_secret_enc);
-        const accessToken = await sophosGetToken(clientId, clientSecret);
-        const identity = await sophosWhoAmI(accessToken);
-        const tenants = (row.central_data as Record<string, unknown>)?.tenants as Array<{ id: string; apiHost?: string }> ?? [];
-        const fwData = await sophosFetchFirewalls(accessToken, identity, tenant_id.trim(), tenants);
-
-        const updatedCentralData = { ...(row.central_data as Record<string, unknown>), ...fwData, selectedTenantId: tenant_id.trim() };
-        await db
-          .from("config_upload_requests")
-          .update({ central_data: updatedCentralData })
-          .eq("id", row.id);
-
-        return json({ ok: true, firewalls: fwData.firewalls });
-      } catch (err) {
-        return json({ error: err instanceof Error ? err.message : "Failed to fetch firewalls" }, 400);
-      }
-    }
-
-    // POST /api/config-upload/:token/central-link — customer links XML to a firewall (public, apikey)
-    if (req.method === "POST" && subRoute === "central-link") {
-      const { data: row, error: fetchErr } = await db
-        .from("config_upload_requests")
-        .select("id, expires_at, central_connected_at")
-        .eq("token", token)
-        .maybeSingle();
-      if (fetchErr) return json({ error: fetchErr.message }, 500);
-      if (!row) return json({ error: "Upload request not found" }, 404);
-      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
-      if (!row.central_connected_at) return json({ error: "Central not connected yet" }, 400);
-
-      const body = await req.json();
-      const { firewall_id, firewall_name } = body as { firewall_id?: string; firewall_name?: string };
-      if (!firewall_id?.trim()) return json({ error: "firewall_id is required" }, 400);
-
-      await db
-        .from("config_upload_requests")
-        .update({
-          central_linked_firewall_id: firewall_id.trim(),
-          central_linked_firewall_name: (firewall_name?.trim()) || null,
-        })
-        .eq("id", row.id);
-
-      return json({ ok: true });
-    }
-
-    // GET /api/config-upload/:token/central-data — SE reads stored Central data (JWT required)
+    // GET /api/config-upload/:token/central-data — SE reads stored Central data
     if (req.method === "GET" && subRoute === "central-data") {
       const se = await authenticateSE(req);
       if (!se) return json({ error: "Unauthorized" }, 401);
@@ -485,7 +247,7 @@ export async function handleConfigUploadRoutes(
       });
     }
 
-    // DELETE /api/config-upload/:token — SE revokes the request (JWT required)
+    // DELETE /api/config-upload/:token — SE revokes the request
     if (req.method === "DELETE" && !subRoute) {
       const se = await authenticateSE(req);
       if (!se) return json({ error: "Unauthorized" }, 401);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizePdfFilenamePart } from "@/lib/html-document-to-pdf-blob";
+import { sanitizePdfFilenamePart } from "@/lib/pdf-utils";
 
 describe("sanitizePdfFilenamePart", () => {
   it("strips unsafe characters and collapses whitespace", () => {

@@ -158,21 +158,40 @@ function flattenObject(obj: unknown, prefix = ""): Record<string, string> {
 }
 
 function policyField(e: Record<string, unknown>, field: string): string {
-  return extractNested(e, `NetworkPolicy.${field}`) ||
-         extractNested(e, `UserPolicy.${field}`) ||
-         extractNested(e, `SecurityPolicy.${field}`) || "";
+  return (
+    extractNested(e, `NetworkPolicy.${field}`) ||
+    extractNested(e, `UserPolicy.${field}`) ||
+    extractNested(e, `SecurityPolicy.${field}`) ||
+    ""
+  );
 }
 
 function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData {
   const headers = [
-    "#", "Rule Name", "Status", "Policy Type", "Action",
-    "Source Zone", "Source Zones", "Destination Zone", "Destination Zones",
-    "Source Networks", "Destination Networks",
-    "Service", "Web Filter", "IPS Policy", "IPS",
-    "Intrusion Prevention", "Application Control",
-    "Match Known Users", "Identity",
-    "Log", "Log Traffic", "Description",
-    "Minimum Source HB Permitted", "Minimum Destination HB Permitted",
+    "#",
+    "Rule Name",
+    "Status",
+    "Policy Type",
+    "Action",
+    "Source Zone",
+    "Source Zones",
+    "Destination Zone",
+    "Destination Zones",
+    "Source Networks",
+    "Destination Networks",
+    "Service",
+    "Web Filter",
+    "IPS Policy",
+    "IPS",
+    "Intrusion Prevention",
+    "Application Control",
+    "Match Known Users",
+    "Identity",
+    "Log",
+    "Log Traffic",
+    "Description",
+    "Minimum Source HB Permitted",
+    "Minimum Destination HB Permitted",
   ];
   const rows = entities.map((e, i) => {
     const srcZone = policyField(e, "SourceZones.Zone");
@@ -186,32 +205,35 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
     const dstNetworks = policyField(e, "DestinationNetworks.Network");
     const matchIdentity = asString(e.MatchIdentity ?? policyField(e, "MatchIdentity") ?? "");
     const identity = extractNested(e, "Identity.Member") || asString(e.Identity ?? "");
-    const srcHB = policyField(e, "MinimumSourceHBPermitted") || asString(e.MinimumSourceHBPermitted ?? "");
-    const dstHB = policyField(e, "MinimumDestinationHBPermitted") || asString(e.MinimumDestinationHBPermitted ?? "");
+    const srcHB =
+      policyField(e, "MinimumSourceHBPermitted") || asString(e.MinimumSourceHBPermitted ?? "");
+    const dstHB =
+      policyField(e, "MinimumDestinationHBPermitted") ||
+      asString(e.MinimumDestinationHBPermitted ?? "");
 
     return {
       "#": String(i + 1),
       "Rule Name": asString(e.Name),
-      "Status": asString(e.Status),
+      Status: asString(e.Status),
       "Policy Type": asString(e.PolicyType ?? ""),
-      "Action": policyField(e, "Action"),
+      Action: policyField(e, "Action"),
       "Source Zone": srcZone || "Any",
       "Source Zones": srcZone || "Any",
       "Destination Zone": dstZone || "Any",
       "Destination Zones": dstZone || "Any",
       "Source Networks": srcNetworks || "Any",
       "Destination Networks": dstNetworks || "Any",
-      "Service": service || "Any",
+      Service: service || "Any",
       "Web Filter": webFilter || "None",
       "IPS Policy": ips || "None",
-      "IPS": ips || "None",
+      IPS: ips || "None",
       "Intrusion Prevention": ips || "None",
       "Application Control": appCtrl || "None",
       "Match Known Users": matchIdentity || "Disabled",
-      "Identity": identity || "N/A",
-      "Log": logTraffic,
+      Identity: identity || "N/A",
+      Log: logTraffic,
       "Log Traffic": logTraffic,
-      "Description": asString(e.Description ?? ""),
+      Description: asString(e.Description ?? ""),
       "Minimum Source HB Permitted": srcHB,
       "Minimum Destination HB Permitted": dstHB,
     };
@@ -221,24 +243,38 @@ function buildFirewallRuleTable(entities: Record<string, unknown>[]): TableData 
 
 function buildNatRuleTable(entities: Record<string, unknown>[]): TableData {
   const headers = [
-    "Rule Name", "Status", "Rule Type",
-    "Original Source", "Original Destination",
-    "Translated Source", "Translated Destination",
-    "Source Networks", "Destination Networks",
-    "Source", "Destination",
+    "Rule Name",
+    "Status",
+    "Rule Type",
+    "Original Source",
+    "Original Destination",
+    "Translated Source",
+    "Translated Destination",
+    "Source Networks",
+    "Destination Networks",
+    "Source",
+    "Destination",
   ];
   const rows = entities.map((e) => {
-    const origSrc = extractNested(e, "OriginalSource.NetworkAddress") ||
-                    extractNested(e, "OriginalSource.Network") || "Any";
-    const origDst = extractNested(e, "OriginalDestination.NetworkAddress") ||
-                    extractNested(e, "OriginalDestination.Network") || "Any";
-    const transSrc = extractNested(e, "TranslatedSource.NetworkAddress") ||
-                     extractNested(e, "TranslatedSource.Network") || "";
-    const transDst = extractNested(e, "TranslatedDestination.NetworkAddress") ||
-                     extractNested(e, "TranslatedDestination.Network") || "";
+    const origSrc =
+      extractNested(e, "OriginalSource.NetworkAddress") ||
+      extractNested(e, "OriginalSource.Network") ||
+      "Any";
+    const origDst =
+      extractNested(e, "OriginalDestination.NetworkAddress") ||
+      extractNested(e, "OriginalDestination.Network") ||
+      "Any";
+    const transSrc =
+      extractNested(e, "TranslatedSource.NetworkAddress") ||
+      extractNested(e, "TranslatedSource.Network") ||
+      "";
+    const transDst =
+      extractNested(e, "TranslatedDestination.NetworkAddress") ||
+      extractNested(e, "TranslatedDestination.Network") ||
+      "";
     return {
       "Rule Name": asString(e.RuleName ?? e.Name),
-      "Status": asString(e.Status),
+      Status: asString(e.Status),
       "Rule Type": asString(e.NATPolicy ?? "DNAT"),
       "Original Source": origSrc,
       "Original Destination": origDst,
@@ -246,8 +282,8 @@ function buildNatRuleTable(entities: Record<string, unknown>[]): TableData {
       "Translated Destination": transDst,
       "Source Networks": origSrc,
       "Destination Networks": origDst,
-      "Source": origSrc,
-      "Destination": origDst,
+      Source: origSrc,
+      Destination: origDst,
     };
   });
   return { headers, rows };
@@ -255,27 +291,37 @@ function buildNatRuleTable(entities: Record<string, unknown>[]): TableData {
 
 function buildSslTlsTable(entities: Record<string, unknown>[]): TableData {
   const headers = [
-    "Name", "Rule Name", "Status", "Decrypt Action", "Action",
-    "Source Zone", "Source Zones", "Destination Zone", "Destination Zones",
-    "Source Networks", "Destination Networks", "Service", "Decryption Profile",
+    "Name",
+    "Rule Name",
+    "Status",
+    "Decrypt Action",
+    "Action",
+    "Source Zone",
+    "Source Zones",
+    "Destination Zone",
+    "Destination Zones",
+    "Source Networks",
+    "Destination Networks",
+    "Service",
+    "Decryption Profile",
   ];
   const rows = entities.map((e) => {
     const action = asString(e.DecryptAction ?? e.Action ?? "");
     const srcZone = extractNested(e, "SourceZones.Zone");
     const dstZone = extractNested(e, "DestinationZones.Zone");
     return {
-      "Name": asString(e.Name),
+      Name: asString(e.Name),
       "Rule Name": asString(e.Name),
-      "Status": asString(e.Enable ?? e.Status ?? ""),
+      Status: asString(e.Enable ?? e.Status ?? ""),
       "Decrypt Action": action,
-      "Action": action,
+      Action: action,
       "Source Zone": srcZone,
       "Source Zones": srcZone,
       "Destination Zone": dstZone,
       "Destination Zones": dstZone,
       "Source Networks": extractNested(e, "SourceNetworks.Network"),
       "Destination Networks": extractNested(e, "DestinationNetworks.Network"),
-      "Service": extractNested(e, "Services.Service"),
+      Service: extractNested(e, "Services.Service"),
       "Decryption Profile": asString(e.DecryptionProfile ?? ""),
     };
   });
@@ -284,16 +330,23 @@ function buildSslTlsTable(entities: Record<string, unknown>[]): TableData {
 
 function buildWirelessNetworksTable(entities: Record<string, unknown>[]): TableData {
   const headers = [
-    "Name", "SSID", "Security Mode", "Status", "Encryption",
-    "Zone", "Frequency Band", "Client Isolation", "Hide SSID",
+    "Name",
+    "SSID",
+    "Security Mode",
+    "Status",
+    "Encryption",
+    "Zone",
+    "Frequency Band",
+    "Client Isolation",
+    "Hide SSID",
   ];
   const rows = entities.map((e) => ({
-    "Name": asString(e.Name ?? e.HardwareName),
-    "SSID": asString(e.SSID ?? e.Name),
+    Name: asString(e.Name ?? e.HardwareName),
+    SSID: asString(e.SSID ?? e.Name),
     "Security Mode": asString(e.SecurityMode ?? ""),
-    "Status": asString(e.Status ?? ""),
-    "Encryption": asString(e.Encryption ?? ""),
-    "Zone": asString(e.Zone ?? ""),
+    Status: asString(e.Status ?? ""),
+    Encryption: asString(e.Encryption ?? ""),
+    Zone: asString(e.Zone ?? ""),
     "Frequency Band": asString(e.FrequencyBand ?? ""),
     "Client Isolation": asString(e.ClientIsolation ?? ""),
     "Hide SSID": asString(e.HideSSID ?? ""),
@@ -313,7 +366,8 @@ function buildLocalServiceAclTable(entities: Record<string, unknown>[]): TableDa
     row["Service"] = serviceName;
 
     for (const [key, value] of Object.entries(e as Record<string, unknown>)) {
-      if (key.startsWith("@_") || key === "ServiceType" || key === "Service" || key === "Name") continue;
+      if (key.startsWith("@_") || key === "ServiceType" || key === "Service" || key === "Name")
+        continue;
       const strVal = asString(value);
       headers.add(key);
       row[key] = strVal;
@@ -325,34 +379,59 @@ function buildLocalServiceAclTable(entities: Record<string, unknown>[]): TableDa
 }
 
 function buildInterfaceTable(entities: Record<string, unknown>[]): TableData {
-  const headers = ["Name", "VLANID", "HardwareName", "Zone", "NetworkZone", "IPAddress", "Status", "Speed", "MACAddress"];
+  const headers = [
+    "Name",
+    "VLANID",
+    "HardwareName",
+    "Zone",
+    "NetworkZone",
+    "IPAddress",
+    "Status",
+    "Speed",
+    "MACAddress",
+  ];
   const rows = entities.map((e) => ({
-    "Name": textOf(e.Name) || textOf(e.HardwareName),
-    "VLANID": "N/A",
-    "HardwareName": textOf(e.HardwareName) || textOf(e.Name),
-    "Zone": textOf(e.Zone) || textOf(e.NetworkZone),
-    "NetworkZone": textOf(e.NetworkZone) || textOf(e.Zone),
-    "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP) || "N/A",
-    "Status": textOf(e.Status),
-    "Speed": textOf(e.Speed),
-    "MACAddress": textOf(e.MACAddress) || textOf(e.MAC),
+    Name: textOf(e.Name) || textOf(e.HardwareName),
+    VLANID: "N/A",
+    HardwareName: textOf(e.HardwareName) || textOf(e.Name),
+    Zone: textOf(e.Zone) || textOf(e.NetworkZone),
+    NetworkZone: textOf(e.NetworkZone) || textOf(e.Zone),
+    IPAddress: textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP) || "N/A",
+    Status: textOf(e.Status),
+    Speed: textOf(e.Speed),
+    MACAddress: textOf(e.MACAddress) || textOf(e.MAC),
   }));
   return { headers, rows };
 }
 
 function buildVlanTable(entities: Record<string, unknown>[]): TableData {
-  const headers = ["Name", "VLANID", "Interface", "Hardware", "Zone", "NetworkZone", "IPAddress", "Status"];
+  const headers = [
+    "Name",
+    "VLANID",
+    "Interface",
+    "Hardware",
+    "Zone",
+    "NetworkZone",
+    "IPAddress",
+    "Status",
+  ];
   const rows = entities.map((e) => {
-    const parent = textOf(e.Hardware) || textOf(e.Interface) || textOf(e.HardwareInterface) || textOf(e.HardwareName) || textOf(e.Member) || textOf(e.Port);
+    const parent =
+      textOf(e.Hardware) ||
+      textOf(e.Interface) ||
+      textOf(e.HardwareInterface) ||
+      textOf(e.HardwareName) ||
+      textOf(e.Member) ||
+      textOf(e.Port);
     return {
-      "Name": textOf(e.Name),
-      "VLANID": textOf(e.VLANID) || textOf(e.VlanID) || textOf(e.VID) || "N/A",
-      "Interface": parent,
-      "Hardware": parent,
-      "Zone": textOf(e.Zone) || textOf(e.NetworkZone),
-      "NetworkZone": textOf(e.NetworkZone) || textOf(e.Zone),
-      "IPAddress": textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP) || "N/A",
-      "Status": textOf(e.Status),
+      Name: textOf(e.Name),
+      VLANID: textOf(e.VLANID) || textOf(e.VlanID) || textOf(e.VID) || "N/A",
+      Interface: parent,
+      Hardware: parent,
+      Zone: textOf(e.Zone) || textOf(e.NetworkZone),
+      NetworkZone: textOf(e.NetworkZone) || textOf(e.Zone),
+      IPAddress: textOf(e.IPAddress) || textOf(e.IPv4Address) || textOf(e.IP) || "N/A",
+      Status: textOf(e.Status),
     };
   });
   return { headers, rows };
@@ -362,7 +441,7 @@ function buildGenericTable(entities: Record<string, unknown>[]): TableData {
   if (!entities.length) return { headers: [], rows: [] };
   const first = entities[0];
   const headers = Object.keys(first).filter(
-    (k) => !k.startsWith("@_") && typeof first[k] !== "object"
+    (k) => !k.startsWith("@_") && typeof first[k] !== "object",
   );
   const rows = entities.map((e) => {
     const row: Record<string, string> = {};
@@ -380,7 +459,13 @@ function buildGenericTable(entities: Record<string, unknown>[]): TableData {
 function unpackAuthServers(data: unknown): Record<string, unknown>[] {
   const items = Array.isArray(data) ? data : [data as Record<string, unknown>];
   const servers: Record<string, unknown>[] = [];
-  const childTypes = ["ActiveDirectory", "LDAPServer", "RadiusServer", "TacacsServer", "eDirectory"];
+  const childTypes = [
+    "ActiveDirectory",
+    "LDAPServer",
+    "RadiusServer",
+    "TacacsServer",
+    "eDirectory",
+  ];
 
   for (const item of items) {
     if (item == null || typeof item !== "object") continue;
@@ -410,9 +495,7 @@ function unpackAuthServers(data: unknown): Record<string, unknown>[] {
  * Convert a raw_config object (keyed by Sophos entity type) into
  * ExtractedSections compatible with all existing web app analysis.
  */
-export function rawConfigToSections(
-  rawConfig: Record<string, unknown>
-): ExtractedSections {
+export function rawConfigToSections(rawConfig: Record<string, unknown>): ExtractedSections {
   const sections: ExtractedSections = {};
 
   for (const [entityType, data] of Object.entries(rawConfig)) {
@@ -432,9 +515,14 @@ export function rawConfigToSections(
         if (name.startsWith("#")) return false;
         const hostType = textOf(e.HostType).toLowerCase();
         if (hostType === "system") return false;
-        if (entityType === "IPHost" && (hostType === "network" || hostType === "iprange" || hostType === "iplist")) return false;
+        if (
+          entityType === "IPHost" &&
+          (hostType === "network" || hostType === "iprange" || hostType === "iplist")
+        )
+          return false;
         const readOnly = textOf(e.ReadOnly ?? e.Readonly ?? e.IsReadOnly).toLowerCase();
-        if (readOnly === "enable" || readOnly === "yes" || readOnly === "true" || readOnly === "1") return false;
+        if (readOnly === "enable" || readOnly === "yes" || readOnly === "true" || readOnly === "1")
+          return false;
         return true;
       });
       if (entities.length === 0) continue;
@@ -445,7 +533,8 @@ export function rawConfigToSections(
         const name = textOf(e.RuleName ?? e.Name);
         if (name.startsWith("#")) return false;
         const readOnly = textOf(e.ReadOnly ?? e.Readonly ?? e.IsReadOnly).toLowerCase();
-        if (readOnly === "enable" || readOnly === "yes" || readOnly === "true" || readOnly === "1") return false;
+        if (readOnly === "enable" || readOnly === "yes" || readOnly === "true" || readOnly === "1")
+          return false;
         return true;
       });
       if (entities.length === 0) continue;
@@ -457,12 +546,6 @@ export function rawConfigToSections(
         return zone.length > 0;
       });
       if (entities.length === 0) continue;
-      if (entityType === "VLAN") {
-        console.log("[DEBUG VLAN] count:", entities.length, "keys:", Object.keys(entities[0] ?? {}), "sample:", JSON.stringify(entities[0], null, 2).substring(0, 500));
-      }
-      if (entityType === "Interface") {
-        console.log("[DEBUG Interface] count:", entities.length, "keys:", Object.keys(entities[0] ?? {}), "sample:", JSON.stringify(entities[0], null, 2).substring(0, 500));
-      }
     }
 
     const sectionName = SECTION_MAP[entityType] ?? entityType;

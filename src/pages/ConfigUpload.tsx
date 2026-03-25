@@ -1,9 +1,25 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Upload, CheckCircle2, Shield, AlertTriangle, ChevronDown, Lock, RefreshCw, Loader2, Wifi } from "lucide-react";
+import {
+  Upload,
+  CheckCircle2,
+  Shield,
+  AlertTriangle,
+  ChevronDown,
+  Lock,
+  RefreshCw,
+  Loader2,
+  Wifi,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface CentralFirewall {
@@ -27,7 +43,10 @@ function buildFirewallGroups(fws: CentralFirewall[]): FirewallGroup[] {
   const noHostKey: CentralFirewall[] = [];
   for (const fw of fws) {
     const key = (fw.hostname || fw.id || "").trim().toLowerCase();
-    if (!key) { noHostKey.push(fw); continue; }
+    if (!key) {
+      noHostKey.push(fw);
+      continue;
+    }
     if (!byHostname.has(key)) byHostname.set(key, []);
     byHostname.get(key)!.push(fw);
   }
@@ -66,14 +85,22 @@ interface UploadStatus {
   central_linked_firewall_name?: string | null;
 }
 
-type PageState = "loading" | "ready" | "uploading" | "success" | "already-uploaded" | "expired" | "not-found" | "error";
+type PageState =
+  | "loading"
+  | "ready"
+  | "uploading"
+  | "success"
+  | "already-uploaded"
+  | "expired"
+  | "not-found"
+  | "error";
 type CentralState = "idle" | "connecting" | "connected" | "error";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 async function fetchUploadStatus(token: string): Promise<UploadStatus | null> {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}`, {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}`, {
     headers: { apikey: SUPABASE_KEY },
   });
   if (res.status === 410) return null;
@@ -84,7 +111,7 @@ async function fetchUploadStatus(token: string): Promise<UploadStatus | null> {
 async function uploadFile(token: string, file: File): Promise<{ ok?: boolean; error?: string }> {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}`, {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}`, {
     method: "POST",
     headers: { apikey: SUPABASE_KEY },
     body: formData,
@@ -122,12 +149,18 @@ const ConfigUpload = () => {
   const firewallGroups = useMemo(() => buildFirewallGroups(centralFirewalls), [centralFirewalls]);
 
   useEffect(() => {
-    if (!token) { setPageState("not-found"); return; }
+    if (!token) {
+      setPageState("not-found");
+      return;
+    }
     let cancelled = false;
     fetchUploadStatus(token)
       .then((d) => {
         if (cancelled) return;
-        if (!d) { setPageState("expired"); return; }
+        if (!d) {
+          setPageState("expired");
+          return;
+        }
         setStatusData(d);
         if (d.central_connected) {
           setCentralState("connected");
@@ -149,68 +182,79 @@ const ConfigUpload = () => {
         if (cancelled) return;
         setPageState(e instanceof Error && e.message === "not-found" ? "not-found" : "error");
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
-  const handleUpload = useCallback(async (file: File) => {
-    if (!token) return;
-    if (!file.name.toLowerCase().endsWith(".xml")) {
-      setUploadError("Please select an XML file (.xml)");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("File exceeds 10 MB limit");
-      return;
-    }
+  const handleUpload = useCallback(
+    async (file: File) => {
+      if (!token) return;
+      if (!file.name.toLowerCase().endsWith(".xml")) {
+        setUploadError("Please select an XML file (.xml)");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError("File exceeds 10 MB limit");
+        return;
+      }
 
-    setUploadError(null);
-    setSelectedFile(file);
-    setPageState("uploading");
-    setUploadProgress(0);
+      setUploadError(null);
+      setSelectedFile(file);
+      setPageState("uploading");
+      setUploadProgress(0);
 
-    const progressInterval = setInterval(() => {
-      setUploadProgress((p) => Math.min(p + Math.random() * 15, 90));
-    }, 300);
+      const progressInterval = setInterval(() => {
+        setUploadProgress((p) => Math.min(p + Math.random() * 15, 90));
+      }, 300);
 
-    try {
-      const result = await uploadFile(token, file);
-      clearInterval(progressInterval);
-      if (result.error) {
-        setUploadError(result.error);
+      try {
+        const result = await uploadFile(token, file);
+        clearInterval(progressInterval);
+        if (result.error) {
+          setUploadError(result.error);
+          setPageState("ready");
+          setUploadProgress(0);
+        } else {
+          setUploadProgress(100);
+          setTimeout(() => {
+            setPageState("success");
+            if (centralState !== "connected") setCentralOpen(true);
+          }, 500);
+        }
+      } catch {
+        clearInterval(progressInterval);
+        setUploadError("Upload failed. Please try again.");
         setPageState("ready");
         setUploadProgress(0);
-      } else {
-        setUploadProgress(100);
-        setTimeout(() => {
-          setPageState("success");
-          if (centralState !== "connected") setCentralOpen(true);
-        }, 500);
       }
-    } catch {
-      clearInterval(progressInterval);
-      setUploadError("Upload failed. Please try again.");
-      setPageState("ready");
-      setUploadProgress(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [token],
+  );
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleUpload(file);
-  }, [handleUpload]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleUpload(file);
+    },
+    [handleUpload],
+  );
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleUpload(file);
-    if (e.target) e.target.value = "";
-  }, [handleUpload]);
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleUpload(file);
+      if (e.target) e.target.value = "";
+    },
+    [handleUpload],
+  );
 
   const handleReplace = useCallback(() => {
     setPageState("ready");
-    setStatusData((d) => d ? { ...d, status: "pending" } : d);
+    setStatusData((d) => (d ? { ...d, status: "pending" } : d));
   }, []);
 
   const handleCentralConnect = useCallback(async () => {
@@ -218,11 +262,14 @@ const ConfigUpload = () => {
     setCentralState("connecting");
     setCentralError(null);
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-connect`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-        body: JSON.stringify({ client_id: clientId.trim(), client_secret: clientSecret.trim() }),
-      });
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}/central-connect`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+          body: JSON.stringify({ client_id: clientId.trim(), client_secret: clientSecret.trim() }),
+        },
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Connection failed");
 
@@ -246,54 +293,68 @@ const ConfigUpload = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, clientId, clientSecret]);
 
-  const handleCentralLink = useCallback(async (firewallId: string, firewallName: string) => {
-    if (!token) return;
-    try {
-      await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-        body: JSON.stringify({ firewall_id: firewallId, firewall_name: firewallName }),
-      });
-    } catch { /* best effort */ }
-  }, [token]);
-
-  const handleTenantSelect = useCallback(async (tenantId: string) => {
-    if (!token) return;
-    setSelectedTenantId(tenantId);
-    setSelectedFirewallId(null);
-    setCentralFirewalls([]);
-    setLoadingFirewalls(true);
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-firewalls`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-        body: JSON.stringify({ tenant_id: tenantId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch firewalls");
-      const fws = (data.firewalls ?? []) as CentralFirewall[];
-      setCentralFirewalls(fws);
-      if (fws.length === 1) {
-        setSelectedFirewallId(fws[0].id);
-        void handleCentralLink(fws[0].id, fws[0].hostname || fws[0].name);
+  const handleCentralLink = useCallback(
+    async (firewallId: string, firewallName: string) => {
+      if (!token) return;
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}/central-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+          body: JSON.stringify({ firewall_id: firewallId, firewall_name: firewallName }),
+        });
+      } catch {
+        /* best effort */
       }
-    } catch {
-      setCentralFirewalls([]);
-    } finally {
-      setLoadingFirewalls(false);
-    }
-  }, [token, handleCentralLink]);
+    },
+    [token],
+  );
 
-  const handleFirewallSelect = useCallback((firewallId: string) => {
-    if (firewallId === "__none__") {
+  const handleTenantSelect = useCallback(
+    async (tenantId: string) => {
+      if (!token) return;
+      setSelectedTenantId(tenantId);
       setSelectedFirewallId(null);
-      void handleCentralLink("", "");
-      return;
-    }
-    setSelectedFirewallId(firewallId);
-    const fw = centralFirewalls.find((f) => f.id === firewallId);
-    if (fw) void handleCentralLink(fw.id, fw.hostname || fw.name);
-  }, [centralFirewalls, handleCentralLink]);
+      setCentralFirewalls([]);
+      setLoadingFirewalls(true);
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}/central-firewalls`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+            body: JSON.stringify({ tenant_id: tenantId }),
+          },
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch firewalls");
+        const fws = (data.firewalls ?? []) as CentralFirewall[];
+        setCentralFirewalls(fws);
+        if (fws.length === 1) {
+          setSelectedFirewallId(fws[0].id);
+          void handleCentralLink(fws[0].id, fws[0].hostname || fws[0].name);
+        }
+      } catch {
+        setCentralFirewalls([]);
+      } finally {
+        setLoadingFirewalls(false);
+      }
+    },
+    [token, handleCentralLink],
+  );
+
+  const handleFirewallSelect = useCallback(
+    (firewallId: string) => {
+      if (firewallId === "__none__") {
+        setSelectedFirewallId(null);
+        void handleCentralLink("", "");
+        return;
+      }
+      setSelectedFirewallId(firewallId);
+      const fw = centralFirewalls.find((f) => f.id === firewallId);
+      if (fw) void handleCentralLink(fw.id, fw.hostname || fw.name);
+    },
+    [centralFirewalls, handleCentralLink],
+  );
 
   const handleCentralRetry = useCallback(() => {
     setCentralState("idle");
@@ -307,7 +368,11 @@ const ConfigUpload = () => {
   }, []);
 
   const expiresLabel = statusData?.expires_at
-    ? new Date(statusData.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    ? new Date(statusData.expires_at).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
     : "";
 
   // ── Central connection panel (reused across screens) ──
@@ -319,22 +384,34 @@ const ConfigUpload = () => {
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Wifi className={cn("h-4 w-4", centralState === "connected" ? "text-[#00F2B3]" : "text-white/40")} />
+          <Wifi
+            className={cn(
+              "h-4 w-4",
+              centralState === "connected" ? "text-[#00F2B3]" : "text-white/40",
+            )}
+          />
           <span className="text-white/60 text-sm font-medium">
-            {centralState === "connected" ? "Sophos Central connected" : "Optional: Connect Sophos Central"}
+            {centralState === "connected"
+              ? "Sophos Central connected"
+              : "Optional: Connect Sophos Central"}
           </span>
           {centralState === "connected" && (
-            <span className="text-[10px] bg-[#00F2B3]/20 text-[#00F2B3] px-2 py-0.5 rounded-full font-medium">Connected</span>
+            <span className="text-[10px] bg-[#00F2B3]/20 text-[#00F2B3] px-2 py-0.5 rounded-full font-medium">
+              Connected
+            </span>
           )}
         </div>
-        <ChevronDown className={cn("h-4 w-4 text-white/40 transition-transform", centralOpen && "rotate-180")} />
+        <ChevronDown
+          className={cn("h-4 w-4 text-white/40 transition-transform", centralOpen && "rotate-180")}
+        />
       </button>
       {centralOpen && (
         <div className="px-4 pb-4 border-t border-white/5 pt-4 space-y-4">
           {centralState === "idle" || centralState === "error" ? (
             <>
               <p className="text-white/50 text-sm leading-relaxed">
-                Connecting Sophos Central lets your SE enrich the health check with licence expiry, firmware versions, and HA status.
+                Connecting Sophos Central lets your SE enrich the health check with licence expiry,
+                firmware versions, and HA status.
               </p>
               <div className="space-y-3">
                 <Input
@@ -381,7 +458,8 @@ const ConfigUpload = () => {
                 </div>
               )}
               <p className="text-white/30 text-xs">
-                Your credentials are encrypted and automatically deleted after the health check is complete.
+                Your credentials are encrypted and automatically deleted after the health check is
+                complete.
               </p>
               <div className="rounded-lg border border-white/5 overflow-hidden">
                 <button
@@ -389,21 +467,46 @@ const ConfigUpload = () => {
                   onClick={() => setCentralHowToOpen(!centralHowToOpen)}
                   className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-white/5 transition-colors"
                 >
-                  <span className="text-white/50 text-xs font-medium">How to create API credentials</span>
-                  <ChevronDown className={cn("h-3 w-3 text-white/30 transition-transform", centralHowToOpen && "rotate-180")} />
+                  <span className="text-white/50 text-xs font-medium">
+                    How to create API credentials
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "h-3 w-3 text-white/30 transition-transform",
+                      centralHowToOpen && "rotate-180",
+                    )}
+                  />
                 </button>
                 {centralHowToOpen && (
                   <div className="px-3 pb-3 text-white/40 text-xs leading-relaxed border-t border-white/5 pt-2 space-y-1.5">
                     <ol className="list-decimal list-inside space-y-1.5">
-                      <li>Sign in to <strong className="text-white/60">Sophos Central</strong> — use the same account that manages the firewall you are exporting the configuration from</li>
-                      <li>Navigate to <strong className="text-white/60">Settings &amp; Policies</strong> &gt; <strong className="text-white/60">API Credentials Management</strong></li>
-                      <li>Click <strong className="text-white/60">Add Credential</strong></li>
-                      <li>Enter a name (e.g. &quot;Health Check&quot;) and select <strong className="text-white/60">Service Principal Read-Only</strong></li>
-                      <li>Click <strong className="text-white/60">Add</strong>, then copy the <strong className="text-white/60">Client ID</strong> and <strong className="text-white/60">Client Secret</strong></li>
+                      <li>
+                        Sign in to <strong className="text-white/60">Sophos Central</strong> — use
+                        the same account that manages the firewall you are exporting the
+                        configuration from
+                      </li>
+                      <li>
+                        Navigate to{" "}
+                        <strong className="text-white/60">Settings &amp; Policies</strong> &gt;{" "}
+                        <strong className="text-white/60">API Credentials Management</strong>
+                      </li>
+                      <li>
+                        Click <strong className="text-white/60">Add Credential</strong>
+                      </li>
+                      <li>
+                        Enter a name (e.g. &quot;Health Check&quot;) and select{" "}
+                        <strong className="text-white/60">Service Principal Read-Only</strong>
+                      </li>
+                      <li>
+                        Click <strong className="text-white/60">Add</strong>, then copy the{" "}
+                        <strong className="text-white/60">Client ID</strong> and{" "}
+                        <strong className="text-white/60">Client Secret</strong>
+                      </li>
                       <li>Paste them into the fields above</li>
                     </ol>
                     <p className="text-white/25 text-[10px] mt-2">
-                      Read-only access is recommended. Your SE only needs to view firewall and licence data.
+                      Read-only access is recommended. Your SE only needs to view firewall and
+                      licence data.
                     </p>
                   </div>
                 )}
@@ -419,19 +522,29 @@ const ConfigUpload = () => {
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-[#00F2B3]" />
                 <span className="text-white/70 text-sm">
-                  Connected as {centralAccountType === "tenant" ? "Tenant" : centralAccountType === "partner" ? "Partner" : "Organization"}
+                  Connected as{" "}
+                  {centralAccountType === "tenant"
+                    ? "Tenant"
+                    : centralAccountType === "partner"
+                      ? "Partner"
+                      : "Organization"}
                 </span>
               </div>
               {centralTenants.length > 1 && (
                 <div className="space-y-2">
                   <label className="text-white/50 text-xs font-medium block">Select tenant</label>
-                  <Select value={selectedTenantId ?? ""} onValueChange={(v) => void handleTenantSelect(v)}>
+                  <Select
+                    value={selectedTenantId ?? ""}
+                    onValueChange={(v) => void handleTenantSelect(v)}
+                  >
                     <SelectTrigger className="w-full bg-white/5 border-white/10 text-white text-sm h-10 rounded-lg">
                       <SelectValue placeholder="Choose a tenant…" />
                     </SelectTrigger>
                     <SelectContent>
                       {centralTenants.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name || t.id}</SelectItem>
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name || t.id}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -446,9 +559,14 @@ const ConfigUpload = () => {
               {centralFirewalls.length > 0 && !loadingFirewalls && (
                 <div className="space-y-2">
                   <label className="text-white/50 text-xs font-medium block">
-                    Which firewall does the <code className="bg-white/10 px-1 rounded text-[10px]">entities.xml</code> belong to?
+                    Which firewall does the{" "}
+                    <code className="bg-white/10 px-1 rounded text-[10px]">entities.xml</code>{" "}
+                    belong to?
                   </label>
-                  <Select value={selectedFirewallId ?? "__none__"} onValueChange={handleFirewallSelect}>
+                  <Select
+                    value={selectedFirewallId ?? "__none__"}
+                    onValueChange={handleFirewallSelect}
+                  >
                     <SelectTrigger className="w-full bg-white/5 border-white/10 text-white text-sm h-10 rounded-lg">
                       <SelectValue placeholder="Select firewall…" />
                     </SelectTrigger>
@@ -456,8 +574,15 @@ const ConfigUpload = () => {
                       <SelectItem value="__none__">Not linked</SelectItem>
                       {firewallGroups.map((g) => {
                         const all = [g.primary, ...g.peers];
-                        const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
-                        const displayName = g.primary.hostname || g.primary.name || g.primary.serialNumber || "Unknown";
+                        const serials = all
+                          .map((x) => x.serialNumber)
+                          .filter(Boolean)
+                          .join(" / ");
+                        const displayName =
+                          g.primary.hostname ||
+                          g.primary.name ||
+                          g.primary.serialNumber ||
+                          "Unknown";
                         return (
                           <SelectItem key={g.primary.id} value={g.primary.id}>
                             <span className="flex items-center gap-2">
@@ -508,7 +633,9 @@ const ConfigUpload = () => {
         <div className="max-w-md text-center space-y-4">
           <Shield className="h-10 w-10 text-white/30 mx-auto" />
           <h1 className="text-xl font-bold text-white">Upload link not found</h1>
-          <p className="text-white/50 text-sm">This link is invalid or has been revoked. Please ask your Sophos SE for a new link.</p>
+          <p className="text-white/50 text-sm">
+            This link is invalid or has been revoked. Please ask your Sophos SE for a new link.
+          </p>
         </div>
       </div>
     );
@@ -532,7 +659,9 @@ const ConfigUpload = () => {
         <div className="max-w-md text-center space-y-4">
           <Shield className="h-10 w-10 text-white/30 mx-auto" />
           <h1 className="text-xl font-bold text-white">Something went wrong</h1>
-          <p className="text-white/50 text-sm">We couldn&apos;t load this page. Please try again or contact your Sophos SE.</p>
+          <p className="text-white/50 text-sm">
+            We couldn&apos;t load this page. Please try again or contact your Sophos SE.
+          </p>
         </div>
       </div>
     );
@@ -551,7 +680,9 @@ const ConfigUpload = () => {
               Your configuration has been securely uploaded. Your Sophos SE will review it shortly.
             </p>
             {selectedFile && (
-              <p className="text-white/40 text-xs">{selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)</p>
+              <p className="text-white/40 text-xs">
+                {selectedFile.name} ({(selectedFile.size / 1024).toFixed(0)} KB)
+              </p>
             )}
           </div>
           {centralPanel}
@@ -570,8 +701,14 @@ const ConfigUpload = () => {
             </div>
             <h1 className="text-xl font-bold text-white">Configuration already uploaded</h1>
             <p className="text-white/60 text-sm leading-relaxed">
-              {statusData?.file_name && <>File <strong className="text-white/80">{statusData.file_name}</strong> was uploaded previously.</>}
-              {!statusData?.file_name && "A configuration file has already been uploaded for this request."}
+              {statusData?.file_name && (
+                <>
+                  File <strong className="text-white/80">{statusData.file_name}</strong> was
+                  uploaded previously.
+                </>
+              )}
+              {!statusData?.file_name &&
+                "A configuration file has already been uploaded for this request."}
             </p>
             {statusData?.status !== "downloaded" && (
               <Button
@@ -585,7 +722,10 @@ const ConfigUpload = () => {
               </Button>
             )}
             {statusData?.status === "downloaded" && (
-              <p className="text-white/40 text-xs">Your SE has already downloaded this configuration. Please contact them if you need to send a new file.</p>
+              <p className="text-white/40 text-xs">
+                Your SE has already downloaded this configuration. Please contact them if you need
+                to send a new file.
+              </p>
             )}
           </div>
           {centralPanel}
@@ -628,7 +768,10 @@ const ConfigUpload = () => {
                   ? "border-[#00F2B3] bg-[#00F2B3]/10"
                   : "border-white/20 hover:border-white/40 bg-white/5",
             )}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
           >
@@ -649,7 +792,9 @@ const ConfigUpload = () => {
                 <Upload className="h-8 w-8 text-white/40 mx-auto" />
                 <div>
                   <p className="text-white/80 text-sm font-medium">
-                    Drag and drop your <code className="bg-white/10 px-1.5 py-0.5 rounded text-xs">entities.xml</code> file here
+                    Drag and drop your{" "}
+                    <code className="bg-white/10 px-1.5 py-0.5 rounded text-xs">entities.xml</code>{" "}
+                    file here
                   </p>
                   <p className="text-white/40 text-xs mt-1">or</p>
                 </div>
@@ -691,21 +836,49 @@ const ConfigUpload = () => {
               onClick={() => setHowToOpen(!howToOpen)}
               className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition-colors"
             >
-              <span className="text-white/60 text-sm font-medium">How to export entities.xml from Sophos Firewall</span>
-              <ChevronDown className={cn("h-4 w-4 text-white/40 transition-transform", howToOpen && "rotate-180")} />
+              <span className="text-white/60 text-sm font-medium">
+                How to export entities.xml from Sophos Firewall
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-white/40 transition-transform",
+                  howToOpen && "rotate-180",
+                )}
+              />
             </button>
             {howToOpen && (
               <div className="px-4 pb-4 text-white/50 text-sm leading-relaxed border-t border-white/5 pt-3 space-y-2">
                 <ol className="list-decimal list-inside space-y-1.5">
                   <li>Log in to your Sophos Firewall web admin console</li>
-                  <li>Navigate to <strong className="text-white/70">Backup &amp; firmware</strong></li>
-                  <li>Click <strong className="text-white/70">Export</strong> to download the configuration</li>
-                  <li>The downloaded file will be a <code className="bg-white/10 px-1 rounded text-xs">.tar</code> archive (e.g. <code className="bg-white/10 px-1 rounded text-xs">API-XXXXX.tar</code>)</li>
-                  <li>Extract the <code className="bg-white/10 px-1 rounded text-xs">.tar</code> file to find <code className="bg-white/10 px-1 rounded text-xs">entities.xml</code> inside</li>
-                  <li>Upload the <code className="bg-white/10 px-1 rounded text-xs">entities.xml</code> file using the drop zone above</li>
+                  <li>
+                    Navigate to <strong className="text-white/70">Backup &amp; firmware</strong>
+                  </li>
+                  <li>
+                    Click <strong className="text-white/70">Export</strong> to download the
+                    configuration
+                  </li>
+                  <li>
+                    The downloaded file will be a{" "}
+                    <code className="bg-white/10 px-1 rounded text-xs">.tar</code> archive (e.g.{" "}
+                    <code className="bg-white/10 px-1 rounded text-xs">API-XXXXX.tar</code>)
+                  </li>
+                  <li>
+                    Extract the <code className="bg-white/10 px-1 rounded text-xs">.tar</code> file
+                    to find <code className="bg-white/10 px-1 rounded text-xs">entities.xml</code>{" "}
+                    inside
+                  </li>
+                  <li>
+                    Upload the{" "}
+                    <code className="bg-white/10 px-1 rounded text-xs">entities.xml</code> file
+                    using the drop zone above
+                  </li>
                 </ol>
                 <p className="text-white/30 text-xs mt-3">
-                  If you&apos;re using Sophos Firewall OS v20+, go to <strong className="text-white/50">System &gt; Backup &amp; firmware &gt; Export config</strong>.
+                  If you&apos;re using Sophos Firewall OS v20+, go to{" "}
+                  <strong className="text-white/50">
+                    System &gt; Backup &amp; firmware &gt; Export config
+                  </strong>
+                  .
                 </p>
               </div>
             )}

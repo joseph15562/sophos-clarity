@@ -28,6 +28,20 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload E2E report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
   deploy-staging:
     name: Deploy to Staging
     needs: check
@@ -52,10 +66,17 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Deploy Edge Functions
-        # JWT verification settings are in supabase/config.toml (single source of truth)
+        # config.toml verify_jwt only applies to local `supabase functions serve`.
+        # For remote deploys, --no-verify-jwt is required when the function
+        # handles its own auth internally (getUser / API-key / public routes).
         run: |
-          supabase functions deploy parse-config
-          supabase functions deploy api
-          supabase functions deploy sophos-central
+          supabase functions deploy parse-config --no-verify-jwt
+          supabase functions deploy api --no-verify-jwt
+          supabase functions deploy api-agent --no-verify-jwt
+          supabase functions deploy api-public --no-verify-jwt
+          supabase functions deploy portal-data --no-verify-jwt
+          supabase functions deploy send-scheduled-reports --no-verify-jwt
+          supabase functions deploy regulatory-scanner --no-verify-jwt
+          supabase functions deploy sophos-central --no-verify-jwt
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

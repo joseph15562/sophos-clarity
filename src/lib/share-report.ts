@@ -22,7 +22,9 @@ export function generateShareToken(): string {
 }
 
 async function getOrgAndUser(): Promise<{ orgId: string; userId: string } | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("org_members")
@@ -82,7 +84,7 @@ export async function saveSharedReport(
 
 export async function loadSharedReport(token: string): Promise<SharedReport | null> {
   try {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/shared/${token}`;
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-public/shared/${token}`;
     const res = await fetch(url, {
       headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
     });
@@ -95,7 +97,10 @@ export async function loadSharedReport(token: string): Promise<SharedReport | nu
       expiresAt: data.expires_at,
       createdAt: data.created_at,
       allowDownload: data.allow_download !== false,
-      advisorNotes: typeof data.advisor_notes === "string" && data.advisor_notes.trim() ? data.advisor_notes : undefined,
+      advisorNotes:
+        typeof data.advisor_notes === "string" && data.advisor_notes.trim()
+          ? data.advisor_notes
+          : undefined,
     };
   } catch {
     return null;

@@ -268,7 +268,8 @@ serve(async (req: Request) => {
     .from("scheduled_reports")
     .select("*, organisations!inner(name, logo_url)")
     .eq("enabled", true)
-    .lte("next_due_at", new Date().toISOString());
+    .lte("next_due_at", new Date().toISOString())
+    .limit(500);
 
   if (queryErr) {
     return new Response(JSON.stringify({ error: queryErr.message }), {

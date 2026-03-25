@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BarChart3,
   ChevronDown,
@@ -9,7 +9,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useHealthChecksQuery, queryKeys } from "@/hooks/queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -33,12 +34,18 @@ interface Props {
 
 function gradeColor(grade: string | null): string {
   switch (grade) {
-    case "A": return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
-    case "B": return "bg-brand-accent/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
-    case "C": return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
-    case "D": return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
-    case "F": return "bg-[#EA0022]/15 text-[#EA0022]";
-    default: return "bg-muted text-muted-foreground";
+    case "A":
+      return "bg-[#00F2B3]/15 text-[#00F2B3] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]";
+    case "B":
+      return "bg-brand-accent/15 text-[#2006F7] dark:bg-[#00EDFF]/10 dark:text-[#00EDFF]";
+    case "C":
+      return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
+    case "D":
+      return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
+    case "F":
+      return "bg-[#EA0022]/15 text-[#EA0022]";
+    default:
+      return "bg-muted text-muted-foreground";
   }
 }
 
@@ -51,26 +58,12 @@ const GRADE_BAR_COLORS: Record<string, string> = {
 };
 
 export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
-  const [rows, setRows] = useState<DashboardRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: rows = [], isLoading: loading } = useHealthChecksQuery(activeTeamId);
   const [open, setOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("se_health_checks")
-      .select("id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, summary_json, se_user_id, se_profiles(display_name)")
-      .eq("team_id", activeTeamId)
-      .order("checked_at", { ascending: false })
-      .limit(200);
-
-    if (!error && data) {
-      setRows(data as unknown as DashboardRow[]);
-    }
-    setLoading(false);
-  }, [activeTeamId]);
-
-  useEffect(() => { void load(); }, [load]);
+  const load = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.healthChecks.list(activeTeamId) });
 
   const stats = useMemo(() => {
     if (rows.length === 0) return null;
@@ -89,7 +82,9 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
     });
 
     const scores = rows.filter((r) => r.overall_score != null).map((r) => r.overall_score!);
-    const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+    const avgScore = scores.length
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : null;
 
     const gradeDist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, F: 0 };
     for (const r of rows) {
@@ -103,7 +98,8 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
       if (existing) {
         existing.count++;
       } else {
-        const name = r.se_profiles?.display_name || (r.se_user_id === seProfileId ? "You" : "Unknown");
+        const name =
+          r.se_profiles?.display_name || (r.se_user_id === seProfileId ? "You" : "Unknown");
         byMember.set(key, { name, count: 1 });
       }
     }
@@ -149,30 +145,53 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
             <BarChart3 className="h-4 w-4 text-brand-accent" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-display font-black text-foreground tracking-tight">Team Dashboard</p>
-            <p className="text-[11px] text-muted-foreground">Monitor team score distribution, activity, and recurring findings.</p>
+            <p className="text-sm font-display font-black text-foreground tracking-tight">
+              Team Dashboard
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Monitor team score distribution, activity, and recurring findings.
+            </p>
           </div>
         </div>
-        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        {open ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        )}
       </button>
 
       {open && (
         <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] overflow-hidden shadow-[0_18px_50px_rgba(32,6,247,0.08)]">
           <div className="flex items-center justify-between p-4 border-b border-border/70 bg-card/60">
             <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Team Overview</p>
-              <p className="text-sm font-semibold text-foreground mt-1">Health check performance across the active team</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Team Overview
+              </p>
+              <p className="text-sm font-semibold text-foreground mt-1">
+                Health check performance across the active team
+              </p>
             </div>
-            <Button type="button" variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => void load()} disabled={loading}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => void load()}
+              disabled={loading}
+            >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
 
           {loading ? (
-            <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+            <div className="p-8 text-center">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+            </div>
           ) : !stats ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">No health checks in this team yet.</div>
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No health checks in this team yet.
+            </div>
           ) : (
             <div className="p-4 space-y-5">
               {/* Stats cards */}
@@ -180,12 +199,17 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
                 <StatCard label="Total Checks" value={stats.totalChecks} />
                 <StatCard label="This Month" value={stats.thisMonth} />
                 <StatCard label="This Quarter" value={stats.thisQuarter} />
-                <StatCard label="Avg Score" value={stats.avgScore != null ? `${stats.avgScore}%` : "—"} />
+                <StatCard
+                  label="Avg Score"
+                  value={stats.avgScore != null ? `${stats.avgScore}%` : "—"}
+                />
               </div>
 
               {/* Grade distribution */}
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Score Distribution</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Score Distribution
+                </p>
                 <div className="flex items-end gap-1 h-20">
                   {(["A", "B", "C", "D", "F"] as const).map((g) => {
                     const count = stats.gradeDist[g];
@@ -196,7 +220,11 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
                         <div className="w-full relative" style={{ height: 60 }}>
                           <div
                             className="absolute bottom-0 w-full rounded-t"
-                            style={{ height: `${Math.max(pct, 4)}%`, backgroundColor: GRADE_BAR_COLORS[g] ?? "#666", opacity: 0.7 }}
+                            style={{
+                              height: `${Math.max(pct, 4)}%`,
+                              backgroundColor: GRADE_BAR_COLORS[g] ?? "#666",
+                              opacity: 0.7,
+                            }}
                           />
                         </div>
                         <span className="text-[9px] font-bold text-muted-foreground">{g}</span>
@@ -210,12 +238,19 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
               {/* Common failing findings */}
               {stats.commonFindings.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Most Common Findings</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Most Common Findings
+                  </p>
                   <div className="space-y-1.5">
                     {stats.commonFindings.map(([finding, count]) => (
-                      <div key={finding} className="flex items-center justify-between gap-2 text-xs py-2 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm">
+                      <div
+                        key={finding}
+                        className="flex items-center justify-between gap-2 text-xs py-2 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm"
+                      >
                         <span className="truncate text-foreground font-medium">{finding}</span>
-                        <Badge variant="outline" className="text-[9px] shrink-0">{count}x</Badge>
+                        <Badge variant="outline" className="text-[9px] shrink-0">
+                          {count}x
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -231,9 +266,14 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
                   </p>
                   <div className="space-y-1.5">
                     {stats.memberActivity.map((m) => (
-                      <div key={m.name} className="flex items-center justify-between gap-2 text-xs py-2 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm">
+                      <div
+                        key={m.name}
+                        className="flex items-center justify-between gap-2 text-xs py-2 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm"
+                      >
                         <span className="text-foreground font-medium">{m.name}</span>
-                        <span className="text-muted-foreground">{m.count} check{m.count !== 1 ? "s" : ""}</span>
+                        <span className="text-muted-foreground">
+                          {m.count} check{m.count !== 1 ? "s" : ""}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -248,19 +288,30 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
                 </p>
                 <div className="space-y-1.5">
                   {stats.recent.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between gap-2 text-xs py-2.5 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm">
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between gap-2 text-xs py-2.5 px-3 rounded-xl border border-border/60 bg-card/70 shadow-sm"
+                    >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-medium truncate">{r.customer_name || "—"}</span>
                         <span className="text-muted-foreground shrink-0">
-                          by {r.se_user_id === seProfileId ? "You" : (r.se_profiles?.display_name || "—")}
+                          by{" "}
+                          {r.se_user_id === seProfileId
+                            ? "You"
+                            : r.se_profiles?.display_name || "—"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <Badge className={`${gradeColor(r.overall_grade)} border-0 text-[9px] px-1.5 py-0`}>
+                        <Badge
+                          className={`${gradeColor(r.overall_grade)} border-0 text-[9px] px-1.5 py-0`}
+                        >
                           {r.overall_grade ?? "—"}
                         </Badge>
                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                          {new Date(r.checked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                          {new Date(r.checked_at).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                          })}
                         </span>
                       </div>
                     </div>
@@ -279,7 +330,9 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-2xl border border-border/70 bg-card/70 p-3.5 text-center shadow-sm">
       <p className="text-2xl font-display font-black tracking-tight text-foreground">{value}</p>
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{label}</p>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+        {label}
+      </p>
     </div>
   );
 }

@@ -49,7 +49,10 @@ const SophosBestPractice = lazy(() =>
 );
 import { DpiExclusionBar } from "@/components/DpiExclusionBar2";
 import { SeHeartbeatScopeBar } from "@/components/SeHeartbeatScopeBar2";
-import { SeThreatResponseAckBar, SeDnsProtectionAckBar } from "@/components/SeThreatResponseAckBar2";
+import {
+  SeThreatResponseAckBar,
+  SeDnsProtectionAckBar,
+} from "@/components/SeThreatResponseAckBar2";
 import { WebFilterRuleExclusionBar } from "@/components/WebFilterRuleExclusionBar2";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import { SEHealthCheckHistory } from "@/components/SEHealthCheckHistory2";
@@ -98,7 +101,10 @@ import {
   SE_HEALTH_CHECK_BP_OVERRIDES_KEY,
   seCentralAutoForLabel,
 } from "@/lib/se-health-check-bp-v2";
-import { loadSeHealthCheckPreparedBy, SE_HEALTH_CHECK_PREPARED_BY_KEY } from "@/lib/se-health-check-preferences-v2";
+import {
+  loadSeHealthCheckPreparedBy,
+  SE_HEALTH_CHECK_PREPARED_BY_KEY,
+} from "@/lib/se-health-check-preferences-v2";
 import {
   buildSeHealthCheckSnapshotV1,
   parseSeHealthCheckSnapshotFromSummaryJson,
@@ -121,8 +127,14 @@ import type {
   GuestFirewallLicenseApiRow,
   GuestTenantRow,
 } from "./health-check/types";
-import { useConfigUpload, type ConfigUploadCentralApiPayload } from "./health-check/use-config-upload";
-import { buildHealthCheckReportParams, validateRequiredFields } from "./health-check/build-report-params";
+import {
+  useConfigUpload,
+  type ConfigUploadCentralApiPayload,
+} from "./health-check/use-config-upload";
+import {
+  buildHealthCheckReportParams,
+  validateRequiredFields,
+} from "./health-check/build-report-params";
 import {
   CENTRAL_MATCH_NONE,
   mapGuestFirewallLicencesToBpRows,
@@ -131,8 +143,10 @@ import {
 } from "./health-check/guest-central-api";
 import { CompleteProfileGate } from "./health-check/CompleteProfileGate";
 import { useHealthCheckSharing } from "./health-check/use-health-check-sharing";
+import { buildAutoSeNotes } from "./health-check/build-auto-se-notes";
 
-const SOPHOS_BP_TEMPLATE = BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
+const SOPHOS_BP_TEMPLATE =
+  BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
 
 function HealthCheckInner() {
   const seAuth = useSEAuth();
@@ -155,13 +169,16 @@ function HealthCheckInner() {
   const [licence, setLicence] = useState<LicenceSelection>({ tier: "xstream", modules: [] });
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
-  const [webFilterComplianceMode, setWebFilterComplianceMode] = useState<WebFilterComplianceMode>("strict");
+  const [webFilterComplianceMode, setWebFilterComplianceMode] =
+    useState<WebFilterComplianceMode>("strict");
   const [webFilterExemptRuleNames, setWebFilterExemptRuleNames] = useState<string[]>([]);
   const [seMdrThreatFeedsAck, setSeMdrThreatFeedsAck] = useState(false);
   const [seNdrEssentialsAck, setSeNdrEssentialsAck] = useState(false);
   const [seDnsProtectionAck, setSeDnsProtectionAck] = useState(false);
   const [seExcludeSecurityHeartbeat, setSeExcludeSecurityHeartbeat] = useState(false);
-  const [guestFirewallLicenseItems, setGuestFirewallLicenseItems] = useState<GuestFirewallLicenseApiRow[]>([]);
+  const [guestFirewallLicenseItems, setGuestFirewallLicenseItems] = useState<
+    GuestFirewallLicenseApiRow[]
+  >([]);
   const [bpOverrideRevision, setBpOverrideRevision] = useState(0);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   /** When non-null, HA BP auto-pass labels come from a reopened save (no live Central groups). */
@@ -248,13 +265,16 @@ function HealthCheckInner() {
     );
     const rows =
       serials.size > 0
-        ? guestFirewallLicenseItems.filter((r) => serials.has((r.serialNumber ?? "").trim().toLowerCase()))
+        ? guestFirewallLicenseItems.filter((r) =>
+            serials.has((r.serialNumber ?? "").trim().toLowerCase()),
+          )
         : [];
     return mapGuestFirewallLicencesToBpRows(rows);
   }, [files, guestFirewallLicenseItems]);
 
   const detectedTierFromCentralLicences = useMemo(
-    () => detectBpLicenceTierFromCentral(centralBpLicenceFlat.length > 0 ? centralBpLicenceFlat : null),
+    () =>
+      detectBpLicenceTierFromCentral(centralBpLicenceFlat.length > 0 ? centralBpLicenceFlat : null),
     [centralBpLicenceFlat],
   );
 
@@ -305,114 +325,41 @@ function HealthCheckInner() {
     return out;
   }, [analysisResults]);
 
-  const autoSeNotes = useMemo(() => {
-    const labels = Object.keys(analysisResults);
-    if (labels.length === 0) return "";
-
-    const manualOverrides = loadSeHealthCheckBpOverrides();
-    const paras: string[] = [];
-
-    const tierLabel = licence.tier === "xstream" ? "Xstream Protection" : licence.tier === "standard" ? "Standard Protection" : "individual module selection";
-    const multi = labels.length > 1;
-
-    paras.push(`I reviewed the configuration export${multi ? `s for ${labels.length} firewalls` : ""} as part of this health check. The ${multi ? "environment is" : "appliance is"} licenced with Sophos Firewall ${tierLabel}.`);
-
-    for (const label of labels) {
-      const ar = analysisResults[label];
-      if (!ar) continue;
-      const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-      const bp = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
-
-      if (multi) paras.push(`Regarding ${label}:`);
-
-      const gradeCommentary =
-        bp.grade === "A" ? "which reflects a well-hardened configuration" :
-        bp.grade === "B" ? "which is solid but has room for improvement" :
-        bp.grade === "C" ? "indicating several areas that would benefit from attention" :
-        bp.grade === "D" ? "which highlights significant gaps that should be addressed" :
-        "which indicates the configuration needs substantial work to meet Sophos recommendations";
-
-      paras.push(`Overall the appliance scored ${bp.overall}% against Sophos best practices, earning a Grade ${bp.grade} — ${gradeCommentary}. Out of ${bp.total} applicable checks, ${bp.passed} passed and ${bp.failed} did not meet the recommended standard.${bp.warnings > 0 ? ` I wasn't able to fully verify ${bp.warnings} item${bp.warnings > 1 ? "s" : ""} from the export alone, so ${bp.warnings > 1 ? "those" : "that"} should be double-checked on the live console.` : ""}`);
-
-      const failedChecks = bp.results.filter((r) => r.status === "fail" && r.applicable);
-      if (failedChecks.length > 0) {
-        const names = failedChecks.map((fc) => fc.check.title);
-        if (names.length <= 3) {
-          paras.push(`The key areas to focus on are ${names.join(" and ")}. I'd recommend tackling these as a priority during any hardening work.`);
-        } else {
-          paras.push(`The main gaps I spotted were around ${names.slice(0, 3).join(", ")}, plus ${names.length - 3} other${names.length - 3 > 1 ? "s" : ""} detailed in the full report. I'd suggest working through the failed checks in the Best Practice section — most of them are straightforward to resolve.`);
-        }
-      }
-
-      const sevCounts: Record<string, number> = {};
-      for (const f of ar.findings) {
-        sevCounts[f.severity] = (sevCounts[f.severity] ?? 0) + 1;
-      }
-
-      const critCount = sevCounts["critical"] ?? 0;
-      const highCount = sevCounts["high"] ?? 0;
-      const medCount = sevCounts["medium"] ?? 0;
-      const totalFindings = ar.findings.length;
-
-      if (totalFindings > 0) {
-        const urgentCount = critCount + highCount;
-        if (urgentCount > 0) {
-          let findingSummary = `Looking at the detailed findings, I found ${totalFindings} items worth flagging.`;
-          if (critCount > 0 && highCount > 0) {
-            findingSummary += ` ${critCount} of these are critical and ${highCount} are high severity — these really should be looked at soon.`;
-          } else if (critCount > 0) {
-            findingSummary += ` ${critCount} of these are critical and need immediate attention.`;
-          } else {
-            findingSummary += ` ${highCount} are high severity and worth prioritising.`;
-          }
-          if (medCount > 0) findingSummary += ` There are also ${medCount} medium-severity items that are worth reviewing when time allows.`;
-          paras.push(findingSummary);
-        } else if (totalFindings > 0) {
-          paras.push(`I found ${totalFindings} findings, but nothing critical or high severity which is good news. ${medCount > 0 ? `There are ${medCount} medium items worth a look, but overall the configuration is in decent shape.` : "The configuration looks well maintained."}`);
-        }
-      }
-
-      const critical = ar.findings.filter((f) => f.severity === "critical");
-      const high = ar.findings.filter((f) => f.severity === "high");
-      const topFindings = [...critical, ...high].slice(0, 4);
-      if (topFindings.length > 0) {
-        const items = topFindings.map((f) => f.title);
-        if (items.length === 1) {
-          paras.push(`The top priority is "${items[0]}" — I'd get that sorted first.`);
-        } else {
-          paras.push(`If I were to pick the most important things to fix first, I'd start with ${items.slice(0, -1).map((i) => `"${i}"`).join(", ")} and "${items[items.length - 1]}".`);
-        }
-      }
-    }
-
-    const scopeNotes: string[] = [];
-    if (dpiExemptZones.length > 0) scopeNotes.push(`I've excluded the ${dpiExemptZones.join(", ")} zone${dpiExemptZones.length > 1 ? "s" : ""} from DPI coverage checks since deploying the signing certificate there isn't practical`);
-    if (dpiExemptNetworks.length > 0) scopeNotes.push(`the ${dpiExemptNetworks.join(", ")} network${dpiExemptNetworks.length > 1 ? "s are" : " is"} also exempt from DPI checks`);
-    if (webFilterExemptRuleNames.length > 0) {
-      const ruleList = webFilterExemptRuleNames.slice(0, 3).join(", ");
-      scopeNotes.push(`${webFilterExemptRuleNames.length} rule${webFilterExemptRuleNames.length > 1 ? "s" : ""} (${ruleList}${webFilterExemptRuleNames.length > 3 ? ` and ${webFilterExemptRuleNames.length - 3} more` : ""}) ${webFilterExemptRuleNames.length > 1 ? "have" : "has"} been scoped out of web filter compliance`);
-    }
-    if (webFilterComplianceMode !== "strict") scopeNotes.push(`I've set web filter compliance to informational mode for this review rather than strict`);
-
-    const ackItems: string[] = [];
-    if (seMdrThreatFeedsAck) ackItems.push("MDR threat feeds");
-    if (seNdrEssentialsAck) ackItems.push("NDR Essentials");
-    if (seDnsProtectionAck) ackItems.push("DNS Protection");
-    if (ackItems.length > 0) scopeNotes.push(`I've confirmed on the appliance that ${ackItems.join(", ")} ${ackItems.length > 1 ? "are" : "is"} active even though it doesn't show in the export`);
-    if (seExcludeSecurityHeartbeat) scopeNotes.push(`I've excluded the Security Heartbeat check since there are no Sophos-managed endpoints in this environment`);
-
-    if (scopeNotes.length > 0) {
-      paras.push(`A few notes on scoping: ${scopeNotes.join(". Also, ")}.`);
-    }
-
-    return paras.join("\n\n");
-  }, [
-    analysisResults, licence, centralLinkedForAnalysis, seCentralHaLabels,
-    seThreatResponseAck, seExcludedBpChecks,
-    dpiExemptZones, dpiExemptNetworks, webFilterExemptRuleNames,
-    webFilterComplianceMode, seMdrThreatFeedsAck, seNdrEssentialsAck,
-    seDnsProtectionAck, seExcludeSecurityHeartbeat,
-  ]);
+  const autoSeNotes = useMemo(
+    () =>
+      buildAutoSeNotes({
+        analysisResults,
+        licence,
+        centralLinkedForAnalysis,
+        seCentralHaLabels,
+        seThreatResponseAck,
+        seExcludedBpChecks,
+        dpiExemptZones,
+        dpiExemptNetworks,
+        webFilterExemptRuleNames,
+        webFilterComplianceMode,
+        seMdrThreatFeedsAck,
+        seNdrEssentialsAck,
+        seDnsProtectionAck,
+        seExcludeSecurityHeartbeat,
+      }),
+    [
+      analysisResults,
+      licence,
+      centralLinkedForAnalysis,
+      seCentralHaLabels,
+      seThreatResponseAck,
+      seExcludedBpChecks,
+      dpiExemptZones,
+      dpiExemptNetworks,
+      webFilterExemptRuleNames,
+      webFilterComplianceMode,
+      seMdrThreatFeedsAck,
+      seNdrEssentialsAck,
+      seDnsProtectionAck,
+      seExcludeSecurityHeartbeat,
+    ],
+  );
 
   const seNotes = useMemo(() => {
     const parts = [autoSeNotes, seNotesManual.trim()].filter(Boolean);
@@ -436,7 +383,14 @@ function HealthCheckInner() {
       });
     }
     setAnalysisResults(next);
-  }, [files, centralLinkedForAnalysis, dpiExemptZones, dpiExemptNetworks, webFilterComplianceMode, webFilterExemptRuleNames]);
+  }, [
+    files,
+    centralLinkedForAnalysis,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+  ]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
@@ -457,7 +411,8 @@ function HealthCheckInner() {
       const parsed: ParsedFile[] = [];
       for (const file of toProcess) {
         await new Promise((r) => setTimeout(r, 0));
-        const isXml = file.fileName.endsWith(".xml") || file.content.trimStart().startsWith("<?xml");
+        const isXml =
+          file.fileName.endsWith(".xml") || file.content.trimStart().startsWith("<?xml");
         let extractedData: ExtractedSections;
         try {
           if (isXml) {
@@ -468,7 +423,9 @@ function HealthCheckInner() {
           }
         } catch (err) {
           console.warn(`[health-check] parse failed ${file.fileName}`, err);
-          toast.error(`Could not parse ${file.fileName} — use a valid Sophos HTML or entities XML export`);
+          toast.error(
+            `Could not parse ${file.fileName} — use a valid Sophos HTML or entities XML export`,
+          );
           extractedData = {} as ExtractedSections;
         }
         parsed.push({ ...file, extractedData, source: "upload" });
@@ -621,8 +578,19 @@ function HealthCheckInner() {
     for (const label of labels) {
       const ar = analysisResults[label];
       if (ar) {
-        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-        bpByLabel[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+        const centralAuto = seCentralAutoForLabel(
+          centralLinkedForAnalysis,
+          label,
+          seCentralHaLabels,
+        );
+        bpByLabel[label] = computeSophosBPScore(
+          ar,
+          licence,
+          manualOverrides,
+          centralAuto,
+          seThreatResponseAck,
+          seExcludedBpChecks,
+        );
       }
     }
 
@@ -647,11 +615,14 @@ function HealthCheckInner() {
       centralValidated: centralLinkedForAnalysis,
       generatedAt: new Date(),
       appVersion:
-        typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
+        typeof import.meta.env.VITE_APP_VERSION === "string"
+          ? import.meta.env.VITE_APP_VERSION
+          : undefined,
       seNotes: seNotes.trim() || undefined,
     };
 
-    const { buildSeHealthCheckBrowserHtmlDocument } = await import("@/lib/se-health-check-browser-html-v2");
+    const { buildSeHealthCheckBrowserHtmlDocument } =
+      await import("@/lib/se-health-check-browser-html-v2");
     return buildSeHealthCheckBrowserHtmlDocument(reportParams);
   }, [
     files,
@@ -716,7 +687,11 @@ function HealthCheckInner() {
   const connectCentral = useCallback(async () => {
     setCentralBusy(true);
     try {
-      await callGuestCentral({ mode: "guest_health_ping", clientId: centralCreds.clientId, clientSecret: centralCreds.clientSecret });
+      await callGuestCentral({
+        mode: "guest_health_ping",
+        clientId: centralCreds.clientId,
+        clientSecret: centralCreds.clientSecret,
+      });
       setCentralValidated(true);
       setReplayCentralLinked(false);
       setRestoredHaLabels(null);
@@ -741,8 +716,11 @@ function HealthCheckInner() {
         const items = fwRes.items ?? [];
         setFirewallOptions(items);
         const groups = buildGuestCentralHaGroups(items);
-        const haNote = groups.length < items.length ? ` (${groups.length} link targets, HA merged)` : "";
-        toast.success(`Connected — found ${items.length} device(s) from Central${haNote} across ${tenants.length} tenant(s).`);
+        const haNote =
+          groups.length < items.length ? ` (${groups.length} link targets, HA merged)` : "";
+        toast.success(
+          `Connected — found ${items.length} device(s) from Central${haNote} across ${tenants.length} tenant(s).`,
+        );
       } else {
         toast.success("Credentials validated but no tenants found.");
       }
@@ -785,16 +763,22 @@ function HealthCheckInner() {
         data-tour="hc-central-match"
       >
         <p className="text-[11px] leading-snug text-muted-foreground">
-          <span className="font-semibold text-foreground">Link each upload to a Central firewall.</span> HA pairs with the
-          same hostname are grouped like the MSP dashboard. Entities XML usually has no serial — pick the row so tabs and
-          saved checks use the right name. If you choose an <span className="text-foreground font-medium">HA</span> row,
-          the <span className="text-foreground font-medium">Resilience › High Availability</span> best-practice check
-          can be satisfied from Central when the export has no HA section.
+          <span className="font-semibold text-foreground">
+            Link each upload to a Central firewall.
+          </span>{" "}
+          HA pairs with the same hostname are grouped like the MSP dashboard. Entities XML usually
+          has no serial — pick the row so tabs and saved checks use the right name. If you choose an{" "}
+          <span className="text-foreground font-medium">HA</span> row, the{" "}
+          <span className="text-foreground font-medium">Resilience › High Availability</span>{" "}
+          best-practice check can be satisfied from Central when the export has no HA section.
         </p>
         <div className="space-y-2">
           {files.map((f) => (
             <div key={f.id} className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground font-normal truncate block" title={f.fileName}>
+              <Label
+                className="text-[10px] text-muted-foreground font-normal truncate block"
+                title={f.fileName}
+              >
                 {f.fileName}
               </Label>
               <Select
@@ -808,10 +792,18 @@ function HealthCheckInner() {
                   <SelectItem value={CENTRAL_MATCH_NONE}>Not linked</SelectItem>
                   {guestFirewallGroups.map((g) => {
                     const all = [g.primary, ...g.peers];
-                    const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
-                    const line = [getFirewallDisplayName(g.primary), serials || undefined].filter(Boolean).join(" — ");
+                    const serials = all
+                      .map((x) => x.serialNumber)
+                      .filter(Boolean)
+                      .join(" / ");
+                    const line = [getFirewallDisplayName(g.primary), serials || undefined]
+                      .filter(Boolean)
+                      .join(" — ");
                     return (
-                      <SelectItem key={guestHaGroupSelectValue(g)} value={guestHaGroupSelectValue(g)}>
+                      <SelectItem
+                        key={guestHaGroupSelectValue(g)}
+                        value={guestHaGroupSelectValue(g)}
+                      >
                         <span className="flex items-center gap-2 flex-wrap">
                           <span>{line}</span>
                           {g.isHA && (
@@ -882,7 +874,9 @@ function HealthCheckInner() {
     try {
       if (localStorage.getItem(key) === "1") return;
       localStorage.setItem(key, "1");
-    } catch { return; }
+    } catch {
+      return;
+    }
     const timer = setTimeout(() => startHealthCheckTour(), 800);
     return () => clearTimeout(timer);
   }, []);
@@ -897,13 +891,32 @@ function HealthCheckInner() {
       const allFindings = entries.flatMap(([, ar]) => ar.findings ?? []);
       const manualOverrides = loadSeHealthCheckBpOverrides();
       const scores = entries.map(([label, ar]) => {
-        const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-        const bp = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+        const centralAuto = seCentralAutoForLabel(
+          centralLinkedForAnalysis,
+          label,
+          seCentralHaLabels,
+        );
+        const bp = computeSophosBPScore(
+          ar,
+          licence,
+          manualOverrides,
+          centralAuto,
+          seThreatResponseAck,
+          seExcludedBpChecks,
+        );
         return { label, score: bp.overall, grade: bp.grade };
       });
       const avgScore = Math.round(scores.reduce((s, e) => s + e.score, 0) / scores.length);
       const avgGrade: string =
-        avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+        avgScore >= 90
+          ? "A"
+          : avgScore >= 75
+            ? "B"
+            : avgScore >= 60
+              ? "C"
+              : avgScore >= 40
+                ? "D"
+                : "F";
 
       const snapshot = buildSeHealthCheckSnapshotV1({
         customerName: customerName.trim(),
@@ -925,7 +938,10 @@ function HealthCheckInner() {
         findingNotes: Object.keys(findingNotes).length > 0 ? findingNotes : undefined,
       });
 
-      const serialNumbers = files.map((f) => f.serialNumber).filter(Boolean).sort() as string[];
+      const serialNumbers = files
+        .map((f) => f.serialNumber)
+        .filter(Boolean)
+        .sort() as string[];
 
       const payload = {
         se_user_id: seAuth.seProfile.id,
@@ -1038,13 +1054,23 @@ function HealthCheckInner() {
     if (!customerName.trim()) missing.push("Customer Name");
     if (!customerEmail.trim()) missing.push("Customer Email");
     if (!preparedFor.trim()) missing.push("Prepared For");
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(", ")}`);
+      return;
+    }
     void saveHealthCheck();
     const manualOverrides = loadSeHealthCheckBpOverrides();
     const bp: Record<string, SophosBPScore> = {};
     for (const [label, ar] of Object.entries(analysisResults)) {
       const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-      bp[label] = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      bp[label] = computeSophosBPScore(
+        ar,
+        licence,
+        manualOverrides,
+        centralAuto,
+        seThreatResponseAck,
+        seExcludedBpChecks,
+      );
     }
     const blob = new Blob(
       [
@@ -1096,35 +1122,54 @@ function HealthCheckInner() {
     if (!customerName.trim()) missing.push("Customer Name");
     if (!customerEmail.trim()) missing.push("Customer Email");
     if (!preparedFor.trim()) missing.push("Prepared For");
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(", ")}`);
+      return;
+    }
     void saveHealthCheck();
 
     const manualOverrides = loadSeHealthCheckBpOverrides();
-    const csvRows: string[][] = [["Finding", "Category", "Severity", "Status", "Recommendation", "SE Note"]];
+    const csvRows: string[][] = [
+      ["Finding", "Category", "Severity", "Status", "Recommendation", "SE Note"],
+    ];
 
     for (const [label, ar] of Object.entries(analysisResults)) {
       const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
-      const bp = computeSophosBPScore(ar, licence, manualOverrides, centralAuto, seThreatResponseAck, seExcludedBpChecks);
+      const bp = computeSophosBPScore(
+        ar,
+        licence,
+        manualOverrides,
+        centralAuto,
+        seThreatResponseAck,
+        seExcludedBpChecks,
+      );
       for (const r of bp.results) {
         csvRows.push([
           r.check.title,
           r.check.category,
-          r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A",
-          r.manualOverride ? "Manual Pass" : (r.status === "fail" ? "Fail" : r.status === "pass" ? "Pass" : r.status === "warn" ? "Warning" : "N/A"),
+          r.status === "fail"
+            ? "Fail"
+            : r.status === "pass"
+              ? "Pass"
+              : r.status === "warn"
+                ? "Warning"
+                : "N/A",
+          r.manualOverride
+            ? "Manual Pass"
+            : r.status === "fail"
+              ? "Fail"
+              : r.status === "pass"
+                ? "Pass"
+                : r.status === "warn"
+                  ? "Warning"
+                  : "N/A",
           r.check.recommendation ?? "",
           findingNotes[r.check.id] ?? "",
         ]);
       }
 
       for (const f of ar.findings ?? []) {
-        csvRows.push([
-          f.title,
-          f.section,
-          f.severity,
-          f.severity,
-          f.remediation ?? "",
-          "",
-        ]);
+        csvRows.push([f.title, f.section, f.severity, f.severity, f.remediation ?? "", ""]);
       }
     }
 
@@ -1140,11 +1185,26 @@ function HealthCheckInner() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Findings CSV downloaded.");
-  }, [analysisResults, licence, seCentralHaLabels, seThreatResponseAck, seExcludedBpChecks, centralLinkedForAnalysis, customerName, customerEmail, preparedFor, saveHealthCheck, findingNotes]);
+  }, [
+    analysisResults,
+    licence,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+    centralLinkedForAnalysis,
+    customerName,
+    customerEmail,
+    preparedFor,
+    saveHealthCheck,
+    findingNotes,
+  ]);
 
   const handleDownloadHealthCheckPdf = useCallback(async () => {
     const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(", ")}`);
+      return;
+    }
     void saveHealthCheck();
     const { reportParams, branding, labels } = buildHealthCheckReportParams({
       files,
@@ -1214,7 +1274,10 @@ function HealthCheckInner() {
 
   const handleDownloadHealthCheckHtml = useCallback(async () => {
     const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(", ")}`);
+      return;
+    }
     void saveHealthCheck();
     const { reportParams, branding, labels } = buildHealthCheckReportParams({
       files,
@@ -1281,7 +1344,10 @@ function HealthCheckInner() {
 
   const handleDownloadHealthCheckZip = useCallback(async () => {
     const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(", ")}`);
+      return;
+    }
     void saveHealthCheck();
     const { reportParams, branding, labels } = buildHealthCheckReportParams({
       files,
@@ -1312,7 +1378,11 @@ function HealthCheckInner() {
     setPdfBusy(true);
     try {
       const { runHealthCheckZipDownload } = await import("@/lib/health-check-pdf-download-v2");
-      const zipFilename = await runHealthCheckZipDownload({ reportParams, branding, filenameCustomerPart: customerName });
+      const zipFilename = await runHealthCheckZipDownload({
+        reportParams,
+        branding,
+        filenameCustomerPart: customerName,
+      });
       toast.success(`Downloaded ${zipFilename}`);
     } catch (e) {
       console.warn("[health-check] zip download failed", e);
@@ -1347,7 +1417,10 @@ function HealthCheckInner() {
 
   const handleSendReportToCustomer = useCallback(async () => {
     const missing = validateRequiredFields({ customerName, customerEmail, preparedFor });
-    if (missing.length) { toast.error(`Please fill in: ${missing.join(", ")}`); return; }
+    if (missing.length) {
+      toast.error(`Please fill in: ${missing.join(", ")}`);
+      return;
+    }
     void saveHealthCheck();
     if (!files.length || Object.keys(analysisResults).length === 0) {
       toast.error("Run a health check before sending.");
@@ -1356,8 +1429,9 @@ function HealthCheckInner() {
     setSendingReport(true);
     try {
       const { buildSeHealthCheckPdfBlob } = await import("@/lib/se-health-check-pdfmake-v2");
-      const { buildSeHealthCheckBrowserHtmlDocument } = await import("@/lib/se-health-check-browser-html-v2");
-      const { sanitizePdfFilenamePart } = await import("@/lib/html-document-to-pdf-blob");
+      const { buildSeHealthCheckBrowserHtmlDocument } =
+        await import("@/lib/se-health-check-browser-html-v2");
+      const { sanitizePdfFilenamePart } = await import("@/lib/pdf-utils");
 
       const { reportParams } = buildHealthCheckReportParams({
         files,
@@ -1400,7 +1474,9 @@ function HealthCheckInner() {
       const date = new Date().toISOString().slice(0, 10);
       const filenameBase = `Sophos-Firewall-Health-Check-${part}-${date}`;
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/send-report`, {
         method: "POST",
         headers: {
@@ -1431,19 +1507,38 @@ function HealthCheckInner() {
       setSendingReport(false);
     }
   }, [
-    files, analysisResults, baselineResults, licence, customerName, customerEmail,
-    preparedFor, effectivePreparedBy, dpiExemptZones, dpiExemptNetworks,
-    webFilterComplianceMode, webFilterExemptRuleNames, seMdrThreatFeedsAck,
-    seNdrEssentialsAck, seDnsProtectionAck, seExcludeSecurityHeartbeat,
-    centralLinkedForAnalysis, seCentralHaLabels,
-    seThreatResponseAck, seExcludedBpChecks, seNotes,
-    saveHealthCheck, seAuth.seProfile,
+    files,
+    analysisResults,
+    baselineResults,
+    licence,
+    customerName,
+    customerEmail,
+    preparedFor,
+    effectivePreparedBy,
+    dpiExemptZones,
+    dpiExemptNetworks,
+    webFilterComplianceMode,
+    webFilterExemptRuleNames,
+    seMdrThreatFeedsAck,
+    seNdrEssentialsAck,
+    seDnsProtectionAck,
+    seExcludeSecurityHeartbeat,
+    centralLinkedForAnalysis,
+    seCentralHaLabels,
+    seThreatResponseAck,
+    seExcludedBpChecks,
+    seNotes,
+    saveHealthCheck,
+    seAuth.seProfile,
   ]);
 
   const restoreFromSavedSnapshot = useCallback(
     (snapshot: SeHealthCheckSnapshotV1, meta?: { checkId: string; followupAt?: string | null }) => {
       try {
-        localStorage.setItem(SE_HEALTH_CHECK_BP_OVERRIDES_KEY, JSON.stringify(snapshot.manualBpOverrideIds));
+        localStorage.setItem(
+          SE_HEALTH_CHECK_BP_OVERRIDES_KEY,
+          JSON.stringify(snapshot.manualBpOverrideIds),
+        );
       } catch {
         /* ignore */
       }
@@ -1502,43 +1597,48 @@ function HealthCheckInner() {
           )}
           {seAuth.seProfile && (
             <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-lg gap-1.5 shrink-0"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Tours</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={() => startHealthCheckTour()}>
-                  <Upload className="h-3.5 w-3.5 mr-2 shrink-0" /> Getting Started
-                </DropdownMenuItem>
-                {activeStep === "results" && (
-                  <DropdownMenuItem onClick={() => startHealthCheckResultsTour()}>
-                    <FileText className="h-3.5 w-3.5 mr-2 shrink-0" /> Results & Export
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg gap-1.5 shrink-0"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                    <span className="hidden sm:inline">Tours</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem onClick={() => startHealthCheckTour()}>
+                    <Upload className="h-3.5 w-3.5 mr-2 shrink-0" /> Getting Started
                   </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-lg gap-1.5 shrink-0"
-              data-tour="hc-management"
-              onClick={() => setSeManagementOpen(true)}
-            >
-              <PanelRight className="h-4 w-4" />
-              <span className="hidden sm:inline">Management</span>
-            </Button>
+                  {activeStep === "results" && (
+                    <DropdownMenuItem onClick={() => startHealthCheckResultsTour()}>
+                      <FileText className="h-3.5 w-3.5 mr-2 shrink-0" /> Results & Export
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-lg gap-1.5 shrink-0"
+                data-tour="hc-management"
+                onClick={() => setSeManagementOpen(true)}
+              >
+                <PanelRight className="h-4 w-4" />
+                <span className="hidden sm:inline">Management</span>
+              </Button>
             </>
           )}
-          <Button variant="outline" size="sm" className="rounded-lg shrink-0" onClick={seAuth.signOut}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg shrink-0"
+            onClick={seAuth.signOut}
+          >
             Sign out
           </Button>
           <Button variant="outline" size="sm" className="rounded-lg gap-1.5 shrink-0" asChild>
@@ -1560,11 +1660,16 @@ function HealthCheckInner() {
                 aria-live="polite"
               >
                 <p className="font-semibold text-brand-accent">Analysing configuration…</p>
-                <p className="text-sm text-muted-foreground">Extracting sections and running deterministic checks.</p>
+                <p className="text-sm text-muted-foreground">
+                  Extracting sections and running deterministic checks.
+                </p>
               </div>
             )}
             <div className="grid gap-4 md:grid-cols-3">
-              <Card data-tour="hc-upload" className="rounded-xl border border-brand-accent/30 bg-card md:col-span-1 shadow-sm">
+              <Card
+                data-tour="hc-upload"
+                className="rounded-xl border border-brand-accent/30 bg-card md:col-span-1 shadow-sm"
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -1607,18 +1712,25 @@ function HealthCheckInner() {
                           {configUploadRequests.filter((r) => r.status === "uploaded").length} ready
                         </span>
                       )}
-                      {configUploadRequests.filter((r) => r.status === "pending").length > 0 && configUploadRequests.filter((r) => r.status === "uploaded").length === 0 && (
-                        <span className="ml-auto text-[10px] text-muted-foreground">
-                          {configUploadRequests.filter((r) => r.status === "pending").length} pending
-                        </span>
-                      )}
+                      {configUploadRequests.filter((r) => r.status === "pending").length > 0 &&
+                        configUploadRequests.filter((r) => r.status === "uploaded").length ===
+                          0 && (
+                          <span className="ml-auto text-[10px] text-muted-foreground">
+                            {configUploadRequests.filter((r) => r.status === "pending").length}{" "}
+                            pending
+                          </span>
+                        )}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="w-full gap-2 text-xs"
-                      onClick={() => { setRecheckQuery(""); setRecheckResults([]); setRecheckSearchOpen(true); }}
+                      onClick={() => {
+                        setRecheckQuery("");
+                        setRecheckResults([]);
+                        setRecheckSearchOpen(true);
+                      }}
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                       Request Re-Check
@@ -1627,7 +1739,10 @@ function HealthCheckInner() {
                 </CardContent>
               </Card>
 
-              <Card data-tour="hc-central" className="rounded-xl border border-border bg-card md:col-span-1 shadow-sm">
+              <Card
+                data-tour="hc-central"
+                className="rounded-xl border border-border bg-card md:col-span-1 shadow-sm"
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -1639,8 +1754,8 @@ function HealthCheckInner() {
                     </Badge>
                   </div>
                   <CardDescription className="text-xs">
-                    Enter the customer&apos;s API credentials to discover their firewalls. Used for this session only —
-                    never stored. Step-by-step setup:{" "}
+                    Enter the customer&apos;s API credentials to discover their firewalls. Used for
+                    this session only — never stored. Step-by-step setup:{" "}
                     <a
                       href="#central-api-help"
                       className="text-brand-accent font-medium underline underline-offset-2"
@@ -1676,7 +1791,11 @@ function HealthCheckInner() {
                     type="button"
                     size="sm"
                     className="rounded-lg w-full bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background dark:hover:bg-[#00EDFF]/90"
-                    disabled={centralBusy || !centralCreds.clientId.trim() || !centralCreds.clientSecret.trim()}
+                    disabled={
+                      centralBusy ||
+                      !centralCreds.clientId.trim() ||
+                      !centralCreds.clientSecret.trim()
+                    }
                     onClick={connectCentral}
                   >
                     {centralBusy ? "Connecting…" : "Connect & Discover Firewalls"}
@@ -1691,9 +1810,15 @@ function HealthCheckInner() {
                     <div className="rounded-lg border border-border bg-muted/20 p-2 max-h-32 overflow-y-auto text-[11px] space-y-1">
                       {guestFirewallGroups.map((g) => {
                         const all = [g.primary, ...g.peers];
-                        const serials = all.map((x) => x.serialNumber).filter(Boolean).join(" / ");
+                        const serials = all
+                          .map((x) => x.serialNumber)
+                          .filter(Boolean)
+                          .join(" / ");
                         return (
-                          <div key={guestHaGroupSelectValue(g)} className="flex justify-between gap-2 items-center">
+                          <div
+                            key={guestHaGroupSelectValue(g)}
+                            className="flex justify-between gap-2 items-center"
+                          >
                             <span className="font-medium truncate flex items-center gap-1.5 min-w-0">
                               {getFirewallDisplayName(g.primary)}
                               {g.isHA && (
@@ -1702,7 +1827,9 @@ function HealthCheckInner() {
                                 </span>
                               )}
                             </span>
-                            <span className="text-muted-foreground font-mono shrink-0 text-right">{serials || "—"}</span>
+                            <span className="text-muted-foreground font-mono shrink-0 text-right">
+                              {serials || "—"}
+                            </span>
                           </div>
                         );
                       })}
@@ -1712,7 +1839,10 @@ function HealthCheckInner() {
                 </CardContent>
               </Card>
 
-              <Card data-tour="hc-proxy" className="rounded-xl border border-dashed border-border bg-muted/10 md:col-span-1 opacity-80">
+              <Card
+                data-tour="hc-proxy"
+                className="rounded-xl border border-dashed border-border bg-muted/10 md:col-span-1 opacity-80"
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2 text-muted-foreground">
@@ -1724,8 +1854,9 @@ function HealthCheckInner() {
                     </Badge>
                   </div>
                   <CardDescription className="text-xs">
-                    Managed proxy for customer Central access — <strong>not available yet</strong>. Use{" "}
-                    <strong>Sophos Central API</strong> in the middle column; credential steps are in{" "}
+                    Managed proxy for customer Central access — <strong>not available yet</strong>.
+                    Use <strong>Sophos Central API</strong> in the middle column; credential steps
+                    are in{" "}
                     <a
                       href="#central-api-help"
                       className="text-brand-accent underline underline-offset-2 font-medium"
@@ -1805,16 +1936,31 @@ function HealthCheckInner() {
                     From Central
                   </span>
                 )}
-                <Button type="button" variant="outline" size="sm" className="rounded-lg" onClick={() => setActiveStep("landing")}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={() => setActiveStep("landing")}
+                >
                   Add configurations
                 </Button>
-                <Button type="button" variant="secondary" size="sm" className="rounded-lg" onClick={resetAll}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={resetAll}
+                >
                   New check
                 </Button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3" data-tour="hc-customer-details">
+            <div
+              className="rounded-xl border border-border bg-card px-4 py-3 space-y-3"
+              data-tour="hc-customer-details"
+            >
               <div className="space-y-1">
                 <Label
                   htmlFor="hc-customer-top"
@@ -1868,8 +2014,9 @@ function HealthCheckInner() {
 
             {replayCentralLinked && !centralValidated && (
               <p className="rounded-lg border border-brand-accent/20 bg-brand-accent/5 dark:bg-[#00EDFF]/10 px-3 py-2 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Opened from saved history.</span> Best-practice scoring uses the
-                saved Central-linked state. Connect to Sophos Central again if you need live discovery or licensing API data.
+                <span className="font-medium text-foreground">Opened from saved history.</span>{" "}
+                Best-practice scoring uses the saved Central-linked state. Connect to Sophos Central
+                again if you need live discovery or licensing API data.
               </p>
             )}
 
@@ -1898,7 +2045,11 @@ function HealthCheckInner() {
                   type="button"
                   size="sm"
                   className="rounded-lg shrink-0 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white dark:bg-[#00EDFF] dark:text-background dark:hover:bg-[#00EDFF]/90"
-                  disabled={centralBusy || !centralCreds.clientId.trim() || !centralCreds.clientSecret.trim()}
+                  disabled={
+                    centralBusy ||
+                    !centralCreds.clientId.trim() ||
+                    !centralCreds.clientSecret.trim()
+                  }
                   onClick={connectCentral}
                 >
                   {centralBusy ? "Connecting…" : "Connect"}
@@ -1934,15 +2085,36 @@ function HealthCheckInner() {
             />
 
             {(() => {
-              const allZones = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceZones))];
-              const allNets = [...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.allWanSourceNetworks))];
+              const allZones = [
+                ...new Set(
+                  Object.values(analysisResults).flatMap(
+                    (r) => r.inspectionPosture.allWanSourceZones,
+                  ),
+                ),
+              ];
+              const allNets = [
+                ...new Set(
+                  Object.values(analysisResults).flatMap(
+                    (r) => r.inspectionPosture.allWanSourceNetworks,
+                  ),
+                ),
+              ];
               const missingWf = [
-                ...new Set(Object.values(analysisResults).flatMap((r) => r.inspectionPosture.wanMissingWebFilterRuleNames)),
+                ...new Set(
+                  Object.values(analysisResults).flatMap(
+                    (r) => r.inspectionPosture.wanMissingWebFilterRuleNames,
+                  ),
+                ),
               ];
               const hasWanWebRules = Object.values(analysisResults).some(
                 (r) => r.inspectionPosture.wanWebServiceRuleNames.length > 0,
               );
-              if (allZones.length === 0 && allNets.length === 0 && missingWf.length === 0 && !hasWanWebRules) {
+              if (
+                allZones.length === 0 &&
+                allNets.length === 0 &&
+                missingWf.length === 0 &&
+                !hasWanWebRules
+              ) {
                 return null;
               }
               return (
@@ -1959,14 +2131,22 @@ function HealthCheckInner() {
                   )}
                   {hasWanWebRules && (
                     <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-2">
-                      <Label htmlFor="hc-web-filter-compliance" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <Label
+                        htmlFor="hc-web-filter-compliance"
+                        className="text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                      >
                         Web filter compliance
                       </Label>
                       <Select
                         value={webFilterComplianceMode}
-                        onValueChange={(v) => setWebFilterComplianceMode(v as WebFilterComplianceMode)}
+                        onValueChange={(v) =>
+                          setWebFilterComplianceMode(v as WebFilterComplianceMode)
+                        }
                       >
-                        <SelectTrigger id="hc-web-filter-compliance" className="max-w-xs rounded-lg h-9 text-sm">
+                        <SelectTrigger
+                          id="hc-web-filter-compliance"
+                          className="max-w-xs rounded-lg h-9 text-sm"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1975,7 +2155,8 @@ function HealthCheckInner() {
                         </SelectContent>
                       </Select>
                       <p className="text-[11px] text-muted-foreground">
-                        Strict surfaces WAN web-filter gaps as stronger findings; Informational lowers severity for scoped reviews.
+                        Strict surfaces WAN web-filter gaps as stronger findings; Informational
+                        lowers severity for scoped reviews.
                       </p>
                     </div>
                   )}
@@ -1991,9 +2172,7 @@ function HealthCheckInner() {
             })()}
 
             <div className="rounded-xl border border-border bg-card px-4 py-3 space-y-3">
-              <Label
-                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
-              >
+              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                 SE Engineer Notes
               </Label>
               <Textarea
@@ -2017,12 +2196,18 @@ function HealthCheckInner() {
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Auto-generated from licence, BP score, findings, and exclusions. Updates when you change settings. Both sections are included in PDF and HTML reports.
+                Auto-generated from licence, BP score, findings, and exclusions. Updates when you
+                change settings. Both sections are included in PDF and HTML reports.
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-card px-4 py-4 space-y-3" data-tour="hc-export">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Save &amp; export</p>
+            <div
+              className="rounded-xl border border-border bg-card px-4 py-4 space-y-3"
+              data-tour="hc-export"
+            >
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Save &amp; export
+              </p>
               <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
                 <Button
                   type="button"
@@ -2047,7 +2232,9 @@ function HealthCheckInner() {
                 </Button>
               </div>
               {!exportFieldsReady && (
-                <p className="text-xs text-amber-500">Fill in Customer Name, Customer Email, and Prepared For to enable exports.</p>
+                <p className="text-xs text-amber-500">
+                  Fill in Customer Name, Customer Email, and Prepared For to enable exports.
+                </p>
               )}
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -2058,7 +2245,11 @@ function HealthCheckInner() {
                   disabled={pdfBusy || !exportFieldsReady}
                   onClick={() => void handleDownloadHealthCheckZip()}
                 >
-                  {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {pdfBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                   {pdfBusy ? "Generating…" : "Download PDF + HTML"}
                 </Button>
                 <Button
@@ -2069,7 +2260,11 @@ function HealthCheckInner() {
                   disabled={pdfBusy || !exportFieldsReady}
                   onClick={() => void handleDownloadHealthCheckPdf()}
                 >
-                  {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {pdfBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                   PDF only
                 </Button>
                 <Button
@@ -2083,11 +2278,25 @@ function HealthCheckInner() {
                   <FileText className="h-4 w-4" />
                   HTML only
                 </Button>
-                <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" disabled={!exportFieldsReady} onClick={exportSummaryJson}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg gap-1.5"
+                  disabled={!exportFieldsReady}
+                  onClick={exportSummaryJson}
+                >
                   <Download className="h-4 w-4" />
                   Summary JSON
                 </Button>
-                <Button type="button" variant="outline" size="sm" className="rounded-lg gap-1.5" disabled={!exportFieldsReady} onClick={exportFindingsCsv}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg gap-1.5"
+                  disabled={!exportFieldsReady}
+                  onClick={exportFindingsCsv}
+                >
                   <FileSpreadsheet className="h-4 w-4" />
                   Findings CSV
                 </Button>
@@ -2098,8 +2307,16 @@ function HealthCheckInner() {
                   disabled={sendingReport || pdfBusy || !files.length || !exportFieldsReady}
                   onClick={() => void handleSendReportToCustomer()}
                 >
-                  {sendingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {sendingReport ? "Sending…" : customerEmail.trim() ? `Send to ${customerEmail.trim()}` : "Send to customer"}
+                  {sendingReport ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {sendingReport
+                    ? "Sending…"
+                    : customerEmail.trim()
+                      ? `Send to ${customerEmail.trim()}`
+                      : "Send to customer"}
                 </Button>
               </div>
 
@@ -2113,18 +2330,43 @@ function HealthCheckInner() {
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px] gap-1">
                         <CalendarClock className="h-3 w-3" />
-                        {new Date(followupAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        {new Date(followupAt).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
                       </Badge>
-                      <Button type="button" variant="ghost" size="sm" className="h-6 text-[10px] text-muted-foreground" disabled={settingFollowup} onClick={() => void handleSetFollowup(null)}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[10px] text-muted-foreground"
+                        disabled={settingFollowup}
+                        onClick={() => void handleSetFollowup(null)}
+                      >
                         Cancel
                       </Button>
                     </div>
                   ) : (
                     <>
-                      <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1" disabled={settingFollowup} onClick={() => void handleSetFollowup(3)}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] gap-1"
+                        disabled={settingFollowup}
+                        onClick={() => void handleSetFollowup(3)}
+                      >
                         3 months
                       </Button>
-                      <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1" disabled={settingFollowup} onClick={() => void handleSetFollowup(6)}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] gap-1"
+                        disabled={settingFollowup}
+                        onClick={() => void handleSetFollowup(6)}
+                      >
                         6 months
                       </Button>
                     </>
@@ -2166,7 +2408,11 @@ function HealthCheckInner() {
                         disabled={sharing}
                         onClick={() => void handleShareHealthCheck()}
                       >
-                        {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                        {sharing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Link2 className="h-4 w-4" />
+                        )}
                         {sharing ? "Generating…" : "Create share link"}
                       </Button>
                     </>
@@ -2198,8 +2444,11 @@ function HealthCheckInner() {
                       </div>
                       {shareExpiry && (
                         <p className="text-[11px] text-muted-foreground">
-                          Expires {new Date(shareExpiry).toLocaleDateString("en-GB", {
-                            day: "numeric", month: "short", year: "numeric",
+                          Expires{" "}
+                          {new Date(shareExpiry).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
                           })}
                         </p>
                       )}
@@ -2229,24 +2478,27 @@ function HealthCheckInner() {
               }
             >
               <div data-tour="hc-bp-results">
-              <SophosBestPractice
-                analysisResults={analysisResults}
-                centralLicences={centralBpLicenceFlat}
-                overridesStorageKey={SE_HEALTH_CHECK_BP_OVERRIDES_KEY}
-                centralEnrichmentActive={centralLinkedForAnalysis}
-                onManualOverridesChange={() => setBpOverrideRevision((n) => n + 1)}
-                licence={licence}
-                onLicenceChange={setLicence}
-                centralHaConfirmedLabels={seCentralHaLabels}
-                seThreatResponseAck={seThreatResponseAck}
-                seExcludedBpChecks={seExcludedBpChecks}
-                findingNotes={findingNotes}
-                onFindingNoteChange={(checkId, note) => setFindingNotes((prev) => {
-                  const next = { ...prev };
-                  if (note) next[checkId] = note; else delete next[checkId];
-                  return next;
-                })}
-              />
+                <SophosBestPractice
+                  analysisResults={analysisResults}
+                  centralLicences={centralBpLicenceFlat}
+                  overridesStorageKey={SE_HEALTH_CHECK_BP_OVERRIDES_KEY}
+                  centralEnrichmentActive={centralLinkedForAnalysis}
+                  onManualOverridesChange={() => setBpOverrideRevision((n) => n + 1)}
+                  licence={licence}
+                  onLicenceChange={setLicence}
+                  centralHaConfirmedLabels={seCentralHaLabels}
+                  seThreatResponseAck={seThreatResponseAck}
+                  seExcludedBpChecks={seExcludedBpChecks}
+                  findingNotes={findingNotes}
+                  onFindingNoteChange={(checkId, note) =>
+                    setFindingNotes((prev) => {
+                      const next = { ...prev };
+                      if (note) next[checkId] = note;
+                      else delete next[checkId];
+                      return next;
+                    })
+                  }
+                />
               </div>
             </Suspense>
 
@@ -2265,36 +2517,34 @@ function HealthCheckInner() {
           </section>
         )}
 
-        {firewallOptions.length > 0 && (
-          <FirmwareEolWarnings firewalls={firewallOptions} />
-        )}
+        {firewallOptions.length > 0 && <FirmwareEolWarnings firewalls={firewallOptions} />}
 
         {seAuth.seProfile && files.length > 0 && files.some((f) => f.serialNumber) && (
           <div data-tour="hc-score-trend">
-          <SEScoreTrendChart
-            serialNumbers={files.map((f) => f.serialNumber).filter(Boolean) as string[]}
-            seProfileId={seAuth.seProfile.id}
-            activeTeamId={activeTeamId}
-          />
+            <SEScoreTrendChart
+              serialNumbers={files.map((f) => f.serialNumber).filter(Boolean) as string[]}
+              seProfileId={seAuth.seProfile.id}
+              activeTeamId={activeTeamId}
+            />
           </div>
         )}
 
         {seAuth.seProfile && (
           <div data-tour="hc-history">
-          <SEHealthCheckHistory
-            seProfileId={seAuth.seProfile.id}
-            refreshTrigger={historyRefreshKey}
-            preparedBy={effectivePreparedBy}
-            onRestoreSnapshot={restoreFromSavedSnapshot}
-            activeTeamId={activeTeamId}
-            teams={teams}
-          />
+            <SEHealthCheckHistory
+              seProfileId={seAuth.seProfile.id}
+              refreshTrigger={historyRefreshKey}
+              preparedBy={effectivePreparedBy}
+              onRestoreSnapshot={restoreFromSavedSnapshot}
+              activeTeamId={activeTeamId}
+              teams={teams}
+            />
           </div>
         )}
 
         {seAuth.seProfile && activeTeamId && (
           <div data-tour="hc-team-dashboard">
-          <TeamDashboard activeTeamId={activeTeamId} seProfileId={seAuth.seProfile.id} />
+            <TeamDashboard activeTeamId={activeTeamId} seProfileId={seAuth.seProfile.id} />
           </div>
         )}
 
@@ -2320,11 +2570,14 @@ function HealthCheckInner() {
           <CollapsibleContent>
             <div className="px-4 pb-4 pt-0 space-y-4 text-sm text-muted-foreground border-t border-border/80">
               <p className="pt-3 text-foreground/90">
-                To run a fuller <strong className="text-foreground">Sophos Firewall Health Check</strong>, you can
-                optionally connect to the customer&apos;s <strong className="text-foreground">Sophos Central</strong>{" "}
-                tenant. That lets this tool list discovered firewalls for context alongside your uploaded HTML/XML
-                exports. API credentials are <strong className="text-foreground">not stored</strong> — they stay in your
-                browser for this session only and are used solely to call Central for discovery during this check.
+                To run a fuller{" "}
+                <strong className="text-foreground">Sophos Firewall Health Check</strong>, you can
+                optionally connect to the customer&apos;s{" "}
+                <strong className="text-foreground">Sophos Central</strong> tenant. That lets this
+                tool list discovered firewalls for context alongside your uploaded HTML/XML exports.
+                API credentials are <strong className="text-foreground">not stored</strong> — they
+                stay in your browser for this session only and are used solely to call Central for
+                discovery during this check.
               </p>
               <div>
                 <p className="font-medium text-foreground text-xs uppercase tracking-wide mb-2">
@@ -2337,33 +2590,41 @@ function HealthCheckInner() {
                     <strong className="text-foreground">API Credentials Management</strong>.
                   </li>
                   <li>
-                    Select <strong className="text-foreground">Add Credential</strong> and enter a clear name and
-                    summary (e.g. &quot;SE health check — read only&quot;).
+                    Select <strong className="text-foreground">Add Credential</strong> and enter a
+                    clear name and summary (e.g. &quot;SE health check — read only&quot;).
                   </li>
                   <li>
-                    Choose the <strong className="text-foreground">Service Principal Read Only</strong> role.
+                    Choose the{" "}
+                    <strong className="text-foreground">Service Principal Read Only</strong> role.
                   </li>
                   <li>
-                    Click <strong className="text-foreground">Add</strong> to create the credential and note the{" "}
-                    <strong className="text-foreground">Client ID</strong> and{" "}
+                    Click <strong className="text-foreground">Add</strong> to create the credential
+                    and note the <strong className="text-foreground">Client ID</strong> and{" "}
                     <strong className="text-foreground">Client Secret</strong>.
                   </li>
                   <li>
-                    Paste them into the <strong className="text-foreground">Sophos Central API</strong> fields on this
-                    page, then use <strong className="text-foreground">Connect &amp; Discover Firewalls</strong> (start
-                    screen) or <strong className="text-foreground">Connect</strong> (results view).
+                    Paste them into the{" "}
+                    <strong className="text-foreground">Sophos Central API</strong> fields on this
+                    page, then use{" "}
+                    <strong className="text-foreground">Connect &amp; Discover Firewalls</strong>{" "}
+                    (start screen) or <strong className="text-foreground">Connect</strong> (results
+                    view).
                   </li>
                   <li>
-                    After uploading configuration files, use <strong className="text-foreground">Link each upload to a
-                    Central firewall</strong> (entities XML often has no serial in the export — manual match is required).
+                    After uploading configuration files, use{" "}
+                    <strong className="text-foreground">
+                      Link each upload to a Central firewall
+                    </strong>{" "}
+                    (entities XML often has no serial in the export — manual match is required).
                   </li>
                 </ol>
               </div>
               <p>
                 After you finish the health check, we recommend{" "}
-                <strong className="text-foreground">removing the API credential</strong> in Sophos Central: open{" "}
-                <strong className="text-foreground">API Credentials Management</strong>, find the credential, and use{" "}
-                <strong className="text-foreground">Delete</strong>.
+                <strong className="text-foreground">removing the API credential</strong> in Sophos
+                Central: open{" "}
+                <strong className="text-foreground">API Credentials Management</strong>, find the
+                credential, and use <strong className="text-foreground">Delete</strong>.
               </p>
               <p className="flex flex-wrap items-center gap-1.5">
                 <span>Further reading:</span>
@@ -2376,7 +2637,9 @@ function HealthCheckInner() {
                   Sophos API getting started
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                 </a>
-                <span className="text-muted-foreground">(Central admin UI steps are under Global Settings.)</span>
+                <span className="text-muted-foreground">
+                  (Central admin UI steps are under Global Settings.)
+                </span>
               </p>
             </div>
           </CollapsibleContent>
@@ -2394,7 +2657,10 @@ function HealthCheckInner() {
         </Link>
       </footer>
 
-      <SeHealthCheckManagementDrawer open={seManagementOpen} onClose={() => setSeManagementOpen(false)} />
+      <SeHealthCheckManagementDrawer
+        open={seManagementOpen}
+        onClose={() => setSeManagementOpen(false)}
+      />
 
       {/* Config Upload Request Dialog */}
       <Dialog open={configUploadDialogOpen} onOpenChange={setConfigUploadDialogOpen}>
@@ -2449,7 +2715,10 @@ function HealthCheckInner() {
               </div>
               <div className="space-y-2">
                 <Label>Link expires in</Label>
-                <Select value={String(configUploadDays)} onValueChange={(v) => setConfigUploadDays(parseInt(v))}>
+                <Select
+                  value={String(configUploadDays)}
+                  onValueChange={(v) => setConfigUploadDays(parseInt(v))}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -2514,9 +2783,10 @@ function HealthCheckInner() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Badge variant={configUploadStatus === "uploaded" ? "default" : "secondary"} className={cn(
-                  configUploadStatus === "uploaded" && "bg-[#00F2B3] text-white",
-                )}>
+                <Badge
+                  variant={configUploadStatus === "uploaded" ? "default" : "secondary"}
+                  className={cn(configUploadStatus === "uploaded" && "bg-[#00F2B3] text-white")}
+                >
                   {configUploadStatus === "uploaded" ? "Config Uploaded" : "Waiting for customer…"}
                 </Badge>
               </div>
@@ -2527,9 +2797,15 @@ function HealthCheckInner() {
                     type="button"
                     className="flex-1 gap-2 bg-[#00F2B3] hover:bg-[#00F2B3]/90"
                     disabled={configUploadLoading}
-                    onClick={() => configUploadToken && handleLoadConfigFromUpload(configUploadToken)}
+                    onClick={() =>
+                      configUploadToken && handleLoadConfigFromUpload(configUploadToken)
+                    }
                   >
-                    {configUploadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {configUploadLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
                     Load Config
                   </Button>
                 )}
@@ -2542,7 +2818,11 @@ function HealthCheckInner() {
                     disabled={configUploadResending}
                     onClick={handleResendConfigUploadEmail}
                   >
-                    {configUploadResending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
+                    {configUploadResending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    )}
                     Resend Email
                   </Button>
                 )}
@@ -2587,7 +2867,9 @@ function HealthCheckInner() {
               {activeTeam ? `${activeTeam.name} Upload Requests` : "My Upload Requests"}
             </DialogTitle>
             <DialogDescription>
-              {activeTeam ? "Team config upload requests — yours and your teammates'." : "Manage config upload requests you've sent to customers."}
+              {activeTeam
+                ? "Team config upload requests — yours and your teammates'."
+                : "Manage config upload requests you've sent to customers."}
             </DialogDescription>
           </DialogHeader>
 
@@ -2596,25 +2878,65 @@ function HealthCheckInner() {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : configUploadRequests.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-8">No upload requests yet.</p>
+            <p className="text-center text-sm text-muted-foreground py-8">
+              No upload requests yet.
+            </p>
           ) : (
             <div className="space-y-3">
               {configUploadRequests.map((req) => {
                 const isExpired = new Date(req.expires_at) <= new Date();
-                const statusLabel = isExpired ? "Expired" : req.status === "uploaded" ? "Config Ready" : req.status === "downloaded" ? "Downloaded" : "Pending";
-                const statusColor = isExpired ? "text-muted-foreground" : req.status === "uploaded" ? "text-[#00F2B3]" : req.status === "downloaded" ? "text-blue-500" : "text-amber-500";
-                const isTeammate = activeTeam && req.se_user_id && req.se_user_id !== seAuth.seProfile?.id;
+                const statusLabel = isExpired
+                  ? "Expired"
+                  : req.status === "uploaded"
+                    ? "Config Ready"
+                    : req.status === "downloaded"
+                      ? "Downloaded"
+                      : "Pending";
+                const statusColor = isExpired
+                  ? "text-muted-foreground"
+                  : req.status === "uploaded"
+                    ? "text-[#00F2B3]"
+                    : req.status === "downloaded"
+                      ? "text-blue-500"
+                      : "text-amber-500";
+                const isTeammate =
+                  activeTeam && req.se_user_id && req.se_user_id !== seAuth.seProfile?.id;
                 return (
-                  <div key={req.id} className={cn("rounded-lg border p-3 space-y-2", isTeammate && "border-brand-accent/30 dark:border-[#00EDFF]/20")}>
+                  <div
+                    key={req.id}
+                    className={cn(
+                      "rounded-lg border p-3 space-y-2",
+                      isTeammate && "border-brand-accent/30 dark:border-[#00EDFF]/20",
+                    )}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{req.customer_name || "Unnamed"}</span>
-                        <span className={cn("text-xs font-medium", statusColor)}>{statusLabel}</span>
-                        {req.central_connected_at && <Badge variant="outline" className="text-[9px] border-blue-500/30 text-blue-500 gap-1"><Wifi className="h-2.5 w-2.5" />Central</Badge>}
-                        {isTeammate && <Badge variant="secondary" className="text-[9px]">Teammate</Badge>}
+                        <span className="font-medium text-sm">
+                          {req.customer_name || "Unnamed"}
+                        </span>
+                        <span className={cn("text-xs font-medium", statusColor)}>
+                          {statusLabel}
+                        </span>
+                        {req.central_connected_at && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] border-blue-500/30 text-blue-500 gap-1"
+                          >
+                            <Wifi className="h-2.5 w-2.5" />
+                            Central
+                          </Badge>
+                        )}
+                        {isTeammate && (
+                          <Badge variant="secondary" className="text-[9px]">
+                            Teammate
+                          </Badge>
+                        )}
                       </div>
                       <span className="text-[10px] text-muted-foreground">
-                        {new Date(req.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        {new Date(req.created_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                        })}
                       </span>
                     </div>
                     {req.customer_email && (
@@ -2629,7 +2951,11 @@ function HealthCheckInner() {
                           disabled={configUploadLoading}
                           onClick={() => handleLoadConfigFromUpload(req.token)}
                         >
-                          {configUploadLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                          {configUploadLoading ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Download className="h-3 w-3" />
+                          )}
                           Load Config
                         </Button>
                       )}
@@ -2642,7 +2968,11 @@ function HealthCheckInner() {
                           disabled={configUploadLoading}
                           onClick={() => handleLoadConfigFromUpload(req.token)}
                         >
-                          {configUploadLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                          {configUploadLoading ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Download className="h-3 w-3" />
+                          )}
                           Re-download
                         </Button>
                       )}
@@ -2683,7 +3013,11 @@ function HealthCheckInner() {
                           disabled={resendingUploadToken === req.token}
                           onClick={() => handleResendUploadEmail(req.token)}
                         >
-                          {resendingUploadToken === req.token ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          {resendingUploadToken === req.token ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
                           Resend Email
                         </Button>
                       )}
@@ -2732,10 +3066,14 @@ function HealthCheckInner() {
               />
             </div>
             {recheckSearching && (
-              <div className="text-center py-3"><Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" /></div>
+              <div className="text-center py-3">
+                <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
+              </div>
             )}
             {!recheckSearching && recheckResults.length === 0 && recheckQuery.trim().length > 0 && (
-              <p className="text-xs text-muted-foreground text-center py-3">No matching customers found.</p>
+              <p className="text-xs text-muted-foreground text-center py-3">
+                No matching customers found.
+              </p>
             )}
             {recheckResults.length > 0 && (
               <div className="space-y-1 max-h-60 overflow-y-auto">
@@ -2749,15 +3087,24 @@ function HealthCheckInner() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{r.customer_name}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        Last checked: {new Date(r.checked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        Last checked:{" "}
+                        {new Date(r.checked_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
                         {r.overall_grade && ` — Grade ${r.overall_grade}`}
                         {r.overall_score != null && ` (${r.overall_score}%)`}
                       </p>
                       {r.serialNumbers.length > 0 && (
-                        <p className="text-[9px] font-mono text-muted-foreground truncate">{r.serialNumbers.join(", ")}</p>
+                        <p className="text-[9px] font-mono text-muted-foreground truncate">
+                          {r.serialNumbers.join(", ")}
+                        </p>
                       )}
                     </div>
-                    <Badge className={`${r.overall_grade === "A" ? "bg-[#00F2B3]/15 text-[#00F2B3]" : r.overall_grade === "F" ? "bg-[#EA0022]/15 text-[#EA0022]" : "bg-muted text-muted-foreground"} border-0 text-[9px] shrink-0`}>
+                    <Badge
+                      className={`${r.overall_grade === "A" ? "bg-[#00F2B3]/15 text-[#00F2B3]" : r.overall_grade === "F" ? "bg-[#EA0022]/15 text-[#EA0022]" : "bg-muted text-muted-foreground"} border-0 text-[9px] shrink-0`}
+                    >
                       {r.overall_grade ?? "—"}
                     </Badge>
                   </button>
@@ -2798,8 +3145,7 @@ export default function HealthCheck() {
   }
 
   if (!seAuth.isAuthenticated) {
-    const sophosSession =
-      !!seAuth.user?.email && /@sophos\.com$/i.test(seAuth.user.email.trim());
+    const sophosSession = !!seAuth.user?.email && /@sophos\.com$/i.test(seAuth.user.email.trim());
     if (seAuth.user && sophosSession && !seAuth.seProfile) {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-12">
@@ -2811,17 +3157,25 @@ export default function HealthCheck() {
               </CardTitle>
               <CardDescription className="text-sm leading-relaxed">
                 You&apos;re signed in as{" "}
-                <span className="font-medium text-foreground">{seAuth.user.email}</span>, but this app couldn&apos;t
-                read or create your row in <code className="text-xs bg-muted px-1 rounded">se_profiles</code>. That
-                usually means database permissions (RLS), a missing migration, or a network issue — not your password.
+                <span className="font-medium text-foreground">{seAuth.user.email}</span>, but this
+                app couldn&apos;t read or create your row in{" "}
+                <code className="text-xs bg-muted px-1 rounded">se_profiles</code>. That usually
+                means database permissions (RLS), a missing migration, or a network issue — not your
+                password.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Ask your admin to verify <code className="text-xs bg-muted px-1 rounded">se_profiles</code> and Supabase
+                Ask your admin to verify{" "}
+                <code className="text-xs bg-muted px-1 rounded">se_profiles</code> and Supabase
                 policies, then try again.
               </p>
-              <Button type="button" variant="default" className="w-full" onClick={() => void seAuth.signOut()}>
+              <Button
+                type="button"
+                variant="default"
+                className="w-full"
+                onClick={() => void seAuth.signOut()}
+              >
                 Sign out
               </Button>
             </CardContent>

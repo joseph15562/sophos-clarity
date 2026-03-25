@@ -111,7 +111,12 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
           team_id: activeTeamId ?? undefined,
         }),
       });
-      const json = (await res.json()) as { error?: string; token?: string; url?: string; email_sent?: boolean };
+      const json = (await res.json()) as {
+        error?: string;
+        token?: string;
+        url?: string;
+        email_sent?: boolean;
+      };
       if (!res.ok) throw new Error(json.error || "Failed to create upload request");
 
       setConfigUploadToken(json.token ?? null);
@@ -325,8 +330,10 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
     }
     const poll = async () => {
       try {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${configUploadToken}`;
-        const res = await fetch(url, { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } });
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-public/config-upload/${configUploadToken}`;
+        const res = await fetch(url, {
+          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+        });
         if (res.ok) {
           const statusJson = (await res.json()) as { status?: string };
           if (statusJson.status === "uploaded") {

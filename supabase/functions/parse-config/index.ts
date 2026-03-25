@@ -458,13 +458,14 @@ serve(async (req) => {
 
     const reportModel = Deno.env.get("GEMINI_REPORT_MODEL") || "gemini-2.5-flash";
     const chatModel = Deno.env.get("GEMINI_CHAT_MODEL") || "gemini-2.5-flash-lite";
-    const model = chat ? chatModel : reportModel;
+    const fallbackModel = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-2.0-flash";
+    const primaryModel = chat ? chatModel : reportModel;
 
     const reasoningOverride = Deno.env.get("GEMINI_REASONING_EFFORT");
     const reasoningEffort = reasoningOverride
       || (chat ? "none" : compliance ? "medium" : "low");
 
-    const doRequest = () =>
+    const doRequest = (selectedModel: string) =>
       fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: {
@@ -472,7 +473,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model,
+          model: selectedModel,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userMessage },
@@ -484,14 +485,22 @@ serve(async (req) => {
         }),
       });
 
-    let response = await doRequest();
+    let usedModel = primaryModel;
+    let response = await doRequest(primaryModel);
     const max429Retries = 2;
     for (let retries = 0; response.status === 429 && retries < max429Retries; retries++) {
-      const retrySec = 15 + retries * 15; // 15s, 30s backoff
+      const retrySec = 15 + retries * 15;
       console.log(`parse-config: 429 rate limit. Waiting ${retrySec}s before retry (attempt ${retries + 1}/${max429Retries}).`);
       await new Promise((r) => setTimeout(r, retrySec * 1000));
-      response = await doRequest();
+      response = await doRequest(primaryModel);
     }
+
+    if (!response.ok && response.status !== 429 && response.status !== 402 && fallbackModel !== primaryModel) {
+      console.log(`parse-config: primary model ${primaryModel} failed (${response.status}), falling back to ${fallbackModel}`);
+      usedModel = fallbackModel;
+      response = await doRequest(fallbackModel);
+    }
+    console.log(`parse-config: using model=${usedModel}`);
 
     if (!response.ok) {
       const text = await response.text();

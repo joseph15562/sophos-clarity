@@ -11,14 +11,21 @@ interface CompleteProfileGateProps {
 }
 
 export function CompleteProfileGate({ seAuth }: CompleteProfileGateProps) {
-  const suggestedName = seAuth.seProfile?.healthCheckPreparedBy || seAuth.user?.user_metadata?.full_name as string || seAuth.user?.user_metadata?.name as string || "";
+  const suggestedName =
+    seAuth.seProfile?.healthCheckPreparedBy ||
+    (seAuth.user?.user_metadata?.full_name as string) ||
+    (seAuth.user?.user_metadata?.name as string) ||
+    "";
   const [name, setName] = useState(suggestedName);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = useCallback(async () => {
     const trimmed = name.trim();
-    if (!trimmed) { setError("Please enter your name"); return; }
+    if (!trimmed) {
+      setError("Please enter your name");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -38,7 +45,10 @@ export function CompleteProfileGate({ seAuth }: CompleteProfileGateProps) {
   }, [name, seAuth]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <main
+      id="main-content"
+      className="min-h-screen bg-background flex items-center justify-center px-4"
+    >
       <Card className="max-w-md w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -59,12 +69,12 @@ export function CompleteProfileGate({ seAuth }: CompleteProfileGateProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Joseph McDonald"
               autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSave();
+              }}
             />
           </div>
-          {error && (
-            <p className="text-xs text-[#EA0022]">{error}</p>
-          )}
+          {error && <p className="text-xs text-[#EA0022]">{error}</p>}
           <Button
             className="w-full bg-[#2006F7] hover:bg-[#10037C] text-white"
             disabled={saving || !name.trim()}
@@ -80,6 +90,6 @@ export function CompleteProfileGate({ seAuth }: CompleteProfileGateProps) {
           </button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

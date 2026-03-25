@@ -29,7 +29,8 @@ export async function handleFirewallRoutes(
     const { data: firewalls, error: fwErr } = await db
       .from("central_firewalls")
       .select("id, firewall_id, serial_number, hostname, name, firmware_version, model, central_tenant_id")
-      .eq("org_id", membership.org_id);
+      .eq("org_id", membership.org_id)
+      .limit(1000);
 
     if (fwErr) return json({ error: fwErr.message }, 500);
 

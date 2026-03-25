@@ -3,7 +3,12 @@ import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -15,9 +20,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Zalando Sans"', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['"Zalando Sans Expanded"', '"Zalando Sans"', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        sans: ['"Zalando Sans"', "Inter", "system-ui", "sans-serif"],
+        display: ['"Zalando Sans Expanded"', '"Zalando Sans"', "system-ui", "sans-serif"],
+        mono: ['"JetBrains Mono"', "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -69,6 +74,17 @@ export default {
           info: "hsl(var(--severity-info))",
         },
         "brand-accent": "hsl(var(--brand-accent))",
+        "brand-violet": "hsl(var(--brand-violet))",
+        "brand-indigo": "hsl(var(--brand-indigo))",
+        "brand-deep-blue": "hsl(var(--brand-deep-blue))",
+        "brand-navy": "hsl(var(--brand-navy))",
+        grade: {
+          a: "hsl(var(--grade-a))",
+          b: "hsl(var(--grade-b))",
+          c: "hsl(var(--grade-c))",
+          d: "hsl(var(--grade-d))",
+          f: "hsl(var(--grade-f))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

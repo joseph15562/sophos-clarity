@@ -7,7 +7,8 @@ export async function authenticateAgent(apiKey: string) {
   const { data: agents, error } = await db
     .from("agents")
     .select("*")
-    .eq("api_key_prefix", prefix);
+    .eq("api_key_prefix", prefix)
+    .limit(10);
 
   if (error || !agents?.length) return null;
 

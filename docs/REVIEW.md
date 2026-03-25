@@ -1,546 +1,745 @@
-# Sophos FireComply — Functional Review & Feature Roadmap
+# Sophos FireComply — War Room Audit
 
-> **Date:** 5 March 2026
-> **Purpose:** Summarised review of current functionality, improvement ideas, and new feature suggestions. Annotate the **Action** column with your decisions (✅ Do, ⏳ Later, ❌ Skip) and add notes.
-
----
-
-## Current Feature Summary
-
-| Area | What It Does Today |
-|------|--------------------|
-| **Upload & Parsing** | Drag-and-drop Sophos Config Viewer HTML files. Multi-firewall support. Client-side parsing of rules, NAT, SSL/TLS, interfaces, zones, admin settings, and 40+ config sections. |
-| **Deterministic Analysis** | 30+ security checks across rules, SSL/TLS, admin access, MFA, NAT, web filter, IPS, virus scanning, and device hardening. Findings rated Critical → Info. |
-| **Risk Scoring** | 0–100 score across 8 categories (Web Filter, IPS, App Control, Auth, Logging, Rule Hygiene, Admin, Anti-Malware). Letter grade A–F. |
-| **AI Reports** | Per-firewall reports, executive summary (2+ firewalls), and compliance evidence pack. AI-generated via streaming. Export as PDF, DOCX, PPTX, ZIP. |
-| **Compliance Mapping** | 19 frameworks (NCSC, CE/CE+, ISO 27001, PCI DSS, NIST, HIPAA, NIS2, GDPR, etc.). Heatmap grid with Pass/Partial/Fail per control. |
-| **Best Practice Checks** | 30+ Sophos-specific checks tied to documentation. Licence-tier aware (Standard, XStream, Individual). Auto-detect via Central. |
-| **Score Simulator** | 8 what-if toggles (enable WF, IPS, App Control, SSL, logging, MFA, replace ANY, restrict admin). Projected score overlaid on donut and radar charts. |
-| **Rule Optimiser** | Finds duplicate, shadowed, and mergeable rules. |
-| **Consistency Checker** | Compares 2+ firewalls for policy alignment (DPI, coverage %, score spread, admin exposure). |
-| **Attack Surface Map** | DNAT/port-forwarding exposure map. Risk-rated (Critical → Low). Cross-references IPS/WF/logging coverage. |
-| **Config Diff** | Section and row-level diff between two config exports. Added/removed/modified views. |
-| **Remediation Playbooks** | 25+ step-by-step guides with Sophos UI paths, doc links, estimated time, and verification steps. |
-| **Central Integration** | OAuth connection to Sophos Central. Pulls tenants, firewalls, licences, alerts, MDR feed. Link configs to Central firewalls for enrichment. |
-| **MSP Dashboard** | Multi-tenant customer list with scores, findings, last assessed date. Search, sort, at-risk count. |
-| **Licence Monitor** | Firewall licence expiry tracking from Central Licensing API. Export CSV. |
-| **AI Chat** | Floating assistant with assessment context. Suggested prompts. Streaming markdown responses. |
-| **Reports Library** | Save and reload report packages (cloud or local). |
-| **Assessment History** | Save/load pre-AI assessments with rename and delete. |
-| **Setup Wizard** | 8-step onboarding with mock UI previews for each feature. |
-| **Keyboard Shortcuts** | Shortcuts for common actions. Modal reference. |
-| **Notifications** | In-app notification centre with read/dismiss/clear. |
+> **Date:** 25 March 2026
+> **Auditors:** Principal Engineer (Google), Senior Product Designer (Apple), Cybersecurity Architect (CrowdStrike), Performance Engineer (Netflix), YC Partner
+> **Scope:** Full codebase audit — architecture, performance, security, UX, functionality, testing, documentation, DX, scalability, product vision
 
 ---
 
-## Improvements to Existing Features
+## DIMENSION 1 — CODE ARCHITECTURE & QUALITY
 
-| # | Area | Suggestion | Action | Notes |
-|---|------|-----------|--------|-------|
-| 1 | **Overview Tab** | Add a "Top 3 Priority Actions" card that surfaces the highest-impact, lowest-effort items from the Priority Matrix — give the user a clear "what to do next". | | |
-| 2 | **Overview Tab** | Show a score trend chart when the same firewall has been assessed before (even just "last time → now"). | | |
-| 3 | **Security Analysis** | Add a summary row at the top with the 4 key numbers (Score, Critical Findings, Coverage %, Rules Analysed) before the detailed widgets. | | |
-| 4 | **Zone Traffic Flow** | Add a "simplified view" toggle that shows only the problem flows (missing WF/IPS) rather than all flows. | | |
-| 5 | **Compliance Heatmap** | Add export to CSV/Excel — MSPs need to attach this to tender responses and audit evidence. | | |
-| 6 | **Compliance Heatmap** | Add a "Gaps Only" filter that hides passing controls and shows only Partial/Fail. | | |
-| 7 | **Compliance** | Add a compliance score per framework (% of controls passing) rather than just the heatmap. | | |
-| 8 | **Config Diff** | Add side-by-side risk scores and grades for the two configs. | | |
-| 9 | **Config Diff** | Add a findings delta — "Config A has 12 findings, Config B has 8. Here are the 4 that were fixed." | | |
-| 10 | **Config Diff** | Timeline view — when the same firewall has 3+ assessments, show a timeline of changes. | | |
-| 11 | **AI Chat** | Contextual suggested questions per tab (compliance questions on Compliance tab, analysis questions on Security Analysis tab). | | |
-| 12 | **AI Chat** | "Explain this finding" button on every finding card — opens chat pre-populated with the question. | | |
-| 13 | **AI Chat** | One-click "Generate executive summary" button for a plain-English summary separate from the full report. | | |
-| 14 | **AI Chat** | Persist conversation history with the assessment so you can resume later. | | |
-| 15 | **Remediation** | Persist "Mark as done" state — save which playbooks were completed, by whom, and when. | | |
-| 16 | **Remediation** | Link playbooks to Score Simulator — "Complete these 3 and your score goes from D → B." | | |
-| 17 | **Reports** | Customer-facing read-only portal — shareable time-limited URL for clients to view their report without logging in. | | |
-| 18 | **Reports** | Standalone executive one-pager — single page with score, grade, top 5 risks, trend, and next steps for C-suite. | | |
-| 19 | **Reports** | Branded PDF cover page with MSP logo, customer name, and assessment date. | | |
-| 20 | **Attack Surface** | Highlight new exposures since last assessment in red. | | |
-| 21 | **MSP Dashboard** | Score trend sparklines per customer (requires assessment history). | | |
+**Score: 6/10**
+
+**Justification:** The project shows competent React engineering with good use of lazy loading, domain separation in edge functions, and a growing hook/query abstraction layer. However, two god files dominate the codebase, TypeScript strictness is disabled, dead code detection is turned off, and there are 5-6 competing data-fetching patterns with no unified API layer. A new engineer would take 2-3 days, not one hour, to understand this codebase.
+
+### Finding 1.1 — God Files
+
+| Field        | Detail                                                                                                                                                                                                                                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `src/pages/HealthCheck2.tsx` is 2,753 lines with 18 `useState` calls. `src/components/SetupWizard.tsx` is ~2,017 lines.                                                                                                                                                                                       |
+| **WHY**      | Violates Single Responsibility Principle (SOLID). Makes code review, testing, and refactoring extremely difficult. Merge conflicts are near-guaranteed when multiple developers touch these files.                                                                                                            |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                                                          |
+| **FIX**      | Extract HealthCheck2 tab panels into `src/pages/health-check/` subcomponents. Extract state clusters into custom hooks (export/PDF state, AI chat state, comparison state). Target: <800 lines for the orchestrator. For SetupWizard, extract each step into its own component under `src/components/setup/`. |
+
+### Finding 1.2 — 10+ Loading/Skeleton Patterns
+
+| Field        | Detail                                                                                                                                                                                                                                                                                                   |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | The codebase has `PageSkeleton`, `DashboardSkeleton` (with 5 sub-variants), `ManagementDrawer` local `Skeleton()`, Lucide `Loader2` + `animate-spin`, `RefreshCw` + spin, plain text "Loading..." with `animate-pulse`, `useState` loading flags, TanStack Query `isLoading`, and streaming progress UI. |
+| **WHY**      | Violates Nielsen Heuristic #4 (Consistency and Standards). No design system consistency for loading states. Developers independently re-invent loading UI on every feature.                                                                                                                              |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                                                                                   |
+| **FIX**      | Create a `<LoadingState />` component with size/variant props (`skeleton`, `spinner`, `inline`). Replace all ad-hoc patterns. Export from `src/components/ui/loading-state.tsx`.                                                                                                                         |
+
+### Finding 1.3 — Dual Toast Systems
+
+| Field        | Detail                                                                                                                                                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Both shadcn `Toaster` (from `src/hooks/use-toast.ts`) and Sonner (`import { toast } from "sonner"`) are mounted simultaneously in `src/App.tsx`. Different features use different systems.                |
+| **WHY**      | Two notification systems means two z-index stacks, two animation systems, two APIs for developers to learn. Inconsistent positioning and styling across the app.                                          |
+| **SEVERITY** | Medium                                                                                                                                                                                                    |
+| **FIX**      | Pick Sonner (it has wider usage). Remove shadcn `Toaster` from `App.tsx`, delete `src/hooks/use-toast.ts` and `src/components/ui/toaster.tsx`. Migrate the ~4 files using the shadcn toast API to Sonner. |
+
+### Finding 1.4 — EmptyState Component Unused
+
+| Field        | Detail                                                                                                                                               |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `src/components/EmptyState.tsx` exists with a test but has zero production imports. Empty states are handled ad-hoc (inline text, conditional divs). |
+| **WHY**      | Wasted abstraction. Inconsistent empty state UX across the app.                                                                                      |
+| **SEVERITY** | Low                                                                                                                                                  |
+| **FIX**      | Wire `EmptyState` into all list/table views that can be empty (TeamDashboard, AgentFleetPanel, health check history, config upload requests).        |
+
+### Finding 1.5 — 5-6 Competing Data Fetching Patterns
+
+| Field        | Detail                                                                                                                                                                                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | (1) Supabase client `.from().select()`, (2) raw `fetch()` to edge function URLs, (3) TanStack `useQuery` with fetch, (4) TanStack `useQuery` with Supabase client, (5) streaming fetch for AI, (6) third-party fetch. `useMutation` is not used at all despite TanStack Query being adopted. |
+| **WHY**      | No unified error handling, retry logic, or cache invalidation strategy. Mutations bypass the query cache entirely. Developers must guess which pattern to use for new features.                                                                                                              |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                                         |
+| **FIX**      | Create an `apiClient` wrapper in `src/lib/api-client.ts` that handles auth headers, base URL, error parsing. Adopt `useMutation` for all write operations. Create `useQuery` hooks for all remaining read operations. Target: 2 patterns max (useQuery for reads, useMutation for writes).   |
+
+### Finding 1.6 — TypeScript Strictness Disabled
+
+| Field        | Detail                                                                                                                                                                                                                                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `tsconfig.json`: `noImplicitAny: false`, `noUnusedLocals: false`, `noUnusedParameters: false`, `strictNullChecks: false`. ESLint: `@typescript-eslint/no-unused-vars: "off"`.                                                                                                            |
+| **WHY**      | This means null reference bugs, unused imports/variables, and implicit `any` types all pass silently. The TypeScript compiler provides zero safety net for the most common JavaScript bugs. Source: Microsoft TypeScript Handbook recommends `strict: true` for all production projects. |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                                     |
+| **FIX**      | Enable `strictNullChecks` first (highest impact). Then `noUnusedLocals` and `noUnusedParameters`. Fix resulting errors incrementally. Enable `@typescript-eslint/no-unused-vars: "error"` in ESLint.                                                                                     |
+
+### Finding 1.7 — Zod Declared but Never Used
+
+| Field        | Detail                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `zod@^3.25.76` is in `package.json` dependencies. Zero imports of `z` or `zod` exist anywhere in `src/` or `supabase/`.                                                    |
+| **WHY**      | Dead dependency increases bundle size (tree-shaking may not fully eliminate it) and supply chain attack surface. Misleads developers into thinking validation is in place. |
+| **SEVERITY** | Low                                                                                                                                                                        |
+| **FIX**      | Either `npm uninstall zod` or adopt it for edge function request validation and form validation (preferred — see Security finding 3.9).                                    |
+
+### Finding 1.8 — Generated Types Stale
+
+| Field        | Detail                                                                                                                                                                                                                                                                                          |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `src/integrations/supabase/types.ts` is missing tables added in migrations after the initial schema: `se_profiles`, `se_health_checks`, `se_teams`, `se_team_members`, `se_team_invites`, `config_upload_requests`, `gemini_usage`, `score_history`, `regulatory_updates`, `scheduled_reports`. |
+| **WHY**      | Type safety is undermined. Queries against these tables use `as string` casts and untyped results.                                                                                                                                                                                              |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                                                                          |
+| **FIX**      | Run `supabase gen types typescript --project-id rpnvyrxorfaqabkdhctl > src/integrations/supabase/types.ts`. Add this as a CI step or npm script.                                                                                                                                                |
+
+### Finding 1.9 — No React.memo Usage
+
+| Field        | Detail                                                                                                                                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | Zero `React.memo` or `memo()` wrappers exist across the entire `src/` directory. 116 files use `useMemo`, 80 use `useCallback`, but no component-level memoization.                                                      |
+| **WHY**      | Without `memo()`, child components re-render on every parent render even when their props haven't changed. `useMemo` and `useCallback` in parent are only useful if children are memoized. Source: React docs on `memo`. |
+| **SEVERITY** | Medium                                                                                                                                                                                                                   |
+| **FIX**      | Add `memo()` to expensive leaf components first: chart components (`ScoreTrendChart`, `ScoreDialGauge`, `CategoryScoreBars`), table rows, and card grids.                                                                |
 
 ---
 
-## New Features to Consider
+## DIMENSION 2 — PERFORMANCE & EFFICIENCY
 
-| # | Feature | Description | Impact | Effort | Action | Notes |
-|---|---------|-------------|--------|--------|--------|-------|
-| 22 | **Scheduled Assessments** | Recurring assessments (weekly/monthly). Track score trends over time. Alert when score drops or new critical findings appear. | High | Medium | | |
-| 23 | **Findings History & Regression** | Diff between current and previous assessment findings. Show new, fixed, and regressed findings. | High | Medium | | |
-| 24 | **Fleet-Wide Estate Heatmap** | All firewalls in a grid, colour-coded by score/grade. Outlier detection ("3 of 12 firewalls have admin on WAN"). | High | Medium | | |
-| 25 | **Email / Webhook Alerting** | Notify on licence expiry, score drops, new critical findings, Central disconnection. Push to Slack, Teams, or PSA tools. | High | Medium | | |
-| 26 | **Assign Remediation Tasks** | Assign playbooks to team members. Track completion. Ties into existing team/invite feature. | Medium | Medium | | |
-| 27 | **Re-Assessment Validation** | After remediation, re-upload config and auto-highlight what improved vs what's still outstanding. | High | Medium | | |
-| 28 | **Risk Register Export** | Export findings as a formal risk register (Excel/CSV) with Risk ID, Description, Likelihood, Impact, Controls, Owner, Due Date, Status. | Medium | Low | | |
-| 29 | **Compliance Score Per Framework** | Percentage of controls passing per framework. Track over time. | Medium | Low | | |
-| 30 | **Cyber Insurance Readiness** | Map findings to common insurance questionnaire questions ("Do you have MFA?", "Is your firewall monitored 24/7?"). Readiness score. | Medium | Medium | | |
-| 31 | **Policy Baseline Templates** | Define a "gold standard" config template. Score each firewall against it. MSPs create templates per customer tier (Basic/Standard/Premium). | Medium | Medium | | |
-| 32 | **Attack Surface Geo-IP** | World map with exposed services pinned to locations (using external IPs from Central). | Medium | High | | |
-| 33 | **CVE Correlation** | For known exposed services (RDP, HTTP, etc.), show relevant recent CVEs from a public feed. | Medium | High | | |
-| 34 | **REST API** | Expose assessment results as an API for PSA/RMM dashboards, ticketing, and BI tools (Power BI, Grafana). | Medium | High | | |
-| 35 | **Change Approval Workflow** | Technician proposes changes from playbooks → Manager/client approves → Changes logged → Post-change validation. | Low | High | | |
-| 36 | **Offline / Air-Gapped Mode** | No Supabase auth, no AI reports, all analysis client-side, local storage only. For government/defence customers. | Niche | Medium | | |
+**Score: 5/10**
+
+**Justification:** The app has competent lazy loading at the route level and good manual chunk splitting in Vite config. However, N+1 query patterns exist in both frontend and edge functions, there are zero debounce/throttle utilities, polling intervals leak on unmount, most fetch calls lack cancellation, and the PDF bundle alone weighs over 1 MB. For a tool handling enterprise firewall configs, these inefficiencies will become painful as customer estates grow.
+
+### Finding 2.1 — N+1 Queries in Edge Functions
+
+| Field        | Detail                                                                                                                                                                                                                                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `send-scheduled-reports/index.ts` line 290: loops over `dueReports` with a per-report `agent_submissions` query. `api/routes/health-checks.ts` line 117: loops over follow-up rows with per-row `se_profiles` select. `regulatory-scanner/index.ts` line 272: per-item upsert in a loop. |
+| **WHY**      | Linear scaling with data volume. 100 due reports = 100 sequential DB round trips. At Netflix scale this would be a P0 incident. Source: Google SRE Book, Chapter 22 — "Addressing Cascading Failures."                                                                                   |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                                     |
+| **FIX**      | Batch queries: use `.in("id", ids)` to fetch all profiles/submissions in one query, then join client-side. For upserts, collect rows and use a single `.upsert(rows[])` call.                                                                                                            |
+
+### Finding 2.2 — N+1 Queries in Frontend
+
+| Field        | Detail                                                                                                                                                                                                                      |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `src/components/AgentFleetPanel.tsx` line 318: `useEffect` loops over tenant agents calling `loadSubmission` per agent (individual `.from("agent_submissions").select()` calls). `AgentManager.tsx` line 315: same pattern. |
+| **WHY**      | Expanding a tenant with 20 agents fires 20 sequential Supabase queries. Visible as a waterfall of loading spinners.                                                                                                         |
+| **SEVERITY** | Medium                                                                                                                                                                                                                      |
+| **FIX**      | Collect agent IDs, use `.in("agent_id", agentIds)` in a single query, then distribute results by agent ID client-side.                                                                                                      |
+
+### Finding 2.3 — Zero Debounce/Throttle Utilities
+
+| Field        | Detail                                                                                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | No `debounce()` or `throttle()` function exists anywhere in the codebase. Search inputs, window resize handlers, and scroll events fire at full frequency.        |
+| **WHY**      | Source: Google Web Vitals — unnecessary DOM updates from rapid events degrade INP (Interaction to Next Paint).                                                    |
+| **SEVERITY** | Medium                                                                                                                                                            |
+| **FIX**      | Add a `useDebouncedValue` hook or install `use-debounce`. Apply to search inputs (AgentFleetPanel filter, compliance grid filter) and any scroll/resize handlers. |
+
+### Finding 2.4 — Polling Intervals Survive Component Unmount
+
+| Field        | Detail                                                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `AgentManager.tsx` ~391 and `AgentFleetPanel.tsx` ~381: `setInterval` for polling scan completion. Cleared on success/timeout inside the callback, but not in a `useEffect` cleanup function. |
+| **WHY**      | Navigating away mid-poll leaves intervals firing against unmounted components. Can cause "Can't perform a React state update on an unmounted component" warnings and wasted network requests. |
+| **SEVERITY** | Medium                                                                                                                                                                                        |
+| **FIX**      | Move interval creation into a `useEffect` with a cleanup return. Store interval ID in a ref. Clear on unmount unconditionally.                                                                |
+
+### Finding 2.5 — Most fetch Calls Lack AbortController
+
+| Field        | Detail                                                                                                                                                                                                                  |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Only 3 files use `AbortController` (`stream-ai.ts`, `sophos-central.ts`, `geo-cve.ts`). The remaining ~25+ files with `fetch()` calls have no cancellation mechanism.                                                   |
+| **WHY**      | Component unmount during an in-flight fetch causes state updates on unmounted components. Long-running requests (PDF generation, Central API) can hang the UI. Source: React 18 strict mode documentation.              |
+| **SEVERITY** | Medium                                                                                                                                                                                                                  |
+| **FIX**      | Create a `useFetch` or `useApiCall` hook that wires `AbortController` to `useEffect` cleanup. For TanStack Query, `signal` is passed automatically — another reason to migrate all fetches to `useQuery`/`useMutation`. |
+
+### Finding 2.6 — PDF Bundle Weight
+
+| Field        | Detail                                                                                                                                                                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `vendor-pdfmake` chunk: 1,010 KB (358 KB gzipped). `se-health-check-pdfmake-v2` chunk: 872 KB (475 KB gzipped). Combined: ~1.9 MB raw / ~834 KB gzipped.                                                                                |
+| **WHY**      | PDF generation is a "click to download" feature used by <5% of page loads. This weight is acceptable only if truly lazy-loaded. Currently it is (via dynamic import), but the chunk still has to download and parse on first PDF click. |
+| **SEVERITY** | Low                                                                                                                                                                                                                                     |
+| **FIX**      | Acceptable as-is since it is lazy-loaded. Consider server-side PDF generation (edge function) to eliminate the client-side bundle entirely for this feature.                                                                            |
+
+### Finding 2.7 — 28+ Files Use key={index}
+
+| Field        | Detail                                                                                                                                                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | At least 28 components use `key={i}` or `key={idx}` for list rendering, including `SetupWizard.tsx` (4 instances), `AgentFleetPanel.tsx`, `ScheduledReportSettings.tsx`, `ConfigDiff.tsx`, and multiple chart/dashboard components.                                                           |
+| **WHY**      | Index keys cause incorrect reconciliation when list items are reordered, inserted, or removed. Source: React docs — "Why keys matter." Many of these are static/skeleton lists where the risk is low, but dynamic lists (agent fleet, scheduled reports, config diff rows) will exhibit bugs. |
+| **SEVERITY** | Low                                                                                                                                                                                                                                                                                           |
+| **FIX**      | Audit each instance. Replace with stable IDs (`item.id`, `item.name`, `item.token`) for dynamic lists. Index keys are acceptable for static skeleton arrays.                                                                                                                                  |
+
+### Finding 2.8 — No Image Optimization Pipeline
+
+| Field        | Detail                                                                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | `public/` contains 384 files including raster PNGs (`NUEBLUE_PATTERN_*.png`, brand logos) served as-is. No WebP/AVIF conversion, no responsive `srcset`, no lazy loading attributes beyond browser defaults. |
+| **WHY**      | Source: Google Lighthouse — unoptimized images are the #1 cause of poor LCP scores.                                                                                                                          |
+| **SEVERITY** | Low                                                                                                                                                                                                          |
+| **FIX**      | Most images are SVG icons (already optimal). Convert remaining PNGs to WebP. Add `loading="lazy"` to below-fold images. Consider `vite-plugin-image-optimizer`.                                              |
 
 ---
 
-## Suggested Priority Order
+## DIMENSION 3 — SECURITY & VULNERABILITY
 
-### Do Next
-- **#22** Scheduled assessments + score trends (transforms from point-in-time to ongoing monitoring)
-- **#15** Persistent remediation tracking (low effort, high stickiness)
-- **#23** Findings history & regression detection (key for re-assessments)
+**Score: 6/10**
 
-### Soon
-- **#17** Customer-facing report portal
-- **#24** Fleet-wide estate heatmap
-- **#25** Email/webhook alerting
-- **#1** "Top 3 Priority Actions" on Overview
-- **#28** Risk register export
+**Justification:** The project gets the fundamentals right: secrets are in environment variables, XSS protection uses DOMPurify, RLS is enabled on all tables, CORS is configured with an allow-list, and all 8 edge functions are explicitly declared in `config.toml` with `--no-verify-jwt` deploy flags (auth is validated internally per-function via `getUser()`, API keys, or public token checks). However, there are specific cryptographic weaknesses, an email HTML injection vector, error message leakage, a broken auth header in one component, and npm vulnerabilities. For a product handling enterprise firewall configurations, these are unacceptable.
 
-### Quick Wins
-- **#5** Compliance heatmap CSV export
-- **#6** Compliance "Gaps Only" filter
-- **#12** "Explain this finding" button → AI chat
-- **#9** Config diff with findings delta
-- **#8** Side-by-side scores in Config Diff
+### Finding 3.1 — HMAC Verification Not Timing-Safe
 
-### Plan
-- **#30** Cyber insurance readiness score
-- **#31** Policy baseline templates
-- **#32** Attack surface geo-IP
-- **#34** REST API
+| Field        | Detail                                                                                                                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `supabase/functions/_shared/crypto.ts` line 13: `hmacVerify` compares hashes with `computed === hash` (string equality).                                                                                                                           |
+| **WHY**      | String comparison short-circuits on first differing byte, leaking information about the correct hash through response timing. An attacker can brute-force API keys one character at a time. Source: OWASP — "Timing Attacks on HMAC Verification." |
+| **SEVERITY** | Critical                                                                                                                                                                                                                                           |
+| **FIX**      | Replace with constant-time comparison: `const a = new TextEncoder().encode(computed); const b = new TextEncoder().encode(hash); if (a.length !== b.length) return false; return crypto.subtle.timingSafeEqual(a, b);` (Deno supports this).        |
 
-### Later
-- **#35** Change approval workflow
-- **#36** Offline mode
+### Finding 3.2 — Weak Encryption Key Derivation
+
+| Field        | Detail                                                                                                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `supabase/functions/_shared/crypto.ts` line 29: `CENTRAL_ENCRYPTION_KEY.padEnd(32, "0").slice(0, 32)` — pads short keys with ASCII `'0'` bytes.                                                                                               |
+| **WHY**      | A 10-character key becomes 10 bytes of entropy + 22 bytes of `'0'`. Effective key strength drops from 256 bits to as low as 80 bits. AES-GCM with a weak key is broken by brute force. Source: NIST SP 800-132 — key derivation requirements. |
+| **SEVERITY** | Critical                                                                                                                                                                                                                                      |
+| **FIX**      | Require `CENTRAL_ENCRYPTION_KEY` to be exactly 32 bytes (reject shorter). Better: use HKDF or PBKDF2 to derive the AES key from the raw secret: `crypto.subtle.deriveKey({name: "HKDF", ...}, baseKey, {name: "AES-GCM", length: 256}, ...)`. |
+
+### Finding 3.3 — Email HTML Injection
+
+| Field        | Detail                                                                                                                                                                                                                                                                                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Customer names (`customer_name`, `contact_name`, `seName`) are interpolated directly into HTML email templates using template literals without HTML entity encoding. Files: `supabase/functions/_shared/email.ts`, `supabase/functions/api-public/index.ts`, `supabase/functions/api/routes/health-checks.ts`, `supabase/functions/api/routes/se-teams.ts`. |
+| **WHY**      | A customer name like `<script>alert('xss')</script>` or `<img src=x onerror=...>` will execute in email clients that render HTML. Source: OWASP — "Injection."                                                                                                                                                                                              |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                                                                                                        |
+| **FIX**      | Create an `escapeHtml(str)` utility: `str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")`. Apply to every user-provided value before HTML interpolation in email templates.                                                                                                                                     |
+
+### Finding 3.4 — Internal Error Messages Leaked to Clients
+
+| Field        | Detail                                                                                                                                                                                                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | 21 locations across edge functions return `err.message` or `error.message` directly in JSON responses. Files: `api/index.ts`, `api-public/index.ts` (6 instances), `api-agent/index.ts`, `se-teams.ts` (5 instances), `config-upload.ts` (2 instances), and others.                |
+| **WHY**      | Internal error messages can reveal database schema, table names, constraint names, and third-party API details. Source: OWASP Top 10 — "Security Misconfiguration."                                                                                                                |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                               |
+| **FIX**      | Return generic messages to clients: `{ error: "An unexpected error occurred" }`. Log the real error server-side with `console.error`. Create a helper: `function safeError(err: unknown, fallback = "Internal server error") { console.error(err); return { error: fallback }; }`. |
+
+### Finding 3.5 — Wrong Auth in ScheduledReportSettings
+
+| Field        | Detail                                                                                                                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `src/components/ScheduledReportSettings.tsx` line 175: `Authorization: Bearer ${anonKey}` uses the Supabase publishable key as a bearer token instead of the user's session JWT.                                |
+| **WHY**      | The anon key grants anonymous access only. The edge function may process the request without proper user authorization, or fail silently.                                                                       |
+| **SEVERITY** | High                                                                                                                                                                                                            |
+| **FIX**      | Replace with: `const { data: { session } } = await supabase.auth.getSession(); Authorization: \`Bearer ${session?.access_token}\`` — same pattern used in every other authenticated fetch call in the codebase. |
+
+### Finding 3.6 — portal-data Readable by Slug
+
+| Field        | Detail                                                                                                                                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `supabase/functions/portal-data/index.ts` resolves a portal by `slug` and returns org data. No end-user JWT is required. `portal-data` is now explicitly declared in `config.toml` with `verify_jwt = false` and deployed with `--no-verify-jwt`. |
+| **WHY**      | If slugs are guessable (e.g., `acme-corp`, `client-1`), anyone can enumerate and read portal data including agent names, scores, and customer information. Source: OWASP — "Broken Access Control (IDOR)."                                        |
+| **SEVERITY** | High                                                                                                                                                                                                                                              |
+| **FIX**      | ~~Add `[functions.portal-data]` to `config.toml`~~ **DONE.** Remaining: add slug entropy requirements (UUID-based slugs or minimum 16-character random strings). Consider requiring a portal-specific access token.                               |
+
+### ~~Finding 3.7 — Edge Functions Missing from config.toml~~ RESOLVED
+
+| Field        | Detail                                                                                                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | ~~`portal-data`, `regulatory-scanner`, and `send-scheduled-reports` are not declared in `supabase/config.toml`.~~ **All 8 edge functions are now explicitly declared in `config.toml` and deployed via CI with `--no-verify-jwt` in both `deploy.yml` and `staging.yml`.** |
+| **WHY**      | Platform defaults can change between Supabase versions. Explicit configuration is a security best practice — fail-closed, not fail-open.                                                                                                                                   |
+| **SEVERITY** | ~~Medium~~ Resolved                                                                                                                                                                                                                                                        |
+| **FIX**      | No further action required. All functions: `parse-config`, `api`, `api-agent`, `api-public`, `portal-data`, `send-scheduled-reports`, `regulatory-scanner`, `sophos-central` are declared in `config.toml` and deployed with explicit `--no-verify-jwt` flags.             |
+
+### Finding 3.8 — 16 npm Vulnerabilities
+
+| Field        | Detail                                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `npm audit` reports 16 vulnerabilities: 5 critical, 2 high, 6 moderate, 3 low.                                                                    |
+| **WHY**      | Known CVEs in dependencies are the lowest-hanging fruit for attackers. Source: OWASP Top 10 — "Vulnerable and Outdated Components."               |
+| **SEVERITY** | High                                                                                                                                              |
+| **FIX**      | Run `npm audit fix`. For breaking changes, review each advisory individually. Add `npm audit --audit-level=high` as a CI gate that blocks merges. |
+
+### Finding 3.9 — No Input Validation Library
+
+| Field        | Detail                                                                                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Zod is declared in `package.json` but never imported. Edge function request bodies are validated with manual `if (!field)` checks. No structured schemas.        |
+| **WHY**      | Manual validation is inconsistent and incomplete. Easy to miss fields, type coercion bugs, and length limits. Source: OWASP — "Injection."                       |
+| **SEVERITY** | Medium                                                                                                                                                           |
+| **FIX**      | Adopt Zod for edge function request validation. Define schemas for each route's expected body. Parse with `schema.safeParse(body)` and return structured errors. |
+
+### Finding 3.10 — Service Role Key Used as HMAC Secret
+
+| Field        | Detail                                                                                                                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `supabase/functions/_shared/crypto.ts` line 1: `HASH_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`. The Supabase service role key is reused as the HMAC pepper for API key hashing. |
+| **WHY**      | Key rotation of the service role key would invalidate all agent API keys. Separation of concerns: authentication secrets and service access keys should be independent.                   |
+| **SEVERITY** | Medium                                                                                                                                                                                    |
+| **FIX**      | Add a dedicated `API_KEY_HMAC_SECRET` environment variable. Rotate it independently of the Supabase service role key.                                                                     |
 
 ---
 
-## How to Use This Document
+## DIMENSION 4 — UI/UX & PRODUCT DESIGN
 
-1. Review each row and fill in the **Action** column (✅ ⏳ ❌)
-2. Add your **Notes** — priorities, constraints, customer requests
-3. Feed the annotated version back and we'll build a plan for the items you choose
+**Score: 6/10**
 
+**Justification:** The app has a polished visual design with a coherent dark/light theme system, good use of Radix/shadcn primitives, and a clear visual hierarchy. However, the dual toast systems, 10+ loading patterns, unused empty state component, and limited responsive testing reveal a design system that is wide but not deep. The product feels like it was designed by engineers who care about aesthetics but lack a systematic design process.
 
+### Finding 4.1 — Dual Toast Systems (Same as 1.3)
 
-Sophos FireComply — Functional Review & Feature Ideas
-What the App Does Well
-You've built a genuinely comprehensive firewall assessment platform. The core loop — upload HTML config, get deterministic analysis, AI reports, compliance mapping, and remediation — is solid and differentiated. The Sophos Central integration, MSP multi-tenant dashboard, and the breadth of 30+ best practice checks put this well beyond a simple audit tool. The Score Simulator with projected overlay is a clever sales/remediation hook.
+| Field        | Detail                                                                                                                |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Both shadcn `Toaster` and Sonner are mounted in `App.tsx`. Different features use different systems.                  |
+| **WHY**      | Violates Nielsen Heuristic #4 (Consistency and Standards). Users see notifications from two different visual systems. |
+| **SEVERITY** | Medium                                                                                                                |
+| **FIX**      | Consolidate to Sonner. See Finding 1.3.                                                                               |
 
-Features to Improve
-1. Scheduled / Automated Assessments
-Right now, everything is manual: upload a file, run analysis, save. For an MSP tool, you want recurring assessments. Since you already have Central integration with firewall serials, you could:
+### Finding 4.2 — No Unified Empty State Pattern
 
-Schedule automatic re-assessments (weekly/monthly) by pulling config exports via Central API (if Sophos supports it) or prompting the MSP to re-upload
-Track score trends over time — a sparkline per customer showing improvement or regression
-Send email alerts when a firewall's score drops below a threshold or a new critical finding appears
-This turns FireComply from a point-in-time tool into ongoing monitoring.
+| Field        | Detail                                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Empty states are handled ad-hoc: inline text, conditional muted paragraphs, raw "No data" strings. The `EmptyState.tsx` component exists but is unused. |
+| **WHY**      | Violates Nielsen Heuristic #1 (Visibility of System Status). Users cannot distinguish "loading" from "empty" from "error" in many views.                |
+| **SEVERITY** | Medium                                                                                                                                                  |
+| **FIX**      | Adopt `EmptyState` component across all list/table/dashboard views. Include an illustration, description, and actionable CTA where appropriate.         |
 
-2. Customer-Facing Reports / Portal
-You generate great reports, but they're only accessible inside the app. Consider:
+### Finding 4.3 — Limited Responsive Design Testing
 
-A read-only customer portal where MSPs can share a report link with their client (no login needed, time-limited URL)
-A branded PDF cover page with the MSP's logo, customer name, and assessment date — you have branding setup but the reports could be more polished
-Executive summary as a standalone one-pager — many MSPs need a single page to hand to a C-suite that shows: score, grade, top 5 risks, trend, and next steps
-3. Remediation Tracking & Workflow
-You have 25+ playbooks, which is excellent, but the "Mark as done" is ephemeral — it's just local state. Consider:
+| Field        | Detail                                                                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Single `useIsMobile()` hook checks for 768px breakpoint. Only imported by `src/components/ui/sidebar.tsx`. All other responsive behavior relies on Tailwind breakpoint classes. |
+| **WHY**      | No systematic verification that complex layouts (analysis tabs, agent fleet, management drawer, setup wizard) work on tablet and mobile viewports.                              |
+| **SEVERITY** | Medium                                                                                                                                                                          |
+| **FIX**      | Add Playwright viewport tests at 375px, 768px, and 1024px for the 3 most critical pages. Add visual regression testing with Playwright's screenshot comparison.                 |
 
-Persistent remediation tracking — save which playbooks have been completed, by whom, when
-Assign remediation tasks to team members (ties into your existing team/invite feature)
-Before/after score projection — "If you complete these 3 playbooks, your score goes from D to B" (you already have the Score Simulator logic, just wire it to specific playbooks)
-Re-assessment validation — after remediation, re-upload the config and automatically highlight what improved vs what's still outstanding
-4. Findings History & Regression Detection
-When an MSP re-assesses the same firewall, there's no way to see:
+### Finding 4.4 — Notification Centre Separate from Toasts
 
-Which findings are new since last assessment
-Which findings were fixed
-Which findings regressed (were fixed then came back)
-A diff between the current and previous assessment's findings would be extremely valuable — you already have diff-config.ts for raw config, extend this concept to findings.
+| Field        | Detail                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `src/hooks/use-notifications.ts` implements a localStorage-based notification system consumed by `NotificationCentre` in Index. This is separate from both toast systems. |
+| **WHY**      | Three notification mechanisms for the user to track. In-app notifications can conflict with or duplicate toast messages.                                                  |
+| **SEVERITY** | Low                                                                                                                                                                       |
+| **FIX**      | Document the distinction: toasts = ephemeral, notification centre = persistent. Ensure they never show duplicate content.                                                 |
 
-5. Dashboard Improvements
-Overview Tab:
+### Finding 4.5 — No Automated Accessibility Testing
 
-The Overview tab shows stats and findings but doesn't give a clear "what should I do next?" call to action. Add a "Top 3 Priority Actions" card at the top that surfaces the highest-impact, lowest-effort items from the Priority Matrix
-Score trend chart — when the same firewall has been assessed multiple times, show the score over time (even just 2 data points: "last assessment vs now")
-Security Analysis Tab:
+| Field        | Detail                                                                                                                                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | The app has 108 `aria-*` attributes, 27 `role` attributes, 28 `alt` attributes, a skip-to-content link, and focus management on route transitions. But there is no `axe-core`, `jest-axe`, or Lighthouse CI integration to enforce accessibility. |
+| **WHY**      | Accessibility regressions are introduced silently. WCAG 2.1 AA compliance cannot be verified without automated tooling. Source: W3C WAI-ARIA Authoring Practices.                                                                                 |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                            |
+| **FIX**      | Add `@axe-core/playwright` to E2E tests. Add `jest-axe` assertions to component tests for critical components. Target: zero a11y violations on the 5 most-used pages.                                                                             |
 
-The tab has 7+ widgets which is a lot of scrolling. Consider a summary row at the top with the 4 most important numbers (Score, Critical Findings, Coverage %, Rules Analysed) before the detailed widgets
-Zone Traffic Flow is powerful but dense — add a "simplified view" toggle that shows just the problem flows (missing web filter/IPS) rather than all flows
-Compliance Tab:
+---
 
-The heatmap is excellent but static. Add export to CSV/Excel of the compliance matrix — MSPs often need to attach this to tender responses or audit evidence packs
-Add a "Gaps Only" filter that hides passing controls and shows only Partial/Fail
-Consider a compliance score per framework (% of controls passing) rather than just the overall heatmap
-6. Multi-Firewall Estate View
-When an MSP has 10+ firewalls across customers, they need:
+## DIMENSION 5 — FUNCTIONALITY & BUSINESS LOGIC
 
-A fleet-wide risk heatmap — all firewalls in a grid, colour-coded by score/grade
-Outlier detection — "3 of your 12 firewalls have admin console exposed on WAN" (aggregate findings across estate)
-Policy templates — "Apply this baseline policy to all firewalls" or at least "here's the delta between your best-configured firewall and the rest"
-7. Attack Surface Map Enhancements
-The current attack surface map shows DNAT/port forwarding exposure, which is great. Add:
+**Score: 7/10**
 
-Geo-IP visualisation — if you have external IPs from Central, show a world map with exposed services pinned to locations
-CVE correlation — for known services (e.g. RDP, HTTP), show relevant recent CVEs from a public feed
-Change detection — highlight new exposures since last assessment in red
-8. AI Chat Improvements
-The AI chat is useful but limited:
+**Justification:** The core workflow (upload config, analyze, generate report) is complete and functional. Compliance mapping covers 19 frameworks. The AI integration with streaming is well-implemented. However, 4 feature modules have explicit TODO comments for missing cloud persistence, ~16 catch blocks silently swallow errors, and there is no structured client-side validation. The product works but has reliability gaps that would erode trust with enterprise customers.
 
-Contextual suggestions per tab — when on the Compliance tab, suggest compliance-specific questions; when on Security Analysis, suggest analysis questions
-"Generate executive summary" button — one-click AI-generated plain English summary of the assessment, separate from the full report
-"Explain this finding" — clickable from any finding card, opens chat pre-populated with "Explain finding X and how to fix it on a Sophos XGS"
-Conversation persistence — save chat history with the assessment so you can come back to it
-9. Config Comparison Improvements
-The diff tool compares raw config sections. Add:
+### Finding 5.1 — Half-Built Features in Production Code
 
-Score comparison — side-by-side risk scores and grades for the two configs
-Findings delta — "Config A has 12 findings, Config B has 8. Here are the 4 that were fixed"
-Timeline view — when the same firewall has 3+ assessments, show a timeline of changes rather than just A vs B
-10. Alerting & Notifications
-The notification centre exists but appears to only show in-app events. Add:
+| Field        | Detail                                                                                                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `src/lib/assessment-schedule.ts` line 4: "TODO: Cloud persistence." `src/lib/change-approval.ts` line 3: same. `src/lib/benchmarks.ts` line 116: "TODO: Load from Supabase." `src/lib/scheduled-reports.ts` line 15: "TODO: Requires a scheduled_reports table migration." |
+| **WHY**      | These features use localStorage only. Data is lost on browser clear, not synced across devices, not available to team members. Users who rely on these features will lose data.                                                                                            |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                                                     |
+| **FIX**      | Either implement cloud persistence for each (Supabase tables + sync) or remove the features from the UI entirely. Half-built features are worse than missing features — they create false expectations.                                                                    |
 
-Email notifications for: licence expiry warnings, score drops, new critical findings, Central disconnection
-Webhook integration — push events to Slack, Teams, or a PSA/ticketing tool (ConnectWise, Autotask, HaloPSA)
-SLA tracking — "Critical findings must be remediated within 7 days" with countdown timers
-New Features to Consider
-11. Firewall Policy Baseline Templates
-Define a "gold standard" configuration template (e.g. Sophos XGS Best Practice Baseline) and score each firewall against it. Show percentage compliance with the template. MSPs could create their own templates for different customer tiers (Basic, Standard, Premium).
+### Finding 5.2 — Silent Error Swallowing
 
-12. Change Approval Workflow
-Before remediation changes are applied to a firewall, an approval step:
+| Field        | Detail                                                                                                                                                                                                                                                                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | ~16 `catch` blocks with `/* ignore */`, `/* silent */`, or empty bodies across: `EvidenceCollection.tsx`, `se-health-check-pdfmake.ts` (3x), `se-health-check-pdfmake-v2.ts` (3x), `widget-preferences.ts` (2x), `AttestationWorkflow.tsx`, `CustomFrameworkBuilder.tsx`, `FindingsBulkView.tsx`, `accepted-findings.ts`, `RemediationPlaybooks.tsx` (3x). |
+| **WHY**      | Silent failures mean broken features with no user feedback. Support tickets will say "it doesn't work" with no error to diagnose. Source: Google SRE Book — "Being On-Call."                                                                                                                                                                               |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                                                                                                                                     |
+| **FIX**      | For each catch block: if the error affects the user, show a toast. If it's truly ignorable (localStorage parse on optional data), add a `console.warn` with context for debugging. Never leave a catch completely empty.                                                                                                                                   |
 
-Technician proposes changes (from playbooks)
-Manager/client approves
-Changes are logged in the audit trail
-Post-change assessment validates
-13. Risk Register Export
-Export findings as a formal risk register (Excel/CSV) with: Risk ID, Description, Likelihood, Impact, Current Controls, Recommended Controls, Owner, Due Date, Status. This is what compliance auditors and insurers want.
+### Finding 5.3 — No Structured Client-Side Validation
 
-14. Cyber Insurance Integration
-Many SMBs need cyber insurance. Add a "Cyber Insurance Readiness" score that maps your findings to common insurance questionnaire questions (e.g. "Do you have MFA enabled?", "Is your firewall monitored 24/7?", "Do you have SSL inspection?"). This gives MSPs a selling point.
+| Field        | Detail                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Form validation across the app uses manual `if (!field)` checks before API calls. No schema validation, no field-level error messages, no real-time validation feedback.   |
+| **WHY**      | Users submit bad data, get a generic server error, and must guess what went wrong. Source: Nielsen Heuristic #9 (Help Users Recognize, Diagnose, and Recover from Errors). |
+| **SEVERITY** | Medium                                                                                                                                                                     |
+| **FIX**      | Use Zod schemas that mirror edge function expectations. Validate client-side before `fetch()`. Display field-level errors using the existing shadcn form primitives.       |
 
-15. API for Third-Party Integration
-Expose the assessment results as a REST API so MSPs can:
+### Finding 5.4 — Race Condition in Polling
 
-Pull scores into their PSA/RMM dashboards
-Feed findings into ticketing systems
-Integrate with reporting tools (Power BI, Grafana)
-16. Offline / Air-Gapped Mode
-Some government/defence customers can't use cloud services. An offline mode where:
+| Field        | Detail                                                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Polling intervals in `AgentManager.tsx` and `AgentFleetPanel.tsx` are created inside event handlers (not `useEffect`) and cleared based on response content, not component lifecycle.         |
+| **WHY**      | Rapid user actions (clicking "Run Now" twice, navigating away and back) can create duplicate intervals. The component may attempt state updates after unmount.                                |
+| **SEVERITY** | Medium                                                                                                                                                                                        |
+| **FIX**      | Refactor polling to `useEffect` with a ref-based interval ID. Clear unconditionally on cleanup. Better: use TanStack Query's `refetchInterval` option, which handles lifecycle automatically. |
 
-No Supabase auth required
-No AI reports (or local LLM)
-All analysis runs client-side (it already does)
-Reports saved locally
-You already have local storage fallbacks — formalise this as a mode.
+### Finding 5.5 — dangerouslySetInnerHTML Exposure Surface
 
-Priority Ranking
-#    Feature    Impact    Effort    Priority
-1    Scheduled assessments + score trends    High    Medium    Do Next
-2    Remediation tracking with persistence    High    Low    Do Next
-4    Findings history & regression detection    High    Medium    Do Next
-3    Customer-facing report portal/links    High    Medium    Soon
-5    Dashboard "what to do next" summary    Medium    Low    Soon
-6    Fleet-wide estate heatmap    High    Medium    Soon
-10    Email/webhook alerting    High    Medium    Soon
-13    Risk register export    Medium    Low    Soon
-5    Compliance CSV export + per-framework score    Medium    Low    Quick Win
-8    AI chat contextual suggestions + "explain finding"    Medium    Low    Quick Win
-9    Config diff with findings delta    Medium    Low    Quick Win
-14    Cyber insurance readiness score    Medium    Medium    Plan
-11    Policy baseline templates    Medium    Medium    Plan
-7    Attack surface geo-IP + CVE correlation    Medium    High    Plan
-15    REST API for integrations    Medium    High    Plan
-12    Change approval workflow    Low    High    Later
-16    Offline/air-gapped mode    Niche    Medium    Later
-The app is already strong in breadth. The biggest gap is the time dimension — everything is a snapshot. Adding assessment history, score trends, regression detection, and persistent remediation tracking would transform it from an assessment tool into an ongoing security posture management platform. That's the difference between a one-off sale and recurring revenue for MSPs.
+| Field        | Detail                                                                                                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | 5 components use `dangerouslySetInnerHTML`: `AIChatPanel.tsx`, `DocumentPreview.tsx`, `ScheduledReportSettings.tsx`, `chart.tsx`, `SharedReport.tsx`. All sanitize with DOMPurify. |
+| **WHY**      | DOMPurify is the correct mitigation, but 5 exposure points means 5 places where a developer could accidentally bypass sanitization.                                                |
+| **SEVERITY** | Low                                                                                                                                                                                |
+| **FIX**      | Create a `<SafeHtml html={...} />` wrapper that enforces DOMPurify internally. Replace all `dangerouslySetInnerHTML` with this component.                                          |
 
-code review
+---
 
-Sophos FireComply - Full Application Review
-Architecture
-What's Good
-Clear data pipeline: HTML parsing (extract-sections.ts) -> analysis (analyse-config.ts) -> presentation (components). No circular dependencies between layers.
-Well-typed interfaces throughout (AnalysisResult, ExtractedSections, Finding, RiskScoreResult).
-Good use of lazy() / Suspense for code splitting heavy components.
-Auth via Supabase with proper RLS design; secrets encrypted at rest in the edge function.
-Custom hooks (useFirewallAnalysis, useReportGeneration, useAutoSave) encapsulate domain logic cleanly.
-What Needs Work
-Area    Issue    Priority
-God component    Index.tsx (969 lines, 18+ useState calls) orchestrates everything    High
-Monolith files    SecurityDashboards.tsx (1012 lines, 6 components), analyse-config.ts (1272 lines)    High
-State management    Pure prop drilling; no shared context for files, analysisResults, branding    Medium
-No error boundaries    A single uncaught error in any component crashes the entire app    High
-Testing
-Current State
-3 real test files, 1 placeholder (example.test.ts just asserts true === true)
-Only extract-sections, analyse-config, and diff-config have tests
-0 component tests despite having @testing-library/react installed
-0 hook tests
-No coverage reporting configured
-Recommendations
-Add coverage to vitest.config.ts (coverage: { provider: 'v8', reporter: ['text', 'html'] })
-Delete or replace example.test.ts
-Add tests for critical paths: risk-score.ts, sophos-licence.ts, rule-optimiser.ts, compliance-map.ts
-Add component tests for EstateOverview, FileUpload, AuthGate
-Add hook tests for use-auth, use-central, use-firewall-analysis
-Target: at least 60% coverage on src/lib/ as a starting point
-TypeScript Strictness
-Current Config (tsconfig.app.json)
-"strict": false,
-"noImplicitAny": false,
-"noUnusedLocals": false,
-"noUnusedParameters": false,
-"strictNullChecks": false
-This is essentially the loosest possible TypeScript config. You're getting type-checking at the most superficial level.
+## DIMENSION 6 — TESTING & RELIABILITY
 
-Recommendations
-Enable strict: true incrementally - start with strictNullChecks (the highest-value flag). This alone will catch null/undefined bugs at compile time.
-Enable noUnusedLocals and noUnusedParameters to catch dead code.
-There are only 4 as any casts in the codebase (all in DocumentPreview.tsx and use-session-persistence.ts) — this is actually very good and means strict mode won't require many changes.
-Error Handling
-Silent Catches (30+ instances)
-Errors are swallowed across the codebase with catch { }, catch { /* ignore */ }, or catch { /* best-effort */ }:
+**Score: 6/10**
 
-File    Count    Example
-use-central.ts    9    catch { setGroups([]) }, catch { /* ignore */ }
-Index.tsx    6    catch { /* best-effort */ } in Central enrichment
-AppHeader.tsx    3    catch { } in status refresh
-SetupWizard.tsx    3    catch { } on Central API calls
-CentralEnrichment.tsx    3    .catch(() => setStatus(null))
-stream-ai.ts    4    .catch(() => ({ error: "Request failed" }))
-Others    10+    BrandingSetup, SophosBestPractice, SavedReportsLibrary, etc.
-No Error Boundaries
-Zero ErrorBoundary components. A render error in any component (e.g. bad data shape from API) takes down the entire app with a white screen.
+**Justification:** The project has 59 test files with 307 tests, a reasonable foundation. The CI pipeline runs lint, typecheck, tests, build, npm audit, and Playwright E2E on every push. However, E2E coverage is minimal (1 smoke test), there are zero integration tests for the 8 edge functions that handle all business logic, and some tests assert implementation details rather than behavior. For a security product handling enterprise firewall configs, this coverage is insufficient.
 
-Recommendations
-Add a top-level <ErrorBoundary> around the app with a "Something went wrong" fallback
-Add granular error boundaries around each tab's content (so one broken tab doesn't kill the others)
-Replace silent catches with at minimum console.warn in development, or a lightweight error reporting service
-Add structured error types instead of raw string messages
-Security
-What's Good
-No hardcoded secrets
-Sophos Central credentials encrypted with AES-256-GCM at rest
-DOMPurify used for all innerHTML/dangerouslySetInnerHTML usage
-Auth tokens passed via Supabase session, not stored in localStorage manually
-Concerns
-Issue    Location    Risk
-AI chat uses anon key, not session token    stream-ai.ts line 54    Medium - edge function must enforce auth independently
-res.json() called without try/catch    sophos-central.ts line 19    Low - non-JSON response crashes the call
-No CSP headers configured    N/A    Low - XSS mitigation already handled by DOMPurify
-noFallthroughCasesInSwitch: false    tsconfig.app.json    Low - could mask logic bugs
-Recommendations
-Verify the parse-config edge function checks the user's session token, not just the anon key
-Wrap res.json() in a try/catch in callCentral
-Add Content-Security-Policy headers via Vite config or hosting platform
-Performance
-No React.memo Anywhere
-Zero usage across 127 source files. Heavy components that receive stable props (e.g. SecurityFeatureCoverage, ZoneTrafficFlow, PriorityMatrix, SophosBestPractice) will re-render every time Index.tsx state changes (which is often, given 18 state variables).
+### Finding 6.1 — Minimal E2E Coverage
 
-Lazy Loading
-Good use of lazy() for 10+ heavy components (ConfigDiff, RemediationPlaybooks, ComplianceHeatmap, AIChatPanel, ScoreSimulator, AttackSurfaceMap, etc.).
+| Field        | Detail                                                                                                                                                                                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `e2e/smoke.spec.ts` is the only Playwright test. It likely covers page load and basic navigation only.                                                                                                                                   |
+| **WHY**      | The core user journey (upload XML → view analysis → generate report → download PDF) has zero automated end-to-end coverage. Regressions in this flow are caught only by manual testing. Source: Google Testing Blog — "Testing Pyramid." |
+| **SEVERITY** | High                                                                                                                                                                                                                                     |
+| **FIX**      | Add Playwright tests for: (1) config upload and analysis flow, (2) report generation and export, (3) SE health check flow, (4) auth/login flow, (5) shared report access. Target: 10-15 E2E scenarios covering the primary happy paths.  |
 
-Potential Render Storms
-Index.tsx has 18 useState calls. Any state change re-renders the entire tree.
-analysisResults is recomputed via useMemo in useFirewallAnalysis, but the objects it returns are new references each time files changes.
-Tab content that isn't visible is unmounted (good — Radix Tabs default), but switching tabs triggers full mount/computation.
-Recommendations
-Wrap expensive dashboard components in React.memo
-Consider extracting analysisResults into a context to avoid re-renders from unrelated state changes in Index.tsx
-Profile with React DevTools Profiler to identify the worst offenders
-For ScoreSimulator: the useEffect that calls onProjectedChange fires on every toggle — consider debouncing
-Accessibility
-What's Good
-shadcn/ui components provide built-in ARIA roles (dialogs, popovers, tabs, tooltips)
-Keyboard shortcuts implemented (use-keyboard-shortcuts.ts)
-AppHeader has proper aria-label on icon buttons
-What's Missing
-Issue    Files
-Icon-only buttons without aria-label    AIChatPanel.tsx (close, clear, send buttons)
-No skip-to-content link    Index.tsx
-No focus trap on AI chat panel    AIChatPanel.tsx
-Decorative images use alt="" but no aria-hidden    20+ instances
-Custom SVG charts have no accessible text    PriorityMatrix.tsx, RiskScoreDashboard.tsx
-Colour alone conveys meaning    Severity badges, stat cards, risk scores
-Recommendations
-Add aria-label to all icon-only buttons
-Add a skip-to-main-content link at the top of the page
-Add focus trapping to the AI chat panel when open
-Add role="img" and aria-label to custom SVG charts
-Ensure colour-coded elements also have text labels or patterns for colour-blind users
-Code Quality
-Console Statements
-Only 2 console.error calls in the entire codebase — both appropriate (404 page, retry logging). Clean.
+### Finding 6.2 — Zero Edge Function Integration Tests
 
-eslint-disable Comments
-5 instances of eslint-disable-next-line react-hooks/exhaustive-deps:
+| Field        | Detail                                                                                                                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | No test files exist under `supabase/functions/`. The 8 edge functions (api, api-agent, api-public, parse-config, sophos-central, portal-data, send-scheduled-reports, regulatory-scanner) have zero automated tests.                 |
+| **WHY**      | All authorization logic, business rules, and data mutations happen in these functions. A bug in `authenticateSE` or `handlePasskeyLoginVerify` would be a security incident. Source: OWASP Testing Guide — "Testing Authentication." |
+| **SEVERITY** | Critical                                                                                                                                                                                                                             |
+| **FIX**      | Use Deno's built-in test runner (`deno test`) or Supabase's local dev server. Prioritize tests for: auth middleware, passkey flows, config upload access control, agent API key validation.                                          |
 
-BrandingSetup.tsx (lines 162, 209)
-FirewallLinker.tsx (lines 57, 84)
-Index.tsx (lines 104, 210)
-CentralIntegration.tsx (line 59)
-LicenceExpiryWidget.tsx (line 48 — recently fixed)
-Each should be reviewed — the usual pattern is a useEffect that intentionally omits a dep to run only once, but this can cause stale closure bugs.
+### Finding 6.3 — Tests Assert Implementation Details
 
-UI Duplication
-Repeated patterns that should be extracted:
+| Field        | Detail                                                                                                                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `TeamDashboard.test.tsx` asserts `document.querySelector(".animate-spin")` — a CSS class, not user-visible behavior.                                                                    |
+| **WHY**      | If the loading spinner implementation changes (different class, different component), the test breaks without any actual bug. Source: Kent C. Dodds — "Testing Implementation Details." |
+| **SEVERITY** | Low                                                                                                                                                                                     |
+| **FIX**      | Replace with role-based queries: `screen.getByRole("status")` or `screen.getByText("Loading")`. Test what the user sees, not how it's rendered.                                         |
 
-Stat cards: 4+ variations of rounded-lg px-2.5 py-2 text-center with different colours in EstateOverview, SecurityDashboards, LicenceExpiryWidget
-Section headers: Icon + title + subtitle pattern repeated 10+ times
-Banner cards: rounded-xl border ... px-5 py-4 flex in Index.tsx lines 334-338, 467-477
-Long Tailwind class strings: The same data-[state=active]:border-[#2006F7] dark:data-[state=active]:border-[#00EDFF] was repeated 7 times before the tabs.tsx refactor
-API Layer
-Missing Resilience
-Feature    sophos-central.ts    stream-ai.ts
-Timeout    None    60s / 150s
-Retry    None    2x with backoff (in hook)
-Rate limiting    None    None
-Safe JSON parse    No    No
-Structured errors    No (raw strings)    No
-Edge Function (sophos-central/index.ts)
-fetchAllPages has no rate limiting — could hit Sophos API limits with large tenants
-No caching of Sophos auth tokens (re-authenticates every request)
-MDR threat feed silently returns empty on failure; other modes don't
-Recommendations
-Add a 30s timeout to callCentral via AbortController
-Add retry with backoff for 429/5xx responses
-Cache the Sophos OAuth token (it's valid for 1 hour) to reduce auth calls
-Add rate limiting or request queuing in the edge function
-Dependencies
-What's Good
-Modern stack: React 18, Vite 5, TypeScript 5.8, Tailwind 3
-No deprecated or abandoned packages
-Clean separation: Radix for headless UI, Recharts for charts, docx/pptxgenjs for exports
-Notes
-@types/dompurify and @types/file-saver are in dependencies — should be in devDependencies
-18 Radix UI packages — consider if all are actually used (audit with npx depcheck)
-react-day-picker and input-otp may not be actively used
-Run npm audit regularly
-File Organisation
-Recommended Splits
-Current File    Lines    Recommendation
-Index.tsx    969    Extract UploadSection, AnalysisTabs, ReportSection, useAppState hook
-SecurityDashboards.tsx    1012    Split into security-dashboards/ folder with one file per component
-analyse-config.ts    1272    Split into analysis/inspection-posture.ts, analysis/findings.ts, analysis/ssl-rules.ts
-SetupWizard.tsx    947    Split into setup/ folder with step components
-EstateOverview.tsx    573    Extract StatCard to ui/StatCard.tsx for reuse
-Quick Wins (do these first)
-Add an ErrorBoundary — prevents white-screen crashes (30 min)
-Move @types/* to devDependencies — cleaner package.json (5 min)
-Enable strictNullChecks in tsconfig — catches the most bugs per effort (1-2 hours to fix type errors)
-Add timeout to callCentral — prevents hung requests (15 min)
-Add aria-label to icon-only buttons — quick accessibility win (30 min)
-Delete example.test.ts and add coverage config (5 min)
-Wrap res.json() in try/catch in sophos-central.ts (5 min)
+### Finding 6.4 — No Rollback Strategy
 
+| Field        | Detail                                                                                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | The deploy workflow (`deploy.yml`) deploys edge functions on push to `main` after quality gates pass. There is no documented rollback procedure.                                             |
+| **WHY**      | If a deployment introduces a bug that passes tests, there is no automated way to revert to the previous version. Manual rollback requires identifying the last good commit and re-deploying. |
+| **SEVERITY** | Medium                                                                                                                                                                                       |
+| **FIX**      | Add a rollback script: `supabase functions deploy <fn> --version <n-1>`. Document the procedure in `docs/`. Consider blue-green deployment or canary releases for edge functions.            |
 
-1. Parser Reliability
-The concern: If your parser silently misses data or crashes on unexpected HTML, every downstream result (findings, scores, compliance) is wrong — and the user won't know.
+### Finding 6.5 — No Load Testing
 
-Current state:
+| Field        | Detail                                                                                                                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | No load testing framework (k6, Artillery, Locust) exists in the project.                                                                                                           |
+| **WHY**      | The theoretical breaking point of the system is unknown. Edge functions have a Supabase-imposed concurrency limit. The Gemini API has rate limits. Neither has been stress-tested. |
+| **SEVERITY** | Medium                                                                                                                                                                             |
+| **FIX**      | Add k6 load tests targeting the 3 highest-traffic endpoints: `parse-config`, `api/se-teams`, and `api/health-checks`. Establish baseline latency and throughput. Run monthly.      |
 
-extractSections has no try/catch — a malformed HTML file can crash the app
-No input validation before parsing (file could be non-HTML, a different Sophos product, or a different export version)
-Only 1 test fixture (basic-firewall.html) — no tests for malformed HTML, empty tables, missing sections, or different Sophos firmware versions
-The "Extraction Coverage" bar shows 152 of 152 sections but doesn't indicate data quality within those sections
-What to improve:
+---
 
-Wrap extractSections in a try/catch in Index.tsx and show a clear error if parsing fails ("This file couldn't be parsed — it may not be a Sophos Config Viewer export")
-Validate the input before parsing — check for expected markers (the Sophos Config Viewer sidebar, known section IDs) and reject files that aren't valid exports with a clear message
-Add a parser confidence score — report how many expected sections were found vs expected. Surface this prominently: "78% of expected sections parsed — some analysis may be incomplete"
-Test edge cases — add fixtures for: empty config, config with no rules, config with only NAT rules, config from a different firmware version, completely malformed HTML, a non-Sophos HTML file
-Version detection — detect the Sophos firmware/export version and warn if it's untested ("This export appears to be from SFOS v19 — FireComply has been validated against v20/v21")
-2. Determinism of Findings
-The concern: If you're positioning findings as authoritative compliance evidence, they need to be provably repeatable, auditable, and transparent about limitations.
+## DIMENSION 7 — DOCUMENTATION & KNOWLEDGE
 
-Current state:
+**Score: 5/10**
 
-Findings are fully deterministic — same input always produces same output (good)
-Severities are mostly hardcoded, with two dynamic exceptions based on percentages (IPS and App Control coverage)
-No confidence level or certainty indicator on any finding
-No provenance — findings don't reference which specific config data triggered them
-The compliance heatmap shows Pass/Partial/Fail but doesn't explain why or link to the evidence
-What to improve:
+**Justification:** The README is solid with setup instructions, environment variable documentation, and an ASCII architecture diagram. The `docs/` folder contains 77 files including a tenant model doc, data privacy doc, and extensive plan files. However, there is no CHANGELOG, no API documentation for the 8 edge functions, no ADRs, and the generated types file is stale. A contractor would struggle beyond day one.
 
-Add a confidence field to findings — "confidence": "high" | "medium" | "low". Parser-derived findings (e.g. "web filter disabled on rule X") are high confidence. Inferred findings (e.g. "no SSL/TLS inspection detected" when the section might just be missing) should be medium/low
-Add evidence/provenance to findings — each finding should reference the exact config data that triggered it: "Rule 'Allow_All_Traffic' (row 7 in Firewall Rules) has Service=ANY"
-Make severity assignment transparent — document the severity logic somewhere the user can see. A "How findings are scored" help section
-Compliance status should link to evidence — the heatmap cells should show exactly which findings/checks drove the Pass/Partial/Fail status, not just the status itself. You have evidence in the control checks but it's just a text string — make it reference specific findings
-Flag parser-dependent findings — if a finding depends on a section that had low extraction quality, flag it: "This finding may be incomplete — the SSL/TLS section could not be fully parsed"
-3. Privacy / Data Governance
-The concern: You're handling firewall configurations — the most sensitive network data a customer has. The feedback is asking whether you've done enough to govern this.
+### Finding 7.1 — No CHANGELOG
 
-Current state:
+| Field        | Detail                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `package.json` version is `0.0.0`. No `CHANGELOG.md` exists. `docs/UPDATES-CHANGELOG.md` is a session-style narrative, not a structured changelog. |
+| **WHY**      | Customers, stakeholders, and developers cannot track what changed between releases. Source: Keep a Changelog (keepachangelog.com).                 |
+| **SEVERITY** | Medium                                                                                                                                             |
+| **FIX**      | Create `CHANGELOG.md` following Keep a Changelog format. Adopt semantic versioning. Automate with `standard-version` or `changesets`.              |
 
-Config data is anonymised before being sent to AI (IPs, customer names, labels replaced) — this is good
-Raw config never leaves the browser — only anonymised sections go to the AI, and only summaries go to Supabase — this is good
-No data retention policy — saved reports and assessments live in Supabase indefinitely
-No data processing agreement (DPA) or privacy policy visible in the app
-No way for a customer to request deletion of all their data
-The AI uses Google Gemini — config data (even anonymised) goes to Google's servers
-No mention of where data is processed geographically (EU/US/etc.)
-Audit trail is incomplete — 7 of 12 defined audit events are never logged
-What to improve:
+### Finding 7.2 — No API Documentation
 
-Add a visible privacy policy / data handling statement in the app — not just the landing page text. A dedicated "How we handle your data" section in Settings or a modal accessible from the header
-Document the AI data flow explicitly — "Your config data is anonymised (IPs, names replaced) and sent to Google Gemini for report generation. No raw config data is stored on our servers. Anonymised data is not retained by the AI provider beyond the request."
-Add data retention controls — allow orgs to set auto-deletion (e.g. "delete assessments older than 12 months"). Add a "Delete all my data" button for GDPR right-to-erasure
-Complete the audit trail — log all 12 defined events, especially auth.login, auth.logout, central.linked, team.invited, report.deleted. For compliance-conscious customers, this is table stakes
-Add data residency information — which Supabase region? Which Google Cloud region for Gemini? Display this in Settings
-Consider a "no-AI mode" — some customers (government, defence) can't send any data externally. Let them use deterministic analysis + pre-built report templates without the AI, producing a less polished but fully offline report
-Add a DPA template — MSPs working with regulated clients need a Data Processing Agreement. Even a downloadable template helps
-4. Operational Resilience
-The concern: What happens when things go wrong? Can the app degrade gracefully?
+| Field        | Detail                                                                                                                                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | The 8 edge functions expose 30+ API routes. None are documented with request/response schemas, auth requirements, or error codes. `src/components/ApiDocumentation.tsx` exists as a UI component but only documents 4 routes as static text. |
+| **WHY**      | New developers and external integrators (connector agent) must read source code to understand the API. Source: Google API Design Guide.                                                                                                      |
+| **SEVERITY** | High                                                                                                                                                                                                                                         |
+| **FIX**      | Generate OpenAPI spec from the route modules. Add TSDoc comments to each route handler with `@param`, `@returns`, `@throws`. Alternatively, create a `docs/API.md` manually documenting all routes with curl examples.                       |
 
-Current state:
+### Finding 7.3 — No Architecture Decision Records
 
-No React Error Boundaries — a single render error white-screens the entire app
-Parser failures propagate with no catch — a bad file crashes everything
-Supabase failures are silently swallowed — saved reports return [], no user feedback
-AI has good resilience: 2 retries with backoff, partial output preservation, timeout handling
-No health check or status page
-No offline/degraded mode
-What to improve:
+| Field        | Detail                                                                                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | No `docs/adr/` directory. Key decisions (why pdfmake over jspdf, why Sonner + shadcn toasts, why Supabase over Firebase, why Gemini over GPT-4) are not documented.          |
+| **WHY**      | Future developers will question and potentially re-make decisions without understanding the original context. Source: Michael Nygard — "Documenting Architecture Decisions." |
+| **SEVERITY** | Low                                                                                                                                                                          |
+| **FIX**      | Create `docs/adr/` with a template. Start with 3 foundational ADRs: (1) Supabase as backend, (2) Edge function architecture, (3) AI model selection.                         |
 
-Add Error Boundaries — at minimum around each tab's content so one broken tab doesn't kill the app. Show "This section encountered an error — your data is safe" with a retry button
-Wrap parser in try/catch — show a specific error for each file that fails to parse rather than crashing
-Surface Supabase failures to the user — instead of silent empty arrays, show a toast: "Couldn't save to cloud — data saved locally as backup"
-Add a local-first fallback — if Supabase is unreachable, auto-save to IndexedDB and sync when connection returns
-Add a health indicator — small status dot (like the Central connection dot) showing: "All systems operational" / "Cloud storage unavailable" / "AI service degraded"
-Rate limit the Sophos Central API calls — fetchAllPages has no rate limiting, which could hit Sophos API limits for large MSPs with many tenants
-5. Product Framing
-The concern: The app sometimes frames itself as authoritative ("audit-ready", "compliance evidence pack") when it should frame itself as advisory.
+### Finding 7.4 — Stale Generated Types (Same as 1.8)
 
-Current state:
+| Field        | Detail                                                                   |
+| ------------ | ------------------------------------------------------------------------ |
+| **WHAT**     | `src/integrations/supabase/types.ts` missing 10+ tables from migrations. |
+| **WHY**      | Type safety gap between code and database.                               |
+| **SEVERITY** | Medium                                                                   |
+| **FIX**      | Regenerate types. Add regeneration as CI step.                           |
 
-The AI report system prompt uses language like "audit-ready" and "suitable for compliance" (in the parse-config edge function)
-"Compliance Evidence Pack" implies the output IS the evidence, rather than a tool to help gather evidence
-The compliance heatmap shows Pass/Fail without caveats about the mapping being indicative
-There's good privacy framing ("Data Privacy Protected", "Data Anonymised") but no advisory disclaimer on the analysis itself
-"Deterministic Findings" is used, which is accurate and good — but there's no caveat that deterministic doesn't mean complete
-What to improve:
+---
 
-Add a global disclaimer — visible on the dashboard and in every report: "FireComply provides automated security analysis based on configuration data. Results should be validated by a qualified security professional. Compliance mappings are indicative and do not constitute a formal audit."
-Rename "Compliance Evidence Pack" to something less authoritative — "Compliance Readiness Report" or "Compliance Gap Analysis"
-Add framework-specific caveats — "This mapping covers X of Y controls from ISO 27001 Annex A. A full ISO 27001 audit requires additional evidence beyond firewall configuration."
-Add a "Limitations" section to reports — auto-generated text that says: what was analysed (firewall config only), what was NOT analysed (endpoint, email, identity, cloud, physical security), and that the assessment is point-in-time
-Frame the risk score as indicative — "This score reflects your firewall configuration security posture. It does not represent your overall organisational security posture."
-Add methodology documentation — a "How it works" page or PDF that explains: what the parser checks, how scores are calculated, how compliance is mapped, and what the AI does vs doesn't do. This is what auditors and procurement teams will ask for
-Summary: Priority Actions
-Priority    Action    Effort
-Now    Add advisory disclaimer to dashboard, reports, and compliance heatmap    Low
-Now    Rename "Compliance Evidence Pack" → "Compliance Readiness Report"    Low
-Now    Wrap parser in try/catch with user-facing error messages    Low
-Now    Add Error Boundaries around tab content    Low
-Soon    Add confidence levels to findings    Medium
-Soon    Complete the audit trail (all 12 events)    Medium
-Soon    Add data retention controls and "delete my data"    Medium
-Soon    Add evidence/provenance linking on findings and compliance cells    Medium
-Soon    Document AI data flow and data residency in-app    Low
-Plan    Parser edge case tests (5+ new fixtures)    Medium
-Plan    Compliance and risk-score unit tests    Medium
-Plan    Methodology documentation (how scoring works)    Medium
-Plan    "No-AI" offline mode for sensitive environments    High
-The core message from that feedback is: the analysis engine is solid, but the packaging needs to make clear what it is and what it isn't. The technical foundations (deterministic findings, anonymisation, client-side parsing) are genuinely good — the gap is in transparency, resilience, and framing.
+## DIMENSION 8 — DEVELOPER EXPERIENCE & TOOLING
+
+**Score: 7/10**
+
+**Justification:** The project has a clean 3-step setup, Prettier with lint-staged pre-commit hooks, comprehensive CI with lint/typecheck/test/build/audit/E2E, and clear npm scripts. This is above average for a startup codebase. However, ESLint disables unused variable detection, supabase functions are excluded from Prettier, TypeScript strict mode is off, and there are no scripts for type generation or database seeding.
+
+### Finding 8.1 — ESLint Disables Unused Variable Detection
+
+| Field        | Detail                                                                                                                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `eslint.config.js` line 23: `"@typescript-eslint/no-unused-vars": "off"`.                                                                                                                 |
+| **WHY**      | Dead imports, unused variables, and abandoned function parameters accumulate without any automated detection. Over time this makes the codebase harder to read and increases bundle size. |
+| **SEVERITY** | Medium                                                                                                                                                                                    |
+| **FIX**      | Set to `"warn"` initially, then `"error"` after cleanup. Use the `argsIgnorePattern: "^_"` option to allow intentional unused args prefixed with underscore.                              |
+
+### Finding 8.2 — Supabase Functions Excluded from Prettier
+
+| Field        | Detail                                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | `.prettierignore` includes `supabase/functions`. The `format` npm script only targets `src/**`.                                      |
+| **WHY**      | Edge function code uses inconsistent formatting. Code reviews include style noise.                                                   |
+| **SEVERITY** | Low                                                                                                                                  |
+| **FIX**      | Remove `supabase/functions` from `.prettierignore`. Run `npx prettier --write "supabase/functions/**/*.ts"` once for initial format. |
+
+### Finding 8.3 — No TypeScript Strict Mode
+
+| Field        | Detail                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | `tsconfig.json`: `strictNullChecks: false`, `noImplicitAny: false`.                                                                                    |
+| **WHY**      | The two most impactful TypeScript safety features are disabled. Every `null` and `undefined` passes silently. Every untyped value is implicitly `any`. |
+| **SEVERITY** | High                                                                                                                                                   |
+| **FIX**      | Enable `strictNullChecks` first (most impactful). Fix resulting ~200-500 errors over 1-2 weeks. Then enable `noImplicitAny`.                           |
+
+### Finding 8.4 — No Database Seed Script
+
+| Field        | Detail                                                                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | No `seed.sql`, `seed.ts`, or `npm run seed` script exists.                                                                                                                       |
+| **WHY**      | New developers start with an empty database. They must manually create organizations, users, agents, and upload configs to test anything. This adds 30-60 minutes to onboarding. |
+| **SEVERITY** | Medium                                                                                                                                                                           |
+| **FIX**      | Create `supabase/seed.sql` with demo org, user, agent, and sample assessment data. Add `"seed": "supabase db reset"` npm script.                                                 |
+
+### Finding 8.5 — No Type Generation Script
+
+| Field        | Detail                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | No npm script to regenerate `src/integrations/supabase/types.ts` from the live database.                                                           |
+| **WHY**      | Types drift from schema. Developers forget to regenerate.                                                                                          |
+| **SEVERITY** | Low                                                                                                                                                |
+| **FIX**      | Add `"gen:types": "supabase gen types typescript --project-id rpnvyrxorfaqabkdhctl > src/integrations/supabase/types.ts"` to package.json scripts. |
+
+---
+
+## DIMENSION 9 — SCALABILITY & SYSTEM DESIGN
+
+**Score: 5/10**
+
+**Justification:** The system is designed for single-tenant SaaS with Supabase as the sole backend. This works for the current scale but has hard ceilings. N+1 queries are the first bottleneck. There is no caching layer beyond TanStack Query's 30-second staleTime, no background job queue, no observability, and the Gemini API is a single point of failure with basic retry logic. At 100x current load, the system would collapse at the edge function layer.
+
+### Finding 9.1 — N+1 Queries Are the First Bottleneck
+
+| Field        | Detail                                                                                                                                                                      |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | See Findings 2.1 and 2.2. Sequential per-row queries in both edge functions and frontend components.                                                                        |
+| **WHY**      | At 100 agents per org, expanding the fleet panel fires 100 sequential queries. At 50 scheduled reports due simultaneously, the cron function makes 50+ sequential DB calls. |
+| **SEVERITY** | High                                                                                                                                                                        |
+| **FIX**      | Batch all queries. See Findings 2.1 and 2.2.                                                                                                                                |
+
+### Finding 9.2 — No Server-Side Caching
+
+| Field        | Detail                                                                                                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | Edge functions query the database on every request. No Redis, no in-memory cache, no CDN layer for API responses. TanStack Query provides 30-second client-side staleTime only.                                                |
+| **WHY**      | Frequently-accessed data (team lists, org membership, SE profiles) is re-queried on every page load from every user. At 1000 concurrent SEs, this means 1000 identical `se_profiles` queries per 30 seconds.                   |
+| **SEVERITY** | Medium                                                                                                                                                                                                                         |
+| **FIX**      | Add Supabase's built-in caching headers for read-heavy endpoints. Consider Upstash Redis for hot data (team membership, org config). For the frontend, increase `staleTime` for stable data (teams, profiles) to 5-10 minutes. |
+
+### Finding 9.3 — No Background Job Queue
+
+| Field        | Detail                                                                                                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | Email sending (`send-scheduled-reports`, config upload notifications) happens inline during edge function execution. PDF generation for scheduled reports is synchronous.                                                                              |
+| **WHY**      | Edge functions have a 150-second execution limit (Supabase). A bulk report send with 50 recipients could timeout. Email delivery failures block the response. Source: 12-Factor App — "Treat backing services as attached resources."                  |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                                 |
+| **FIX**      | Use Supabase `pg_cron` + `pg_net` for scheduled jobs (already partially implemented). For event-driven work (config uploaded → notify SE), add a Postgres `NOTIFY`/`LISTEN` channel or use `supabase.functions.invoke` from within a database trigger. |
+
+### Finding 9.4 — Gemini API as Single Point of Failure
+
+| Field        | Detail                                                                                                                                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | `parse-config/index.ts` calls the Gemini API with a fallback model. If both primary and fallback fail, the analysis returns an error. No queue, no offline fallback, no degraded mode.                                                     |
+| **WHY**      | Gemini outages (which have occurred) would make the entire analysis feature unavailable. Enterprise customers expect >99.9% uptime.                                                                                                        |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                     |
+| **FIX**      | Add a request queue that retries failed analyses with exponential backoff. Store pending analyses in a `pending_analyses` table. Process them via `pg_cron`. Show users "Analysis queued — results available shortly" instead of an error. |
+
+### Finding 9.5 — No Observability
+
+| Field        | Detail                                                                                                                                                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | No structured logging (just `console.log`/`console.warn`). No metrics collection. No distributed tracing. No alerting on error rates or latency.                                                                                                    |
+| **WHY**      | When something breaks in production, the only debugging tool is reading Supabase function logs manually. Mean time to detect (MTTD) and mean time to recover (MTTR) are both unbounded. Source: Google SRE Book — "Monitoring Distributed Systems." |
+| **SEVERITY** | High                                                                                                                                                                                                                                                |
+| **FIX**      | Add structured JSON logging to edge functions. Integrate Sentry or LogFlare for error tracking. Add a `/health` endpoint to each edge function. Set up Supabase Log Drain to a monitoring service.                                                  |
+
+### Finding 9.6 — Database Schema Lacks Composite Indexes for Common Queries
+
+| Field        | Detail                                                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | Common query patterns (e.g., `se_health_checks` filtered by `se_user_id` + `checked_at`, `agent_submissions` by `org_id` + `created_at` for dashboard sorting) may not have optimal composite indexes. |
+| **WHY**      | As data grows, sequential scans on large tables will cause query timeouts.                                                                                                                             |
+| **SEVERITY** | Medium                                                                                                                                                                                                 |
+| **FIX**      | Run `EXPLAIN ANALYZE` on the 10 most frequent queries. Add composite indexes where sequential scans appear. Add `pg_stat_statements` monitoring to identify slow queries proactively.                  |
+
+---
+
+## DIMENSION 10 — PRODUCT VISION & STRATEGIC QUALITY
+
+**Score: 7/10**
+
+**Justification:** The product has a clear, defensible value proposition: automated Sophos firewall configuration audit with AI-powered report generation. The SE health check workflow is particularly well-designed — it solves a real pain point for Sophos sales engineers. The core journey (upload → analyze → report) is polished. However, feature bloat is emerging, half-built features reduce trust, and the product lacks the kind of polish details (empty states, loading consistency, error recovery) that separate a prototype from a product.
+
+### Finding 10.1 — Feature Bloat Risk
+
+| Field        | Detail                                                                                                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | The app includes features that may serve no users: `AttestationWorkflow`, `CustomFrameworkBuilder`, `SecurityRoiCalculator`, `PolicyComplexity`, `ComplianceCalendar`, `FindingHeatmapTime`, `EncryptionOverview`. These are full components with non-trivial code. |
+| **WHY**      | Every feature adds maintenance burden, test surface, and cognitive load. Features without users are pure cost. Source: YC — "Do things that don't scale, but don't build things nobody wants."                                                                      |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                                              |
+| **FIX**      | Add analytics (PostHog or Supabase's built-in analytics) to track feature usage. After 30 days, remove features with <5% adoption. Focus engineering time on the core flow.                                                                                         |
+
+### Finding 10.2 — Half-Built Features Erode Trust
+
+| Field        | Detail                                                                                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | Assessment scheduling, change approval workflows, and benchmarking all exist in the UI but only persist to localStorage. The code contains TODO comments acknowledging they are incomplete.  |
+| **WHY**      | An enterprise user who configures scheduled assessments, clears their browser, and finds everything gone will not trust this product again. Source: Nielsen Heuristic #5 (Error Prevention). |
+| **SEVERITY** | High                                                                                                                                                                                         |
+| **FIX**      | Remove these features from the UI immediately. Re-introduce them only when cloud persistence is implemented. A missing feature is always better than a broken one.                           |
+
+### Finding 10.3 — Core Journey Polish Gaps
+
+| Field        | Detail                                                                                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | The upload → analyze → report flow works well, but error recovery is weak. If the Gemini API fails mid-stream, the user sees a partial report with no clear way to retry. If the XML parsing fails, the error message is technical. |
+| **WHY**      | The most important flow in the product should have the most robust error handling.                                                                                                                                                  |
+| **SEVERITY** | Medium                                                                                                                                                                                                                              |
+| **FIX**      | Add a "Retry Analysis" button on partial/failed reports. Improve XML parse error messages to be user-friendly ("This file doesn't appear to be a Sophos configuration export. Please check that you exported from...").             |
+
+### Finding 10.4 — No Usage Analytics
+
+| Field        | Detail                                                                                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | No feature usage tracking. No way to know which features are used, how often, or by whom.                                                                                                         |
+| **WHY**      | Product decisions are made without data. Feature investment is based on assumptions, not evidence.                                                                                                |
+| **SEVERITY** | Medium                                                                                                                                                                                            |
+| **FIX**      | Integrate PostHog or a lightweight custom event tracker. Track: page views, feature interactions (which tabs are opened, which exports are used), analysis completion rate, report download rate. |
+
+---
+
+## FINAL VERDICT
+
+### 1. SCORECARD
+
+| #   | Dimension                      | Score | One-Line Justification                                                                                             |
+| --- | ------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------ |
+| 1   | Architecture & Quality         | 6/10  | Competent React engineering undermined by god files, disabled TypeScript safety, and 5+ data fetching patterns     |
+| 2   | Performance & Efficiency       | 5/10  | Good lazy loading but N+1 queries, zero debounce, leaking intervals, and a 1.9 MB PDF bundle                       |
+| 3   | Security & Vulnerability       | 6/10  | Correct fundamentals (RLS, DOMPurify, env secrets) but timing-unsafe HMAC, email HTML injection, and error leakage |
+| 4   | UI/UX & Product Design         | 6/10  | Polished visual design with inconsistent loading/empty/toast patterns and no a11y automation                       |
+| 5   | Functionality & Business Logic | 7/10  | Core flow works, 19 compliance frameworks, but 4 half-built features and ~16 silent error catches                  |
+| 6   | Testing & Reliability          | 6/10  | 307 unit tests + CI pipeline but only 1 E2E test and zero edge function tests                                      |
+| 7   | Documentation & Knowledge      | 5/10  | Good README but no CHANGELOG, no API docs, no ADRs, and stale generated types                                      |
+| 8   | Developer Experience & Tooling | 7/10  | Clean setup, Prettier, Husky, CI/CD — but TypeScript strict mode off and no DB seed                                |
+| 9   | Scalability & System Design    | 5/10  | Works at current scale but N+1 queries, no caching, no job queue, no observability                                 |
+| 10  | Product Vision & Strategic     | 7/10  | Clear value prop and polished core journey, but feature bloat and half-built features erode trust                  |
+
+**Weighted Overall Score: 60/100**
+
+Weights: Security (15%), Architecture (12%), Scalability (12%), Testing (12%), Performance (10%), Functionality (10%), Product (10%), DX (8%), UX (6%), Documentation (5%).
+
+### 2. CRITICAL FAILURES (Must Fix Before Shipping)
+
+| #   | Problem                                   | Location                                              | Fix                                                                | Effort   |
+| --- | ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ | -------- |
+| 1   | HMAC timing attack vulnerability          | `supabase/functions/_shared/crypto.ts:13`             | Replace `===` with `crypto.subtle.timingSafeEqual`                 | 30 min   |
+| 2   | Weak AES key derivation (padEnd with '0') | `supabase/functions/_shared/crypto.ts:29`             | Require 32-byte key or use HKDF/PBKDF2 derivation                  | 2 hrs    |
+| 3   | Email HTML injection                      | `supabase/functions/_shared/email.ts` + 3 other files | Add `escapeHtml()` to all user-provided values in email templates  | 2 hrs    |
+| 4   | Internal error messages leaked            | 21 locations across edge functions                    | Return generic errors; log real errors server-side                 | 3 hrs    |
+| 5   | Wrong auth in ScheduledReportSettings     | `src/components/ScheduledReportSettings.tsx:175`      | Use `session.access_token` instead of `anonKey`                    | 15 min   |
+| 6   | Zero edge function integration tests      | `supabase/functions/` (all 8 functions)               | Add Deno tests for auth middleware and critical routes             | 2-3 days |
+| 7   | portal-data IDOR via slug enumeration     | `supabase/functions/portal-data/index.ts`             | ~~config.toml entry~~ DONE — remaining: enforce high-entropy slugs | 1 hr     |
+| 8   | npm audit: 5 critical + 2 high vulns      | `package.json` dependencies                           | `npm audit fix` + review breaking changes                          | 2 hrs    |
+
+### 3. PRIORITISED IMPROVEMENT ROADMAP
+
+#### TIER 1 — Fix This Week (Blocking Issues)
+
+- [ ] Fix HMAC timing attack in `crypto.ts` (30 min)
+- [ ] Fix AES key derivation weakness in `crypto.ts` (2 hrs)
+- [ ] Add `escapeHtml()` to all email templates (2 hrs)
+- [ ] Replace `err.message` with generic errors in all edge function catch blocks (3 hrs)
+- [ ] Fix `ScheduledReportSettings.tsx` auth header (15 min)
+- [ ] Fix portal-data IDOR — ~~add explicit config.toml entry~~ DONE, enforce slug entropy (1 hr)
+- [x] Add missing edge functions to `config.toml` — all 8 declared + deployed with `--no-verify-jwt`
+- [ ] Run `npm audit fix` and resolve critical/high vulnerabilities (2 hrs)
+- [ ] Remove half-built features from UI (assessment schedule, change approval, benchmarks) (2 hrs)
+
+#### TIER 2 — Fix This Month (Significant Improvements)
+
+- [ ] Enable `strictNullChecks` in TypeScript and fix resulting errors (1-2 weeks)
+- [ ] Enable `@typescript-eslint/no-unused-vars: "warn"` and clean up (2 days)
+- [ ] Batch N+1 queries in edge functions (send-scheduled-reports, health-checks, regulatory-scanner) (1 day)
+- [ ] Batch N+1 queries in frontend (AgentFleetPanel, AgentManager) (1 day)
+- [ ] Add Deno integration tests for edge function auth middleware (2-3 days)
+- [ ] Add 10-15 Playwright E2E tests for critical user journeys (1 week)
+- [ ] Consolidate to single toast system (Sonner) (2 hrs)
+- [ ] Create unified `<LoadingState />` and `<SafeHtml />` components (1 day)
+- [ ] Wire `EmptyState` component into all list/table views (1 day)
+- [ ] Regenerate `types.ts` and add regeneration npm script (1 hr)
+- [ ] Create `escapeHtml` and `safeError` utility functions for edge functions (2 hrs)
+- [ ] Adopt `useMutation` for all write operations (3 days)
+- [ ] Fix polling intervals to use `useEffect` cleanup (2 hrs)
+- [ ] Add structured JSON logging to edge functions (1 day)
+- [ ] Create API documentation for all edge function routes (2-3 days)
+- [ ] Create CHANGELOG.md with semantic versioning (2 hrs)
+- [ ] Add separate HMAC secret env var (decouple from service role key) (1 hr)
+- [ ] Add Zod request validation to edge function routes (3 days)
+- [ ] Add `@axe-core/playwright` for automated accessibility testing (1 day)
+
+#### TIER 3 — Fix This Quarter (Polish and Scale)
+
+- [ ] Further decompose `HealthCheck2.tsx` to <800 lines (1-2 weeks)
+- [ ] Decompose `SetupWizard.tsx` into step-level components (1 week)
+- [ ] Add debounce/throttle hooks for search and scroll handlers (1 day)
+- [ ] Add `AbortController` to all fetch calls or migrate to TanStack Query (1 week)
+- [ ] Add `React.memo` to expensive leaf components (2 days)
+- [ ] Replace index keys with stable IDs in dynamic lists (1 day)
+- [ ] Convert raster PNGs to WebP, add lazy loading (1 day)
+- [ ] Add feature usage analytics (PostHog or custom) (2-3 days)
+- [ ] Add server-side caching for hot data (Upstash Redis) (1 week)
+- [ ] Implement background job queue for email/report sending (1-2 weeks)
+- [ ] Add Gemini request queue with retry for failed analyses (1 week)
+- [ ] Add structured observability: Sentry for errors, LogFlare for logs (2-3 days)
+- [ ] Create Architecture Decision Records for key decisions (ongoing)
+- [ ] Add database seed script for developer onboarding (1 day)
+- [ ] Add load testing with k6 for top 3 endpoints (2-3 days)
+- [ ] Run EXPLAIN ANALYZE on top queries and add composite indexes (1 day)
+- [ ] Enable `noImplicitAny` in TypeScript (1-2 weeks)
+- [ ] Remove or adopt Zod (if not adopted in Tier 2) (1 hr)
+- [ ] Add Playwright viewport tests at 375px, 768px, 1024px (1 day)
+- [ ] Move PDF generation to server-side edge function (1 week)
+
+### 4. THE BRUTAL TRUTH
+
+This is a competent solo-developer project that has outgrown its architecture. The core product — upload a firewall config, get an AI-powered security audit with compliance mapping across 19 frameworks — is genuinely useful and well-executed. The SE health check workflow shows real product thinking. But the codebase carries the debt of rapid feature development without a safety net: TypeScript strict mode is off, the test suite covers breadth but not depth, the edge functions that handle all authorization have zero automated tests, and there are cryptographic weaknesses (timing-unsafe HMAC, weak key derivation) that would fail a professional security audit. The biggest thing holding this project back is not missing features — it is the absence of engineering discipline in the layers you cannot see: auth, crypto, error handling, input validation, and observability. The product surface is a 7/10; the infrastructure underneath it is a 5/10. That gap will widen with every feature added until it collapses, probably as a security incident rather than a performance problem.
+
+### 5. THE PATH TO EXCEPTIONAL
+
+1. **Enable TypeScript strict mode and treat the compiler as your first test suite.** This single change — `strictNullChecks: true`, `noImplicitAny: true`, `noUnusedLocals: true` — would eliminate an entire class of runtime bugs. It will produce 500+ errors. Fix them all. The codebase will be meaningfully safer on the other side.
+
+2. **Write integration tests for every edge function route before adding any new feature.** The 8 edge functions are the security perimeter. They handle authentication, authorization, data access, email sending, and AI orchestration. Zero tests on this layer is the single biggest risk in the project. A comprehensive test suite here is worth more than 100 component tests.
+
+3. **Hire (or become) a product editor, not a product builder.** The codebase has 25+ features. Some are brilliant (compliance mapping, config diff, attack surface map). Some are unused (attestation workflow, custom framework builder, encryption overview). The discipline to remove 30% of features would make the remaining 70% dramatically better. Measure usage. Kill what is not used. Polish what is.
+
+4. **Add observability before adding scale.** You cannot scale what you cannot measure. Before pursuing Redis caching, background queues, or horizontal scaling, add structured logging, error tracking (Sentry), and latency monitoring to every edge function. This will tell you exactly where to invest engineering time — with data, not intuition.
+
+5. **Treat the edge function layer as a proper API, not a collection of scripts.** Define request/response schemas (Zod). Document routes (OpenAPI). Add versioning. Add integration tests. Add structured error codes. This transforms the backend from "code that runs on Supabase" into "a professional API that happens to be deployed on Supabase." The difference is the difference between a prototype and a platform.

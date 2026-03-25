@@ -37,7 +37,7 @@ export default defineConfig(() => ({
           "vendor-docx": ["docx", "file-saver"],
           "vendor-archive": ["jszip", "pptxgenjs"],
           "vendor-pdfmake": ["pdfmake"],
-          "vendor-pdf-render": ["jspdf", "html-to-image", "html2canvas"],
+          "vendor-html-to-image": ["html-to-image"],
         },
       },
     },

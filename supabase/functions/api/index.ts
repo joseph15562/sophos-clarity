@@ -11,7 +11,6 @@ import { handleHealthCheckRoutes } from "./routes/health-checks.ts";
 import { handlePasskeyRoutes } from "./routes/passkey.ts";
 import { handleSeTeamRoutes } from "./routes/se-teams.ts";
 import { handleSendReportRoutes } from "./routes/send-report.ts";
-import { handleSharedRoutes } from "./routes/shared.ts";
 
 let corsHeaders: Record<string, string> = {};
 function json(body: unknown, status = 200) {
@@ -21,24 +20,22 @@ function json(body: unknown, status = 200) {
 const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 
 // ── Route Auth Matrix ──
-// Gateway-level JWT verification is DISABLED (config.toml). Each route
-// enforces its own auth. Re-enable after splitting the monolith (#5).
+// Gateway JWT is ENABLED (config.toml). All routes require a valid JWT.
+//
+// Public routes (shared reports, passkey login, guest config upload) have
+// moved to the api-public function. Agent API-key routes have moved to
+// the api-agent function.
 //
 //   Route prefix              Auth mechanism
 //   ─────────────────────────  ─────────────────────────────────────
 //   agent/register|delete|…   JWT via userClient + getUser
-//   agent/config|submit|…     API key via X-API-Key + authenticateAgent
-//   passkey/*                  JWT via userClient + getUser
+//   passkey/register-*         JWT via userClient + getUser
 //   admin/*                    JWT + org admin role check
-//   auth/mfa-recovery          JWT + org admin role check
 //   assessments                JWT via userClient + getUser
-//   shared/:token              Public (token-based, no auth)
-//   shared-health-check/:token Public (token-based, no auth)
 //   se-teams/*                 JWT via authenticateSE
 //   health-checks/*            JWT via authenticateSE
-//   health-checks/process-…    Service role key (cron)
 //   config-upload-request(s)   JWT via authenticateSE
-//   config-upload/:token/…     Public or JWT depending on sub-route
+//   config-upload/:token/…     JWT via authenticateSE (resend/download/claim/central-data/delete)
 //   firewalls                  JWT via userClient + getUser
 //   send-report                JWT via authenticateSE
 
@@ -73,9 +70,6 @@ serve(async (req: Request) => {
 
   const assessmentRes = await handleAssessmentRoutes(req, url, segments, corsHeaders);
   if (assessmentRes !== null) return assessmentRes;
-
-  const sharedRes = await handleSharedRoutes(req, url, segments, corsHeaders);
-  if (sharedRes !== null) return sharedRes;
 
   const seTeamRes = await handleSeTeamRoutes(req, url, segments, corsHeaders);
   if (seTeamRes !== null) return seTeamRes;

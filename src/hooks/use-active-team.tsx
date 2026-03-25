@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSeTeamsQuery } from "@/hooks/queries/use-se-teams-query";
+import { queryKeys } from "@/hooks/queries/keys";
 
 export interface SETeam {
   id: string;
@@ -34,53 +36,33 @@ export function useActiveTeam() {
   return useContext(ActiveTeamContext);
 }
 
-export function ActiveTeamProvider({ seProfileId, children }: { seProfileId: string | null; children: ReactNode }) {
-  const [teams, setTeams] = useState<SETeam[]>([]);
+export function ActiveTeamProvider({
+  seProfileId,
+  children,
+}: {
+  seProfileId: string | null;
+  children: ReactNode;
+}) {
+  const queryClient = useQueryClient();
+  const { data: teams = [], isLoading } = useSeTeamsQuery(seProfileId);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
-  const fetchTeams = useCallback(async () => {
-    if (!seProfileId) {
-      setTeams([]);
-      setActiveTeamId(null);
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/se-teams`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        },
-      );
-      if (!res.ok) return;
-      const json = await res.json();
-      const fetched: SETeam[] = json.data ?? [];
-      setTeams(fetched);
-
-      if (!initialized) {
-        const primary = fetched.find((t) => t.is_primary) ?? fetched[0];
-        setActiveTeamId(primary?.id ?? null);
-        setInitialized(true);
-      } else if (fetched.length > 0 && !fetched.some((t) => t.id === activeTeamId)) {
-        const primary = fetched.find((t) => t.is_primary) ?? fetched[0];
-        setActiveTeamId(primary?.id ?? null);
-      }
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seProfileId, initialized]);
-
   useEffect(() => {
-    void fetchTeams();
-  }, [fetchTeams]);
+    if (!teams.length) return;
+    if (!initialized) {
+      const primary = teams.find((t) => t.is_primary) ?? teams[0];
+      setActiveTeamId(primary?.id ?? null);
+      setInitialized(true);
+    } else if (!teams.some((t) => t.id === activeTeamId)) {
+      const primary = teams.find((t) => t.is_primary) ?? teams[0];
+      setActiveTeamId(primary?.id ?? null);
+    }
+  }, [teams, initialized, activeTeamId]);
+
+  const reload = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.seTeams.all });
+  }, [queryClient]);
 
   const activeTeam = useMemo(
     () => teams.find((t) => t.id === activeTeamId) ?? null,
@@ -88,8 +70,8 @@ export function ActiveTeamProvider({ seProfileId, children }: { seProfileId: str
   );
 
   const value = useMemo<ActiveTeamContextValue>(
-    () => ({ teams, activeTeam, activeTeamId, setActiveTeamId, loading, reload: fetchTeams }),
-    [teams, activeTeam, activeTeamId, loading, fetchTeams],
+    () => ({ teams, activeTeam, activeTeamId, setActiveTeamId, loading: isLoading, reload }),
+    [teams, activeTeam, activeTeamId, isLoading, reload],
   );
 
   return <ActiveTeamContext.Provider value={value}>{children}</ActiveTeamContext.Provider>;

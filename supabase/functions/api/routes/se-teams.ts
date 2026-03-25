@@ -25,7 +25,8 @@ export async function handleSeTeamRoutes(
     const { data: memberships, error } = await db
       .from("se_team_members")
       .select("id, team_id, role, is_primary, joined_at")
-      .eq("se_profile_id", se.seProfile.id);
+      .eq("se_profile_id", se.seProfile.id)
+      .limit(100);
     if (error) return json({ error: error.message }, 500);
 
     if (!memberships?.length) return json({ data: [] });
@@ -34,12 +35,14 @@ export async function handleSeTeamRoutes(
     const { data: teams } = await db
       .from("se_teams")
       .select("id, name, created_by, created_at")
-      .in("id", teamIds);
+      .in("id", teamIds)
+      .limit(100);
 
     const { data: counts } = await db
       .from("se_team_members")
       .select("team_id")
-      .in("team_id", teamIds);
+      .in("team_id", teamIds)
+      .limit(1000);
 
     const countMap: Record<string, number> = {};
     for (const c of counts ?? []) {
@@ -147,13 +150,15 @@ export async function handleSeTeamRoutes(
       .from("se_team_members")
       .select("se_profile_id")
       .eq("team_id", invite.team_id)
-      .eq("role", "admin");
+      .eq("role", "admin")
+      .limit(100);
     if (admins?.length) {
       const adminIds = admins.map((a: any) => a.se_profile_id);
       const { data: adminProfiles } = await db
         .from("se_profiles")
         .select("email")
-        .in("id", adminIds);
+        .in("id", adminIds)
+        .limit(100);
       const joinerName = se.seProfile.display_name || se.user.email || "An SE";
       for (const ap of adminProfiles ?? []) {
         if (ap.email) {
@@ -190,13 +195,15 @@ export async function handleSeTeamRoutes(
       const { data: members } = await db
         .from("se_team_members")
         .select("id, se_profile_id, role, is_primary, joined_at")
-        .eq("team_id", teamId);
+        .eq("team_id", teamId)
+        .limit(200);
 
       const profileIds = (members ?? []).map((m: any) => m.se_profile_id);
       const { data: profiles } = await db
         .from("se_profiles")
         .select("id, email, display_name")
-        .in("id", profileIds);
+        .in("id", profileIds)
+        .limit(200);
 
       const profileMap: Record<string, any> = {};
       for (const p of profiles ?? []) profileMap[p.id] = p;
@@ -216,7 +223,8 @@ export async function handleSeTeamRoutes(
           .from("se_team_members")
           .select("id")
           .eq("team_id", teamId)
-          .eq("role", "admin");
+          .eq("role", "admin")
+          .limit(100);
         if ((adminCount?.length ?? 0) <= 1) {
           return json({ error: "You are the only admin. Transfer admin role to another member before leaving." }, 400);
         }
@@ -293,7 +301,8 @@ export async function handleSeTeamRoutes(
         .select("id, email, status, created_at, expires_at")
         .eq("team_id", teamId)
         .eq("status", "pending")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
       return json({ data: invites ?? [] });
     }
 

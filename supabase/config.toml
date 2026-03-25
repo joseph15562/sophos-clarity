@@ -1,16 +1,37 @@
 project_id = "rpnvyrxorfaqabkdhctl"
 
+# NOTE: verify_jwt in this file only applies to local development
+# (`supabase functions serve`). For remote deploys, use --no-verify-jwt
+# in the deploy command (see .github/workflows/deploy.yml).
+
 [functions.parse-config]
 verify_jwt = false
-# Anonymous access needed: browser sends JWT via Authorization header,
-# but the function validates it internally via auth.getUser().
+# Auth validated internally via getUser().
 
 [functions.api]
 verify_jwt = false
-# Mixed auth: JWT (web app), API keys (agents), service role (cron),
-# public tokens (shared reports). Per-route auth enforced in handler.
-# Re-enable after API split (see docs/plans/war-room-audit.md #5).
+# Per-route auth enforced in handler (JWT, API keys, service role).
+
+[functions.api-agent]
+verify_jwt = false
+# Agent connector auth via X-API-Key header (not JWT).
+
+[functions.api-public]
+verify_jwt = false
+# Public routes: shared reports, passkey login, guest config upload.
+
+[functions.portal-data]
+verify_jwt = false
+# Public portal endpoint — no user JWT, resolves by slug/org_id.
+
+[functions.send-scheduled-reports]
+verify_jwt = false
+# Mixed: cron (no JWT) + manual preview (JWT validated internally).
+
+[functions.regulatory-scanner]
+verify_jwt = false
+# Auth validated internally via getUser().
 
 [functions.sophos-central]
 verify_jwt = false
-# Proxied from the browser with user JWT in header; validated internally.
+# Auth validated internally via getUser().
