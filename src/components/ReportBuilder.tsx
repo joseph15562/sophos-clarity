@@ -19,7 +19,6 @@ const SECTIONS = [
   { id: "findings-list", label: "Findings List" },
   { id: "compliance-status", label: "Compliance Status" },
   { id: "remediation-plan", label: "Remediation Plan" },
-  { id: "peer-comparison", label: "Peer Comparison" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -46,7 +45,7 @@ function saveTemplates(templates: ReportTemplate[]): void {
 
 export function ReportBuilder({ analysisResults }: Props) {
   const [selectedSections, setSelectedSections] = useState<Set<SectionId>>(
-    new Set(SECTIONS.map((s) => s.id))
+    new Set(SECTIONS.map((s) => s.id)),
   );
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
 
@@ -96,7 +95,9 @@ export function ReportBuilder({ analysisResults }: Props) {
 
       <div className="mt-4 flex flex-col lg:flex-row gap-4">
         <aside className="lg:w-56 shrink-0 space-y-3">
-          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground">Report sections</h4>
+          <h4 className="text-xs font-display font-semibold tracking-tight text-foreground">
+            Report sections
+          </h4>
           <div className="space-y-2">
             {SECTIONS.map((s) => (
               <label
@@ -134,16 +135,19 @@ export function ReportBuilder({ analysisResults }: Props) {
                 Saved templates
               </h4>
               <div className="space-y-1">
-                {templates.slice(-5).reverse().map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => handleLoadTemplate(t)}
-                    className="block w-full text-left text-[10px] text-muted-foreground hover:text-foreground truncate px-1 py-0.5 rounded"
-                  >
-                    {t.name}
-                  </button>
-                ))}
+                {templates
+                  .slice(-5)
+                  .reverse()
+                  .map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleLoadTemplate(t)}
+                      className="block w-full text-left text-[10px] text-muted-foreground hover:text-foreground truncate px-1 py-0.5 rounded"
+                    >
+                      {t.name}
+                    </button>
+                  ))}
               </div>
             </div>
           )}
@@ -159,10 +163,7 @@ export function ReportBuilder({ analysisResults }: Props) {
               <p className="text-muted-foreground italic">Select at least one section.</p>
             ) : (
               orderedSections.map((s) => (
-                <div
-                  key={s.id}
-                  className="rounded-md border border-border bg-background p-3"
-                >
+                <div key={s.id} className="rounded-md border border-border bg-background p-3">
                   <p className="font-semibold text-foreground mb-2">{s.label}</p>
                   {s.id === "executive-summary" && (
                     <p className="text-muted-foreground">
@@ -196,11 +197,6 @@ export function ReportBuilder({ analysisResults }: Props) {
                   {s.id === "remediation-plan" && (
                     <p className="text-muted-foreground">
                       Prioritised remediation roadmap with effort estimates.
-                    </p>
-                  )}
-                  {s.id === "peer-comparison" && (
-                    <p className="text-muted-foreground">
-                      Benchmark against peer organisations.
                     </p>
                   )}
                 </div>
