@@ -106,9 +106,7 @@ export function StickyActionBar({
               >
                 <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 pointer-events-none bg-brand-accent" />
                 <Keyboard className="h-3 w-3 text-brand-accent" />
-                <kbd className="inline-flex items-center justify-center w-3.5 h-3.5 rounded border border-white/[0.1] bg-white/[0.04] text-[8px] font-mono font-bold">
-                  ?
-                </kbd>
+                Shortcuts
               </button>
             )}
           </div>

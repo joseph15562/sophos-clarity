@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
-import { ArrowLeftRight, RotateCcw, Save, BarChart3, Scale } from "lucide-react";
+import { ArrowLeftRight, RotateCcw, Save, BarChart3, Scale, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadedFile } from "@/components/FileUpload";
 import { BrandingData } from "@/components/BrandingSetup";
@@ -1386,14 +1386,16 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           />
           <button
             onClick={() => setShortcutsOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
+            className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.06] text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+            style={{
+              background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
+            }}
             title="Keyboard shortcuts (?)"
             aria-label="Keyboard shortcuts"
             data-tour="shortcuts-button"
           >
-            <kbd className="inline-flex items-center justify-center w-4 h-4 rounded border border-border bg-muted text-[9px] font-mono font-bold">
-              ?
-            </kbd>
+            <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 pointer-events-none bg-brand-accent" />
+            <Keyboard className="h-3 w-3 text-brand-accent" />
             Shortcuts
           </button>
         </div>
