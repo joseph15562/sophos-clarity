@@ -43,7 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
-import type { Severity } from "@/lib/design-tokens";
+import { scoreToColor, type Severity } from "@/lib/design-tokens";
 
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#00F2B3] dark:text-[#00F2B3]",
@@ -228,82 +228,196 @@ function scoreToAngle(score: number): number {
   return 150 + (score / 100) * 240;
 }
 
-function ScoreGauge({
+function GaugeSvg({
   score,
-  grade,
-  accentColor,
+  size,
+  showLabels,
+  label,
 }: {
   score: number;
-  grade: string;
-  accentColor?: string;
+  size: number;
+  showLabels?: boolean;
+  label?: string;
 }) {
-  const cx = 110;
-  const cy = 110;
-  const r = 48;
-  const strokeWidth = 8;
-  const filledEnd = scoreToAngle(score);
-  const trackPath = arcPath(cx, cy, r, 150, 390);
-  const filledPath = arcPath(cx, cy, r, 150, filledEnd);
-  const defaultColor = score <= 40 ? "#EA0022" : score <= 75 ? "#F29400" : "#00F2B3";
-  const fillColor = accentColor && score > 75 ? accentColor : defaultColor;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size * 0.38;
+  const strokeWidth = size * 0.065;
+  const needleLength = r - strokeWidth * 1.5;
+  const startAngle = 150;
+  const endAngle = 390;
+  const filledEndAngle = scoreToAngle(score);
+  const needleAngle = filledEndAngle;
+  const trackPath = arcPath(cx, cy, r, startAngle, endAngle);
+  const filledPath = arcPath(cx, cy, r, startAngle, filledEndAngle);
+  const fillColor = scoreToColor(score);
+  const gaugeId = `gauge-${size}-${Math.round(score)}`;
 
   return (
-    <div className="relative flex items-center justify-center">
-      <svg
-        width={220}
-        height={180}
-        viewBox="0 0 220 180"
-        className="overflow-visible drop-shadow-lg"
-      >
-        <defs>
-          <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={fillColor} />
-            <stop offset="100%" stopColor={fillColor} stopOpacity="0.6" />
-          </linearGradient>
-          <filter id="gaugeGlow">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <path
-          d={trackPath}
-          fill="none"
-          stroke="currentColor"
-          className="text-border/30"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-        />
-        <path
-          d={filledPath}
-          fill="none"
-          stroke="url(#gaugeGrad)"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          filter="url(#gaugeGlow)"
-        />
-        <text
-          x={cx}
-          y={cy - 10}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className={cn("text-3xl font-black", GRADE_COLORS[grade] ?? GRADE_COLORS.C)}
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
+      <defs>
+        <linearGradient id={`${gaugeId}-grad`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={fillColor} stopOpacity={0.8} />
+          <stop offset="100%" stopColor={fillColor} />
+        </linearGradient>
+        <filter id={`${gaugeId}-glow`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation={size * 0.02} result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <path
+        d={trackPath}
+        fill="none"
+        stroke="hsl(213 27% 86%)"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        className="dark:hidden"
+      />
+      <path
+        d={trackPath}
+        fill="none"
+        stroke="hsl(215 40% 22%)"
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        className="hidden dark:block"
+      />
+      {Array.from({ length: 11 }, (_, i) => {
+        const tickAngle = startAngle + (i / 10) * (endAngle - startAngle);
+        const rad = (tickAngle * Math.PI) / 180;
+        const isMajor = i % 5 === 0;
+        const outerR = r + strokeWidth * 0.8;
+        const innerR = r + strokeWidth * (isMajor ? 1.6 : 1.2);
+        return (
+          <line
+            key={i}
+            x1={cx + outerR * Math.cos(rad)}
+            y1={cy + outerR * Math.sin(rad)}
+            x2={cx + innerR * Math.cos(rad)}
+            y2={cy + innerR * Math.sin(rad)}
+            stroke={fillColor}
+            strokeWidth={isMajor ? 1.5 : 0.8}
+            opacity={isMajor ? 0.4 : 0.2}
+            strokeLinecap="round"
+          />
+        );
+      })}
+      <path
+        d={filledPath}
+        fill="none"
+        stroke={fillColor}
+        strokeWidth={strokeWidth * 2.2}
+        strokeLinecap="round"
+        opacity={0.15}
+        filter={`url(#${gaugeId}-glow)`}
+      />
+      <path
+        d={filledPath}
+        fill="none"
+        stroke={`url(#${gaugeId}-grad)`}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <g transform={`translate(${cx}, ${cy})`}>
+        <g
+          className="gauge-needle"
+          style={{
+            transformOrigin: "0 0",
+            ["--needle-end" as string]: `${needleAngle}deg`,
+            animation: "gaugeNeedleSweep 0.6s ease-out forwards",
+          }}
         >
-          {grade}
-        </text>
-        <text
-          x={cx}
-          y={cy + 18}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className="fill-muted-foreground text-base font-bold tabular-nums"
-        >
-          {score}
-        </text>
-      </svg>
-    </div>
+          <line
+            x1={0}
+            y1={0}
+            x2={needleLength}
+            y2={0}
+            stroke="hsl(215 52% 25%)"
+            strokeWidth={size * 0.02}
+            strokeLinecap="round"
+            className="dark:hidden"
+          />
+          <line
+            x1={0}
+            y1={0}
+            x2={needleLength}
+            y2={0}
+            stroke="hsl(210 20% 65%)"
+            strokeWidth={size * 0.02}
+            strokeLinecap="round"
+            className="hidden dark:block"
+          />
+        </g>
+      </g>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={size * 0.04}
+        fill="none"
+        stroke={fillColor}
+        strokeWidth={size * 0.008}
+        opacity={0.3}
+      />
+      <circle cx={cx} cy={cy} r={size * 0.028} fill="hsl(215 52% 25%)" className="dark:hidden" />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={size * 0.028}
+        fill="hsl(210 20% 65%)"
+        className="hidden dark:block"
+      />
+      {showLabels && (
+        <g>
+          <text
+            x={cx}
+            y={cy - size * 0.04}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={fillColor}
+            style={{
+              fontSize: size * 0.18,
+              fontWeight: 900,
+              fontFamily: "'Zalando Sans Expanded', 'Zalando Sans', system-ui, sans-serif",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {label ?? "—"}
+          </text>
+          <text
+            x={cx}
+            y={cy + size * 0.1}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="hsl(210 25% 50%)"
+            style={{
+              fontSize: size * 0.07,
+              fontWeight: 700,
+              fontFamily: "'Zalando Sans', system-ui, sans-serif",
+            }}
+            className="dark:hidden"
+          >
+            {score}
+          </text>
+          <text
+            x={cx}
+            y={cy + size * 0.1}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="hsl(210 20% 65%)"
+            style={{
+              fontSize: size * 0.07,
+              fontWeight: 700,
+              fontFamily: "'Zalando Sans', system-ui, sans-serif",
+            }}
+            className="hidden dark:block"
+          >
+            {score}
+          </text>
+        </g>
+      )}
+    </svg>
   );
 }
 
@@ -660,13 +774,8 @@ export default function ClientPortal() {
       style={accentStyle}
     >
       {/* Header */}
-      <header
-        className="sticky top-0 z-40 border-b border-brand-accent/10 bg-white/80 dark:bg-[#080d1c]/80 backdrop-blur-xl"
-        style={
-          showBranding && branding?.logoUrl ? { borderBottomColor: `${accentColor}25` } : undefined
-        }
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {showBranding && branding?.logoUrl ? (
               <img
@@ -675,32 +784,33 @@ export default function ClientPortal() {
                 className="h-10 w-auto max-w-[120px] object-contain"
               />
             ) : (
-              <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center shadow-[0_4px_16px_rgba(90,0,255,0.25)]">
-                <span className="text-lg font-bold text-white">
-                  {customerName.charAt(0).toUpperCase()}
-                </span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-elevated shrink-0">
+                <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="text-lg font-display font-bold text-foreground truncate">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
+                  {tenantName
+                    ? `${tenantName} — Security Assessment`
+                    : showBranding && branding?.companyName
+                      ? `${customerName} — Security Assessment`
+                      : "Firewall Configuration Assessment"}
+                </span>
+              </div>
+              <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight truncate">
                 {showBranding && branding?.companyName ? branding.companyName : customerName}
               </h1>
-              <p className="text-xs text-muted-foreground/70">
-                {tenantName
-                  ? `${tenantName} — Security Assessment`
-                  : showBranding && branding?.companyName
-                    ? `${customerName} — Security Assessment`
-                    : "Firewall Configuration Assessment"}
-              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {authUser ? (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="text-xs gap-1 rounded-xl hover:bg-brand-accent/[0.06]"
+                className="text-[10px] gap-1 rounded-xl text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] border border-white/10 bg-white/[0.04]"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Sign Out
@@ -710,7 +820,7 @@ export default function ClientPortal() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowLogin(!showLogin)}
-                className="text-xs gap-1 rounded-xl hover:bg-brand-accent/[0.06]"
+                className="text-[10px] gap-1 rounded-xl text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] border border-white/10 bg-white/[0.04]"
               >
                 <LogIn className="h-3.5 w-3.5" />
                 Sign In
@@ -719,12 +829,15 @@ export default function ClientPortal() {
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-xl hover:bg-brand-accent/[0.06]"
+              className="rounded-xl text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] border border-white/10 bg-white/[0.04]"
               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               aria-label="Toggle theme"
             >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              {resolvedTheme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
@@ -759,56 +872,91 @@ export default function ClientPortal() {
         )}
 
         {/* Score Summary */}
-        {sectionVisible("score") && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6 sm:p-8">
-            <div className="mb-4">
-              <h2 className="text-lg font-display font-bold text-foreground">Score Summary</h2>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">
-                Your current security assessment score
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-8">
-              <ScoreGauge
-                score={latest?.overall_score ?? 0}
-                grade={latest?.overall_grade ?? "—"}
-                accentColor={accentColor}
-              />
-              <div className="flex-1 text-center sm:text-left space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Latest assessment:{" "}
-                  {latest
-                    ? new Date(latest.assessed_at).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })
-                    : "—"}
-                </p>
-                {previous && latest && (
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">vs previous: </span>
-                    <span
-                      className={cn(
-                        "font-semibold",
-                        latest.overall_score > previous.overall_score
-                          ? "text-[#00F2B3]"
-                          : latest.overall_score < previous.overall_score
-                            ? "text-[#EA0022]"
-                            : "text-muted-foreground",
-                      )}
-                    >
-                      {latest.overall_score > previous.overall_score
-                        ? `+${latest.overall_score - previous.overall_score}`
-                        : latest.overall_score < previous.overall_score
-                          ? latest.overall_score - previous.overall_score
-                          : "No change"}
-                    </span>
-                  </p>
-                )}
+        {sectionVisible("score") &&
+          (() => {
+            const aggScore = latest?.overall_score ?? 0;
+            const aggGrade = latest?.overall_grade ?? "—";
+            return (
+              <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-6 sm:p-8 shadow-[0_18px_50px_rgba(32,6,247,0.08)] space-y-5">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-brand-accent">
+                    Security score
+                  </div>
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <h2 className="text-xl font-display font-black text-foreground tracking-tight">
+                        Security Score
+                      </h2>
+                      <p className="text-[11px] text-muted-foreground/60 leading-relaxed mt-1">
+                        {latest
+                          ? `Latest assessment: ${new Date(latest.assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
+                          : "No assessments yet"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-border/50 bg-card shadow-card px-5 py-4 text-right">
+                      <p className="text-[9px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
+                        Current posture
+                      </p>
+                      <p
+                        className="text-4xl font-display font-black tracking-tight tabular-nums mt-1.5"
+                        style={{ color: scoreToColor(aggScore) }}
+                      >
+                        {aggScore}
+                        <span className="text-lg font-semibold text-muted-foreground">/100</span>
+                      </p>
+                      <p
+                        className="text-[11px] font-display font-semibold mt-1"
+                        style={{ color: scoreToColor(aggScore) }}
+                      >
+                        Grade {aggGrade}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="relative flex items-center justify-center">
+                      <div style={{ animation: "gaugeNeedleMount 0.6s ease-out forwards" }}>
+                        <GaugeSvg score={aggScore} size={240} showLabels label={aggGrade} />
+                      </div>
+                    </div>
+                    <p className="text-[13px] font-display font-medium text-muted-foreground/70 text-center">
+                      Your firewall scores{" "}
+                      <span className="font-bold text-foreground">{aggScore}/100</span>{" "}
+                      <span className="text-foreground/60">(Grade {aggGrade})</span>
+                    </p>
+                    {previous && latest && (
+                      <p className="text-sm text-center">
+                        <span className="text-muted-foreground">vs previous: </span>
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            latest.overall_score > previous.overall_score
+                              ? "text-[#00F2B3]"
+                              : latest.overall_score < previous.overall_score
+                                ? "text-[#EA0022]"
+                                : "text-muted-foreground",
+                          )}
+                        >
+                          {latest.overall_score > previous.overall_score
+                            ? `+${latest.overall_score - previous.overall_score}`
+                            : latest.overall_score < previous.overall_score
+                              ? latest.overall_score - previous.overall_score
+                              : "No change"}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <style>{`
+                @keyframes gaugeNeedleMount { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                @keyframes gaugeNeedleSweep { from { transform: rotate(150deg); } to { transform: rotate(var(--needle-end, 150deg)); } }
+              `}</style>
               </div>
-            </div>
-          </div>
-        )}
+            );
+          })()}
 
         {/* Per-Firewall Breakdown */}
         {sectionVisible("score") && portalFirewalls.length > 1 && (
