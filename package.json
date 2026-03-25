@@ -17,7 +17,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "update-browserslist": "npm update caniuse-lite browserslist",
-    "favicon": "node -e \"require('sharp')(require('path').join('public','favicon.svg')).resize(32,32).png().toBuffer().then(p=>require('to-ico')([p]).then(ico=>require('fs').writeFileSync(require('path').join('public','favicon.ico'),ico))).then(()=>console.log('favicon.ico updated')).catch(e=>console.error(e))\"",
+    "test:deno": "cd supabase/functions && deno test --allow-env --allow-net",
     "prepare": "husky"
   },
   "dependencies": {
