@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, FileText, AlertTriangle } from "lucide-react";
+import { Eye, FileText, AlertTriangle, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -20,6 +20,8 @@ export interface StickyActionBarProps {
   onScrollToReports: () => void;
   onScrollToContext: () => void;
   onGenerateAll: () => void;
+  tourSlot?: React.ReactNode;
+  onOpenShortcuts?: () => void;
 }
 
 const REQUIRED_FIELDS: { key: keyof BrandingData; label: string }[] = [
@@ -36,6 +38,8 @@ export function StickyActionBar({
   onScrollToReports,
   onScrollToContext,
   onGenerateAll,
+  tourSlot,
+  onOpenShortcuts,
 }: StickyActionBarProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -84,11 +88,32 @@ export function StickyActionBar({
           }}
         />
 
-        <div className="max-w-[1320px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <p className="hidden sm:block text-xs text-muted-foreground/80 font-medium">
-            Quick actions
-          </p>
+        <div className="max-w-[1320px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+          {/* Left: utility actions */}
+          <div className="flex items-center gap-2">
+            {tourSlot}
 
+            {onOpenShortcuts && (
+              <button
+                onClick={onOpenShortcuts}
+                className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.06] text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+                style={{
+                  background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
+                }}
+                title="Keyboard shortcuts (?)"
+                aria-label="Keyboard shortcuts"
+                data-tour="shortcuts-button"
+              >
+                <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 pointer-events-none bg-brand-accent" />
+                <Keyboard className="h-3 w-3 text-brand-accent" />
+                <kbd className="inline-flex items-center justify-center w-3.5 h-3.5 rounded border border-white/[0.1] bg-white/[0.04] text-[8px] font-mono font-bold">
+                  ?
+                </kbd>
+              </button>
+            )}
+          </div>
+
+          {/* Right: primary actions */}
           <div className="flex items-center gap-2.5 ml-auto">
             <Button
               variant="outline"

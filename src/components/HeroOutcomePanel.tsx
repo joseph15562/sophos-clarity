@@ -223,33 +223,61 @@ export function HeroOutcomePanel({
           <div className="grid gap-3 lg:grid-cols-3">
             {topActions.map((action, i) => {
               const isCrit = action.severity === "critical";
-              const borderColor = isCrit ? "border-[#EA0022]/25" : "border-[#F29400]/25";
-              const leftBorder = isCrit ? "border-l-[#EA0022]" : "border-l-[#F29400]";
+              const sevHex = isCrit ? "#EA0022" : "#F29400";
               return (
                 <div
                   key={`${action.title}-${i}`}
-                  className={`rounded-xl border ${borderColor} border-l-[3px] ${leftBorder} bg-card/80 dark:bg-card/60 px-4 py-3.5 space-y-2 shadow-card transition-shadow duration-200 hover:shadow-elevated`}
+                  className="group relative overflow-hidden rounded-xl border border-white/[0.06] border-l-[3px] px-4 py-4 space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-white/[0.12] hover:shadow-elevated"
+                  style={{
+                    borderLeftColor: sevHex,
+                    background: `linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
+                  }}
                 >
-                  <div className="flex items-center gap-2.5 flex-wrap">
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div
+                      className="absolute -top-5 -right-5 h-14 w-14 rounded-full blur-[24px] opacity-20 transition-opacity duration-200 group-hover:opacity-35"
+                      style={{ backgroundColor: sevHex }}
+                    />
+                  </div>
+                  <div
+                    className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                    style={{
+                      background: `linear-gradient(90deg, transparent, ${sevHex}30, transparent)`,
+                    }}
+                  />
+
+                  <div className="relative flex items-center gap-2.5 flex-wrap">
                     <span
-                      className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider ${isCrit ? "bg-[#EA0022]/15 text-[#EA0022] ring-1 ring-[#EA0022]/20" : "bg-[#F29400]/15 text-[#F29400] ring-1 ring-[#F29400]/20"}`}
+                      className="text-[9px] font-black uppercase px-2.5 py-0.5 rounded-lg tracking-wider border"
+                      style={{
+                        color: sevHex,
+                        backgroundColor: `${sevHex}14`,
+                        borderColor: `${sevHex}25`,
+                      }}
                     >
                       {action.severity}
                     </span>
-                    <span className="text-sm font-semibold text-foreground leading-tight">
+                    <span className="text-sm font-bold text-foreground leading-tight">
                       {action.title}
                     </span>
                   </div>
                   {action.remediation && (
-                    <p className="text-[11px] text-foreground/85 leading-relaxed">
+                    <p className="relative text-[11px] text-foreground/85 leading-relaxed">
                       {action.remediation}
                     </p>
                   )}
-                  <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">
-                    <span className="font-semibold text-foreground/70">Evidence source:</span>{" "}
-                    {action.section}
-                    {action.evidence ? ` · ${action.evidence}` : ""}
-                  </p>
+                  <div
+                    className="relative rounded-lg border border-white/[0.06] px-3 py-2"
+                    style={{ background: `linear-gradient(135deg, ${sevHex}06, transparent)` }}
+                  >
+                    <p className="text-[10px] text-muted-foreground/90">
+                      <span className="font-bold" style={{ color: sevHex }}>
+                        Evidence source:
+                      </span>{" "}
+                      {action.section}
+                      {action.evidence ? ` · ${action.evidence}` : ""}
+                    </p>
+                  </div>
                 </div>
               );
             })}
@@ -259,6 +287,12 @@ export function HeroOutcomePanel({
     </div>
   );
 }
+
+const VALUE_HEX = {
+  neutral: "#2006F7",
+  primary: "#2006F7",
+  success: "#00F2B3",
+} as const;
 
 function ValueCard({
   label,
@@ -271,21 +305,35 @@ function ValueCard({
   sublabel: string;
   accent?: "neutral" | "primary" | "success";
 }) {
-  const styles = {
-    neutral: "border-border bg-card/70 text-foreground",
-    primary: "border-brand-accent/20 bg-brand-accent/[0.05] text-brand-accent",
-    success: "border-[#00F2B3]/20 bg-[#00F2B3]/[0.05] text-[#00774a] dark:text-[#00F2B3]",
-  } as const;
+  const hex = VALUE_HEX[accent];
   return (
-    <div className={`rounded-2xl border px-3 py-3 ${styles[accent]}`}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+    <div
+      className="relative overflow-hidden rounded-2xl border border-white/[0.06] px-3 py-3 transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+      style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
+          style={{ backgroundColor: hex }}
+        />
+      </div>
+      <p className="relative text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/80">
         {label}
       </p>
-      <p className="mt-1 text-xl font-black tracking-tight">{value}</p>
-      <p className="text-[10px] text-muted-foreground mt-0.5">{sublabel}</p>
+      <p className="relative mt-1 text-xl font-black tracking-tight" style={{ color: hex }}>
+        {value}
+      </p>
+      <p className="relative text-[10px] text-muted-foreground mt-0.5">{sublabel}</p>
     </div>
   );
 }
+
+const STAT_HEX = {
+  red: "#EA0022",
+  amber: "#F29400",
+  green: "#00F2B3",
+  neutral: "#2006F7",
+} as const;
 
 function StatPill({
   icon,
@@ -298,20 +346,26 @@ function StatPill({
   value: string;
   accent: "red" | "amber" | "green" | "neutral";
 }) {
-  const colors = {
-    red: "border-[#EA0022]/20 bg-[#EA0022]/[0.04] text-[#EA0022]",
-    amber: "border-[#F29400]/20 bg-[#F29400]/[0.04] text-[#F29400]",
-    green: "border-[#00F2B3]/20 bg-[#00F2B3]/[0.04] text-[#00F2B3]",
-    neutral: "border-border bg-muted/30 text-muted-foreground",
-  };
+  const hex = STAT_HEX[accent];
   return (
-    <div className={`rounded-2xl border px-4 py-3 ${colors[accent]}`}>
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+    <div
+      className="relative overflow-hidden rounded-2xl border border-white/[0.06] px-4 py-3 transition-all duration-200 hover:border-white/[0.12]"
+      style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
+    >
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
+          style={{ backgroundColor: hex }}
+        />
+      </div>
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        style={{ background: `linear-gradient(90deg, transparent, ${hex}28, transparent)` }}
+      />
+      <div className="relative flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/80">
         {icon} {label}
       </div>
-      <p
-        className={`text-2xl font-black mt-1 tabular-nums ${accent !== "neutral" ? colors[accent].split(" ").pop() : "text-foreground"}`}
-      >
+      <p className="relative text-2xl font-black mt-1 tabular-nums" style={{ color: hex }}>
         {value}
       </p>
     </div>

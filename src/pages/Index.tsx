@@ -1310,6 +1310,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               `Generating all reports for ${branding.customerName || "this assessment"}…`,
             );
           }}
+          tourSlot={
+            <GuidedTourButton
+              hasFiles={hasFiles}
+              hasReports={hasReports}
+              isGuest={isGuest}
+              tourCallbacks={tourCallbacks}
+            />
+          }
+          onOpenShortcuts={() => setShortcutsOpen(true)}
         />
       )}
 
@@ -1366,29 +1375,29 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         />
       </ErrorBoundary>
 
-      {/* Keyboard shortcut hint + Tours */}
-      <div
-        className={`fixed ${hasFiles && (!viewingReports || isGuest) && !isLoading && !inDiffMode ? "bottom-[68px]" : "bottom-4"} right-4 z-10 no-print flex items-center gap-2 transition-all duration-200`}
-      >
-        <GuidedTourButton
-          hasFiles={hasFiles}
-          hasReports={hasReports}
-          isGuest={isGuest}
-          tourCallbacks={tourCallbacks}
-        />
-        <button
-          onClick={() => setShortcutsOpen(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
-          title="Keyboard shortcuts (?)"
-          aria-label="Keyboard shortcuts"
-          data-tour="shortcuts-button"
-        >
-          <kbd className="inline-flex items-center justify-center w-4 h-4 rounded border border-border bg-muted text-[9px] font-mono font-bold">
-            ?
-          </kbd>
-          Shortcuts
-        </button>
-      </div>
+      {/* Keyboard shortcut hint + Tours — only when sticky bar is NOT shown */}
+      {!(hasFiles && (!viewingReports || isGuest) && !isLoading && !inDiffMode) && (
+        <div className="fixed bottom-4 right-4 z-10 no-print flex items-center gap-2">
+          <GuidedTourButton
+            hasFiles={hasFiles}
+            hasReports={hasReports}
+            isGuest={isGuest}
+            tourCallbacks={tourCallbacks}
+          />
+          <button
+            onClick={() => setShortcutsOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
+            title="Keyboard shortcuts (?)"
+            aria-label="Keyboard shortcuts"
+            data-tour="shortcuts-button"
+          >
+            <kbd className="inline-flex items-center justify-center w-4 h-4 rounded border border-border bg-muted text-[9px] font-mono font-bold">
+              ?
+            </kbd>
+            Shortcuts
+          </button>
+        </div>
+      )}
 
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>

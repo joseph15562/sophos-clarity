@@ -63,11 +63,15 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm text-[10px] text-muted-foreground hover:text-foreground hover:border-brand-accent/30 transition-colors shadow-sm"
+          className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.06] text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
+          style={{
+            background: "linear-gradient(145deg, rgba(0,242,179,0.06), rgba(0,242,179,0.02))",
+          }}
           title="Guided tours"
           aria-label="Guided tours"
         >
-          <HelpCircle className="h-3.5 w-3.5" />
+          <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 pointer-events-none bg-[#00F2B3]" />
+          <Compass className="h-3 w-3 text-[#00F2B3]" />
           Tours
         </button>
       </DropdownMenuTrigger>
