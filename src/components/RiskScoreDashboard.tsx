@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTheme } from "next-themes";
 import { HelpCircle, ShieldCheck } from "lucide-react";
 import {
   RadarChart,
@@ -11,6 +12,7 @@ import {
 } from "recharts";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
+import { ScoringMethodology } from "./ScoringMethodology";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -211,8 +213,6 @@ function GaugeRing({
   );
 }
 
-import { ScoringMethodology } from "./ScoringMethodology";
-
 export function RiskScoreDashboard({ analysisResults, projected }: Props) {
   const perFirewall = useMemo(() => {
     const entries: { label: string; result: RiskScoreResult }[] = [];
@@ -255,6 +255,10 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
   });
 
   const [showHelp, setShowHelp] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const polarGridStroke = isDark ? "rgba(255,255,255,0.16)" : "rgba(51, 65, 85, 0.32)";
+  const polarTickFill = isDark ? "rgba(226, 232, 240, 0.92)" : "rgba(30, 41, 59, 0.88)";
 
   return (
     <section className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-6 sm:p-8 space-y-6 shadow-[0_18px_50px_rgba(32,6,247,0.08)]">
@@ -372,10 +376,10 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
         <div className="relative h-72 w-full flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-              <PolarGrid stroke="rgba(255,255,255,0.06)" />
+              <PolarGrid stroke={polarGridStroke} strokeWidth={1.15} />
               <PolarAngleAxis
                 dataKey="category"
-                tick={{ fontSize: 11, fill: "rgba(180,190,220,0.75)", fontWeight: 500 }}
+                tick={{ fontSize: 11, fill: polarTickFill, fontWeight: 500 }}
               />
               <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
               {projected && (
@@ -406,15 +410,27 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
                 </linearGradient>
               </defs>
               <Tooltip
-                contentStyle={{
-                  background: "rgba(10,14,28,0.92)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 12,
-                  fontSize: 11,
-                  padding: "8px 12px",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-                  color: "#fff",
-                }}
+                contentStyle={
+                  isDark
+                    ? {
+                        background: "rgba(10,14,28,0.92)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: 12,
+                        fontSize: 11,
+                        padding: "8px 12px",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                        color: "#fff",
+                      }
+                    : {
+                        background: "rgba(255,255,255,0.96)",
+                        border: "1px solid rgba(15,23,42,0.12)",
+                        borderRadius: 12,
+                        fontSize: 11,
+                        padding: "8px 12px",
+                        boxShadow: "0 8px 24px rgba(15,23,42,0.12)",
+                        color: "#0f172a",
+                      }
+                }
                 formatter={(value: number, name: string) => [
                   `${value}%`,
                   name === "projected" ? "Projected" : "Current",

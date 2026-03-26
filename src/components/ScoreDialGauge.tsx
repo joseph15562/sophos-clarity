@@ -277,6 +277,8 @@ export function ScoreDialGauge({ analysisResults, trendSnapshot }: ScoreDialGaug
     return { aggregate, perFirewall };
   }, [analysisResults]);
 
+  const [selectedFw, setSelectedFw] = useState<string | null>(null);
+
   if (!scores.aggregate) {
     return (
       <div className="rounded-xl border border-border/70 bg-card p-5 shadow-card">
@@ -293,8 +295,6 @@ export function ScoreDialGauge({ analysisResults, trendSnapshot }: ScoreDialGaug
   const isSingle = scores.perFirewall.length === 1;
   const aggScore = "score" in scores.aggregate ? scores.aggregate.score : 0;
   const aggGrade = "grade" in scores.aggregate ? scores.aggregate.grade : "—";
-
-  const [selectedFw, setSelectedFw] = useState<string | null>(null);
 
   const activeFw = scores.perFirewall.find((fw) => fw.key === selectedFw) ?? null;
   const activeScore = activeFw ? activeFw.score : aggScore;
