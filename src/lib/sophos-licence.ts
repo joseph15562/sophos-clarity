@@ -56,29 +56,19 @@ export const MODULES: Record<ModuleId, ModuleInfo> = {
     id: "zeroDayProtection",
     label: "Zero-Day Protection",
     description: "Machine learning, sandboxing file analysis, threat intelligence",
-    features: [
-      "Machine Learning Analysis",
-      "Sandboxing File Analysis",
-      "Threat Intelligence",
-    ],
+    features: ["Machine Learning Analysis", "Sandboxing File Analysis", "Threat Intelligence"],
   },
   centralOrchestration: {
     id: "centralOrchestration",
     label: "Central Orchestration",
     description: "SD-WAN VPN orchestration, advanced reporting",
-    features: [
-      "SD-WAN VPN Orchestration",
-      "Advanced Central Reporting",
-    ],
+    features: ["SD-WAN VPN Orchestration", "Advanced Central Reporting"],
   },
   dnsProtection: {
     id: "dnsProtection",
     label: "DNS Protection",
     description: "Cloud-based DNS filtering via Sophos Central",
-    features: [
-      "Cloud DNS Filtering",
-      "DNS Security Policies",
-    ],
+    features: ["Cloud DNS Filtering", "DNS Security Policies"],
   },
 };
 
@@ -93,7 +83,13 @@ export interface LicenceSelection {
 export function getActiveModules(sel: LicenceSelection): ModuleId[] {
   if (sel.tier === "standard") return ["networkProtection", "webProtection"];
   if (sel.tier === "xstream")
-    return ["networkProtection", "webProtection", "zeroDayProtection", "centralOrchestration", "dnsProtection"];
+    return [
+      "networkProtection",
+      "webProtection",
+      "zeroDayProtection",
+      "centralOrchestration",
+      "dnsProtection",
+    ];
   return sel.modules;
 }
 
@@ -140,70 +136,99 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-admin-wan",
     category: "Device Hardening",
     title: "Admin services not exposed to WAN",
-    recommendation: "Disable HTTPS and SSH admin access on the WAN zone. Use Sophos Central for remote management.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Disable HTTPS and SSH admin access on the WAN zone. Use Sophos Central for remote management.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 10,
     evaluate: (r) => {
-      const hits = findingMatches(r.findings, /admin console|ssh accessible|management service.*exposed/i);
+      const hits = findingMatches(
+        r.findings,
+        /admin console|ssh accessible|management service.*exposed/i,
+      );
       return hits.length === 0
         ? { status: "pass", detail: "No admin services exposed to untrusted zones" }
-        : { status: "fail", detail: `${hits.length} admin service(s) exposed — disable WAN access and use Sophos Central` };
+        : {
+            status: "fail",
+            detail: `${hits.length} admin service(s) exposed — disable WAN access and use Sophos Central`,
+          };
     },
   },
   {
     id: "bp-mfa",
     category: "Device Hardening",
     title: "MFA enabled for all administrators & portals",
-    recommendation: "Turn on MFA for all administrators, VPN portal, and user portal to protect against stolen credentials.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Turn on MFA for all administrators, VPN portal, and user portal to protect against stolen credentials.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 10,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /MFA|OTP|multi.?factor/i);
       return hits.length === 0
         ? { status: "pass", detail: "MFA/OTP enabled across all detected portals" }
-        : { status: "fail", detail: `${hits.length} portal(s) without MFA — enable OTP in Authentication > MFA` };
+        : {
+            status: "fail",
+            detail: `${hits.length} portal(s) without MFA — enable OTP in Authentication > MFA`,
+          };
     },
   },
   {
     id: "bp-logging",
     category: "Visibility & Monitoring",
     title: "Logging enabled on all firewall rules",
-    recommendation: "Enable traffic logging on every firewall rule to generate log and report data for compliance and forensics.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Enable traffic logging on every firewall rule to generate log and report data for compliance and forensics.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: null,
     weight: 8,
     evaluate: (r) => {
       const hit = findingMatches(r.findings, /logging disabled/i);
       if (hit.length === 0) return { status: "pass", detail: "All rules have logging enabled" };
       const count = parseInt(hit[0].title.match(/\d+/)?.[0] ?? "1");
-      return { status: "fail", detail: `${count} rule(s) with logging disabled — enable in each rule's Logging section` };
+      return {
+        status: "fail",
+        detail: `${count} rule(s) with logging disabled — enable in each rule's Logging section`,
+      };
     },
   },
   {
     id: "bp-ssl-tls",
     category: "Encryption & Inspection",
     title: "SSL/TLS inspection (DPI) active on WAN traffic",
-    recommendation: "Create SSL/TLS Decrypt rules covering all source zones with WAN-bound firewall rules for full encrypted traffic visibility.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/RulesAndPolicies/SSL/TLSInspectionRules/",
+    recommendation:
+      "Create SSL/TLS Decrypt rules covering all source zones with WAN-bound firewall rules for full encrypted traffic visibility.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/RulesAndPolicies/SSL/TLSInspectionRules/",
     requiredModule: null,
     weight: 10,
     evaluate: (r) => {
-      if (r.inspectionPosture.totalWanRules === 0) return { status: "na", detail: "No WAN rules detected" };
+      if (r.inspectionPosture.totalWanRules === 0)
+        return { status: "na", detail: "No WAN rules detected" };
       if (!r.inspectionPosture.dpiEngineEnabled)
         return { status: "fail", detail: "No SSL/TLS Decrypt rules — DPI is completely inactive" };
       if (r.inspectionPosture.sslUncoveredZones.length > 0)
-        return { status: "warn", detail: `Decrypt rules exist but zones ${r.inspectionPosture.sslUncoveredZones.join(", ")} are uncovered` };
-      return { status: "pass", detail: `${r.inspectionPosture.sslDecryptRules} Decrypt rule(s) covering all WAN-bound zones` };
+        return {
+          status: "warn",
+          detail: `Decrypt rules exist but zones ${r.inspectionPosture.sslUncoveredZones.join(", ")} are uncovered`,
+        };
+      return {
+        status: "pass",
+        detail: `${r.inspectionPosture.sslDecryptRules} Decrypt rule(s) covering all WAN-bound zones`,
+      };
     },
   },
   {
     id: "bp-snmp",
     category: "Device Hardening",
     title: "SNMP not exposed to untrusted zones",
-    recommendation: "Disable SNMP access from WAN. If SNMP monitoring is required, restrict to LAN/management zone with SNMPv3.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Disable SNMP access from WAN. If SNMP monitoring is required, restrict to LAN/management zone with SNMPv3.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 5,
     evaluate: (r) => {
@@ -217,45 +242,61 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-any-service",
     category: "Rule Hygiene",
     title: 'Avoid "ANY" service in firewall rules',
-    recommendation: "Use specific services instead of ANY to reduce the attack surface. ANY allows all ports and protocols.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Use specific services instead of ANY to reduce the attack surface. ANY allows all ports and protocols.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: null,
     weight: 6,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /"ANY" service/i);
       return hits.length === 0
         ? { status: "pass", detail: "No rules with ANY service detected" }
-        : { status: "warn", detail: `Rules using ANY service — narrow to specific services for defence-in-depth` };
+        : {
+            status: "warn",
+            detail: `Rules using ANY service — narrow to specific services for defence-in-depth`,
+          };
     },
   },
   {
     id: "bp-disabled-rules",
     category: "Rule Hygiene",
     title: "Remove or review disabled firewall rules",
-    recommendation: "Disabled rules clutter the policy and may indicate abandoned configuration. Review and remove unused rules.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Disabled rules clutter the policy and may indicate abandoned configuration. Review and remove unused rules.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: null,
     weight: 4,
     evaluate: (r) => {
       const d = r.inspectionPosture.disabledWanRules + r.inspectionPosture.totalDisabledRules;
       if (d === 0) return { status: "pass", detail: "No disabled rules found" };
-      if (d <= 2) return { status: "warn", detail: `${d} disabled rule(s) — review if still needed` };
-      return { status: "fail", detail: `${d} disabled rules — remove abandoned rules to reduce policy complexity` };
+      if (d <= 2)
+        return { status: "warn", detail: `${d} disabled rule(s) — review if still needed` };
+      return {
+        status: "fail",
+        detail: `${d} disabled rules — remove abandoned rules to reduce policy complexity`,
+      };
     },
   },
   {
     id: "bp-broad-rules",
     category: "Rule Hygiene",
     title: "Avoid overly broad source/destination rules",
-    recommendation: "Rules with 'Any' source and 'Any' destination bypass network segmentation. Use specific zones and networks.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Rules with 'Any' source and 'Any' destination bypass network segmentation. Use specific zones and networks.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: null,
     weight: 6,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /broad source/i);
       return hits.length === 0
         ? { status: "pass", detail: "No overly broad rules detected" }
-        : { status: "warn", detail: `Broad Any→Any rules found — tighten source/dest for network segmentation` };
+        : {
+            status: "warn",
+            detail: `Broad Any→Any rules found — tighten source/dest for network segmentation`,
+          };
     },
   },
 
@@ -264,51 +305,79 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-ips",
     category: "Network Protection",
     title: "IPS policy applied to all WAN rules",
-    recommendation: "Apply an IPS policy to every firewall rule governing traffic to/from WAN for intrusion detection and prevention.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Apply an IPS policy to every firewall rule governing traffic to/from WAN for intrusion detection and prevention.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: "networkProtection",
     weight: 10,
     evaluate: (r) => {
       const { withIps, enabledWanRules } = r.inspectionPosture;
       if (enabledWanRules === 0) return { status: "na", detail: "No enabled WAN rules" };
       if (withIps >= enabledWanRules)
-        return { status: "pass", detail: `IPS applied on all ${enabledWanRules} enabled WAN rule(s)` };
+        return {
+          status: "pass",
+          detail: `IPS applied on all ${enabledWanRules} enabled WAN rule(s)`,
+        };
       const missing = enabledWanRules - withIps;
-      return { status: "fail", detail: `${missing} of ${enabledWanRules} enabled WAN rule(s) missing IPS` };
+      return {
+        status: "fail",
+        detail: `${missing} of ${enabledWanRules} enabled WAN rule(s) missing IPS`,
+      };
     },
   },
   {
     id: "bp-dos-syn-flood",
     category: "DoS & Spoof Protection",
     title: "SYN flood protection enabled",
-    recommendation: "Enable SYN flood protection under Intrusion prevention > DoS & spoof protection with recommended thresholds to mitigate volumetric attacks.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ProtectPolicies/IntrusionPrevention/DoSSpoof/",
+    recommendation:
+      "Enable SYN flood protection under Intrusion prevention > DoS & spoof protection with recommended thresholds to mitigate volumetric attacks.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ProtectPolicies/IntrusionPrevention/DoSSpoof/",
     requiredModule: null,
     weight: 8,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /syn.*flood.*disabled/i);
       const noConfig = findingMatches(r.findings, /no dos.*spoof.*protection.*config/i);
-      if (noConfig.length > 0) return { status: "warn", detail: "DoS & spoof protection configuration not found in export" };
+      if (noConfig.length > 0)
+        return {
+          status: "warn",
+          detail: "DoS & spoof protection configuration not found in export",
+        };
       return hits.length === 0
         ? { status: "pass", detail: "SYN flood protection is enabled" }
-        : { status: "fail", detail: "SYN flood protection is disabled — enable under Intrusion prevention > DoS & spoof protection" };
+        : {
+            status: "fail",
+            detail:
+              "SYN flood protection is disabled — enable under Intrusion prevention > DoS & spoof protection",
+          };
     },
   },
   {
     id: "bp-dos-spoof-prevention",
     category: "DoS & Spoof Protection",
     title: "IP spoof prevention enabled",
-    recommendation: "Enable IP spoof prevention under Intrusion prevention > DoS & spoof protection to block packets with forged source addresses.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ProtectPolicies/IntrusionPrevention/DoSSpoof/",
+    recommendation:
+      "Enable IP spoof prevention under Intrusion prevention > DoS & spoof protection to block packets with forged source addresses.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ProtectPolicies/IntrusionPrevention/DoSSpoof/",
     requiredModule: null,
     weight: 8,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /spoof.*prevention.*disabled/i);
       const noConfig = findingMatches(r.findings, /no dos.*spoof.*protection.*config/i);
-      if (noConfig.length > 0) return { status: "warn", detail: "DoS & spoof protection configuration not found in export" };
+      if (noConfig.length > 0)
+        return {
+          status: "warn",
+          detail: "DoS & spoof protection configuration not found in export",
+        };
       return hits.length === 0
         ? { status: "pass", detail: "IP spoof prevention is enabled" }
-        : { status: "fail", detail: "IP spoof prevention is disabled — enable under Intrusion prevention > DoS & spoof protection" };
+        : {
+            status: "fail",
+            detail:
+              "IP spoof prevention is disabled — enable under Intrusion prevention > DoS & spoof protection",
+          };
     },
   },
 
@@ -317,45 +386,66 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-vpn-weak-crypto",
     category: "VPN Security",
     title: "No active VPN profiles with weak encryption",
-    recommendation: "Update all active IPSec VPN profiles to use AES-128/256 with SHA-256+ and DH Group 14+. Remove DES, 3DES, MD5, SHA-1, and weak DH groups.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecProfiles/",
+    recommendation:
+      "Update all active IPSec VPN profiles to use AES-128/256 with SHA-256+ and DH Group 14+. Remove DES, 3DES, MD5, SHA-1, and weak DH groups.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecProfiles/",
     requiredModule: null,
     weight: 9,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /vpn profile.*weak encryption/i);
       return hits.length === 0
         ? { status: "pass", detail: "All active VPN profiles use strong encryption" }
-        : { status: "fail", detail: "Active VPN profiles are using weak ciphers, auth, or DH groups — update under VPN > IPsec profiles" };
+        : {
+            status: "fail",
+            detail:
+              "Active VPN profiles are using weak ciphers, auth, or DH groups — update under VPN > IPsec profiles",
+          };
     },
   },
   {
     id: "bp-vpn-pfs",
     category: "VPN Security",
     title: "Perfect Forward Secrecy enabled on active VPN profiles",
-    recommendation: "Enable PFS (DH Group 14+) on Phase 2 of all active IPSec VPN profiles to prevent retroactive decryption if a key is compromised.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecProfiles/",
+    recommendation:
+      "Enable PFS (DH Group 14+) on Phase 2 of all active IPSec VPN profiles to prevent retroactive decryption if a key is compromised.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecProfiles/",
     requiredModule: null,
     weight: 7,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /vpn profile.*without perfect forward secrecy/i);
       return hits.length === 0
         ? { status: "pass", detail: "All active VPN profiles have PFS enabled" }
-        : { status: "fail", detail: "Active VPN profiles lack PFS — enable in Phase 2 settings under VPN > IPsec profiles" };
+        : {
+            status: "fail",
+            detail:
+              "Active VPN profiles lack PFS — enable in Phase 2 settings under VPN > IPsec profiles",
+          };
     },
   },
   {
     id: "bp-vpn-cert-auth",
     category: "VPN Security",
     title: "IPSec connections use certificate authentication",
-    recommendation: "Migrate IPSec connections from pre-shared key (PSK) to digital certificate (X.509) authentication for stronger identity verification.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecConnections/",
+    recommendation:
+      "Migrate IPSec connections from pre-shared key (PSK) to digital certificate (X.509) authentication for stronger identity verification.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/VPN/IPsecConnections/",
     requiredModule: null,
     weight: 6,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /ipsec connection.*pre-shared key/i);
       return hits.length === 0
-        ? { status: "pass", detail: "All IPSec connections use certificate or RSA key authentication" }
-        : { status: "warn", detail: "IPSec connections are using pre-shared key auth — consider migrating to certificate-based authentication" };
+        ? {
+            status: "pass",
+            detail: "All IPSec connections use certificate or RSA key authentication",
+          }
+        : {
+            status: "warn",
+            detail:
+              "IPSec connections are using pre-shared key auth — consider migrating to certificate-based authentication",
+          };
     },
   },
 
@@ -363,34 +453,48 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-xops-feeds",
     category: "Active Threat Response",
     title: "Sophos X-Ops (ATP) enabled with Log & Drop",
-    recommendation: "Enable Advanced Threat Protection (Sophos X-Ops) under Protect > Advanced threat > Advanced threat protection and set the policy to 'Log and Drop'.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ATRSophosXOps/",
+    recommendation:
+      "Enable Advanced Threat Protection (Sophos X-Ops) under Protect > Advanced threat > Advanced threat protection and set the policy to 'Log and Drop'.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ATRSophosXOps/",
     requiredModule: "networkProtection",
     weight: 9,
     evaluate: (r) => {
       const atp = r.atpStatus;
       if (atp) {
         if (!atp.enabled)
-          return { status: "fail", detail: "ATP (Sophos X-Ops) is disabled — enable under Protect > Advanced threat > Advanced threat protection" };
+          return {
+            status: "fail",
+            detail:
+              "ATP (Sophos X-Ops) is disabled — enable under Protect > Advanced threat > Advanced threat protection",
+          };
         const policy = atp.policy.toLowerCase();
         if (policy.includes("log") && policy.includes("drop"))
           return { status: "pass", detail: `ATP is enabled with policy "${atp.policy}"` };
         if (policy)
-          return { status: "warn", detail: `ATP is enabled but policy is "${atp.policy}" — recommended setting is "Log and Drop"` };
+          return {
+            status: "warn",
+            detail: `ATP is enabled but policy is "${atp.policy}" — recommended setting is "Log and Drop"`,
+          };
         return { status: "pass", detail: "ATP (Sophos X-Ops) is enabled" };
       }
       const disabled = findingMatches(r.findings, /x.ops.*disabled|atp.*disabled/i);
       if (disabled.length > 0)
         return { status: "fail", detail: "Sophos X-Ops (ATP) threat protection is disabled" };
-      return { status: "warn", detail: "ATP section not found in config export — verify under Protect > Advanced threat" };
+      return {
+        status: "warn",
+        detail: "ATP section not found in config export — verify under Protect > Advanced threat",
+      };
     },
   },
   {
     id: "bp-heartbeat",
     category: "Synchronized Security",
     title: "Security Heartbeat configured",
-    recommendation: "Register the firewall with Sophos Central and enable Security Heartbeat to isolate compromised endpoints automatically.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/SophosCentral/SecurityHeartbeatOverview/",
+    recommendation:
+      "Register the firewall with Sophos Central and enable Security Heartbeat to isolate compromised endpoints automatically.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/SophosCentral/SecurityHeartbeatOverview/",
     requiredModule: "networkProtection",
     weight: 7,
     evaluate: (r) => {
@@ -400,51 +504,81 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
         if (hasHBColumns) {
           return { status: "pass", detail: "Security Heartbeat enforced on WAN rules" };
         }
-        return { status: "warn", detail: "Security Heartbeat status not in config export — verify in Sophos Central > Firewall Management" };
+        return {
+          status: "warn",
+          detail:
+            "Security Heartbeat status not in config export — verify in Sophos Central > Firewall Management",
+        };
       }
       const allMissing = hbFindings.some((f) => /not configured on any/i.test(f.title));
       if (allMissing) {
-        return { status: "fail", detail: "No WAN rules enforce Security Heartbeat — set minimum health to Green" };
+        return {
+          status: "fail",
+          detail: "No WAN rules enforce Security Heartbeat — set minimum health to Green",
+        };
       }
-      return { status: "warn", detail: `${hbFindings[0].title} — add heartbeat restrictions to remaining rules` };
+      return {
+        status: "warn",
+        detail: `${hbFindings[0].title} — add heartbeat restrictions to remaining rules`,
+      };
     },
   },
   {
     id: "bp-mdr-feeds",
     category: "Active Threat Response",
     title: "MDR threat feeds enabled",
-    recommendation: "If you have Sophos MDR, enable MDR threat feeds to receive analyst-curated threat intelligence pushed directly to the firewall.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ConfigureFeeds/MDRThreatFeeds/",
+    recommendation:
+      "If you have Sophos MDR, enable MDR threat feeds to receive analyst-curated threat intelligence pushed directly to the firewall.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ConfigureFeeds/MDRThreatFeeds/",
     requiredModule: "networkProtection",
     weight: 6,
     evaluate: (r) => {
       const hasSection = r.stats.sectionNames.some((s) => /^MDR\s*(Status|Threat)/i.test(s));
       if (!hasSection) {
-        return { status: "warn", detail: "MDR feed status not in config export — verify under Active threat response if MDR licence is active" };
+        return {
+          status: "warn",
+          detail:
+            "MDR feed status not in config export — verify under Active threat response if MDR licence is active",
+        };
       }
       const hits = findingMatches(r.findings, /MDR threat feed.*not active/i);
       return hits.length === 0
         ? { status: "pass", detail: "MDR threat feeds are active" }
-        : { status: "fail", detail: "MDR threat feed is disabled — enable under Active threat response > MDR threat feeds" };
+        : {
+            status: "fail",
+            detail:
+              "MDR threat feed is disabled — enable under Active threat response > MDR threat feeds",
+          };
     },
   },
   {
     id: "bp-ndr",
     category: "Active Threat Response",
     title: "NDR Essentials enabled for encrypted traffic analysis",
-    recommendation: "Enable NDR Essentials so the firewall sends TLS metadata and DNS queries to Sophos Cloud for AI-based threat detection without full decryption.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ConfigureFeeds/NDREssentials/",
+    recommendation:
+      "Enable NDR Essentials so the firewall sends TLS metadata and DNS queries to Sophos Cloud for AI-based threat detection without full decryption.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/ActiveThreatResponse/ConfigureFeeds/NDREssentials/",
     requiredModule: "networkProtection",
     weight: 7,
     evaluate: (r) => {
       const hasSection = r.stats.sectionNames.some((s) => /^NDR\s*(Status|Essentials)/i.test(s));
       if (!hasSection) {
-        return { status: "warn", detail: "NDR Essentials status not in config export — enable under Active threat response > NDR Essentials" };
+        return {
+          status: "warn",
+          detail:
+            "NDR Essentials status not in config export — enable under Active threat response > NDR Essentials",
+        };
       }
       const hits = findingMatches(r.findings, /NDR Essentials.*not enabled/i);
       return hits.length === 0
         ? { status: "pass", detail: "NDR Essentials is enabled for encrypted traffic analysis" }
-        : { status: "fail", detail: "NDR Essentials is disabled — enable under Active threat response > NDR Essentials" };
+        : {
+            status: "fail",
+            detail:
+              "NDR Essentials is disabled — enable under Active threat response > NDR Essentials",
+          };
     },
   },
 
@@ -453,49 +587,72 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-webfilter",
     category: "Web Protection",
     title: "Web filtering on all WAN rules (HTTP/HTTPS/ANY)",
-    recommendation: "Apply a web filter policy on every WAN-bound rule with HTTP, HTTPS, or ANY service to block malicious and non-compliant websites.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Apply a web filter policy on every WAN-bound rule with HTTP, HTTPS, or ANY service to block malicious and non-compliant websites.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: "webProtection",
     weight: 10,
     evaluate: (r) => {
       const { withWebFilter, webFilterableRules } = r.inspectionPosture;
-      if (webFilterableRules === 0) return { status: "na", detail: "No filterable WAN rules (HTTP/HTTPS/ANY)" };
+      if (webFilterableRules === 0)
+        return { status: "na", detail: "No filterable WAN rules (HTTP/HTTPS/ANY)" };
       if (withWebFilter >= webFilterableRules)
-        return { status: "pass", detail: `Web filtering on all ${webFilterableRules} applicable WAN rule(s)` };
+        return {
+          status: "pass",
+          detail: `Web filtering on all ${webFilterableRules} applicable WAN rule(s)`,
+        };
       const missing = webFilterableRules - withWebFilter;
-      return { status: "fail", detail: `${missing} of ${webFilterableRules} WAN rule(s) missing web filter policy` };
+      return {
+        status: "fail",
+        detail: `${missing} of ${webFilterableRules} WAN rule(s) missing web filter policy`,
+      };
     },
   },
   {
     id: "bp-appcontrol",
     category: "Web Protection",
     title: "Application control on WAN rules",
-    recommendation: "Apply application control policies to WAN-bound rules to identify and control application traffic (social media, P2P, etc.).",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Apply application control policies to WAN-bound rules to identify and control application traffic (social media, P2P, etc.).",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: "webProtection",
     weight: 8,
     evaluate: (r) => {
       const { withAppControl, enabledWanRules } = r.inspectionPosture;
       if (enabledWanRules === 0) return { status: "na", detail: "No enabled WAN rules" };
       if (withAppControl >= enabledWanRules)
-        return { status: "pass", detail: `App control on all ${enabledWanRules} enabled WAN rule(s)` };
+        return {
+          status: "pass",
+          detail: `App control on all ${enabledWanRules} enabled WAN rule(s)`,
+        };
       const missing = enabledWanRules - withAppControl;
-      return { status: "fail", detail: `${missing} of ${enabledWanRules} enabled WAN rule(s) without app control` };
+      return {
+        status: "fail",
+        detail: `${missing} of ${enabledWanRules} enabled WAN rule(s) without app control`,
+      };
     },
   },
   {
     id: "bp-highrisk-categories",
     category: "Web Protection",
     title: "High-risk web categories blocked",
-    recommendation: "Block high-risk web categories (malware, phishing, C&C) in all web filter policies.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Block high-risk web categories (malware, phishing, C&C) in all web filter policies.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: "webProtection",
     weight: 6,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /high-risk categor/i);
       return hits.length === 0
         ? { status: "pass", detail: "No high-risk category gaps detected" }
-        : { status: "fail", detail: "Web filter policy allows high-risk categories — block malware, phishing, and C&C sites" };
+        : {
+            status: "fail",
+            detail:
+              "Web filter policy allows high-risk categories — block malware, phishing, and C&C sites",
+          };
     },
   },
 
@@ -504,23 +661,30 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-sandboxing",
     category: "Zero-Day Protection",
     title: "Sandboxing / zero-day file analysis enabled",
-    recommendation: "Enable Sophos Sandstorm for cloud-based sandboxing of suspicious files to detect zero-day malware.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/22.0/help/en-us/webhelp/onlinehelp/AdministratorHelp/ZeroDayProtection/ZeroDayProtectionSettings/",
+    recommendation:
+      "Enable Sophos Sandstorm for cloud-based sandboxing of suspicious files to detect zero-day malware.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/22.0/help/en-us/webhelp/onlinehelp/AdministratorHelp/ZeroDayProtection/ZeroDayProtectionSettings/",
     requiredModule: "zeroDayProtection",
     weight: 9,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /sandboxing|zero-day/i);
       return hits.length === 0
         ? { status: "pass", detail: "Sandboxing / zero-day protection is active" }
-        : { status: "fail", detail: "Sandboxing not enabled — enable under Protection > Zero-day protection" };
+        : {
+            status: "fail",
+            detail: "Sandboxing not enabled — enable under Protection > Zero-day protection",
+          };
     },
   },
   {
     id: "bp-av-scanning",
     category: "Zero-Day Protection",
     title: "Virus scanning enabled for all protocols",
-    recommendation: "Enable AV scanning for HTTP, HTTPS, FTP, SMTP, POP3, and IMAP in the DPI engine.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
+    recommendation:
+      "Enable AV scanning for HTTP, HTTPS, FTP, SMTP, POP3, and IMAP in the DPI engine.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/RuleBestPractice/",
     requiredModule: "zeroDayProtection",
     weight: 7,
     evaluate: (r) => {
@@ -536,12 +700,17 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-central-mgmt",
     category: "Central Orchestration",
     title: "Firewall managed via Sophos Central",
-    recommendation: "Register with Sophos Central for centralised management, reporting, and firmware updates.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Register with Sophos Central for centralised management, reporting, and firmware updates.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: "centralOrchestration",
     weight: 6,
     evaluate: () => {
-      return { status: "warn", detail: "Central management status not in config export — verify in Sophos Central" };
+      return {
+        status: "warn",
+        detail: "Central management status not in config export — verify in Sophos Central",
+      };
     },
   },
 
@@ -550,12 +719,18 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-dns-protection",
     category: "DNS Protection",
     title: "DNS Protection configured",
-    recommendation: "Configure Sophos DNS Protection IPs as the firewall's upstream DNS servers to filter malicious domains at the DNS layer.",
-    reference: "https://docs.sophos.com/central/customer/help/en-us/ManageYourProducts/DNSProtection/NetworkSetup/ConfigureSophosFirewallToUseDNSProtection/",
+    recommendation:
+      "Configure Sophos DNS Protection IPs as the firewall's upstream DNS servers to filter malicious domains at the DNS layer.",
+    reference:
+      "https://docs.sophos.com/central/customer/help/en-us/ManageYourProducts/DNSProtection/NetworkSetup/ConfigureSophosFirewallToUseDNSProtection/",
     requiredModule: "dnsProtection",
     weight: 8,
     evaluate: () => {
-      return { status: "warn", detail: "DNS Protection config not in export — verify DNS servers point to Sophos DNS IPs in Network > DNS" };
+      return {
+        status: "warn",
+        detail:
+          "DNS Protection config not in export — verify DNS servers point to Sophos DNS IPs in Network > DNS",
+      };
     },
   },
 
@@ -564,105 +739,141 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-password-complexity",
     category: "Device Hardening",
     title: "Password complexity enforced",
-    recommendation: "Enable password complexity with minimum length 10, alphabetic, numeric, and special characters.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Enable password complexity with minimum length 10, alphabetic, numeric, and special characters.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 8,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /password complexity/i);
       return hits.length === 0
         ? { status: "pass", detail: "Password complexity requirements are enforced" }
-        : { status: "fail", detail: "Password complexity not enabled — weak passwords increase brute-force risk" };
+        : {
+            status: "fail",
+            detail: "Password complexity not enabled — weak passwords increase brute-force risk",
+          };
     },
   },
   {
     id: "bp-login-lockout",
     category: "Device Hardening",
     title: "Brute-force login protection enabled",
-    recommendation: "Enable login lockout after 5 failed attempts to prevent brute-force attacks against the admin console.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Enable login lockout after 5 failed attempts to prevent brute-force attacks against the admin console.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 8,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /brute.?force|login.*lockout/i);
       return hits.length === 0
         ? { status: "pass", detail: "Login brute-force protection is active" }
-        : { status: "fail", detail: "Login lockout disabled — unlimited password attempts possible" };
+        : {
+            status: "fail",
+            detail: "Login lockout disabled — unlimited password attempts possible",
+          };
     },
   },
   {
     id: "bp-login-disclaimer",
     category: "Device Hardening",
     title: "Login disclaimer enabled",
-    recommendation: "Enable a login disclaimer banner to provide a legal warning before authentication (CIS requirement).",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Enable a login disclaimer banner to provide a legal warning before authentication (CIS requirement).",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 4,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /login disclaimer/i);
       return hits.length === 0
         ? { status: "pass", detail: "Login disclaimer is enabled" }
-        : { status: "fail", detail: "No login disclaimer — add a legal warning banner for CIS/ISO compliance" };
+        : {
+            status: "fail",
+            detail: "No login disclaimer — add a legal warning banner for CIS/ISO compliance",
+          };
     },
   },
   {
     id: "bp-hotfix",
     category: "Device Hardening",
     title: "Automatic hotfix installation enabled",
-    recommendation: "Enable automatic hotfix installation so critical security patches are applied between firmware releases.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Enable automatic hotfix installation so critical security patches are applied between firmware releases.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 9,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /hotfix/i);
       return hits.length === 0
         ? { status: "pass", detail: "Automatic hotfix installation is enabled" }
-        : { status: "fail", detail: "Hotfix auto-install disabled — critical security patches will not be applied automatically" };
+        : {
+            status: "fail",
+            detail:
+              "Hotfix auto-install disabled — critical security patches will not be applied automatically",
+          };
     },
   },
   {
     id: "bp-pattern-update",
     category: "Device Hardening",
     title: "Pattern auto-update enabled",
-    recommendation: "Enable automatic pattern/signature updates at least every 2 hours for IPS, AV, and application control.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Enable automatic pattern/signature updates at least every 2 hours for IPS, AV, and application control.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 9,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /pattern auto.?update/i);
       return hits.length === 0
         ? { status: "pass", detail: "Pattern auto-update is enabled" }
-        : { status: "fail", detail: "Pattern updates disabled — IPS/AV signatures will become stale" };
+        : {
+            status: "fail",
+            detail: "Pattern updates disabled — IPS/AV signatures will become stale",
+          };
     },
   },
   {
     id: "bp-backup",
     category: "Visibility & Monitoring",
     title: "Automated backups scheduled",
-    recommendation: "Schedule automated backups (daily or weekly) to email or Sophos Central for disaster recovery.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Schedule automated backups (daily or weekly) to email or Sophos Central for disaster recovery.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 5,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /backup.*not scheduled|automated backup/i);
       return hits.length === 0
         ? { status: "pass", detail: "Automated backups are configured" }
-        : { status: "fail", detail: "No scheduled backups — configure daily/weekly backups for disaster recovery" };
+        : {
+            status: "fail",
+            detail: "No scheduled backups — configure daily/weekly backups for disaster recovery",
+          };
     },
   },
   {
     id: "bp-notification",
     category: "Visibility & Monitoring",
     title: "Notification emails configured",
-    recommendation: "Configure email notifications for security events so administrators are alerted to threats and system issues.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Configure email notifications for security events so administrators are alerted to threats and system issues.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 4,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /notification email/i);
       return hits.length === 0
         ? { status: "pass", detail: "Notification email server is configured" }
-        : { status: "fail", detail: "No notification email — security alerts will not reach administrators" };
+        : {
+            status: "fail",
+            detail: "No notification email — security alerts will not reach administrators",
+          };
     },
   },
   {
@@ -670,22 +881,28 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     category: "Device Hardening",
     title: "NTP time synchronisation configured",
     recommendation: "Enable NTP for accurate time on logs, certificates, and forensic analysis.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 4,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /ntp.*not configured/i);
       return hits.length === 0
         ? { status: "pass", detail: "NTP time synchronisation is active" }
-        : { status: "fail", detail: "NTP not configured — inaccurate time breaks log correlation and certificates" };
+        : {
+            status: "fail",
+            detail: "NTP not configured — inaccurate time breaks log correlation and certificates",
+          };
     },
   },
   {
     id: "bp-auth-encryption",
     category: "Device Hardening",
     title: "Authentication server connections encrypted",
-    recommendation: "Use SSL (LDAPS port 636) or STARTTLS for all LDAP/AD authentication servers to protect credentials in transit.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
+    recommendation:
+      "Use SSL (LDAPS port 636) or STARTTLS for all LDAP/AD authentication servers to protect credentials in transit.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/StartupHelp/SecurityBestPractices/SecurityHardening/",
     requiredModule: null,
     weight: 7,
     evaluate: (r) => {
@@ -699,15 +916,49 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-sync-app-control",
     category: "Synchronized Security",
     title: "Synchronized Application Control enabled",
-    recommendation: "Enable Synchronized Application Control to identify unknown application traffic using endpoint heartbeat data.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/SophosCentral/SecurityHeartbeatOverview/",
+    recommendation:
+      "Enable Synchronized Application Control to identify unknown application traffic using endpoint heartbeat data.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/SophosCentral/SecurityHeartbeatOverview/",
     requiredModule: "networkProtection",
     weight: 5,
     evaluate: (r) => {
       const hits = findingMatches(r.findings, /synchronized application control/i);
       return hits.length === 0
         ? { status: "pass", detail: "Synchronized Application Control is enabled" }
-        : { status: "fail", detail: "Synchronized App Control disabled — unknown apps won't be identified via heartbeat" };
+        : {
+            status: "fail",
+            detail:
+              "Synchronized App Control disabled — unknown apps won't be identified via heartbeat",
+          };
+    },
+  },
+
+  /* ---------- Central Firewall Reporting / Log Retention ---------- */
+  {
+    id: "bp-cfr-log-retention",
+    category: "Visibility & Monitoring",
+    title: "Central Firewall Reporting with adequate log retention",
+    recommendation:
+      "Ensure Sophos Central Firewall Reporting (CFR) is active with Xstream licence (365-day retention) or forward logs via syslog to a SIEM with ≥ 180-day retention to meet PSN/CAF requirements.",
+    reference:
+      "https://docs.sophos.com/central/customer/help/en-us/LicensingGuide/FirewallLicenses/SFOSLicensingModel/",
+    requiredModule: null,
+    weight: 8,
+    evaluate: (r) => {
+      const noFwd = findingMatches(r.findings, /no external.*log.*forwarding/i);
+      if (noFwd.length > 0) {
+        return {
+          status: "fail",
+          detail:
+            "No external log forwarding configured — local-only storage has no guaranteed retention. Enable Sophos Central (Xstream for 365-day CFR) or add syslog to a SIEM.",
+        };
+      }
+      return {
+        status: "pass",
+        detail:
+          "External log forwarding is active (Sophos Central and/or syslog). Verify retention meets your framework requirements (e.g. 180 days for PSN/CAF).",
+      };
     },
   },
 
@@ -716,8 +967,10 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
     id: "bp-ha-configured",
     category: "Resilience",
     title: "High Availability (HA) configured",
-    recommendation: "Deploy a secondary Sophos firewall in HA active-passive or active-active mode for hardware redundancy.",
-    reference: "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/SystemServices/HighAvailability/",
+    recommendation:
+      "Deploy a secondary Sophos firewall in HA active-passive or active-active mode for hardware redundancy.",
+    reference:
+      "https://docs.sophos.com/nsg/sophos-firewall/21.5/help/en-us/webhelp/onlinehelp/AdministratorHelp/SystemServices/HighAvailability/",
     requiredModule: null,
     weight: 6,
     evaluate: (r) => {
@@ -725,9 +978,11 @@ export const BEST_PRACTICE_CHECKS: BestPracticeCheck[] = [
       const noHA = findingMatches(r.findings, /no high availability/i);
       if (noHA.length > 0)
         return { status: "warn", detail: "No HA configuration detected — single point of failure" };
-      if (haInfo.length > 0)
-        return { status: "pass", detail: haInfo[0].detail };
-      return { status: "unknown", detail: "HA configuration could not be determined from the export" };
+      if (haInfo.length > 0) return { status: "pass", detail: haInfo[0].detail };
+      return {
+        status: "unknown",
+        detail: "HA configuration could not be determined from the export",
+      };
     },
   },
 ];
@@ -769,9 +1024,15 @@ export function computeSophosBPScore(
   const activeModules = getActiveModules(licence);
 
   const results: BPCheckResult[] = BEST_PRACTICE_CHECKS.map((check) => {
-    const applicable = check.requiredModule === null || activeModules.includes(check.requiredModule);
+    const applicable =
+      check.requiredModule === null || activeModules.includes(check.requiredModule);
     if (!applicable) {
-      return { check, status: "na" as CheckStatus, detail: `Requires ${MODULES[check.requiredModule!].label} module`, applicable: false };
+      return {
+        check,
+        status: "na" as CheckStatus,
+        detail: `Requires ${MODULES[check.requiredModule!].label} module`,
+        applicable: false,
+      };
     }
     if (seExcludedBpCheckIds?.has(check.id)) {
       const scopeDetail =
@@ -790,7 +1051,10 @@ export function computeSophosBPScore(
     const detail = evaluated.detail;
     if (status === ("unknown" as CheckStatus)) status = "warn";
 
-    if (centralAutoChecks?.has(check.id) && (status === "warn" || status === ("unknown" as CheckStatus))) {
+    if (
+      centralAutoChecks?.has(check.id) &&
+      (status === "warn" || status === ("unknown" as CheckStatus))
+    ) {
       const detailMsg =
         check.id === "bp-ha-configured"
           ? "HA cluster confirmed in Sophos Central for the linked firewall (export did not include HA details)"
@@ -809,7 +1073,13 @@ export function computeSophosBPScore(
 
     const overridden = manualOverrides?.has(check.id) && status === "warn";
     if (overridden) {
-      return { check, status: "pass" as CheckStatus, detail: `Manually confirmed compliant — ${detail}`, applicable: true, manualOverride: true };
+      return {
+        check,
+        status: "pass" as CheckStatus,
+        detail: `Manually confirmed compliant — ${detail}`,
+        applicable: true,
+        manualOverride: true,
+      };
     }
     return { check, status, detail, applicable: true };
   });

@@ -43,11 +43,13 @@ function mockStats(overrides: Partial<ConfigStats> = {}): ConfigStats {
   };
 }
 
-function mockAnalysisResult(overrides: {
-  stats?: Partial<ConfigStats>;
-  inspectionPosture?: Partial<InspectionPosture>;
-  findings?: AnalysisResult["findings"];
-} = {}): AnalysisResult {
+function mockAnalysisResult(
+  overrides: {
+    stats?: Partial<ConfigStats>;
+    inspectionPosture?: Partial<InspectionPosture>;
+    findings?: AnalysisResult["findings"];
+  } = {},
+): AnalysisResult {
   const stats = mockStats(overrides.stats);
   const inspectionPosture = mockInspectionPosture(overrides.inspectionPosture);
   const findings = overrides.findings ?? [];
@@ -95,7 +97,9 @@ describe("mapToFramework", () => {
       const result = mockAnalysisResult({ findings: [] });
       const mapping = mapToFramework("NCSC Guidelines", result);
       const loggingControl = mapping.controls.find((c) => c.controlName === "Audit Logging");
-      const mfaControl = mapping.controls.find((c) => c.controlName === "Multi-Factor Authentication");
+      const mfaControl = mapping.controls.find(
+        (c) => c.controlName === "Multi-Factor Authentication",
+      );
       expect(loggingControl?.status).toBe("pass");
       expect(mfaControl?.status).toBe("pass");
     });
@@ -131,7 +135,9 @@ describe("mapToFramework", () => {
         ],
       });
       const mapping = mapToFramework("NCSC Guidelines", result);
-      const mfaControl = mapping.controls.find((c) => c.controlName === "Multi-Factor Authentication");
+      const mfaControl = mapping.controls.find(
+        (c) => c.controlName === "Multi-Factor Authentication",
+      );
       expect(mfaControl?.status).toBe("fail");
     });
 
@@ -148,7 +154,9 @@ describe("mapToFramework", () => {
         ],
       });
       const mapping = mapToFramework("NCSC Guidelines", result);
-      const adminControl = mapping.controls.find((c) => c.controlName === "Admin Access Restriction");
+      const adminControl = mapping.controls.find(
+        (c) => c.controlName === "Admin Access Restriction",
+      );
       expect(adminControl?.status).toBe("fail");
     });
 
@@ -170,7 +178,9 @@ describe("mapToFramework", () => {
         ],
       });
       const mapping = mapToFramework("NCSC Guidelines", result);
-      const webFilterControl = mapping.controls.find((c) => c.controlName === "Web Content Filtering");
+      const webFilterControl = mapping.controls.find(
+        (c) => c.controlName === "Web Content Filtering",
+      );
       expect(webFilterControl?.status).toBe("fail");
     });
 
@@ -215,7 +225,10 @@ describe("findingToFrameworks", () => {
 
   it("maps SSL/TLS inspection finding to frameworks with dpiEngine or sslInspection", () => {
     const frameworks = ["NCSC Guidelines", "DfE / KCSIE", "ISO 27001"];
-    const result = findingToFrameworks("No SSL/TLS inspection rules configured (DPI inactive)", frameworks);
+    const result = findingToFrameworks(
+      "No SSL/TLS inspection rules configured (DPI inactive)",
+      frameworks,
+    );
     expect(result.length).toBeGreaterThan(0);
     expect(result).toContain("NCSC Guidelines");
     expect(result).toContain("DfE / KCSIE");
@@ -249,5 +262,65 @@ describe("findingToFrameworks", () => {
     const result = findingToFrameworks("5 rules with logging disabled", frameworks);
     expect(result).toContain("NCSC Guidelines");
     expect(result).toContain("SOX");
+  });
+
+  it("maps external log forwarding finding to PSN and NCSC CAF", () => {
+    const frameworks = ["PSN", "NCSC CAF", "NCSC Guidelines"];
+    const result = findingToFrameworks("No external log forwarding configured", frameworks);
+    expect(result).toContain("PSN");
+    expect(result).toContain("NCSC CAF");
+    expect(result).toContain("NCSC Guidelines");
+  });
+});
+
+describe("PSN and NCSC CAF frameworks", () => {
+  it("NCSC CAF includes cfrLogRetention control", () => {
+    const result = mockAnalysisResult();
+    const mapping = mapToFramework("NCSC CAF", result);
+    expect(mapping.framework).toBe("NCSC CAF");
+    const cfr = mapping.controls.find((c) => c.controlName === "Log Retention (180-day minimum)");
+    expect(cfr).toBeDefined();
+  });
+
+  it("PSN includes cfrLogRetention control", () => {
+    const result = mockAnalysisResult();
+    const mapping = mapToFramework("PSN", result);
+    expect(mapping.framework).toBe("PSN");
+    const cfr = mapping.controls.find((c) => c.controlName === "Log Retention (180-day minimum)");
+    expect(cfr).toBeDefined();
+  });
+
+  it("cfrLogRetention fails when no external log forwarding finding exists", () => {
+    const result = mockAnalysisResult({
+      findings: [
+        {
+          id: "f1",
+          severity: "medium",
+          title: "No external log forwarding configured",
+          detail: "No syslog server or Sophos Central management was detected.",
+          section: "Logging & Monitoring",
+          evidence: "No Syslog Servers section found and firewall is not Central-managed",
+        },
+      ],
+    });
+    const mapping = mapToFramework("PSN", result);
+    const cfr = mapping.controls.find((c) => c.controlName === "Log Retention (180-day minimum)");
+    expect(cfr?.status).toBe("fail");
+    expect(cfr?.relatedFindings).toContain("f1");
+  });
+
+  it("cfrLogRetention passes when no log forwarding findings (syslog or Central active)", () => {
+    const result = mockAnalysisResult({ findings: [] });
+    const mapping = mapToFramework("NCSC CAF", result);
+    const cfr = mapping.controls.find((c) => c.controlName === "Log Retention (180-day minimum)");
+    expect(cfr?.status).toBe("pass");
+  });
+
+  it("PSN summary counts are correct", () => {
+    const result = mockAnalysisResult();
+    const mapping = mapToFramework("PSN", result);
+    const total =
+      mapping.summary.pass + mapping.summary.partial + mapping.summary.fail + mapping.summary.na;
+    expect(total).toBe(mapping.controls.length);
   });
 });

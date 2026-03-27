@@ -48,9 +48,9 @@ export function ClientPortalView({
   const latestGrade = latest?.grade ?? "—";
 
   return (
-    <div className="min-h-screen bg-muted/20">
-      {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4">
+    <div className="min-h-full bg-background text-foreground">
+      {/* Header — same canvas as body in light mode (avoids white bar on gray sheet) */}
+      <header className="border-b border-border/70 bg-background px-6 py-4 dark:bg-card/40 dark:border-border/50">
         <h1 className="text-lg font-display font-bold text-foreground">{customerName}</h1>
         <p className="text-xs text-muted-foreground mt-0.5">Firewall Configuration Assessment</p>
       </header>

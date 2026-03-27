@@ -61,13 +61,24 @@ export async function sophosFetchTenants(token: string, identity: SophosIdentity
     const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
     let name = "(This tenant)";
     try {
-      const tenantList = await sophosFetchAllPages(
-        `${apiHost}/organization/v1/tenants`, token,
-        { "X-Tenant-ID": identity.id }, 1,
-      ) as Array<{ id: string; name?: string; showAs?: string }>;
-      const self = tenantList?.find((t) => t.id === identity.id);
-      if (self && (self.showAs ?? self.name)) name = (self.showAs ?? self.name) as string;
-    } catch { /* optional name lookup */ }
+      const acctRes = await fetch(`${apiHost}/account-info/v1/account-info`, {
+        headers: { Authorization: `Bearer ${token}`, "X-Tenant-ID": identity.id },
+      });
+      if (acctRes.ok) {
+        const acctInfo = await acctRes.json() as { name?: string; showAs?: string };
+        if (acctInfo.showAs || acctInfo.name) name = (acctInfo.showAs ?? acctInfo.name) as string;
+      }
+    } catch { /* account-info not available */ }
+    if (name === "(This tenant)") {
+      try {
+        const tenantList = await sophosFetchAllPages(
+          `${apiHost}/organization/v1/tenants`, token,
+          { "X-Tenant-ID": identity.id }, 1,
+        ) as Array<{ id: string; name?: string; showAs?: string }>;
+        const self = tenantList?.find((t) => t.id === identity.id);
+        if (self && (self.showAs ?? self.name)) name = (self.showAs ?? self.name) as string;
+      } catch { /* optional name lookup */ }
+    }
     return [{ id: identity.id, name, apiHost }];
   }
   const multiHeader = identity.idType === "partner"

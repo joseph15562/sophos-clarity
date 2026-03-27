@@ -360,15 +360,25 @@ serve(async (req) => {
           const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
           let name = "(This tenant)";
           try {
-            const tenantList = await fetchAllPages(
-              `${apiHost}/organization/v1/tenants`,
+            const acctInfo = await sophosGet(
+              `${apiHost}/account-info/v1/account-info`,
               token,
               { "X-Tenant-ID": identity.id },
-              1,
-            ) as Array<{ id: string; name?: string; showAs?: string }>;
-            const self = tenantList?.find((t) => t.id === identity.id);
-            if (self && (self.showAs ?? self.name)) name = (self.showAs ?? self.name) as string;
-          } catch (_) { /* optional name */ }
+            ) as { name?: string; showAs?: string };
+            if (acctInfo.showAs || acctInfo.name) name = (acctInfo.showAs ?? acctInfo.name) as string;
+          } catch (_) { /* account-info not available */ }
+          if (name === "(This tenant)") {
+            try {
+              const tenantList = await fetchAllPages(
+                `${apiHost}/organization/v1/tenants`,
+                token,
+                { "X-Tenant-ID": identity.id },
+                1,
+              ) as Array<{ id: string; name?: string; showAs?: string }>;
+              const self = tenantList?.find((t) => t.id === identity.id);
+              if (self && (self.showAs ?? self.name)) name = (self.showAs ?? self.name) as string;
+            } catch (_) { /* optional name */ }
+          }
           return json({
             items: [{
               id: identity.id,
@@ -539,17 +549,32 @@ serve(async (req) => {
         const identity = await whoami(token);
         const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
         let tenantName = "(This tenant)";
+
+        // Try /account-info/v1/account-info for the company display name
         try {
-          const tenantList = await fetchAllPages(
-            `${apiHost}/organization/v1/tenants`,
+          const acctInfo = await sophosGet(
+            `${apiHost}/account-info/v1/account-info`,
             token,
             { "X-Tenant-ID": identity.id },
-            1,
-          ) as Array<{ id: string; name?: string; showAs?: string }>;
-          const self = tenantList?.find((t) => t.id === identity.id);
-          if (self && (self.showAs ?? self.name)) tenantName = (self.showAs ?? self.name) as string;
+          ) as { name?: string; showAs?: string };
+          if (acctInfo.showAs || acctInfo.name) tenantName = (acctInfo.showAs ?? acctInfo.name) as string;
         } catch (_) {
-          /* whoami does not return tenant display name; org API may not be available for tenant-type */
+          /* account-info not available — try org API as fallback */
+        }
+
+        if (tenantName === "(This tenant)") {
+          try {
+            const tenantList = await fetchAllPages(
+              `${apiHost}/organization/v1/tenants`,
+              token,
+              { "X-Tenant-ID": identity.id },
+              1,
+            ) as Array<{ id: string; name?: string; showAs?: string }>;
+            const self = tenantList?.find((t) => t.id === identity.id);
+            if (self && (self.showAs ?? self.name)) tenantName = (self.showAs ?? self.name) as string;
+          } catch (_) {
+            /* org API not available for tenant-type credentials */
+          }
         }
         const tenantItem = {
           id: identity.id,

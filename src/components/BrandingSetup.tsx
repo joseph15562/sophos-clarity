@@ -124,6 +124,8 @@ export const ALL_FRAMEWORKS = [
   "GDPR",
   "Cyber Essentials / CE+",
   "NCSC Guidelines",
+  "NCSC CAF",
+  "PSN",
   "DfE / KCSIE",
   "ISO 27001",
   "PCI DSS",
@@ -183,9 +185,11 @@ function getDefaultFrameworks(
       if (isUS) fw.push("CIPA");
       break;
     case "Healthcare":
+      if (isUK) fw.push("NCSC CAF");
       if (isUS) fw.push("HIPAA", "HITECH");
       break;
     case "Government":
+      if (isUK) fw.push("NCSC CAF", "PSN");
       if (isUS) fw.push("FedRAMP", "CMMC");
       break;
     case "Financial Services":
@@ -194,13 +198,16 @@ function getDefaultFrameworks(
       break;
     case "Operational Technology":
       fw.push("IEC 62443", "NIST 800-82");
+      if (isUK) fw.push("NCSC CAF");
       break;
     case "Critical Infrastructure":
+      if (isUK) fw.push("NCSC CAF");
       if (isEU) fw.push("NIS2");
       if (isUS) fw.push("NERC CIP");
       break;
     case "Defence":
       fw.push("MOD Cyber / ITAR", "CMMC");
+      if (isUK) fw.push("NCSC CAF");
       break;
     case "Retail & Hospitality":
       fw.push("PCI DSS");

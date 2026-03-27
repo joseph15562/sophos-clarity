@@ -13,7 +13,16 @@ import {
   SlidersHorizontal,
   Cpu,
   Shield,
+  Monitor,
+  Users,
+  GitCompare,
+  FileText,
+  BarChart3,
+  BookOpen,
+  Code2,
+  LayoutDashboard,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -290,6 +299,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { user, org, isGuest, signOut } = useAuth();
+  const location = useLocation();
 
   const showContext = hasFiles || customerName || selectedFrameworks.length > 0;
   const isLoginShell = isGuest && !showContext;
@@ -409,6 +419,39 @@ export function AppHeader({
           </Button>
         </div>
       </header>
+
+      {!isGuest && org && (
+        <nav className="border-b border-[#10037C]/15 bg-[linear-gradient(90deg,#001030_0%,#001440_42%,#0D0268_100%)] no-print">
+          <div className="max-w-[1320px] mx-auto px-4 md:px-6 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+            {[
+              { to: "/", icon: LayoutDashboard, label: "Assess" },
+              { to: "/command", icon: Monitor, label: "Fleet" },
+              { to: "/customers", icon: Users, label: "Customers" },
+              { to: "/reports", icon: FileText, label: "Reports" },
+              { to: "/insights", icon: BarChart3, label: "Insights" },
+              { to: "/drift", icon: GitCompare, label: "Drift" },
+              { to: "/playbooks", icon: BookOpen, label: "Playbooks" },
+              { to: "/api", icon: Code2, label: "API" },
+            ].map(({ to, icon: Icon, label }) => {
+              const active = location.pathname === to;
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium transition-colors whitespace-nowrap ${
+                    active
+                      ? "text-white border-b-2 border-[#00EDFF]"
+                      : "text-[#6A889B] hover:text-white border-b-2 border-transparent"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
 
       {showContext && (
         <div className="border-b border-border/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(180deg,rgba(11,16,28,0.92),rgba(14,20,34,0.92))] no-print hidden sm:block backdrop-blur-sm">

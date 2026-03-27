@@ -416,12 +416,17 @@ export function AgentFleetPanel({
   }, [loadAgents]);
 
   const grouped = useMemo(() => {
+    const resolveName = (raw: string | null) => {
+      if (!raw) return "Unassigned";
+      if (/^\s*\(this tenant\)\s*$/i.test(raw)) return org?.name || raw;
+      return raw;
+    };
     const filtered = filterTenantName
-      ? agents.filter((a) => (a.tenant_name || "Unassigned") === filterTenantName)
+      ? agents.filter((a) => resolveName(a.tenant_name) === filterTenantName)
       : agents;
     const map = new Map<string, Agent[]>();
     for (const a of filtered) {
-      const key = a.tenant_name || "Unassigned";
+      const key = resolveName(a.tenant_name);
       const list = map.get(key) ?? [];
       list.push(a);
       map.set(key, list);
@@ -429,7 +434,7 @@ export function AgentFleetPanel({
     return Array.from(map.entries()).sort(([a], [b]) =>
       a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b),
     );
-  }, [agents, filterTenantName]);
+  }, [agents, filterTenantName, org?.name]);
 
   useEffect(() => {
     if (grouped.length === 1) {

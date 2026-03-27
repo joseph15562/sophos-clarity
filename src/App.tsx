@@ -17,6 +17,13 @@ const SharedHealthCheck = lazy(() => import("./pages/SharedHealthCheck"));
 const ConfigUpload = lazy(() => import("./pages/ConfigUpload"));
 const TeamInviteAccept = lazy(() => import("./pages/TeamInviteAccept"));
 const ThemePreview = lazy(() => import("./pages/ThemePreview"));
+const FleetCommand = lazy(() => import("./pages/FleetCommand"));
+const CustomerManagement = lazy(() => import("./pages/CustomerManagement"));
+const DriftMonitor = lazy(() => import("./pages/DriftMonitor"));
+const ReportCentre = lazy(() => import("./pages/ReportCentre"));
+const PortfolioInsights = lazy(() => import("./pages/PortfolioInsights"));
+const PlaybookLibrary = lazy(() => import("./pages/PlaybookLibrary"));
+const ApiHub = lazy(() => import("./pages/ApiHub"));
 
 function FocusReset() {
   const location = useLocation();
@@ -72,6 +79,13 @@ const App = () => (
                 <Route path="/upload/:token" element={<ConfigUpload />} />
                 <Route path="/team-invite/:token" element={<TeamInviteAccept />} />
                 <Route path="/preview" element={<ThemePreview />} />
+                <Route path="/command" element={<FleetCommand />} />
+                <Route path="/customers" element={<CustomerManagement />} />
+                <Route path="/drift" element={<DriftMonitor />} />
+                <Route path="/reports" element={<ReportCentre />} />
+                <Route path="/insights" element={<PortfolioInsights />} />
+                <Route path="/playbooks" element={<PlaybookLibrary />} />
+                <Route path="/api" element={<ApiHub />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

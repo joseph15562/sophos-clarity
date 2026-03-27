@@ -602,8 +602,8 @@ export function ManagementDrawer({
                       Client View
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-                    <div className="min-h-[400px]">
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-border bg-background p-0 text-foreground shadow-2xl">
+                    <div className="min-h-[400px] bg-background">
                       <ClientPortalView
                         customerName={customerName || "Customer"}
                         assessments={clientViewAssessments}

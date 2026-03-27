@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTheme } from "next-themes";
 import { TrendingUp, Download } from "lucide-react";
 import { toPng } from "html-to-image";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
@@ -28,6 +29,25 @@ export function ScoreTrendChart({
   const [selectedCategory, setSelectedCategory] = useState<string>(CATEGORY_OVERALL);
   const [exporting, setExporting] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const gridLineStroke = isDark ? "rgba(255,255,255,0.16)" : "rgba(51, 65, 85, 0.30)";
+  const axisLabelFill = isDark ? "rgba(226, 232, 240, 0.88)" : "rgba(30, 41, 59, 0.82)";
+  const dotOutlineStroke = isDark ? "rgba(241, 245, 249, 0.9)" : "rgba(15, 23, 42, 0.85)";
+
+  const chartSurfaceStyle = useMemo(
+    () =>
+      isDark
+        ? {
+            background: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
+            boxShadow: "0 12px 40px rgba(32,6,247,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
+          }
+        : {
+            background: "linear-gradient(145deg, rgba(255,255,255,0.99), rgba(247,249,255,0.96))",
+            boxShadow: "0 8px 28px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.98)",
+          },
+    [isDark],
+  );
 
   useEffect(() => {
     if (propData) {
@@ -101,7 +121,7 @@ export function ScoreTrendChart({
     return (
       <div
         className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 animate-pulse"
-        style={{ background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))" }}
+        style={chartSurfaceStyle}
       >
         <div className="h-4 bg-white/80 dark:bg-white/[0.06] rounded w-1/3 mb-3" />
         <div className="h-36 bg-white/80 dark:bg-white/[0.06] rounded-xl" />
@@ -113,7 +133,7 @@ export function ScoreTrendChart({
     return (
       <div
         className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 text-center space-y-2"
-        style={{ background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(0,237,255,0.02))" }}
+        style={chartSurfaceStyle}
       >
         <TrendingUp className="h-8 w-8 mx-auto text-muted-foreground/30" />
         <p className="text-xs text-muted-foreground">
@@ -183,23 +203,29 @@ export function ScoreTrendChart({
   return (
     <div
       ref={chartRef}
-      className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-5 sm:p-6 space-y-4 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] hover:shadow-[0_8px_40px_rgba(32,6,247,0.12)]"
-      style={{
-        background: "linear-gradient(145deg, rgba(90,0,255,0.07), rgba(0,237,255,0.025))",
-        boxShadow: "0 12px 40px rgba(32,6,247,0.06), inset 0 1px 0 rgba(255,255,255,0.04)",
-      }}
+      className={`group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-5 sm:p-6 space-y-4 transition-all duration-200 hover:border-slate-900/[0.14] dark:hover:border-white/[0.10] ${
+        isDark
+          ? "hover:shadow-[0_8px_40px_rgba(32,6,247,0.12)]"
+          : "hover:shadow-[0_12px_32px_rgba(15,23,42,0.07)]"
+      }`}
+      style={chartSurfaceStyle}
     >
       {/* Corner glow */}
       <div
-        className="absolute -top-10 -right-10 h-28 w-28 rounded-full blur-[50px] opacity-20 transition-opacity duration-300 group-hover:opacity-35 pointer-events-none"
+        className={`absolute -top-10 -right-10 h-28 w-28 rounded-full blur-[50px] pointer-events-none transition-opacity duration-300 ${
+          isDark
+            ? "opacity-20 group-hover:opacity-[0.35]"
+            : "opacity-[0.08] group-hover:opacity-[0.14]"
+        }`}
         style={{ background: "radial-gradient(circle, #5A00FF 0%, transparent 70%)" }}
       />
       {/* Top shimmer */}
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{
-          background:
-            "linear-gradient(90deg, transparent, rgba(90,0,255,0.35), rgba(0,237,255,0.2), transparent)",
+          background: isDark
+            ? "linear-gradient(90deg, transparent, rgba(90,0,255,0.35), rgba(0,237,255,0.2), transparent)"
+            : "linear-gradient(90deg, transparent, rgba(90,0,255,0.18), rgba(0,237,255,0.1), transparent)",
         }}
       />
 
@@ -308,15 +334,14 @@ export function ScoreTrendChart({
               {selGrade}
             </p>
           </div>
-          <div className="h-8 w-px bg-white/85 dark:bg-white/[0.08]" />
+          <div className="h-8 w-px bg-slate-900/12 dark:bg-white/[0.12]" />
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold text-foreground">Selected snapshot</p>
             <p className="text-[10px] text-muted-foreground">{selDate}</p>
           </div>
           <button
             onClick={() => setSelectedIdx(null)}
-            className="text-[9px] font-bold text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] transition-all"
-            style={{ background: "rgba(255,255,255,0.03)" }}
+            className="text-[9px] font-bold text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] transition-all bg-slate-900/[0.04] dark:bg-white/[0.03]"
           >
             Clear
           </button>
@@ -361,17 +386,11 @@ export function ScoreTrendChart({
                   y1={y}
                   x2={pad.left + chartW}
                   y2={y}
-                  stroke="currentColor"
-                  strokeOpacity={0.05}
+                  stroke={gridLineStroke}
+                  strokeWidth={isDark ? 1 : 1.05}
                   strokeDasharray="3 3"
                 />
-                <text
-                  x={pad.left - 6}
-                  y={y + 4}
-                  textAnchor="end"
-                  className="fill-muted-foreground"
-                  fontSize={9}
-                >
+                <text x={pad.left - 6} y={y + 4} textAnchor="end" fill={axisLabelFill} fontSize={9}>
                   {v}
                 </text>
               </g>
@@ -393,7 +412,7 @@ export function ScoreTrendChart({
                 x={toX(idx)}
                 y={h - 4}
                 textAnchor="middle"
-                className="fill-muted-foreground"
+                fill={axisLabelFill}
                 fontSize={9}
               >
                 {new Date(data[idx].assessed_at).toLocaleDateString("en-GB", {
@@ -468,7 +487,7 @@ export function ScoreTrendChart({
                   cy={y}
                   r={isSelected ? 8 : isHovered ? 7 : 4.5}
                   fill={hex}
-                  stroke={isSelected ? hex : "#0a1628"}
+                  stroke={isSelected ? hex : dotOutlineStroke}
                   strokeWidth={isSelected ? 2 : 1.5}
                   className="transition-all duration-150 cursor-pointer"
                   style={isSelected ? { filter: `drop-shadow(0 0 6px ${hex}80)` } : undefined}
