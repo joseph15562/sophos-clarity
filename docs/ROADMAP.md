@@ -30,7 +30,7 @@
 - **NAT Rule Analysis** — Detects DNAT rules exposing services to WAN without IPS
 - **Web Filter Policy Analysis** — Checks for default/uncustomised policies, missing HTTPS scanning
 - **IPS Policy Analysis** — Detects "Monitor Only" mode, disabled categories, outdated signatures
-- **Virus Scanning Analysis** — Checks dual-engine mode and scan-mode settings
+- **Virus Scanning Analysis** — Checks dual-engine mode and scan-mode settings; flags malware scanning **disabled for HTTP/SMTP/POP3/IMAP** (and related) when those rows appear in the scan settings export
 - **Local Service ACL Analysis** — Flags admin services (HTTPS, SSH) exposed to WAN
 - **Admin Settings Analysis** — Checks password complexity, login lockout, login disclaimer
 - **Backup & Restore Analysis** — Detects missing scheduled backups
@@ -42,6 +42,11 @@
 - **Synchronized App Control** — Detects if Security Heartbeat app identification is enabled
 - **ATP / Sophos X-Ops Analysis** — Checks Advanced Threat Protection status and policy action
 - **High Availability Analysis** — Detects HA mode (Active-Passive/Active-Active), node name, cluster status
+- **DoS & Spoof Protection** — Finds missing DoS/spoof sections in the export, disabled SYN flood protection, and disabled IP spoof prevention (`analyseDoSProtection` in `src/lib/analysis/domains/vpn-network.ts`, invoked from `analyse-config.ts`). Section matching uses parsed headings (e.g. DoS / spoof-related blocks), not a single fixed `DoSSettings` key name across all export shapes
+- **VPN Security** — For **IPsec** profiles in use: weak Phase 1/2 encryption or authentication, weak DH groups, Perfect Forward Secrecy off, and PSK vs certificate authentication. **SSL VPN**: policy count / presence informational finding. Wired as `analyseVpnSecurity` in the same module
+- **Certificate management** — Weak key sizes, SHA-1 signatures, **expiry within 30 days** (high) and **30–90 days** (medium), self-signed / untrusted issuer (`analyseCertificates` in `src/lib/analysis/domains/infra.ts`)
+- **WAF (Web Application Firewall)** — Monitor-only policies; **published web servers without WAF** when DNAT suggests exposure (`analyseWafPolicies` in `src/lib/analysis/domains/rules-waf.ts`). Deeper OWASP-oriented rule/template coverage can still expand
+- **Licensed-feature gaps** — When the export shows **Web Protection** licensed but no web filter/WAF policies; **Email Protection** licensed but no relay/SMTP/DKIM-style configuration detected (`infra.ts` licensing helpers)
 
 ### Scoring & Benchmarking
 
@@ -63,7 +68,10 @@
 - **Config Diff Viewer** — Side-by-side section comparison for change reviews and drift auditing
 - **Multi-Firewall Consistency Checker** — Compares settings across firewalls and highlights discrepancies
 - **Remediation Playbooks** — Step-by-step Sophos Firewall remediation instructions for each finding
-- **Assessment History** — IndexedDB-backed snapshot storage with drift detection, inline renaming, and trend comparison
+- **Remediation status** — Cloud `remediation_status` rows with playbook completion from Assess / **Playbook library**; **Remediation progress** and velocity-style views where wired
+- **Assessment History** — IndexedDB-backed snapshot storage with drift detection, inline renaming, score trend mini-chart, and comparison vs previous snapshot
+- **Score history & trends** — **`ScoreTrendChart`** from persisted score history (workspace dashboard drawer, **Client portal**); click-to-sync dial on Assess when integrated
+- **Drift monitoring** — **Drift** route, agent submission drift payloads, alerts for agent drift
 - **Parser Diagnostics** — Section extraction stats and parseable data coverage metrics
 
 ### Cloud, MSP & integrations (shipped)
@@ -110,29 +118,30 @@ The app supports **guest/local use** (IndexedDB, no login) and **signed-in cloud
 
 ## Planned Features (Not Yet Started)
 
+The bullets below are **still open or only partially covered**. Several older roadmap lines (DoS/spoof, VPN crypto, certificate expiry findings, score trends, basic WAF findings, SMTP/POP/IMAP malware-off) **already ship** — see **Completed** above.
+
 ### Quick Wins
 
-- **DoS and Spoof Protection** — Check DoSSettings section for flood protection and spoof prevention configuration
-- **VPN Security Analysis** — Flag PPTP usage, check IPSec/SSL VPN encryption strength, identify weak ciphers
-- **Email Security Posture** — Analyse SMTP/POP/IMAP scanning, anti-spam configuration, DKIM settings
+- **PPTP / legacy remote-access VPN** — Dedicated finding when PPTP (or obsolete L2TP/PPTP remote access) is clearly enabled in the export; **IPsec/SSL VPN** analysis already exists
+- **Email security (deeper)** — Anti-spam rule posture, SPF/DMARC-style signals if present in export, richer **DKIM** policy review beyond the licenced-feature “no DKIM section” check; **virus scanning** already flags disabled mail-protocol malware scanning when those rows exist
 
 ### Medium Effort
 
-- **Assessment History Trend Charts** — Line chart of scores over time using Recharts (data already in IndexedDB/cloud)
-- **Certificate Health Monitor** — Parse certificate sections, track expiry dates, flag certificates expiring within 30/60/90 days
-- **VPN Topology Diagram** — Visualise site-to-site and remote access VPN connections
+- **Assessment trend UX** — Extend or unify line/history visuals (e.g. category breakdowns on Assess, export of trend PNG/CSV) on top of existing **`ScoreTrendChart`** / `score_history`
+- **Certificate UX** — Optional **60-day** horizon, inventory table, or expiry calendar view in the UI (findings already use 30- and 90-day thresholds)
+- **VPN Topology Diagram** — Visual map of site-to-site and remote-access VPN objects from parsed connections/profiles
 
 ### Larger Features
 
-- **Scheduled Comparison** — Automated periodic assessment with email alerts on score regression
-- **Remediation Tracker** — Track which findings have been actioned, with completion dates and notes
-- **WAF Security Analysis** — Parse WAF rules and policies, check for OWASP coverage
-- **SD-WAN Analysis** — Analyse SD-WAN profiles, SLA routing, and gateway health
+- **Scheduled Comparison** — Automated periodic re-assessment with **email/webhook** alerts on score regression (connector + scheduling productisation)
+- **Remediation programme** — Cross-customer views, reviewer **notes**, due dates, and exports on top of today’s **playbook + `remediation_status`** completion tracking
+- **WAF depth** — OWASP-style template coverage, virtual host / rule semantic checks beyond monitor-only and “published server without WAF”
+- **SD-WAN Analysis** — Profiles, SLA routing, gateway health (not yet a dedicated `analyseSdwan`-style module)
 
 ### Operations and governance
 
-- **Data retention and erasure** — Org-level submission retention, in-app **Delete all data** (admins), Trust + **DATA-PRIVACY.md** alignment shipped; continue counsel-approved DPA wording and any export-before-delete UX
-- **Operational visibility** — Structured logging and diagnostics for Edge Functions and Connector; document retry and rate-limit behaviour (Central, Gemini) for support runbooks
+- **Data retention and erasure (follow-ups)** — Counsel-approved DPA wording, export-before-delete UX, customer-facing procurement pack
+- **Operational visibility** — Structured logging and diagnostics for Edge Functions and Connector; documented retry and rate-limit behaviour (Central, Gemini) for support runbooks
 
 ### Skipped
 
