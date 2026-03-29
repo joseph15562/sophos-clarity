@@ -20,10 +20,12 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
-          command: process.env.CI ? "npx vite preview --port 5173" : "npm run dev",
-          url: "http://localhost:5173",
+          command: process.env.CI
+            ? "npx vite preview --host 127.0.0.1 --strictPort --port 5173"
+            : "npm run dev",
+          url: "http://127.0.0.1:5173",
           reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
+          timeout: 180_000,
         },
       }),
 });

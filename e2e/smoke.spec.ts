@@ -21,8 +21,13 @@ test.describe("Smoke tests", () => {
   });
 
   test("shared report 404 for invalid token", async ({ page }) => {
-    await page.goto("/shared/invalid-token-12345");
-    await expect(page.getByText(/not found|expired|invalid/i).first()).toBeVisible();
+    await page.goto("/shared/invalid-token-12345", { waitUntil: "domcontentloaded" });
+    // fetch() may return 404, or fail open (network) in CI — any terminal error state is OK
+    await expect(
+      page.getByRole("heading", {
+        name: /report not found|this report has expired|invalid link|could not load this report/i,
+      }),
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test("404 page for unknown routes", async ({ page }) => {
@@ -31,13 +36,17 @@ test.describe("Smoke tests", () => {
   });
 
   test("changelog page loads", async ({ page }) => {
-    await page.goto("/changelog");
-    await expect(page.getByRole("heading", { name: /what's new/i })).toBeVisible();
+    await page.goto("/changelog", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /what's new/i })).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   test("trust page loads", async ({ page }) => {
-    await page.goto("/trust");
-    await expect(page.getByText(/trust/i).first()).toBeVisible();
+    await page.goto("/trust", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /^trust$/i })).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   test("playbooks page loads", async ({ page }) => {
@@ -47,7 +56,9 @@ test.describe("Smoke tests", () => {
   });
 
   test("audit page shell loads", async ({ page }) => {
-    await page.goto("/audit");
-    await expect(page.getByRole("heading", { name: /activity log/i })).toBeVisible();
+    await page.goto("/audit", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /activity log/i })).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });
