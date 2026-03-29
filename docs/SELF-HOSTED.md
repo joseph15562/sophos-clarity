@@ -1,4 +1,4 @@
-# Self-hosted / single-tenant FireComply (G3.5)
+# Self-hosted / single-tenant FireComply
 
 This document is a **starting runbook** for teams that need dedicated infrastructure (data residency, sovereign cloud, or contractual isolation). Product defaults assume the shared Supabase-backed SaaS; self-hosted is an **optional XL** track.
 

@@ -368,7 +368,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
   }, [searchParams, setSearchParams, isViewerOnly, canManageTeam, localMode]);
 
-  /** G1.6: load Prepared By / footer from org `report_template`. */
+  /** Load Prepared By / footer from org `report_template`. */
   useEffect(() => {
     if (!org?.id || isGuest) {
       setReportAttributionHydrated(false);
@@ -405,7 +405,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     };
   }, [org?.id, isGuest]);
 
-  /** G1.6: debounced persist of attribution fields (merge into report_template). */
+  /** Debounced persist of attribution fields (merge into report_template). */
   useEffect(() => {
     if (!org?.id || isGuest || !canManageTeam || !reportAttributionHydrated) return;
     const t = window.setTimeout(() => {

@@ -26,7 +26,7 @@ const stripClass =
 
 type StripVariant = "fleet" | "customers" | "insights";
 
-/** Compact “open workspace settings” row for non-Assess routes (G1.3). */
+/** Compact “open workspace settings” row for non-Assess routes. */
 export function WorkspaceSettingsStrip({ variant }: { variant: StripVariant }) {
   const central = <WorkspacePanelLink section="central">Sophos Central</WorkspacePanelLink>;
   const agents = <WorkspacePanelLink section="agents">Connector agents</WorkspacePanelLink>;

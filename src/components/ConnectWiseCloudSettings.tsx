@@ -18,7 +18,7 @@ type StatusRow = {
   last_error: string | null;
 };
 
-/** G3.1 — ConnectWise Cloud Services API credentials (client credentials + subscription key). */
+/** ConnectWise Cloud Services API credentials (client credentials + subscription key). */
 export function ConnectWiseCloudSettings() {
   const { org } = useAuth();
   const [status, setStatus] = useState<StatusRow | null>(undefined);

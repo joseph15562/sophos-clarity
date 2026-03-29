@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/** X4 — in-app changelog (curate releases here). */
+/** In-app “What’s new” page (curate releases here). */
 export default function ChangelogPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -37,16 +37,15 @@ export default function ChangelogPage() {
               scanner and where headlines appear.
             </li>
             <li>
-              <strong className="text-foreground">ConnectWise Cloud Services (G3.1):</strong> PSA
-              &amp; API automation → ConnectWise Cloud — store encrypted API user ID and
-              subscription key (same encryption key as Sophos Central), verify OAuth
-              client-credentials token on save, test token, and load Partner Cloud{" "}
-              <code className="text-xs">GET /whoami</code> profile from the Edge API (credentials
-              never returned to the browser).
+              <strong className="text-foreground">ConnectWise Cloud Services:</strong> PSA &amp; API
+              automation → ConnectWise Cloud — store encrypted API user ID and subscription key
+              (same encryption key as Sophos Central), verify OAuth client-credentials token on
+              save, test token, and load Partner Cloud <code className="text-xs">GET /whoami</code>{" "}
+              profile from the Edge API (credentials never returned to the browser).
             </li>
             <li>
-              <strong className="text-foreground">Org service API keys (G3.2):</strong> workspace
-              settings list active keys; Edge validates{" "}
+              <strong className="text-foreground">Org service API keys:</strong> workspace settings
+              list active keys; Edge validates{" "}
               <code className="text-xs">X-FireComply-Service-Key</code> / Bearer (non-JWT) on{" "}
               <code className="text-xs">/api/service-key/ping</code> and scoped routes such as{" "}
               <code className="text-xs">GET /api/firewalls</code> when{" "}

@@ -324,9 +324,7 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
         </p>
       </div>
       <div className="space-y-2">
-        <p className="font-semibold text-foreground text-[11px]">
-          Retention &amp; lifecycle (G2.6)
-        </p>
+        <p className="font-semibold text-foreground text-[11px]">Retention &amp; lifecycle</p>
         <p>
           Submission and saved-report retention follow your organisation&apos;s configured policy
           and scheduled cleanup jobs (e.g.{" "}
@@ -357,9 +355,7 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
         </p>
       </div>
       <div className="space-y-2">
-        <p className="font-semibold text-foreground text-[11px]">
-          Regulatory change scanner (G2.5)
-        </p>
+        <p className="font-semibold text-foreground text-[11px]">Regulatory change scanner</p>
         <p>
           The <code className="text-[10px]">regulatory-scanner</code> Edge Function ingests public
           RSS feeds <strong className="text-foreground">daily (~06:00 UTC)</strong> into{" "}
@@ -1163,17 +1159,16 @@ export function ManagementDrawer({
                 >
                   <div className="p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
                     <p>
-                      <span className="font-semibold text-foreground">PSA (G3.1)</span> —
-                      ConnectWise Cloud Services credentials below unlock API access (tickets /
-                      company mapping next).{" "}
+                      <span className="font-semibold text-foreground">PSA</span> — ConnectWise Cloud
+                      Services credentials below unlock API access (tickets / company mapping next).{" "}
                       <strong className="text-foreground">ConnectWise Manage</strong> and other PSA
                       flows follow the same pattern. Use{" "}
                       <strong className="text-foreground">webhooks</strong> for notify-only
                       automation where APIs are not needed.
                     </p>
                     <p>
-                      <span className="font-semibold text-foreground">Scoped API keys (G3.2)</span>{" "}
-                      — Org-level service accounts (hashed at rest) for RMM and CI — see active keys
+                      <span className="font-semibold text-foreground">Scoped API keys</span> —
+                      Org-level service accounts (hashed at rest) for RMM and CI — see active keys
                       below.
                     </p>
                     <div className="rounded-xl border border-border/50 bg-background/30 p-3">

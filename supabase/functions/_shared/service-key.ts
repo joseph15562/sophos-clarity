@@ -19,7 +19,7 @@ export function extractServiceKeySecret(req: Request): string | null {
   return token;
 }
 
-/** Resolve org + scopes for an active org service key (G3.2 Edge validation). */
+/** Resolve org + scopes for an active org service key (Edge validation). */
 export async function getServiceKeyContext(
   req: Request,
 ): Promise<{ orgId: string; scopes: string[]; keyId: string } | null> {

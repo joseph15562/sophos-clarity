@@ -5,7 +5,7 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Row = Tables<"regulatory_updates">;
 
-/** G2.5 — Surface latest regulatory digest rows (populated by regulatory-scanner Edge Function). */
+/** Latest regulatory digest rows (populated by regulatory-scanner Edge Function). */
 export function RegulatoryDigestSettings() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);

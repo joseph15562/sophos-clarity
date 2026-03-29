@@ -1,4 +1,4 @@
-/** X2 — product funnel events: console in dev; optional POST to VITE_ANALYTICS_INGEST_URL. */
+/** Product funnel events: console in dev; optional POST to VITE_ANALYTICS_INGEST_URL. */
 export function trackProductEvent(event: string, props?: Record<string, unknown>): void {
   if (import.meta.env.DEV) {
     console.debug("[product-telemetry]", event, props ?? {});

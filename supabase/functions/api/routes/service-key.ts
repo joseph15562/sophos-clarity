@@ -1,7 +1,7 @@
 import { json as jsonResponse, safeError } from "../../_shared/db.ts";
 import { getServiceKeyContext } from "../../_shared/service-key.ts";
 
-/** GET /api/service-key/ping — verify X-FireComply-Service-Key / Bearer service secret (G3.2). */
+/** GET /api/service-key/ping — verify X-FireComply-Service-Key / Bearer service secret. */
 export async function handleServiceKeyRoutes(
   req: Request,
   _url: URL,

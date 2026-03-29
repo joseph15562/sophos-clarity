@@ -1,5 +1,5 @@
 /**
- * G2.1 — Latest connector release the UI recommends. Set in env to flag outdated agents in Fleet / API hub.
+ * Latest connector release the UI recommends. Set in env to flag outdated agents in Fleet / API hub.
  * Agent sends `connector_version` on POST /heartbeat (api-agent).
  */
 export function getLatestConnectorVersion(): string {

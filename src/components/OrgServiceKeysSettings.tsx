@@ -6,7 +6,7 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type KeyRow = Tables<"org_service_api_keys">;
 
-/** G3.2 — List org service API keys; Edge validates via `_shared/service-key.ts` (ping + scoped routes). */
+/** List org service API keys; Edge validates via `_shared/service-key.ts` (ping + scoped routes). */
 export function OrgServiceKeysSettings() {
   const { org } = useAuth();
   const [rows, setRows] = useState<KeyRow[]>([]);

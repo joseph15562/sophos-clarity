@@ -3,7 +3,7 @@ import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
- * G3.3 — Trust centre baseline: subprocessors, retention pointers, legal placeholders.
+ * Trust centre: subprocessors, retention pointers, legal placeholders.
  * Replace highlighted copy with counsel-approved text before procurement.
  */
 export default function TrustPage() {
