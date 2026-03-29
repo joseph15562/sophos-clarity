@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ExternalLink, RefreshCw, Loader2, Rss } from "lucide-react";
+import { ExternalLink, Rss } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface RegulatoryUpdate {
@@ -56,24 +56,47 @@ function timeAgo(iso: string | null): string {
   return `${months}mo ago`;
 }
 
+function formatIngestLabel(iso: string | null): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/** Headlines refresh daily via scheduled Edge Function (06:00 UTC). */
 export function RegulatoryTracker() {
   const [updates, setUpdates] = useState<RegulatoryUpdate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [scanning, setScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<string | null>(null);
+  const [lastIngestAt, setLastIngestAt] = useState<string | null>(null);
 
   const fetchUpdates = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("regulatory_updates")
-        .select("*")
-        .order("published_at", { ascending: false, nullsFirst: false })
-        .limit(20);
+      const [listRes, latestRes] = await Promise.all([
+        supabase
+          .from("regulatory_updates")
+          .select("*")
+          .order("published_at", { ascending: false, nullsFirst: false })
+          .limit(20),
+        supabase
+          .from("regulatory_updates")
+          .select("created_at")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-      if (error) throw error;
-      setUpdates((data ?? []) as unknown as RegulatoryUpdate[]);
+      if (listRes.error) throw listRes.error;
+      setUpdates((listRes.data ?? []) as unknown as RegulatoryUpdate[]);
+      const row = latestRes.data as { created_at?: string } | null;
+      setLastIngestAt(row?.created_at ?? null);
     } catch {
       setUpdates([]);
+      setLastIngestAt(null);
     } finally {
       setLoading(false);
     }
@@ -81,38 +104,6 @@ export function RegulatoryTracker() {
 
   useEffect(() => {
     fetchUpdates();
-  }, [fetchUpdates]);
-
-  const handleScan = useCallback(async () => {
-    setScanning(true);
-    setScanResult(null);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-
-      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/regulatory-scanner`;
-      const res = await fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ action: "scan" }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Scan failed");
-
-      setScanResult(data.message ?? `Found ${data.relevant ?? 0} relevant updates`);
-      if (!data.throttled) await fetchUpdates();
-    } catch (err) {
-      setScanResult(err instanceof Error ? err.message : "Scan failed");
-    } finally {
-      setScanning(false);
-    }
   }, [fetchUpdates]);
 
   const displayItems =
@@ -137,58 +128,41 @@ export function RegulatoryTracker() {
             "linear-gradient(90deg, transparent, rgba(180,122,255,0.25), rgba(0,237,255,0.15), transparent)",
         }}
       />
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
-        <div className="min-w-0">
-          <h3 className="text-lg font-display font-black tracking-tight text-foreground flex items-center gap-3">
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl backdrop-blur-sm shrink-0"
-              style={{
-                border: "1px solid rgba(180,122,255,0.35)",
-                background: "linear-gradient(145deg, rgba(90,0,255,0.2), rgba(90,0,255,0.06))",
-                boxShadow: "0 0 16px rgba(90,0,255,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
-              }}
-            >
-              <Rss className="h-5 w-5 text-[#B47AFF]" />
-            </span>
-            Regulatory Tracker
-          </h3>
-          <p className="text-sm text-foreground/45 mt-2 font-medium pl-0 sm:pl-[52px]">
-            {isLiveData
-              ? `${updates.length} updates from regulatory feeds`
-              : "Showing default entries — scan to fetch live updates"}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleScan}
-          disabled={scanning}
-          className="flex items-center justify-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl backdrop-blur-sm text-foreground transition-all disabled:opacity-50 shrink-0 hover:brightness-110"
-          style={{
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03))",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-          }}
-        >
-          {scanning ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+      <div className="mb-5">
+        <h3 className="text-lg font-display font-black tracking-tight text-foreground flex items-center gap-3">
+          <span
+            className="flex h-10 w-10 items-center justify-center rounded-xl backdrop-blur-sm shrink-0"
+            style={{
+              border: "1px solid rgba(180,122,255,0.35)",
+              background: "linear-gradient(145deg, rgba(90,0,255,0.2), rgba(90,0,255,0.06))",
+              boxShadow: "0 0 16px rgba(90,0,255,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
+            }}
+          >
+            <Rss className="h-5 w-5 text-[#B47AFF]" />
+          </span>
+          Regulatory Tracker
+        </h3>
+        <p className="text-sm text-foreground/45 mt-2 font-medium pl-0 sm:pl-[52px] leading-relaxed">
+          {isLiveData ? (
+            <>
+              {updates.length} update{updates.length !== 1 ? "s" : ""} from regulatory feeds.
+              Refreshed automatically every day (~06:00 UTC).
+              {lastIngestAt && (
+                <span className="block mt-1 text-xs text-foreground/40">
+                  Last ingest: {formatIngestLabel(lastIngestAt)} ({timeAgo(lastIngestAt)})
+                </span>
+              )}
+            </>
           ) : (
-            <RefreshCw className="h-4 w-4" />
+            <>
+              Sample cards below until the first scheduled ingest runs (daily ~06:00 UTC).{" "}
+              <span className="text-foreground/35">
+                Ensure pg_cron + pg_net and DB custom settings are configured (see migration notes).
+              </span>
+            </>
           )}
-          {scanning ? "Scanning..." : "Scan Feeds"}
-        </button>
+        </p>
       </div>
-
-      {scanResult && (
-        <div
-          className="mb-4 px-4 py-3 rounded-xl text-sm text-foreground/70 backdrop-blur-sm"
-          style={{
-            border: "1px solid rgba(255,255,255,0.08)",
-            background: "rgba(255,255,255,0.04)",
-          }}
-        >
-          {scanResult}
-        </div>
-      )}
 
       {loading ? (
         <div className="space-y-3">

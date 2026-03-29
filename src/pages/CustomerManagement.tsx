@@ -34,6 +34,7 @@ import {
   Settings,
 } from "lucide-react";
 import { resolveCustomerName } from "@/lib/customer-name";
+import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 
 type HealthStatus = "Healthy" | "At Risk" | "Critical" | "Overdue";
 
@@ -590,6 +591,11 @@ function CustomerManagementInner() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        {org?.id && !isGuest && (
+          <div className="mb-4">
+            <WorkspaceSettingsStrip variant="customers" />
+          </div>
+        )}
         {/* Summary strip */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryCard

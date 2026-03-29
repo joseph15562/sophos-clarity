@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   BookOpen,
@@ -26,8 +26,12 @@ import {
   Cloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { BEST_PRACTICE_CHECKS, MODULES, type BestPracticeCheck } from "@/lib/sophos-licence";
 import { ALL_FRAMEWORK_NAMES } from "@/lib/compliance-map";
+
+const REMEDIATION_CUSTOMER_HASH = "__org_default__";
 
 /* ------------------------------------------------------------------ */
 /*  Category configuration                                             */
@@ -164,9 +168,12 @@ function deriveSteps(recommendation: string): string[] {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export default function PlaybookLibrary() {
+function PlaybookLibraryInner() {
   const { theme, setTheme } = useTheme();
+  const { org } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
+  const appliedHighlightRef = useRef(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [expandedPlaybook, setExpandedPlaybook] = useState<string | null>(null);
   const [completed, setCompleted] = useState<Set<string>>(() => {
@@ -183,7 +190,55 @@ export default function PlaybookLibrary() {
     return set;
   });
 
+  useEffect(() => {
+    if (!org?.id) return;
+    let cancelled = false;
+    void supabase
+      .from("remediation_status")
+      .select("playbook_id")
+      .eq("org_id", org.id)
+      .eq("customer_hash", REMEDIATION_CUSTOMER_HASH)
+      .then(({ data, error }) => {
+        if (cancelled || error || !data?.length) return;
+        setCompleted((prev) => {
+          const next = new Set(prev);
+          for (const row of data) {
+            next.add(row.playbook_id);
+            try {
+              localStorage.setItem(`firecomply_playbook_completed_${row.playbook_id}`, "true");
+            } catch {
+              /* ignore */
+            }
+          }
+          return next;
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id]);
+
   const isDark = theme === "dark";
+
+  useEffect(() => {
+    if (appliedHighlightRef.current) return;
+    const h = searchParams.get("highlight")?.trim();
+    if (!h) {
+      appliedHighlightRef.current = true;
+      return;
+    }
+    appliedHighlightRef.current = true;
+    const byId = BEST_PRACTICE_CHECKS.find((c) => c.id === h);
+    setSearch(byId ? byId.title : h);
+    setSearchParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        next.delete("highlight");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
 
   const allCategories = useMemo(() => {
     const cats = [...new Set(BEST_PRACTICE_CHECKS.map((c) => c.category))];
@@ -213,12 +268,32 @@ export default function PlaybookLibrary() {
   function toggleComplete(id: string) {
     setCompleted((prev) => {
       const next = new Set(prev);
+      const adding = !next.has(id);
       if (next.has(id)) {
         next.delete(id);
         localStorage.removeItem(`firecomply_playbook_completed_${id}`);
       } else {
         next.add(id);
         localStorage.setItem(`firecomply_playbook_completed_${id}`, "true");
+      }
+      if (org?.id) {
+        if (adding) {
+          void supabase.from("remediation_status").upsert(
+            {
+              org_id: org.id,
+              playbook_id: id,
+              customer_hash: REMEDIATION_CUSTOMER_HASH,
+            },
+            { onConflict: "org_id,customer_hash,playbook_id" },
+          );
+        } else {
+          void supabase
+            .from("remediation_status")
+            .delete()
+            .eq("org_id", org.id)
+            .eq("customer_hash", REMEDIATION_CUSTOMER_HASH)
+            .eq("playbook_id", id);
+        }
       }
       return next;
     });
@@ -633,5 +708,14 @@ export default function PlaybookLibrary() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function PlaybookLibrary() {
+  const auth = useAuthProvider();
+  return (
+    <AuthProvider value={auth}>
+      <PlaybookLibraryInner />
+    </AuthProvider>
   );
 }

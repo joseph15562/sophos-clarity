@@ -35,6 +35,8 @@ import { computeRiskScore } from "@/lib/risk-score";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { saveScoreSnapshot } from "@/lib/score-history";
+import { CentralHealthBanner } from "@/components/CentralHealthBanner";
+import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -1405,6 +1407,12 @@ function FleetCommandInner() {
 
       {/* ── Body ── */}
       <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6 space-y-6">
+        {org?.id && !isGuest && (
+          <div className="space-y-3">
+            <CentralHealthBanner orgId={org.id} />
+            <WorkspaceSettingsStrip variant="fleet" />
+          </div>
+        )}
         {/* ── Stat cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard

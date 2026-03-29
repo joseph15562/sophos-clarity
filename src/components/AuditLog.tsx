@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import {
   Clock,
   Search,
@@ -10,6 +11,8 @@ import {
   Upload,
   Trash2,
   Download,
+  ExternalLink,
+  Plug,
 } from "lucide-react";
 import { loadAuditLog, type AuditEntry, type AuditAction } from "@/lib/audit";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,6 +41,16 @@ const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; c
   },
   "central.linked": { label: "Central API linked", icon: Wifi, color: "text-[#005BC8]" },
   "central.synced": { label: "Central synced", icon: Wifi, color: "text-[#009CFB]" },
+  "connectwise.linked": {
+    label: "ConnectWise Cloud linked",
+    icon: Plug,
+    color: "text-[#5A00FF]",
+  },
+  "connectwise.disconnected": {
+    label: "ConnectWise Cloud disconnected",
+    icon: Plug,
+    color: "text-muted-foreground",
+  },
   "team.invited": { label: "Team member invited", icon: Users, color: "text-brand-accent" },
   "team.removed": { label: "Team member removed", icon: Users, color: "text-[#EA0022]" },
   "auth.login": {
@@ -61,7 +74,7 @@ function toISODate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function AuditLog() {
+export function AuditLog({ layout = "drawer" }: { layout?: "drawer" | "page" }) {
   const { org, isGuest } = useAuth();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,8 +156,21 @@ export function AuditLog() {
       })
     : entries;
 
+  const pad = layout === "page" ? "p-4 sm:p-6" : "p-5";
+
   return (
-    <div className="p-5 space-y-4">
+    <div className={`${pad} space-y-4`}>
+      {layout === "drawer" && !isGuest && (
+        <div className="flex justify-end -mt-1 mb-1">
+          <Link
+            to="/audit"
+            className="inline-flex items-center gap-1 text-[10px] font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+          >
+            Open full screen
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+      )}
       <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 max-w-xs min-w-[180px]">

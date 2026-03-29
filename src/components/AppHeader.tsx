@@ -21,6 +21,7 @@ import {
   BookOpen,
   Code2,
   LayoutDashboard,
+  ScrollText,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
@@ -434,6 +435,7 @@ export function AppHeader({
               { to: "/drift", icon: GitCompare, label: "Drift" },
               { to: "/playbooks", icon: BookOpen, label: "Playbooks" },
               { to: "/api", icon: Code2, label: "API" },
+              { to: "/changelog", icon: ScrollText, label: "Updates" },
             ].map(({ to, icon: Icon, label }) => {
               const active = location.pathname === to;
               return (

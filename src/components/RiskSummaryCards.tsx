@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ComponentType, type ReactNode } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Eye,
   Layers,
-  Server,
   FileSearch,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
@@ -55,6 +54,15 @@ function scoreColor(score: number): ColorScheme {
   if (score >= 50) return "amber";
   return "red";
 }
+
+type SummaryCard = {
+  label: string;
+  value: string;
+  scheme: ColorScheme;
+  icon: ComponentType<{ className?: string }>;
+  trend?: ReactNode;
+  badge?: string;
+};
 
 export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
   const stats = useMemo(() => {
@@ -144,7 +152,15 @@ export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
       )
     ) : null;
 
-  const cards = [
+  const cards: SummaryCard[] = [
+    {
+      label: "Overall Score",
+      value: String(stats.overallScore),
+      scheme: scoreScheme,
+      icon: Shield,
+      trend: trendIcon ?? undefined,
+      badge: stats.grade,
+    },
     {
       label: "Critical Findings",
       value: String(stats.criticalFindings),
@@ -166,19 +182,19 @@ export function RiskSummaryCards({ analysisResults, previousScore }: Props) {
     {
       label: "Rules Analysed",
       value: String(stats.totalRules),
-      scheme: "neutral" as ColorScheme,
+      scheme: "neutral",
       icon: Layers,
     },
     {
       label: "Sections Parsed",
       value: `${stats.populatedSections}/${stats.totalSections}`,
-      scheme: "neutral" as ColorScheme,
+      scheme: "neutral",
       icon: FileSearch,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3">
       {cards.map((card) => {
         const c = COLOR_CLASSES[card.scheme];
         const Icon = card.icon;

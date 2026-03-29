@@ -25,6 +25,9 @@ const SavedReportViewer = lazy(() => import("./pages/SavedReportViewer"));
 const PortfolioInsights = lazy(() => import("./pages/PortfolioInsights"));
 const PlaybookLibrary = lazy(() => import("./pages/PlaybookLibrary"));
 const ApiHub = lazy(() => import("./pages/ApiHub"));
+const AuditPage = lazy(() => import("./pages/AuditPage"));
+const TrustPage = lazy(() => import("./pages/TrustPage"));
+const ChangelogPage = lazy(() => import("./pages/ChangelogPage"));
 
 function FocusReset() {
   const location = useLocation();
@@ -88,6 +91,9 @@ const App = () => (
                 <Route path="/insights" element={<PortfolioInsights />} />
                 <Route path="/playbooks" element={<PlaybookLibrary />} />
                 <Route path="/api" element={<ApiHub />} />
+                <Route path="/audit" element={<AuditPage />} />
+                <Route path="/trust" element={<TrustPage />} />
+                <Route path="/changelog" element={<ChangelogPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

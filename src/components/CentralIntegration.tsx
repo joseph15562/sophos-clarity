@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useCentral } from "@/hooks/use-central";
 import { useAuth } from "@/hooks/use-auth";
 import { logAudit } from "@/lib/audit";
+import { trackProductEvent } from "@/lib/product-telemetry";
 
 function SetupStep({
   step,
@@ -81,6 +82,7 @@ export function CentralIntegration() {
         logAudit(org.id, "central.linked", "central", "", {
           partnerType: central.status?.partner_type,
         }).catch(() => {});
+        trackProductEvent("central_connected", { orgId: org.id });
       }
     }
     setConnecting(false);

@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useCallback } from "react";
+import { Link } from "react-router-dom";
 import {
   CheckCircle2,
   Download,
@@ -23,12 +24,14 @@ import {
   ShieldCheck,
   Search,
   GitBranch,
+  BookOpen,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/StatCard";
 import type { AnalysisResult, Severity, Finding, InspectionPosture } from "@/lib/analyse-config";
 import { severityIcon } from "@/lib/analyse-config";
 import { findingToFrameworks } from "@/lib/compliance-map";
 import { downloadCsv, downloadFindingsPdf } from "@/lib/findings-export";
+import { playbookLibraryHrefForFindingTitle } from "@/lib/playbook-link";
 
 interface EstateOverviewProps {
   fileCount: number;
@@ -593,6 +596,7 @@ function FindingCard({
   const [open, setOpen] = useState(false);
   const frameworks =
     selectedFrameworks.length > 0 ? findingToFrameworks(finding.title, selectedFrameworks) : [];
+  const playbookHref = playbookLibraryHrefForFindingTitle(finding.title);
 
   const sevHex = SEV_HEX[finding.severity];
   const confHex =
@@ -664,6 +668,17 @@ function FindingCard({
             style={{ color: sevHex, opacity: 0.5 }}
           />
         </button>
+        {playbookHref && (
+          <Link
+            to={playbookHref}
+            onClick={(e) => e.stopPropagation()}
+            className="relative p-2.5 mr-1 shrink-0 text-muted-foreground/50 hover:text-brand-accent rounded-lg transition-all duration-200 hover:bg-brand-accent/[0.08]"
+            title="Open related playbook"
+            aria-label="Open related playbook"
+          >
+            <BookOpen className="h-4 w-4" />
+          </Link>
+        )}
         {onExplainFinding && (
           <button
             onClick={(e) => {

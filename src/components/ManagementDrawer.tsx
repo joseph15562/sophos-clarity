@@ -1,4 +1,13 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense, type ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  lazy,
+  Suspense,
+  type ReactNode,
+} from "react";
 import {
   X,
   LayoutDashboard,
@@ -20,6 +29,7 @@ import {
   Eye,
   ClipboardCheck,
   Globe,
+  Newspaper,
   Webhook,
   FileStack,
   ImageIcon,
@@ -27,6 +37,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import { settingsSectionExpandAllowed } from "@/lib/workspace-deeplink";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -93,6 +104,21 @@ const ReportTemplateSettings = lazy(() =>
     default: m.ReportTemplateSettings,
   })),
 );
+const RegulatoryDigestSettings = lazy(() =>
+  import("@/components/RegulatoryDigestSettings").then((m) => ({
+    default: m.RegulatoryDigestSettings,
+  })),
+);
+const OrgServiceKeysSettings = lazy(() =>
+  import("@/components/OrgServiceKeysSettings").then((m) => ({
+    default: m.OrgServiceKeysSettings,
+  })),
+);
+const ConnectWiseCloudSettings = lazy(() =>
+  import("@/components/ConnectWiseCloudSettings").then((m) => ({
+    default: m.ConnectWiseCloudSettings,
+  })),
+);
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -149,6 +175,8 @@ interface Props {
   onDownloadReport?: () => void;
   /** Fired when user clicks a trend chart data point to reflect on the main score dial */
   onSelectTrendScore?: (score: number, grade: string, date: string) => void;
+  /** When opening from /?panel=settings&section=…, expand matching accordion once */
+  initialSettingsSection?: string;
 }
 
 function Skeleton() {
@@ -162,19 +190,38 @@ function Skeleton() {
 }
 
 function SettingsSection({
+  sectionId,
   title,
   icon,
   subtitle,
   children,
+  expandSignal = 0,
+  expandAllowed = false,
 }: {
+  sectionId: string;
   title: string;
   icon?: ReactNode;
   subtitle?: string;
   children: ReactNode;
+  expandSignal?: number;
+  expandAllowed?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const lastAppliedSignal = useRef(0);
+
+  /** Deep-link: open synchronously so parent can scroll the drawer body in the same frame. */
+  useLayoutEffect(() => {
+    if (expandSignal > lastAppliedSignal.current && expandAllowed) {
+      setOpen(true);
+      lastAppliedSignal.current = expandSignal;
+    }
+  }, [expandSignal, expandAllowed]);
+
   return (
-    <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] overflow-hidden shadow-[0_8px_30px_rgba(32,6,247,0.05)]">
+    <div
+      id={`settings-section-${sectionId}`}
+      className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] overflow-hidden shadow-[0_8px_30px_rgba(32,6,247,0.05)]"
+    >
       <button
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center gap-3.5 px-5 py-4 text-left transition-colors group ${open ? "bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08]" : "hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04]"}`}
@@ -211,6 +258,28 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
   const [confirmText, setConfirmText] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [submissionRetentionDays, setSubmissionRetentionDays] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!org?.id) {
+      setSubmissionRetentionDays(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("organisations")
+      .select("submission_retention_days")
+      .eq("id", org.id)
+      .single()
+      .then(({ data }) => {
+        if (!cancelled && data) {
+          setSubmissionRetentionDays(data.submission_retention_days ?? null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id]);
 
   const handleDelete = async () => {
     const id = org?.id;
@@ -252,6 +321,53 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
           Assessments, saved reports, finding snapshots, remediation progress, alert rules, shared
           report links, audit logs, Sophos Central credentials (encrypted), and cached firewall
           metadata. All data is scoped to your organisation with row-level security.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <p className="font-semibold text-foreground text-[11px]">
+          Retention &amp; lifecycle (G2.6)
+        </p>
+        <p>
+          Submission and saved-report retention follow your organisation&apos;s configured policy
+          and scheduled cleanup jobs (e.g.{" "}
+          <code className="text-[10px]">cleanup_expired_submissions</code>
+          ).{" "}
+          {submissionRetentionDays != null ? (
+            <>
+              <strong className="text-foreground">
+                Connector submissions default to {submissionRetentionDays} days
+              </strong>{" "}
+              in cloud storage per org setting — align customer contracts with this value and your{" "}
+              <a
+                href="https://github.com/joseph15562/sophos-firecomply/blob/main/docs/DATA-PRIVACY.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand-accent hover:underline"
+              >
+                DATA-PRIVACY
+              </a>{" "}
+              materials.
+            </>
+          ) : (
+            <>
+              Align customer contracts with the numbers in workspace admin settings and your
+              DATA-PRIVACY materials.
+            </>
+          )}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <p className="font-semibold text-foreground text-[11px]">
+          Regulatory change scanner (G2.5)
+        </p>
+        <p>
+          The <code className="text-[10px]">regulatory-scanner</code> Edge Function ingests public
+          RSS feeds <strong className="text-foreground">daily (~06:00 UTC)</strong> into{" "}
+          <code className="text-[10px]">regulatory_updates</code>. Headlines appear here and in the
+          Compliance tab <strong className="text-foreground">Regulatory Tracker</strong> (requires
+          pg_cron + project DB settings — see migration{" "}
+          <code className="text-[10px]">regulatory_scanner_daily_cron</code>
+          ).
         </p>
       </div>
       <div className="space-y-2">
@@ -489,6 +605,7 @@ export function ManagementDrawer({
   onLocalModeChange,
   onDownloadReport,
   onSelectTrendScore,
+  initialSettingsSection,
 }: Props) {
   const { org, isViewerOnly, canManageTeam } = useAuth();
   const { logoUrl: companyLogo } = useCompanyLogo();
@@ -548,14 +665,90 @@ export function ManagementDrawer({
   }, [clientViewOpen, isGuest, org, analysisResults]);
   const visibleTabs = TABS.filter((t) => t.guestVisible || !isGuest);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? visibleTabs[0]?.id ?? "reports");
+  const [settingsExpandSignal, setSettingsExpandSignal] = useState(0);
+  const settingsExpandBumpedForOpen = useRef<string | null>(null);
+  const drawerBodyScrollRef = useRef<HTMLDivElement>(null);
+
+  /** Deep-links set `initialTab` while `activeTab` may still be stale (drawer stays mounted when closed). Sync before expand so Settings sections exist when we bump the accordion signal. */
+  useLayoutEffect(() => {
+    if (open && initialTab) setActiveTab(initialTab);
+  }, [open, initialTab]);
 
   useEffect(() => {
-    if (initialTab && open) setActiveTab(initialTab);
-  }, [initialTab, open]);
+    if (!open) settingsExpandBumpedForOpen.current = null;
+  }, [open]);
 
-  if (!open) return null;
+  useLayoutEffect(() => {
+    if (!open || !initialSettingsSection?.trim()) return;
+    if (activeTab !== "settings") return;
+    const key = initialSettingsSection.trim();
+    if (settingsExpandBumpedForOpen.current === key) return;
+    settingsExpandBumpedForOpen.current = key;
+    setSettingsExpandSignal((n) => n + 1);
+  }, [open, initialSettingsSection, activeTab]);
+
+  /**
+   * Deep-link: `scrollIntoView` + block "nearest" often skips the drawer's `overflow-y-auto` body.
+   * After the accordion opens (signal bump + layout), scroll that container so the target card is visible.
+   */
+  useLayoutEffect(() => {
+    if (!open || activeTab !== "settings" || !initialSettingsSection?.trim()) return;
+    const sec = initialSettingsSection.trim();
+    if (!settingsSectionExpandAllowed(sec, { canManageTeam, isViewerOnly, localMode })) return;
+
+    const scrollSectionIntoDrawerBody = () => {
+      const body = drawerBodyScrollRef.current;
+      const el = document.getElementById(`settings-section-${sec}`);
+      if (!body || !el || !body.contains(el)) return false;
+      const bodyRect = body.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const nextTop = elRect.top - bodyRect.top + body.scrollTop - 12;
+      body.scrollTo({ top: Math.max(0, nextTop), behavior: "instant" });
+      return true;
+    };
+
+    scrollSectionIntoDrawerBody();
+    let innerRaf = 0;
+    const outerRaf = requestAnimationFrame(() => {
+      scrollSectionIntoDrawerBody();
+      innerRaf = requestAnimationFrame(() => scrollSectionIntoDrawerBody());
+    });
+    const t = window.setTimeout(() => scrollSectionIntoDrawerBody(), 200);
+
+    return () => {
+      cancelAnimationFrame(outerRaf);
+      cancelAnimationFrame(innerRaf);
+      clearTimeout(t);
+    };
+  }, [
+    open,
+    activeTab,
+    initialSettingsSection,
+    settingsExpandSignal,
+    canManageTeam,
+    isViewerOnly,
+    localMode,
+  ]);
+
+  /**
+   * Reset drawer body scroll when opening, except when deep-linking to a settings section (parent
+   * scrolls the target section into the drawer body above).
+   */
+  useLayoutEffect(() => {
+    if (!open) return;
+    const deepSettings = initialTab === "settings" && !!initialSettingsSection?.trim();
+    if (deepSettings) return;
+    drawerBodyScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [open, initialTab, initialSettingsSection]);
 
   const currentTab = visibleTabs.find((t) => t.id === activeTab) ? activeTab : visibleTabs[0]?.id;
+  const expandCtx = { canManageTeam, isViewerOnly, localMode };
+  const matchSettingsExpand = (id: string) =>
+    !!initialSettingsSection &&
+    initialSettingsSection === id &&
+    settingsSectionExpandAllowed(id, expandCtx);
+
+  if (!open) return null;
 
   return (
     <>
@@ -648,7 +841,7 @@ export function ManagementDrawer({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div ref={drawerBodyScrollRef} className="flex-1 overflow-y-auto">
           {currentTab === "dashboard" && (
             <div className="space-y-3 pt-3">
               <Suspense fallback={<Skeleton />}>
@@ -757,6 +950,9 @@ export function ManagementDrawer({
 
               {canManageTeam && (
                 <SettingsSection
+                  sectionId="branding"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("branding")}
                   title="Company Branding"
                   icon={<ImageIcon className="h-3.5 w-3.5 text-brand-accent" />}
                   subtitle="Set your company logo for reports and portals"
@@ -767,6 +963,9 @@ export function ManagementDrawer({
 
               {!localMode && (
                 <SettingsSection
+                  sectionId="central"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("central")}
                   title="Sophos Central API"
                   icon={<Wifi className="h-3.5 w-3.5 text-[#005BC8]" />}
                   subtitle="Manage your API connection"
@@ -780,6 +979,9 @@ export function ManagementDrawer({
               )}
               {!localMode && !isViewerOnly && (
                 <SettingsSection
+                  sectionId="agents"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("agents")}
                   title="FireComply Connector Agents"
                   icon={<Plug className="h-3.5 w-3.5 text-[#6B5BFF]" />}
                   subtitle="Automated firewall monitoring agents"
@@ -794,6 +996,9 @@ export function ManagementDrawer({
               {canManageTeam && (
                 <div data-tour="drawer-team">
                   <SettingsSection
+                    sectionId="team"
+                    expandSignal={settingsExpandSignal}
+                    expandAllowed={matchSettingsExpand("team")}
                     title="Team Management"
                     icon={<Users className="h-3.5 w-3.5 text-[#2006F7]" />}
                     subtitle="Invite and manage team members"
@@ -809,6 +1014,9 @@ export function ManagementDrawer({
               {canManageTeam && (
                 <div data-tour="drawer-portal">
                   <SettingsSection
+                    sectionId="portal"
+                    expandSignal={settingsExpandSignal}
+                    expandAllowed={matchSettingsExpand("portal")}
                     title="Client Portal"
                     icon={<Globe className="h-3.5 w-3.5 text-[#009CFB]" />}
                     subtitle="Branding, sections & customer access"
@@ -822,6 +1030,9 @@ export function ManagementDrawer({
                 </div>
               )}
               <SettingsSection
+                sectionId="security"
+                expandSignal={settingsExpandSignal}
+                expandAllowed={matchSettingsExpand("security")}
                 title="Security"
                 icon={<Fingerprint className="h-3.5 w-3.5 text-[#00F2B3]" />}
                 subtitle="MFA and passkey settings"
@@ -841,6 +1052,9 @@ export function ManagementDrawer({
               </SettingsSection>
               <div data-tour="drawer-audit">
                 <SettingsSection
+                  sectionId="audit"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("audit")}
                   title="Activity Log"
                   icon={<Activity className="h-3.5 w-3.5 text-[#6B5BFF]" />}
                   subtitle="Review workspace activity"
@@ -852,6 +1066,9 @@ export function ManagementDrawer({
               </div>
               <div data-tour="drawer-alerts">
                 <SettingsSection
+                  sectionId="alerts"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("alerts")}
                   title="Alerts"
                   icon={<Bell className="h-3.5 w-3.5 text-[#F29400]" />}
                   subtitle="Email and webhook notifications"
@@ -866,6 +1083,9 @@ export function ManagementDrawer({
               {canManageTeam && (
                 <div data-tour="drawer-webhooks">
                   <SettingsSection
+                    sectionId="webhooks"
+                    expandSignal={settingsExpandSignal}
+                    expandAllowed={matchSettingsExpand("webhooks")}
                     title="Integrations (Webhook)"
                     icon={<Webhook className="h-3.5 w-3.5 text-[#5A00FF]" />}
                     subtitle="Notify a URL when reports are saved"
@@ -880,6 +1100,9 @@ export function ManagementDrawer({
               )}
               <div data-tour="drawer-scheduled-reports">
                 <SettingsSection
+                  sectionId="scheduled-reports"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("scheduled-reports")}
                   title="Scheduled Reports"
                   icon={<Mail className="h-3.5 w-3.5 text-[#009CFB]" />}
                   subtitle="Auto-send compliance reports to clients"
@@ -893,6 +1116,9 @@ export function ManagementDrawer({
               </div>
               {canManageTeam && (
                 <SettingsSection
+                  sectionId="report-template"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("report-template")}
                   title="Report template"
                   icon={<FileStack className="h-3.5 w-3.5 text-[#5A00FF]" />}
                   subtitle="Custom sections/headings for generated reports"
@@ -905,6 +1131,9 @@ export function ManagementDrawer({
                 </SettingsSection>
               )}
               <SettingsSection
+                sectionId="api-docs"
+                expandSignal={settingsExpandSignal}
+                expandAllowed={matchSettingsExpand("api-docs")}
                 title="API Documentation"
                 icon={<Code className="h-3.5 w-3.5 text-[#6B5BFF]" />}
                 subtitle="REST API reference"
@@ -923,7 +1152,67 @@ export function ManagementDrawer({
                   </Dialog>
                 </div>
               </SettingsSection>
+              {canManageTeam && (
+                <SettingsSection
+                  sectionId="partner-automation"
+                  expandSignal={settingsExpandSignal}
+                  expandAllowed={matchSettingsExpand("partner-automation")}
+                  title="PSA & API automation"
+                  icon={<Webhook className="h-3.5 w-3.5 text-[#5A00FF]" />}
+                  subtitle="ConnectWise Cloud auth, tickets roadmap, scoped service keys"
+                >
+                  <div className="p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
+                    <p>
+                      <span className="font-semibold text-foreground">PSA (G3.1)</span> —
+                      ConnectWise Cloud Services credentials below unlock API access (tickets /
+                      company mapping next).{" "}
+                      <strong className="text-foreground">ConnectWise Manage</strong> and other PSA
+                      flows follow the same pattern. Use{" "}
+                      <strong className="text-foreground">webhooks</strong> for notify-only
+                      automation where APIs are not needed.
+                    </p>
+                    <p>
+                      <span className="font-semibold text-foreground">Scoped API keys (G3.2)</span>{" "}
+                      — Org-level service accounts (hashed at rest) for RMM and CI — see active keys
+                      below.
+                    </p>
+                    <div className="rounded-xl border border-border/50 bg-background/30 p-3">
+                      <p className="text-[10px] font-semibold text-foreground mb-2 uppercase tracking-wide">
+                        ConnectWise Cloud
+                      </p>
+                      <Suspense fallback={<Skeleton />}>
+                        <ConnectWiseCloudSettings />
+                      </Suspense>
+                    </div>
+                    <div className="rounded-xl border border-border/50 bg-background/30 p-3">
+                      <p className="text-[10px] font-semibold text-foreground mb-2 uppercase tracking-wide">
+                        Service keys
+                      </p>
+                      <Suspense fallback={<Skeleton />}>
+                        <OrgServiceKeysSettings />
+                      </Suspense>
+                    </div>
+                  </div>
+                </SettingsSection>
+              )}
               <SettingsSection
+                sectionId="regulatory-digest"
+                expandSignal={settingsExpandSignal}
+                expandAllowed={matchSettingsExpand("regulatory-digest")}
+                title="Regulatory digest"
+                icon={<Newspaper className="h-3.5 w-3.5 text-[#009CFB]" />}
+                subtitle="Headlines from the regulatory scanner"
+              >
+                <div className="p-4">
+                  <Suspense fallback={<Skeleton />}>
+                    <RegulatoryDigestSettings />
+                  </Suspense>
+                </div>
+              </SettingsSection>
+              <SettingsSection
+                sectionId="data-governance"
+                expandSignal={settingsExpandSignal}
+                expandAllowed={matchSettingsExpand("data-governance")}
                 title="How We Handle Your Data"
                 icon={<Shield className="h-3.5 w-3.5 text-[#00F2B3]" />}
                 subtitle="Data privacy and governance"

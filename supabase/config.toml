@@ -34,7 +34,7 @@ verify_jwt = false
 
 [functions.regulatory-scanner]
 verify_jwt = false
-# Auth validated internally via getUser().
+# User JWT for optional manual scan; service role Bearer for pg_cron daily ingest.
 
 [functions.sophos-central]
 verify_jwt = false

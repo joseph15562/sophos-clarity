@@ -8,6 +8,7 @@ import {
   isAccepted,
   type AcceptedFinding,
 } from "@/lib/accepted-findings";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -225,7 +226,17 @@ export function FindingsBulkView({ analysisResults }: Props) {
                         {finding.severity}
                       </span>
                     </td>
-                    <td className="p-2 text-foreground">{finding.title}</td>
+                    <td className="p-2 text-foreground">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{finding.title}</span>
+                        <Link
+                          to={`/playbooks?highlight=${encodeURIComponent(finding.title.slice(0, 120))}`}
+                          className="text-[10px] font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF] w-fit"
+                        >
+                          Related playbooks
+                        </Link>
+                      </div>
+                    </td>
                     <td className="p-2 text-[10px] text-muted-foreground">
                       {accepted && "Accepted"}
                       {inPlan && !accepted && "In plan"}

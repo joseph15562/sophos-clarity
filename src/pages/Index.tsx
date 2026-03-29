@@ -53,7 +53,16 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
 import { toast } from "sonner";
 import { isLocalMode, setLocalMode } from "@/lib/local-mode";
+import {
+  readManagePanelParams,
+  stripManagePanelParams,
+  settingsSectionExpandAllowed,
+} from "@/lib/workspace-deeplink";
+import { CentralHealthBanner } from "@/components/CentralHealthBanner";
+import { MspAttentionSurface } from "@/components/MspAttentionSurface";
+import { MspSetupChecklist } from "@/components/MspSetupChecklist";
 import { getDemoConfigHtml, DEMO_FILE_NAME, DEMO_LABEL } from "@/lib/demo-mode";
+import { trackProductEvent } from "@/lib/product-telemetry";
 
 const DocumentPreview = lazy(() =>
   import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })),
@@ -92,7 +101,7 @@ function scrollPageToTop() {
 }
 
 function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
-  const { isGuest, org, isViewerOnly } = useAuth();
+  const { isGuest, org, isViewerOnly, canManageTeam } = useAuth();
   const {
     notifications,
     unreadCount,
@@ -122,6 +131,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<string | undefined>(undefined);
+  const [drawerSection, setDrawerSection] = useState<string | undefined>(undefined);
   const [localMode, setLocalModeState] = useState(() => isLocalMode());
   const [saveError, setSaveError] = useState("");
   const [loadedSavedSummary, setLoadedSavedSummary] = useState<{
@@ -158,6 +168,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [backendDebugInfo, setBackendDebugInfo] = useState<Record<string, unknown> | null>(null);
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
+  const [reportAttributionHydrated, setReportAttributionHydrated] = useState(false);
 
   const firewallAnalysisOpts = useMemo(
     () => ({
@@ -329,6 +340,107 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       openUpload,
     });
   }, [searchParams, setSearchParams]);
+
+  /** Deep-link: /?panel=dashboard|reports|history|settings&section=… (settings only) — opens management drawer then strips params. */
+  useEffect(() => {
+    const parsed = readManagePanelParams(searchParams);
+    if (!parsed) return;
+
+    const sec = parsed.section;
+    const blocked =
+      parsed.panel === "settings" &&
+      !!sec &&
+      !settingsSectionExpandAllowed(sec, { canManageTeam, isViewerOnly, localMode });
+    if (blocked) {
+      toast.warning("Ask an org admin to open this workspace settings section.");
+      setDrawerOpen(true);
+      setDrawerTab("settings");
+      setDrawerSection(undefined);
+    } else {
+      setDrawerOpen(true);
+      setDrawerTab(parsed.panel);
+      setDrawerSection(parsed.section);
+    }
+
+    const next = stripManagePanelParams(searchParams);
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams, isViewerOnly, canManageTeam, localMode]);
+
+  /** G1.6: load Prepared By / footer from org `report_template`. */
+  useEffect(() => {
+    if (!org?.id || isGuest) {
+      setReportAttributionHydrated(false);
+      return;
+    }
+    setReportAttributionHydrated(false);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("organisations")
+          .select("report_template")
+          .eq("id", org.id)
+          .single();
+        if (cancelled) return;
+        const rt = (data as { report_template?: Record<string, unknown> } | null)?.report_template;
+        if (rt && typeof rt === "object") {
+          const pb = rt.prepared_by;
+          const ft = rt.report_footer_text;
+          setBranding((prev) => ({
+            ...prev,
+            preparedBy: typeof pb === "string" ? pb : prev.preparedBy,
+            footerText: typeof ft === "string" ? ft : prev.footerText,
+          }));
+        }
+      } catch {
+        /* keep branding */
+      } finally {
+        if (!cancelled) setReportAttributionHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id, isGuest]);
+
+  /** G1.6: debounced persist of attribution fields (merge into report_template). */
+  useEffect(() => {
+    if (!org?.id || isGuest || !canManageTeam || !reportAttributionHydrated) return;
+    const t = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const { data } = await supabase
+            .from("organisations")
+            .select("report_template")
+            .eq("id", org.id)
+            .single();
+          const existing = ((data as { report_template?: Record<string, unknown> } | null)
+            ?.report_template ?? {}) as Record<string, unknown>;
+          const updated = {
+            ...existing,
+            prepared_by: branding.preparedBy?.trim() ?? "",
+            report_footer_text: branding.footerText?.trim() ?? "",
+          };
+          await supabase
+            .from("organisations")
+            .update({ report_template: updated })
+            .eq("id", org.id);
+        } catch (err) {
+          console.warn("[Index] report attribution save", err);
+        }
+      })();
+    }, 900);
+    return () => window.clearTimeout(t);
+  }, [
+    branding.preparedBy,
+    branding.footerText,
+    org?.id,
+    isGuest,
+    canManageTeam,
+    reportAttributionHydrated,
+  ]);
 
   useEffect(() => {
     if (!customerDeepLink) return;
@@ -786,6 +898,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               branding.environment,
               org.id,
             );
+            trackProductEvent("assessment_saved_cloud", { orgId: org.id });
           } catch (err) {
             console.warn("[handleSaveReports] saveAssessmentCloud", err);
             toast.error("Couldn't save assessment to cloud — saved locally as backup");
@@ -808,6 +921,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
             "Save failed — have you run the 003_saved_reports.sql migration in Supabase?",
           );
         } else {
+          if (!isGuest && org && includeReports) {
+            trackProductEvent("report_saved_cloud", { orgId: org.id });
+          }
           setReportsSaved(true);
           setSavedReportsTrigger((n) => n + 1);
           setTimeout(() => setReportsSaved(false), 3000);
@@ -1089,6 +1205,14 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         id="main-content"
         className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"} ${hasFiles && (!viewingReports || isGuest) && !isLoading && !inDiffMode ? "pb-20" : ""}`}
       >
+        {!isGuest && org?.id && (
+          <>
+            <CentralHealthBanner orgId={org.id} />
+            {canManageTeam && <MspSetupChecklist orgId={org.id} canManage={canManageTeam} />}
+            <MspAttentionSurface orgId={org.id} orgName={org.name ?? ""} />
+          </>
+        )}
+
         {/* Restored session banner */}
         {restoredSession && !viewingReports && hasReports && !isLoading && (
           <div className="no-print animate-in fade-in slide-in-from-top-2 duration-500 rounded-xl border border-brand-accent/30 bg-gradient-to-r from-brand-accent/10 via-brand-accent/[0.06] to-transparent dark:from-brand-accent/15 dark:via-brand-accent/[0.08] dark:to-transparent px-5 py-3 flex items-center gap-3 text-sm shadow-[0_0_20px_-4px] shadow-brand-accent/20 dark:shadow-brand-accent/25 backdrop-blur-sm">
@@ -1560,7 +1684,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       <ErrorBoundary fallbackTitle="Management panel failed to load">
         <ManagementDrawer
           open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
+          onClose={() => {
+            setDrawerOpen(false);
+            setDrawerSection(undefined);
+            setDrawerTab(undefined);
+          }}
           isGuest={isGuest}
           orgName={org?.name}
           analysisResults={analysisResults}
@@ -1570,6 +1698,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           savedReportsTrigger={savedReportsTrigger}
           hasFiles={hasFiles}
           initialTab={drawerTab as "dashboard" | "reports" | "history" | "settings" | undefined}
+          initialSettingsSection={drawerSection}
           onRerunSetup={() => {
             resetSetupFlag();
             setDrawerOpen(false);

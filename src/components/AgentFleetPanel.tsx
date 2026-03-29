@@ -20,6 +20,7 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { analyseConfig } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
+import { getLatestConnectorVersion, isConnectorVersionOutdated } from "@/lib/connector-version";
 import { toast } from "sonner";
 
 type Agent = Tables<"agents">;
@@ -67,6 +68,18 @@ function timeAgo(ts: string | null): string {
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
 }
+
+function isAgentInError(a: Agent): boolean {
+  return a.status === "error" || Boolean(a.error_message?.trim());
+}
+
+/** Not recently seen as “live” (30m), regardless of DB status. */
+function isEffectivelyOffline(a: Agent): boolean {
+  const recent = a.last_seen_at && Date.now() - new Date(a.last_seen_at).getTime() < 30 * 60 * 1000;
+  return !(a.status === "online" && Boolean(recent));
+}
+
+type FleetFilter = "all" | "attention" | "error" | "offline" | "outdated";
 
 const SEV_COLORS: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
@@ -177,6 +190,7 @@ function AgentSummaryCard({
   onRequestScan,
   scanRequested,
   isLoaded,
+  submissionsLast7d = 0,
 }: {
   agent: Agent;
   submission: Submission | null;
@@ -185,6 +199,7 @@ function AgentSummaryCard({
   onRequestScan: () => void;
   scanRequested: boolean;
   isLoaded?: boolean;
+  submissionsLast7d?: number;
 }) {
   const recomputed = submission ? recomputeFromRaw(submission) : null;
 
@@ -247,6 +262,26 @@ function AgentSummaryCard({
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap gap-2 text-[9px] text-muted-foreground">
+        <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-1">
+          Submissions (7d):{" "}
+          <span className="font-semibold text-foreground">{submissionsLast7d}</span>
+        </span>
+        {agent.connector_version ? (
+          <span className="rounded-md border border-border/60 bg-muted/30 px-2 py-1 font-mono">
+            Connector {agent.connector_version}
+            {isConnectorVersionOutdated(agent.connector_version) ? (
+              <span className="ml-1 font-sans font-semibold text-[#F29400]">
+                · update available
+              </span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="rounded-md border border-dashed border-border/60 px-2 py-1 italic">
+            Connector version unknown (agent not yet reporting)
+          </span>
+        )}
+      </div>
       <div className="flex items-start gap-4">
         <ScoreGauge score={displayScore} grade={displayGrade} />
         <div className="flex-1 min-w-0 space-y-2">
@@ -402,18 +437,49 @@ export function AgentFleetPanel({
   const [submissions, setSubmissions] = useState<Record<string, Submission | null>>({});
   const [loadingSub, setLoadingSub] = useState<Record<string, boolean>>({});
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
+  const [fleetFilter, setFleetFilter] = useState<FleetFilter>("all");
+  const [submissionCounts7d, setSubmissionCounts7d] = useState<Record<string, number>>({});
 
   const loadAgents = useCallback(async () => {
-    if (!org) return;
+    if (!org?.id) return;
     setLoading(true);
     const { data } = await supabase.from("agents").select("*").order("customer_name").order("name");
     setAgents(data ?? []);
+    const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: subRows } = await supabase
+      .from("agent_submissions")
+      .select("agent_id")
+      .eq("org_id", org.id)
+      .gte("created_at", sevenAgo);
+    const cmap: Record<string, number> = {};
+    for (const r of subRows ?? []) {
+      cmap[r.agent_id] = (cmap[r.agent_id] ?? 0) + 1;
+    }
+    setSubmissionCounts7d(cmap);
     setLoading(false);
-  }, [org]);
+  }, [org?.id]);
 
   useEffect(() => {
     loadAgents();
   }, [loadAgents]);
+
+  const agentsForUi = useMemo(() => {
+    if (fleetFilter === "all") return agents;
+    if (fleetFilter === "attention") {
+      return agents.filter(
+        (a) =>
+          a.status === "error" ||
+          Boolean(a.error_message?.trim()) ||
+          (a.status !== "online" && a.status !== "error"),
+      );
+    }
+    if (fleetFilter === "error") return agents.filter(isAgentInError);
+    if (fleetFilter === "offline") return agents.filter(isEffectivelyOffline);
+    if (fleetFilter === "outdated") {
+      return agents.filter((a) => isConnectorVersionOutdated(a.connector_version));
+    }
+    return agents;
+  }, [agents, fleetFilter]);
 
   const grouped = useMemo(() => {
     const resolveName = (raw: string | null) => {
@@ -422,8 +488,8 @@ export function AgentFleetPanel({
       return raw;
     };
     const filtered = filterTenantName
-      ? agents.filter((a) => resolveName(a.tenant_name) === filterTenantName)
-      : agents;
+      ? agentsForUi.filter((a) => resolveName(a.tenant_name) === filterTenantName)
+      : agentsForUi;
     const map = new Map<string, Agent[]>();
     for (const a of filtered) {
       const key = resolveName(a.tenant_name);
@@ -434,7 +500,7 @@ export function AgentFleetPanel({
     return Array.from(map.entries()).sort(([a], [b]) =>
       a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b),
     );
-  }, [agents, filterTenantName, org?.name]);
+  }, [agentsForUi, filterTenantName, org?.name]);
 
   useEffect(() => {
     if (grouped.length === 1) {
@@ -575,7 +641,7 @@ export function AgentFleetPanel({
     );
   }
 
-  const onlineAgents = agents.filter(
+  const onlineAgents = agentsForUi.filter(
     (a) =>
       a.status === "online" &&
       a.last_seen_at &&
@@ -613,16 +679,76 @@ export function AgentFleetPanel({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <span className="text-[10px] px-2 py-1 rounded-full font-bold bg-muted text-muted-foreground">
-              {agents.length} agent{agents.length !== 1 ? "s" : ""}
+              {agentsForUi.length} agent{agentsForUi.length !== 1 ? "s" : ""}
             </span>
             <span className="text-[10px] px-2 py-1 rounded-full font-bold bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]">
               {onlineAgents} online
             </span>
+            <Button
+              type="button"
+              variant={fleetFilter === "all" ? "secondary" : "outline"}
+              size="sm"
+              className="h-7 text-[10px]"
+              onClick={() => setFleetFilter("all")}
+            >
+              All
+            </Button>
+            <Button
+              type="button"
+              variant={fleetFilter === "attention" ? "secondary" : "outline"}
+              size="sm"
+              className="h-7 text-[10px]"
+              onClick={() => setFleetFilter("attention")}
+            >
+              Needs attention
+            </Button>
+            <Button
+              type="button"
+              variant={fleetFilter === "error" ? "secondary" : "outline"}
+              size="sm"
+              className="h-7 text-[10px]"
+              onClick={() => setFleetFilter("error")}
+            >
+              Errors
+            </Button>
+            <Button
+              type="button"
+              variant={fleetFilter === "offline" ? "secondary" : "outline"}
+              size="sm"
+              className="h-7 text-[10px]"
+              onClick={() => setFleetFilter("offline")}
+            >
+              Offline
+            </Button>
+            <Button
+              type="button"
+              variant={fleetFilter === "outdated" ? "secondary" : "outline"}
+              size="sm"
+              className="h-7 text-[10px]"
+              title={`Latest connector: ${getLatestConnectorVersion()} (set VITE_CONNECTOR_VERSION_LATEST)`}
+              onClick={() => setFleetFilter("outdated")}
+            >
+              Outdated
+            </Button>
           </div>
         </div>
       </div>
+
+      {agentsForUi.length === 0 && agents.length > 0 && fleetFilter !== "all" && (
+        <div className="px-6 py-4 text-center text-xs text-muted-foreground">
+          No agents match this filter — try{" "}
+          <button
+            type="button"
+            className="underline font-medium text-foreground"
+            onClick={() => setFleetFilter("all")}
+          >
+            show all
+          </button>
+          .
+        </div>
+      )}
 
       {agents.length === 0 && (
         <div className="px-6 py-8 text-center space-y-3">
@@ -713,6 +839,18 @@ export function AgentFleetPanel({
                               {agent.hardware_model}
                             </span>
                           )}
+                          {agent.connector_version && (
+                            <span
+                              className={`text-[9px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                                isConnectorVersionOutdated(agent.connector_version)
+                                  ? "bg-[#F29400]/15 text-[#F29400]"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                              title="Connector package version"
+                            >
+                              c:{agent.connector_version}
+                            </span>
+                          )}
                           {agent.firmware_version && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-semibold shrink-0">
                               {agent.firmware_version}
@@ -749,6 +887,7 @@ export function AgentFleetPanel({
                               onRequestScan={() => handleRequestScan(agent.id)}
                               scanRequested={!!scanRequested[agent.id]}
                               isLoaded={isLoaded}
+                              submissionsLast7d={submissionCounts7d[agent.id] ?? 0}
                             />
                           </div>
                         )}

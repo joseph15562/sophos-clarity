@@ -9,6 +9,8 @@ export type AuditAction =
   | "assessment.saved"
   | "central.linked"
   | "central.synced"
+  | "connectwise.linked"
+  | "connectwise.disconnected"
   | "team.invited"
   | "team.removed"
   | "auth.login"
@@ -50,7 +52,7 @@ export async function loadAuditLog(
   orgId: string,
   limit = 50,
   offset = 0,
-  options?: { fromDate?: string; toDate?: string }
+  options?: { fromDate?: string; toDate?: string },
 ): Promise<AuditEntry[]> {
   let query = supabase
     .from("audit_log")

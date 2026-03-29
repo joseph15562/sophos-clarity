@@ -29,4 +29,25 @@ test.describe("Smoke tests", () => {
     await page.goto("/this-does-not-exist");
     await expect(page.getByText(/not found|404/i).first()).toBeVisible();
   });
+
+  test("changelog page loads", async ({ page }) => {
+    await page.goto("/changelog");
+    await expect(page.getByRole("heading", { name: /what's new/i })).toBeVisible();
+  });
+
+  test("trust page loads", async ({ page }) => {
+    await page.goto("/trust");
+    await expect(page.getByText(/trust/i).first()).toBeVisible();
+  });
+
+  test("playbooks page loads", async ({ page }) => {
+    await page.goto("/playbooks");
+    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByText(/playbook/i).first()).toBeVisible();
+  });
+
+  test("audit page shell loads", async ({ page }) => {
+    await page.goto("/audit");
+    await expect(page.getByRole("heading", { name: /activity log/i })).toBeVisible();
+  });
 });

@@ -6,12 +6,14 @@ import { handleAdminRoutes } from "./routes/admin.ts";
 import { handleAgentRoutes } from "./routes/agent.ts";
 import { handleAssessmentRoutes } from "./routes/assessments.ts";
 import { handleConfigUploadRoutes } from "./routes/config-upload.ts";
+import { handleConnectWiseRoutes } from "./routes/connectwise.ts";
 import { handleFirewallRoutes } from "./routes/firewalls.ts";
 import { handleHealthCheckRoutes } from "./routes/health-checks.ts";
 import { handlePasskeyRoutes } from "./routes/passkey.ts";
 import { handleSeTeamRoutes } from "./routes/se-teams.ts";
 import { handlePortalViewerRoutes } from "./routes/portal-viewers.ts";
 import { handleSendReportRoutes } from "./routes/send-report.ts";
+import { handleServiceKeyRoutes } from "./routes/service-key.ts";
 
 let corsHeaders: Record<string, string> = {};
 function json(body: unknown, status = 200) {
@@ -39,6 +41,9 @@ const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 //   config-upload/:token/…     JWT via authenticateSE (resend/download/claim/central-data/delete)
 //   firewalls                  JWT via userClient + getUser
 //   send-report                JWT via authenticateSE
+//   service-key/ping           X-FireComply-Service-Key or Bearer (non-JWT) + org_service_api_keys hash
+//   firewalls (GET)            JWT or service key with scope api:read
+//   connectwise/*              JWT + org admin (credentials, token test, GET whoami)
 
 // ── Main router ──
 
@@ -59,6 +64,9 @@ serve(async (req: Request) => {
   const match = path.match(/\/api\/?(.*)$/);
   const rest = (match ? match[1] : path).replace(/\/$/, "") || "";
   const segments = rest.split("/").filter(Boolean);
+
+  const serviceKeyRes = await handleServiceKeyRoutes(req, url, segments, corsHeaders);
+  if (serviceKeyRes !== null) return serviceKeyRes;
 
   const agentRes = await handleAgentRoutes(req, url, segments, corsHeaders);
   if (agentRes !== null) return agentRes;
@@ -90,6 +98,8 @@ serve(async (req: Request) => {
   const sendReportRes = await handleSendReportRoutes(req, url, segments, corsHeaders);
   if (sendReportRes !== null) return sendReportRes;
 
+  const connectWiseRes = await handleConnectWiseRoutes(req, url, segments, corsHeaders);
+  if (connectWiseRes !== null) return connectWiseRes;
 
   return json({ error: "Not found" }, 404);
   } catch (err) {

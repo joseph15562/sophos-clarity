@@ -159,7 +159,7 @@ serve(async (req: Request) => {
     // 2. Build data from agents + agent_submissions (tenant-filtered when applicable)
     let scoreHistory: Array<Record<string, unknown>> = [];
     const findings: Array<{ id: string; title: string; severity: string }> = [];
-    let firewallBreakdown: Array<Record<string, unknown>> = [];
+    const firewallBreakdown: Array<Record<string, unknown>> = [];
     let tenantDisplayName: string | null = null;
     let aggregateScore: number | null = null;
     let aggregateGrade: string | null = null;

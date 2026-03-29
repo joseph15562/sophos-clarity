@@ -94,6 +94,10 @@ async function handleHeartbeat(
     error_message: body.error_message ?? null,
   };
   if (body.firmware_version) update.firmware_version = body.firmware_version;
+  if (body.connector_version != null && typeof body.connector_version === "string") {
+    const cv = body.connector_version.trim();
+    if (cv) update.connector_version = cv;
+  }
   if (body.serial_number) update.serial_number = body.serial_number;
   if (body.hardware_model) update.hardware_model = body.hardware_model;
   if (body.customer_name) update.customer_name = body.customer_name;

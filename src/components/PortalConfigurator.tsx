@@ -111,6 +111,7 @@ export function PortalConfigurator({
   const [saving, setSaving] = useState(false);
   const [slugError, setSlugError] = useState<string | null>(null);
   const [configExpanded, setConfigExpanded] = useState(false);
+  const [portalSurface, setPortalSurface] = useState<"consultant" | "customer">("consultant");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedTenantRef = useRef<string | null>(null);
 
@@ -165,6 +166,10 @@ export function PortalConfigurator({
   useEffect(() => {
     loadTenants();
   }, [loadTenants]);
+
+  useEffect(() => {
+    setPortalSurface("consultant");
+  }, [selectedTenant]);
 
   // When selected tenant changes, load or create the config for that tenant
   useEffect(() => {
@@ -410,247 +415,325 @@ export function PortalConfigurator({
       {/* Selected Tenant Configuration */}
       {config && (
         <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] overflow-hidden">
-          <button
-            type="button"
-            className="w-full flex items-center gap-2 px-5 py-3.5 text-left hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors"
-            onClick={() => setConfigExpanded((v) => !v)}
-          >
-            {configExpanded ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className="text-sm font-medium text-foreground">
-              Configure: {resolveCustomerName(selectedTenant ?? "", orgDisplayName)}
-            </span>
-            {config.id && (
-              <Badge variant="secondary" className="ml-auto text-xs">
-                Saved
-              </Badge>
-            )}
-          </button>
+          <div className="flex flex-wrap gap-2 px-5 pt-4 border-b border-brand-accent/10 pb-3">
+            <Button
+              type="button"
+              size="sm"
+              variant={portalSurface === "consultant" ? "secondary" : "outline"}
+              className="h-8 text-xs"
+              onClick={() => setPortalSurface("consultant")}
+            >
+              Consultant setup
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={portalSurface === "customer" ? "secondary" : "outline"}
+              className="h-8 text-xs"
+              onClick={() => setPortalSurface("customer")}
+            >
+              Customer view
+            </Button>
+          </div>
+          {portalSurface === "customer" ? (
+            <div className="p-5 space-y-4 text-sm">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Customers only see the live portal (branding, enabled sections, reports you expose).
+                Use this tab to sanity-check scope before sharing the link.
+              </p>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Visible sections
+                </p>
+                <ul className="list-disc pl-5 text-xs text-foreground space-y-1">
+                  {config.visible_sections.map((sid) => {
+                    const opt = SECTION_OPTIONS.find((o) => o.id === sid);
+                    return <li key={sid}>{opt?.label ?? sid}</li>;
+                  })}
+                </ul>
+              </div>
+              {portalUrl ? (
+                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" asChild>
+                  <a href={portalUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open live customer portal
+                  </a>
+                </Button>
+              ) : (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Save a valid slug under Consultant setup to open the customer URL.
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              {portalUrl ? (
+                <div className="px-5 py-3 border-b border-brand-accent/10 flex flex-wrap items-center justify-between gap-2 bg-brand-accent/[0.03]">
+                  <p className="text-[11px] text-muted-foreground">
+                    <span className="font-semibold text-foreground">Customer view</span> — what end
+                    clients see at the live portal. Your edits below are the consultant
+                    configuration.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-8 text-xs shrink-0"
+                    asChild
+                  >
+                    <a href={portalUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open live portal
+                    </a>
+                  </Button>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className="w-full flex items-center gap-2 px-5 py-3.5 text-left hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors"
+                onClick={() => setConfigExpanded((v) => !v)}
+              >
+                {configExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-sm font-medium text-foreground">
+                  Configure: {resolveCustomerName(selectedTenant ?? "", orgDisplayName)}
+                </span>
+                {config.id && (
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    Saved
+                  </Badge>
+                )}
+              </button>
 
-          {configExpanded && (
-            <div className="px-4 pb-4 space-y-6 border-t border-border pt-4">
-              {/* Portal Link */}
-              {portalUrl && (
-                <div className="rounded-xl border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground">Portal Link</span>
+              {configExpanded && (
+                <div className="px-4 pb-4 space-y-6 border-t border-border pt-4">
+                  {/* Portal Link */}
+                  {portalUrl && (
+                    <div className="rounded-xl border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground">Portal Link</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-background/60 dark:bg-background/30 rounded-lg px-3 py-2 border border-brand-accent/15 truncate font-mono">
+                          {portalUrl}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyLink(portalUrl)}
+                          className="rounded-xl border-brand-accent/15 hover:bg-brand-accent/[0.06] gap-1.5"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Vanity Slug */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="portal-slug">Portal Slug</Label>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                      <span>{window.location.origin}/portal/</span>
+                    </div>
+                    <Input
+                      id="portal-slug"
+                      placeholder={slugify(selectedTenant ?? "acme-security")}
+                      value={config.slug}
+                      onChange={(e) => handleSlugChange(e.target.value)}
+                      className={slugError ? "border-red-500" : ""}
+                    />
+                    {slugError && <p className="text-xs text-red-500">{slugError}</p>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs bg-background/60 dark:bg-background/30 rounded-lg px-3 py-2 border border-brand-accent/15 truncate font-mono">
-                      {portalUrl}
-                    </code>
+
+                  {/* Branding Toggle */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Show Branding</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Display your logo and company name on the portal
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.show_branding}
+                      onCheckedChange={(v) => update({ show_branding: v })}
+                    />
+                  </div>
+
+                  {/* Logo */}
+                  <div className="space-y-1.5">
+                    <Label>Company Logo</Label>
+                    <div className="flex items-center gap-3">
+                      {config.logo_url ? (
+                        <div className="relative">
+                          <img
+                            src={config.logo_url}
+                            alt="Logo preview"
+                            className="h-12 w-auto max-w-[160px] object-contain rounded-lg border border-brand-accent/15 bg-white p-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => update({ logo_url: null })}
+                            className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive text-destructive-foreground p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="h-12 w-24 rounded-lg border border-dashed border-brand-accent/20 flex items-center justify-center">
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {config.logo_url ? "Change" : "Upload"}
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPEG, SVG, or WebP. Max 500 KB.
+                    </p>
+                  </div>
+
+                  {/* Company Name */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="portal-company">Company Name</Label>
+                    <Input
+                      id="portal-company"
+                      placeholder={org?.name ?? "Your Company"}
+                      value={config.company_name}
+                      onChange={(e) => update({ company_name: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Accent Colour */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="portal-accent">Accent Colour</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        id="portal-accent"
+                        value={config.accent_color}
+                        onChange={(e) => update({ accent_color: e.target.value })}
+                        className="h-9 w-12 rounded-lg border border-brand-accent/15 cursor-pointer bg-transparent p-0.5"
+                      />
+                      <Input
+                        value={config.accent_color}
+                        onChange={(e) => update({ accent_color: e.target.value })}
+                        className="w-28 font-mono text-xs"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Welcome Message */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="portal-welcome">Welcome Message</Label>
+                    <Textarea
+                      id="portal-welcome"
+                      placeholder="Welcome to your security dashboard. Here you can view your latest assessment results and compliance status."
+                      value={config.welcome_message}
+                      onChange={(e) => update({ welcome_message: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  {/* SLA Info */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="portal-sla">SLA Information</Label>
+                    <Textarea
+                      id="portal-sla"
+                      placeholder="Assessments are performed quarterly. Critical findings are addressed within 24 hours."
+                      value={config.sla_info}
+                      onChange={(e) => update({ sla_info: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Contact Details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="portal-email">Contact Email</Label>
+                      <Input
+                        id="portal-email"
+                        type="email"
+                        placeholder="security@yourcompany.com"
+                        value={config.contact_email}
+                        onChange={(e) => update({ contact_email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="portal-phone">Contact Phone</Label>
+                      <Input
+                        id="portal-phone"
+                        type="tel"
+                        placeholder="+44 20 1234 5678"
+                        value={config.contact_phone}
+                        onChange={(e) => update({ contact_phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer Text */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="portal-footer">Footer Text</Label>
+                    <Input
+                      id="portal-footer"
+                      placeholder="&copy; 2026 Your Company. All rights reserved."
+                      value={config.footer_text}
+                      onChange={(e) => update({ footer_text: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Visible Sections */}
+                  <div className="space-y-3">
+                    <Label>Visible Sections</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Choose which sections this tenant's customers can see on their portal.
+                    </p>
+                    <div className="space-y-2">
+                      {SECTION_OPTIONS.map((s) => (
+                        <div key={s.id} className="flex items-center justify-between py-1">
+                          <span className="text-sm text-foreground">{s.label}</span>
+                          <Switch
+                            checked={config.visible_sections.includes(s.id)}
+                            onCheckedChange={() => toggleSection(s.id)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Save */}
+                  <div className="flex justify-end pt-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyLink(portalUrl)}
-                      className="rounded-xl border-brand-accent/15 hover:bg-brand-accent/[0.06] gap-1.5"
+                      onClick={handleSave}
+                      disabled={saving || !!slugError}
+                      className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
                     >
-                      <Copy className="h-3.5 w-3.5" />
-                      Copy
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {saving ? "Saving..." : "Save Configuration"}
                     </Button>
                   </div>
                 </div>
               )}
-
-              {/* Vanity Slug */}
-              <div className="space-y-1.5">
-                <Label htmlFor="portal-slug">Portal Slug</Label>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                  <span>{window.location.origin}/portal/</span>
-                </div>
-                <Input
-                  id="portal-slug"
-                  placeholder={slugify(selectedTenant ?? "acme-security")}
-                  value={config.slug}
-                  onChange={(e) => handleSlugChange(e.target.value)}
-                  className={slugError ? "border-red-500" : ""}
-                />
-                {slugError && <p className="text-xs text-red-500">{slugError}</p>}
-              </div>
-
-              {/* Branding Toggle */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Show Branding</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Display your logo and company name on the portal
-                  </p>
-                </div>
-                <Switch
-                  checked={config.show_branding}
-                  onCheckedChange={(v) => update({ show_branding: v })}
-                />
-              </div>
-
-              {/* Logo */}
-              <div className="space-y-1.5">
-                <Label>Company Logo</Label>
-                <div className="flex items-center gap-3">
-                  {config.logo_url ? (
-                    <div className="relative">
-                      <img
-                        src={config.logo_url}
-                        alt="Logo preview"
-                        className="h-12 w-auto max-w-[160px] object-contain rounded-lg border border-brand-accent/15 bg-white p-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => update({ logo_url: null })}
-                        className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive text-destructive-foreground p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="h-12 w-24 rounded-lg border border-dashed border-brand-accent/20 flex items-center justify-center">
-                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                    {config.logo_url ? "Change" : "Upload"}
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                    className="hidden"
-                    onChange={handleLogoUpload}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  PNG, JPEG, SVG, or WebP. Max 500 KB.
-                </p>
-              </div>
-
-              {/* Company Name */}
-              <div className="space-y-1.5">
-                <Label htmlFor="portal-company">Company Name</Label>
-                <Input
-                  id="portal-company"
-                  placeholder={org?.name ?? "Your Company"}
-                  value={config.company_name}
-                  onChange={(e) => update({ company_name: e.target.value })}
-                />
-              </div>
-
-              {/* Accent Colour */}
-              <div className="space-y-1.5">
-                <Label htmlFor="portal-accent">Accent Colour</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    id="portal-accent"
-                    value={config.accent_color}
-                    onChange={(e) => update({ accent_color: e.target.value })}
-                    className="h-9 w-12 rounded-lg border border-brand-accent/15 cursor-pointer bg-transparent p-0.5"
-                  />
-                  <Input
-                    value={config.accent_color}
-                    onChange={(e) => update({ accent_color: e.target.value })}
-                    className="w-28 font-mono text-xs"
-                    maxLength={7}
-                  />
-                </div>
-              </div>
-
-              {/* Welcome Message */}
-              <div className="space-y-1.5">
-                <Label htmlFor="portal-welcome">Welcome Message</Label>
-                <Textarea
-                  id="portal-welcome"
-                  placeholder="Welcome to your security dashboard. Here you can view your latest assessment results and compliance status."
-                  value={config.welcome_message}
-                  onChange={(e) => update({ welcome_message: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              {/* SLA Info */}
-              <div className="space-y-1.5">
-                <Label htmlFor="portal-sla">SLA Information</Label>
-                <Textarea
-                  id="portal-sla"
-                  placeholder="Assessments are performed quarterly. Critical findings are addressed within 24 hours."
-                  value={config.sla_info}
-                  onChange={(e) => update({ sla_info: e.target.value })}
-                  rows={2}
-                />
-              </div>
-
-              {/* Contact Details */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="portal-email">Contact Email</Label>
-                  <Input
-                    id="portal-email"
-                    type="email"
-                    placeholder="security@yourcompany.com"
-                    value={config.contact_email}
-                    onChange={(e) => update({ contact_email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="portal-phone">Contact Phone</Label>
-                  <Input
-                    id="portal-phone"
-                    type="tel"
-                    placeholder="+44 20 1234 5678"
-                    value={config.contact_phone}
-                    onChange={(e) => update({ contact_phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Footer Text */}
-              <div className="space-y-1.5">
-                <Label htmlFor="portal-footer">Footer Text</Label>
-                <Input
-                  id="portal-footer"
-                  placeholder="&copy; 2026 Your Company. All rights reserved."
-                  value={config.footer_text}
-                  onChange={(e) => update({ footer_text: e.target.value })}
-                />
-              </div>
-
-              {/* Visible Sections */}
-              <div className="space-y-3">
-                <Label>Visible Sections</Label>
-                <p className="text-xs text-muted-foreground">
-                  Choose which sections this tenant's customers can see on their portal.
-                </p>
-                <div className="space-y-2">
-                  {SECTION_OPTIONS.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between py-1">
-                      <span className="text-sm text-foreground">{s.label}</span>
-                      <Switch
-                        checked={config.visible_sections.includes(s.id)}
-                        onCheckedChange={() => toggleSection(s.id)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Save */}
-              <div className="flex justify-end pt-2">
-                <Button
-                  onClick={handleSave}
-                  disabled={saving || !!slugError}
-                  className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {saving ? "Saving..." : "Save Configuration"}
-                </Button>
-              </div>
-            </div>
+            </>
           )}
         </div>
       )}

@@ -28,7 +28,9 @@ export function ReportTemplateSettings() {
       .single()
       .then(({ data }) => {
         const rt = (data as { report_template?: unknown } | null)?.report_template;
-        setTemplateJson(rt ? JSON.stringify(rt, null, 2) : JSON.stringify(DEFAULT_TEMPLATE, null, 2));
+        setTemplateJson(
+          rt ? JSON.stringify(rt, null, 2) : JSON.stringify(DEFAULT_TEMPLATE, null, 2),
+        );
       })
       .finally(() => setLoading(false));
   }, [org?.id]);
@@ -45,22 +47,37 @@ export function ReportTemplateSettings() {
     }
     setSaving(true);
     setSaved(false);
-    await supabase
+    const { data: cur } = await supabase
       .from("organisations")
-      .update({ report_template: parsed as Record<string, unknown> })
-      .eq("id", org.id);
+      .select("report_template")
+      .eq("id", org.id)
+      .single();
+    const existing = ((cur as { report_template?: Record<string, unknown> } | null)
+      ?.report_template ?? {}) as Record<string, unknown>;
+    const merged = {
+      ...existing,
+      ...(typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {}),
+    };
+    await supabase.from("organisations").update({ report_template: merged }).eq("id", org.id);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   if (loading) return <div className="text-xs text-muted-foreground">Loading…</div>;
-  if (!canManageTeam) return <p className="text-xs text-muted-foreground">Only admins can configure report templates.</p>;
+  if (!canManageTeam)
+    return (
+      <p className="text-xs text-muted-foreground">Only admins can configure report templates.</p>
+    );
 
   return (
     <div className="space-y-4">
       <p className="text-[11px] text-muted-foreground">
-        Optional custom report structure (JSON). Define section IDs and headings; future report generation will merge this with AI output. Example: sections with id, heading, and required flag.
+        Optional custom report structure (JSON). Define section IDs and headings; future report
+        generation will merge this with AI output. Example: sections with id, heading, and required
+        flag.
       </p>
       <textarea
         value={templateJson}

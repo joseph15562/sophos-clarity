@@ -23,9 +23,20 @@ import {
   Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ApiDocumentation } from "@/components/ApiDocumentation";
+import { getLatestConnectorVersion, isConnectorVersionOutdated } from "@/lib/connector-version";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
+import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
 
 const CentralIntegration = lazy(() =>
   import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })),
@@ -73,6 +84,21 @@ interface Agent {
   lastHeartbeat: string;
   status: "online" | "offline";
   configPulls: number;
+  pullsLast7d: number;
+  connectorVersion?: string | null;
+  errorMessage?: string | null;
+}
+
+interface AgentActivityRow {
+  id: string;
+  created_at: string;
+  overall_score: number;
+  overall_grade: string;
+}
+
+function shortAgentId(id: string): string {
+  if (id.length < 24) return id;
+  return `${id.slice(0, 8)}…${id.slice(-4)}`;
 }
 
 /* ───────── demo data ───────── */
@@ -236,44 +262,6 @@ const WEBHOOK_EVENTS = [
   { id: "agent_offline", label: "Agent Offline" },
 ];
 
-const DEMO_DELIVERIES: WebhookDelivery[] = [
-  {
-    id: "d1",
-    timestamp: "2025-03-12T14:32:10Z",
-    event: "assessment_complete",
-    success: true,
-    statusCode: 200,
-  },
-  {
-    id: "d2",
-    timestamp: "2025-03-12T13:05:44Z",
-    event: "score_change",
-    success: true,
-    statusCode: 200,
-  },
-  {
-    id: "d3",
-    timestamp: "2025-03-11T22:18:09Z",
-    event: "critical_finding",
-    success: false,
-    statusCode: 500,
-  },
-  {
-    id: "d4",
-    timestamp: "2025-03-11T18:45:00Z",
-    event: "agent_offline",
-    success: true,
-    statusCode: 200,
-  },
-  {
-    id: "d5",
-    timestamp: "2025-03-10T09:12:33Z",
-    event: "assessment_complete",
-    success: true,
-    statusCode: 201,
-  },
-];
-
 const DEMO_AGENTS: Agent[] = [
   {
     id: "agent-7f3a",
@@ -281,6 +269,8 @@ const DEMO_AGENTS: Agent[] = [
     lastHeartbeat: "2025-03-12T14:58:00Z",
     status: "online",
     configPulls: 34,
+    pullsLast7d: 7,
+    connectorVersion: "1.0.0",
   },
   {
     id: "agent-b2c1",
@@ -288,6 +278,8 @@ const DEMO_AGENTS: Agent[] = [
     lastHeartbeat: "2025-03-12T14:55:00Z",
     status: "online",
     configPulls: 21,
+    pullsLast7d: 5,
+    connectorVersion: "1.0.0",
   },
   {
     id: "agent-e9d4",
@@ -295,6 +287,8 @@ const DEMO_AGENTS: Agent[] = [
     lastHeartbeat: "2025-03-12T12:10:00Z",
     status: "online",
     configPulls: 12,
+    pullsLast7d: 3,
+    connectorVersion: "0.9.2",
   },
   {
     id: "agent-1a8f",
@@ -302,6 +296,8 @@ const DEMO_AGENTS: Agent[] = [
     lastHeartbeat: "2025-03-10T08:20:00Z",
     status: "offline",
     configPulls: 7,
+    pullsLast7d: 0,
+    connectorVersion: null,
   },
   {
     id: "agent-c5e2",
@@ -309,6 +305,8 @@ const DEMO_AGENTS: Agent[] = [
     lastHeartbeat: "2025-03-09T16:44:00Z",
     status: "offline",
     configPulls: 3,
+    pullsLast7d: 0,
+    connectorVersion: "0.8.0",
   },
 ];
 
@@ -533,6 +531,14 @@ function IntegrationsTab() {
         ))}
       </div>
 
+      {!centralConnected && (
+        <p className="mt-4 text-xs text-muted-foreground leading-relaxed">
+          Prefer the main workspace? On <strong className="text-foreground">Assess</strong>, open
+          your organisation panel (top bar) → Settings →{" "}
+          <WorkspacePanelLink section="central">Sophos Central API</WorkspacePanelLink> to connect.
+        </p>
+      )}
+
       {openPanel && (
         <>
           <div
@@ -576,6 +582,23 @@ function IntegrationsTab() {
 function ApiExplorerTab() {
   return (
     <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-fit gap-2">
+              <Code2 className="h-4 w-4" />
+              API documentation
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <ApiDocumentation />
+          </DialogContent>
+        </Dialog>
+        <p className="text-xs text-muted-foreground leading-relaxed sm:max-w-md">
+          Same reference lives under Assess → workspace panel → Settings →{" "}
+          <WorkspacePanelLink section="api-docs">API Documentation</WorkspacePanelLink>.
+        </p>
+      </div>
       <div className={`${GLASS} p-5`}>
         <h3 className="text-sm font-semibold text-foreground mb-1">Authentication</h3>
         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -612,7 +635,7 @@ function WebhooksTab() {
   const [enabledEvents, setEnabledEvents] = useState<Set<string>>(
     new Set(["assessment_complete", "critical_finding"]),
   );
-  const [deliveries, setDeliveries] = useState(DEMO_DELIVERIES);
+  const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
 
   useEffect(() => {
     if (!org?.id) return;
@@ -645,16 +668,18 @@ function WebhooksTab() {
       .order("created_at", { ascending: false })
       .limit(10)
       .then(({ data }) => {
-        if (data && data.length > 0) {
-          const mapped = data.map((d) => ({
-            id: d.id,
-            timestamp: d.created_at,
-            event: d.resource_type || d.action,
-            success: !(d.metadata as Record<string, unknown>)?.error,
-            statusCode: ((d.metadata as Record<string, unknown>)?.statusCode as number) ?? 200,
-          }));
-          setDeliveries(mapped);
+        if (!data?.length) {
+          setDeliveries([]);
+          return;
         }
+        const mapped = data.map((d) => ({
+          id: d.id,
+          timestamp: d.created_at,
+          event: d.resource_type || d.action,
+          success: !(d.metadata as Record<string, unknown>)?.error,
+          statusCode: ((d.metadata as Record<string, unknown>)?.statusCode as number) ?? 200,
+        }));
+        setDeliveries(mapped);
       });
   }, [org?.id]);
 
@@ -674,6 +699,21 @@ function WebhooksTab() {
 
   return (
     <div className="space-y-6">
+      <div className={`${GLASS} p-4 text-xs text-muted-foreground leading-relaxed space-y-2`}>
+        <p>
+          <strong className="text-foreground">Org webhook URL</strong> (saved reports / notify URL)
+          and <strong className="text-foreground">webhook secret</strong> are managed under Assess →
+          workspace panel → Settings →{" "}
+          <WorkspacePanelLink section="webhooks">Integrations (Webhook)</WorkspacePanelLink>
+          <span className="text-muted-foreground/80">
+            {" "}
+            (org admins). Event checkboxes on this page reflect{" "}
+            <WorkspacePanelLink section="alerts">Alerts</WorkspacePanelLink> rules (
+            <code className="rounded bg-muted px-1 py-0.5 text-[10px]">alert_rules</code>).
+          </span>
+        </p>
+      </div>
+
       <div className={`${GLASS} p-5 space-y-4`}>
         <div>
           <label className="text-sm font-semibold text-foreground" htmlFor="webhook-url">
@@ -719,32 +759,51 @@ function WebhooksTab() {
           <h3 className="text-sm font-semibold text-foreground">Recent deliveries</h3>
         </div>
         <div className="divide-y divide-border/40">
-          {deliveries.map((d) => (
-            <div key={d.id} className="flex items-center gap-4 px-5 py-3 text-sm">
-              <span className="shrink-0">
-                {d.success ? (
-                  <Check className="h-4 w-4 text-[#00F2B3]" />
-                ) : (
-                  <X className="h-4 w-4 text-[#EA0022]" />
-                )}
-              </span>
-              <span className="font-mono text-xs text-muted-foreground w-40 shrink-0">
-                {formatTs(d.timestamp)}
-              </span>
-              <span className="text-foreground truncate">
-                {WEBHOOK_EVENTS.find((e) => e.id === d.event)?.label ?? d.event}
-              </span>
-              <span
-                className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold font-mono border ${
-                  d.success
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
-                    : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/25"
-                }`}
-              >
-                {d.statusCode}
-              </span>
+          {deliveries.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm text-muted-foreground space-y-3 max-w-lg mx-auto">
+              <p>
+                No webhook deliveries logged yet. Rows appear when outbound webhooks run and write
+                to the <strong className="text-foreground">audit log</strong>.
+              </p>
+              <p className="text-xs leading-relaxed">
+                Trace activity in Assess → workspace → Settings →{" "}
+                <WorkspacePanelLink
+                  section="audit"
+                  className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+                >
+                  Activity Log
+                </WorkspacePanelLink>
+                .
+              </p>
             </div>
-          ))}
+          ) : (
+            deliveries.map((d) => (
+              <div key={d.id} className="flex items-center gap-4 px-5 py-3 text-sm">
+                <span className="shrink-0">
+                  {d.success ? (
+                    <Check className="h-4 w-4 text-[#00F2B3]" />
+                  ) : (
+                    <X className="h-4 w-4 text-[#EA0022]" />
+                  )}
+                </span>
+                <span className="font-mono text-xs text-muted-foreground w-40 shrink-0">
+                  {formatTs(d.timestamp)}
+                </span>
+                <span className="text-foreground truncate">
+                  {WEBHOOK_EVENTS.find((e) => e.id === d.event)?.label ?? d.event}
+                </span>
+                <span
+                  className={`ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold font-mono border ${
+                    d.success
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+                      : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/25"
+                  }`}
+                >
+                  {d.statusCode}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -755,6 +814,9 @@ function AgentsTab() {
   const { org } = useAuth();
   const [realAgents, setRealAgents] = useState<Agent[]>(DEMO_AGENTS);
   const [loaded, setLoaded] = useState(false);
+  const [logAgent, setLogAgent] = useState<Agent | null>(null);
+  const [activityRows, setActivityRows] = useState<AgentActivityRow[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   useEffect(() => {
     if (!org?.id) {
@@ -766,7 +828,9 @@ function AgentsTab() {
       try {
         const { data } = await supabase
           .from("agents")
-          .select("id, name, firewall_host, last_seen_at, status, hardware_model")
+          .select(
+            "id, name, firewall_host, last_seen_at, status, hardware_model, error_message, connector_version",
+          )
           .eq("org_id", org.id);
         if (cancelled) return;
         if (!data || data.length === 0) {
@@ -775,22 +839,30 @@ function AgentsTab() {
           return;
         }
 
+        const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { data: submissions } = await supabase
           .from("agent_submissions")
-          .select("agent_id")
+          .select("agent_id, created_at")
           .eq("org_id", org.id);
 
-        const countMap = new Map<string, number>();
+        const totalMap = new Map<string, number>();
+        const last7dMap = new Map<string, number>();
         for (const s of submissions ?? []) {
-          countMap.set(s.agent_id, (countMap.get(s.agent_id) ?? 0) + 1);
+          totalMap.set(s.agent_id, (totalMap.get(s.agent_id) ?? 0) + 1);
+          if (s.created_at >= sevenAgo) {
+            last7dMap.set(s.agent_id, (last7dMap.get(s.agent_id) ?? 0) + 1);
+          }
         }
 
         const mapped: Agent[] = data.map((a) => ({
-          id: a.id.slice(0, 12),
+          id: a.id,
           hostname: a.firewall_host || a.name,
           lastHeartbeat: a.last_seen_at ?? "",
           status: a.status === "online" ? ("online" as const) : ("offline" as const),
-          configPulls: countMap.get(a.id) ?? 0,
+          configPulls: totalMap.get(a.id) ?? 0,
+          pullsLast7d: last7dMap.get(a.id) ?? 0,
+          connectorVersion: a.connector_version,
+          errorMessage: a.error_message,
         }));
         setRealAgents(mapped);
       } catch (err) {
@@ -804,13 +876,127 @@ function AgentsTab() {
     };
   }, [org?.id]);
 
+  useEffect(() => {
+    if (!logAgent || !org?.id) {
+      setActivityRows([]);
+      return;
+    }
+    let cancelled = false;
+    setActivityLoading(true);
+    void supabase
+      .from("agent_submissions")
+      .select("id, created_at, overall_score, overall_grade")
+      .eq("org_id", org.id)
+      .eq("agent_id", logAgent.id)
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.warn("[ApiHub] agent activity load failed", error);
+          setActivityRows([]);
+        } else {
+          setActivityRows((data ?? []) as AgentActivityRow[]);
+        }
+        setActivityLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [logAgent, org?.id]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className={`${GLASS} p-4 text-xs text-muted-foreground leading-relaxed space-y-2`}>
+        <p>
+          Install agents, API keys, and schedules: Assess → workspace panel → Settings →{" "}
+          <WorkspacePanelLink section="agents">FireComply Connector Agents</WorkspacePanelLink>.
+        </p>
+        <p>
+          Fleet-wide scores and assessments:{" "}
+          <Link
+            to="/command"
+            className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+          >
+            Open Fleet
+          </Link>
+          .
+        </p>
+      </div>
+
+      <Sheet
+        open={logAgent !== null}
+        onOpenChange={(open) => {
+          if (!open) setLogAgent(null);
+        }}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Agent activity</SheetTitle>
+            <SheetDescription>
+              Config submissions received from this connector in FireComply. For raw debug logs,
+              open the agent app on the firewall host and use its Log viewer.
+            </SheetDescription>
+          </SheetHeader>
+          {logAgent && (
+            <div className="mt-4 space-y-4">
+              <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-xs">
+                <p className="font-medium text-foreground">{logAgent.hostname}</p>
+                <p className="mt-1 font-mono text-muted-foreground break-all">{logAgent.id}</p>
+              </div>
+              {logAgent.errorMessage?.trim() ? (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+                  <p className="font-semibold">Last connector error</p>
+                  <p className="mt-1 whitespace-pre-wrap">{logAgent.errorMessage}</p>
+                </div>
+              ) : null}
+              {activityLoading ? (
+                <div className="flex justify-center py-10">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
+                </div>
+              ) : activityRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-6 text-center">
+                  No submissions yet. After the agent uploads a config, each run appears here with
+                  score and time.
+                </p>
+              ) : (
+                <div className="rounded-xl border border-border/50 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border/40 bg-muted/30 text-left text-muted-foreground">
+                        <th className="px-3 py-2 font-medium">Time</th>
+                        <th className="px-3 py-2 font-medium text-right">Score</th>
+                        <th className="px-3 py-2 font-medium text-right">Grade</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {activityRows.map((row) => (
+                        <tr key={row.id}>
+                          <td className="px-3 py-2 font-mono text-muted-foreground whitespace-nowrap">
+                            {formatTs(row.created_at)}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">{row.overall_score}</td>
+                          <td className="px-3 py-2 text-right font-semibold">
+                            {row.overall_grade}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-foreground">Agent fleet</h3>
-        <Button size="sm" className="gap-1.5">
-          <Download className="h-3.5 w-3.5" />
-          Deploy New Agent
+        <Button size="sm" className="gap-1.5" asChild>
+          <WorkspacePanelLink section="agents" className="inline-flex items-center gap-1.5">
+            <Download className="h-3.5 w-3.5" />
+            Register / install connector
+          </WorkspacePanelLink>
         </Button>
       </div>
 
@@ -819,12 +1005,20 @@ function AgentsTab() {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
         </div>
       ) : realAgents.length === 0 ? (
-        <div className={`${GLASS} p-8 text-center`}>
+        <div className={`${GLASS} p-8 text-center space-y-3 max-w-lg mx-auto`}>
           <Server className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-sm font-semibold text-foreground mb-1">No agents deployed</p>
-          <p className="text-xs text-muted-foreground">
-            Deploy the connector agent to your Sophos firewalls for automated config collection and
-            scoring.
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Register and download installers from Assess → workspace panel → Settings →{" "}
+            <WorkspacePanelLink section="agents">FireComply Connector Agents</WorkspacePanelLink>.
+            After deployment, monitor the fleet from{" "}
+            <Link
+              to="/command"
+              className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+            >
+              Fleet
+            </Link>
+            .
           </p>
         </div>
       ) : (
@@ -835,17 +1029,47 @@ function AgentsTab() {
                 <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
                   <th className="px-5 py-3 font-semibold">Agent ID</th>
                   <th className="px-5 py-3 font-semibold">Hostname</th>
+                  <th className="px-5 py-3 font-semibold">Connector</th>
                   <th className="px-5 py-3 font-semibold">Last Heartbeat</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
-                  <th className="px-5 py-3 font-semibold text-right">Config Pulls</th>
+                  <th
+                    className="px-5 py-3 font-semibold text-right"
+                    title="All-time submission count"
+                  >
+                    Pulls
+                  </th>
+                  <th
+                    className="px-5 py-3 font-semibold text-right"
+                    title="Submissions in last 7 days"
+                  >
+                    7d
+                  </th>
                   <th className="px-5 py-3 font-semibold" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
                 {realAgents.map((a) => (
                   <tr key={a.id} className="hover:bg-accent/30 transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{a.id}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
+                      {shortAgentId(a.id)}
+                    </td>
                     <td className="px-5 py-3 font-medium text-foreground">{a.hostname}</td>
+                    <td className="px-5 py-3 text-xs font-mono text-muted-foreground">
+                      {a.connectorVersion ? (
+                        <span
+                          className={
+                            isConnectorVersionOutdated(a.connectorVersion)
+                              ? "text-[#F29400] font-semibold"
+                              : ""
+                          }
+                          title={`Latest: ${getLatestConnectorVersion()}`}
+                        >
+                          {a.connectorVersion}
+                        </span>
+                      ) : (
+                        <span className="italic opacity-70">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-xs text-muted-foreground flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5" />
                       {timeAgoStr(a.lastHeartbeat)}
@@ -867,8 +1091,17 @@ function AgentsTab() {
                     <td className="px-5 py-3 text-right font-mono text-xs text-muted-foreground">
                       {a.configPulls}
                     </td>
+                    <td className="px-5 py-3 text-right font-mono text-xs text-muted-foreground">
+                      {a.pullsLast7d}
+                    </td>
                     <td className="px-5 py-3 text-right">
-                      <Button size="sm" variant="ghost" className="gap-1 text-xs">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1 text-xs"
+                        onClick={() => setLogAgent(a)}
+                      >
                         <ExternalLink className="h-3 w-3" />
                         View Logs
                       </Button>
@@ -881,20 +1114,66 @@ function AgentsTab() {
         </div>
       )}
 
-      <div className={`${GLASS} p-5`}>
-        <h3 className="text-sm font-semibold text-foreground mb-3">Download agent installer</h3>
-        <div className="flex flex-wrap gap-3">
-          {[
-            { os: "Linux (x64)", file: "firecomply-agent-linux-amd64.tar.gz" },
-            { os: "Linux (ARM64)", file: "firecomply-agent-linux-arm64.tar.gz" },
-            { os: "Docker", file: "docker pull firecomply/agent:latest" },
-          ].map((d) => (
-            <Button key={d.os} variant="outline" size="sm" className="gap-1.5">
-              <Download className="h-3.5 w-3.5" />
-              {d.os}
-            </Button>
-          ))}
+      <div className={`${GLASS} p-5 space-y-3`}>
+        <h3 className="text-sm font-semibold text-foreground">Connector installer matrix</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Builds are published on{" "}
+          <a
+            href="https://github.com/joseph15562/sophos-firecomply/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+          >
+            GitHub Releases
+          </a>
+          . Register the agent on Assess first (
+          <WorkspacePanelLink section="agents">Connector agents</WorkspacePanelLink>) to obtain an
+          API key, then install on a host that can reach the firewall XML API.
+        </p>
+        <div className="rounded-lg border border-border/50 overflow-hidden text-xs">
+          <table className="w-full text-left">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-medium">Platform</th>
+                <th className="px-3 py-2 font-medium">Artefact</th>
+                <th className="px-3 py-2 font-medium">Notes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              <tr>
+                <td className="px-3 py-2 text-foreground">Windows x64</td>
+                <td className="px-3 py-2 font-mono text-[11px]">FireComply-Connector-Setup.exe</td>
+                <td className="px-3 py-2 text-muted-foreground">Service or interactive install</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 text-foreground">macOS (Apple Silicon / Intel)</td>
+                <td className="px-3 py-2 font-mono text-[11px]">FireComply-Connector-mac.zip</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  Extract and run per README in release
+                </td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 text-foreground">Linux x64</td>
+                <td className="px-3 py-2 font-mono text-[11px]">FireComply-Connector.AppImage</td>
+                <td className="px-3 py-2 text-muted-foreground">chmod +x; no root required</td>
+              </tr>
+              <tr>
+                <td className="px-3 py-2 text-foreground">Linux ARM64</td>
+                <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                  TBD per release
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  Ship when CI publishes arm64 bundle
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <p className="text-[10px] text-muted-foreground">
+          If a download 404s, the release may still be publishing — use{" "}
+          <WorkspacePanelLink section="agents">Assess → Connector agents</WorkspacePanelLink> or
+          contact support for checksums and signed packages.
+        </p>
       </div>
     </div>
   );

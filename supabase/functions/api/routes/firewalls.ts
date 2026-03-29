@@ -1,5 +1,6 @@
 import { getOrgMembership } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse, safeDbError, safeError, userClient } from "../../_shared/db.ts";
+import { getServiceKeyContext } from "../../_shared/service-key.ts";
 
 export async function handleFirewallRoutes(
   req: Request,
@@ -15,13 +16,23 @@ export async function handleFirewallRoutes(
     return null;
   }
 
+  let orgId: string | null = null;
   const authHeader = req.headers.get("authorization");
-  if (!authHeader) return json({ error: "Unauthorized" }, 401);
-  const uc = userClient(authHeader);
-  const { data: { user } } = await uc.auth.getUser();
-  if (!user) return json({ error: "Unauthorized" }, 401);
-  const membership = await getOrgMembership(user.id);
-  if (!membership) return json({ error: "Forbidden" }, 403);
+  if (authHeader) {
+    const uc = userClient(authHeader);
+    const {
+      data: { user },
+    } = await uc.auth.getUser();
+    if (user) {
+      const membership = await getOrgMembership(user.id);
+      if (membership) orgId = membership.org_id;
+    }
+  }
+  if (!orgId) {
+    const sk = await getServiceKeyContext(req);
+    if (sk?.scopes.includes("api:read")) orgId = sk.orgId;
+  }
+  if (!orgId) return json({ error: "Unauthorized" }, 401);
 
   const db = adminClient();
 
@@ -29,7 +40,7 @@ export async function handleFirewallRoutes(
     const { data: firewalls, error: fwErr } = await db
       .from("central_firewalls")
       .select("id, firewall_id, serial_number, hostname, name, firmware_version, model, central_tenant_id")
-      .eq("org_id", membership.org_id)
+      .eq("org_id", orgId)
       .limit(1000);
 
     if (fwErr) return json({ error: safeDbError(fwErr) }, 500);
@@ -38,7 +49,7 @@ export async function handleFirewallRoutes(
     const { data: submissions } = await db
       .from("agent_submissions")
       .select("id, firewalls, overall_score, overall_grade, created_at")
-      .eq("org_id", membership.org_id)
+      .eq("org_id", orgId)
       .order("created_at", { ascending: false })
       .limit(500);
 

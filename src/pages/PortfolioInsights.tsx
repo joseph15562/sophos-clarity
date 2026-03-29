@@ -5,6 +5,9 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { loadScoreHistoryForFleet } from "@/lib/score-history";
+import { gradeForScore, GRADE_COLORS, type Grade } from "@/lib/design-tokens";
+import { resolveCustomerName } from "@/lib/customer-name";
+import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 import {
   BarChart3,
   TrendingUp,
@@ -165,12 +168,10 @@ const TREND_DATA = [
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
 
-function grade(score: number) {
-  if (score >= 85) return { letter: "A", color: "#00F2B3" };
-  if (score >= 70) return { letter: "B", color: "#00EDFF" };
-  if (score >= 55) return { letter: "C", color: "#F29400" };
-  if (score >= 40) return { letter: "D", color: "#EA0022" };
-  return { letter: "F", color: "#EA0022" };
+/** Letter + colour — same bands as saved assessments (`assessment-cloud` / `gradeForScore`). */
+function gradeFromNumericScore(score: number): { letter: Grade; color: string } {
+  const letter = gradeForScore(score);
+  return { letter, color: GRADE_COLORS[letter] };
 }
 
 function formatGBP(n: number) {
@@ -369,7 +370,7 @@ function ScatterPlot({ customers }: { customers: Customer[] }) {
         const cx = xScale(c.daysSinceAssessment);
         const cy = yScale(c.score);
         const r = radius(c.firewallCount);
-        const g = grade(c.score);
+        const g = gradeFromNumericScore(c.score);
         const isHovered = hovered === c.id;
         return (
           <g
@@ -431,11 +432,21 @@ function TrendChart({ data }: { data: { month: string; score: number }[] }) {
   const iw = w - pad.left - pad.right;
   const ih = h - pad.top - pad.bottom;
 
+  if (data.length === 0) {
+    return (
+      <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
+        No trend data yet
+      </div>
+    );
+  }
+
   const minS = Math.min(...data.map((d) => d.score)) - 5;
   const maxS = Math.max(...data.map((d) => d.score)) + 5;
+  const spanY = Math.max(1, maxS - minS);
+  const xDenom = Math.max(1, data.length - 1);
 
-  const x = (i: number) => pad.left + (i / (data.length - 1)) * iw;
-  const y = (s: number) => pad.top + ((maxS - s) / (maxS - minS)) * ih;
+  const x = (i: number) => pad.left + (i / xDenom) * iw;
+  const y = (s: number) => pad.top + ((maxS - s) / spanY) * ih;
 
   const line = data.map((d, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(d.score)}`).join(" ");
   const area = `${line} L${x(data.length - 1)},${h - pad.bottom} L${x(0)},${h - pad.bottom} Z`;
@@ -498,7 +509,7 @@ const glassCard =
   "relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/80 dark:bg-card/95 backdrop-blur-xl shadow-card";
 
 function PortfolioInsightsInner() {
-  const { user, org } = useAuth();
+  const { user, org, isGuest } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   void user;
 
@@ -527,10 +538,14 @@ function PortfolioInsightsInner() {
         if (cancelled) return;
 
         const assessments = assessRes.data ?? [];
+        const orgName = org.name ?? "";
 
+        // One row per logical customer: merge "(This tenant)", "Unnamed", empty, etc. to org name
+        // (same rules as Customer Management / Fleet) so single-tenant orgs do not get duplicate rows.
         const byCustomer = new Map<string, (typeof assessments)[number]>();
         for (const a of assessments) {
-          if (!byCustomer.has(a.customer_name)) byCustomer.set(a.customer_name, a);
+          const key = resolveCustomerName(a.customer_name ?? "", orgName);
+          if (!byCustomer.has(key)) byCustomer.set(key, a);
         }
 
         if (byCustomer.size > 0) {
@@ -591,7 +606,7 @@ function PortfolioInsightsInner() {
         : 0,
     [portfolio, totalCustomers],
   );
-  const avgGrade = useMemo(() => grade(avgScore), [avgScore]);
+  const avgGrade = useMemo(() => gradeFromNumericScore(avgScore), [avgScore]);
   const totalExposure = useMemo(() => portfolio.reduce((s, c) => s + c.exposure, 0), [portfolio]);
   const complianceRate = useMemo(
     () =>
@@ -673,6 +688,7 @@ function PortfolioInsightsInner() {
       )}
 
       <main className={`mx-auto max-w-7xl space-y-8 px-6 py-8 ${loading ? "hidden" : ""}`}>
+        {org?.id && !isGuest && <WorkspaceSettingsStrip variant="insights" />}
         {/* ---- Executive KPIs ---- */}
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className={glassCard + " p-5"}>
@@ -758,7 +774,7 @@ function PortfolioInsightsInner() {
             </div>
             <div className="grid grid-cols-2 gap-3 p-5">
               {sectorAverages.map(({ sector, avg }) => {
-                const g = grade(avg);
+                const g = gradeFromNumericScore(avg);
                 return (
                   <div
                     key={sector}
@@ -782,7 +798,12 @@ function PortfolioInsightsInner() {
               <AlertTriangle className="h-5 w-5 text-[#EA0022]" />
               At-Risk Customers
             </h2>
-            <p className="text-sm text-muted-foreground">Sorted by urgency — worst first</p>
+            <p className="text-sm text-muted-foreground">
+              Every customer, sorted by lowest score first. Grades match saved assessments (A≥90,
+              B≥75, C≥60, D≥40). <span className="font-medium text-foreground">Action needed</span>{" "}
+              when score is under 60, last assessment over 30 days ago, or five or more critical
+              findings.
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -798,9 +819,9 @@ function PortfolioInsightsInner() {
               </thead>
               <tbody>
                 {atRiskCustomers.map((c) => {
-                  const g = grade(c.score);
+                  const g = gradeFromNumericScore(c.score);
                   const needsAction =
-                    c.score < 55 || c.daysSinceAssessment > 30 || c.criticalFindings >= 5;
+                    c.score < 60 || c.daysSinceAssessment > 30 || c.criticalFindings >= 5;
                   return (
                     <tr
                       key={c.id}

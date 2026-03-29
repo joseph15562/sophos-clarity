@@ -25,26 +25,34 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 
+function isServiceRoleBearer(req: Request): boolean {
+  const auth = req.headers.get("Authorization")?.trim() ?? "";
+  if (!auth.toLowerCase().startsWith("bearer ")) return false;
+  const token = auth.slice(7).trim();
+  return token.length > 0 && token === SUPABASE_SERVICE_KEY;
+}
+
+/** Keep URLs verified periodically — vendor sites often retire legacy /feeds paths (404). */
 const RSS_SOURCES = [
   {
     name: "NCSC",
-    url: "https://www.ncsc.gov.uk/feeds/news.xml",
+    url: "https://www.ncsc.gov.uk/api/1/services/v1/news-rss-feed.xml",
     framework: "Cyber Essentials",
   },
   {
-    name: "NIST CSRC",
-    url: "https://csrc.nist.gov/news.xml",
+    name: "NIST",
+    url: "https://www.nist.gov/news-events/news/rss.xml",
     framework: "NIST CSF",
   },
   {
-    name: "ICO",
-    url: "https://ico.org.uk/about-the-ico/media-centre/news-and-blogs/rss/",
-    framework: "GDPR",
+    name: "PCI SSC",
+    url: "https://blog.pcisecuritystandards.org/rss.xml",
+    framework: "PCI DSS",
   },
   {
-    name: "ENISA",
-    url: "https://www.enisa.europa.eu/publications/rss.xml",
-    framework: "NIS2",
+    name: "CISA",
+    url: "https://www.cisa.gov/news.xml",
+    framework: "Cybersecurity",
   },
 ];
 
@@ -55,6 +63,16 @@ interface RssItem {
   pubDate: string;
   source: string;
   framework: string;
+}
+
+/** Per-source result for UI diagnostics (also logged server-side). */
+interface FeedFetchStatus {
+  name: string;
+  url: string;
+  ok: boolean;
+  http_status: number | null;
+  items_parsed: number;
+  error: string | null;
 }
 
 function extractTag(xml: string, tag: string): string {
@@ -103,7 +121,17 @@ function parseRssFeed(xml: string, source: string, framework: string): RssItem[]
   return items.slice(0, 10);
 }
 
-async function fetchFeed(source: typeof RSS_SOURCES[0]): Promise<RssItem[]> {
+async function fetchFeedWithStatus(
+  source: (typeof RSS_SOURCES)[0],
+): Promise<{ items: RssItem[]; status: FeedFetchStatus }> {
+  const status: FeedFetchStatus = {
+    name: source.name,
+    url: source.url,
+    ok: false,
+    http_status: null,
+    items_parsed: 0,
+    error: null,
+  };
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10_000);
@@ -112,12 +140,25 @@ async function fetchFeed(source: typeof RSS_SOURCES[0]): Promise<RssItem[]> {
       headers: { "User-Agent": "FireComply-RegulatoryScanner/1.0" },
     });
     clearTimeout(timer);
-    if (!res.ok) return [];
+    status.http_status = res.status;
+    if (!res.ok) {
+      status.error = `HTTP ${res.status}`;
+      console.warn(`[fetchFeed] ${source.name} ${status.error} ${source.url}`);
+      return { items: [], status };
+    }
     const xml = await res.text();
-    return parseRssFeed(xml, source.name, source.framework);
+    const items = parseRssFeed(xml, source.name, source.framework);
+    status.items_parsed = items.length;
+    status.ok = items.length > 0;
+    if (items.length === 0) {
+      status.error = "No RSS/Atom items parsed (empty or unknown format)";
+      console.warn(`[fetchFeed] ${source.name} parsed 0 items`);
+    }
+    return { items, status };
   } catch (err) {
+    status.error = err instanceof Error ? err.message : String(err);
     console.warn(`[fetchFeed] ${source.name} failed:`, err);
-    return [];
+    return { items: [], status };
   }
 }
 
@@ -212,6 +253,88 @@ Return ONLY the JSON array, no markdown fencing.`;
   }
 }
 
+async function runRegulatoryScan(
+  admin: ReturnType<typeof createClient>,
+  cors: Record<string, string>,
+  opts: { enforceUserCooldown: boolean; invoker: "cron" | "user" },
+): Promise<Response> {
+  if (opts.enforceUserCooldown) {
+    const { data: lastScan } = await admin
+      .from("regulatory_updates")
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+    if (lastScan?.created_at && Date.now() - new Date(lastScan.created_at).getTime() < COOLDOWN_MS) {
+      const hoursLeft = Math.ceil(
+        (COOLDOWN_MS - (Date.now() - new Date(lastScan.created_at).getTime())) / 3_600_000,
+      );
+      return new Response(
+        JSON.stringify({
+          throttled: true,
+          message: `Already scanned today. Next scan available in ~${hoursLeft}h.`,
+        }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+  }
+
+  const feedResults = await Promise.all(RSS_SOURCES.map(fetchFeedWithStatus));
+  const feed_status = feedResults.map((r) => r.status);
+  const allItems: RssItem[] = [];
+  for (const r of feedResults) allItems.push(...r.items);
+
+  if (allItems.length === 0) {
+    console.warn(`[regulatory-scanner] ${opts.invoker}: no RSS items`);
+    return new Response(
+      JSON.stringify({
+        updates: [],
+        message: "No items fetched from feeds",
+        feed_status,
+        invoker: opts.invoker,
+      }),
+      { headers: { ...cors, "Content-Type": "application/json" } },
+    );
+  }
+
+  const summarised = await summariseWithGemini(allItems);
+  const relevant = summarised.filter((s) => s.relevant);
+
+  let inserted = 0;
+  for (const item of relevant) {
+    const { error } = await admin.from("regulatory_updates").upsert(
+      {
+        source: item.source,
+        title: item.title,
+        summary: item.summary,
+        link: item.link,
+        framework: item.framework,
+        published_at: item.published_at,
+      },
+      { onConflict: "source,title" },
+    );
+    if (!error) inserted++;
+  }
+
+  console.log(
+    `[regulatory-scanner] ${opts.invoker}: scanned=${allItems.length} relevant=${relevant.length} inserted=${inserted}`,
+  );
+
+  return new Response(
+    JSON.stringify({
+      scanned: allItems.length,
+      relevant: relevant.length,
+      inserted,
+      message: `Scanned ${allItems.length} items, ${relevant.length} relevant, ${inserted} stored`,
+      feed_status,
+      invoker: opts.invoker,
+    }),
+    { headers: { ...cors, "Content-Type": "application/json" } },
+  );
+}
+
 serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
@@ -219,83 +342,43 @@ serve(async (req) => {
   }
 
   try {
-    const { data: { user } } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-      global: { headers: { Authorization: req.headers.get("Authorization")! } },
-    }).auth.getUser();
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Not authenticated" }), {
-        status: 401,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json().catch(() => ({}));
     const action = (body as Record<string, unknown>).action ?? "scan";
-
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const cron = isServiceRoleBearer(req);
 
     if (action === "scan") {
-      const { data: lastScan } = await admin
-        .from("regulatory_updates")
-        .select("created_at")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+      if (cron) {
+        return await runRegulatoryScan(admin, cors, { enforceUserCooldown: false, invoker: "cron" });
+      }
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const { data: { user } } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      }).auth.getUser();
 
-      const COOLDOWN_MS = 24 * 60 * 60 * 1000;
-      if (lastScan?.created_at && Date.now() - new Date(lastScan.created_at).getTime() < COOLDOWN_MS) {
-        const hoursLeft = Math.ceil((COOLDOWN_MS - (Date.now() - new Date(lastScan.created_at).getTime())) / 3_600_000);
-        return new Response(JSON.stringify({
-          throttled: true,
-          message: `Already scanned today. Next scan available in ~${hoursLeft}h.`,
-        }), {
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Not authenticated" }), {
+          status: 401,
           headers: { ...cors, "Content-Type": "application/json" },
         });
       }
 
-      const feedResults = await Promise.allSettled(RSS_SOURCES.map(fetchFeed));
-      const allItems: RssItem[] = [];
-      for (const r of feedResults) {
-        if (r.status === "fulfilled") allItems.push(...r.value);
-      }
-
-      if (allItems.length === 0) {
-        return new Response(JSON.stringify({ updates: [], message: "No items fetched from feeds" }), {
-          headers: { ...cors, "Content-Type": "application/json" },
-        });
-      }
-
-      const summarised = await summariseWithGemini(allItems);
-      const relevant = summarised.filter((s) => s.relevant);
-
-      let inserted = 0;
-      for (const item of relevant) {
-        const { error } = await admin.from("regulatory_updates").upsert(
-          {
-            source: item.source,
-            title: item.title,
-            summary: item.summary,
-            link: item.link,
-            framework: item.framework,
-            published_at: item.published_at,
-          },
-          { onConflict: "source,title" }
-        );
-        if (!error) inserted++;
-      }
-
-      return new Response(JSON.stringify({
-        scanned: allItems.length,
-        relevant: relevant.length,
-        inserted,
-        message: `Scanned ${allItems.length} items, ${relevant.length} relevant, ${inserted} stored`,
-      }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return await runRegulatoryScan(admin, cors, { enforceUserCooldown: true, invoker: "user" });
     }
 
     if (action === "list") {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const { data: { user } } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      }).auth.getUser();
+
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Not authenticated" }), {
+          status: 401,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
       const { data, error } = await admin
         .from("regulatory_updates")
         .select("*")

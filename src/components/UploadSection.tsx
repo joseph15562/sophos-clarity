@@ -317,6 +317,18 @@ export function UploadSection({
                   Supported inputs
                 </p>
                 <p className="text-sm font-semibold text-foreground mt-1">HTML, HTM, XML</p>
+                <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+                  SFOS HTML exports and entities-style XML —{" "}
+                  <a
+                    href="/supported-sfos-versions.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+                  >
+                    supported export matrix
+                  </a>
+                  .
+                </p>
               </div>
               <div className="rounded-2xl border border-brand-accent/15 bg-brand-accent/[0.05] px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
