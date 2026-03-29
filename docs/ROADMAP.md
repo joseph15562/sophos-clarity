@@ -1,6 +1,6 @@
 # Sophos FireComply — Roadmap & Feature Log
 
-> Last updated: 29 March 2026
+> Last updated: 31 March 2026
 
 ---
 
