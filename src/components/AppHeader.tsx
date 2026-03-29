@@ -435,6 +435,7 @@ export function AppHeader({
               { to: "/drift", icon: GitCompare, label: "Drift" },
               { to: "/playbooks", icon: BookOpen, label: "Playbooks" },
               { to: "/api", icon: Code2, label: "API" },
+              { to: "/trust", icon: Shield, label: "Trust" },
               { to: "/changelog", icon: ScrollText, label: "Updates" },
             ].map(({ to, icon: Icon, label }) => {
               const active = location.pathname === to;

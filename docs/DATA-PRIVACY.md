@@ -59,15 +59,15 @@ Implementation: `src/lib/anonymise.ts` — `buildAnonymisationMap`, `anonymiseDa
 
 ## Retention and processing (summary)
 
-| Data / flow              | Where it goes              | Persisted? |
-|--------------------------|----------------------------|------------|
-| Config in local mode     | Nowhere                    | No         |
-| Config in cloud mode     | Supabase Edge → Gemini     | Not by FireComply; Gemini per Google’s policy |
-| Anonymised config        | Same as above, with placeholders | No real values stored |
-| Assessments (signed in)  | Supabase Postgres          | Yes, per your RLS/schema |
-| Connector submissions   | FireComply API / Supabase  | Yes, per your project |
+| Data / flow             | Where it goes                    | Persisted?                                    |
+| ----------------------- | -------------------------------- | --------------------------------------------- |
+| Config in local mode    | Nowhere                          | No                                            |
+| Config in cloud mode    | Supabase Edge → Gemini           | Not by FireComply; Gemini per Google’s policy |
+| Anonymised config       | Same as above, with placeholders | No real values stored                         |
+| Assessments (signed in) | Supabase Postgres                | Yes, per your RLS/schema                      |
+| Connector submissions   | FireComply API / Supabase        | Yes, per your project                         |
 
-We do not control retention on Google’s side. For Supabase, retention follows your project settings and RLS policies; see [TENANT-MODEL.md](TENANT-MODEL.md) for how data is isolated per organisation. Organisations can set submission retention (e.g. auto-delete connector submissions after N days) in the app; a full “delete my data” / right-to-erasure flow is on the roadmap.
+We do not control retention on Google’s side. For Supabase, retention follows your project settings and RLS policies; see [TENANT-MODEL.md](TENANT-MODEL.md) for how data is isolated per organisation. Organisations can set submission retention (e.g. auto-delete connector submissions after N days) in the app under **How we handle your data** (workspace settings). **Org admins** can also use **Delete all data** in that same section to remove cloud-stored workspace data (assessments, reports, Central cache, audit log for the org, etc.); scope and limits are described in-app — align DPA language with counsel.
 
 ---
 

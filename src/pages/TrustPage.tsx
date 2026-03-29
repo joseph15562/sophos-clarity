@@ -1,9 +1,13 @@
 import { Link } from "react-router-dom";
 import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
+
+const DATA_PRIVACY_HREF =
+  "https://github.com/joseph15562/sophos-firecomply/blob/main/docs/DATA-PRIVACY.md";
 
 /**
- * Trust centre: subprocessors, retention pointers, legal placeholders.
+ * Trust centre: how we handle data, subprocessors, retention pointers, legal placeholders.
  * Replace highlighted copy with counsel-approved text before procurement.
  */
 export default function TrustPage() {
@@ -26,6 +30,138 @@ export default function TrustPage() {
             exports and optional Sophos Central metadata. Hosting, authentication, and long-lived
             data are processed in line with your workspace configuration and the documents linked
             below.
+          </p>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold tracking-tight">How we handle your data</h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This summary matches the in-app{" "}
+            <strong className="text-foreground">How we handle your data</strong> section (workspace
+            settings). For flow diagrams and mode details, see the{" "}
+            <a
+              href={DATA_PRIVACY_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-accent hover:underline font-medium"
+            >
+              DATA-PRIVACY
+            </a>{" "}
+            document in the repository (replace the host with your fork if self-hosting).
+          </p>
+
+          <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3 space-y-3 text-xs text-muted-foreground leading-relaxed">
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">Data residency</p>
+              <p>
+                Cloud data lives in the FireComply platform database (Supabase). Firewall
+                configuration exports are parsed and scored in your browser; raw config is not
+                uploaded or stored on our servers for that workflow.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">
+                What we store in the cloud
+              </p>
+              <p>
+                When you use cloud mode: assessments, saved reports, finding snapshots, remediation
+                progress, alert rules, shared report links, audit metadata, encrypted Sophos Central
+                credentials, and cached firewall metadata — scoped per organisation (row-level
+                security).
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">
+                Local (air-gapped) mode
+              </p>
+              <p>
+                Optional local mode keeps parsing, scoring, and UI state on your machine (e.g.
+                IndexedDB). AI report generation and Sophos Central integration are disabled in that
+                mode.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">
+                Retention and automated cleanup
+              </p>
+              <p>
+                Submission and saved-report retention follow your organisation policy and scheduled
+                cleanup jobs. A daily regulatory RSS ingest may run in your project (Compliance /
+                Regulatory Tracker) — see product docs for operator setup.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">AI report generation</p>
+              <p>
+                For AI-generated reports, config can be{" "}
+                <strong className="text-foreground">anonymised before transmission</strong>{" "}
+                (placeholders for IPs, hostnames, labels). Anonymised content is sent to Google
+                Gemini via a Supabase Edge Function over HTTPS. Google’s terms and processing
+                location apply; we do not control Google’s retention of API traffic — see{" "}
+                <a
+                  href="https://ai.google.dev/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-accent hover:underline"
+                >
+                  Google AI terms
+                </a>
+                .
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">
+                Deterministic analysis
+              </p>
+              <p>
+                Rule-based findings, risk scoring, and compliance mappings run in the browser; no
+                raw config is sent to a server for that analysis.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">Other external calls</p>
+              <ul className="list-disc pl-4 space-y-1 mt-1">
+                <li>
+                  <span className="text-foreground font-medium">Geo-IP</span> — public IPs may be
+                  looked up via ip-api.com for map features (no auth data).
+                </li>
+                <li>
+                  <span className="text-foreground font-medium">CVE correlation</span> — service
+                  names may be queried against the NIST NVD API (no firewall config payload).
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">Sophos Central</p>
+              <p>
+                If connected, credentials are encrypted at rest; Central API calls are proxied
+                server-side so secrets are not exposed in the browser after setup.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">Connector agent</p>
+              <p>
+                The connector uses your firewall XML API locally and submits results through an
+                authenticated server path; it does not expose firewall credentials externally.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-[11px] mb-1">Shared reports</p>
+              <p>
+                Share links are time-limited (default seven days). Shared content is assessment
+                report material, not raw firewall configuration exports.
+              </p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <strong className="text-foreground">In the product:</strong> open{" "}
+            <WorkspacePanelLink section="data-governance">
+              How we handle your data
+            </WorkspacePanelLink>{" "}
+            from Assess (workspace panel → Settings) to see your org retention value, regulatory
+            scanner notes, and <strong className="text-foreground">Delete all data</strong> (org
+            admins — irreversible).
           </p>
         </section>
 
@@ -68,22 +204,6 @@ export default function TrustPage() {
               </tbody>
             </table>
           </div>
-        </section>
-
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-tight">Retention and lifecycle</h2>
-          <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-            <li>
-              Submission retention is configured per organisation (see{" "}
-              <strong className="text-foreground font-medium">Data governance</strong> in workspace
-              settings). Automated cleanup jobs remove expired submissions per policy.
-            </li>
-            <li>
-              Product privacy overview:{" "}
-              <span className="font-mono text-xs text-foreground/90">docs/DATA-PRIVACY.md</span> in
-              the application repository (or your fork).
-            </li>
-          </ul>
         </section>
 
         <section className="space-y-2">
