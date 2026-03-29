@@ -4,7 +4,7 @@
 > **Auditors:** Principal Engineer (Google), Senior Product Designer (Apple), Cybersecurity Architect (CrowdStrike), Performance Engineer (Netflix), YC Partner
 > **Scope:** Full codebase audit — architecture, performance, security, UX, functionality, testing, documentation, DX, scalability, product vision
 
-> **Verification (31 March 2026):** On `main`, `npm run build`, `npx tsc --noEmit`, and `npm test` (319 tests, 60 files) all succeed. Tier 2 backlog QA checklist: [TEST-PLAN-TIER2-BACKLOG.md](TEST-PLAN-TIER2-BACKLOG.md).
+> **Verification (31 March 2026):** On `main`, `npm run build`, `npx tsc --noEmit`, and `npm test` (319 tests, 60 files) all succeed. Tier 2 **QA checklist:** [TEST-PLAN-TIER2-BACKLOG.md](TEST-PLAN-TIER2-BACKLOG.md). Tier 2 **phased execution plan:** [docs/plans/tier-2-engineering-backlog.md](plans/tier-2-engineering-backlog.md).
 
 ---
 
@@ -438,7 +438,7 @@
 
 **Score: 5/10**
 
-**Justification:** The README is solid with setup instructions, environment variable documentation, and an ASCII architecture diagram. The `docs/` folder includes a tenant model doc, data privacy doc, [ROADMAP.md](ROADMAP.md), and extensive plan files. The product ships an in-app **Changelog** at `/changelog` (`ChangelogPage`), but there is still no repo-root `CHANGELOG.md` with semantic versioning, no machine-readable API spec for edge routes, no ADRs, and the generated Supabase types file is stale. A contractor would struggle beyond day one.
+**Justification:** The README is solid with setup instructions, environment variable documentation, and an ASCII architecture diagram. The `docs/` folder includes a tenant model doc, data privacy doc, [ROADMAP.md](ROADMAP.md), [Tier 2 execution plan](plans/tier-2-engineering-backlog.md), and extensive plan files. The product ships an in-app **Changelog** at `/changelog` (`ChangelogPage`), but there is still no repo-root `CHANGELOG.md` with semantic versioning, no machine-readable API spec for edge routes, no ADRs, and the generated Supabase types file is stale. A contractor would struggle beyond day one.
 
 ### Finding 7.1 — No repo-level CHANGELOG (in-app Changelog exists)
 
@@ -641,18 +641,18 @@
 
 ### 1. SCORECARD
 
-| #   | Dimension                      | Score | One-Line Justification                                                                                                                                                          |
-| --- | ------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Architecture & Quality         | 6/10  | Competent React engineering undermined by god files, incomplete TS strictness (`noImplicitAny` off), ESLint unused-vars off, and 5+ data fetching patterns                      |
-| 2   | Performance & Efficiency       | 5/10  | Good lazy loading but N+1 queries, zero debounce, leaking intervals, and a 1.9 MB PDF bundle                                                                                    |
-| 3   | Security & Vulnerability       | 8/10  | All 8 critical/high findings resolved — constant-time HMAC, HKDF key derivation, HTML escaping, error genericization, auth fix, slug entropy, npm audit clean                   |
-| 4   | UI/UX & Product Design         | 6/10  | Polished visual design with inconsistent loading/empty/toast patterns and no a11y automation                                                                                    |
-| 5   | Functionality & Business Logic | 7/10  | Core flow works, 19 compliance frameworks, but 4 half-built features and ~16 silent error catches                                                                               |
-| 6   | Testing & Reliability          | 7/10  | 319 unit tests + CI + ~30 Deno `_shared` tests + Playwright smoke file (several cases); still no full-journey or edge-route integration tests                                   |
-| 7   | Documentation & Knowledge      | 5/10  | Good README; in-app Changelog + ROADMAP + Tier 2 [test plan](TEST-PLAN-TIER2-BACKLOG.md); still no root CHANGELOG.md, no OpenAPI-style API spec, no ADRs, stale generated types |
-| 8   | Developer Experience & Tooling | 7/10  | Clean setup, Prettier, Husky, CI/CD — but TypeScript strict mode off and no DB seed                                                                                             |
-| 9   | Scalability & System Design    | 5/10  | Works at current scale but N+1 queries, no caching, no job queue, no observability                                                                                              |
-| 10  | Product Vision & Strategic     | 8/10  | Clear value prop, polished core journey, half-built features removed — tighter product surface                                                                                  |
+| #   | Dimension                      | Score | One-Line Justification                                                                                                                                                                                                               |
+| --- | ------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Architecture & Quality         | 6/10  | Competent React engineering undermined by god files, incomplete TS strictness (`noImplicitAny` off), ESLint unused-vars off, and 5+ data fetching patterns                                                                           |
+| 2   | Performance & Efficiency       | 5/10  | Good lazy loading but N+1 queries, zero debounce, leaking intervals, and a 1.9 MB PDF bundle                                                                                                                                         |
+| 3   | Security & Vulnerability       | 8/10  | All 8 critical/high findings resolved — constant-time HMAC, HKDF key derivation, HTML escaping, error genericization, auth fix, slug entropy, npm audit clean                                                                        |
+| 4   | UI/UX & Product Design         | 6/10  | Polished visual design with inconsistent loading/empty/toast patterns and no a11y automation                                                                                                                                         |
+| 5   | Functionality & Business Logic | 7/10  | Core flow works, 19 compliance frameworks, but 4 half-built features and ~16 silent error catches                                                                                                                                    |
+| 6   | Testing & Reliability          | 7/10  | 319 unit tests + CI + ~30 Deno `_shared` tests + Playwright smoke file (several cases); still no full-journey or edge-route integration tests                                                                                        |
+| 7   | Documentation & Knowledge      | 5/10  | Good README; in-app Changelog + ROADMAP + Tier 2 [test plan](TEST-PLAN-TIER2-BACKLOG.md) + [phased plan](plans/tier-2-engineering-backlog.md); still no root CHANGELOG.md, no OpenAPI-style API spec, no ADRs, stale generated types |
+| 8   | Developer Experience & Tooling | 7/10  | Clean setup, Prettier, Husky, CI/CD — but TypeScript strict mode off and no DB seed                                                                                                                                                  |
+| 9   | Scalability & System Design    | 5/10  | Works at current scale but N+1 queries, no caching, no job queue, no observability                                                                                                                                                   |
+| 10  | Product Vision & Strategic     | 8/10  | Clear value prop, polished core journey, half-built features removed — tighter product surface                                                                                                                                       |
 
 **Weighted Overall Score: 60/100 → 65/100 (post-fix)**
 
@@ -688,7 +688,10 @@ Weights: Security (15%), Architecture (12%), Scalability (12%), Testing (12%), P
 
 #### TIER 2 — Fix This Month (Significant Improvements)
 
+**Sequencing:** Use the dependency-ordered phases in [docs/plans/tier-2-engineering-backlog.md](plans/tier-2-engineering-backlog.md) (CI/strict → quick wins → N+1 → UI primitives → `useMutation` → Zod/docs/logging → tests/a11y). Validate with [TEST-PLAN-TIER2-BACKLOG.md](TEST-PLAN-TIER2-BACKLOG.md).
+
 - [x] Tier 2 validation checklist — [TEST-PLAN-TIER2-BACKLOG.md](TEST-PLAN-TIER2-BACKLOG.md) (living document; execute rows as work lands)
+- [x] Tier 2 phased execution plan — [docs/plans/tier-2-engineering-backlog.md](plans/tier-2-engineering-backlog.md) (canonical in git; mirror under `~/.cursor/plans/` if using Cursor Plans UI)
 - [ ] Enable full TypeScript `strict` / `noImplicitAny` for `src` — `tsconfig.app.json` already has `strictNullChecks` + unused locals/parameters; burn down remaining flags (1–2 weeks)
 - [ ] Enable `@typescript-eslint/no-unused-vars: "warn"` and clean up (2 days)
 - [ ] Batch N+1 queries in edge functions (send-scheduled-reports, health-checks, regulatory-scanner) (1 day)
