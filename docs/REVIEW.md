@@ -1,6 +1,6 @@
 # Sophos FireComply — War Room Audit
 
-> **Date:** 25 March 2026
+> **Date:** 31 March 2026
 > **Auditors:** Principal Engineer (Google), Senior Product Designer (Apple), Cybersecurity Architect (CrowdStrike), Performance Engineer (Netflix), YC Partner
 > **Scope:** Full codebase audit — architecture, performance, security, UX, functionality, testing, documentation, DX, scalability, product vision
 
@@ -383,25 +383,25 @@
 
 **Score: 6/10**
 
-**Justification:** The project has 59 test files with 307 tests, a reasonable foundation. The CI pipeline runs lint, typecheck, tests, build, npm audit, and Playwright E2E on every push. However, E2E coverage is minimal (1 smoke test), there are zero integration tests for the 8 edge functions that handle all business logic, and some tests assert implementation details rather than behavior. For a security product handling enterprise firewall configs, this coverage is insufficient.
+**Justification:** The project has 59 test files with 307 tests, a reasonable foundation. The CI pipeline runs lint, typecheck, tests, build, npm audit, and Playwright E2E on every push. Playwright smoke coverage is still thin relative to product surface: `e2e/smoke.spec.ts` runs several scenarios (home, guest path, shared-report error state, 404, `/changelog`, `/trust`, playbooks shell, `/audit`), but the full upload → analyse → export journey remains unautomated. Route-level edge function integration tests are still missing, and some unit tests assert implementation details rather than behavior. For a security product handling enterprise firewall configs, this coverage is insufficient.
 
 ### Finding 6.1 — Minimal E2E Coverage
 
-| Field        | Detail                                                                                                                                                                                                                                   |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **WHAT**     | `e2e/smoke.spec.ts` is the only Playwright test. It likely covers page load and basic navigation only.                                                                                                                                   |
-| **WHY**      | The core user journey (upload XML → view analysis → generate report → download PDF) has zero automated end-to-end coverage. Regressions in this flow are caught only by manual testing. Source: Google Testing Blog — "Testing Pyramid." |
-| **SEVERITY** | High                                                                                                                                                                                                                                     |
-| **FIX**      | Add Playwright tests for: (1) config upload and analysis flow, (2) report generation and export, (3) SE health check flow, (4) auth/login flow, (5) shared report access. Target: 10-15 E2E scenarios covering the primary happy paths.  |
+| Field        | Detail                                                                                                                                                                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `e2e/smoke.spec.ts` is the only Playwright file, but it contains multiple smoke cases (landing, guest affordance, invalid shared link, unknown route, `/changelog`, `/trust`, playbooks, activity log). None cover config upload, AI report generation, or authenticated hub workflows end-to-end. |
+| **WHY**      | The core user journey (upload XML → view analysis → generate report → download PDF) has zero automated end-to-end coverage. Regressions in this flow are caught only by manual testing. Source: Google Testing Blog — "Testing Pyramid."                                                           |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                                               |
+| **FIX**      | Add Playwright tests for: (1) config upload and analysis flow, (2) report generation and export, (3) SE health check flow, (4) auth/login flow, (5) shared report access. Target: 10-15 E2E scenarios covering the primary happy paths.                                                            |
 
 ### Finding 6.2 — Zero Edge Function Integration Tests
 
-| Field        | Detail                                                                                                                                                                                                                               |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **WHAT**     | No test files exist under `supabase/functions/`. The 8 edge functions (api, api-agent, api-public, parse-config, sophos-central, portal-data, send-scheduled-reports, regulatory-scanner) have zero automated tests.                 |
-| **WHY**      | All authorization logic, business rules, and data mutations happen in these functions. A bug in `authenticateSE` or `handlePasskeyLoginVerify` would be a security incident. Source: OWASP Testing Guide — "Testing Authentication." |
-| **SEVERITY** | Critical                                                                                                                                                                                                                             |
-| **FIX**      | Use Deno's built-in test runner (`deno test`) or Supabase's local dev server. Prioritize tests for: auth middleware, passkey flows, config upload access control, agent API key validation.                                          |
+| Field        | Detail                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | Deno tests exist under `supabase/functions/_shared/` (crypto, email, db utilities — ~30 tests). There are still **no** integration tests that hit deployed route handlers, auth middleware, or per-function HTTP contracts for the edge stack (api, api-agent, api-public, parse-config, sophos-central, portal-data, send-scheduled-reports, regulatory-scanner, etc.). |
+| **WHY**      | All authorization logic, business rules, and data mutations happen in these functions. A bug in `authenticateSE` or `handlePasskeyLoginVerify` would be a security incident. Source: OWASP Testing Guide — "Testing Authentication."                                                                                                                                     |
+| **SEVERITY** | Critical                                                                                                                                                                                                                                                                                                                                                                 |
+| **FIX**      | Use Deno's built-in test runner (`deno test`) or Supabase's local dev server. Prioritize tests for: auth middleware, passkey flows, config upload access control, agent API key validation.                                                                                                                                                                              |
 
 ### Finding 6.3 — Tests Assert Implementation Details
 
@@ -436,16 +436,16 @@
 
 **Score: 5/10**
 
-**Justification:** The README is solid with setup instructions, environment variable documentation, and an ASCII architecture diagram. The `docs/` folder contains 77 files including a tenant model doc, data privacy doc, and extensive plan files. However, there is no CHANGELOG, no API documentation for the 8 edge functions, no ADRs, and the generated types file is stale. A contractor would struggle beyond day one.
+**Justification:** The README is solid with setup instructions, environment variable documentation, and an ASCII architecture diagram. The `docs/` folder includes a tenant model doc, data privacy doc, [ROADMAP.md](ROADMAP.md), and extensive plan files. The product ships an in-app **Changelog** at `/changelog` (`ChangelogPage`), but there is still no repo-root `CHANGELOG.md` with semantic versioning, no machine-readable API spec for edge routes, no ADRs, and the generated Supabase types file is stale. A contractor would struggle beyond day one.
 
-### Finding 7.1 — No CHANGELOG
+### Finding 7.1 — No repo-level CHANGELOG (in-app Changelog exists)
 
-| Field        | Detail                                                                                                                                             |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **WHAT**     | `package.json` version is `0.0.0`. No `CHANGELOG.md` exists. `docs/UPDATES-CHANGELOG.md` is a session-style narrative, not a structured changelog. |
-| **WHY**      | Customers, stakeholders, and developers cannot track what changed between releases. Source: Keep a Changelog (keepachangelog.com).                 |
-| **SEVERITY** | Medium                                                                                                                                             |
-| **FIX**      | Create `CHANGELOG.md` following Keep a Changelog format. Adopt semantic versioning. Automate with `standard-version` or `changesets`.              |
+| Field        | Detail                                                                                                                                                                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WHAT**     | `package.json` version is `0.0.0`. No root `CHANGELOG.md` exists. `docs/UPDATES-CHANGELOG.md` is a session-style narrative, not a structured release log. **Mitigation:** in-app `/changelog` and [ROADMAP.md](ROADMAP.md) document shipped features for users and stakeholders. |
+| **WHY**      | Release engineering and integrators still lack a single semver file and automated release notes. Source: Keep a Changelog (keepachangelog.com).                                                                                                                                  |
+| **SEVERITY** | Medium                                                                                                                                                                                                                                                                           |
+| **FIX**      | Add `CHANGELOG.md` (Keep a Changelog) and adopt semantic versioning; optionally generate release entries from merged PRs. Keep `/changelog` in sync or link out to the same source of truth.                                                                                     |
 
 ### Finding 7.2 — No API Documentation
 
@@ -646,8 +646,8 @@
 | 3   | Security & Vulnerability       | 8/10  | All 8 critical/high findings resolved — constant-time HMAC, HKDF key derivation, HTML escaping, error genericization, auth fix, slug entropy, npm audit clean |
 | 4   | UI/UX & Product Design         | 6/10  | Polished visual design with inconsistent loading/empty/toast patterns and no a11y automation                                                                  |
 | 5   | Functionality & Business Logic | 7/10  | Core flow works, 19 compliance frameworks, but 4 half-built features and ~16 silent error catches                                                             |
-| 6   | Testing & Reliability          | 7/10  | 307 unit tests + CI pipeline + 30 Deno edge function tests; still only 1 E2E test                                                                             |
-| 7   | Documentation & Knowledge      | 5/10  | Good README but no CHANGELOG, no API docs, no ADRs, and stale generated types                                                                                 |
+| 6   | Testing & Reliability          | 7/10  | 307 unit tests + CI + ~30 Deno `_shared` tests + Playwright smoke file (several cases); still no full-journey or edge-route integration tests                 |
+| 7   | Documentation & Knowledge      | 5/10  | Good README; in-app Changelog + ROADMAP help, but no root CHANGELOG.md, no OpenAPI-style API spec, no ADRs, stale generated types                             |
 | 8   | Developer Experience & Tooling | 7/10  | Clean setup, Prettier, Husky, CI/CD — but TypeScript strict mode off and no DB seed                                                                           |
 | 9   | Scalability & System Design    | 5/10  | Works at current scale but N+1 queries, no caching, no job queue, no observability                                                                            |
 | 10  | Product Vision & Strategic     | 8/10  | Clear value prop, polished core journey, half-built features removed — tighter product surface                                                                |
@@ -691,7 +691,7 @@ Weights: Security (15%), Architecture (12%), Scalability (12%), Testing (12%), P
 - [ ] Batch N+1 queries in edge functions (send-scheduled-reports, health-checks, regulatory-scanner) (1 day)
 - [ ] Batch N+1 queries in frontend (AgentFleetPanel, AgentManager) (1 day)
 - [ ] Add Deno integration tests for edge function auth middleware — scaffold exists, expand coverage (2-3 days)
-- [ ] Add 10-15 Playwright E2E tests for critical user journeys (1 week)
+- [ ] Expand Playwright beyond smoke: config upload → analysis → export, auth/hub flows, SE health check (target 10–15 scenarios total) (1 week)
 - [ ] Consolidate to single toast system (Sonner) (2 hrs)
 - [ ] Create unified `<LoadingState />` and `<SafeHtml />` components (1 day)
 - [ ] Wire `EmptyState` component into all list/table views (1 day)
