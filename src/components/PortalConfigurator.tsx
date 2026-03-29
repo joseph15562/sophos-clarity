@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import {
   Building2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { resolveCustomerName } from "@/lib/customer-name";
 
 const SECTION_OPTIONS = [
   { id: "score", label: "Score Summary" },
@@ -85,9 +86,22 @@ function slugify(name: string): string {
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{10,46}[a-z0-9]$/;
 
-export function PortalConfigurator() {
+export interface PortalConfiguratorProps {
+  /** Raw `tenant_name` to select when opening from Customer Management (must match DB). */
+  initialTenantName?: string | null;
+  /** `focused` hides the full tenant list and edits one tenant only. */
+  tenantListMode?: "all" | "focused";
+  onSaved?: () => void;
+}
+
+export function PortalConfigurator({
+  initialTenantName = null,
+  tenantListMode = "all",
+  onSaved,
+}: PortalConfiguratorProps) {
   const { org } = useAuth();
   const { toast } = useToast();
+  const orgDisplayName = org?.name ?? "";
 
   const [tenants, setTenants] = useState<string[]>([]);
   const [portalConfigs, setPortalConfigs] = useState<PortalConfig[]>([]);
@@ -98,8 +112,13 @@ export function PortalConfigurator() {
   const [slugError, setSlugError] = useState<string | null>(null);
   const [configExpanded, setConfigExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedTenantRef = useRef<string | null>(null);
 
   const orgId = org?.id ?? "";
+
+  useLayoutEffect(() => {
+    selectedTenantRef.current = selectedTenant;
+  }, [selectedTenant]);
 
   // Load distinct tenant names from agents + all existing portal configs
   const loadTenants = useCallback(async () => {
@@ -123,19 +142,25 @@ export function PortalConfigurator() {
       if (pc.tenant_name) tenantSet.add(pc.tenant_name);
     }
 
+    if (initialTenantName) tenantSet.add(initialTenantName);
+
     const sortedTenants = [...tenantSet].sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: "base" }),
     );
     setTenants(sortedTenants);
     setPortalConfigs(configList);
 
-    // Auto-select first tenant if none selected
-    if (!selectedTenant && sortedTenants.length > 0) {
-      setSelectedTenant(sortedTenants[0]);
-    }
+    const prev = selectedTenantRef.current;
+    const nextSelected =
+      tenantListMode === "focused" && initialTenantName
+        ? initialTenantName
+        : prev && sortedTenants.includes(prev)
+          ? prev
+          : (sortedTenants[0] ?? null);
+    setSelectedTenant(nextSelected);
 
     setLoading(false);
-  }, [orgId, selectedTenant]);
+  }, [orgId, initialTenantName, tenantListMode]);
 
   useEffect(() => {
     loadTenants();
@@ -271,9 +296,10 @@ export function PortalConfigurator() {
       });
     } else {
       toast({ title: "Portal configuration saved" });
+      onSaved?.();
       await loadTenants();
     }
-  }, [config, orgId, toast, update, loadTenants]);
+  }, [config, orgId, toast, update, loadTenants, onSaved]);
 
   const portalUrl = config?.slug ? `${window.location.origin}/portal/${config.slug}` : "";
 
@@ -309,74 +335,77 @@ export function PortalConfigurator() {
   return (
     <div className="space-y-6">
       {/* Tenant Portal Summary */}
-      <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] overflow-hidden">
-        <div className="px-5 py-4 border-b border-brand-accent/10">
-          <div className="flex items-center gap-2.5">
-            <Globe className="h-4 w-4 text-brand-accent/50" />
-            <span className="text-[13px] font-display font-semibold text-foreground">
-              Tenant Portals
-            </span>
+      {tenantListMode === "all" && (
+        <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] overflow-hidden">
+          <div className="px-5 py-4 border-b border-brand-accent/10">
+            <div className="flex items-center gap-2.5">
+              <Globe className="h-4 w-4 text-brand-accent/50" />
+              <span className="text-[13px] font-display font-semibold text-foreground">
+                Tenant Portals
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">
+              Each tenant gets their own portal link showing only their firewalls' data.
+            </p>
           </div>
-          <p className="text-[11px] text-muted-foreground/70 mt-1">
-            Each tenant gets their own portal link showing only their firewalls' data.
-          </p>
-        </div>
-        <div className="divide-y divide-brand-accent/[0.06]">
-          {tenants.map((tenant) => {
-            const pc = portalConfigs.find((c) => c.tenant_name === tenant);
-            const url = pc?.slug ? `${window.location.origin}/portal/${pc.slug}` : null;
-            const isSelected = selectedTenant === tenant;
+          <div className="divide-y divide-brand-accent/[0.06]">
+            {tenants.map((tenant) => {
+              const pc = portalConfigs.find((c) => c.tenant_name === tenant);
+              const url = pc?.slug ? `${window.location.origin}/portal/${pc.slug}` : null;
+              const isSelected = selectedTenant === tenant;
+              const displayName = resolveCustomerName(tenant, orgDisplayName);
 
-            return (
-              <div
-                key={tenant}
-                className={`flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors ${
-                  isSelected ? "bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08]" : ""
-                }`}
-                onClick={() => setSelectedTenant(tenant)}
-              >
-                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{tenant}</p>
-                  {url ? (
-                    <p className="text-xs text-muted-foreground truncate">{url}</p>
+              return (
+                <div
+                  key={tenant}
+                  className={`flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04] transition-colors ${
+                    isSelected ? "bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08]" : ""
+                  }`}
+                  onClick={() => setSelectedTenant(tenant)}
+                >
+                  <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+                    {url ? (
+                      <p className="text-xs text-muted-foreground truncate">{url}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Not configured</p>
+                    )}
+                  </div>
+                  {pc?.slug ? (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#008F69]/30 dark:border-[#00F2B3]/20"
+                    >
+                      Live
+                    </Badge>
                   ) : (
-                    <p className="text-xs text-muted-foreground italic">Not configured</p>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 rounded-md text-muted-foreground bg-brand-accent/[0.04] border-brand-accent/10"
+                    >
+                      Draft
+                    </Badge>
+                  )}
+                  {url && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyLink(url);
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
                   )}
                 </div>
-                {pc?.slug ? (
-                  <Badge
-                    variant="outline"
-                    className="shrink-0 rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#008F69]/30 dark:border-[#00F2B3]/20"
-                  >
-                    Live
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="shrink-0 rounded-md text-muted-foreground bg-brand-accent/[0.04] border-brand-accent/10"
-                  >
-                    Draft
-                  </Badge>
-                )}
-                {url && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyLink(url);
-                    }}
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Selected Tenant Configuration */}
       {config && (
@@ -391,7 +420,9 @@ export function PortalConfigurator() {
             ) : (
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
-            <span className="text-sm font-medium text-foreground">Configure: {selectedTenant}</span>
+            <span className="text-sm font-medium text-foreground">
+              Configure: {resolveCustomerName(selectedTenant ?? "", orgDisplayName)}
+            </span>
             {config.id && (
               <Badge variant="secondary" className="ml-auto text-xs">
                 Saved

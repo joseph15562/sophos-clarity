@@ -2,7 +2,19 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, UserPlus, Key, Shield, Trash2, Loader2, Clock, Check, X, Users } from "lucide-react";
+import {
+  Mail,
+  UserPlus,
+  Key,
+  Shield,
+  Trash2,
+  Loader2,
+  Clock,
+  Check,
+  X,
+  Users,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface PortalViewerManagerProps {
@@ -159,6 +171,69 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
     }
   }
 
+  async function handleDelete(viewer: PortalViewer) {
+    setActionInFlight(viewer.id);
+    try {
+      const { error } = await supabase
+        .from("portal_viewers")
+        .delete()
+        .eq("id", viewer.id)
+        .eq("org_id", orgId);
+      if (error) throw new Error(error.message);
+      toast.success(`${viewer.email} removed`);
+      loadViewers();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(msg);
+    } finally {
+      setActionInFlight(null);
+    }
+  }
+
+  async function handleResendInvite(viewer: PortalViewer) {
+    setActionInFlight(viewer.id);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Not authenticated");
+        setActionInFlight(null);
+        return;
+      }
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/portal-viewers/invite`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ email: viewer.email, name: viewer.name }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === "Already invited") {
+          const { error } = await supabase.auth.resetPasswordForEmail(viewer.email);
+          if (error) throw new Error(error.message);
+          toast.success(`Invite re-sent to ${viewer.email}`);
+        } else {
+          throw new Error(body.error ?? `Resend failed (${res.status})`);
+        }
+      } else {
+        toast.success(`Invite re-sent to ${viewer.email}`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(msg);
+    } finally {
+      setActionInFlight(null);
+    }
+  }
+
   const activeCount = viewers.filter((v) => v.status !== "revoked").length;
 
   return (
@@ -257,27 +332,50 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
                   <td className="py-3 pr-4 text-muted-foreground">{formatDate(v.last_login)}</td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {v.status !== "revoked" && (
+                      {actionInFlight === v.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      ) : (
                         <>
+                          {v.status === "pending" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={actionInFlight === v.id}
+                              onClick={() => handleResendInvite(v)}
+                              title="Resend Invite"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {v.status !== "revoked" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={actionInFlight === v.id}
+                                onClick={() => handleResetPassword(v)}
+                                title="Reset Password"
+                              >
+                                <Key className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={actionInFlight === v.id}
+                                onClick={() => handleRevoke(v)}
+                                title="Revoke Access"
+                                className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
                             disabled={actionInFlight === v.id}
-                            onClick={() => handleResetPassword(v)}
-                            title="Reset Password"
-                          >
-                            {actionInFlight === v.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Key className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={actionInFlight === v.id}
-                            onClick={() => handleRevoke(v)}
-                            title="Revoke Access"
+                            onClick={() => handleDelete(v)}
+                            title="Delete permanently"
                             className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

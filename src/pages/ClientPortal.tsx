@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Moon,
@@ -19,6 +19,7 @@ import {
   Send,
   LogIn,
   LogOut,
+  ArrowLeft,
   Loader2,
   Mail,
   Phone,
@@ -678,6 +679,7 @@ export default function ClientPortal() {
   const [authUser, setAuthUser] = useState<{ email: string } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [isMspUser, setIsMspUser] = useState(false);
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState<"dashboard" | "findings" | "compliance" | "reports">(
@@ -718,6 +720,7 @@ export default function ClientPortal() {
           .limit(1)
           .maybeSingle();
         if (membership) {
+          setIsMspUser(true);
           setAccessDenied(false);
           return;
         }
@@ -987,6 +990,16 @@ export default function ClientPortal() {
       <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
+            {isMspUser && (
+              <Link
+                to="/customers"
+                className="flex items-center gap-1.5 text-[#B6C4FF]/70 hover:text-white transition-colors shrink-0"
+                title="Back to Customer Management"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-xs hidden sm:inline">Back</span>
+              </Link>
+            )}
             {showBranding && branding?.logoUrl ? (
               <img
                 src={branding.logoUrl}

@@ -60,6 +60,7 @@ export async function handlePortalViewerRoutes(
     }
 
     // Create Supabase auth user with invite (sends set-password email)
+    const portalUrl = `https://sophos-firecomply.vercel.app/portal/${orgId}`;
     let userId: string | null = null;
     try {
       // Check if user already exists in auth
@@ -69,7 +70,10 @@ export async function handlePortalViewerRoutes(
       if (existingUser) {
         userId = existingUser.id;
       } else {
-        const { data: invited, error: inviteErr } = await db.auth.admin.inviteUserByEmail(email.toLowerCase());
+        const { data: invited, error: inviteErr } = await db.auth.admin.inviteUserByEmail(
+          email.toLowerCase(),
+          { redirectTo: portalUrl },
+        );
         if (inviteErr) {
           console.warn("[portal-viewers] invite failed, creating without auth user:", inviteErr.message);
         } else {
@@ -113,9 +117,11 @@ export async function handlePortalViewerRoutes(
       .maybeSingle();
     if (!viewer) return json({ error: "Viewer not found" }, 404, corsHeaders);
 
+    const portalResetUrl = `https://sophos-firecomply.vercel.app/portal/${orgId}`;
     const { error: resetErr } = await db.auth.admin.generateLink({
       type: "recovery",
       email: email.toLowerCase(),
+      options: { redirectTo: portalResetUrl },
     });
     if (resetErr) return json({ error: resetErr.message }, 500, corsHeaders);
     return json({ message: "Password reset sent" }, 200, corsHeaders);
