@@ -36,6 +36,49 @@ export default function ChangelogPage() {
               Workspace settings → Regulatory digest and Data governance: copy updated for the daily
               scanner and where headlines appear.
             </li>
+            <li>
+              <strong className="text-foreground">ConnectWise Cloud Services (G3.1):</strong> PSA
+              &amp; API automation → ConnectWise Cloud — store encrypted API user ID and
+              subscription key (same encryption key as Sophos Central), verify OAuth
+              client-credentials token on save, test token, and load Partner Cloud{" "}
+              <code className="text-xs">GET /whoami</code> profile from the Edge API (credentials
+              never returned to the browser).
+            </li>
+            <li>
+              <strong className="text-foreground">Org service API keys (G3.2):</strong> workspace
+              settings list active keys; Edge validates{" "}
+              <code className="text-xs">X-FireComply-Service-Key</code> / Bearer (non-JWT) on{" "}
+              <code className="text-xs">/api/service-key/ping</code> and scoped routes such as{" "}
+              <code className="text-xs">GET /api/firewalls</code> when{" "}
+              <code className="text-xs">api:read</code> is granted.
+            </li>
+            <li>
+              Agent connector: package version from submissions is shown in Fleet views for support
+              and upgrade tracking.
+            </li>
+            <li>
+              New routes: <strong className="text-foreground">Trust</strong> (
+              <code className="text-xs">/trust</code>
+              ), <strong className="text-foreground">Audit log</strong> (
+              <code className="text-xs">/audit</code>), and this{" "}
+              <strong className="text-foreground">Changelog</strong> (
+              <code className="text-xs">/changelog</code>).
+            </li>
+            <li>
+              Product telemetry: lightweight client events for key flows (e.g. Central connect) to
+              support funnel and adoption reporting.
+            </li>
+            <li>
+              Documentation: self-hosted runbook (
+              <code className="text-xs">docs/SELF-HOSTED.md</code>
+              ), supported SFOS versions matrix (in-repo and linked from upload empty states), and
+              refreshed roadmap / execution plan notes under{" "}
+              <code className="text-xs">docs/plans/</code>.
+            </li>
+            <li>
+              API Hub, customer management, playbook library, and portfolio insights: navigation and
+              copy aligned with workspace settings and MSP workflows.
+            </li>
           </ul>
           <div className="space-y-2 pt-2 border-t border-border/50">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">Fixes</h3>
