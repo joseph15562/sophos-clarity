@@ -4,13 +4,15 @@
 > **Auditors:** Principal Engineer (Google), Senior Product Designer (Apple), Cybersecurity Architect (CrowdStrike), Performance Engineer (Netflix), YC Partner
 > **Scope:** Full codebase audit — architecture, performance, security, UX, functionality, testing, documentation, DX, scalability, product vision
 
+> **Verification (31 March 2026):** On `main`, `npm run build`, `npx tsc --noEmit`, and `npm test` (319 tests, 60 files) all succeed. Tier 2 backlog QA checklist: [TEST-PLAN-TIER2-BACKLOG.md](TEST-PLAN-TIER2-BACKLOG.md).
+
 ---
 
 ## DIMENSION 1 — CODE ARCHITECTURE & QUALITY
 
 **Score: 6/10**
 
-**Justification:** The project shows competent React engineering with good use of lazy loading, domain separation in edge functions, and a growing hook/query abstraction layer. However, two god files dominate the codebase, TypeScript strictness is disabled, dead code detection is turned off, and there are 5-6 competing data-fetching patterns with no unified API layer. A new engineer would take 2-3 days, not one hour, to understand this codebase.
+**Justification:** The project shows competent React engineering with good use of lazy loading, domain separation in edge functions, and a growing hook/query abstraction layer. However, two god files dominate the codebase, TypeScript **full** strict mode is not enabled (`noImplicitAny` still off in [`tsconfig.app.json`](../tsconfig.app.json) despite `strictNullChecks` and unused locals on `src/`), ESLint still disables unused-variable rules, and there are 5-6 competing data-fetching patterns with no unified API layer. A new engineer would take 2-3 days, not one hour, to understand this codebase.
 
 ### Finding 1.1 — God Files
 
@@ -57,14 +59,14 @@
 | **SEVERITY** | High                                                                                                                                                                                                                                                                                         |
 | **FIX**      | Create an `apiClient` wrapper in `src/lib/api-client.ts` that handles auth headers, base URL, error parsing. Adopt `useMutation` for all write operations. Create `useQuery` hooks for all remaining read operations. Target: 2 patterns max (useQuery for reads, useMutation for writes).   |
 
-### Finding 1.6 — TypeScript Strictness Disabled
+### Finding 1.6 — TypeScript Strictness Incomplete
 
-| Field        | Detail                                                                                                                                                                                                                                                                                   |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **WHAT**     | `tsconfig.json`: `noImplicitAny: false`, `noUnusedLocals: false`, `noUnusedParameters: false`, `strictNullChecks: false`. ESLint: `@typescript-eslint/no-unused-vars: "off"`.                                                                                                            |
-| **WHY**      | This means null reference bugs, unused imports/variables, and implicit `any` types all pass silently. The TypeScript compiler provides zero safety net for the most common JavaScript bugs. Source: Microsoft TypeScript Handbook recommends `strict: true` for all production projects. |
-| **SEVERITY** | High                                                                                                                                                                                                                                                                                     |
-| **FIX**      | Enable `strictNullChecks` first (highest impact). Then `noUnusedLocals` and `noUnusedParameters`. Fix resulting errors incrementally. Enable `@typescript-eslint/no-unused-vars: "error"` in ESLint.                                                                                     |
+| Field        | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **WHAT**     | Root [`tsconfig.json`](../tsconfig.json) still lists loose defaults (`strictNullChecks: false`, etc.). **[`tsconfig.app.json`](../tsconfig.app.json)** (the `src/` project) sets **`strictNullChecks: true`**, **`noUnusedLocals: true`**, and **`noUnusedParameters: true`**, but keeps **`strict: false`** and **`noImplicitAny: false`**, so implicit `any` and other strict checks remain off. ESLint: `@typescript-eslint/no-unused-vars: "off"`. |
+| **WHY**      | A large class of bugs is caught for `src/`, but implicit `any` and non–strict-function checks still compile; ESLint does not backfill unused detection for all patterns. Source: Microsoft TypeScript Handbook recommends `strict: true` for production.                                                                                                                                                                                               |
+| **SEVERITY** | High                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **FIX**      | Enable **`noImplicitAny`** then **`strict: true`** on `tsconfig.app.json` with an error burn-down. Align root/CI documentation so it is obvious which project is checked. Enable `@typescript-eslint/no-unused-vars: "warn"` (then `"error"` after cleanup).                                                                                                                                                                                           |
 
 ### Finding 1.7 — Zod Declared but Never Used
 
@@ -383,7 +385,7 @@
 
 **Score: 6/10**
 
-**Justification:** The project has 59 test files with 307 tests, a reasonable foundation. The CI pipeline runs lint, typecheck, tests, build, npm audit, and Playwright E2E on every push. Playwright smoke coverage is still thin relative to product surface: `e2e/smoke.spec.ts` runs several scenarios (home, guest path, shared-report error state, 404, `/changelog`, `/trust`, playbooks shell, `/audit`), but the full upload → analyse → export journey remains unautomated. Route-level edge function integration tests are still missing, and some unit tests assert implementation details rather than behavior. For a security product handling enterprise firewall configs, this coverage is insufficient.
+**Justification:** The project has 60 test files with 319 tests, a reasonable foundation. The CI pipeline runs lint, typecheck, tests, build, npm audit, and Playwright E2E on every push. Playwright smoke coverage is still thin relative to product surface: `e2e/smoke.spec.ts` runs several scenarios (home, guest path, shared-report error state, 404, `/changelog`, `/trust`, playbooks shell, `/audit`), but the full upload → analyse → export journey remains unautomated. Route-level edge function integration tests are still missing, and some unit tests assert implementation details rather than behavior. For a security product handling enterprise firewall configs, this coverage is insufficient.
 
 ### Finding 6.1 — Minimal E2E Coverage
 
@@ -480,7 +482,7 @@
 
 **Score: 7/10**
 
-**Justification:** The project has a clean 3-step setup, Prettier with lint-staged pre-commit hooks, comprehensive CI with lint/typecheck/test/build/audit/E2E, and clear npm scripts. This is above average for a startup codebase. However, ESLint disables unused variable detection, supabase functions are excluded from Prettier, TypeScript strict mode is off, and there are no scripts for type generation or database seeding.
+**Justification:** The project has a clean 3-step setup, Prettier with lint-staged pre-commit hooks, comprehensive CI with lint/typecheck/test/build/audit/E2E, and clear npm scripts. This is above average for a startup codebase. However, ESLint disables unused variable detection, supabase functions are excluded from Prettier, **`strict`/`noImplicitAny` remain off** for `src/` (though `strictNullChecks` and unused locals are on in `tsconfig.app.json`), and there are no scripts for type generation or database seeding.
 
 ### Finding 8.1 — ESLint Disables Unused Variable Detection
 
@@ -639,18 +641,18 @@
 
 ### 1. SCORECARD
 
-| #   | Dimension                      | Score | One-Line Justification                                                                                                                                        |
-| --- | ------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Architecture & Quality         | 6/10  | Competent React engineering undermined by god files, disabled TypeScript safety, and 5+ data fetching patterns                                                |
-| 2   | Performance & Efficiency       | 5/10  | Good lazy loading but N+1 queries, zero debounce, leaking intervals, and a 1.9 MB PDF bundle                                                                  |
-| 3   | Security & Vulnerability       | 8/10  | All 8 critical/high findings resolved — constant-time HMAC, HKDF key derivation, HTML escaping, error genericization, auth fix, slug entropy, npm audit clean |
-| 4   | UI/UX & Product Design         | 6/10  | Polished visual design with inconsistent loading/empty/toast patterns and no a11y automation                                                                  |
-| 5   | Functionality & Business Logic | 7/10  | Core flow works, 19 compliance frameworks, but 4 half-built features and ~16 silent error catches                                                             |
-| 6   | Testing & Reliability          | 7/10  | 307 unit tests + CI + ~30 Deno `_shared` tests + Playwright smoke file (several cases); still no full-journey or edge-route integration tests                 |
-| 7   | Documentation & Knowledge      | 5/10  | Good README; in-app Changelog + ROADMAP help, but no root CHANGELOG.md, no OpenAPI-style API spec, no ADRs, stale generated types                             |
-| 8   | Developer Experience & Tooling | 7/10  | Clean setup, Prettier, Husky, CI/CD — but TypeScript strict mode off and no DB seed                                                                           |
-| 9   | Scalability & System Design    | 5/10  | Works at current scale but N+1 queries, no caching, no job queue, no observability                                                                            |
-| 10  | Product Vision & Strategic     | 8/10  | Clear value prop, polished core journey, half-built features removed — tighter product surface                                                                |
+| #   | Dimension                      | Score | One-Line Justification                                                                                                                                                          |
+| --- | ------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Architecture & Quality         | 6/10  | Competent React engineering undermined by god files, incomplete TS strictness (`noImplicitAny` off), ESLint unused-vars off, and 5+ data fetching patterns                      |
+| 2   | Performance & Efficiency       | 5/10  | Good lazy loading but N+1 queries, zero debounce, leaking intervals, and a 1.9 MB PDF bundle                                                                                    |
+| 3   | Security & Vulnerability       | 8/10  | All 8 critical/high findings resolved — constant-time HMAC, HKDF key derivation, HTML escaping, error genericization, auth fix, slug entropy, npm audit clean                   |
+| 4   | UI/UX & Product Design         | 6/10  | Polished visual design with inconsistent loading/empty/toast patterns and no a11y automation                                                                                    |
+| 5   | Functionality & Business Logic | 7/10  | Core flow works, 19 compliance frameworks, but 4 half-built features and ~16 silent error catches                                                                               |
+| 6   | Testing & Reliability          | 7/10  | 319 unit tests + CI + ~30 Deno `_shared` tests + Playwright smoke file (several cases); still no full-journey or edge-route integration tests                                   |
+| 7   | Documentation & Knowledge      | 5/10  | Good README; in-app Changelog + ROADMAP + Tier 2 [test plan](TEST-PLAN-TIER2-BACKLOG.md); still no root CHANGELOG.md, no OpenAPI-style API spec, no ADRs, stale generated types |
+| 8   | Developer Experience & Tooling | 7/10  | Clean setup, Prettier, Husky, CI/CD — but TypeScript strict mode off and no DB seed                                                                                             |
+| 9   | Scalability & System Design    | 5/10  | Works at current scale but N+1 queries, no caching, no job queue, no observability                                                                                              |
+| 10  | Product Vision & Strategic     | 8/10  | Clear value prop, polished core journey, half-built features removed — tighter product surface                                                                                  |
 
 **Weighted Overall Score: 60/100 → 65/100 (post-fix)**
 
@@ -686,7 +688,8 @@ Weights: Security (15%), Architecture (12%), Scalability (12%), Testing (12%), P
 
 #### TIER 2 — Fix This Month (Significant Improvements)
 
-- [ ] Enable `strictNullChecks` in TypeScript and fix resulting errors (1-2 weeks)
+- [x] Tier 2 validation checklist — [TEST-PLAN-TIER2-BACKLOG.md](TEST-PLAN-TIER2-BACKLOG.md) (living document; execute rows as work lands)
+- [ ] Enable full TypeScript `strict` / `noImplicitAny` for `src` — `tsconfig.app.json` already has `strictNullChecks` + unused locals/parameters; burn down remaining flags (1–2 weeks)
 - [ ] Enable `@typescript-eslint/no-unused-vars: "warn"` and clean up (2 days)
 - [ ] Batch N+1 queries in edge functions (send-scheduled-reports, health-checks, regulatory-scanner) (1 day)
 - [ ] Batch N+1 queries in frontend (AgentFleetPanel, AgentManager) (1 day)
@@ -731,11 +734,11 @@ Weights: Security (15%), Architecture (12%), Scalability (12%), Testing (12%), P
 
 ### 4. THE BRUTAL TRUTH
 
-This is a competent solo-developer project that has outgrown its architecture. The core product — upload a firewall config, get an AI-powered security audit with compliance mapping across 19 frameworks — is genuinely useful and well-executed. The SE health check workflow shows real product thinking. But the codebase carries the debt of rapid feature development without a safety net: TypeScript strict mode is off, the test suite covers breadth but not depth, the edge functions that handle all authorization have zero automated tests, and there are cryptographic weaknesses (timing-unsafe HMAC, weak key derivation) that would fail a professional security audit. The biggest thing holding this project back is not missing features — it is the absence of engineering discipline in the layers you cannot see: auth, crypto, error handling, input validation, and observability. The product surface is a 7/10; the infrastructure underneath it is a 5/10. That gap will widen with every feature added until it collapses, probably as a security incident rather than a performance problem.
+This is a competent solo-developer project that has outgrown its architecture. The core product — upload a firewall config, get an AI-powered security audit with compliance mapping across 19 frameworks — is genuinely useful and well-executed. The SE health check workflow shows real product thinking. The codebase carried rapid-feature debt: **several critical security items (constant-time HMAC, HKDF key derivation, portal slug hardening, safe errors) are now resolved**, but TypeScript **full** strict mode is still off, the test suite covers breadth more than depth, and **route-level** edge integration tests remain absent. The remaining risk skews toward **regressions and operational blind spots** (validation, observability) rather than the same raw crypto baseline as before. The product surface is a 7/10; the infrastructure underneath is climbing but not yet a 7/10 until edge tests, input schemas, and logging mature.
 
 ### 5. THE PATH TO EXCEPTIONAL
 
-1. **Enable TypeScript strict mode and treat the compiler as your first test suite.** This single change — `strictNullChecks: true`, `noImplicitAny: true`, `noUnusedLocals: true` — would eliminate an entire class of runtime bugs. It will produce 500+ errors. Fix them all. The codebase will be meaningfully safer on the other side.
+1. **Finish TypeScript strict mode and treat the compiler as your first test suite.** `strictNullChecks`, `noUnusedLocals`, and `noUnusedParameters` are already enabled for `src/` via `tsconfig.app.json`. The next step is **`noImplicitAny`** and **`strict: true`** (or equivalent flags), which will surface a large error burn-down. Fix them incrementally. The codebase will be meaningfully safer on the other side.
 
 2. **Write integration tests for every edge function route before adding any new feature.** The 8 edge functions are the security perimeter. They handle authentication, authorization, data access, email sending, and AI orchestration. Zero tests on this layer is the single biggest risk in the project. A comprehensive test suite here is worth more than 100 component tests.
 
