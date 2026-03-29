@@ -13,11 +13,16 @@ vi.mock("@/integrations/supabase/client", () => {
   chain.select = () => chain;
   chain.order = () => chain;
   chain.eq = () => chain;
+  chain.gte = () => chain;
   chain.limit = () => chain;
   chain.then = (
     onFulfilled?: ((v: unknown) => unknown) | null,
     onRejected?: ((e: unknown) => unknown) | null,
-  ) => Promise.resolve({ data: [], error: null }).then(onFulfilled ?? undefined, onRejected ?? undefined);
+  ) =>
+    Promise.resolve({ data: [], error: null }).then(
+      onFulfilled ?? undefined,
+      onRejected ?? undefined,
+    );
 
   return {
     supabase: {
@@ -57,6 +62,10 @@ describe("AgentFleetPanel", () => {
       isGuest: false,
     } as ReturnType<typeof useAuth>);
     renderWithProviders(<AgentFleetPanel />);
-    expect(screen.getByClassName ? document.querySelector(".animate-pulse") : document.querySelector(".animate-pulse")).toBeTruthy();
+    expect(
+      screen.getByClassName
+        ? document.querySelector(".animate-pulse")
+        : document.querySelector(".animate-pulse"),
+    ).toBeTruthy();
   });
 });

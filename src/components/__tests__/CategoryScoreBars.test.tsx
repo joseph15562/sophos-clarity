@@ -30,16 +30,14 @@ function emptyInspectionPosture(overrides: Partial<InspectionPosture> = {}): Ins
   };
 }
 
-function minimalAnalysisResult(overrides: {
-  stats?: Partial<AnalysisResult["stats"]>;
-  findings?: Finding[];
-  inspectionPosture?: Partial<InspectionPosture>;
-} = {}): AnalysisResult {
-  const {
-    stats: statsOverrides,
-    findings = [],
-    inspectionPosture: postureOverrides,
-  } = overrides;
+function minimalAnalysisResult(
+  overrides: {
+    stats?: Partial<AnalysisResult["stats"]>;
+    findings?: Finding[];
+    inspectionPosture?: Partial<InspectionPosture>;
+  } = {},
+): AnalysisResult {
+  const { stats: statsOverrides, findings = [], inspectionPosture: postureOverrides } = overrides;
 
   return {
     stats: {
@@ -69,9 +67,7 @@ describe("CategoryScoreBars", () => {
   });
 
   it("renders category labels", () => {
-    render(
-      <CategoryScoreBars analysisResults={{ fw1: minimalAnalysisResult() }} />,
-    );
+    render(<CategoryScoreBars analysisResults={{ fw1: minimalAnalysisResult() }} />);
 
     expect(screen.getByText("Web Filtering")).toBeInTheDocument();
     expect(screen.getByText("Intrusion Prevention")).toBeInTheDocument();
@@ -89,11 +85,14 @@ describe("CategoryScoreBars", () => {
       <CategoryScoreBars analysisResults={{ fw1: minimalAnalysisResult() }} />,
     );
 
-    const tracks = container.querySelectorAll(".overflow-hidden.rounded-full.bg-muted");
+    const rows = container.querySelectorAll(".space-y-4 > .flex.items-center.gap-3");
+    expect(rows.length).toBe(9);
+
+    const tracks = container.querySelectorAll(".flex-1.h-3.rounded-full.overflow-hidden");
     expect(tracks.length).toBe(9);
 
     const innerBars = container.querySelectorAll(
-      ".overflow-hidden.rounded-full.bg-muted > div[style]",
+      ".flex-1.h-3.rounded-full.overflow-hidden > div[style]",
     );
     expect(innerBars.length).toBe(9);
   });
