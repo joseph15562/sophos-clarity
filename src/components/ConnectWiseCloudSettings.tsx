@@ -171,23 +171,18 @@ export function ConnectWiseCloudSettings() {
   return (
     <div className="space-y-3 text-xs text-muted-foreground leading-relaxed">
       <p>
-        <span className="font-semibold text-foreground">ConnectWise Cloud Services</span> uses OAuth
-        2.0 client credentials: Basic auth with your API user ID and subscription key, plus the{" "}
-        <code className="text-[10px]">Ocp-Apim-Subscription-Key</code> header.{" "}
+        <span className="font-semibold text-foreground">Partner Cloud</span> — OAuth 2.0 client
+        credentials (API user ID + subscription key +{" "}
+        <code className="text-[10px]">Ocp-Apim-Subscription-Key</code>).{" "}
         <a
           href={AUTH_GUIDE}
           target="_blank"
           rel="noopener noreferrer"
           className="text-brand-accent inline-flex items-center gap-0.5 font-medium"
         >
-          Authentication guide <ExternalLink className="h-3 w-3" />
+          Authentication <ExternalLink className="h-3 w-3" />
         </a>
-        . Credentials are encrypted with the same key as Sophos Central; we verify a token before
-        saving.
-      </p>
-      <p>
-        <span className="font-semibold text-foreground">Partner Cloud</span> documents{" "}
-        <code className="text-[10px]">GET …/whoami</code> on the same host (
+        {" · "}
         <a
           href={GET_STARTED}
           target="_blank"
@@ -196,18 +191,18 @@ export function ConnectWiseCloudSettings() {
         >
           Get started
         </a>
-        ). <strong className="text-foreground">Companies and service tickets</strong> live in{" "}
-        <strong className="text-foreground">ConnectWise Manage</strong>’s REST API (
+        . Encrypted like Sophos Central; token verified on save.{" "}
+        <strong className="text-foreground">Service tickets</strong> use{" "}
+        <strong className="text-foreground">ConnectWise Manage</strong> in PSA settings (
         <a
           href={MANAGE_REST}
           target="_blank"
           rel="noopener noreferrer"
           className="text-brand-accent font-medium"
         >
-          developer.connectwise.com
+          Manage REST <ExternalLink className="inline h-3 w-3" />
         </a>
-        ) using your Manage site URL and API keys — a separate integration from this developer
-        portal flow.
+        ) — not this Partner API.
       </p>
 
       {connected && (

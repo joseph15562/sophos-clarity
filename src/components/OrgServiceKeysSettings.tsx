@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { KeyRound, Loader2, Copy, Trash2 } from "lucide-react";
+import { KeyRound, Loader2, Copy, Trash2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
@@ -18,11 +18,22 @@ import { logAudit } from "@/lib/audit";
 
 type KeyRow = Tables<"org_service_api_keys">;
 
+function formatServiceKeyClientError(err: unknown): string {
+  if (err instanceof TypeError && /fetch/i.test(String(err.message))) {
+    return "Could not reach the FireComply API (network or CORS). Check your connection, VPN, ad blockers, and that Supabase Edge Functions are deployed for this project.";
+  }
+  if (err instanceof Error && /failed to fetch/i.test(err.message)) {
+    return "Could not reach the FireComply API (network or CORS). Check connection and that the api function is deployed.";
+  }
+  return err instanceof Error ? err.message : "Request failed";
+}
+
 /** List and manage org service API keys; Edge validates via `_shared/service-key.ts`. */
 export function OrgServiceKeysSettings() {
   const { org } = useAuth();
   const [rows, setRows] = useState<KeyRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -38,6 +49,7 @@ export function OrgServiceKeysSettings() {
       return;
     }
     setLoading(true);
+    setLoadError("");
     const { data, error } = await supabase
       .from("org_service_api_keys")
       .select("*")
@@ -47,6 +59,11 @@ export function OrgServiceKeysSettings() {
     if (error) {
       console.warn("[OrgServiceKeysSettings]", error);
       setRows([]);
+      setLoadError(
+        error.message?.includes("fetch") || error.message === "Failed to fetch"
+          ? formatServiceKeyClientError(new TypeError("Failed to fetch"))
+          : error.message || "Could not load keys",
+      );
     } else {
       setRows((data ?? []) as KeyRow[]);
     }
@@ -112,7 +129,7 @@ export function OrgServiceKeysSettings() {
         label: trimmed,
       });
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Could not create key");
+      setMessage(formatServiceKeyClientError(err));
     } finally {
       setBusy(false);
     }
@@ -128,7 +145,7 @@ export function OrgServiceKeysSettings() {
       await loadRows();
       void logAudit(org.id, "service_key.revoked", "service_key", id, {});
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Could not revoke key");
+      setMessage(formatServiceKeyClientError(err));
     } finally {
       setRevokingId(null);
     }
@@ -146,14 +163,20 @@ export function OrgServiceKeysSettings() {
 
   return (
     <div className="space-y-4">
-      <p className="text-[10px] text-muted-foreground leading-relaxed">
-        Use <code className="text-[10px]">X-FireComply-Service-Key</code> or Bearer (non-JWT) on API
-        calls. Ping <code className="text-[10px] break-all">{pingUrl}</code> to verify.{" "}
-        <code className="text-[10px]">api:read</code> allows{" "}
-        <code className="text-[10px]">GET /api/firewalls</code>;{" "}
-        <code className="text-[10px]">api:read:assessments</code> allows listing and reading
-        assessments.
-      </p>
+      <details className="group rounded-xl border border-border/50 bg-muted/15 open:bg-muted/25">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-[10px] font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+          Using service keys &amp; ping URL
+        </summary>
+        <p className="border-t border-border/40 px-3 pb-3 pt-2 text-[10px] text-muted-foreground leading-relaxed">
+          Use <code className="text-[10px]">X-FireComply-Service-Key</code> or Bearer (non-JWT) on
+          API calls. Ping <code className="text-[10px] break-all">{pingUrl}</code> to verify.{" "}
+          <code className="text-[10px]">api:read</code> allows{" "}
+          <code className="text-[10px]">GET /api/firewalls</code>;{" "}
+          <code className="text-[10px]">api:read:assessments</code> allows listing and reading
+          assessments.
+        </p>
+      </details>
 
       <form
         onSubmit={(e) => void handleCreate(e)}
@@ -204,8 +227,16 @@ export function OrgServiceKeysSettings() {
 
       {message && <p className="text-[11px] text-amber-700 dark:text-amber-400">{message}</p>}
 
+      {loadError && !message && (
+        <p className="text-[11px] text-amber-700 dark:text-amber-400">{loadError}</p>
+      )}
+
       {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No active keys yet. Create one above.</p>
+        <p className="text-xs text-muted-foreground">
+          {loadError
+            ? "Keys could not be loaded. Fix the issue above, then refresh or reopen settings."
+            : "No active keys yet. Create one above."}
+        </p>
       ) : (
         <ul className="space-y-2">
           {rows.map((k) => (

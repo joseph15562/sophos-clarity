@@ -14,6 +14,7 @@ export type AuditAction =
   | "service_key.issued"
   | "service_key.revoked"
   | "psa.connectwise_ticket_created"
+  | "psa.autotask_ticket_created"
   | "team.invited"
   | "team.removed"
   | "auth.login"

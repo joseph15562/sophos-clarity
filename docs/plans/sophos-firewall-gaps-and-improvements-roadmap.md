@@ -49,7 +49,8 @@ Quick checklist; file anchors live in [sophos-firewall-master-execution.md](./so
 - **G3.1** (depth ongoing — see section below)
   - [x] ConnectWise Cloud + Manage ticket MVP (idempotency, audit)
   - [x] Persisted **customer ↔ Manage company** mapping (`psa_customer_company_map` + settings UI)
-  - [ ] Auto-ticket on assessment complete; Halo/Autotask
+  - [x] **Autotask PSA (Datto)** MVP (credentials, mapping, tickets from findings)
+  - [ ] Auto-ticket on assessment complete; Halo (or third PSA)
 - **G3.2** (scopes ongoing — see section below)
   - [x] Issue / revoke UI + Edge paths; `api:read` → `GET /api/firewalls`; `api:read:assessments` → `GET /api/assessments`
   - [ ] Further issuable scopes / routes as automation needs grow
@@ -224,7 +225,8 @@ Quick checklist; file anchors live in [sophos-firewall-master-execution.md](./so
 - [x] ConnectWise **Partner Cloud** credentials + token test + `whoami`
 - [x] ConnectWise **Manage** credentials (per org), **create service ticket** from finding (bulk view), **idempotency** store, **audit** entry
 - [x] Persisted **customer ↔ Manage company** mapping (table + PSA settings + ticket dialog / resolved customer key from Assess)
-- [ ] **Auto-ticket** on assessment complete; **Halo / Autotask** pattern
+- [x] **Autotask PSA (Datto)** — credentials, customer ↔ company mapping, company query, idempotent tickets from findings, audit (`autotask_psa_credentials`, `provider = autotask`)
+- [ ] **Auto-ticket** on assessment complete; **Halo** (or third PSA) pattern
 
 ### G3.2 Scoped API keys (org service accounts)
 

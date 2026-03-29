@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { getActiveModules, computeSophosBPScore, type ModuleId } from "../sophos-licence";
+import {
+  filterSupersededFullGuardLicences,
+  isCentralFirewallTrialSupersededByXstreamBundle,
+  getActiveModules,
+  computeSophosBPScore,
+  type ModuleId,
+} from "../sophos-licence";
 import type { AnalysisResult, InspectionPosture, ConfigStats } from "@/lib/analyse-config";
 
 function mockInspectionPosture(overrides: Partial<InspectionPosture> = {}): InspectionPosture {
@@ -43,11 +49,13 @@ function mockStats(overrides: Partial<ConfigStats> = {}): ConfigStats {
   };
 }
 
-function mockAnalysisResult(overrides: {
-  stats?: Partial<ConfigStats>;
-  inspectionPosture?: Partial<InspectionPosture>;
-  findings?: AnalysisResult["findings"];
-} = {}): AnalysisResult {
+function mockAnalysisResult(
+  overrides: {
+    stats?: Partial<ConfigStats>;
+    inspectionPosture?: Partial<InspectionPosture>;
+    findings?: AnalysisResult["findings"];
+  } = {},
+): AnalysisResult {
   const stats = mockStats(overrides.stats);
   const inspectionPosture = mockInspectionPosture(overrides.inspectionPosture);
   const findings = overrides.findings ?? [];
@@ -124,8 +132,14 @@ describe("computeSophosBPScore", () => {
     const scoreWithoutOverride = computeSophosBPScore(result, { tier: "standard", modules: [] });
     const warnCheck = scoreWithoutOverride.results.find((r) => r.status === "warn");
     if (warnCheck) {
-      const scoreWithOverride = computeSophosBPScore(result, { tier: "standard", modules: [] }, new Set([warnCheck.check.id]));
-      const overriddenResult = scoreWithOverride.results.find((r) => r.check.id === warnCheck.check.id);
+      const scoreWithOverride = computeSophosBPScore(
+        result,
+        { tier: "standard", modules: [] },
+        new Set([warnCheck.check.id]),
+      );
+      const overriddenResult = scoreWithOverride.results.find(
+        (r) => r.check.id === warnCheck.check.id,
+      );
       expect(overriddenResult?.status).toBe("pass");
       expect(overriddenResult?.manualOverride).toBe(true);
     }
@@ -137,7 +151,14 @@ describe("computeSophosBPScore", () => {
     const withHb = computeSophosBPScore(result, licence);
     const hbBefore = withHb.results.find((r) => r.check.id === "bp-heartbeat");
     expect(hbBefore?.applicable).toBe(true);
-    const excluded = computeSophosBPScore(result, licence, undefined, undefined, undefined, new Set(["bp-heartbeat"]));
+    const excluded = computeSophosBPScore(
+      result,
+      licence,
+      undefined,
+      undefined,
+      undefined,
+      new Set(["bp-heartbeat"]),
+    );
     const hbAfter = excluded.results.find((r) => r.check.id === "bp-heartbeat");
     expect(hbAfter?.status).toBe("na");
     expect(hbAfter?.applicable).toBe(false);
@@ -151,10 +172,140 @@ describe("computeSophosBPScore", () => {
     const without = computeSophosBPScore(result, licence);
     const mdr = without.results.find((r) => r.check.id === "bp-mdr-feeds");
     expect(mdr?.status).toBe("warn");
-    const withAck = computeSophosBPScore(result, licence, undefined, undefined, new Set(["bp-mdr-feeds"]));
+    const withAck = computeSophosBPScore(
+      result,
+      licence,
+      undefined,
+      undefined,
+      new Set(["bp-mdr-feeds"]),
+    );
     const mdr2 = withAck.results.find((r) => r.check.id === "bp-mdr-feeds");
     expect(mdr2?.status).toBe("pass");
     expect(mdr2?.manualOverride).toBeUndefined();
     expect(mdr2?.detail).toContain("SE confirmed");
+  });
+});
+
+describe("filterSupersededFullGuardLicences", () => {
+  const sub = (
+    name: string,
+    perpetual: boolean,
+    daysRemaining: number,
+    type: string = "term",
+  ): {
+    perpetual: boolean;
+    type: string;
+    product: { code: string; name: string };
+  } => ({
+    perpetual,
+    type,
+    product: { code: "x", name },
+  });
+
+  it("removes expired Full Guard when Xstream is active on the same serial", () => {
+    const rows = [
+      {
+        serialNumber: "SN1",
+        daysRemaining: 400,
+        subscription: sub("Sophos Firewall Xstream Protection", false, 400),
+      },
+      {
+        serialNumber: "SN1",
+        daysRemaining: -10,
+        subscription: sub("Sophos Firewall FullGuard", false, -10),
+      },
+    ];
+    const out = filterSupersededFullGuardLicences(rows);
+    expect(out).toHaveLength(1);
+    expect(out[0].subscription.product.name).toContain("Xstream");
+  });
+
+  it("keeps expired Full Guard when there is no active Xstream", () => {
+    const rows = [
+      {
+        serialNumber: "SN1",
+        daysRemaining: -1,
+        subscription: sub("Sophos Firewall FullGuard", false, -1),
+      },
+    ];
+    expect(filterSupersededFullGuardLicences(rows)).toHaveLength(1);
+  });
+
+  it("removes expired individual module trials when perpetual Xstream is active", () => {
+    const rows = [
+      {
+        serialNumber: "SN1",
+        daysRemaining: 9999,
+        subscription: {
+          perpetual: true,
+          type: "perpetual",
+          product: { code: "x", name: "Sophos Firewall Xstream Protection with Webserver" },
+        },
+      },
+      {
+        serialNumber: "SN1",
+        daysRemaining: -1,
+        subscription: sub("Web Protection", false, -1, "trial"),
+      },
+      {
+        serialNumber: "SN1",
+        daysRemaining: -1,
+        subscription: sub("Network Protection", false, -1, "trial"),
+      },
+    ];
+    const out = filterSupersededFullGuardLicences(rows);
+    expect(out).toHaveLength(1);
+    expect(out[0].subscription.product.name).toContain("Xstream");
+  });
+
+  it("keeps expired module trials when type is not trial", () => {
+    const rows = [
+      {
+        serialNumber: "SN1",
+        daysRemaining: 400,
+        subscription: sub("Sophos Firewall Xstream Protection", false, 400),
+      },
+      {
+        serialNumber: "SN1",
+        daysRemaining: -1,
+        subscription: sub("Web Protection", false, -1, "term"),
+      },
+    ];
+    expect(filterSupersededFullGuardLicences(rows)).toHaveLength(2);
+  });
+
+  it("keeps expired trial for products outside the Xstream module list", () => {
+    const rows = [
+      {
+        serialNumber: "SN1",
+        daysRemaining: 400,
+        subscription: sub("Sophos Firewall Xstream Protection", false, 400),
+      },
+      {
+        serialNumber: "SN1",
+        daysRemaining: -1,
+        subscription: sub("Enhanced Support Plus", false, -1, "trial"),
+      },
+    ];
+    expect(filterSupersededFullGuardLicences(rows)).toHaveLength(2);
+  });
+});
+
+describe("isCentralFirewallTrialSupersededByXstreamBundle", () => {
+  it("matches module trials only", () => {
+    expect(
+      isCentralFirewallTrialSupersededByXstreamBundle({
+        perpetual: false,
+        type: "trial",
+        product: { code: "a", name: "Zero-Day Protection" },
+      }),
+    ).toBe(true);
+    expect(
+      isCentralFirewallTrialSupersededByXstreamBundle({
+        perpetual: false,
+        type: "term",
+        product: { code: "a", name: "Zero-Day Protection" },
+      }),
+    ).toBe(false);
   });
 });

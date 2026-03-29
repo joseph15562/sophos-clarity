@@ -68,6 +68,11 @@ const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; c
     icon: Ticket,
     color: "text-[#5A00FF]",
   },
+  "psa.autotask_ticket_created": {
+    label: "Autotask PSA ticket created",
+    icon: Ticket,
+    color: "text-[#007A5A] dark:text-[#00F2B3]",
+  },
   "team.invited": { label: "Team member invited", icon: Users, color: "text-brand-accent" },
   "team.removed": { label: "Team member removed", icon: Users, color: "text-[#EA0022]" },
   "auth.login": {

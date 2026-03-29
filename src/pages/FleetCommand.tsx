@@ -747,7 +747,8 @@ function FleetCommandInner() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [collapsedTenants, setCollapsedTenants] = useState<Set<string>>(new Set());
+  /** List view: tenant groups start collapsed; names here are expanded after user toggles. */
+  const [expandedTenants, setExpandedTenants] = useState<Set<string>>(new Set());
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
@@ -1192,7 +1193,7 @@ function FleetCommandInner() {
   const STATUSES = ["All", "Online", "Offline", "Suspended", "Stale"] as const;
 
   const toggleTenant = useCallback((name: string) => {
-    setCollapsedTenants((prev) => {
+    setExpandedTenants((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
@@ -1604,7 +1605,7 @@ function FleetCommandInner() {
                     group.firewalls.reduce((s, f) => s + f.score, 0) / group.firewalls.length,
                   )
                 : 0;
-              const isCollapsed = collapsedTenants.has(group.name);
+              const isCollapsed = !expandedTenants.has(group.name);
 
               return (
                 <div key={group.name} className="space-y-2">

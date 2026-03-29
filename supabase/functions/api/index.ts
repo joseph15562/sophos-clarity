@@ -6,6 +6,7 @@ import { handleAdminRoutes } from "./routes/admin.ts";
 import { handleAgentRoutes } from "./routes/agent.ts";
 import { handleAssessmentRoutes } from "./routes/assessments.ts";
 import { handleConfigUploadRoutes } from "./routes/config-upload.ts";
+import { handleAutotaskPsaRoutes } from "./routes/autotask-psa.ts";
 import { handleConnectWiseManageRoutes } from "./routes/connectwise-manage.ts";
 import { handleConnectWiseRoutes } from "./routes/connectwise.ts";
 import { handleFirewallRoutes } from "./routes/firewalls.ts";
@@ -50,7 +51,8 @@ const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 //   Add new scopes in _shared/service-key.ts + validate in each route before accepting service key.
 //   firewalls (GET)            JWT or service key with scope api:read
 //   connectwise/*              JWT + org admin (credentials, token test, GET whoami)
-//   connectwise-manage/*       JWT + org admin (credentials; company-mappings GET/PUT/DELETE; POST tickets)
+//   connectwise-manage/*       JWT + org admin (credentials; company-mappings GET/PUT/DELETE; GET companies; POST tickets)
+//   autotask-psa/*             JWT + org admin (credentials; company-mappings GET/PUT/DELETE; GET companies; POST tickets)
 
 // ── Main router ──
 
@@ -110,6 +112,9 @@ serve(async (req: Request) => {
 
   const connectWiseManageRes = await handleConnectWiseManageRoutes(req, url, segments, corsHeaders);
   if (connectWiseManageRes !== null) return connectWiseManageRes;
+
+  const autotaskPsaRes = await handleAutotaskPsaRoutes(req, url, segments, corsHeaders);
+  if (autotaskPsaRes !== null) return autotaskPsaRes;
 
   return json({ error: "Not found" }, 404);
   } catch (err) {

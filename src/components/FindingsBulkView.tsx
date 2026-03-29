@@ -12,7 +12,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
+import { AutotaskTicketFromFindingDialog } from "@/components/AutotaskTicketFromFindingDialog";
 import { ConnectWiseTicketFromFindingDialog } from "@/components/ConnectWiseTicketFromFindingDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY_PLAN = "sophos-remediation-plan-ids";
 
@@ -47,7 +49,7 @@ const SEV_STYLE: Record<string, string> = {
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
-  /** Resolved customer name for ConnectWise PSA mapping */
+  /** Resolved customer name for PSA company mapping */
   firecomplyCustomerKey?: string;
 }
 
@@ -57,6 +59,11 @@ export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Pro
   const [planIds, setPlanIds] = useState<Set<string>>(loadPlanIds);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [cwTicketOpen, setCwTicketOpen] = useState(false);
+  const [atTicketOpen, setAtTicketOpen] = useState(false);
+  const [psaLinked, setPsaLinked] = useState<{ cw: boolean; at: boolean }>({
+    cw: false,
+    at: false,
+  });
 
   const allFindings = useMemo(() => {
     const out: { key: string; label: string; finding: Finding }[] = [];
@@ -91,6 +98,34 @@ export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Pro
     window.addEventListener("accepted-findings-changed", onStorage);
     return () => window.removeEventListener("accepted-findings-changed", onStorage);
   }, [loadAccepted]);
+
+  useEffect(() => {
+    if (!org?.id || !canManageTeam) {
+      setPsaLinked({ cw: false, at: false });
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const [cwRes, atRes] = await Promise.all([
+        supabase
+          .from("connectwise_manage_credentials")
+          .select("org_id")
+          .eq("org_id", org.id)
+          .maybeSingle(),
+        supabase
+          .from("autotask_psa_credentials")
+          .select("org_id")
+          .eq("org_id", org.id)
+          .maybeSingle(),
+      ]);
+      if (!cancelled) {
+        setPsaLinked({ cw: !!cwRes.data, at: !!atRes.data });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id, canManageTeam]);
 
   const toggleSelect = useCallback((key: string) => {
     setSelected((prev) => {
@@ -157,6 +192,12 @@ export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Pro
     return `cw_find_${org.id}_${safe}`;
   }, [org?.id, singleSelectedFinding]);
 
+  const atIdempotencyKey = useMemo(() => {
+    if (!org?.id || !singleSelectedFinding) return "";
+    const safe = singleSelectedFinding.key.replace(/[^a-zA-Z0-9:_-]/g, "_").slice(0, 220);
+    return `at_find_${org.id}_${safe}`;
+  }, [org?.id, singleSelectedFinding]);
+
   if (allFindings.length === 0) return null;
 
   return (
@@ -199,7 +240,7 @@ export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Pro
         >
           Add to remediation plan
         </Button>
-        {canManageTeam && singleSelectedFinding && (
+        {canManageTeam && singleSelectedFinding && psaLinked.cw && (
           <Button
             size="sm"
             variant="outline"
@@ -207,6 +248,16 @@ export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Pro
             className="gap-1.5 text-xs"
           >
             ConnectWise ticket
+          </Button>
+        )}
+        {canManageTeam && singleSelectedFinding && psaLinked.at && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setAtTicketOpen(true)}
+            className="gap-1.5 text-xs"
+          >
+            Autotask ticket
           </Button>
         )}
         {selected.size > 0 && (
@@ -220,6 +271,25 @@ export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Pro
           onOpenChange={setCwTicketOpen}
           idempotencyKey={cwIdempotencyKey}
           summary={singleSelectedFinding.finding.title}
+          firecomplyCustomerKey={firecomplyCustomerKey}
+          description={[
+            singleSelectedFinding.finding.detail,
+            singleSelectedFinding.finding.remediation
+              ? `Remediation: ${singleSelectedFinding.finding.remediation}`
+              : "",
+            `Firewall: ${singleSelectedFinding.label}`,
+            `Severity: ${singleSelectedFinding.finding.severity}`,
+          ]
+            .filter(Boolean)
+            .join("\n\n")}
+        />
+      )}
+      {singleSelectedFinding && atIdempotencyKey && (
+        <AutotaskTicketFromFindingDialog
+          open={atTicketOpen}
+          onOpenChange={setAtTicketOpen}
+          idempotencyKey={atIdempotencyKey}
+          title={singleSelectedFinding.finding.title}
           firecomplyCustomerKey={firecomplyCustomerKey}
           description={[
             singleSelectedFinding.finding.detail,

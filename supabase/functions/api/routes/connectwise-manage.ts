@@ -1,5 +1,8 @@
 import { getOrgMembership } from "../../_shared/auth.ts";
-import { connectWiseManageCreateServiceTicket } from "../../_shared/connectwise-manage.ts";
+import {
+  connectWiseManageCreateServiceTicket,
+  connectWiseManageListCompanies,
+} from "../../_shared/connectwise-manage.ts";
 import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
 import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
 
@@ -99,6 +102,43 @@ export async function handleConnectWiseManageRoutes(
       .eq("customer_key", customerKey);
     if (delErr) return j({ error: safeDbError(delErr) }, 500);
     return j({ ok: true });
+  }
+
+  if (route === "companies" && req.method === "GET") {
+    const { data: cred, error: credErr } = await db
+      .from("connectwise_manage_credentials")
+      .select("api_base_url, integrator_company_id, encrypted_public_key, encrypted_private_key")
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (credErr) return j({ error: safeDbError(credErr) }, 500);
+    if (!cred) {
+      return j({ error: "ConnectWise Manage is not configured for this organisation" }, 404);
+    }
+    const row = cred as {
+      api_base_url: string;
+      integrator_company_id: string;
+      encrypted_public_key: string;
+      encrypted_private_key: string;
+    };
+    let publicKey: string;
+    let privateKey: string;
+    try {
+      publicKey = await centralDecrypt(row.encrypted_public_key);
+      privateKey = await centralDecrypt(row.encrypted_private_key);
+    } catch {
+      return j({ error: "Could not decrypt stored credentials" }, 500);
+    }
+    try {
+      const companies = await connectWiseManageListCompanies(
+        row.api_base_url,
+        row.integrator_company_id,
+        publicKey,
+        privateKey,
+      );
+      return j({ companies });
+    } catch (e) {
+      return j({ error: e instanceof Error ? e.message : "Manage API error" }, 400);
+    }
   }
 
   if (route === "credentials" && req.method === "POST") {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   Code2,
@@ -19,6 +20,7 @@ import {
   Globe,
   MessageSquare,
   Ticket,
+  KeyRound,
   Sun,
   Moon,
 } from "lucide-react";
@@ -37,7 +39,6 @@ import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
-import { buildManagePanelSearch } from "@/lib/workspace-deeplink";
 
 const CentralIntegration = lazy(() =>
   import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })),
@@ -47,6 +48,24 @@ const SlackIntegration = lazy(() =>
 );
 const TeamsIntegration = lazy(() =>
   import("@/components/TeamsIntegration").then((m) => ({ default: m.TeamsIntegration })),
+);
+const ConnectWiseCloudSettings = lazy(() =>
+  import("@/components/ConnectWiseCloudSettings").then((m) => ({
+    default: m.ConnectWiseCloudSettings,
+  })),
+);
+const ConnectWiseManageSettings = lazy(() =>
+  import("@/components/ConnectWiseManageSettings").then((m) => ({
+    default: m.ConnectWiseManageSettings,
+  })),
+);
+const AutotaskPsaSettings = lazy(() =>
+  import("@/components/AutotaskPsaSettings").then((m) => ({ default: m.AutotaskPsaSettings })),
+);
+const OrgServiceKeysSettings = lazy(() =>
+  import("@/components/OrgServiceKeysSettings").then((m) => ({
+    default: m.OrgServiceKeysSettings,
+  })),
 );
 
 /* ───────── types ───────── */
@@ -130,26 +149,44 @@ const INTEGRATIONS: Integration[] = [
     action: "Connect",
   },
   {
-    id: "connectwise",
-    name: "ConnectWise PSA",
+    id: "connectwise-cloud",
+    name: "ConnectWise Cloud",
     description:
-      "Partner Cloud credentials in workspace settings; ConnectWise Manage REST for service tickets (configure in PSA settings, create from Assess → Findings bulk actions).",
+      "Partner Cloud API — OAuth client credentials for ConnectWise Cloud Services (separate from Manage tickets).",
     icon: <Ticket className="h-6 w-6" />,
-    status: "partial",
-    action: "Workspace settings",
+    status: "available",
+    action: "Connect",
+  },
+  {
+    id: "connectwise-manage",
+    name: "ConnectWise Manage",
+    description: "Site REST API for service tickets — create from Assess → Findings bulk actions.",
+    icon: <Ticket className="h-6 w-6" />,
+    status: "available",
+    action: "Connect",
+  },
+  {
+    id: "datto-autotask",
+    name: "Datto Autotask PSA",
+    description:
+      "REST API for tickets from Assess → Findings; defaults and company mapping in-app.",
+    icon: <Ticket className="h-6 w-6" />,
+    status: "available",
+    action: "Connect",
+  },
+  {
+    id: "scoped-service-keys",
+    name: "Scoped service keys",
+    description:
+      "Org-level API keys (hashed at rest) for RMM and automation — firewalls and assessments.",
+    icon: <KeyRound className="h-6 w-6" />,
+    status: "available",
+    action: "Connect",
   },
   {
     id: "halopsa",
     name: "HaloPSA",
     description: "Sync findings as tickets in HaloPSA.",
-    icon: <Ticket className="h-6 w-6" />,
-    status: "coming-soon",
-    action: "Coming Soon",
-  },
-  {
-    id: "datto-autotask",
-    name: "Datto Autotask PSA",
-    description: "Create and sync tickets in Datto Autotask for findings and remediation tasks.",
     icon: <Ticket className="h-6 w-6" />,
     status: "coming-soon",
     action: "Coming Soon",
@@ -506,9 +543,11 @@ function EndpointRow({ ep }: { ep: Endpoint }) {
 
 function IntegrationsTab() {
   const { org } = useAuth();
-  const navigate = useNavigate();
   const [centralConnected, setCentralConnected] = useState(false);
-  const [connectWiseLinked, setConnectWiseLinked] = useState(false);
+  const [cwCloudLinked, setCwCloudLinked] = useState(false);
+  const [cwManageLinked, setCwManageLinked] = useState(false);
+  const [autotaskLinked, setAutotaskLinked] = useState(false);
+  const [hasServiceKeys, setHasServiceKeys] = useState(false);
   const [openPanel, setOpenPanel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -528,8 +567,51 @@ function IntegrationsTab() {
       .select("org_id")
       .eq("org_id", org.id)
       .maybeSingle()
-      .then(({ data }) => setConnectWiseLinked(!!data));
+      .then(({ data }) => setCwCloudLinked(!!data));
   }, [org?.id]);
+
+  useEffect(() => {
+    if (!org?.id) return;
+    supabase
+      .from("connectwise_manage_credentials")
+      .select("org_id")
+      .eq("org_id", org.id)
+      .maybeSingle()
+      .then(({ data }) => setCwManageLinked(!!data));
+  }, [org?.id]);
+
+  useEffect(() => {
+    if (!org?.id) return;
+    supabase
+      .from("autotask_psa_credentials")
+      .select("org_id")
+      .eq("org_id", org.id)
+      .maybeSingle()
+      .then(({ data }) => setAutotaskLinked(!!data));
+  }, [org?.id]);
+
+  useEffect(() => {
+    if (!org?.id) {
+      setHasServiceKeys(false);
+      return;
+    }
+    supabase
+      .from("org_service_api_keys")
+      .select("id")
+      .eq("org_id", org.id)
+      .is("revoked_at", null)
+      .limit(1)
+      .then(({ data }) => setHasServiceKeys((data?.length ?? 0) > 0));
+  }, [org?.id, openPanel]);
+
+  useEffect(() => {
+    if (!openPanel) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [openPanel]);
 
   const items = INTEGRATIONS.map((item) => {
     if (item.id === "sophos-central") {
@@ -539,25 +621,38 @@ function IntegrationsTab() {
         action: centralConnected ? "Configure" : "Connect",
       };
     }
-    if (item.id === "connectwise") {
+    if (item.id === "connectwise-cloud") {
       return {
         ...item,
-        description: connectWiseLinked
-          ? "Partner Cloud is linked. Open workspace settings to manage credentials or test the API. Manage ticket sync is still planned."
-          : item.description,
+        status: cwCloudLinked ? ("connected" as const) : ("available" as const),
+        action: cwCloudLinked ? "Configure" : "Connect",
+      };
+    }
+    if (item.id === "connectwise-manage") {
+      return {
+        ...item,
+        status: cwManageLinked ? ("connected" as const) : ("available" as const),
+        action: cwManageLinked ? "Configure" : "Connect",
+      };
+    }
+    if (item.id === "datto-autotask") {
+      return {
+        ...item,
+        status: autotaskLinked ? ("connected" as const) : ("available" as const),
+        action: autotaskLinked ? "Configure" : "Connect",
+      };
+    }
+    if (item.id === "scoped-service-keys") {
+      return {
+        ...item,
+        status: hasServiceKeys ? ("connected" as const) : ("available" as const),
+        action: hasServiceKeys ? "Configure" : "Connect",
       };
     }
     return item;
   });
 
   const onIntegrationAction = (id: string) => {
-    if (id === "connectwise") {
-      navigate({
-        pathname: "/",
-        search: buildManagePanelSearch({ panel: "settings", section: "partner-automation" }),
-      });
-      return;
-    }
     setOpenPanel(id);
   };
 
@@ -577,42 +672,63 @@ function IntegrationsTab() {
         </p>
       )}
 
-      {openPanel && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            onClick={() => setOpenPanel(null)}
-          />
-          <div className="fixed inset-x-4 top-[8vh] z-50 mx-auto max-w-2xl max-h-[84vh] overflow-y-auto rounded-2xl border border-border/60 bg-background text-foreground shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-border/50 bg-background/95 backdrop-blur-sm rounded-t-2xl">
-              <h3 className="text-sm font-display font-bold text-foreground">
-                {openPanel === "sophos-central" && "Sophos Central Integration"}
-                {openPanel === "slack" && "Slack Integration"}
-                {openPanel === "teams" && "Microsoft Teams Integration"}
-              </h3>
-              <button
-                onClick={() => setOpenPanel(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      {openPanel &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+              aria-hidden
+              onClick={() => setOpenPanel(null)}
+            />
+            <div
+              className="fixed inset-x-4 top-[max(1rem,8vh)] z-[101] mx-auto max-w-2xl max-h-[min(84vh,calc(100dvh-2rem))] flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-background text-foreground shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="api-hub-integration-panel-title"
+            >
+              <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-border/50 bg-background">
+                <h3
+                  id="api-hub-integration-panel-title"
+                  className="text-sm font-display font-bold text-foreground"
+                >
+                  {openPanel === "sophos-central" && "Sophos Central Integration"}
+                  {openPanel === "slack" && "Slack Integration"}
+                  {openPanel === "teams" && "Microsoft Teams Integration"}
+                  {openPanel === "connectwise-cloud" && "ConnectWise Cloud"}
+                  {openPanel === "connectwise-manage" && "ConnectWise Manage"}
+                  {openPanel === "datto-autotask" && "Datto Autotask PSA"}
+                  {openPanel === "scoped-service-keys" && "Scoped service keys"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setOpenPanel(null)}
+                  className="text-muted-foreground hover:text-foreground transition-colors rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6">
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center py-12">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
+                    </div>
+                  }
+                >
+                  {openPanel === "sophos-central" && <CentralIntegration />}
+                  {openPanel === "slack" && <SlackIntegration />}
+                  {openPanel === "teams" && <TeamsIntegration />}
+                  {openPanel === "connectwise-cloud" && <ConnectWiseCloudSettings />}
+                  {openPanel === "connectwise-manage" && <ConnectWiseManageSettings />}
+                  {openPanel === "datto-autotask" && <AutotaskPsaSettings />}
+                  {openPanel === "scoped-service-keys" && <OrgServiceKeysSettings />}
+                </Suspense>
+              </div>
             </div>
-            <div className="p-6">
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center py-12">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
-                  </div>
-                }
-              >
-                {openPanel === "sophos-central" && <CentralIntegration />}
-                {openPanel === "slack" && <SlackIntegration />}
-                {openPanel === "teams" && <TeamsIntegration />}
-              </Suspense>
-            </div>
-          </div>
-        </>
-      )}
+          </>,
+          document.body,
+        )}
     </>
   );
 }

@@ -560,6 +560,55 @@ export type Database = {
           },
         ];
       };
+      autotask_psa_credentials: {
+        Row: {
+          org_id: string;
+          api_zone_base_url: string;
+          username: string;
+          encrypted_secret: string;
+          encrypted_integration_code: string;
+          default_queue_id: number;
+          default_priority: number;
+          default_status: number;
+          default_source: number;
+          default_ticket_type: number;
+          connected_at: string;
+        };
+        Insert: {
+          org_id: string;
+          api_zone_base_url: string;
+          username: string;
+          encrypted_secret: string;
+          encrypted_integration_code: string;
+          default_queue_id: number;
+          default_priority: number;
+          default_status: number;
+          default_source: number;
+          default_ticket_type: number;
+          connected_at?: string;
+        };
+        Update: {
+          org_id?: string;
+          api_zone_base_url?: string;
+          username?: string;
+          encrypted_secret?: string;
+          encrypted_integration_code?: string;
+          default_queue_id?: number;
+          default_priority?: number;
+          default_status?: number;
+          default_source?: number;
+          default_ticket_type?: number;
+          connected_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "autotask_psa_credentials_org_id_fkey";
+            columns: ["org_id"];
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       psa_ticket_idempotency: {
         Row: {
           id: string;

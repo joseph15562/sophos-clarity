@@ -35,6 +35,7 @@ import {
   ImageIcon,
   Upload,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { settingsSectionExpandAllowed } from "@/lib/workspace-deeplink";
@@ -45,7 +46,13 @@ import { computeRiskScore } from "@/lib/risk-score";
 import { ScoreTrendChart } from "@/components/ScoreTrendChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ApiDocumentation } from "@/components/ApiDocumentation";
 import { ClientPortalView, type Assessment } from "@/components/ClientPortalView";
 import { loadHistory } from "@/lib/assessment-history";
@@ -124,6 +131,51 @@ const ConnectWiseManageSettings = lazy(() =>
     default: m.ConnectWiseManageSettings,
   })),
 );
+const AutotaskPsaSettings = lazy(() =>
+  import("@/components/AutotaskPsaSettings").then((m) => ({ default: m.AutotaskPsaSettings })),
+);
+
+type PsaSetupModalId = "cw-cloud" | "cw-manage" | "autotask" | "service-keys";
+
+function PsaSetupRow({
+  title,
+  description,
+  linked,
+  onOpen,
+}: {
+  title: string;
+  description: string;
+  linked: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-border/50 bg-background/30 px-3 py-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-foreground">{title}</p>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">{description}</p>
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant={linked ? "outline" : "default"}
+        className="text-[10px] shrink-0 gap-1.5 self-end sm:self-center h-8"
+        onClick={onOpen}
+      >
+        {linked ? (
+          <>
+            <ExternalLink className="h-3.5 w-3.5" />
+            Configure
+          </>
+        ) : (
+          <>
+            <Plug className="h-3.5 w-3.5" />
+            Connect
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -667,6 +719,13 @@ export function ManagementDrawer({
   const visibleTabs = TABS.filter((t) => t.guestVisible || !isGuest);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? visibleTabs[0]?.id ?? "reports");
   const [settingsExpandSignal, setSettingsExpandSignal] = useState(0);
+  const [psaSetupModal, setPsaSetupModal] = useState<PsaSetupModalId | null>(null);
+  const [psaLinks, setPsaLinks] = useState({
+    cwCloud: false,
+    cwManage: false,
+    autotask: false,
+    serviceKeys: false,
+  });
   const settingsExpandBumpedForOpen = useRef<string | null>(null);
   const drawerBodyScrollRef = useRef<HTMLDivElement>(null);
 
@@ -741,6 +800,44 @@ export function ManagementDrawer({
     if (deepSettings) return;
     drawerBodyScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [open, initialTab, initialSettingsSection]);
+
+  useEffect(() => {
+    if (!org?.id) {
+      setPsaLinks({ cwCloud: false, cwManage: false, autotask: false, serviceKeys: false });
+      return;
+    }
+    let cancelled = false;
+    void Promise.all([
+      supabase
+        .from("connectwise_cloud_credentials")
+        .select("org_id")
+        .eq("org_id", org.id)
+        .maybeSingle(),
+      supabase
+        .from("connectwise_manage_credentials")
+        .select("org_id")
+        .eq("org_id", org.id)
+        .maybeSingle(),
+      supabase.from("autotask_psa_credentials").select("org_id").eq("org_id", org.id).maybeSingle(),
+      supabase
+        .from("org_service_api_keys")
+        .select("id")
+        .eq("org_id", org.id)
+        .is("revoked_at", null)
+        .limit(1),
+    ]).then(([cwC, cwM, at, keys]) => {
+      if (cancelled) return;
+      setPsaLinks({
+        cwCloud: !!cwC.data,
+        cwManage: !!cwM.data,
+        autotask: !!at.data,
+        serviceKeys: (keys.data?.length ?? 0) > 0,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [org?.id, psaSetupModal]);
 
   const currentTab = visibleTabs.find((t) => t.id === activeTab) ? activeTab : visibleTabs[0]?.id;
   const expandCtx = { canManageTeam, isViewerOnly, localMode };
@@ -1160,43 +1257,40 @@ export function ManagementDrawer({
                   expandAllowed={matchSettingsExpand("partner-automation")}
                   title="PSA & API automation"
                   icon={<Webhook className="h-3.5 w-3.5 text-[#5A00FF]" />}
-                  subtitle="ConnectWise Cloud, Manage tickets, scoped service keys"
+                  subtitle="ConnectWise, Autotask PSA, scoped service keys"
                 >
                   <div className="p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
-                    <p>
-                      <span className="font-semibold text-foreground">PSA</span> — ConnectWise Cloud
-                      (Partner API) and ConnectWise Manage (service tickets from findings) below.
-                      Use <strong className="text-foreground">webhooks</strong> for notify-only
-                      automation where APIs are not needed.
+                    <p className="text-[11px] text-muted-foreground">
+                      Use <strong className="text-foreground">Connect</strong> to open setup in a
+                      dialog (same pattern as Slack/Teams on the API &amp; Integrations page). For
+                      notify-only flows, use <strong className="text-foreground">webhooks</strong>{" "}
+                      in Notifications.
                     </p>
-                    <p>
-                      <span className="font-semibold text-foreground">Scoped API keys</span> —
-                      Org-level service accounts (hashed at rest) for RMM and CI — see active keys
-                      below.
-                    </p>
-                    <div className="rounded-xl border border-border/50 bg-background/30 p-3">
-                      <p className="text-[10px] font-semibold text-foreground mb-2 uppercase tracking-wide">
-                        ConnectWise Cloud
-                      </p>
-                      <Suspense fallback={<Skeleton />}>
-                        <ConnectWiseCloudSettings />
-                      </Suspense>
-                    </div>
-                    <div className="rounded-xl border border-border/50 bg-background/30 p-3">
-                      <p className="text-[10px] font-semibold text-foreground mb-2 uppercase tracking-wide">
-                        ConnectWise Manage (tickets)
-                      </p>
-                      <Suspense fallback={<Skeleton />}>
-                        <ConnectWiseManageSettings />
-                      </Suspense>
-                    </div>
-                    <div className="rounded-xl border border-border/50 bg-background/30 p-3">
-                      <p className="text-[10px] font-semibold text-foreground mb-2 uppercase tracking-wide">
-                        Service keys
-                      </p>
-                      <Suspense fallback={<Skeleton />}>
-                        <OrgServiceKeysSettings />
-                      </Suspense>
+                    <div className="space-y-2">
+                      <PsaSetupRow
+                        title="ConnectWise Cloud (Partner API)"
+                        description="OAuth client credentials for ConnectWise Cloud Services."
+                        linked={psaLinks.cwCloud}
+                        onOpen={() => setPsaSetupModal("cw-cloud")}
+                      />
+                      <PsaSetupRow
+                        title="ConnectWise Manage (tickets)"
+                        description="Site REST API for service tickets from Assess → Findings."
+                        linked={psaLinks.cwManage}
+                        onOpen={() => setPsaSetupModal("cw-manage")}
+                      />
+                      <PsaSetupRow
+                        title="Autotask PSA (Datto)"
+                        description="Zone REST API, defaults, and customer ↔ company mapping."
+                        linked={psaLinks.autotask}
+                        onOpen={() => setPsaSetupModal("autotask")}
+                      />
+                      <PsaSetupRow
+                        title="Scoped service keys"
+                        description="Org API keys for RMM and automation (firewalls, assessments)."
+                        linked={psaLinks.serviceKeys}
+                        onOpen={() => setPsaSetupModal("service-keys")}
+                      />
                     </div>
                   </div>
                 </SettingsSection>
@@ -1229,6 +1323,25 @@ export function ManagementDrawer({
           )}
         </div>
       </div>
+
+      <Dialog open={psaSetupModal !== null} onOpenChange={(o) => !o && setPsaSetupModal(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base font-display">
+              {psaSetupModal === "cw-cloud" && "ConnectWise Cloud"}
+              {psaSetupModal === "cw-manage" && "ConnectWise Manage"}
+              {psaSetupModal === "autotask" && "Autotask PSA (Datto)"}
+              {psaSetupModal === "service-keys" && "Scoped service keys"}
+            </DialogTitle>
+          </DialogHeader>
+          <Suspense fallback={<Skeleton />}>
+            {psaSetupModal === "cw-cloud" && <ConnectWiseCloudSettings />}
+            {psaSetupModal === "cw-manage" && <ConnectWiseManageSettings />}
+            {psaSetupModal === "autotask" && <AutotaskPsaSettings />}
+            {psaSetupModal === "service-keys" && <OrgServiceKeysSettings />}
+          </Suspense>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

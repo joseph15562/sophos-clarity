@@ -3,12 +3,14 @@
  */
 
 import { useState, useMemo } from "react";
-import { History, GitCompare, ChevronDown, ChevronRight } from "lucide-react";
+import { History, GitCompare, ChevronRight } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { loadConfigSnapshots, type ConfigSnapshot } from "@/lib/config-snapshots";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { ConfigDiff } from "@/components/ConfigDiff";
 import { Button } from "@/components/ui/button";
 import { GRADE_COLORS, gradeForScore } from "@/lib/design-tokens";
+import { displayCustomerNameForUi } from "@/lib/sophos-central";
 
 interface Props {
   /** Optional: filter by hostname */
@@ -28,6 +30,7 @@ function gradeColor(grade: string): string {
 }
 
 export function ConfigHistory({ hostname, refreshTrigger }: Props) {
+  const { org } = useAuth();
   const [compareSelection, setCompareSelection] = useState<
     [ConfigSnapshot | null, ConfigSnapshot | null]
   >([null, null]);
@@ -167,9 +170,12 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
                 })}
               </span>
               <span className="text-xs font-medium text-foreground truncate">{snap.hostname}</span>
-              {snap.customer_name && (
-                <span className="text-[9px] text-muted-foreground truncate">
-                  {snap.customer_name}
+              {snap.customer_name.trim() && (
+                <span
+                  className="text-[9px] text-muted-foreground truncate"
+                  title="Customer name from report branding when this snapshot was saved (not a separate MSP account)."
+                >
+                  {displayCustomerNameForUi(snap.customer_name, org?.name)}
                 </span>
               )}
             </div>

@@ -3,6 +3,7 @@ import { Shield, Download, ChevronDown, RefreshCw, Server, Clock, Link2 } from "
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";
+import { filterSupersededFullGuardLicences } from "@/lib/sophos-licence";
 import {
   getFirewallLicences,
   getFirewallDisplayName,
@@ -178,13 +179,18 @@ export function LicenceExpiryWidget() {
     return items;
   }, [firewallLicences]);
 
+  const flattenedForDisplay = useMemo(
+    () => filterSupersededFullGuardLicences(flattened),
+    [flattened],
+  );
+
   const filtered = useMemo(() => {
-    let items = flattened;
+    let items = flattenedForDisplay;
     if (filterMode === "expired") items = items.filter((l) => l.daysRemaining <= 0);
     else if (filterMode === "expiring")
       items = items.filter((l) => l.daysRemaining > 0 && l.daysRemaining <= 90);
     return items.sort((a, b) => a.daysRemaining - b.daysRemaining);
-  }, [flattened, filterMode]);
+  }, [flattenedForDisplay, filterMode]);
 
   const groupKey = useCallback(
     (serial: string) => {
@@ -250,10 +256,52 @@ export function LicenceExpiryWidget() {
         }
         group.primarySerial = primary;
         group.items = group.items.filter((i) => i.serialNumber === primary);
+
+        // HA A-P: show at most two appliance serials. Central can return many
+        // firewall rows sharing one cluster id (duplicates/stale inventory); licence
+        // lines still use the primary serial chosen above.
+        const uniqueSerials = [...new Set(group.serials)];
+        if (uniqueSerials.length > 2) {
+          if (group.key.startsWith("ha:")) {
+            const clusterId = group.key.slice(3);
+            const bySerial = new Map<string, (typeof central.firewalls)[number]>();
+            for (const fw of central.firewalls) {
+              if (!fw.serialNumber || fw.cluster?.id !== clusterId) continue;
+              if (!bySerial.has(fw.serialNumber)) bySerial.set(fw.serialNumber, fw);
+            }
+            const members = [...bySerial.values()];
+            const norm = (s: string | undefined) => (s ?? "").toLowerCase();
+            const primaryFw = members.find((fw) => {
+              const x = norm(fw.cluster?.status);
+              return x === "primary" || x === "active";
+            });
+            const auxFw = members.find((fw) => {
+              const x = norm(fw.cluster?.status);
+              return (
+                x === "auxiliary" ||
+                x === "standby" ||
+                x.includes("auxiliary") ||
+                x.includes("standby") ||
+                x.includes("passive")
+              );
+            });
+            if (primaryFw && auxFw && primaryFw.serialNumber !== auxFw.serialNumber) {
+              group.serials = [primaryFw.serialNumber, auxFw.serialNumber];
+            } else {
+              const second = uniqueSerials.find((s) => s !== primary) ?? primary;
+              group.serials = [primary, second];
+            }
+          } else {
+            const second = uniqueSerials.find((s) => s !== primary) ?? primary;
+            group.serials = [primary, second];
+          }
+        } else {
+          group.serials = uniqueSerials;
+        }
       }
       return Array.from(map.values());
     },
-    [groupKey],
+    [groupKey, central.firewalls],
   );
 
   const grouped = useMemo(() => {
@@ -275,7 +323,7 @@ export function LicenceExpiryWidget() {
   };
 
   const firewallTotals = useMemo(() => {
-    const groups = buildGroups(flattened);
+    const groups = buildGroups(flattenedForDisplay);
     let expired = 0,
       expiringCritical = 0,
       expiringSoon = 0,
@@ -297,7 +345,7 @@ export function LicenceExpiryWidget() {
       expiringMedium,
       healthy,
     };
-  }, [flattened, buildGroups]);
+  }, [flattenedForDisplay, buildGroups]);
 
   const {
     total: fwTotal,
@@ -489,7 +537,7 @@ export function LicenceExpiryWidget() {
                 <RefreshCw className="h-3 w-3" /> Retry
               </Button>
             </div>
-          ) : filtered.length > 0 || flattened.length > 0 ? (
+          ) : filtered.length > 0 || flattenedForDisplay.length > 0 ? (
             <>
               <div className="space-y-1.5 max-h-72 overflow-y-auto">
                 {grouped.map((group) => {

@@ -106,6 +106,102 @@ export function detectBpLicenceTierFromCentral(
   return null;
 }
 
+/** Licence row shape for supersession filtering (e.g. LicenceExpiryWidget). */
+export interface LicenceRowForSupersession {
+  serialNumber: string;
+  daysRemaining: number;
+  subscription: {
+    perpetual: boolean;
+    /** Central firewall licence type; `trial` rows may duplicate Xstream coverage. */
+    type?: string;
+    product: { code: string; name: string; genericCode?: string };
+  };
+}
+
+function centralFirewallProductBlob(sub: LicenceRowForSupersession["subscription"]): string {
+  return [sub.product?.name, sub.product?.code, sub.product?.genericCode]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+export function isCentralFirewallProductXstream(
+  sub: LicenceRowForSupersession["subscription"],
+): boolean {
+  return centralFirewallProductBlob(sub).includes("xstream");
+}
+
+/** Legacy bundle name before Xstream (Central often keeps expired rows alongside Xstream). */
+export function isCentralFirewallProductLegacyFullGuard(
+  sub: LicenceRowForSupersession["subscription"],
+): boolean {
+  const b = centralFirewallProductBlob(sub);
+  return b.includes("fullguard") || b.includes("full guard") || b.includes("full-guard");
+}
+
+/**
+ * Product names for individual firewall modules that are included in the Xstream bundle.
+ * Central often returns expired trials for these next to an active Xstream line.
+ */
+const XSTREAM_BUNDLE_MODULE_TRIAL_SUBSTRINGS = [
+  "network protection",
+  "web protection",
+  "webserver protection",
+  "web server protection",
+  "zero-day protection",
+  "zero day protection",
+  "zeroday protection",
+  "email protection",
+  "dns protection",
+  "central orchestration",
+] as const;
+
+/** Expired trial for a module that Xstream already covers (same serial has active Xstream). */
+export function isCentralFirewallTrialSupersededByXstreamBundle(
+  sub: LicenceRowForSupersession["subscription"],
+): boolean {
+  if ((sub.type ?? "").toLowerCase() !== "trial") return false;
+  const b = centralFirewallProductBlob(sub);
+  if (b.includes("xstream")) return false;
+  return XSTREAM_BUNDLE_MODULE_TRIAL_SUBSTRINGS.some((s) => b.includes(s));
+}
+
+/**
+ * Drop licence rows superseded by an active Xstream subscription on the same serial:
+ * expired FullGuard, and expired trials for individual modules included in Xstream.
+ */
+export function filterSupersededFullGuardLicences<T extends LicenceRowForSupersession>(
+  rows: T[],
+): T[] {
+  const bySerial = new Map<string, T[]>();
+  for (const r of rows) {
+    const list = bySerial.get(r.serialNumber) ?? [];
+    list.push(r);
+    bySerial.set(r.serialNumber, list);
+  }
+  const out: T[] = [];
+  for (const list of bySerial.values()) {
+    const hasActiveXstream = list.some(
+      (r) =>
+        isCentralFirewallProductXstream(r.subscription) &&
+        (r.subscription.perpetual || r.daysRemaining > 0),
+    );
+    for (const r of list) {
+      const expired = !r.subscription.perpetual && r.daysRemaining <= 0;
+      if (
+        hasActiveXstream &&
+        expired &&
+        (isCentralFirewallProductLegacyFullGuard(r.subscription) ||
+          isCentralFirewallTrialSupersededByXstreamBundle(r.subscription))
+      ) {
+        continue;
+      }
+      out.push(r);
+    }
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Best-practice check definitions                                   */
 /* ------------------------------------------------------------------ */

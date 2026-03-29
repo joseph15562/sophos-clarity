@@ -54,7 +54,17 @@ export default function ChangelogPage() {
               <strong className="text-foreground">PSA customer mapping:</strong> under ConnectWise
               Manage settings, map each FireComply customer name (same label as the Customers page)
               to a Manage company ID; tickets from findings pre-fill the ID or can use the mapping
-              server-side when the field is left empty.
+              server-side when the field is left empty. Combobox pickers and Manage company list
+              (REST) reduce typos.
+            </li>
+            <li>
+              <strong className="text-foreground">Autotask PSA (Datto):</strong> second PSA under
+              the same settings drawer — zone URL, API user, encrypted secret and integration code,
+              ticket picklist defaults; customer ↔ Autotask company mapping with company query;
+              idempotent tickets from findings when Autotask is linked (
+              <code className="text-xs">autotask_psa_credentials</code>,{" "}
+              <code className="text-xs">provider = autotask</code> on shared mapping / idempotency
+              tables).
             </li>
             <li>
               <strong className="text-foreground">Org service API keys:</strong> workspace settings
@@ -95,6 +105,46 @@ export default function ChangelogPage() {
               API Hub, customer management, playbook library, and portfolio insights: navigation and
               copy aligned with workspace settings and MSP workflows.
             </li>
+            <li>
+              <strong className="text-foreground">Firewall Licence Monitor:</strong> HA A-P rows cap
+              displayed serials at two (primary + peer from Central cluster or licence heuristic).
+              When <strong className="text-foreground">Xstream</strong> is active on a device,
+              expired <strong className="text-foreground">FullGuard</strong> and expired{" "}
+              <strong className="text-foreground">trial</strong> lines for bundled modules (e.g.
+              Network/Web/Zero-Day/Email) no longer drive an{" "}
+              <strong className="text-foreground">EXPIRED</strong> header — Central often keeps
+              legacy rows next to Xstream.
+            </li>
+            <li>
+              <strong className="text-foreground">Config History:</strong> the saved customer label
+              uses your FireComply org name when Sophos Central returned the{" "}
+              <code className="text-xs">(This tenant)</code> placeholder; tooltip notes the value
+              comes from report branding at snapshot time (not a separate MSP account).
+            </li>
+            <li>
+              <strong className="text-foreground">PSA &amp; API automation</strong> (workspace
+              settings) and <strong className="text-foreground">API &amp; Integrations</strong>:
+              ConnectWise Cloud, ConnectWise Manage, Autotask PSA, and scoped service keys use the
+              same <strong className="text-foreground">Connect / Configure → dialog</strong> pattern
+              as Slack and Microsoft Teams — no inline dropdown; API Hub lists each as its own card
+              with live connected state.
+            </li>
+            <li>
+              <strong className="text-foreground">Scoped service keys:</strong> clearer in-app
+              messages when key list or issue/revoke calls fail at the network layer (instead of a
+              bare &quot;Failed to fetch&quot;).
+            </li>
+            <li>
+              <strong className="text-foreground">Fleet (list view):</strong> Sophos Central
+              customer groups start <strong className="text-foreground">collapsed</strong> — open a
+              row to see its firewalls (reduces scroll on large estates).
+            </li>
+            <li>
+              <strong className="text-foreground">Scoped service keys UI:</strong> the long usage /
+              ping-URL blurb is under{" "}
+              <strong className="text-foreground">Using service keys &amp; ping URL</strong>,
+              collapsed by default (API Hub panel and workspace PSA settings).
+            </li>
           </ul>
           <div className="space-y-2 pt-2 border-t border-border/50">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground">Fixes</h3>
@@ -114,6 +164,23 @@ export default function ChangelogPage() {
                 Regulatory scanner: replaced retired RSS URLs that returned 404 so feeds can load
                 again; scan API responses include per-feed status (HTTP code, parse count, errors)
                 for support and debugging.
+              </li>
+              <li>
+                <strong className="text-foreground">API &amp; Integrations:</strong> Connect /
+                Configure panels use a{" "}
+                <strong className="text-foreground">portal to document.body</strong>, higher
+                z-index, and body scroll lock so the backdrop sits above the page and no longer
+                clips or stacks oddly with the hero area.
+              </li>
+              <li>
+                <strong className="text-foreground">Edge Function CORS</strong> (
+                <code className="text-xs">_shared/cors.ts</code>, used by the{" "}
+                <code className="text-xs">api</code> function): browser{" "}
+                <code className="text-xs">Origin</code> on HTTP loopback (
+                <code className="text-xs">127.0.0.1</code>, <code className="text-xs">::1</code>,
+                any port) is mirrored for local dev — avoids CORS failures when the app URL uses
+                numeric loopback instead of <code className="text-xs">localhost</code>. Redeploy the{" "}
+                <code className="text-xs">api</code> function after updating.
               </li>
             </ul>
           </div>

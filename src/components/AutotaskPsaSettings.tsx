@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, ChevronsUpDown, ExternalLink, Loader2, Ticket, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown, ExternalLink, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { FirecomplyCustomerMappingInput } from "@/components/psa/FirecomplyCustomerMappingInput";
@@ -17,28 +17,32 @@ import {
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const MANAGE_REST = "https://developer.connectwise.com/products/manage/rest";
+const AUTOTASK_AUTH_DOC =
+  "https://www.autotask.net/help/DeveloperHelp/Content/APIs/REST/General_Topics/REST_Security_Auth.htm";
 
-type ManageCompanyRow = { id: number; name: string; identifier: string };
+type AtCompanyRow = { id: number; name: string };
 
-/** ConnectWise Manage REST credentials and defaults for service ticket creation (separate from Partner Cloud). */
-export function ConnectWiseManageSettings() {
+/** Datto Autotask PSA REST — credentials, ticket defaults, customer ↔ company mapping. */
+export function AutotaskPsaSettings() {
   const { org } = useAuth();
   const [linked, setLinked] = useState<boolean | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [apiBaseUrl, setApiBaseUrl] = useState("");
-  const [integratorCompanyId, setIntegratorCompanyId] = useState("");
-  const [publicKey, setPublicKey] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
-  const [defaultBoardId, setDefaultBoardId] = useState("");
-  const [defaultStatusId, setDefaultStatusId] = useState("1");
+  const [apiZoneBaseUrl, setApiZoneBaseUrl] = useState("");
+  const [username, setUsername] = useState("");
+  const [secret, setSecret] = useState("");
+  const [integrationCode, setIntegrationCode] = useState("");
+  const [defaultQueueId, setDefaultQueueId] = useState("");
+  const [defaultPriority, setDefaultPriority] = useState("");
+  const [defaultStatus, setDefaultStatus] = useState("");
+  const [defaultSource, setDefaultSource] = useState("");
+  const [defaultTicketType, setDefaultTicketType] = useState("");
   const [mappings, setMappings] = useState<{ customer_key: string; company_id: number }[]>([]);
   const [mapCustomerKey, setMapCustomerKey] = useState("");
   const [mapCompanyId, setMapCompanyId] = useState("");
   const [mapBusy, setMapBusy] = useState(false);
 
-  const [manageCompanies, setManageCompanies] = useState<ManageCompanyRow[]>([]);
+  const [atCompanies, setAtCompanies] = useState<AtCompanyRow[]>([]);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState("");
   const [companyOpen, setCompanyOpen] = useState(false);
@@ -50,21 +54,26 @@ export function ConnectWiseManageSettings() {
       return;
     }
     const { data, error } = await supabase
-      .from("connectwise_manage_credentials")
-      .select("api_base_url, integrator_company_id, default_board_id, default_status_id")
+      .from("autotask_psa_credentials")
+      .select(
+        "api_zone_base_url, username, default_queue_id, default_priority, default_status, default_source, default_ticket_type",
+      )
       .eq("org_id", org.id)
       .maybeSingle();
     if (error) {
-      console.warn("[ConnectWiseManageSettings]", error);
+      console.warn("[AutotaskPsaSettings]", error);
       setLinked(false);
       return;
     }
     if (data) {
       setLinked(true);
-      setApiBaseUrl(data.api_base_url ?? "");
-      setIntegratorCompanyId(data.integrator_company_id ?? "");
-      setDefaultBoardId(String(data.default_board_id ?? ""));
-      setDefaultStatusId(String(data.default_status_id ?? 1));
+      setApiZoneBaseUrl(data.api_zone_base_url ?? "");
+      setUsername(data.username ?? "");
+      setDefaultQueueId(String(data.default_queue_id ?? ""));
+      setDefaultPriority(String(data.default_priority ?? ""));
+      setDefaultStatus(String(data.default_status ?? ""));
+      setDefaultSource(String(data.default_source ?? ""));
+      setDefaultTicketType(String(data.default_ticket_type ?? ""));
     } else {
       setLinked(false);
     }
@@ -79,10 +88,10 @@ export function ConnectWiseManageSettings() {
       .from("psa_customer_company_map")
       .select("customer_key, company_id")
       .eq("org_id", org.id)
-      .eq("provider", "connectwise_manage")
+      .eq("provider", "autotask")
       .order("customer_key", { ascending: true });
     if (error) {
-      console.warn("[ConnectWiseManageSettings] mappings", error);
+      console.warn("[AutotaskPsaSettings] mappings", error);
       setMappings([]);
       return;
     }
@@ -119,17 +128,17 @@ export function ConnectWiseManageSettings() {
     return resBody as Record<string, unknown>;
   }
 
-  async function ensureManageCompanies() {
+  async function ensureAtCompanies() {
     if (!linked) return;
     setCompaniesLoading(true);
     setCompaniesError("");
     try {
-      const data = await apiGet("/connectwise-manage/companies");
+      const data = await apiGet("/autotask-psa/companies");
       const list = data.companies;
-      setManageCompanies(Array.isArray(list) ? (list as ManageCompanyRow[]) : []);
+      setAtCompanies(Array.isArray(list) ? (list as AtCompanyRow[]) : []);
     } catch (err) {
       setCompaniesError(err instanceof Error ? err.message : "Failed to load companies");
-      setManageCompanies([]);
+      setAtCompanies([]);
     } finally {
       setCompaniesLoading(false);
     }
@@ -208,39 +217,48 @@ export function ConnectWiseManageSettings() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!org?.id) return;
-    const board = parseInt(defaultBoardId, 10);
-    const status = parseInt(defaultStatusId, 10) || 1;
-    if (!apiBaseUrl.trim() || !integratorCompanyId.trim()) {
-      setMessage("API base URL and integrator company ID are required.");
+    const q = parseInt(defaultQueueId, 10);
+    const pr = parseInt(defaultPriority, 10);
+    const st = parseInt(defaultStatus, 10);
+    const so = parseInt(defaultSource, 10);
+    const tt = parseInt(defaultTicketType, 10);
+    if (!apiZoneBaseUrl.trim() || !username.trim()) {
+      setMessage("Zone URL and username are required.");
       return;
     }
-    if (!linked && (!publicKey.trim() || !privateKey.trim())) {
-      setMessage("Public and private keys are required for a new connection.");
+    if (!linked && (!secret.trim() || !integrationCode.trim())) {
+      setMessage("Secret and API integration code are required for a new connection.");
       return;
     }
-    if (!Number.isFinite(board)) {
-      setMessage("Default board ID must be a number.");
+    if (![q, pr, st, so, tt].every((n) => Number.isFinite(n))) {
+      setMessage(
+        "All default picklist IDs (queue, priority, status, source, ticket type) must be numbers.",
+      );
       return;
     }
     setBusy(true);
     setMessage("");
     try {
       const payload: Record<string, unknown> = {
-        apiBaseUrl: apiBaseUrl.trim(),
-        integratorCompanyId: integratorCompanyId.trim(),
-        defaultBoardId: board,
-        defaultStatusId: status,
+        apiZoneBaseUrl: apiZoneBaseUrl.trim(),
+        username: username.trim(),
+        defaultQueueId: q,
+        defaultPriority: pr,
+        defaultStatus: st,
+        defaultSource: so,
+        defaultTicketType: tt,
       };
-      if (publicKey.trim() && privateKey.trim()) {
-        payload.publicKey = publicKey.trim();
-        payload.privateKey = privateKey.trim();
+      if (secret.trim() && integrationCode.trim()) {
+        payload.secret = secret.trim();
+        payload.integrationCode = integrationCode.trim();
       }
-      await apiPost("/connectwise-manage/credentials", payload);
-      setPrivateKey("");
+      await apiPost("/autotask-psa/credentials", payload);
+      setSecret("");
+      setIntegrationCode("");
       setMessage("Saved.");
       await loadStatus();
       await loadMappings();
-      setManageCompanies([]);
+      setAtCompanies([]);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -254,17 +272,17 @@ export function ConnectWiseManageSettings() {
     const ck = mapCustomerKey.trim();
     const cid = parseInt(mapCompanyId, 10);
     if (!ck) {
-      setMessage("Choose or enter the FireComply customer name (same as Customers page).");
+      setMessage("Choose or enter the FireComply customer name.");
       return;
     }
     if (!Number.isFinite(cid)) {
-      setMessage("Manage company ID must be a number.");
+      setMessage("Autotask company ID must be a number.");
       return;
     }
     setMapBusy(true);
     setMessage("");
     try {
-      await apiPut("/connectwise-manage/company-mappings", {
+      await apiPut("/autotask-psa/company-mappings", {
         customerKey: ck,
         companyId: cid,
       });
@@ -290,7 +308,7 @@ export function ConnectWiseManageSettings() {
       } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
       const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
-      const res = await fetch(`${base}/connectwise-manage/company-mappings`, {
+      const res = await fetch(`${base}/autotask-psa/company-mappings`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -315,21 +333,24 @@ export function ConnectWiseManageSettings() {
   };
 
   const handleDisconnect = async () => {
-    if (!confirm("Remove ConnectWise Manage credentials?")) return;
+    if (!confirm("Remove Autotask PSA credentials?")) return;
     setBusy(true);
     setMessage("");
     try {
-      await apiDelete("/connectwise-manage/credentials");
+      await apiDelete("/autotask-psa/credentials");
       setLinked(false);
-      setApiBaseUrl("");
-      setIntegratorCompanyId("");
-      setPublicKey("");
-      setPrivateKey("");
-      setDefaultBoardId("");
-      setDefaultStatusId("1");
+      setApiZoneBaseUrl("");
+      setUsername("");
+      setSecret("");
+      setIntegrationCode("");
+      setDefaultQueueId("");
+      setDefaultPriority("");
+      setDefaultStatus("");
+      setDefaultSource("");
+      setDefaultTicketType("");
       setMessage("Disconnected.");
       setMappings([]);
-      setManageCompanies([]);
+      setAtCompanies([]);
       setCompaniesError("");
       setMapCustomerKey("");
       setMapCompanyId("");
@@ -344,9 +365,8 @@ export function ConnectWiseManageSettings() {
   const selectedCompanyLabel = (() => {
     const id = parseInt(mapCompanyId, 10);
     if (!Number.isFinite(id)) return "";
-    const row = manageCompanies.find((c) => c.id === id);
-    if (!row) return String(id);
-    return row.identifier ? `${row.name} (${row.identifier})` : row.name;
+    const row = atCompanies.find((c) => c.id === id);
+    return row ? row.name : String(id);
   })();
 
   if (linked === undefined) {
@@ -360,26 +380,24 @@ export function ConnectWiseManageSettings() {
   return (
     <div className="space-y-3 text-xs text-muted-foreground leading-relaxed">
       <p>
-        <span className="font-semibold text-foreground">ConnectWise Manage</span> — site REST API
-        (base URL + integrator keys), not Partner Cloud.{" "}
+        <span className="font-semibold text-foreground">Autotask (Datto) PSA</span> — REST API for
+        your zone; API-only user per{" "}
         <a
-          href={MANAGE_REST}
+          href={AUTOTASK_AUTH_DOC}
           target="_blank"
           rel="noopener noreferrer"
           className="text-brand-accent font-medium"
         >
-          Manage REST docs <ExternalLink className="inline h-3 w-3" />
+          REST security &amp; authentication <ExternalLink className="inline h-3 w-3" />
         </a>
-        . Encrypted like Sophos Central. Default board/status apply to tickets from findings.
+        . Credentials encrypted like Sophos Central. Defaults are picklist IDs for tickets from
+        findings.
       </p>
       {linked && (
         <div className="rounded-lg border border-border/50 bg-background/40 px-3 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Ticket className="h-3.5 w-3.5 text-[#5A00FF] shrink-0" />
-            <span className="text-[11px] font-medium text-foreground truncate">
-              Manage API linked
-            </span>
-          </div>
+          <span className="text-[11px] font-medium text-foreground truncate">
+            Autotask PSA linked
+          </span>
           <Button
             type="button"
             variant="ghost"
@@ -400,64 +418,98 @@ export function ConnectWiseManageSettings() {
           {linked ? "Update credentials" : "Connect"}
         </p>
         <div className="space-y-1">
-          <label className="text-[10px] text-foreground">API base URL</label>
+          <label className="text-[10px] text-foreground">API zone URL</label>
           <Input
             className="h-8 text-[11px] font-mono"
-            value={apiBaseUrl}
-            onChange={(e) => setApiBaseUrl(e.target.value)}
-            placeholder="https://na.myconnectwise.net/v4_6_release/apis/3.0"
+            value={apiZoneBaseUrl}
+            onChange={(e) => setApiZoneBaseUrl(e.target.value)}
+            placeholder="https://webservices3.autotask.net"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-foreground">Integrator company ID</label>
+          <label className="text-[10px] text-foreground">Username (API user email)</label>
           <Input
-            className="h-8 text-xs font-mono"
-            value={integratorCompanyId}
-            onChange={(e) => setIntegratorCompanyId(e.target.value)}
-            placeholder="Numeric company ID from Manage"
+            className="h-8 text-xs"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="off"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-foreground">Public key</label>
-          <Input
-            className="h-8 text-xs font-mono"
-            value={publicKey}
-            onChange={(e) => setPublicKey(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[10px] text-foreground">Private key</label>
+          <label className="text-[10px] text-foreground">Secret</label>
           <Input
             className="h-8 text-xs font-mono"
             type="password"
-            value={privateKey}
-            onChange={(e) => setPrivateKey(e.target.value)}
-            placeholder="Paste from Manage API member"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            placeholder={linked ? "Leave blank to keep existing" : "API user secret"}
+            autoComplete="new-password"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <label className="text-[10px] text-foreground">API integration code</label>
+          <Input
+            className="h-8 text-xs font-mono"
+            type="password"
+            value={integrationCode}
+            onChange={(e) => setIntegrationCode(e.target.value)}
+            placeholder={linked ? "Leave blank to keep existing" : "Tracking identifier"}
+            autoComplete="new-password"
+          />
+        </div>
+        <p className="text-[10px] font-semibold text-foreground uppercase tracking-wide pt-1">
+          Ticket defaults (picklist IDs)
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div className="space-y-1">
-            <label className="text-[10px] text-foreground">Default board ID</label>
+            <label className="text-[10px] text-foreground">Queue</label>
             <Input
               className="h-8 text-xs"
-              value={defaultBoardId}
-              onChange={(e) => setDefaultBoardId(e.target.value)}
+              value={defaultQueueId}
+              onChange={(e) => setDefaultQueueId(e.target.value)}
               inputMode="numeric"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] text-foreground">Default status ID</label>
+            <label className="text-[10px] text-foreground">Priority</label>
             <Input
               className="h-8 text-xs"
-              value={defaultStatusId}
-              onChange={(e) => setDefaultStatusId(e.target.value)}
+              value={defaultPriority}
+              onChange={(e) => setDefaultPriority(e.target.value)}
+              inputMode="numeric"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] text-foreground">Status</label>
+            <Input
+              className="h-8 text-xs"
+              value={defaultStatus}
+              onChange={(e) => setDefaultStatus(e.target.value)}
+              inputMode="numeric"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] text-foreground">Source</label>
+            <Input
+              className="h-8 text-xs"
+              value={defaultSource}
+              onChange={(e) => setDefaultSource(e.target.value)}
+              inputMode="numeric"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] text-foreground">Ticket type</label>
+            <Input
+              className="h-8 text-xs"
+              value={defaultTicketType}
+              onChange={(e) => setDefaultTicketType(e.target.value)}
               inputMode="numeric"
             />
           </div>
         </div>
         <p className="text-[10px] text-amber-700 dark:text-amber-400">
-          You can change board, status, or URL without re-entering keys. Paste both keys only when
-          adding or rotating the integration. Keys are never shown after save.
+          You can change URL, username, or defaults without re-entering secret and integration code.
+          Paste both only when connecting or rotating credentials.
         </p>
         <Button type="submit" size="sm" disabled={busy}>
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
@@ -466,11 +518,11 @@ export function ConnectWiseManageSettings() {
 
       <div className="rounded-xl border border-border/50 bg-background/20 p-3 space-y-2">
         <p className="text-[10px] font-semibold text-foreground uppercase tracking-wide">
-          Customer ↔ Manage company ID
+          Customer ↔ Autotask company ID
         </p>
         <p className="text-[10px] text-muted-foreground leading-relaxed">
-          Pick the customer label from your org data (same resolved names as the Customers page).
-          With Manage linked, choose a company from Manage or enter an ID manually.
+          Map FireComply customers to Autotask company (account) IDs. With Autotask linked, load
+          companies from your zone or enter an ID manually.
         </p>
         {mappings.length > 0 && (
           <ul className="space-y-1 max-h-32 overflow-y-auto">
@@ -508,15 +560,15 @@ export function ConnectWiseManageSettings() {
           </div>
           <div className="space-y-1 sm:col-span-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <label className="text-[10px] text-foreground">Manage company</label>
+              <label className="text-[10px] text-foreground">Autotask company</label>
               {linked && !companyManualMode && (
                 <button
                   type="button"
                   className="text-[10px] text-brand-accent font-medium hover:underline shrink-0"
                   disabled={mapBusy || companiesLoading}
-                  onClick={() => void ensureManageCompanies()}
+                  onClick={() => void ensureAtCompanies()}
                 >
-                  {companiesLoading ? "Loading…" : manageCompanies.length ? "Refresh" : "Load list"}
+                  {companiesLoading ? "Loading…" : atCompanies.length ? "Refresh" : "Load list"}
                 </button>
               )}
             </div>
@@ -526,8 +578,8 @@ export function ConnectWiseManageSettings() {
                   open={companyOpen}
                   onOpenChange={(open) => {
                     setCompanyOpen(open);
-                    if (open && manageCompanies.length === 0 && !companiesLoading) {
-                      void ensureManageCompanies();
+                    if (open && atCompanies.length === 0 && !companiesLoading) {
+                      void ensureAtCompanies();
                     }
                   }}
                 >
@@ -561,32 +613,28 @@ export function ConnectWiseManageSettings() {
                           {companiesError || "No companies loaded."}
                         </CommandEmpty>
                         <CommandGroup>
-                          {manageCompanies.map((c) => {
-                            const label = c.identifier ? `${c.name} (${c.identifier})` : c.name;
-                            const searchValue = `${c.name} ${c.identifier} ${c.id}`;
-                            return (
-                              <CommandItem
-                                key={c.id}
-                                value={searchValue}
-                                className="text-xs"
-                                onSelect={() => {
-                                  setMapCompanyId(String(c.id));
-                                  setCompanyOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-3.5 w-3.5 shrink-0",
-                                    mapCompanyId === String(c.id) ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                                <span className="truncate flex-1 min-w-0">{label}</span>
-                                <span className="font-mono text-muted-foreground shrink-0 ml-1">
-                                  {c.id}
-                                </span>
-                              </CommandItem>
-                            );
-                          })}
+                          {atCompanies.map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              value={`${c.name} ${c.id}`}
+                              className="text-xs"
+                              onSelect={() => {
+                                setMapCompanyId(String(c.id));
+                                setCompanyOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-3.5 w-3.5 shrink-0",
+                                  mapCompanyId === String(c.id) ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              <span className="truncate flex-1 min-w-0">{c.name}</span>
+                              <span className="font-mono text-muted-foreground shrink-0 ml-1">
+                                {c.id}
+                              </span>
+                            </CommandItem>
+                          ))}
                         </CommandGroup>
                         <CommandSeparator />
                         <CommandGroup>
@@ -628,7 +676,7 @@ export function ConnectWiseManageSettings() {
                       setMapCompanyId("");
                     }}
                   >
-                    Pick from Manage list
+                    Pick from Autotask list
                   </button>
                 )}
               </div>
