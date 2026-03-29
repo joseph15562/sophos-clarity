@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   SlidersHorizontal,
   Scale,
+  Shield,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -391,6 +392,10 @@ export function AnalysisTabs({
             <TabsTrigger value="compliance" className="gap-2">
               <ClipboardCheck className="h-3.5 w-3.5" />
               Compliance
+            </TabsTrigger>
+            <TabsTrigger value="insurance-readiness" className="gap-2">
+              <Shield className="h-3.5 w-3.5" />
+              Insurance Readiness
             </TabsTrigger>
             <TabsTrigger value="optimisation" className="gap-2">
               <Zap className="h-3.5 w-3.5" />
@@ -1046,12 +1051,6 @@ export function AnalysisTabs({
                 </div>
               </SecurityWidgetShell>
 
-              <SecurityWidgetShell className="border-[#5A00FF]/10">
-                <Suspense fallback={<CardSkeleton />}>
-                  <InsuranceReadiness analysisResults={analysisResult} />
-                </Suspense>
-              </SecurityWidgetShell>
-
               {w("compliance-summary") && (
                 <div className="grid gap-6 lg:grid-cols-2">
                   <SecurityWidgetShell className="border-[#5A00FF]/10">
@@ -1102,6 +1101,39 @@ export function AnalysisTabs({
                   </Suspense>
                 </SecurityWidgetShell>
               )}
+            </div>
+          </ErrorBoundary>
+        </TabsContent>
+
+        {/* Insurance Readiness */}
+        <TabsContent
+          value="insurance-readiness"
+          className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0"
+        >
+          <ErrorBoundary fallbackTitle="Insurance readiness failed to load">
+            <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(234,0,34,0.08),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(234,0,34,0.12),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] shadow-[0_18px_50px_rgba(32,6,247,0.08)] p-5 sm:p-6 space-y-4">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="space-y-2 max-w-2xl">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#EA0022]/20 bg-[#EA0022]/[0.06] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#EA0022] dark:text-[#ff6b7a]">
+                    Carrier conversations
+                  </div>
+                  <h3 className="text-2xl font-display font-black text-foreground tracking-tight">
+                    Insurance Readiness
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Questionnaire-style signals derived from your firewall analysis. Use alongside
+                    operational evidence and broker guidance — not a substitute for formal
+                    attestation.
+                  </p>
+                </div>
+              </div>
+              <Suspense fallback={<CardSkeleton />}>
+                <InsuranceReadiness
+                  analysisResults={analysisResult}
+                  customerName={branding.customerName}
+                  mspName={branding.companyName}
+                />
+              </Suspense>
             </div>
           </ErrorBoundary>
         </TabsContent>

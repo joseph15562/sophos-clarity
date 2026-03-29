@@ -47,6 +47,11 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
 import { scoreToColor, type Severity } from "@/lib/design-tokens";
+import { resolveCustomerName } from "@/lib/customer-name";
+import { saveAs } from "file-saver";
+import type { BrandingData } from "@/components/BrandingSetup";
+import { buildReportHtml } from "@/lib/report-html";
+import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
 
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#00F2B3] dark:text-[#00F2B3]",
@@ -203,6 +208,8 @@ interface PortalBranding {
 interface PortalFirewall {
   agentId: string;
   label: string;
+  /** Hostname / identity for matching assessments (when present). */
+  hostname?: string | null;
   serialNumber: string | null;
   model: string | null;
   score: number | null;
@@ -210,6 +217,62 @@ interface PortalFirewall {
   lastSeen: string | null;
   lastAssessed: string | null;
   findingsRich?: PortalFindingRich[];
+}
+
+interface PortalSavedReportEntry {
+  id: string;
+  label: string;
+  markdown: string;
+}
+
+interface PortalSavedAnalysisSummary {
+  totalFindings?: number;
+  overallScore?: number;
+  overallGrade?: string;
+}
+
+interface PortalSavedReportPackage {
+  id: string;
+  customer_name: string;
+  environment: string;
+  report_type: string;
+  created_at: string;
+  reports: PortalSavedReportEntry[];
+  analysis_summary?: PortalSavedAnalysisSummary;
+}
+
+function sanitizeFilenameBase(name: string): string {
+  return (
+    name
+      .replace(/[/\\?%*:|"<>]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80) || "report"
+  );
+}
+
+function normalizePortalSavedReports(raw: unknown): PortalSavedReportPackage[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((p) => {
+    const o = p as Record<string, unknown>;
+    const reps = Array.isArray(o.reports) ? o.reports : [];
+    return {
+      id: String(o.id ?? ""),
+      customer_name: String(o.customer_name ?? ""),
+      environment: String(o.environment ?? ""),
+      report_type: String(o.report_type ?? "full"),
+      created_at: String(o.created_at ?? ""),
+      reports: reps.map((r) => {
+        const e = r as Record<string, unknown>;
+        return {
+          id: String(e.id ?? ""),
+          label: String(e.label ?? "Report"),
+          markdown: String(e.markdown ?? ""),
+        };
+      }),
+      analysis_summary: (o.analysis_summary as PortalSavedAnalysisSummary) ?? {},
+    };
+  });
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -671,8 +734,17 @@ export default function ClientPortal() {
     "feedback",
   ]);
   const [orgId, setOrgId] = useState<string>("");
+  /** FireComply organisation display name — used to replace "(This tenant)" and similar. */
+  const [organizationName, setOrganizationName] = useState("");
   const [tenantName, setTenantName] = useState<string | null>(null);
+  const [portalAggregate, setPortalAggregate] = useState<{
+    score: number | null;
+    grade: string | null;
+    latestAt: string | null;
+  }>({ score: null, grade: null, latestAt: null });
   const [portalFirewalls, setPortalFirewalls] = useState<PortalFirewall[]>([]);
+  const [portalSavedReports, setPortalSavedReports] = useState<PortalSavedReportPackage[]>([]);
+  const [reportActionKey, setReportActionKey] = useState<string | null>(null);
   const [expandedFindingIds, setExpandedFindingIds] = useState<Set<string>>(() => new Set());
 
   // Auth state
@@ -746,6 +818,8 @@ export default function ClientPortal() {
 
     setLoading(true);
     setError(null);
+    setPortalSavedReports([]);
+    setOrganizationName("");
 
     try {
       if (isSlug || !authUser) {
@@ -768,7 +842,14 @@ export default function ClientPortal() {
         const data = await resp.json();
         setOrgId(data.orgId ?? "");
         setTenantName(data.tenantName ?? null);
-        setCustomerName(data.tenantName ?? data.customerName ?? "Customer");
+        setOrganizationName(typeof data.organizationName === "string" ? data.organizationName : "");
+        setCustomerName(data.customerName ?? "Customer");
+        setPortalAggregate({
+          score: typeof data.aggregateScore === "number" ? data.aggregateScore : null,
+          grade: typeof data.aggregateGrade === "string" ? data.aggregateGrade : null,
+          latestAt:
+            typeof data.summaryLatestAssessedAt === "string" ? data.summaryLatestAssessedAt : null,
+        });
         setScoreHistory(data.scoreHistory ?? []);
         const portalFindings = data.findings ?? [];
         setFindings(portalFindings);
@@ -785,10 +866,12 @@ export default function ClientPortal() {
             "feedback",
           ],
         );
+        setPortalSavedReports(normalizePortalSavedReports(data.savedReports));
       } else {
         // Authenticated path: use Supabase RLS directly
         const resolvedOrgId = identifier;
         setOrgId(resolvedOrgId);
+        setPortalAggregate({ score: null, grade: null, latestAt: null });
 
         const history = await loadScoreHistory(resolvedOrgId, undefined, 30);
         setScoreHistory(history);
@@ -824,6 +907,41 @@ export default function ClientPortal() {
               : ["score", "history", "findings", "compliance", "reports", "feedback"],
           );
         }
+
+        const { data: orgRowAuth } = await supabase
+          .from("organisations")
+          .select("name")
+          .eq("id", resolvedOrgId)
+          .maybeSingle();
+        const orgNmAuth = String(orgRowAuth?.name ?? "");
+        setOrganizationName(orgNmAuth);
+        const resolvedCustomer = resolveCustomerName(name, orgNmAuth);
+
+        const { data: srAuth } = await supabase
+          .from("saved_reports")
+          .select(
+            "id, customer_name, environment, report_type, reports, analysis_summary, created_at",
+          )
+          .eq("org_id", resolvedOrgId)
+          .order("created_at", { ascending: false })
+          .limit(80);
+
+        const filteredSr = (srAuth ?? []).filter(
+          (row) => resolveCustomerName(row.customer_name, orgNmAuth) === resolvedCustomer,
+        );
+        setPortalSavedReports(
+          normalizePortalSavedReports(
+            filteredSr.map((row) => ({
+              id: row.id,
+              customer_name: row.customer_name,
+              environment: row.environment,
+              report_type: row.report_type,
+              created_at: row.created_at,
+              reports: row.reports,
+              analysis_summary: row.analysis_summary,
+            })),
+          ),
+        );
       }
 
       if (scoreHistory.length === 0 && findings.length === 0 && frameworks.length === 0) {
@@ -867,7 +985,7 @@ export default function ClientPortal() {
 
   const mergedRichFindings = useMemo((): MergedRichFinding[] | null => {
     const rows: MergedRichFinding[] = [];
-    const showFirewall = portalFirewalls.length > 1;
+    const showFirewall = portalFirewalls.length >= 1;
     for (const fw of portalFirewalls) {
       const rich = fw.findingsRich;
       if (!rich?.length) continue;
@@ -913,6 +1031,87 @@ export default function ClientPortal() {
     [accentColor],
   );
 
+  const reportExportBranding = useMemo((): BrandingData => {
+    return {
+      companyName: branding?.companyName ?? "MSP",
+      customerName: customerName || "Customer",
+      logoUrl: branding?.logoUrl ?? null,
+      environment: "",
+      country: "",
+      selectedFrameworks: [],
+    };
+  }, [branding, customerName]);
+
+  const handleDownloadMarkdown = useCallback(
+    (entry: PortalSavedReportEntry) => {
+      if (!entry.markdown?.trim()) {
+        toast({
+          title: "Nothing to download",
+          description: "This report section is empty.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const blob = new Blob([entry.markdown], { type: "text/markdown;charset=utf-8" });
+      saveAs(blob, `${sanitizeFilenameBase(entry.label)}.md`);
+    },
+    [toast],
+  );
+
+  const handleDownloadWord = useCallback(
+    async (pkg: PortalSavedReportPackage, entry: PortalSavedReportEntry) => {
+      const key = `${pkg.id}-${entry.id}-word`;
+      if (!entry.markdown?.trim()) {
+        toast({
+          title: "Nothing to export",
+          description: "This report section is empty.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setReportActionKey(key);
+      try {
+        const blob = await generateWordBlob(entry.markdown, reportExportBranding);
+        const prefix = sanitizeFilenameBase(`${customerName}-${entry.label}`);
+        saveAs(blob, `${prefix}.docx`);
+      } catch {
+        toast({ title: "Word export failed", variant: "destructive" });
+      } finally {
+        setReportActionKey(null);
+      }
+    },
+    [toast, reportExportBranding, customerName],
+  );
+
+  const handleDownloadPdf = useCallback(
+    (entry: PortalSavedReportEntry) => {
+      if (!entry.markdown?.trim()) {
+        toast({
+          title: "Nothing to print",
+          description: "This report section is empty.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const inner = buildReportHtml(entry.markdown);
+      const html = buildPdfHtml(inner, entry.label, reportExportBranding, { theme: "light" });
+      const w = window.open("", "_blank");
+      if (!w) {
+        toast({
+          title: "Pop-up blocked",
+          description: "Allow pop-ups to print or save as PDF.",
+          variant: "destructive",
+        });
+        return;
+      }
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      setTimeout(() => w.print(), 300);
+    },
+    [toast, reportExportBranding],
+  );
+
   if (loading || !authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))]">
@@ -943,7 +1142,10 @@ export default function ClientPortal() {
       <PortalLoginForm
         accentColor={accentColor}
         branding={branding}
-        customerName={customerName}
+        customerName={resolveCustomerName(
+          customerName || tenantName || "",
+          organizationName || branding?.companyName || "",
+        )}
         onSuccess={() => {
           supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
@@ -976,10 +1178,44 @@ export default function ClientPortal() {
   const historyReversed = [...scoreHistory].reverse();
   const latest = historyReversed[0];
   const previous = historyReversed[1];
+
+  const summaryScore =
+    portalAggregate.score ??
+    (portalFirewalls.length > 0
+      ? (() => {
+          const nums = portalFirewalls
+            .map((f) => f.score)
+            .filter((s): s is number => s != null && s > 0);
+          return nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : null;
+        })()
+      : null) ??
+    latest?.overall_score ??
+    0;
+
+  const summaryGrade =
+    portalAggregate.grade ??
+    (portalAggregate.score != null || portalFirewalls.some((f) => f.score != null && f.score > 0)
+      ? summaryScore >= 85
+        ? "A"
+        : summaryScore >= 70
+          ? "B"
+          : summaryScore >= 55
+            ? "C"
+            : summaryScore >= 40
+              ? "D"
+              : "F"
+      : (latest?.overall_grade ?? "—"));
+
+  const summaryLatestLabel = portalAggregate.latestAt ?? latest?.assessed_at;
   const filteredFindings = findings.filter((f) => severityFilter.has(f.severity));
   const filteredRichFindings =
     mergedRichFindings?.filter((f) => severityFilter.has(f.severity)) ?? null;
   const showBranding = branding?.showBranding !== false;
+
+  const portalHeaderTitle =
+    resolveCustomerName(customerName || tenantName || "", organizationName) ||
+    branding?.companyName?.trim() ||
+    "Customer";
 
   return (
     <div
@@ -1013,8 +1249,7 @@ export default function ClientPortal() {
             )}
             <div className="min-w-0">
               <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight truncate">
-                {tenantName ??
-                  (showBranding && branding?.companyName ? branding.companyName : customerName)}
+                {portalHeaderTitle}
               </h1>
               <p className="text-[10px] text-[#B6C4FF]/70 truncate">
                 {showBranding && branding?.companyName
@@ -1111,8 +1346,12 @@ export default function ClientPortal() {
             {/* Score Summary */}
             {sectionVisible("score") &&
               (() => {
-                const aggScore = latest?.overall_score ?? 0;
-                const aggGrade = latest?.overall_grade ?? "—";
+                const aggScore = summaryScore;
+                const aggGrade = summaryGrade;
+                const fwWithScore = portalFirewalls.filter(
+                  (f) => f.score != null && f.score > 0,
+                ).length;
+                const fwTotal = portalFirewalls.length;
                 return (
                   <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6 sm:p-8 space-y-5">
                     <div className="space-y-3">
@@ -1125,10 +1364,18 @@ export default function ClientPortal() {
                             Security Score
                           </h2>
                           <p className="text-[11px] text-muted-foreground/60 leading-relaxed mt-1">
-                            {latest
-                              ? `Latest assessment: ${new Date(latest.assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
+                            {summaryLatestLabel
+                              ? `Latest assessment: ${new Date(summaryLatestLabel).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
                               : "No assessments yet"}
                           </p>
+                          {fwTotal > 1 && (
+                            <p className="text-[11px] text-muted-foreground/80 mt-1">
+                              Average across {fwWithScore} of {fwTotal} firewalls with scores
+                              {fwTotal - fwWithScore > 0
+                                ? ` · ${fwTotal - fwWithScore} not yet assessed`
+                                : ""}
+                            </p>
+                          )}
                         </div>
                         <div className="rounded-2xl border border-border/50 bg-card shadow-card px-5 py-4 text-right">
                           <p className="text-[9px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
@@ -1161,9 +1408,19 @@ export default function ClientPortal() {
                           </div>
                         </div>
                         <p className="text-[13px] font-display font-medium text-muted-foreground/70 text-center">
-                          Your firewall scores{" "}
-                          <span className="font-bold text-foreground">{aggScore}/100</span>{" "}
-                          <span className="text-foreground/60">(Grade {aggGrade})</span>
+                          {fwTotal > 1 ? (
+                            <>
+                              Your firewalls average{" "}
+                              <span className="font-bold text-foreground">{aggScore}/100</span>{" "}
+                              <span className="text-foreground/60">(Grade {aggGrade})</span>
+                            </>
+                          ) : (
+                            <>
+                              Your firewall scores{" "}
+                              <span className="font-bold text-foreground">{aggScore}/100</span>{" "}
+                              <span className="text-foreground/60">(Grade {aggGrade})</span>
+                            </>
+                          )}
                         </p>
                         {previous && latest && (
                           <p className="text-sm text-center">
@@ -1198,20 +1455,23 @@ export default function ClientPortal() {
               })()}
 
             {/* Per-Firewall Breakdown */}
-            {sectionVisible("score") && portalFirewalls.length > 1 && (
+            {sectionVisible("score") && portalFirewalls.length >= 1 && (
               <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
                   <h2 className="text-lg font-display font-bold text-foreground">
                     Firewall Overview
                   </h2>
                   <p className="text-xs text-muted-foreground/70 mt-0.5">
-                    Individual firewall scores for {tenantName ?? customerName}
+                    Per-device scores from Sophos Central and assessments for {customerName}
                   </p>
                 </div>
                 <div className="px-6 pb-6">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-brand-accent/10 hover:bg-transparent">
+                        <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                          Hostname
+                        </TableHead>
                         <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
                           Firewall
                         </TableHead>
@@ -1235,6 +1495,9 @@ export default function ClientPortal() {
                           key={fw.agentId}
                           className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
                         >
+                          <TableCell className="text-sm text-muted-foreground font-mono text-xs">
+                            {fw.hostname ?? fw.label ?? "—"}
+                          </TableCell>
                           <TableCell>
                             <div>
                               <span className="font-medium text-foreground">{fw.label}</span>
@@ -1290,7 +1553,7 @@ export default function ClientPortal() {
                     Assessment History
                   </h2>
                   <p className="text-xs text-muted-foreground/70 mt-0.5">
-                    Past assessments with score and finding count
+                    Per-firewall snapshots from your MSP (hostname matches Sophos Central)
                   </p>
                 </div>
                 <div className="px-6 pb-6">
@@ -1304,6 +1567,9 @@ export default function ClientPortal() {
                         <TableRow className="border-brand-accent/10 hover:bg-transparent">
                           <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
                             Date
+                          </TableHead>
+                          <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                            Firewall
                           </TableHead>
                           <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
                             Score
@@ -1328,6 +1594,9 @@ export default function ClientPortal() {
                                 month: "short",
                                 year: "numeric",
                               })}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate font-mono text-xs">
+                              {entry.hostname?.trim() ? entry.hostname : "—"}
                             </TableCell>
                             <TableCell className="font-semibold tabular-nums">
                               {entry.overall_score}
@@ -1615,33 +1884,133 @@ export default function ClientPortal() {
           <>
             {/* Report Downloads */}
             {sectionVisible("reports") && (
-              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6">
-                <div className="mb-4">
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6 space-y-6">
+                <div>
                   <h2 className="text-lg font-display font-bold text-foreground">
                     Report Downloads
                   </h2>
                   <p className="text-xs text-muted-foreground/70 mt-0.5">
-                    Download your assessment reports
+                    Reports your MSP generated and saved for {customerName}. Use PDF (print to
+                    file), Word, or Markdown.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="rounded-xl border-brand-accent/15 gap-1.5"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="rounded-xl border-brand-accent/15 gap-1.5"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Download Word
-                  </Button>
-                </div>
+                {portalSavedReports.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No saved reports are available yet. When your MSP generates and saves a report
+                    for this account in FireComply, it will appear here.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {portalSavedReports.map((pkg) => {
+                      const savedDate = pkg.created_at
+                        ? new Date(pkg.created_at).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—";
+                      const sum = pkg.analysis_summary;
+                      return (
+                        <div
+                          key={pkg.id}
+                          className="rounded-xl border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-4 space-y-3"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">Saved package</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{savedDate}</p>
+                              {pkg.environment ? (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Environment: {pkg.environment}
+                                </p>
+                              ) : null}
+                            </div>
+                            {sum &&
+                              (sum.overallScore != null ||
+                                sum.overallGrade ||
+                                sum.totalFindings != null) && (
+                                <div className="text-right text-xs text-muted-foreground">
+                                  {sum.overallScore != null && (
+                                    <span className="font-semibold text-foreground">
+                                      Score {sum.overallScore}
+                                      {sum.overallGrade ? ` (${sum.overallGrade})` : ""}
+                                    </span>
+                                  )}
+                                  {sum.totalFindings != null && (
+                                    <span className="block mt-0.5">
+                                      {sum.totalFindings} findings (snapshot)
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                          </div>
+                          {pkg.reports.length === 0 ? (
+                            <p className="text-xs text-muted-foreground italic">
+                              Pre-analysis package — no AI report sections in this save.
+                            </p>
+                          ) : (
+                            <ul className="space-y-2 divide-y divide-border/40">
+                              {pkg.reports.map((entry) => {
+                                const busy = reportActionKey === `${pkg.id}-${entry.id}-word`;
+                                const hasMd = Boolean(entry.markdown?.trim());
+                                return (
+                                  <li key={entry.id} className="pt-2 first:pt-0">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                      <span className="text-sm font-medium text-foreground">
+                                        {entry.label}
+                                      </span>
+                                      <div className="flex flex-wrap gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={!hasMd}
+                                          className="rounded-xl border-brand-accent/15 gap-1.5 text-xs"
+                                          onClick={() => handleDownloadMarkdown(entry)}
+                                        >
+                                          <Download className="h-3.5 w-3.5" />
+                                          Markdown
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={!hasMd || busy}
+                                          className="rounded-xl border-brand-accent/15 gap-1.5 text-xs"
+                                          onClick={() => void handleDownloadWord(pkg, entry)}
+                                        >
+                                          {busy ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <FileText className="h-3.5 w-3.5" />
+                                          )}
+                                          Word
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={!hasMd}
+                                          className="rounded-xl border-brand-accent/15 gap-1.5 text-xs"
+                                          onClick={() => handleDownloadPdf(entry)}
+                                        >
+                                          <FileText className="h-3.5 w-3.5" />
+                                          PDF
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 

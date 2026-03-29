@@ -33,7 +33,7 @@ export interface InsuranceReadinessResult {
 /** Map question index to assessment logic. */
 function assessQuestion(
   idx: number,
-  results: AnalysisResult[]
+  results: AnalysisResult[],
 ): { answer: InsuranceAnswer; evidence: string } {
   const allFindings = results.flatMap((r) => r.findings);
   const allPostures = results.map((r) => r.inspectionPosture);
@@ -44,18 +44,17 @@ function assessQuestion(
       const mfaDisabled = allFindings.filter(
         (f) =>
           /mfa|otp|2fa|multi.?factor|one.?time.?password/i.test(f.title) &&
-          /disabled|not enabled/i.test(f.title)
+          /disabled|not enabled/i.test(f.title),
       );
       if (mfaDisabled.length === 0) {
         const hasOtpSection = results.some((r) =>
-          r.findings.some((f) => /authentication|otp/i.test(f.section))
+          r.findings.some((f) => /authentication|otp/i.test(f.section)),
         );
         return {
           answer: hasOtpSection ? "yes" : "partial",
-          evidence:
-            hasOtpSection
-              ? "No MFA/OTP disabled findings; authentication section present."
-              : "No MFA/OTP findings in config — cannot confirm from firewall export alone.",
+          evidence: hasOtpSection
+            ? "No MFA/OTP disabled findings; authentication section present."
+            : "No MFA/OTP findings in config — cannot confirm from firewall export alone.",
         };
       }
       return {
@@ -80,7 +79,7 @@ function assessQuestion(
       const dpiFindings = allFindings.filter(
         (f) =>
           /ssl|tls|dpi|inspection/i.test(f.title) &&
-          /inactive|no.*rule|none.*decrypt/i.test(f.title.toLowerCase())
+          /inactive|no.*rule|none.*decrypt/i.test(f.title.toLowerCase()),
       );
       if (dpiFindings.length > 0 || !anyDpi) {
         return {
@@ -105,7 +104,7 @@ function assessQuestion(
       const ipsFindings = allFindings.filter(
         (f) =>
           /ips|intrusion prevention/i.test(f.title) &&
-          (f.severity === "high" || f.severity === "critical")
+          (f.severity === "high" || f.severity === "critical"),
       );
       if (ipsFindings.length > 0) {
         return {
@@ -140,9 +139,8 @@ function assessQuestion(
       // Admin console restricted from public internet
       const adminExposed = allFindings.filter(
         (f) =>
-          /admin.*wan|admin console.*internet|https.*wan|ssh.*wan|management.*wan/i.test(
-            f.title
-          ) || /admin.*accessible.*wan|wan.*admin/i.test(f.title)
+          /admin.*wan|admin console.*internet|https.*wan|ssh.*wan|management.*wan/i.test(f.title) ||
+          /admin.*accessible.*wan|wan.*admin/i.test(f.title),
       );
       if (adminExposed.length > 0) {
         return {
@@ -161,7 +159,7 @@ function assessQuestion(
       const loggingOff = allFindings.filter(
         (f) =>
           /logging.*disabled|log.*disabled|rule.*log/i.test(f.title) ||
-          (/log/i.test(f.title) && /disabled|off/i.test(f.title.toLowerCase()))
+          (/log/i.test(f.title) && /disabled|off/i.test(f.title.toLowerCase())),
       );
       if (loggingOff.length > 0) {
         return {
@@ -180,7 +178,7 @@ function assessQuestion(
       const avDisabled = allFindings.filter(
         (f) =>
           /virus|malware|anti.?malware|anti.?virus|scanning/i.test(f.title) &&
-          /disabled|not enabled|not active/i.test(f.title.toLowerCase())
+          /disabled|not enabled|not active/i.test(f.title.toLowerCase()),
       );
       if (avDisabled.length > 0) {
         return {
@@ -188,9 +186,7 @@ function assessQuestion(
           evidence: avDisabled[0].title,
         };
       }
-      const hasVsSection = allFindings.some((f) =>
-        /virus|malware|virus scanning/i.test(f.section)
-      );
+      const hasVsSection = allFindings.some((f) => /virus|malware|virus scanning/i.test(f.section));
       return {
         answer: hasVsSection ? "yes" : "partial",
         evidence: hasVsSection
@@ -204,7 +200,7 @@ function assessQuestion(
       const broadRules = allFindings.filter(
         (f) =>
           /broad|any.*any|source.*destination.*any/i.test(f.title) &&
-          /rule|source|destination/i.test(f.title.toLowerCase())
+          /rule|source|destination/i.test(f.title.toLowerCase()),
       );
       if (broadRules.length > 0) {
         return {
@@ -229,7 +225,7 @@ function assessQuestion(
  * readinessScore = percentage of questions answerable with "yes".
  */
 export function assessInsuranceReadiness(
-  analysisResults: Record<string, AnalysisResult>
+  analysisResults: Record<string, AnalysisResult>,
 ): InsuranceReadinessResult {
   const results = Object.values(analysisResults);
   if (results.length === 0) {
@@ -249,8 +245,55 @@ export function assessInsuranceReadiness(
   });
 
   const yesCount = questions.filter((q) => q.answer === "yes").length;
-  const readinessScore =
-    questions.length > 0 ? Math.round((yesCount / questions.length) * 100) : 0;
+  const readinessScore = questions.length > 0 ? Math.round((yesCount / questions.length) * 100) : 0;
 
   return { questions, readinessScore };
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Printable body HTML for browser PDF (print → Save as PDF). */
+export function buildInsuranceReadinessPrintHtml(
+  result: InsuranceReadinessResult,
+  customerName?: string,
+): string {
+  const answerLabel = (a: InsuranceAnswer) =>
+    a === "yes" ? "Yes" : a === "no" ? "No" : "Partial / unknown";
+
+  const rows = result.questions
+    .map((q) => {
+      const ans = answerLabel(q.answer);
+      return `<tr>
+  <td style="padding:10px;border:1px solid #cfd8e3;vertical-align:top;"><strong>${escapeHtml(q.question)}</strong></td>
+  <td style="padding:10px;border:1px solid #cfd8e3;vertical-align:top;white-space:nowrap;">${escapeHtml(ans)}</td>
+  <td style="padding:10px;border:1px solid #cfd8e3;vertical-align:top;font-size:11px;color:#334155;">${escapeHtml(q.evidence)}</td>
+</tr>`;
+    })
+    .join("\n");
+
+  const cust = customerName?.trim();
+  return `<div class="insurance-readiness-export" style="font-family:system-ui,-apple-system,sans-serif;color:#0f172a;line-height:1.45;">
+  <h1 style="font-size:20px;margin:0 0 6px;font-weight:800;">Cyber Insurance Readiness</h1>
+  <p style="font-size:12px;color:#64748b;margin:0 0 14px;">${cust ? `Customer: <strong>${escapeHtml(cust)}</strong>` : "Firewall configuration assessment"} · ${escapeHtml(
+    new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+  )}</p>
+  <p style="font-size:14px;margin:0 0 8px;"><strong>Overall readiness score:</strong> ${result.readinessScore}%</p>
+  <p style="font-size:11px;color:#64748b;margin:0 0 18px;max-width:52rem;">Indicative summary from automated firewall analysis only. Validate answers with operational records and your insurance broker or carrier before submission.</p>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead>
+      <tr>
+        <th style="text-align:left;padding:8px 10px;border:1px solid #94a3b8;background:#e2e8f0;">Question</th>
+        <th style="text-align:left;padding:8px 10px;border:1px solid #94a3b8;background:#e2e8f0;width:9rem;">Answer</th>
+        <th style="text-align:left;padding:8px 10px;border:1px solid #94a3b8;background:#e2e8f0;">Evidence</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</div>`;
 }

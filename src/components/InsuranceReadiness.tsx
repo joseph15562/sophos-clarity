@@ -1,11 +1,20 @@
 import { useMemo } from "react";
 import { FileDown } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
-import { assessInsuranceReadiness, type InsuranceAnswer } from "@/lib/insurance-readiness";
+import {
+  assessInsuranceReadiness,
+  buildInsuranceReadinessPrintHtml,
+  type InsuranceAnswer,
+} from "@/lib/insurance-readiness";
+import { buildPdfHtml } from "@/lib/report-export";
+import type { BrandingData } from "@/components/BrandingSetup";
 import { toast } from "sonner";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
+  /** Shown on PDF cover line */
+  customerName?: string;
+  mspName?: string;
 }
 
 const ANSWER_STYLES: Record<InsuranceAnswer, { color: string; bg: string; symbol: string }> = {
@@ -26,14 +35,50 @@ const ANSWER_STYLES: Record<InsuranceAnswer, { color: string; bg: string; symbol
   },
 };
 
-export function InsuranceReadiness({ analysisResults }: Props) {
+export function InsuranceReadiness({ analysisResults, customerName, mspName }: Props) {
   const result = useMemo(() => assessInsuranceReadiness(analysisResults), [analysisResults]);
 
   const handleExportPdf = () => {
-    toast.info("Export as PDF", {
-      description:
-        "Coming soon — PDF export for insurance readiness will be available in a future release.",
+    const inner = buildInsuranceReadinessPrintHtml(result, customerName);
+    const branding: BrandingData = {
+      companyName: mspName ?? "",
+      customerName: customerName ?? "",
+      logoUrl: null,
+      environment: "",
+      country: "",
+      selectedFrameworks: [],
+    };
+    const html = buildPdfHtml(inner, "Cyber Insurance Readiness", branding, {
+      theme: "light",
+      omitPdfToc: true,
     });
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("title", "Insurance readiness print");
+    iframe.style.cssText =
+      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+    document.body.appendChild(iframe);
+    const idoc = iframe.contentDocument ?? iframe.contentWindow?.document;
+    const win = iframe.contentWindow;
+    if (!idoc || !win) {
+      document.body.removeChild(iframe);
+      toast.error("Could not prepare print view. Try again or use a different browser.");
+      return;
+    }
+    idoc.open();
+    idoc.write(html);
+    idoc.close();
+    const cleanup = () => {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    };
+    win.focus();
+    setTimeout(() => {
+      try {
+        win.print();
+      } finally {
+        setTimeout(cleanup, 2_000);
+      }
+    }, 200);
+    toast.success("Print dialog opened — choose Save as PDF if you prefer a file.");
   };
 
   return (

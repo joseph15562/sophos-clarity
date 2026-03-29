@@ -39,6 +39,7 @@ vi.mock("@/lib/sophos-central", () => ({
   getCentralStatus: vi.fn(() => Promise.resolve({ connected: false })),
   syncTenants: vi.fn(() => Promise.resolve([])),
   syncFirewalls: vi.fn(() => Promise.resolve()),
+  displayCustomerNameForUi: (stored: string) => stored,
 }));
 
 vi.mock("@/integrations/supabase/client", async () => {
@@ -75,11 +76,7 @@ describe("AppHeader", () => {
 
   it("renders customer name when provided", () => {
     renderWithProviders(
-      <AppHeader
-        {...minimalHeaderProps()}
-        customerName="Acme Corp"
-        environment="Production"
-      />,
+      <AppHeader {...minimalHeaderProps()} customerName="Acme Corp" environment="Production" />,
     );
     expect(screen.getByText("Acme Corp")).toBeVisible();
   });

@@ -798,7 +798,7 @@ function CustomerManagementInner() {
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             onClick={() => setAccessTarget(null)}
           />
-          <div className="fixed inset-x-4 top-[8vh] z-50 mx-auto max-w-xl max-h-[84vh] overflow-y-auto rounded-2xl border border-border/60 bg-background text-foreground shadow-2xl">
+          <div className="fixed inset-x-4 top-[8vh] z-50 mx-auto w-full max-w-4xl max-h-[84vh] overflow-y-auto rounded-2xl border border-border/60 bg-background text-foreground shadow-2xl">
             <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-border/50 bg-background/95 backdrop-blur-sm rounded-t-2xl">
               <h3 className="text-sm font-display font-bold text-foreground">
                 Portal Access — {accessTarget.name}
@@ -1041,11 +1041,23 @@ function CustomerCard({
             View Portal
           </Button>
         )}
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Generate Report">
-          <FileText className="h-4 w-4" />
+        <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+          <Link
+            to={`/?${new URLSearchParams({ customer: customer.name }).toString()}`}
+            title="Open dashboard — set customer context and generate FireComply reports"
+            aria-label="Open main dashboard to generate reports for this customer"
+          >
+            <FileText className="h-4 w-4" />
+          </Link>
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" title="Send Upload Link">
-          <Send className="h-4 w-4" />
+        <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+          <Link
+            to={`/?${new URLSearchParams({ customer: customer.name, openUpload: "1" }).toString()}`}
+            title="Open dashboard — upload configs for this customer (email upload link: SE Health Check menu)"
+            aria-label="Open main dashboard to upload firewall configs for this customer"
+          >
+            <Send className="h-4 w-4" />
+          </Link>
         </Button>
         <Button
           variant="ghost"

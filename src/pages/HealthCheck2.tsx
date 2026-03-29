@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -564,6 +564,42 @@ function HealthCheckInner() {
     activeTeamId,
     onLoadConfig: onLoadConfigFromUpload,
   });
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const shouldConsume =
+      searchParams.has("customer") ||
+      searchParams.has("configUpload") ||
+      searchParams.has("upload");
+    if (!shouldConsume) return;
+
+    const customer = searchParams.get("customer")?.trim();
+    const openUpload =
+      searchParams.get("configUpload") === "1" || searchParams.get("upload") === "1";
+
+    if (customer) {
+      setCustomerName(customer);
+      setPreparedFor((p) => p.trim() || customer);
+      setConfigUploadCustomerName(customer);
+    }
+    if (openUpload) {
+      setConfigUploadDialogOpen(true);
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("customer");
+    next.delete("configUpload");
+    next.delete("upload");
+    setSearchParams(next, { replace: true });
+  }, [
+    searchParams,
+    setSearchParams,
+    setCustomerName,
+    setPreparedFor,
+    setConfigUploadCustomerName,
+    setConfigUploadDialogOpen,
+  ]);
 
   const [savedCheckId, setSavedCheckId] = useState<string | null>(null);
 

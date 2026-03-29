@@ -3,7 +3,14 @@ const STORAGE_KEY = "firecomply_widget_preferences";
 export interface WidgetDef {
   id: string;
   label: string;
-  tab: "overview" | "security" | "compliance" | "optimisation" | "tools" | "remediation";
+  tab:
+    | "overview"
+    | "security"
+    | "compliance"
+    | "insurance-readiness"
+    | "optimisation"
+    | "tools"
+    | "remediation";
   isDefault: boolean;
 }
 

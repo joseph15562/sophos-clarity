@@ -15,6 +15,8 @@ export interface AnalysisSummary {
   overallGrade: string;
   categories: { label: string; pct: number }[];
   totalRules: number;
+  /** Assessment labels / hostnames at save time (for Report Centre and pre-AI viewer). */
+  firewallLabels?: string[];
 }
 
 export interface SavedReportPackage {
@@ -31,10 +33,10 @@ export interface SavedReportPackage {
 function buildAnalysisSummary(analysisResults: Record<string, AnalysisResult>): AnalysisSummary {
   const allFindings = Object.values(analysisResults).flatMap((r) => r.findings);
   const scores = Object.values(analysisResults).map((r) => computeRiskScore(r));
-  const avgScore = scores.length > 0
-    ? Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length)
-    : 0;
-  const grade = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+  const avgScore =
+    scores.length > 0 ? Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length) : 0;
+  const grade =
+    avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
   const totalRules = Object.values(analysisResults).reduce((s, r) => s + r.stats.totalRules, 0);
 
   const catMap = new Map<string, number[]>();
@@ -49,7 +51,148 @@ function buildAnalysisSummary(analysisResults: Record<string, AnalysisResult>): 
     pct: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length),
   }));
 
-  return { totalFindings: allFindings.length, overallScore: avgScore, overallGrade: grade, categories, totalRules };
+  const firewallLabels = Object.entries(analysisResults).map(([key, r]) => {
+    const h = (r.hostname || "").trim();
+    return h || key;
+  });
+
+  return {
+    totalFindings: allFindings.length,
+    overallScore: avgScore,
+    overallGrade: grade,
+    categories,
+    totalRules,
+    firewallLabels: firewallLabels.length > 0 ? firewallLabels : undefined,
+  };
+}
+
+/** Normalise JSONB `reports` from Supabase (handles null / wrong shape). */
+export function normalizeReportEntries(raw: unknown): SavedReportEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (x): x is SavedReportEntry =>
+      x != null && typeof x === "object" && typeof (x as SavedReportEntry).id === "string",
+  );
+}
+
+/** HTML-safe id for in-page scroll targets (saved report viewer). */
+export function savedReportJumpTargetId(entryId: string): string {
+  const safe = entryId
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `saved-doc-${safe || "report"}`;
+}
+
+/** Strip leading emoji / icon noise from report tab labels for firewall column. */
+function displayLabelForSavedTechnicalReport(label: string): string {
+  return label.replace(/^[\p{Extended_Pictographic}\uFE0F\s]+/u, "").trim() || label;
+}
+
+/** Firewalls column: prefer analysis_summary; fall back to technical report labels in the package. */
+export function formatFirewallSummaryFromPackage(pkg: SavedReportPackage): string {
+  const fromSummary = pkg.analysisSummary?.firewallLabels?.filter(Boolean) ?? [];
+  if (fromSummary.length > 0) {
+    if (fromSummary.length <= 2) return fromSummary.join(", ");
+    return `${fromSummary.length} firewalls`;
+  }
+  const reps = normalizeReportEntries(pkg.reports);
+  const techLabels = reps
+    .filter(
+      (r) =>
+        r.id !== "report-compliance" &&
+        r.id !== "report-executive" &&
+        r.id !== "report-executive-one-pager",
+    )
+    .map((r) => displayLabelForSavedTechnicalReport(r.label))
+    .filter(Boolean);
+  if (techLabels.length === 0) return "—";
+  if (techLabels.length <= 2) return techLabels.join(", ");
+  return `${techLabels.length} firewalls`;
+}
+
+/** Short cell text for Report Centre “firewalls” column (summary only — prefer formatFirewallSummaryFromPackage). */
+export function formatFirewallSummaryForRow(summary: AnalysisSummary | undefined): string {
+  const labels = summary?.firewallLabels?.filter(Boolean) ?? [];
+  if (labels.length === 0) return "—";
+  if (labels.length <= 2) return labels.join(", ");
+  return `${labels.length} firewalls`;
+}
+
+/** Merge saved report bodies with jump anchors so the viewer can scroll to each document. */
+export function packageReportsToMarkdown(reports: SavedReportEntry[]): string {
+  const reps = normalizeReportEntries(reports);
+  if (reps.length === 0) return "";
+  return reps
+    .map((r) => {
+      const jid = savedReportJumpTargetId(r.id);
+      return `<div id="${jid}" class="saved-report-jump-target scroll-mt-28" aria-hidden="true"></div>\n\n## ${r.label}\n\n${r.markdown}`;
+    })
+    .join("\n\n---\n\n");
+}
+
+/**
+ * Primary nav pills: Technical (→ first per-firewall doc), Executive, Compliance — canonical order.
+ */
+export function buildSavedPackNavItems(
+  reps: SavedReportEntry[],
+): { domId: string; shortTitle: string }[] {
+  const list = normalizeReportEntries(reps);
+  if (list.length === 0) return [];
+
+  const tech = list.filter(
+    (r) =>
+      r.id !== "report-compliance" &&
+      r.id !== "report-executive" &&
+      r.id !== "report-executive-one-pager",
+  );
+  const execFull = list.find((r) => r.id === "report-executive");
+  const onePager = list.find((r) => r.id === "report-executive-one-pager");
+  const comp = list.find((r) => r.id === "report-compliance");
+
+  const out: { domId: string; shortTitle: string }[] = [];
+  if (tech.length > 0) {
+    out.push({
+      domId: savedReportJumpTargetId(tech[0].id),
+      shortTitle: tech.length === 1 ? "Technical" : `Technical (${tech.length})`,
+    });
+  }
+  const execEntry = execFull ?? onePager;
+  if (execEntry) {
+    out.push({ domId: savedReportJumpTargetId(execEntry.id), shortTitle: "Executive" });
+  }
+  if (comp) {
+    out.push({ domId: savedReportJumpTargetId(comp.id), shortTitle: "Compliance" });
+  }
+  return out;
+}
+
+/** Human-readable pack description from stored report entries. */
+export function describeSavedReportRowType(pkg: SavedReportPackage): string {
+  const reps = normalizeReportEntries(pkg.reports);
+  if (reps.length === 0) {
+    return pkg.reportType === "pre-ai" ? "Pre-AI assessment" : "No AI documents in save";
+  }
+  const tech = reps.filter((r) => {
+    const id = r.id;
+    if (
+      id === "report-executive" ||
+      id === "report-executive-one-pager" ||
+      id === "report-compliance"
+    ) {
+      return false;
+    }
+    return id.startsWith("report-");
+  }).length;
+  const hasExecFull = reps.some((r) => r.id === "report-executive");
+  const hasOnePager = reps.some((r) => r.id === "report-executive-one-pager");
+  const hasComp = reps.some((r) => r.id === "report-compliance");
+  const parts: string[] = [];
+  if (tech > 0) parts.push(tech === 1 ? "Technical" : `${tech}× technical`);
+  if (hasExecFull) parts.push("Executive");
+  else if (hasOnePager) parts.push("One-pager");
+  if (hasComp) parts.push("Compliance");
+  return parts.join(" · ") || `${reps.length} document(s)`;
 }
 
 // ── Cloud (Supabase) ──
@@ -126,7 +269,7 @@ export async function saveReportCloud(
             enc.encode(secret),
             { name: "HMAC", hash: "SHA-256" },
             false,
-            ["sign"]
+            ["sign"],
           );
           const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
           headers["X-Webhook-Signature"] = Array.from(new Uint8Array(sig))
@@ -137,7 +280,7 @@ export async function saveReportCloud(
         }
       }
       fetch(url, { method: "POST", headers, body }).catch((err) =>
-        console.warn("[saved-reports] webhook failed", err)
+        console.warn("[saved-reports] webhook failed", err),
       );
     })
     .catch(() => {});
@@ -148,7 +291,9 @@ export async function saveReportCloud(
 export async function loadSavedReportsCloud(): Promise<SavedReportPackage[]> {
   const { data, error } = await supabase
     .from("saved_reports")
-    .select("id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by")
+    .select(
+      "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by",
+    )
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
@@ -158,11 +303,35 @@ export async function loadSavedReportsCloud(): Promise<SavedReportPackage[]> {
     customerName: row.customer_name,
     environment: row.environment,
     reportType: row.report_type as "full" | "pre-ai",
-    reports: row.reports as unknown as SavedReportEntry[],
-    analysisSummary: row.analysis_summary as unknown as AnalysisSummary,
+    reports: normalizeReportEntries(row.reports),
+    analysisSummary: (row.analysis_summary || {}) as unknown as AnalysisSummary,
     createdAt: new Date(row.created_at).getTime(),
     createdBy: row.created_by,
   }));
+}
+
+/** Single package by id (RLS: org members only). Used by Report Centre “open saved report”. */
+export async function loadSavedReportPackageById(id: string): Promise<SavedReportPackage | null> {
+  const { data, error } = await supabase
+    .from("saved_reports")
+    .select(
+      "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    customerName: data.customer_name,
+    environment: data.environment,
+    reportType: data.report_type as "full" | "pre-ai",
+    reports: normalizeReportEntries(data.reports),
+    analysisSummary: (data.analysis_summary || {}) as unknown as AnalysisSummary,
+    createdAt: new Date(data.created_at).getTime(),
+    createdBy: data.created_by,
+  };
 }
 
 export async function deleteSavedReportCloud(id: string): Promise<void> {

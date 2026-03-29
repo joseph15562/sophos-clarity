@@ -6,8 +6,13 @@ const CALL_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 2;
 const RETRY_BASE_MS = 1_000;
 
-async function callCentral<T = unknown>(body: Record<string, unknown>, retries = MAX_RETRIES): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
+async function callCentral<T = unknown>(
+  body: Record<string, unknown>,
+  retries = MAX_RETRIES,
+): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) throw new Error("Not authenticated");
 
   let lastError: Error | null = null;
@@ -93,7 +98,11 @@ export interface ConnectResult {
   apiHosts: Record<string, string>;
 }
 
-export async function connectCentral(orgId: string, clientId: string, clientSecret: string): Promise<ConnectResult> {
+export async function connectCentral(
+  orgId: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<ConnectResult> {
   return callCentral<ConnectResult>({ mode: "connect", orgId, clientId, clientSecret });
 }
 
@@ -139,18 +148,38 @@ function looksLikeSerialOrNodeId(s: string): boolean {
   return /^[A-Za-z0-9]+$/.test(t) && !t.includes(".");
 }
 
+/** Sophos Central uses this literal for single-tenant MSP accounts. */
+export function isThisTenantPlaceholder(name: string | undefined | null): boolean {
+  return /^\s*\(this tenant\)\s*$/i.test((name ?? "").trim());
+}
+
+/** Header, pills, selects: show org name instead of the Central placeholder when signed in. */
+export function displayCustomerNameForUi(
+  storedName: string,
+  orgDisplayName: string | undefined | null,
+): string {
+  const o = (orgDisplayName ?? "").trim();
+  if (o && isThisTenantPlaceholder(storedName)) return o;
+  return storedName;
+}
+
 /** When the API returns "(This tenant)" for a single-tenant account, use the provided display name (e.g. from branding or connector). */
 export function getEffectiveTenantDisplayName(
   tenant: { name?: string } | null,
   fallbackDisplayName?: string | null,
 ): string {
   if (!tenant?.name) return fallbackDisplayName ?? "";
-  if (/^\s*\(this tenant\)\s*$/i.test(tenant.name.trim()) && fallbackDisplayName?.trim()) return fallbackDisplayName.trim();
+  if (isThisTenantPlaceholder(tenant.name) && fallbackDisplayName?.trim())
+    return fallbackDisplayName.trim();
   return tenant.name;
 }
 
 /** Prefer hostname when it looks like a real hostname; avoid using serial/node-id as display name. */
-export function getFirewallDisplayName(fw: { name?: string; hostname?: string; serialNumber?: string }): string {
+export function getFirewallDisplayName(fw: {
+  name?: string;
+  hostname?: string;
+  serialNumber?: string;
+}): string {
   const name = (fw.name ?? "").trim();
   const hostname = (fw.hostname ?? "").trim();
   if (hostname && (hostname.includes(".") || !looksLikeSerialOrNodeId(hostname))) return hostname;
@@ -159,7 +188,11 @@ export function getFirewallDisplayName(fw: { name?: string; hostname?: string; s
 }
 
 export async function syncFirewalls(orgId: string, tenantId: string): Promise<CentralFirewall[]> {
-  const res = await callCentral<{ items: CentralFirewall[] }>({ mode: "firewalls", orgId, tenantId });
+  const res = await callCentral<{ items: CentralFirewall[] }>({
+    mode: "firewalls",
+    orgId,
+    tenantId,
+  });
   return res.items;
 }
 
@@ -171,8 +204,15 @@ export interface CentralFirewallGroup {
   firewalls?: { items?: Array<{ id: string }> };
 }
 
-export async function getFirewallGroups(orgId: string, tenantId: string): Promise<CentralFirewallGroup[]> {
-  const res = await callCentral<{ items: CentralFirewallGroup[] }>({ mode: "firewall-groups", orgId, tenantId });
+export async function getFirewallGroups(
+  orgId: string,
+  tenantId: string,
+): Promise<CentralFirewallGroup[]> {
+  const res = await callCentral<{ items: CentralFirewallGroup[] }>({
+    mode: "firewall-groups",
+    orgId,
+    tenantId,
+  });
   return res.items ?? [];
 }
 
@@ -205,7 +245,11 @@ export interface CentralLicence {
 }
 
 export async function getLicences(orgId: string, tenantId: string): Promise<CentralLicence[]> {
-  const res = await callCentral<{ licenses: CentralLicence[] }>({ mode: "licenses", orgId, tenantId });
+  const res = await callCentral<{ licenses: CentralLicence[] }>({
+    mode: "licenses",
+    orgId,
+    tenantId,
+  });
   return res.licenses ?? [];
 }
 
@@ -237,8 +281,15 @@ export interface FirewallLicence {
   licenses: FirewallSubscription[];
 }
 
-export async function getFirewallLicences(orgId: string, tenantId?: string): Promise<FirewallLicence[]> {
-  const res = await callCentral<{ items: FirewallLicence[] }>({ mode: "firewall-licenses", orgId, tenantId });
+export async function getFirewallLicences(
+  orgId: string,
+  tenantId?: string,
+): Promise<FirewallLicence[]> {
+  const res = await callCentral<{ items: FirewallLicence[] }>({
+    mode: "firewall-licenses",
+    orgId,
+    tenantId,
+  });
   return res.items ?? [];
 }
 
@@ -266,24 +317,26 @@ export async function getCachedTenants(orgId: string): Promise<CentralTenant[]> 
   }));
 }
 
-export async function getCachedFirewalls(orgId: string, tenantId?: string): Promise<Array<{
-  firewallId: string;
-  centralTenantId: string;
-  serialNumber: string;
-  hostname: string;
-  name: string;
-  firmwareVersion: string;
-  model: string;
-  status: unknown;
-  cluster: unknown;
-  group: unknown;
-  externalIps: unknown;
-  syncedAt: string;
-}>> {
-  let q = supabase
-    .from("central_firewalls")
-    .select("*")
-    .eq("org_id", orgId);
+export async function getCachedFirewalls(
+  orgId: string,
+  tenantId?: string,
+): Promise<
+  Array<{
+    firewallId: string;
+    centralTenantId: string;
+    serialNumber: string;
+    hostname: string;
+    name: string;
+    firmwareVersion: string;
+    model: string;
+    status: unknown;
+    cluster: unknown;
+    group: unknown;
+    externalIps: unknown;
+    syncedAt: string;
+  }>
+> {
+  let q = supabase.from("central_firewalls").select("*").eq("org_id", orgId);
   if (tenantId) q = q.eq("central_tenant_id", tenantId);
   const { data } = await q.order("hostname");
   return (data ?? []).map((r) => ({

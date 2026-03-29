@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
@@ -30,6 +30,8 @@ import { loadSavedReportsCloud, loadSavedReportsLocal } from "@/lib/saved-report
 import {
   getCachedTenants,
   getEffectiveTenantDisplayName,
+  isThisTenantPlaceholder,
+  displayCustomerNameForUi,
   type CentralTenant,
 } from "@/lib/sophos-central";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
@@ -303,11 +305,19 @@ export function BrandingSetup({ branding, onChange }: Props) {
 
   const selectCustomer = useCallback(
     (name: string) => {
-      onChange({ ...branding, customerName: name });
+      onChange((prev) => ({ ...prev, customerName: name }));
       setAddingNew(false);
     },
-    [branding, onChange],
+    [onChange],
   );
+
+  /** Pass org name when current customer is the Central placeholder so tenant rows resolve correctly. */
+  const tenantResolutionFallback = useMemo(() => {
+    if (org?.name?.trim() && isThisTenantPlaceholder(branding.customerName)) {
+      return org.name.trim();
+    }
+    return branding.customerName ?? "";
+  }, [org?.name, branding.customerName]);
 
   useEffect(() => {
     if (userTouchedFrameworks.current) return;
@@ -513,7 +523,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
                   onValueChange={(val) => {
                     if (val === "__new__") {
                       setAddingNew(true);
-                      onChange({ ...branding, customerName: "" });
+                      onChange((prev) => ({ ...prev, customerName: "" }));
                     } else {
                       selectCustomer(val);
                     }
@@ -523,41 +533,72 @@ export function BrandingSetup({ branding, onChange }: Props) {
                     <SelectValue placeholder="Select customer…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {branding.customerName &&
-                      !centralTenants.some(
-                        (t) =>
-                          getEffectiveTenantDisplayName(t, branding.customerName) ===
-                            branding.customerName || t.name === branding.customerName,
-                      ) &&
-                      !knownCustomers.includes(branding.customerName) && (
-                        <SelectItem value={branding.customerName}>
-                          {branding.customerName} (from connector)
+                    {(() => {
+                      const orphanVal = branding.customerName;
+                      if (
+                        !orphanVal ||
+                        centralTenants.some(
+                          (t) =>
+                            (getEffectiveTenantDisplayName(t, tenantResolutionFallback) ||
+                              t.name) === orphanVal || t.name === orphanVal,
+                        ) ||
+                        knownCustomers.includes(orphanVal)
+                      ) {
+                        return null;
+                      }
+                      return (
+                        <SelectItem
+                          value={orphanVal}
+                          onPointerUp={() => {
+                            if (branding.customerName === orphanVal) selectCustomer(orphanVal);
+                          }}
+                        >
+                          {displayCustomerNameForUi(orphanVal, org?.name)} (from connector)
                         </SelectItem>
-                      )}
+                      );
+                    })()}
                     {centralTenants
-                      .filter(
-                        (t) =>
-                          !knownCustomers.includes(
-                            getEffectiveTenantDisplayName(t, branding.customerName),
-                          ),
-                      )
+                      .filter((t) => {
+                        const resolved =
+                          getEffectiveTenantDisplayName(t, tenantResolutionFallback) || t.name;
+                        return !knownCustomers.includes(resolved);
+                      })
                       .map((t) => {
                         const displayName =
-                          getEffectiveTenantDisplayName(t, branding.customerName) || t.name;
+                          getEffectiveTenantDisplayName(t, tenantResolutionFallback) || t.name;
                         return (
-                          <SelectItem key={`central-${t.id}`} value={displayName}>
+                          <SelectItem
+                            key={`central-${t.id}`}
+                            value={displayName}
+                            onPointerUp={() => {
+                              if (branding.customerName === displayName) {
+                                selectCustomer(displayName);
+                              }
+                            }}
+                          >
                             {displayName} {t.dataRegion ? `(${t.dataRegion})` : ""}
                           </SelectItem>
                         );
                       })}
-                    {knownCustomers.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
-                        {customerReportCounts[name] > 0
+                    {knownCustomers.map((name) => {
+                      const reportsSuffix =
+                        customerReportCounts[name] > 0
                           ? ` (${customerReportCounts[name]} report${customerReportCounts[name] !== 1 ? "s" : ""})`
-                          : ""}
-                      </SelectItem>
-                    ))}
+                          : "";
+                      return (
+                        <SelectItem
+                          key={name}
+                          value={name}
+                          onPointerUp={() => {
+                            /* Radix omits onValueChange when value unchanged — re-apply so parent still updates */
+                            if (branding.customerName === name) selectCustomer(name);
+                          }}
+                        >
+                          {displayCustomerNameForUi(name, org?.name)}
+                          {reportsSuffix}
+                        </SelectItem>
+                      );
+                    })}
                     <SelectItem value="__new__">＋ Add New Customer</SelectItem>
                   </SelectContent>
                 </Select>

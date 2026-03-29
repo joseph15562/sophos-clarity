@@ -58,6 +58,8 @@ export interface UploadSectionProps {
   onGenerateExecutiveOnePager: () => void;
   onGenerateCompliance: () => void;
   onGenerateAll: () => void;
+  /** Opens Analysis → Compliance (Insurance Readiness widget). */
+  onOpenInsuranceReadiness?: () => void;
   setViewingReports: (v: boolean) => void;
   onLoadAgentAssessment: (
     label: string,
@@ -77,8 +79,10 @@ export interface UploadSectionProps {
   /** Rendered above the Generate Reports section */
   beforeReports?: React.ReactNode;
   onLoadDemo?: () => void;
-  contextRef?: React.RefObject<HTMLDivElement>;
-  reportsRef?: React.RefObject<HTMLDivElement>;
+  contextRef?: React.RefObject<HTMLDivElement | null>;
+  reportsRef?: React.RefObject<HTMLDivElement | null>;
+  /** Step 1 upload area — always mounted so deep links can scroll before configs exist */
+  workbenchRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function UploadSection({
@@ -101,6 +105,7 @@ export function UploadSection({
   onGenerateExecutiveOnePager,
   onGenerateCompliance,
   onGenerateAll,
+  onOpenInsuranceReadiness,
   setViewingReports,
   onLoadAgentAssessment,
   activeTenantName,
@@ -115,6 +120,7 @@ export function UploadSection({
   onLoadDemo,
   contextRef,
   reportsRef,
+  workbenchRef,
 }: UploadSectionProps) {
   return (
     <>
@@ -274,7 +280,7 @@ export function UploadSection({
       )}
 
       {/* Firewall configs — loaded cards + upload zone */}
-      <section className="space-y-4">
+      <section ref={workbenchRef} className="space-y-4 scroll-mt-24">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">
@@ -619,6 +625,7 @@ export function UploadSection({
             onGenerateExecutiveOnePager={onGenerateExecutiveOnePager}
             onGenerateCompliance={onGenerateCompliance}
             onGenerateAll={onGenerateAll}
+            onOpenInsuranceReadiness={onOpenInsuranceReadiness}
           />
         </div>
       )}

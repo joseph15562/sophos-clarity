@@ -63,6 +63,13 @@ interface FleetFirewall {
   latestReportDate?: string;
 }
 
+/** Main app dashboard with customer context (same query as Customer Management cards). */
+function assessmentDashboardHref(fw: Pick<FleetFirewall, "customer" | "tenantName">): string {
+  const name = (fw.tenantName || fw.customer || "").trim();
+  if (!name) return "/";
+  return `/?${new URLSearchParams({ customer: name }).toString()}`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Demo data                                                         */
 /* ------------------------------------------------------------------ */
@@ -486,25 +493,40 @@ function DetailPanel({ fw, isDark }: { fw: FleetFirewall; isDark: boolean }) {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions — use Button asChild so we never nest <button> inside <a> (breaks clicks). */}
         <div className="flex flex-col gap-2">
-          <Link to="/">
-            <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 text-xs"
+            asChild
+          >
+            <Link to={assessmentDashboardHref(fw)} title="Open main dashboard for this customer">
               <Shield className="h-3.5 w-3.5" /> View Assessment
-            </Button>
-          </Link>
-          {fw.latestReportId && (
-            <Link to={`/shared/${fw.latestReportId}`}>
-              <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs">
-                <FileText className="h-3.5 w-3.5" /> Latest Report
-              </Button>
             </Link>
-          )}
-          <a href="https://central.sophos.com" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="w-full justify-start gap-2 text-xs">
-              <ExternalLink className="h-3.5 w-3.5" /> View in Central
+          </Button>
+          {fw.latestReportId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start gap-2 text-xs"
+              asChild
+            >
+              <Link to={`/shared/${fw.latestReportId}`}>
+                <FileText className="h-3.5 w-3.5" /> Latest Report
+              </Link>
             </Button>
-          </a>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2 text-xs"
+            asChild
+          >
+            <a href="https://central.sophos.com" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3.5 w-3.5" /> View in Central
+            </a>
+          </Button>
         </div>
       </div>
     </div>
@@ -1521,11 +1543,9 @@ function FleetCommandInner() {
             <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
               Connect Sophos Central or deploy the connector agent to start monitoring your fleet.
             </p>
-            <Link to="/">
-              <Button className="mt-6 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white">
-                Get started
-              </Button>
-            </Link>
+            <Button className="mt-6 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white" asChild>
+              <Link to="/">Get started</Link>
+            </Button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
@@ -1722,25 +1742,34 @@ function FleetCommandInner() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <Link to="/">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-[11px] h-7"
+                        asChild
+                      >
+                        <Link
+                          to={assessmentDashboardHref(fw)}
+                          title="Open main dashboard for this customer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Shield className="h-3 w-3" /> View Assessment
+                        </Link>
+                      </Button>
+                      {fw.latestReportId && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="w-full justify-start gap-2 text-[11px] h-7"
+                          asChild
                         >
-                          <Shield className="h-3 w-3" /> View Assessment
-                        </Button>
-                      </Link>
-                      {fw.latestReportId && (
-                        <Link to={`/shared/${fw.latestReportId}`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full justify-start gap-2 text-[11px] h-7"
+                          <Link
+                            to={`/shared/${fw.latestReportId}`}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <FileText className="h-3 w-3" /> Latest Report
-                          </Button>
-                        </Link>
+                          </Link>
+                        </Button>
                       )}
                     </div>
                   </div>

@@ -304,7 +304,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
         </div>
       ) : (
         <div className="overflow-x-auto -mx-6 px-6">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-700/60 text-left text-xs font-medium text-muted-foreground">
                 <th className="pb-2 pr-4">Email</th>
@@ -330,55 +330,61 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
                   </td>
                   <td className="py-3 pr-4 text-muted-foreground">{formatDate(v.invited_at)}</td>
                   <td className="py-3 pr-4 text-muted-foreground">{formatDate(v.last_login)}</td>
-                  <td className="py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
+                  <td className="py-3 text-right align-top">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5 max-w-[280px] ml-auto">
                       {actionInFlight === v.id ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                       ) : (
                         <>
                           {v.status === "pending" && (
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
+                              className="h-8 gap-1 text-xs"
                               disabled={actionInFlight === v.id}
                               onClick={() => handleResendInvite(v)}
-                              title="Resend Invite"
+                              aria-label="Resend invite"
                             >
-                              <RefreshCw className="h-3.5 w-3.5" />
+                              <RefreshCw className="h-3 w-3 shrink-0" />
+                              Resend
                             </Button>
                           )}
                           {v.status !== "revoked" && (
                             <>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
+                                className="h-8 gap-1 text-xs"
                                 disabled={actionInFlight === v.id}
                                 onClick={() => handleResetPassword(v)}
-                                title="Reset Password"
+                                aria-label="Send password reset email"
                               >
-                                <Key className="h-3.5 w-3.5" />
+                                <Key className="h-3 w-3 shrink-0" />
+                                Reset
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
+                                className="h-8 gap-1 text-xs text-amber-700 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950/40"
                                 disabled={actionInFlight === v.id}
                                 onClick={() => handleRevoke(v)}
-                                title="Revoke Access"
-                                className="text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                aria-label="Revoke access"
                               >
-                                <X className="h-3.5 w-3.5" />
+                                <X className="h-3 w-3 shrink-0" />
+                                Revoke
                               </Button>
                             </>
                           )}
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
+                            className="h-8 gap-1 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-950/40"
                             disabled={actionInFlight === v.id}
                             onClick={() => handleDelete(v)}
-                            title="Delete permanently"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            aria-label="Remove viewer permanently"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3 shrink-0" />
+                            Remove
                           </Button>
                         </>
                       )}

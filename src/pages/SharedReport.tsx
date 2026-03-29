@@ -11,14 +11,33 @@ import { Button } from "@/components/ui/button";
 const SharedReport = () => {
   const { token } = useParams<{ token: string }>();
   const [report, setReport] = useState<SharedReportType | null | undefined>(undefined);
+  const [loadFailure, setLoadFailure] = useState<
+    "not_found" | "expired" | "server_error" | "network" | null
+  >(null);
   const [tocOpen, setTocOpen] = useState(false);
   const reportContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!token) { setReport(null); return; }
+    if (!token) {
+      setReport(null);
+      setLoadFailure(null);
+      return;
+    }
     let cancelled = false;
-    loadSharedReport(token).then((r) => { if (!cancelled) setReport(r); });
-    return () => { cancelled = true; };
+    setLoadFailure(null);
+    loadSharedReport(token).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setReport(result.report);
+        setLoadFailure(null);
+      } else {
+        setReport(null);
+        setLoadFailure(result.reason);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   // Hooks must run unconditionally (before any early return) to avoid React error #310
@@ -31,7 +50,9 @@ const SharedReport = () => {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-xl font-bold text-foreground">Invalid link</h1>
-          <p className="text-muted-foreground">This share link is invalid. Please request a new link from the report owner.</p>
+          <p className="text-muted-foreground">
+            This share link is invalid. Please request a new link from the report owner.
+          </p>
           <a href="/" className="text-brand-accent hover:underline font-medium">
             Return to Sophos FireComply
           </a>
@@ -49,16 +70,37 @@ const SharedReport = () => {
   }
 
   if (!report) {
+    const copy =
+      loadFailure === "expired"
+        ? {
+            title: "This report has expired",
+            body: "Shared reports are available for 7 days. Please request a new link from the report owner.",
+          }
+        : loadFailure === "not_found"
+          ? {
+              title: "Report not found",
+              body: "This link does not match a shared report. It may be wrong, the link may be for a library report (open it from Report Centre instead), or the share was removed.",
+            }
+          : {
+              title: "Could not load this report",
+              body:
+                loadFailure === "network"
+                  ? "Check your network connection and try again."
+                  : "The server returned an error. Try again in a moment.",
+            };
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
         <div className="max-w-md text-center space-y-4">
-          <h1 className="text-xl font-bold text-foreground">This report has expired</h1>
-          <p className="text-muted-foreground">
-            Shared reports are available for 7 days. Please request a new link from the report owner.
-          </p>
-          <a href="/" className="text-brand-accent hover:underline font-medium">
-            Return to Sophos FireComply
-          </a>
+          <h1 className="text-xl font-bold text-foreground">{copy.title}</h1>
+          <p className="text-muted-foreground">{copy.body}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center text-sm">
+            <a href="/reports" className="text-brand-accent hover:underline font-medium">
+              Report Centre
+            </a>
+            <a href="/" className="text-brand-accent hover:underline font-medium">
+              Dashboard
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -134,9 +176,17 @@ const SharedReport = () => {
                 </div>
               )}
               <span className="text-[10px] text-white/40">
-                {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                {new Date().toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
                 {" · Link expires "}
-                {new Date(report.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                {new Date(report.expiresAt).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
               </span>
             </div>
           </div>
@@ -145,9 +195,13 @@ const SharedReport = () => {
             <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-brand-accent/20 dark:border-brand-accent/30">
               <div className="flex-1">
                 {report.customerName && (
-                  <p className="text-lg font-display font-bold text-foreground">{report.customerName}</p>
+                  <p className="text-lg font-display font-bold text-foreground">
+                    {report.customerName}
+                  </p>
                 )}
-                <p className="text-sm text-muted-foreground">Firewall Configuration Assessment Report</p>
+                <p className="text-sm text-muted-foreground">
+                  Firewall Configuration Assessment Report
+                </p>
               </div>
             </div>
 
@@ -181,7 +235,9 @@ const SharedReport = () => {
                         type="button"
                         onClick={() => scrollTo(h.id)}
                         className={`block w-full text-left text-xs hover:text-[#2006F7] dark:hover:text-[#009CFB] transition-colors truncate cursor-pointer ${
-                          h.level === 2 ? "font-semibold text-foreground py-1" : "text-muted-foreground pl-4 py-0.5"
+                          h.level === 2
+                            ? "font-semibold text-foreground py-1"
+                            : "text-muted-foreground pl-4 py-0.5"
                         }`}
                       >
                         {h.text}

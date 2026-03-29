@@ -21,6 +21,7 @@ const FleetCommand = lazy(() => import("./pages/FleetCommand"));
 const CustomerManagement = lazy(() => import("./pages/CustomerManagement"));
 const DriftMonitor = lazy(() => import("./pages/DriftMonitor"));
 const ReportCentre = lazy(() => import("./pages/ReportCentre"));
+const SavedReportViewer = lazy(() => import("./pages/SavedReportViewer"));
 const PortfolioInsights = lazy(() => import("./pages/PortfolioInsights"));
 const PlaybookLibrary = lazy(() => import("./pages/PlaybookLibrary"));
 const ApiHub = lazy(() => import("./pages/ApiHub"));
@@ -83,6 +84,7 @@ const App = () => (
                 <Route path="/customers" element={<CustomerManagement />} />
                 <Route path="/drift" element={<DriftMonitor />} />
                 <Route path="/reports" element={<ReportCentre />} />
+                <Route path="/reports/saved/:id" element={<SavedReportViewer />} />
                 <Route path="/insights" element={<PortfolioInsights />} />
                 <Route path="/playbooks" element={<PlaybookLibrary />} />
                 <Route path="/api" element={<ApiHub />} />

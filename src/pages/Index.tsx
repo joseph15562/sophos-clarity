@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeftRight, RotateCcw, Save, BarChart3, Scale, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadedFile } from "@/components/FileUpload";
@@ -143,6 +144,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const findingsRef = useRef<HTMLDivElement>(null);
   const contextRef = useRef<HTMLDivElement>(null);
   const reportsRef = useRef<HTMLDivElement>(null);
+  const workbenchRef = useRef<HTMLDivElement>(null);
+  const qbrRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
   const [parsingProgress, setParsingProgress] = useState<{
@@ -197,6 +201,174 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     generateAll,
     handleRetry,
   } = useReportGeneration(files, branding, analysisResults);
+
+  useEffect(() => {
+    const raw = searchParams.get("reportTemplate")?.trim().toLowerCase();
+    if (!raw) return;
+
+    const allowed = new Set(["board-summary", "technical", "compliance", "qbr", "insurance"]);
+    if (!allowed.has(raw)) {
+      setSearchParams(
+        (p) => {
+          const next = new URLSearchParams(p);
+          next.delete("reportTemplate");
+          return next;
+        },
+        { replace: true },
+      );
+      return;
+    }
+
+    if (files.length < 1) {
+      reportsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      toast.info(
+        "Upload or select a firewall configuration first. Keep this page open — the template will run when a config is ready.",
+      );
+      return;
+    }
+
+    setSearchParams(
+      (p) => {
+        const next = new URLSearchParams(p);
+        next.delete("reportTemplate");
+        return next;
+      },
+      { replace: true },
+    );
+
+    if (isGuest || isViewerOnly) {
+      toast.warning("Sign in with edit access to generate reports.");
+      return;
+    }
+
+    const aiTemplates = new Set(["board-summary", "technical", "compliance"]);
+    if (localMode && aiTemplates.has(raw)) {
+      reportsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      toast.warning(
+        "AI templates need online mode. Use Generate Executive One-Pager or disable Local mode.",
+      );
+      return;
+    }
+
+    switch (raw) {
+      case "board-summary":
+        setViewingReports(true);
+        generateExecutive();
+        toast.success("Generating Executive Brief (Board Summary)…");
+        break;
+      case "technical":
+        setViewingReports(true);
+        generateIndividual();
+        toast.success("Generating technical reports…");
+        break;
+      case "compliance":
+        setViewingReports(true);
+        generateCompliance();
+        toast.success("Generating compliance report…");
+        break;
+      case "qbr":
+        setViewingReports(false);
+        window.setTimeout(
+          () => qbrRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+          100,
+        );
+        toast.info("QBR Pack: use the checklist and generate Executive + Compliance as needed.");
+        break;
+      case "insurance":
+        setViewingReports(false);
+        setAnalysisTab("insurance-readiness");
+        window.setTimeout(
+          () => findingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+          100,
+        );
+        toast.info(
+          "Open the Insurance Readiness tab below for questionnaire-style posture signals.",
+        );
+        break;
+      default:
+        break;
+    }
+  }, [
+    searchParams,
+    setSearchParams,
+    files.length,
+    isGuest,
+    isViewerOnly,
+    localMode,
+    generateExecutive,
+    generateIndividual,
+    generateCompliance,
+  ]);
+
+  /** Pending deep-link from Customer Management (must not share an effect with setSearchParams — stripping params re-runs the effect and clearTimeout cancels the scroll). */
+  const [customerDeepLink, setCustomerDeepLink] = useState<{
+    customer?: string;
+    openUpload: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const customer = searchParams.get("customer")?.trim();
+    const openUpload = searchParams.get("openUpload") === "1";
+    if (!customer && !openUpload) return;
+
+    if (customer) {
+      setBranding((prev) =>
+        prev.customerName === customer ? prev : { ...prev, customerName: customer },
+      );
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("customer");
+    next.delete("openUpload");
+    if (searchParams.has("customer") || searchParams.has("openUpload")) {
+      setSearchParams(next, { replace: true });
+    }
+
+    setCustomerDeepLink({
+      customer: customer || undefined,
+      openUpload,
+    });
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!customerDeepLink) return;
+
+    const { customer, openUpload } = customerDeepLink;
+    if (!isGuest && org && isSetupComplete()) {
+      setWizardOpen(false);
+    }
+
+    const runScrollAndToast = () => {
+      const hasConfigs = files.length >= 1;
+      if (openUpload) {
+        if (hasConfigs) {
+          contextRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          workbenchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        toast.info(
+          customer
+            ? `Customer set to ${customer}. ${hasConfigs ? "Review assessment context below." : "Upload a config or use Connected Firewalls — then you can generate reports."} To email a secure entities.xml upload link, open SE Health Check from the app menu.`
+            : "Upload or sync configs below. To email a secure upload link to a customer, open SE Health Check from the app menu.",
+        );
+      } else if (customer) {
+        if (hasConfigs) {
+          reportsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          toast.success(`Working as ${customer} — Generate Reports is below.`);
+        } else {
+          workbenchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          toast.success(
+            `Working as ${customer}. Upload a firewall export or load from Connected Firewalls — then scroll to Generate Reports.`,
+          );
+        }
+      }
+      setCustomerDeepLink(null);
+    };
+
+    const t = window.setTimeout(runScrollAndToast, 150);
+    return () => window.clearTimeout(t);
+  }, [customerDeepLink, files.length, isGuest, org]);
+
   const totalFindings = analysisOverride
     ? Object.values(analysisOverride).reduce((s, r) => s + r.findings.length, 0)
     : rawTotalFindings;
@@ -594,7 +766,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       try {
         const reportEntries: SavedReportEntry[] = includeReports
           ? reports
-              .filter((r) => r.markdown)
+              .filter((r) => (r.markdown?.trim().length ?? 0) > 0)
               .map((r) => ({ id: r.id, label: r.label, markdown: r.markdown }))
           : [];
         let result: unknown;
@@ -654,8 +826,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
             `${branding.customerName || "Assessment"} saved successfully with ${reportEntries.length} report${reportEntries.length !== 1 ? "s" : ""}.`,
           );
 
-          const hasCompliance = reportEntries.some((r) => r.id.startsWith("compliance"));
-          const hasExecutive = reportEntries.some((r) => r.id.startsWith("executive"));
+          // IDs are report-executive / report-compliance (not "executive…" / "compliance…")
+          const hasCompliance = reportEntries.some((r) => r.id === "report-compliance");
+          const hasExecutive = reportEntries.some(
+            (r) => r.id === "report-executive" || r.id === "report-executive-one-pager",
+          );
           if (!hasCompliance || !hasExecutive) {
             const suggestions: string[] = [];
             if (!hasExecutive && files.length >= 2) suggestions.push("Executive Brief");
@@ -1037,6 +1212,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               localMode={localMode}
               contextRef={contextRef}
               reportsRef={reportsRef}
+              workbenchRef={workbenchRef}
               onGenerateIndividual={() => {
                 setViewingReports(true);
                 generateIndividual();
@@ -1067,6 +1243,14 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   `Generating all reports for ${branding.customerName || "this assessment"}…`,
                 );
               }}
+              onOpenInsuranceReadiness={() => {
+                setViewingReports(false);
+                setAnalysisTab("insurance-readiness");
+                window.setTimeout(
+                  () => findingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  100,
+                );
+              }}
               setViewingReports={setViewingReports}
               onLoadAgentAssessment={handleLoadAgentAssessment}
               activeTenantName={activeTenantName}
@@ -1085,7 +1269,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               onLoadDemo={handleLoadDemo}
             />
             {hasFiles && !isGuest && org?.id && (
-              <div className="grid gap-5 xl:grid-cols-2">
+              <div ref={qbrRef} className="grid gap-5 xl:grid-cols-2">
                 <ProgressNarrative
                   orgId={org.id}
                   currentResults={analysisResults}

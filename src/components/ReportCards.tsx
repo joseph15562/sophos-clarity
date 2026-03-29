@@ -1,4 +1,12 @@
-import { BookOpen, ClipboardCheck, FileText, BarChart3, Scale, Sparkles } from "lucide-react";
+import {
+  BookOpen,
+  ClipboardCheck,
+  FileText,
+  BarChart3,
+  Scale,
+  Sparkles,
+  Shield,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ReportCardsProps {
@@ -10,6 +18,8 @@ interface ReportCardsProps {
   onGenerateExecutiveOnePager: () => void;
   onGenerateCompliance: () => void;
   onGenerateAll: () => void;
+  /** Insurance readiness lives under Analysis → Compliance (not a separate AI PDF yet). */
+  onOpenInsuranceReadiness?: () => void;
 }
 
 export function ReportCards({
@@ -21,6 +31,7 @@ export function ReportCards({
   onGenerateExecutiveOnePager,
   onGenerateCompliance,
   onGenerateAll,
+  onOpenInsuranceReadiness,
 }: ReportCardsProps) {
   const canGenerate = !localMode && !isViewerOnly;
   return (
@@ -188,6 +199,25 @@ export function ReportCards({
                     : "AI unavailable"
                   : "Generate Compliance Report",
                 btnIcon: ClipboardCheck,
+                primary: false,
+              },
+              {
+                title: "Insurance readiness",
+                desc: "Structured posture signals for cyber-insurance conversations — opens the Insurance Readiness tab. Use Export as PDF and your carrier questionnaire; full AI submission pack is not available yet.",
+                icon: Shield,
+                hex: "#EA0022",
+                hexEnd: "#B91C1C",
+                onClick:
+                  canGenerate && onOpenInsuranceReadiness
+                    ? () => onOpenInsuranceReadiness()
+                    : undefined,
+                disabled: !canGenerate || !onOpenInsuranceReadiness,
+                btnLabel: !canGenerate
+                  ? isViewerOnly
+                    ? "View only"
+                    : "Upload a config first"
+                  : "Open Insurance Readiness",
+                btnIcon: Shield,
                 primary: false,
               },
             ].map((card) => {

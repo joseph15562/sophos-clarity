@@ -497,7 +497,7 @@ export function startWidgetTour() {
       popover: {
         title: "Widget Customiser",
         description:
-          "Toggle optional widgets on each analysis tab. Enable or disable Insurance Readiness, Evidence Collection, Coverage Matrix, and more.",
+          "Toggle optional widgets on each analysis tab. Enable or disable Evidence Collection, Coverage Matrix, and more. Insurance Readiness lives on its own tab.",
         side: "bottom",
         align: "center",
       },
