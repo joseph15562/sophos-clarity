@@ -1,9 +1,13 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+
+const PortalViewerManager = lazy(() =>
+  import("@/components/PortalViewerManager").then((m) => ({ default: m.PortalViewerManager })),
+);
 import {
   Users,
   Plus,
@@ -21,7 +25,17 @@ import {
   AlertTriangle,
   Sun,
   Moon,
+  Trash2,
+  X,
+  UserCog,
 } from "lucide-react";
+
+const PLACEHOLDER_NAMES = /^\s*(\(this tenant\)|unnamed|unknown|customer)\s*$/i;
+
+function resolveCustomerName(raw: string, orgName: string): string {
+  if (!raw || PLACEHOLDER_NAMES.test(raw)) return orgName || "My Organisation";
+  return raw;
+}
 
 type HealthStatus = "Healthy" | "At Risk" | "Critical" | "Overdue";
 
@@ -39,6 +53,7 @@ interface DemoCustomer {
   frameworks: string[];
   health: HealthStatus;
   portalSlug: string;
+  originalNames?: string[];
 }
 
 const DEMO_CUSTOMERS: DemoCustomer[] = [
@@ -180,6 +195,30 @@ function CustomerManagementInner() {
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<DemoCustomer[]>(DEMO_CUSTOMERS);
+  const [deleteTarget, setDeleteTarget] = useState<DemoCustomer | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [accessTarget, setAccessTarget] = useState<DemoCustomer | null>(null);
+
+  const handleDelete = useCallback(
+    async (customer: DemoCustomer) => {
+      if (!org?.id) return;
+      setDeleting(true);
+      try {
+        const names = customer.originalNames ?? [customer.name];
+        for (const n of names) {
+          await supabase.from("assessments").delete().eq("org_id", org.id).eq("customer_name", n);
+          await supabase.from("saved_reports").delete().eq("org_id", org.id).eq("customer_name", n);
+        }
+        setCustomers((prev) => prev.filter((c) => c.id !== customer.id));
+        setDeleteTarget(null);
+      } catch (err) {
+        console.warn("[CustomerManagement] delete failed", err);
+      } finally {
+        setDeleting(false);
+      }
+    },
+    [org?.id],
+  );
 
   useEffect(() => {
     if (!org?.id) {
@@ -243,13 +282,14 @@ function CustomerManagementInner() {
             daysAgo: 999,
             frameworks: [],
             health: "Overdue" as HealthStatus,
-            portalSlug: tName.toLowerCase().replace(/\s+/g, "-"),
+            portalSlug: t.central_tenant_id,
           });
           void onlineCount;
         }
 
         for (const a of assessments) {
-          const name = a.customer_name;
+          const rawName = a.customer_name;
+          const name = resolveCustomerName(rawName, org.name);
           const fws = a.firewalls as Array<unknown> | null;
           const fwCount = Array.isArray(fws) ? fws.length : 1;
           const daysSince = Math.floor(
@@ -262,16 +302,20 @@ function CustomerManagementInner() {
           else health = "Healthy";
 
           const existing = customerMap.get(name);
-          if (existing && existing.score === 0) {
-            existing.score = a.overall_score;
-            existing.grade = a.overall_grade;
-            existing.sector = a.environment || existing.sector;
-            existing.firewallCount = Math.max(existing.firewallCount, fwCount);
-            existing.lastAssessed =
-              daysSince === 0 ? "Today" : daysSince === 1 ? "Yesterday" : `${daysSince} days ago`;
-            existing.daysAgo = daysSince;
-            existing.health = health;
-          } else if (!customerMap.has(name)) {
+          if (existing) {
+            if (!existing.originalNames) existing.originalNames = [];
+            if (!existing.originalNames.includes(rawName)) existing.originalNames.push(rawName);
+            if (existing.score === 0 || a.overall_score > existing.score) {
+              existing.score = a.overall_score;
+              existing.grade = a.overall_grade;
+              existing.sector = a.environment || existing.sector;
+              existing.firewallCount = Math.max(existing.firewallCount, fwCount);
+              existing.lastAssessed =
+                daysSince === 0 ? "Today" : daysSince === 1 ? "Yesterday" : `${daysSince} days ago`;
+              existing.daysAgo = Math.min(existing.daysAgo, daysSince);
+              existing.health = health;
+            }
+          } else {
             customerMap.set(name, {
               id: a.id,
               name,
@@ -286,14 +330,15 @@ function CustomerManagementInner() {
               daysAgo: daysSince,
               frameworks: [],
               health,
-              portalSlug: name.toLowerCase().replace(/\s+/g, "-"),
+              portalSlug: a.id,
+              originalNames: [rawName],
             });
           }
         }
 
         for (const ag of agents) {
-          const name = ag.tenant_name || ag.customer_name || ag.name;
-          const resolvedName = /^\s*\(this tenant\)\s*$/i.test(name) ? org.name || name : name;
+          const rawAgName = ag.tenant_name || ag.customer_name || ag.name;
+          const resolvedName = resolveCustomerName(rawAgName, org.name);
           const existing = customerMap.get(resolvedName);
           if (existing) {
             if (existing.score === 0 && ag.last_score != null) {
@@ -339,7 +384,7 @@ function CustomerManagementInner() {
               daysAgo: daysSince,
               frameworks: [],
               health,
-              portalSlug: resolvedName.toLowerCase().replace(/\s+/g, "-"),
+              portalSlug: ag.id,
             });
           }
         }
@@ -541,7 +586,12 @@ function CustomerManagementInner() {
         {filtered.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((customer) => (
-              <CustomerCard key={customer.id} customer={customer} />
+              <CustomerCard
+                key={customer.id}
+                customer={customer}
+                onDelete={setDeleteTarget}
+                onManageAccess={setAccessTarget}
+              />
             ))}
           </div>
         ) : (
@@ -586,6 +636,100 @@ function CustomerManagementInner() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Portal access manager modal */}
+      {accessTarget && org?.id && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setAccessTarget(null)}
+          />
+          <div className="fixed inset-x-4 top-[8vh] z-50 mx-auto max-w-xl max-h-[84vh] overflow-y-auto rounded-2xl border border-border/60 bg-background text-foreground shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-border/50 bg-background/95 backdrop-blur-sm rounded-t-2xl">
+              <h3 className="text-sm font-display font-bold text-foreground">
+                Portal Access — {accessTarget.name}
+              </h3>
+              <button
+                onClick={() => setAccessTarget(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-6">
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
+                  </div>
+                }
+              >
+                <PortalViewerManager orgId={org.id} />
+              </Suspense>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteTarget && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteTarget(null)}
+          />
+          <div className="fixed inset-x-4 top-[30vh] z-50 mx-auto max-w-sm rounded-2xl border border-border/60 bg-background text-foreground shadow-2xl p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EA0022]/10">
+                  <Trash2 className="h-5 w-5 text-[#EA0022]" />
+                </div>
+                <h3 className="text-sm font-display font-bold text-foreground">Delete Customer</h3>
+              </div>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Delete <strong className="text-foreground">{deleteTarget.name}</strong>? This will
+              remove all assessment records
+              {deleteTarget.originalNames && deleteTarget.originalNames.length > 1 && (
+                <span>
+                  {" "}
+                  (including assessments saved as{" "}
+                  {deleteTarget.originalNames
+                    .filter((n) => n !== deleteTarget.name)
+                    .map((n) => `"${n}"`)
+                    .join(", ")}
+                  )
+                </span>
+              )}{" "}
+              and saved reports for this customer. This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-[#EA0022] hover:bg-[#EA0022]/90 text-white gap-1.5"
+                onClick={() => handleDelete(deleteTarget)}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -639,7 +783,15 @@ function FilterPill({
   );
 }
 
-function CustomerCard({ customer }: { customer: DemoCustomer }) {
+function CustomerCard({
+  customer,
+  onDelete,
+  onManageAccess,
+}: {
+  customer: DemoCustomer;
+  onDelete?: (c: DemoCustomer) => void;
+  onManageAccess?: (c: DemoCustomer) => void;
+}) {
   const gradeColor = GRADE_COLORS[customer.grade] ?? "#2006F7";
 
   return (
@@ -725,6 +877,24 @@ function CustomerCard({ customer }: { customer: DemoCustomer }) {
         </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" title="Send Upload Link">
           <Send className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          title="Manage portal access"
+          onClick={() => onManageAccess?.(customer)}
+        >
+          <UserCog className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-[#EA0022] hover:bg-[#EA0022]/10"
+          title="Delete customer"
+          onClick={() => onDelete?.(customer)}
+        >
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
     </div>

@@ -249,7 +249,7 @@ function statusDotColor(s: string): string {
 }
 
 function timeAgo(ts: string | null): string {
-  if (!ts) return "Never";
+  if (!ts) return "—";
   const diff = Date.now() - new Date(ts).getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "Just now";
@@ -434,15 +434,26 @@ function DetailPanel({ fw, isDark }: { fw: FleetFirewall; isDark: boolean }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Score ring */}
         <div className="flex items-center gap-4">
-          <ScoreRing score={fw.score} grade={fw.grade} size={80} />
-          <div>
-            <p className="text-3xl font-display font-black text-foreground leading-none">
-              {fw.score}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {fw.findings} findings · {fw.criticalFindings} critical
-            </p>
-          </div>
+          {fw.grade === "—" ? (
+            <div>
+              <p className="text-lg font-display font-bold text-muted-foreground">Not assessed</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload a config file to get a score
+              </p>
+            </div>
+          ) : (
+            <>
+              <ScoreRing score={fw.score} grade={fw.grade} size={80} />
+              <div>
+                <p className="text-3xl font-display font-black text-foreground leading-none">
+                  {fw.score}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {fw.findings} findings · {fw.criticalFindings} critical
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Stats */}
@@ -590,8 +601,14 @@ function FleetCard({
 
         {/* Score */}
         <div className="flex items-center gap-2">
-          <span className="text-lg font-display font-black text-foreground">{fw.score}</span>
-          <GradeBadge grade={fw.grade} />
+          {fw.grade === "—" ? (
+            <span className="text-sm text-muted-foreground">Not assessed</span>
+          ) : (
+            <>
+              <span className="text-lg font-display font-black text-foreground">{fw.score}</span>
+              <GradeBadge grade={fw.grade} />
+            </>
+          )}
         </div>
 
         {/* Findings */}
@@ -908,10 +925,10 @@ function FleetCommandInner() {
               hostname: `${primaryHn} (HA ${peers.length}-node)`,
               customer: peerNames.join(" + "),
               score: match?.score ?? 0,
-              grade: match?.grade ?? gradeFromScore(match?.score ?? 0),
+              grade: match ? (match.grade ?? gradeFromScore(match.score)) : "—",
               findings: match?.findings ?? 0,
               criticalFindings: 0,
-              lastAssessed: match?.date ?? primary.synced_at,
+              lastAssessed: match?.date ?? null,
               status,
               firmware: primary.firmware_version,
               model: primary.model,
@@ -955,10 +972,10 @@ function FleetCommandInner() {
             hostname: hn,
             customer: fw.name || fw.hostname,
             score: match?.score ?? 0,
-            grade: match?.grade ?? gradeFromScore(match?.score ?? 0),
+            grade: match ? (match.grade ?? gradeFromScore(match.score)) : "—",
             findings: match?.findings ?? 0,
             criticalFindings: 0,
-            lastAssessed: match?.date ?? fw.synced_at,
+            lastAssessed: match?.date ?? null,
             status,
             firmware: fw.firmware_version,
             model: fw.model,
@@ -989,10 +1006,10 @@ function FleetCommandInner() {
             hostname: hn,
             customer: ag.customer_name || ag.name,
             score: ag.last_score ?? 0,
-            grade: ag.last_grade ?? gradeFromScore(ag.last_score ?? 0),
+            grade: ag.last_score != null ? (ag.last_grade ?? gradeFromScore(ag.last_score)) : "—",
             findings: 0,
             criticalFindings: 0,
-            lastAssessed: ag.last_seen_at,
+            lastAssessed: ag.last_score != null ? ag.last_seen_at : null,
             status,
             firmware: ag.firmware_version ?? "Unknown",
             model: ag.hardware_model ?? "Agent",
@@ -1642,21 +1659,29 @@ function FleetCommandInner() {
 
                 {/* Score ring */}
                 <div className="flex items-center gap-4 mb-4">
-                  <ScoreRing score={fw.score} grade={fw.grade} />
-                  <div>
-                    <p className="text-2xl font-display font-black text-foreground leading-none">
-                      {fw.score}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {fw.findings} findings
-                      {fw.criticalFindings > 0 && (
-                        <span className="text-[#EA0022] font-semibold">
-                          {" "}
-                          · {fw.criticalFindings} critical
-                        </span>
-                      )}
-                    </p>
-                  </div>
+                  {fw.grade === "—" ? (
+                    <div className="text-sm text-muted-foreground py-3">
+                      Not assessed — drop a config to score
+                    </div>
+                  ) : (
+                    <>
+                      <ScoreRing score={fw.score} grade={fw.grade} />
+                      <div>
+                        <p className="text-2xl font-display font-black text-foreground leading-none">
+                          {fw.score}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {fw.findings} findings
+                          {fw.criticalFindings > 0 && (
+                            <span className="text-[#EA0022] font-semibold">
+                              {" "}
+                              · {fw.criticalFindings} critical
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Meta row + upload */}

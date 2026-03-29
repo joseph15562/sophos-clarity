@@ -10,6 +10,7 @@ import { handleFirewallRoutes } from "./routes/firewalls.ts";
 import { handleHealthCheckRoutes } from "./routes/health-checks.ts";
 import { handlePasskeyRoutes } from "./routes/passkey.ts";
 import { handleSeTeamRoutes } from "./routes/se-teams.ts";
+import { handlePortalViewerRoutes } from "./routes/portal-viewers.ts";
 import { handleSendReportRoutes } from "./routes/send-report.ts";
 
 let corsHeaders: Record<string, string> = {};
@@ -67,6 +68,9 @@ serve(async (req: Request) => {
 
   const adminRes = await handleAdminRoutes(req, url, segments, corsHeaders);
   if (adminRes !== null) return adminRes;
+
+  const portalViewerRes = await handlePortalViewerRoutes(req, url, segments, corsHeaders);
+  if (portalViewerRes !== null) return portalViewerRes;
 
   const assessmentRes = await handleAssessmentRoutes(req, url, segments, corsHeaders);
   if (assessmentRes !== null) return assessmentRes;

@@ -25,6 +25,8 @@ import {
   Info,
   ChevronDown,
   ChevronRight,
+  Lock,
+  ShieldAlert,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useToast } from "@/hooks/use-toast";
@@ -421,28 +423,50 @@ function GaugeSvg({
   );
 }
 
-// ── Login form ──
+// ── Login form (full-page) ──
 
 function PortalLoginForm({
   onSuccess,
   accentColor,
+  branding,
+  customerName,
 }: {
   onSuccess: () => void;
   accentColor?: string;
+  branding?: PortalBranding | null;
+  customerName?: string;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const { setTheme, resolvedTheme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setMessage(null);
     setLoading(true);
-    const { error: authErr } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+
+    if (mode === "forgot") {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email);
+      setLoading(false);
+      if (resetErr) setError(resetErr.message);
+      else setMessage("Password reset link sent. Check your email.");
+      return;
+    }
+
+    if (mode === "signup") {
+      const { error: signUpErr } = await supabase.auth.signUp({ email, password });
+      setLoading(false);
+      if (signUpErr) setError(signUpErr.message);
+      else setMessage("Account created! Check your email to verify, then sign in.");
+      return;
+    }
+
+    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (authErr) {
       setError(authErr.message);
@@ -451,54 +475,167 @@ function PortalLoginForm({
     }
   };
 
+  const accent = accentColor || "#2006F7";
+  const showBrand = branding?.showBranding !== false;
+  const mspName = showBrand && branding?.companyName ? branding.companyName : null;
+
   return (
-    <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
-      <div className="mb-4">
-        <h2 className="text-lg font-display font-bold text-foreground">Sign In</h2>
-        <p className="text-xs text-muted-foreground/70 mt-0.5">
-          Sign in to access your full security portal
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))] px-4 relative">
+      <div className="absolute top-4 right-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-xl text-muted-foreground hover:text-foreground"
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          aria-label="Toggle theme"
+        >
+          {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      <div className="w-full max-w-sm space-y-6">
+        {showBrand && branding?.logoUrl ? (
+          <img
+            src={branding.logoUrl}
+            alt={mspName ?? "Logo"}
+            className="h-12 w-auto max-w-[160px] mx-auto object-contain"
+          />
+        ) : (
+          <div className="flex justify-center">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center shadow-lg">
+              <Lock className="h-7 w-7 text-white" />
+            </div>
+          </div>
+        )}
+
+        <div className="text-center">
+          <h1 className="text-2xl font-display font-black text-foreground tracking-tight">
+            Customer Portal
+          </h1>
+          {customerName && <p className="text-sm text-muted-foreground mt-1">{customerName}</p>}
+        </div>
+
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/80 dark:bg-slate-900/60 backdrop-blur-sm shadow-xl p-6">
+          <h2 className="text-lg font-display font-bold text-foreground mb-1">
+            {mode === "signin"
+              ? "Sign In"
+              : mode === "signup"
+                ? "Create Account"
+                : "Reset Password"}
+          </h2>
+          <p className="text-xs text-muted-foreground/70 mb-5">
+            {mode === "signin"
+              ? "Sign in to access your security portal"
+              : mode === "signup"
+                ? "Set up your account with your invited email"
+                : "Enter your email to receive a reset link"}
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="portal-email">Email</Label>
+              <Input
+                id="portal-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                placeholder="you@company.com"
+                className="rounded-xl border-slate-900/[0.10] dark:border-white/[0.06]"
+              />
+            </div>
+            {mode !== "forgot" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="portal-password">Password</Label>
+                <Input
+                  id="portal-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  placeholder="••••••••"
+                  className="rounded-xl border-slate-900/[0.10] dark:border-white/[0.06]"
+                />
+              </div>
+            )}
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            {message && <p className="text-xs text-emerald-600 dark:text-emerald-400">{message}</p>}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
+              style={
+                accent !== "#2006F7"
+                  ? { backgroundColor: accent, backgroundImage: "none" }
+                  : undefined
+              }
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : mode === "forgot" ? (
+                <Mail className="h-4 w-4" />
+              ) : (
+                <LogIn className="h-4 w-4" />
+              )}
+              {loading
+                ? "Please wait..."
+                : mode === "signin"
+                  ? "Sign In"
+                  : mode === "signup"
+                    ? "Create Account"
+                    : "Send Reset Link"}
+            </Button>
+          </form>
+
+          <div className="mt-4 flex flex-col gap-2 text-center text-xs text-muted-foreground">
+            {mode === "signin" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("forgot");
+                    setError(null);
+                    setMessage(null);
+                  }}
+                  className="hover:underline hover:text-foreground transition-colors"
+                >
+                  Forgot password?
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signup");
+                    setError(null);
+                    setMessage(null);
+                  }}
+                  className="hover:underline hover:text-foreground transition-colors"
+                >
+                  Invited? Create your account
+                </button>
+              </>
+            )}
+            {mode !== "signin" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signin");
+                  setError(null);
+                  setMessage(null);
+                }}
+                className="hover:underline hover:text-foreground transition-colors"
+              >
+                Back to Sign In
+              </button>
+            )}
+          </div>
+        </div>
+
+        <p className="text-xs text-center text-muted-foreground/60">
+          {mspName ? `Access provided by ${mspName}` : "Powered by Sophos Clarity"}
         </p>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="portal-email">Email</Label>
-          <Input
-            id="portal-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            className="rounded-xl border-brand-accent/15"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="portal-password">Password</Label>
-          <Input
-            id="portal-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-            className="rounded-xl border-brand-accent/15"
-          />
-        </div>
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
-          style={
-            accentColor && accentColor !== "#2006F7"
-              ? { backgroundColor: accentColor, backgroundImage: "none" }
-              : undefined
-          }
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-          {loading ? "Signing in..." : "Sign In"}
-        </Button>
-      </form>
     </div>
   );
 }
@@ -539,8 +676,13 @@ export default function ClientPortal() {
 
   // Auth state
   const [authUser, setAuthUser] = useState<{ email: string } | null>(null);
-  const [showLogin, setShowLogin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  // Tab navigation
+  const [activeTab, setActiveTab] = useState<"dashboard" | "findings" | "compliance" | "reports">(
+    "dashboard",
+  );
 
   const isSlug = rawParam ? !UUID_RE.test(rawParam) : false;
   const identifier = rawParam ?? "";
@@ -559,6 +701,38 @@ export default function ClientPortal() {
       })
       .catch(() => setAuthChecked(true));
   }, []);
+
+  // Verify portal access — allow org members (MSP staff) OR invited portal viewers
+  useEffect(() => {
+    if (!authUser) return;
+    (async () => {
+      // Check if user is an org member (MSP staff) — always allowed for any portal
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: membership } = await supabase
+          .from("org_members")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
+        if (membership) {
+          setAccessDenied(false);
+          return;
+        }
+      }
+      // Not an MSP user — check portal_viewers (need orgId from data load)
+      if (!orgId) return;
+      const { data: viewer } = await supabase
+        .from("portal_viewers")
+        .select("id")
+        .eq("org_id", orgId)
+        .eq("email", authUser.email)
+        .maybeSingle();
+      setAccessDenied(!viewer);
+    })();
+  }, [authUser, orgId]);
 
   const loadData = useCallback(async () => {
     if (!identifier) {
@@ -718,7 +892,7 @@ export default function ClientPortal() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setAuthUser(null);
-    setShowLogin(false);
+    setAccessDenied(false);
   };
 
   const sectionVisible = useCallback(
@@ -736,7 +910,7 @@ export default function ClientPortal() {
     [accentColor],
   );
 
-  if (loading) {
+  if (loading || !authChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))]">
         <span className="animate-spin h-6 w-6 border-2 border-brand-accent/30 border-t-[#5A00FF] rounded-full" />
@@ -760,6 +934,42 @@ export default function ClientPortal() {
     );
   }
 
+  // Auth gate: require authentication before showing portal data
+  if (!authUser) {
+    return (
+      <PortalLoginForm
+        accentColor={accentColor}
+        branding={branding}
+        customerName={customerName}
+        onSuccess={() => {
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session?.user) {
+              setAuthUser({ email: session.user.email ?? "" });
+            }
+          });
+        }}
+      />
+    );
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))] px-4">
+        <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/80 dark:bg-slate-900/60 backdrop-blur-sm shadow-xl p-8 max-w-sm w-full text-center space-y-4">
+          <ShieldAlert className="h-12 w-12 text-red-500 mx-auto" />
+          <h1 className="text-xl font-display font-bold text-foreground">Access Denied</h1>
+          <p className="text-sm text-muted-foreground">
+            Your account does not have access to this portal. Contact your MSP provider for
+            assistance.
+          </p>
+          <Button variant="outline" onClick={handleSignOut} className="rounded-xl">
+            Sign Out
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const historyReversed = [...scoreHistory].reverse();
   const latest = historyReversed[0];
   const previous = historyReversed[1];
@@ -775,7 +985,7 @@ export default function ClientPortal() {
     >
       {/* Header */}
       <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {showBranding && branding?.logoUrl ? (
               <img
@@ -789,43 +999,30 @@ export default function ClientPortal() {
               </div>
             )}
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 mb-1">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F2B3]" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#B6C4FF]">
-                  {tenantName
-                    ? `${tenantName} — Security Assessment`
-                    : showBranding && branding?.companyName
-                      ? `${customerName} — Security Assessment`
-                      : "Firewall Configuration Assessment"}
-                </span>
-              </div>
               <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight truncate">
-                {showBranding && branding?.companyName ? branding.companyName : customerName}
+                {tenantName ??
+                  (showBranding && branding?.companyName ? branding.companyName : customerName)}
               </h1>
+              <p className="text-[10px] text-[#B6C4FF]/70 truncate">
+                {showBranding && branding?.companyName
+                  ? `${branding.companyName} — Security Assessment`
+                  : "Firewall Configuration Assessment"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {authUser ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-                className="text-[10px] gap-1 rounded-xl text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] border border-white/10 bg-white/[0.04]"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Sign Out
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowLogin(!showLogin)}
-                className="text-[10px] gap-1 rounded-xl text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] border border-white/10 bg-white/[0.04]"
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                Sign In
-              </Button>
-            )}
+            <span className="text-[10px] text-[#B6C4FF]/70 hidden sm:inline truncate max-w-[160px]">
+              {authUser?.email}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="text-[10px] gap-1 rounded-xl text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] border border-white/10 bg-white/[0.04]"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign Out
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -843,629 +1040,696 @@ export default function ClientPortal() {
         </div>
       </header>
 
-      <main id="main-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        {/* Login form */}
-        {showLogin && !authUser && (
-          <PortalLoginForm
-            accentColor={accentColor}
-            onSuccess={() => {
-              setShowLogin(false);
-              supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session?.user) {
-                  setAuthUser({ email: session.user.email ?? "" });
+      {/* Tab navigation */}
+      <div className="sticky top-[52px] z-30 border-b border-slate-900/[0.10] dark:border-white/[0.06] bg-white/80 dark:bg-[#080d1c]/80 backdrop-blur-sm">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <nav className="flex gap-1 -mb-px" role="tablist">
+            {(
+              [
+                { id: "dashboard", label: "Dashboard" },
+                { id: "findings", label: "Findings" },
+                { id: "compliance", label: "Compliance" },
+                { id: "reports", label: "Reports" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                role="tab"
+                type="button"
+                aria-selected={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                  activeTab === tab.id
+                    ? "border-current text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30",
+                )}
+                style={
+                  activeTab === tab.id
+                    ? { borderColor: accentColor, color: accentColor }
+                    : undefined
                 }
-              });
-            }}
-          />
-        )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
 
-        {/* Welcome Message */}
-        {showBranding && branding?.welcomeMessage && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
-            <div className="flex items-start gap-3">
-              <div className="shrink-0 h-9 w-9 rounded-xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center mt-0.5 shadow-[0_4px_16px_rgba(90,0,255,0.2)]">
-                <Info className="h-4 w-4 text-white" />
-              </div>
-              <p className="text-sm text-foreground leading-relaxed">{branding.welcomeMessage}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Score Summary */}
-        {sectionVisible("score") &&
-          (() => {
-            const aggScore = latest?.overall_score ?? 0;
-            const aggGrade = latest?.overall_grade ?? "—";
-            return (
-              <div className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.10),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_34%),linear-gradient(135deg,rgba(9,13,24,0.98),rgba(12,18,34,0.98))] p-6 sm:p-8 shadow-[0_18px_50px_rgba(32,6,247,0.08)] space-y-5">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-brand-accent">
-                    Security score
+      <main id="main-content" className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* ── Dashboard Tab ── */}
+        {activeTab === "dashboard" && (
+          <>
+            {/* Welcome Message */}
+            {showBranding && branding?.welcomeMessage && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 h-9 w-9 rounded-xl bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center mt-0.5 shadow-[0_4px_16px_rgba(90,0,255,0.2)]">
+                    <Info className="h-4 w-4 text-white" />
                   </div>
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <h2 className="text-xl font-display font-black text-foreground tracking-tight">
-                        Security Score
-                      </h2>
-                      <p className="text-[11px] text-muted-foreground/60 leading-relaxed mt-1">
-                        {latest
-                          ? `Latest assessment: ${new Date(latest.assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
-                          : "No assessments yet"}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-border/50 bg-card shadow-card px-5 py-4 text-right">
-                      <p className="text-[9px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
-                        Current posture
-                      </p>
-                      <p
-                        className="text-4xl font-display font-black tracking-tight tabular-nums mt-1.5"
-                        style={{ color: scoreToColor(aggScore) }}
-                      >
-                        {aggScore}
-                        <span className="text-lg font-semibold text-muted-foreground">/100</span>
-                      </p>
-                      <p
-                        className="text-[11px] font-display font-semibold mt-1"
-                        style={{ color: scoreToColor(aggScore) }}
-                      >
-                        Grade {aggGrade}
-                      </p>
-                    </div>
-                  </div>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {branding.welcomeMessage}
+                  </p>
                 </div>
+              </div>
+            )}
 
-                <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="relative flex items-center justify-center">
-                      <div style={{ animation: "gaugeNeedleMount 0.6s ease-out forwards" }}>
-                        <GaugeSvg score={aggScore} size={240} showLabels label={aggGrade} />
+            {/* Score Summary */}
+            {sectionVisible("score") &&
+              (() => {
+                const aggScore = latest?.overall_score ?? 0;
+                const aggGrade = latest?.overall_grade ?? "—";
+                return (
+                  <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6 sm:p-8 space-y-5">
+                    <div className="space-y-3">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-brand-accent">
+                        Security score
+                      </div>
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div>
+                          <h2 className="text-xl font-display font-black text-foreground tracking-tight">
+                            Security Score
+                          </h2>
+                          <p className="text-[11px] text-muted-foreground/60 leading-relaxed mt-1">
+                            {latest
+                              ? `Latest assessment: ${new Date(latest.assessed_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
+                              : "No assessments yet"}
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-border/50 bg-card shadow-card px-5 py-4 text-right">
+                          <p className="text-[9px] font-display font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
+                            Current posture
+                          </p>
+                          <p
+                            className="text-4xl font-display font-black tracking-tight tabular-nums mt-1.5"
+                            style={{ color: scoreToColor(aggScore) }}
+                          >
+                            {aggScore}
+                            <span className="text-lg font-semibold text-muted-foreground">
+                              /100
+                            </span>
+                          </p>
+                          <p
+                            className="text-[11px] font-display font-semibold mt-1"
+                            style={{ color: scoreToColor(aggScore) }}
+                          >
+                            Grade {aggGrade}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-[13px] font-display font-medium text-muted-foreground/70 text-center">
-                      Your firewall scores{" "}
-                      <span className="font-bold text-foreground">{aggScore}/100</span>{" "}
-                      <span className="text-foreground/60">(Grade {aggGrade})</span>
-                    </p>
-                    {previous && latest && (
-                      <p className="text-sm text-center">
-                        <span className="text-muted-foreground">vs previous: </span>
-                        <span
-                          className={cn(
-                            "font-semibold",
-                            latest.overall_score > previous.overall_score
-                              ? "text-[#00F2B3]"
-                              : latest.overall_score < previous.overall_score
-                                ? "text-[#EA0022]"
-                                : "text-muted-foreground",
-                          )}
-                        >
-                          {latest.overall_score > previous.overall_score
-                            ? `+${latest.overall_score - previous.overall_score}`
-                            : latest.overall_score < previous.overall_score
-                              ? latest.overall_score - previous.overall_score
-                              : "No change"}
-                        </span>
-                      </p>
-                    )}
-                  </div>
-                </div>
 
-                <style>{`
+                    <div className="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="relative flex items-center justify-center">
+                          <div style={{ animation: "gaugeNeedleMount 0.6s ease-out forwards" }}>
+                            <GaugeSvg score={aggScore} size={240} showLabels label={aggGrade} />
+                          </div>
+                        </div>
+                        <p className="text-[13px] font-display font-medium text-muted-foreground/70 text-center">
+                          Your firewall scores{" "}
+                          <span className="font-bold text-foreground">{aggScore}/100</span>{" "}
+                          <span className="text-foreground/60">(Grade {aggGrade})</span>
+                        </p>
+                        {previous && latest && (
+                          <p className="text-sm text-center">
+                            <span className="text-muted-foreground">vs previous: </span>
+                            <span
+                              className={cn(
+                                "font-semibold",
+                                latest.overall_score > previous.overall_score
+                                  ? "text-[#00F2B3]"
+                                  : latest.overall_score < previous.overall_score
+                                    ? "text-[#EA0022]"
+                                    : "text-muted-foreground",
+                              )}
+                            >
+                              {latest.overall_score > previous.overall_score
+                                ? `+${latest.overall_score - previous.overall_score}`
+                                : latest.overall_score < previous.overall_score
+                                  ? latest.overall_score - previous.overall_score
+                                  : "No change"}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <style>{`
                 @keyframes gaugeNeedleMount { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
                 @keyframes gaugeNeedleSweep { from { transform: rotate(150deg); } to { transform: rotate(var(--needle-end, 150deg)); } }
               `}</style>
-              </div>
-            );
-          })()}
+                  </div>
+                );
+              })()}
 
-        {/* Per-Firewall Breakdown */}
-        {sectionVisible("score") && portalFirewalls.length > 1 && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] overflow-hidden">
-            <div className="px-6 pt-6 pb-4">
-              <h2 className="text-lg font-display font-bold text-foreground">Firewall Overview</h2>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">
-                Individual firewall scores for {tenantName ?? customerName}
-              </p>
-            </div>
-            <div className="px-6 pb-6">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-brand-accent/10 hover:bg-transparent">
-                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                      Firewall
-                    </TableHead>
-                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                      Model
-                    </TableHead>
-                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                      Score
-                    </TableHead>
-                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                      Grade
-                    </TableHead>
-                    <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                      Last Assessed
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {portalFirewalls.map((fw) => (
-                    <TableRow
-                      key={fw.agentId}
-                      className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
-                    >
-                      <TableCell>
-                        <div>
-                          <span className="font-medium text-foreground">{fw.label}</span>
-                          {fw.serialNumber && (
-                            <span className="block text-xs text-muted-foreground">
-                              SN: {fw.serialNumber}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {fw.model ?? "—"}
-                      </TableCell>
-                      <TableCell className="font-semibold tabular-nums">
-                        {fw.score ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        {fw.grade ? (
-                          <span
-                            className={cn(
-                              "font-bold text-base",
-                              GRADE_COLORS[fw.grade] ?? GRADE_COLORS.C,
-                            )}
-                          >
-                            {fw.grade}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {fw.lastAssessed
-                          ? new Date(fw.lastAssessed).toLocaleDateString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "Never"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-
-        {/* Assessment History */}
-        {sectionVisible("history") && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] overflow-hidden">
-            <div className="px-6 pt-6 pb-4">
-              <h2 className="text-lg font-display font-bold text-foreground">Assessment History</h2>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">
-                Past assessments with score and finding count
-              </p>
-            </div>
-            <div className="px-6 pb-6">
-              {historyReversed.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  No assessment history yet.
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-brand-accent/10 hover:bg-transparent">
-                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                        Date
-                      </TableHead>
-                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                        Score
-                      </TableHead>
-                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                        Grade
-                      </TableHead>
-                      <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                        Findings
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {historyReversed.map((entry) => (
-                      <TableRow
-                        key={entry.id}
-                        className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
-                      >
-                        <TableCell>
-                          {new Date(entry.assessed_at).toLocaleDateString("en-GB", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </TableCell>
-                        <TableCell className="font-semibold tabular-nums">
-                          {entry.overall_score}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={cn(
-                              "font-bold text-base",
-                              GRADE_COLORS[entry.overall_grade] ?? GRADE_COLORS.C,
-                            )}
-                          >
-                            {entry.overall_grade}
-                          </span>
-                        </TableCell>
-                        <TableCell className="tabular-nums">{entry.findings_count}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Findings Summary */}
-        {sectionVisible("findings") && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] overflow-hidden">
-            <div className="px-6 pt-6 pb-4">
-              <h2 className="text-lg font-display font-bold text-foreground">Findings Summary</h2>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">
-                Latest findings grouped by severity
-              </p>
-            </div>
-            <div className="px-6 pb-6">
-              <div className="flex flex-wrap gap-2 mb-4">
-                {(["critical", "high", "medium", "low", "info"] as Severity[]).map((s) => (
-                  <Badge
-                    key={s}
-                    variant={severityFilter.has(s) ? "default" : "outline"}
-                    className={cn(
-                      "cursor-pointer capitalize rounded-lg",
-                      severityFilter.has(s) && SEVERITY_COLORS[s],
-                      !severityFilter.has(s) && "border-brand-accent/15",
-                    )}
-                    onClick={() => toggleSeverity(s)}
-                  >
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-              {findings.length === 0 && !mergedRichFindings?.length ? (
-                <p className="text-sm text-muted-foreground py-4">No findings data available.</p>
-              ) : mergedRichFindings && filteredRichFindings ? (
-                filteredRichFindings.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4">
-                    No findings match the selected filters.
+            {/* Per-Firewall Breakdown */}
+            {sectionVisible("score") && portalFirewalls.length > 1 && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm overflow-hidden">
+                <div className="px-6 pt-6 pb-4">
+                  <h2 className="text-lg font-display font-bold text-foreground">
+                    Firewall Overview
+                  </h2>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    Individual firewall scores for {tenantName ?? customerName}
                   </p>
-                ) : (
+                </div>
+                <div className="px-6 pb-6">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-brand-accent/10 hover:bg-transparent">
-                        <TableHead className="w-10" aria-hidden />
                         <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                          Severity
+                          Firewall
                         </TableHead>
                         <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                          Finding
+                          Model
                         </TableHead>
-                        {portalFirewalls.length > 1 && (
-                          <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
-                            Firewall
-                          </TableHead>
-                        )}
+                        <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                          Score
+                        </TableHead>
+                        <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                          Grade
+                        </TableHead>
+                        <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                          Last Assessed
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRichFindings.map((f) => {
-                        const open = expandedFindingIds.has(f.rowKey);
-                        const colSpan = portalFirewalls.length > 1 ? 4 : 3;
-                        return (
-                          <Fragment key={f.rowKey}>
-                            <TableRow
-                              className={cn(
-                                "cursor-pointer transition-colors duration-200 border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]",
-                              )}
-                              onClick={() => toggleFindingRow(f.rowKey)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  toggleFindingRow(f.rowKey);
-                                }
-                              }}
-                              tabIndex={0}
-                              aria-expanded={open}
-                            >
-                              <TableCell className="w-10 align-middle">
-                                <span className="inline-flex text-muted-foreground transition-transform duration-200">
-                                  {open ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
+                      {portalFirewalls.map((fw) => (
+                        <TableRow
+                          key={fw.agentId}
+                          className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
+                        >
+                          <TableCell>
+                            <div>
+                              <span className="font-medium text-foreground">{fw.label}</span>
+                              {fw.serialNumber && (
+                                <span className="block text-xs text-muted-foreground">
+                                  SN: {fw.serialNumber}
                                 </span>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  className={cn(
-                                    "capitalize",
-                                    SEVERITY_COLORS[f.severity] ?? SEVERITY_COLORS.info,
-                                  )}
-                                >
-                                  {f.severity}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-sm text-foreground">{f.title}</TableCell>
-                              {portalFirewalls.length > 1 && (
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {f.firewallLabel ?? "—"}
-                                </TableCell>
                               )}
-                            </TableRow>
-                            <TableRow className="border-0 hover:bg-transparent" aria-hidden={!open}>
-                              <TableCell colSpan={colSpan} className="p-0">
-                                <div
-                                  className={cn(
-                                    "overflow-hidden transition-all duration-200 ease-in-out",
-                                    open
-                                      ? "max-h-[min(80vh,2400px)] opacity-100"
-                                      : "max-h-0 opacity-0",
-                                  )}
-                                >
-                                  <div className="rounded-xl bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] border border-brand-accent/10 p-4 mx-2 mb-2 space-y-3 text-sm transition-opacity duration-200">
-                                    {f.section && (
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-0.5">
-                                          Section
-                                        </p>
-                                        <p className="text-foreground">{f.section}</p>
-                                      </div>
-                                    )}
-                                    {f.detail && (
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-0.5">
-                                          Detail
-                                        </p>
-                                        <p className="text-foreground whitespace-pre-wrap">
-                                          {f.detail}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {f.remediation && (
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-0.5">
-                                          Remediation
-                                        </p>
-                                        <p className="text-foreground whitespace-pre-wrap">
-                                          {f.remediation}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {f.evidence && (
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-0.5">
-                                          Evidence
-                                        </p>
-                                        <pre className="text-xs text-foreground font-mono whitespace-pre-wrap break-words">
-                                          {f.evidence}
-                                        </pre>
-                                      </div>
-                                    )}
-                                    {f.confidence && (
-                                      <div>
-                                        <p className="text-xs text-muted-foreground mb-0.5">
-                                          Confidence
-                                        </p>
-                                        <p className="text-foreground capitalize">{f.confidence}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          </Fragment>
-                        );
-                      })}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {fw.model ?? "—"}
+                          </TableCell>
+                          <TableCell className="font-semibold tabular-nums">
+                            {fw.score ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            {fw.grade ? (
+                              <span
+                                className={cn(
+                                  "font-bold text-base",
+                                  GRADE_COLORS[fw.grade] ?? GRADE_COLORS.C,
+                                )}
+                              >
+                                {fw.grade}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {fw.lastAssessed
+                              ? new Date(fw.lastAssessed).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "Never"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
-                )
-              ) : findings.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">No findings data available.</p>
-              ) : filteredFindings.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">
-                  No findings match the selected filters.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {filteredFindings.map((f) => (
-                    <li
-                      key={f.id}
-                      className="flex items-center gap-2 py-2.5 border-b border-brand-accent/[0.06] last:border-0"
-                    >
-                      <Badge className={cn("shrink-0 capitalize", SEVERITY_COLORS[f.severity])}>
-                        {f.severity}
-                      </Badge>
-                      <span className="text-sm text-foreground">{f.title}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Compliance Status */}
-        {sectionVisible("compliance") && frameworks.length > 0 && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
-            <div className="mb-4">
-              <h2 className="text-lg font-display font-bold text-foreground">Compliance Status</h2>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">
-                Posture per selected framework
-              </p>
-            </div>
-            <div className="space-y-4">
-              {frameworks.map((fw) => (
-                <div
-                  key={fw.framework}
-                  className="flex flex-wrap items-center gap-4 rounded-xl bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] border border-brand-accent/[0.06] px-4 py-3"
-                >
-                  <span className="font-medium text-foreground">{fw.framework}</span>
-                  <div className="flex gap-2">
-                    <Badge
-                      variant="outline"
-                      className="rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#00F2B3]/20"
-                    >
-                      Pass: {fw.pass}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className="rounded-md text-[#F8E300] bg-[#F8E300]/[0.08] border-[#F8E300]/20"
-                    >
-                      Partial: {fw.partial}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className="rounded-md text-[#EA0022] bg-[#EA0022]/[0.08] border-[#EA0022]/20"
-                    >
-                      Fail: {fw.fail}
-                    </Badge>
-                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
+
+            {/* Assessment History */}
+            {sectionVisible("history") && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm overflow-hidden">
+                <div className="px-6 pt-6 pb-4">
+                  <h2 className="text-lg font-display font-bold text-foreground">
+                    Assessment History
+                  </h2>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    Past assessments with score and finding count
+                  </p>
+                </div>
+                <div className="px-6 pb-6">
+                  {historyReversed.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      No assessment history yet.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-brand-accent/10 hover:bg-transparent">
+                          <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                            Date
+                          </TableHead>
+                          <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                            Score
+                          </TableHead>
+                          <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                            Grade
+                          </TableHead>
+                          <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                            Findings
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {historyReversed.map((entry) => (
+                          <TableRow
+                            key={entry.id}
+                            className="border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]"
+                          >
+                            <TableCell>
+                              {new Date(entry.assessed_at).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </TableCell>
+                            <TableCell className="font-semibold tabular-nums">
+                              {entry.overall_score}
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={cn(
+                                  "font-bold text-base",
+                                  GRADE_COLORS[entry.overall_grade] ?? GRADE_COLORS.C,
+                                )}
+                              >
+                                {entry.overall_grade}
+                              </span>
+                            </TableCell>
+                            <TableCell className="tabular-nums">{entry.findings_count}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Report Downloads */}
-        {sectionVisible("reports") && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
-            <div className="mb-4">
-              <h2 className="text-lg font-display font-bold text-foreground">Report Downloads</h2>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">
-                Download your assessment reports
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                disabled
-                className="rounded-xl border-brand-accent/15 gap-1.5"
-              >
-                <Download className="h-4 w-4" />
-                Download PDF
-              </Button>
-              <Button
-                variant="outline"
-                disabled
-                className="rounded-xl border-brand-accent/15 gap-1.5"
-              >
-                <FileText className="h-4 w-4" />
-                Download Word
-              </Button>
-            </div>
-          </div>
+        {/* ── Findings Tab ── */}
+        {activeTab === "findings" && (
+          <>
+            {/* Findings Summary */}
+            {sectionVisible("findings") && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm overflow-hidden">
+                <div className="px-6 pt-6 pb-4">
+                  <h2 className="text-lg font-display font-bold text-foreground">
+                    Findings Summary
+                  </h2>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    Latest findings grouped by severity
+                  </p>
+                </div>
+                <div className="px-6 pb-6">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {(["critical", "high", "medium", "low", "info"] as Severity[]).map((s) => (
+                      <Badge
+                        key={s}
+                        variant={severityFilter.has(s) ? "default" : "outline"}
+                        className={cn(
+                          "cursor-pointer capitalize rounded-lg",
+                          severityFilter.has(s) && SEVERITY_COLORS[s],
+                          !severityFilter.has(s) && "border-brand-accent/15",
+                        )}
+                        onClick={() => toggleSeverity(s)}
+                      >
+                        {s}
+                      </Badge>
+                    ))}
+                  </div>
+                  {findings.length === 0 && !mergedRichFindings?.length ? (
+                    <p className="text-sm text-muted-foreground py-4">
+                      No findings data available.
+                    </p>
+                  ) : mergedRichFindings && filteredRichFindings ? (
+                    filteredRichFindings.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-4">
+                        No findings match the selected filters.
+                      </p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-brand-accent/10 hover:bg-transparent">
+                            <TableHead className="w-10" aria-hidden />
+                            <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                              Severity
+                            </TableHead>
+                            <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                              Finding
+                            </TableHead>
+                            {portalFirewalls.length > 1 && (
+                              <TableHead className="text-[11px] font-display uppercase tracking-wider text-muted-foreground/60">
+                                Firewall
+                              </TableHead>
+                            )}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredRichFindings.map((f) => {
+                            const open = expandedFindingIds.has(f.rowKey);
+                            const colSpan = portalFirewalls.length > 1 ? 4 : 3;
+                            return (
+                              <Fragment key={f.rowKey}>
+                                <TableRow
+                                  className={cn(
+                                    "cursor-pointer transition-colors duration-200 border-brand-accent/[0.06] hover:bg-brand-accent/[0.02]",
+                                  )}
+                                  onClick={() => toggleFindingRow(f.rowKey)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      toggleFindingRow(f.rowKey);
+                                    }
+                                  }}
+                                  tabIndex={0}
+                                  aria-expanded={open}
+                                >
+                                  <TableCell className="w-10 align-middle">
+                                    <span className="inline-flex text-muted-foreground transition-transform duration-200">
+                                      {open ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                      )}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      className={cn(
+                                        "capitalize",
+                                        SEVERITY_COLORS[f.severity] ?? SEVERITY_COLORS.info,
+                                      )}
+                                    >
+                                      {f.severity}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-sm text-foreground">
+                                    {f.title}
+                                  </TableCell>
+                                  {portalFirewalls.length > 1 && (
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {f.firewallLabel ?? "—"}
+                                    </TableCell>
+                                  )}
+                                </TableRow>
+                                <TableRow
+                                  className="border-0 hover:bg-transparent"
+                                  aria-hidden={!open}
+                                >
+                                  <TableCell colSpan={colSpan} className="p-0">
+                                    <div
+                                      className={cn(
+                                        "overflow-hidden transition-all duration-200 ease-in-out",
+                                        open
+                                          ? "max-h-[min(80vh,2400px)] opacity-100"
+                                          : "max-h-0 opacity-0",
+                                      )}
+                                    >
+                                      <div className="rounded-xl bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] border border-brand-accent/10 p-4 mx-2 mb-2 space-y-3 text-sm transition-opacity duration-200">
+                                        {f.section && (
+                                          <div>
+                                            <p className="text-xs text-muted-foreground mb-0.5">
+                                              Section
+                                            </p>
+                                            <p className="text-foreground">{f.section}</p>
+                                          </div>
+                                        )}
+                                        {f.detail && (
+                                          <div>
+                                            <p className="text-xs text-muted-foreground mb-0.5">
+                                              Detail
+                                            </p>
+                                            <p className="text-foreground whitespace-pre-wrap">
+                                              {f.detail}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {f.remediation && (
+                                          <div>
+                                            <p className="text-xs text-muted-foreground mb-0.5">
+                                              Remediation
+                                            </p>
+                                            <p className="text-foreground whitespace-pre-wrap">
+                                              {f.remediation}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {f.evidence && (
+                                          <div>
+                                            <p className="text-xs text-muted-foreground mb-0.5">
+                                              Evidence
+                                            </p>
+                                            <pre className="text-xs text-foreground font-mono whitespace-pre-wrap break-words">
+                                              {f.evidence}
+                                            </pre>
+                                          </div>
+                                        )}
+                                        {f.confidence && (
+                                          <div>
+                                            <p className="text-xs text-muted-foreground mb-0.5">
+                                              Confidence
+                                            </p>
+                                            <p className="text-foreground capitalize">
+                                              {f.confidence}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </Fragment>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )
+                  ) : findings.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4">
+                      No findings data available.
+                    </p>
+                  ) : filteredFindings.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4">
+                      No findings match the selected filters.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {filteredFindings.map((f) => (
+                        <li
+                          key={f.id}
+                          className="flex items-center gap-2 py-2.5 border-b border-brand-accent/[0.06] last:border-0"
+                        >
+                          <Badge className={cn("shrink-0 capitalize", SEVERITY_COLORS[f.severity])}>
+                            {f.severity}
+                          </Badge>
+                          <span className="text-sm text-foreground">{f.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {/* SLA Information */}
-        {showBranding && branding?.slaInfo && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
-            <h2 className="text-lg font-display font-bold text-foreground mb-3">
-              Service Level Agreement
-            </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-              {branding.slaInfo}
-            </p>
-          </div>
+        {/* ── Compliance Tab ── */}
+        {activeTab === "compliance" && (
+          <>
+            {/* Compliance Status */}
+            {sectionVisible("compliance") && frameworks.length > 0 && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-display font-bold text-foreground">
+                    Compliance Status
+                  </h2>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    Posture per selected framework
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  {frameworks.map((fw) => (
+                    <div
+                      key={fw.framework}
+                      className="flex flex-wrap items-center gap-4 rounded-xl bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] border border-brand-accent/[0.06] px-4 py-3"
+                    >
+                      <span className="font-medium text-foreground">{fw.framework}</span>
+                      <div className="flex gap-2">
+                        <Badge
+                          variant="outline"
+                          className="rounded-md text-[#00F2B3] bg-[#00F2B3]/[0.08] border-[#00F2B3]/20"
+                        >
+                          Pass: {fw.pass}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="rounded-md text-[#F8E300] bg-[#F8E300]/[0.08] border-[#F8E300]/20"
+                        >
+                          Partial: {fw.partial}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="rounded-md text-[#EA0022] bg-[#EA0022]/[0.08] border-[#EA0022]/20"
+                        >
+                          Fail: {fw.fail}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Feedback Section */}
-        {sectionVisible("feedback") && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-display font-bold text-foreground">Feedback</h2>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">
-                Rate your experience (1-5 stars)
-              </p>
-            </div>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setFeedbackStars(n)}
-                  className="p-1.5 rounded-xl hover:bg-brand-accent/[0.06] transition-colors"
-                  aria-label={`${n} star${n > 1 ? "s" : ""}`}
+        {/* ── Reports Tab ── */}
+        {activeTab === "reports" && (
+          <>
+            {/* Report Downloads */}
+            {sectionVisible("reports") && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-display font-bold text-foreground">
+                    Report Downloads
+                  </h2>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    Download your assessment reports
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="rounded-xl border-brand-accent/15 gap-1.5"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="rounded-xl border-brand-accent/15 gap-1.5"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Download Word
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* SLA Information */}
+            {showBranding && branding?.slaInfo && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6">
+                <h2 className="text-lg font-display font-bold text-foreground mb-3">
+                  Service Level Agreement
+                </h2>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {branding.slaInfo}
+                </p>
+              </div>
+            )}
+
+            {/* Feedback Section */}
+            {sectionVisible("feedback") && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6 space-y-4">
+                <div>
+                  <h2 className="text-lg font-display font-bold text-foreground">Feedback</h2>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    Rate your experience (1-5 stars)
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setFeedbackStars(n)}
+                      className="p-1.5 rounded-xl hover:bg-brand-accent/[0.06] transition-colors"
+                      aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                    >
+                      <Star
+                        className={cn(
+                          "h-8 w-8 transition-colors",
+                          feedbackStars >= n
+                            ? "fill-amber-400 text-amber-400 drop-shadow-[0_2px_8px_rgba(251,191,36,0.4)]"
+                            : "text-muted-foreground/30",
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  placeholder="Additional feedback (optional)"
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  className="w-full min-h-[80px] rounded-xl border border-brand-accent/15 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
+                />
+                <Button
+                  onClick={handleFeedbackSubmit}
+                  disabled={feedbackStars === 0}
+                  className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
+                  style={
+                    accentColor !== "#2006F7"
+                      ? { backgroundColor: accentColor, backgroundImage: "none" }
+                      : undefined
+                  }
                 >
-                  <Star
-                    className={cn(
-                      "h-8 w-8 transition-colors",
-                      feedbackStars >= n
-                        ? "fill-amber-400 text-amber-400 drop-shadow-[0_2px_8px_rgba(251,191,36,0.4)]"
-                        : "text-muted-foreground/30",
-                    )}
-                  />
-                </button>
-              ))}
-            </div>
-            <textarea
-              placeholder="Additional feedback (optional)"
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              className="w-full min-h-[80px] rounded-xl border border-brand-accent/15 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-brand-accent/20 focus:border-brand-accent/30 transition-all"
-            />
-            <Button
-              onClick={handleFeedbackSubmit}
-              disabled={feedbackStars === 0}
-              className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
-              style={
-                accentColor !== "#2006F7"
-                  ? { backgroundColor: accentColor, backgroundImage: "none" }
-                  : undefined
-              }
-            >
-              <Send className="h-4 w-4" />
-              Submit Feedback
-            </Button>
-          </div>
-        )}
+                  <Send className="h-4 w-4" />
+                  Submit Feedback
+                </Button>
+              </div>
+            )}
 
-        {/* Contact Info */}
-        {showBranding && (branding?.contactEmail || branding?.contactPhone) && (
-          <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(247,249,255,0.95))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.95),rgba(14,20,34,0.95))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
-            <h2 className="text-lg font-display font-bold text-foreground mb-4">
-              Contact Your MSP
-            </h2>
-            <div className="flex flex-wrap gap-6">
-              {branding.contactEmail && (
-                <a
-                  href={`mailto:${branding.contactEmail}`}
-                  className="flex items-center gap-2.5 text-sm font-medium text-brand-accent hover:underline rounded-xl bg-brand-accent/[0.04] px-4 py-2.5 border border-brand-accent/10 transition-colors hover:bg-brand-accent/[0.08]"
-                >
-                  <Mail className="h-4 w-4" />
-                  {branding.contactEmail}
-                </a>
-              )}
-              {branding.contactPhone && (
-                <a
-                  href={`tel:${branding.contactPhone}`}
-                  className="flex items-center gap-2.5 text-sm font-medium text-brand-accent hover:underline rounded-xl bg-brand-accent/[0.04] px-4 py-2.5 border border-brand-accent/10 transition-colors hover:bg-brand-accent/[0.08]"
-                >
-                  <Phone className="h-4 w-4" />
-                  {branding.contactPhone}
-                </a>
-              )}
-            </div>
-          </div>
+            {/* Contact Info */}
+            {showBranding && (branding?.contactEmail || branding?.contactPhone) && (
+              <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-white/[0.03] backdrop-blur-sm shadow-sm p-6">
+                <h2 className="text-lg font-display font-bold text-foreground mb-4">
+                  Contact Your MSP
+                </h2>
+                <div className="flex flex-wrap gap-6">
+                  {branding.contactEmail && (
+                    <a
+                      href={`mailto:${branding.contactEmail}`}
+                      className="flex items-center gap-2.5 text-sm font-medium text-brand-accent hover:underline rounded-xl bg-brand-accent/[0.04] px-4 py-2.5 border border-brand-accent/10 transition-colors hover:bg-brand-accent/[0.08]"
+                    >
+                      <Mail className="h-4 w-4" />
+                      {branding.contactEmail}
+                    </a>
+                  )}
+                  {branding.contactPhone && (
+                    <a
+                      href={`tel:${branding.contactPhone}`}
+                      className="flex items-center gap-2.5 text-sm font-medium text-brand-accent hover:underline rounded-xl bg-brand-accent/[0.04] px-4 py-2.5 border border-brand-accent/10 transition-colors hover:bg-brand-accent/[0.08]"
+                    >
+                      <Phone className="h-4 w-4" />
+                      {branding.contactPhone}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-brand-accent/10 bg-white/60 dark:bg-[#080d1c]/60 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
           <p className="text-xs text-muted-foreground/60 text-center">
             {showBranding && branding?.footerText
               ? branding.footerText

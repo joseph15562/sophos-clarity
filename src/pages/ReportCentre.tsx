@@ -26,7 +26,12 @@ import {
   ChevronUp,
   Sun,
   Moon,
+  Trash2,
 } from "lucide-react";
+import { deleteSavedReportCloud } from "@/lib/saved-reports";
+import { toast } from "sonner";
+
+const PLACEHOLDER_NAMES = /^\s*(\(this tenant\)|unnamed|unknown|customer)\s*$/i;
 
 /* ── Demo Data ── */
 
@@ -211,9 +216,11 @@ function ReportCentreInner() {
         if (cancelled) return;
 
         if (savedReports.length > 0) {
+          const orgName = org.name || "My Organisation";
           const mapped = savedReports.map((r, i) => ({
             id: r.id || `r${i}`,
-            customer: r.customerName,
+            customer:
+              !r.customerName || PLACEHOLDER_NAMES.test(r.customerName) ? orgName : r.customerName,
             type: r.reportType === "full" ? "Technical Assessment" : "Board Summary",
             date: new Date(r.createdAt).toLocaleDateString("en-GB", {
               day: "numeric",
@@ -258,7 +265,7 @@ function ReportCentreInner() {
     return () => {
       cancelled = true;
     };
-  }, [org?.id]);
+  }, [org?.id, org?.name]);
 
   const totalReports = reports.length;
   const thisMonth = reports.filter((r) => r.date >= "2026-03-01").length;
@@ -374,9 +381,11 @@ function ReportCentreInner() {
                   >
                     ~{t.pages} pages
                   </span>
-                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[11px]">
-                    Use Template
-                  </Button>
+                  <Link to="/">
+                    <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[11px]">
+                      Use Template
+                    </Button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -430,23 +439,36 @@ function ReportCentreInner() {
                     </span>
                   </span>
                   <div className="flex items-center justify-end gap-1">
+                    <Link to={`/shared/${r.id}`} target="_blank">
+                      <button
+                        className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+                        title="View report"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                    </Link>
+                    <Link to={`/shared/${r.id}`} target="_blank">
+                      <button
+                        className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+                        title="Download"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </button>
+                    </Link>
                     <button
-                      className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
-                      title="View"
+                      className="rounded-lg p-1.5 text-muted-foreground hover:text-[#EA0022] hover:bg-[#EA0022]/10 transition-colors"
+                      title="Delete report"
+                      onClick={async () => {
+                        try {
+                          await deleteSavedReportCloud(r.id);
+                          setReports((prev) => prev.filter((rpt) => rpt.id !== r.id));
+                          toast.success("Report deleted");
+                        } catch {
+                          toast.error("Failed to delete report");
+                        }
+                      }}
                     >
-                      <Eye className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
-                      title="Download"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
-                      title="Send"
-                    >
-                      <Send className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
