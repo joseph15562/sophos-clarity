@@ -263,6 +263,8 @@ export interface AnalysisTabsProps {
   hasReports?: boolean;
   /** Historical trend snapshot to show on the score dial */
   trendSnapshot?: { score: number; grade: string; date: string } | null;
+  /** For ConnectWise ticket creation from findings */
+  firecomplyCustomerKey?: string;
 }
 
 function fileLabel(f: ParsedFile) {
@@ -303,6 +305,7 @@ export function AnalysisTabs({
   orgId = "",
   hasReports = false,
   trendSnapshot,
+  firecomplyCustomerKey,
 }: AnalysisTabsProps) {
   const { resolvedTheme } = useTheme();
   const analysisTabBarDark = resolvedTheme === "dark";
@@ -1279,7 +1282,10 @@ export function AnalysisTabs({
 
             {w("findings-bulk") && (
               <Suspense fallback={<CardSkeleton />}>
-                <FindingsBulkView analysisResults={analysisResult} />
+                <FindingsBulkView
+                  analysisResults={analysisResult}
+                  firecomplyCustomerKey={firecomplyCustomerKey}
+                />
               </Suspense>
             )}
             <Suspense fallback={null}>

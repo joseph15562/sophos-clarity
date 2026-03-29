@@ -7,6 +7,7 @@ import { BrandingData } from "@/components/BrandingSetup";
 import { AppHeader } from "@/components/AppHeader";
 import { UploadSection } from "@/components/UploadSection";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
+import { resolveCustomerName } from "@/lib/customer-name";
 
 import { AuthFlow } from "@/components/AuthFlow";
 import {
@@ -1461,6 +1462,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                   }}
                   hasReports={reports.some((r) => (r.markdown?.trim().length ?? 0) > 0)}
                   trendSnapshot={trendSnapshot}
+                  firecomplyCustomerKey={
+                    org?.name
+                      ? resolveCustomerName(branding.customerName ?? "", org.name)
+                      : undefined
+                  }
                 />
               </div>
             )}

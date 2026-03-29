@@ -13,6 +13,8 @@ import {
   Download,
   ExternalLink,
   Plug,
+  KeyRound,
+  Ticket,
 } from "lucide-react";
 import { loadAuditLog, type AuditEntry, type AuditAction } from "@/lib/audit";
 import { useAuth } from "@/hooks/use-auth";
@@ -50,6 +52,21 @@ const ACTION_META: Record<AuditAction, { label: string; icon: typeof FileText; c
     label: "ConnectWise Cloud disconnected",
     icon: Plug,
     color: "text-muted-foreground",
+  },
+  "service_key.issued": {
+    label: "Service API key issued",
+    icon: KeyRound,
+    color: "text-[#5A00FF]",
+  },
+  "service_key.revoked": {
+    label: "Service API key revoked",
+    icon: KeyRound,
+    color: "text-muted-foreground",
+  },
+  "psa.connectwise_ticket_created": {
+    label: "ConnectWise Manage ticket created",
+    icon: Ticket,
+    color: "text-[#5A00FF]",
   },
   "team.invited": { label: "Team member invited", icon: Users, color: "text-brand-accent" },
   "team.removed": { label: "Team member removed", icon: Users, color: "text-[#EA0022]" },

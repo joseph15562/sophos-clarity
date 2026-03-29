@@ -520,6 +520,114 @@ export type Database = {
           },
         ];
       };
+      connectwise_manage_credentials: {
+        Row: {
+          org_id: string;
+          api_base_url: string;
+          integrator_company_id: string;
+          encrypted_public_key: string;
+          encrypted_private_key: string;
+          default_board_id: number;
+          default_status_id: number;
+          connected_at: string;
+        };
+        Insert: {
+          org_id: string;
+          api_base_url: string;
+          integrator_company_id: string;
+          encrypted_public_key: string;
+          encrypted_private_key: string;
+          default_board_id: number;
+          default_status_id?: number;
+          connected_at?: string;
+        };
+        Update: {
+          org_id?: string;
+          api_base_url?: string;
+          integrator_company_id?: string;
+          encrypted_public_key?: string;
+          encrypted_private_key?: string;
+          default_board_id?: number;
+          default_status_id?: number;
+          connected_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "connectwise_manage_credentials_org_id_fkey";
+            columns: ["org_id"];
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      psa_ticket_idempotency: {
+        Row: {
+          id: string;
+          org_id: string;
+          provider: string;
+          idempotency_key: string;
+          external_ticket_id: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          org_id: string;
+          provider?: string;
+          idempotency_key: string;
+          external_ticket_id: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          org_id?: string;
+          provider?: string;
+          idempotency_key?: string;
+          external_ticket_id?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "psa_ticket_idempotency_org_id_fkey";
+            columns: ["org_id"];
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      psa_customer_company_map: {
+        Row: {
+          org_id: string;
+          provider: string;
+          customer_key: string;
+          company_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          org_id: string;
+          provider?: string;
+          customer_key: string;
+          company_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          org_id?: string;
+          provider?: string;
+          customer_key?: string;
+          company_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "psa_customer_company_map_org_id_fkey";
+            columns: ["org_id"];
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       central_tenants: {
         Row: {
           id: string;

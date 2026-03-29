@@ -11,6 +11,8 @@ import {
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/use-auth";
+import { ConnectWiseTicketFromFindingDialog } from "@/components/ConnectWiseTicketFromFindingDialog";
 
 const STORAGE_KEY_PLAN = "sophos-remediation-plan-ids";
 
@@ -45,12 +47,16 @@ const SEV_STYLE: Record<string, string> = {
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
+  /** Resolved customer name for ConnectWise PSA mapping */
+  firecomplyCustomerKey?: string;
 }
 
-export function FindingsBulkView({ analysisResults }: Props) {
+export function FindingsBulkView({ analysisResults, firecomplyCustomerKey }: Props) {
+  const { org, canManageTeam } = useAuth();
   const [acceptedList, setAcceptedList] = useState<AcceptedFinding[]>([]);
   const [planIds, setPlanIds] = useState<Set<string>>(loadPlanIds);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [cwTicketOpen, setCwTicketOpen] = useState(false);
 
   const allFindings = useMemo(() => {
     const out: { key: string; label: string; finding: Finding }[] = [];
@@ -139,6 +145,18 @@ export function FindingsBulkView({ analysisResults }: Props) {
     setSelected(new Set());
   }, [selected, planIds]);
 
+  const singleSelectedFinding = useMemo(() => {
+    if (selected.size !== 1) return null;
+    const key = [...selected][0];
+    return allFindings.find((x) => x.key === key) ?? null;
+  }, [selected, allFindings]);
+
+  const cwIdempotencyKey = useMemo(() => {
+    if (!org?.id || !singleSelectedFinding) return "";
+    const safe = singleSelectedFinding.key.replace(/[^a-zA-Z0-9:_-]/g, "_").slice(0, 220);
+    return `cw_find_${org.id}_${safe}`;
+  }, [org?.id, singleSelectedFinding]);
+
   if (allFindings.length === 0) return null;
 
   return (
@@ -181,10 +199,40 @@ export function FindingsBulkView({ analysisResults }: Props) {
         >
           Add to remediation plan
         </Button>
+        {canManageTeam && singleSelectedFinding && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCwTicketOpen(true)}
+            className="gap-1.5 text-xs"
+          >
+            ConnectWise ticket
+          </Button>
+        )}
         {selected.size > 0 && (
           <span className="text-[10px] text-muted-foreground">{selected.size} selected</span>
         )}
       </div>
+
+      {singleSelectedFinding && cwIdempotencyKey && (
+        <ConnectWiseTicketFromFindingDialog
+          open={cwTicketOpen}
+          onOpenChange={setCwTicketOpen}
+          idempotencyKey={cwIdempotencyKey}
+          summary={singleSelectedFinding.finding.title}
+          firecomplyCustomerKey={firecomplyCustomerKey}
+          description={[
+            singleSelectedFinding.finding.detail,
+            singleSelectedFinding.finding.remediation
+              ? `Remediation: ${singleSelectedFinding.finding.remediation}`
+              : "",
+            `Firewall: ${singleSelectedFinding.label}`,
+            `Severity: ${singleSelectedFinding.finding.severity}`,
+          ]
+            .filter(Boolean)
+            .join("\n\n")}
+        />
+      )}
 
       <div className="rounded-lg border border-border overflow-hidden">
         <div className="max-h-[400px] overflow-y-auto">

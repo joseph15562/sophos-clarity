@@ -18,6 +18,49 @@ Each item: **Gap** → **Why it matters** → **Today** → **Target** → **Dep
 
 ---
 
+## Epic status (shipped vs remaining)
+
+Quick checklist; file anchors live in [sophos-firewall-master-execution.md](./sophos-firewall-master-execution.md).
+
+**Horizon 1**
+
+- [x] G1.1 MSP attention / command surface
+- [x] G1.2 First-run MSP checklist
+- [x] G1.3 Workspace settings strip on Fleet / Customers / Insights
+- [x] G1.4 Central connection health banner
+- [x] G1.5 Audit full-screen `/audit` + export
+- [x] G1.6 Prepared By / report footer persistence (`report_template`)
+
+**Horizon 2**
+
+- [x] G2.1 Agent operations (version, fleet health signals)
+- [x] G2.2 Installer / deploy matrix + honest CTAs
+- [x] G2.3 Remediation loop (playbook links + `remediation_status`)
+- [x] G2.4 Portal consultant vs customer tabs + live link
+- [x] G2.5 Regulatory digest surfaced in settings
+- [x] G2.6 Data lifecycle copy in drawer
+
+**Horizon 3**
+
+- [x] G3.3 Trust centre `/trust`
+- [x] G3.4 Supported SFOS versions doc + in-app link
+- [x] G3.5 Baseline self-host **runbook** only ([SELF-HOSTED.md](../SELF-HOSTED.md))
+- [ ] G3.5 Docker / Helm in-repo (deferred until on-prem customer need)
+- **G3.1** (depth ongoing — see section below)
+  - [x] ConnectWise Cloud + Manage ticket MVP (idempotency, audit)
+  - [x] Persisted **customer ↔ Manage company** mapping (`psa_customer_company_map` + settings UI)
+  - [ ] Auto-ticket on assessment complete; Halo/Autotask
+- **G3.2** (scopes ongoing — see section below)
+  - [x] Issue / revoke UI + Edge paths; `api:read` → `GET /api/firewalls`; `api:read:assessments` → `GET /api/assessments`
+  - [ ] Further issuable scopes / routes as automation needs grow
+
+**Cross-cutting**
+
+- [x] X4 Changelog `/changelog`
+- [ ] X1, X2, X3 (ongoing — role toasts, telemetry ingest, E2E breadth)
+
+---
+
 ## Horizon 1 — Quick composability (weeks-scale epics)
 
 ### G1.1 MSP attention / command surface
@@ -176,6 +219,13 @@ Each item: **Gap** → **Why it matters** → **Today** → **Target** → **Dep
 | **Dependencies**  | Vendor sandbox, legal, pricing.                                                                                                                                                                                  |
 | **Acceptance**    | Idempotent ticket creation; audit log entry; failure alerts.                                                                                                                                                     |
 
+**Shipped (2026-03):**
+
+- [x] ConnectWise **Partner Cloud** credentials + token test + `whoami`
+- [x] ConnectWise **Manage** credentials (per org), **create service ticket** from finding (bulk view), **idempotency** store, **audit** entry
+- [x] Persisted **customer ↔ Manage company** mapping (table + PSA settings + ticket dialog / resolved customer key from Assess)
+- [ ] **Auto-ticket** on assessment complete; **Halo / Autotask** pattern
+
 ### G3.2 Scoped API keys (org service accounts)
 
 | Field             | Detail                                                                                                           |
@@ -184,6 +234,14 @@ Each item: **Gap** → **Why it matters** → **Today** → **Target** → **Dep
 | **Why**           | MSP automation without sharing user JWTs.                                                                        |
 | **Target**        | Table `api_keys` (hash, prefix, org_id, scopes, created_by); Edge validation path; rotate/revoke UI in settings. |
 | **Dependencies**  | Security review; rate limits.                                                                                    |
+
+**Shipped (2026-03):**
+
+- [x] `org_service_api_keys` (hash, prefix, scopes, labels); Edge **`/service-key/ping`**, **`issue`**, **`revoke`**
+- [x] Service-key auth on **`GET /api/firewalls`** (`api:read`) and **`GET /api/assessments`** (`api:read:assessments`)
+- [x] **OrgServiceKeysSettings** UI (create with one-time secret, scope checkboxes, revoke)
+- [ ] Further scopes/routes (see matrix in `supabase/functions/api/index.ts`)
+- [ ] Rate limits (if not already covered elsewhere)
 
 ### G3.3 Trust centre / subprocessors page
 
@@ -210,6 +268,11 @@ Each item: **Gap** → **Why it matters** → **Today** → **Target** → **Dep
 | **Inventory ref** | PRODUCT-ASSESSMENT                                                    |
 | **Why**           | Some MSPs and regions require data residency not met by shared cloud. |
 | **Target**        | Runbook + docker/helm; feature flags for AI keys. Large effort.       |
+
+**Status:**
+
+- [x] Starting **runbook** ([SELF-HOSTED.md](../SELF-HOSTED.md))
+- [ ] **Docker / Helm** in-repo (deferred until a customer requires on-prem images)
 
 ---
 
@@ -280,7 +343,7 @@ flowchart LR
 
 ## Maintenance
 
-- When an item ships, move it to a **“Done”** subsection or link the PR.
+- When an item ships, update the **Epic status** checklist at the top of this file and keep [sophos-firewall-master-execution.md](./sophos-firewall-master-execution.md) aligned.
 - Revisit quarterly against [PRODUCT-ASSESSMENT.md](../PRODUCT-ASSESSMENT.md) and partner feedback.
 
-_Created: 2026-03-29._
+_Created: 2026-03-29. Epic checklist updated: 2026-03-29._

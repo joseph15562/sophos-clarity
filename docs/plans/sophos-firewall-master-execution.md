@@ -15,6 +15,23 @@
 
 ---
 
+## Epic checklist (done in repo)
+
+Mirrors [sophos-firewall-gaps-and-improvements-roadmap.md](./sophos-firewall-gaps-and-improvements-roadmap.md) **Epic status**.
+
+- [x] **H1** G1.1–G1.6
+- [x] **H2** G2.1–G2.6
+- [x] **X4** Changelog
+- [x] **G3.3** Trust centre
+- [x] **G3.4** Parser / supported SFOS matrix
+- [x] **G3.5** Runbook baseline ([SELF-HOSTED.md](../SELF-HOSTED.md)) — _Helm/container deferred_
+- [x] **G3.1 (MVP)** Partner Cloud + Manage tickets + **persisted customer ↔ company mapping** — _auto-ticket on assessment + other PSAs: not done_
+- [x] **G3.2 (MVP)** Service keys issue/revoke + `api:read` firewalls + `api:read:assessments` — _further scopes/routes as needed_
+- [ ] **G3.5 (XL)** Docker/Helm in-repo
+- [ ] **X1, X2, X3** cross-cutting polish (ongoing)
+
+---
+
 ## Complete G catalog (every epic)
 
 ### Horizon 1 — Quick composability
@@ -90,15 +107,15 @@
 | G2.5 | [RegulatoryDigestSettings.tsx](../src/components/RegulatoryDigestSettings.tsx), ManagementDrawer **Regulatory digest**                                                                                                                                                        |
 | G2.6 | ManagementDrawer **Data governance** retention copy + DATA-PRIVACY pointer                                                                                                                                                                                                    |
 
-**Phase C (H3) — partial**
+**Phase C (H3) — partial (MVP shipped; depth ongoing)**
 
-| ID   | Anchors                                                                                                                                                                                                                                                                                                                                                                   |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G3.1 | ManagementDrawer **PSA & API automation** — ConnectWise-first narrative (OAuth/tickets TBD)                                                                                                                                                                                                                                                                               |
-| G3.2 | `org_service_api_keys` migration; [\_shared/service-key.ts](../supabase/functions/_shared/service-key.ts), [api/routes/service-key.ts](../supabase/functions/api/routes/service-key.ts) ping; [firewalls.ts](../supabase/functions/api/routes/firewalls.ts) optional service key + `api:read`; [OrgServiceKeysSettings.tsx](../src/components/OrgServiceKeysSettings.tsx) |
-| G3.3 | [TrustPage.tsx](../src/pages/TrustPage.tsx) subprocessors + retention sections                                                                                                                                                                                                                                                                                            |
-| G3.4 | [docs/SUPPORTED-SFOS-VERSIONS.md](../SUPPORTED-SFOS-VERSIONS.md), [public/supported-sfos-versions.md](../public/supported-sfos-versions.md), UploadSection link                                                                                                                                                                                                           |
-| G3.5 | [docs/SELF-HOSTED.md](../SELF-HOSTED.md)                                                                                                                                                                                                                                                                                                                                  |
+| ID   | Anchors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G3.1 | **Partner Cloud:** [ConnectWiseCloudSettings.tsx](../src/components/ConnectWiseCloudSettings.tsx), [connectwise.ts](../supabase/functions/api/routes/connectwise.ts), [\_shared/connectwise-cloud.ts](../supabase/functions/_shared/connectwise-cloud.ts). **Manage tickets + mapping:** [ConnectWiseManageSettings.tsx](../src/components/ConnectWiseManageSettings.tsx), [ConnectWiseTicketFromFindingDialog.tsx](../src/components/ConnectWiseTicketFromFindingDialog.tsx), [FindingsBulkView.tsx](../src/components/FindingsBulkView.tsx), [Index.tsx](../src/pages/Index.tsx) → [AnalysisTabs](../src/components/AnalysisTabs.tsx) customer key, [connectwise-manage.ts](../supabase/functions/api/routes/connectwise-manage.ts), migrations `20260329210000_connectwise_manage_psa.sql`, `20260329220000_psa_customer_company_map.sql`. |
+| G3.2 | `org_service_api_keys`; [service-key.ts](../supabase/functions/api/routes/service-key.ts) **ping, issue, revoke**; [\_shared/service-key.ts](../supabase/functions/_shared/service-key.ts); [firewalls.ts](../supabase/functions/api/routes/firewalls.ts) + `api:read`; [OrgServiceKeysSettings.tsx](../src/components/OrgServiceKeysSettings.tsx)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| G3.3 | [TrustPage.tsx](../src/pages/TrustPage.tsx) subprocessors + retention sections                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| G3.4 | [docs/SUPPORTED-SFOS-VERSIONS.md](../SUPPORTED-SFOS-VERSIONS.md), [public/supported-sfos-versions.md](../public/supported-sfos-versions.md), UploadSection link                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| G3.5 | [docs/SELF-HOSTED.md](../SELF-HOSTED.md)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 **Phase D — cross-cutting**
 
@@ -126,8 +143,8 @@ Roadmap mermaid: [sophos-firewall-gaps-and-improvements-roadmap.md](./sophos-fir
 
 ## Next engineering focus
 
-1. **G3.1** — ConnectWise (or chosen PSA) OAuth, ticket create, idempotency, audit entries (legal + sandbox).
-2. **G3.2** — Self-serve key issuance/revoke UI; expand service-key auth to additional routes per scope matrix.
+1. **G3.1** — Optional **auto-ticket** when an assessment completes; **Halo / Autotask** (or second PSA) pattern; optional **customer mapping** UI on Customers page.
+2. **G3.2** — More **issuable scopes** and read-only routes as automation needs grow (matrix in [api/index.ts](../supabase/functions/api/index.ts) + [\_shared/service-key.ts](../supabase/functions/_shared/service-key.ts)).
 3. **G3.5 / XL** — Container/Helm packaging if customers require on-prem images.
 
 ---
@@ -136,4 +153,4 @@ Roadmap mermaid: [sophos-firewall-gaps-and-improvements-roadmap.md](./sophos-fir
 
 When an epic ships, note it in the gaps roadmap **Done** section or with PR links. Keep this file aligned with [App.tsx](../src/App.tsx) and nav.
 
-_Updated: 2026-03-29 — Phase B–D implementation pass; H1 + H2 shipped tables; H3 partial._
+_Updated: 2026-03-29 — PSA customer ↔ Manage mapping; service key `api:read:assessments`; next: auto-ticket + more scopes._

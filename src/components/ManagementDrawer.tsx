@@ -119,6 +119,11 @@ const ConnectWiseCloudSettings = lazy(() =>
     default: m.ConnectWiseCloudSettings,
   })),
 );
+const ConnectWiseManageSettings = lazy(() =>
+  import("@/components/ConnectWiseManageSettings").then((m) => ({
+    default: m.ConnectWiseManageSettings,
+  })),
+);
 
 type TabId = "dashboard" | "reports" | "history" | "settings";
 
@@ -1155,15 +1160,13 @@ export function ManagementDrawer({
                   expandAllowed={matchSettingsExpand("partner-automation")}
                   title="PSA & API automation"
                   icon={<Webhook className="h-3.5 w-3.5 text-[#5A00FF]" />}
-                  subtitle="ConnectWise Cloud auth, tickets roadmap, scoped service keys"
+                  subtitle="ConnectWise Cloud, Manage tickets, scoped service keys"
                 >
                   <div className="p-4 space-y-3 text-xs text-muted-foreground leading-relaxed">
                     <p>
                       <span className="font-semibold text-foreground">PSA</span> — ConnectWise Cloud
-                      Services credentials below unlock API access (tickets / company mapping next).{" "}
-                      <strong className="text-foreground">ConnectWise Manage</strong> and other PSA
-                      flows follow the same pattern. Use{" "}
-                      <strong className="text-foreground">webhooks</strong> for notify-only
+                      (Partner API) and ConnectWise Manage (service tickets from findings) below.
+                      Use <strong className="text-foreground">webhooks</strong> for notify-only
                       automation where APIs are not needed.
                     </p>
                     <p>
@@ -1177,6 +1180,14 @@ export function ManagementDrawer({
                       </p>
                       <Suspense fallback={<Skeleton />}>
                         <ConnectWiseCloudSettings />
+                      </Suspense>
+                    </div>
+                    <div className="rounded-xl border border-border/50 bg-background/30 p-3">
+                      <p className="text-[10px] font-semibold text-foreground mb-2 uppercase tracking-wide">
+                        ConnectWise Manage (tickets)
+                      </p>
+                      <Suspense fallback={<Skeleton />}>
+                        <ConnectWiseManageSettings />
                       </Suspense>
                     </div>
                     <div className="rounded-xl border border-border/50 bg-background/30 p-3">

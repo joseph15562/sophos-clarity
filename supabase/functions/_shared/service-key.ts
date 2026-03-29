@@ -8,6 +8,32 @@ async function sha256Hex(secret: string): Promise<string> {
     .join("");
 }
 
+/** Same hash stored in `org_service_api_keys.key_hash` (issue path). */
+export async function hashServiceKeySecret(secret: string): Promise<string> {
+  return sha256Hex(secret);
+}
+
+/** Opaque secret shown once to the org admin; prefix helps support identify logs. */
+export function generateServiceKeySecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return `fcsk_${hex}`;
+}
+
+/** Scopes that may be granted at issue time (expand with route matrix in api/index.ts). */
+export const ISSUABLE_SERVICE_KEY_SCOPES = ["api:read", "api:read:assessments"] as const;
+export type IssuableServiceKeyScope = (typeof ISSUABLE_SERVICE_KEY_SCOPES)[number];
+
+export function normalizeIssuableScopes(raw: unknown): IssuableServiceKeyScope[] {
+  const allowed = new Set<string>(ISSUABLE_SERVICE_KEY_SCOPES);
+  if (!Array.isArray(raw) || raw.length === 0) return ["api:read"];
+  const out = raw.filter((s): s is string => typeof s === "string" && allowed.has(s));
+  return (out.length ? [...new Set(out)] : ["api:read"]) as IssuableServiceKeyScope[];
+}
+
 /** Raw secret from Authorization: Bearer <key> or X-FireComply-Service-Key. */
 export function extractServiceKeySecret(req: Request): string | null {
   const dedicated = req.headers.get("x-firecomply-service-key")?.trim();
@@ -25,7 +51,7 @@ export async function getServiceKeyContext(
 ): Promise<{ orgId: string; scopes: string[]; keyId: string } | null> {
   const secret = extractServiceKeySecret(req);
   if (!secret) return null;
-  const keyHash = await sha256Hex(secret);
+  const keyHash = await hashServiceKeySecret(secret);
   const db = adminClient();
   const { data, error } = await db
     .from("org_service_api_keys")

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   Code2,
@@ -37,6 +37,7 @@ import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
+import { buildManagePanelSearch } from "@/lib/workspace-deeplink";
 
 const CentralIntegration = lazy(() =>
   import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })),
@@ -57,7 +58,7 @@ interface Integration {
   name: string;
   description: string;
   icon: React.ReactNode;
-  status: "connected" | "available" | "coming-soon";
+  status: "connected" | "available" | "coming-soon" | "partial";
   action: string;
 }
 
@@ -131,10 +132,11 @@ const INTEGRATIONS: Integration[] = [
   {
     id: "connectwise",
     name: "ConnectWise PSA",
-    description: "Sync findings as tickets in ConnectWise Manage.",
+    description:
+      "Partner Cloud credentials in workspace settings; ConnectWise Manage REST for service tickets (configure in PSA settings, create from Assess → Findings bulk actions).",
     icon: <Ticket className="h-6 w-6" />,
-    status: "coming-soon",
-    action: "Coming Soon",
+    status: "partial",
+    action: "Workspace settings",
   },
   {
     id: "halopsa",
@@ -332,6 +334,10 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
     label: "Coming Soon",
     cls: "bg-[#F29400]/15 text-[#9A5F00] dark:text-[#F29400] border-[#F29400]/25",
   },
+  partial: {
+    label: "In progress",
+    cls: "bg-[#5A00FF]/15 text-[#5A00FF] dark:text-[#C4B5FD] border-[#5A00FF]/25",
+  },
 };
 
 function timeAgo(iso: string): string {
@@ -429,7 +435,7 @@ function IntegrationCard({
       <div className="flex items-center justify-end mt-auto">
         {item.status === "coming-soon" ? (
           <span className="text-xs text-muted-foreground italic">Coming soon</span>
-        ) : item.status === "connected" ? (
+        ) : item.status === "connected" || item.status === "partial" ? (
           <Button
             size="sm"
             variant="outline"
@@ -500,7 +506,9 @@ function EndpointRow({ ep }: { ep: Endpoint }) {
 
 function IntegrationsTab() {
   const { org } = useAuth();
+  const navigate = useNavigate();
   const [centralConnected, setCentralConnected] = useState(false);
+  const [connectWiseLinked, setConnectWiseLinked] = useState(false);
   const [openPanel, setOpenPanel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -513,21 +521,51 @@ function IntegrationsTab() {
       .then(({ data }) => setCentralConnected(!!data));
   }, [org?.id]);
 
-  const items = INTEGRATIONS.map((item) =>
-    item.id === "sophos-central"
-      ? {
-          ...item,
-          status: centralConnected ? ("connected" as const) : ("available" as const),
-          action: centralConnected ? "Configure" : "Connect",
-        }
-      : item,
-  );
+  useEffect(() => {
+    if (!org?.id) return;
+    supabase
+      .from("connectwise_cloud_credentials")
+      .select("org_id")
+      .eq("org_id", org.id)
+      .maybeSingle()
+      .then(({ data }) => setConnectWiseLinked(!!data));
+  }, [org?.id]);
+
+  const items = INTEGRATIONS.map((item) => {
+    if (item.id === "sophos-central") {
+      return {
+        ...item,
+        status: centralConnected ? ("connected" as const) : ("available" as const),
+        action: centralConnected ? "Configure" : "Connect",
+      };
+    }
+    if (item.id === "connectwise") {
+      return {
+        ...item,
+        description: connectWiseLinked
+          ? "Partner Cloud is linked. Open workspace settings to manage credentials or test the API. Manage ticket sync is still planned."
+          : item.description,
+      };
+    }
+    return item;
+  });
+
+  const onIntegrationAction = (id: string) => {
+    if (id === "connectwise") {
+      navigate({
+        pathname: "/",
+        search: buildManagePanelSearch({ panel: "settings", section: "partner-automation" }),
+      });
+      return;
+    }
+    setOpenPanel(id);
+  };
 
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
         {items.map((i) => (
-          <IntegrationCard key={i.id} item={i} onAction={setOpenPanel} />
+          <IntegrationCard key={i.id} item={i} onAction={onIntegrationAction} />
         ))}
       </div>
 

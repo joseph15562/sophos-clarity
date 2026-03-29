@@ -6,6 +6,7 @@ import { handleAdminRoutes } from "./routes/admin.ts";
 import { handleAgentRoutes } from "./routes/agent.ts";
 import { handleAssessmentRoutes } from "./routes/assessments.ts";
 import { handleConfigUploadRoutes } from "./routes/config-upload.ts";
+import { handleConnectWiseManageRoutes } from "./routes/connectwise-manage.ts";
 import { handleConnectWiseRoutes } from "./routes/connectwise.ts";
 import { handleFirewallRoutes } from "./routes/firewalls.ts";
 import { handleHealthCheckRoutes } from "./routes/health-checks.ts";
@@ -34,7 +35,7 @@ const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 //   agent/register|delete|…   JWT via userClient + getUser
 //   passkey/register-*         JWT via userClient + getUser
 //   admin/*                    JWT + org admin role check
-//   assessments                JWT via userClient + getUser
+//   assessments                JWT or service key with scope api:read:assessments (GET list + GET :id)
 //   se-teams/*                 JWT via authenticateSE
 //   health-checks/*            JWT via authenticateSE
 //   config-upload-request(s)   JWT via authenticateSE
@@ -42,8 +43,14 @@ const API_MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 //   firewalls                  JWT via userClient + getUser
 //   send-report                JWT via authenticateSE
 //   service-key/ping           X-FireComply-Service-Key or Bearer (non-JWT) + org_service_api_keys hash
+//   service-key/issue|revoke   JWT + org admin (create/revoke hashed keys; secret returned once on issue)
+//   Service-key scopes (see ISSUABLE_SERVICE_KEY_SCOPES in _shared/service-key.ts):
+//     api:read               →  GET /api/firewalls
+//     api:read:assessments   →  GET /api/assessments, GET /api/assessments/:id
+//   Add new scopes in _shared/service-key.ts + validate in each route before accepting service key.
 //   firewalls (GET)            JWT or service key with scope api:read
 //   connectwise/*              JWT + org admin (credentials, token test, GET whoami)
+//   connectwise-manage/*       JWT + org admin (credentials; company-mappings GET/PUT/DELETE; POST tickets)
 
 // ── Main router ──
 
@@ -100,6 +107,9 @@ serve(async (req: Request) => {
 
   const connectWiseRes = await handleConnectWiseRoutes(req, url, segments, corsHeaders);
   if (connectWiseRes !== null) return connectWiseRes;
+
+  const connectWiseManageRes = await handleConnectWiseManageRoutes(req, url, segments, corsHeaders);
+  if (connectWiseManageRes !== null) return connectWiseManageRes;
 
   return json({ error: "Not found" }, 404);
   } catch (err) {

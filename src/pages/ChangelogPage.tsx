@@ -44,12 +44,29 @@ export default function ChangelogPage() {
               profile from the Edge API (credentials never returned to the browser).
             </li>
             <li>
+              <strong className="text-foreground">ConnectWise Manage (tickets):</strong> Manage REST
+              credentials under PSA settings; admins create idempotent service tickets from{" "}
+              <strong className="text-foreground">Findings — bulk actions</strong> (one finding
+              selected) with server-side dedupe and audit (
+              <code className="text-xs">psa_ticket_idempotency</code>).
+            </li>
+            <li>
+              <strong className="text-foreground">PSA customer mapping:</strong> under ConnectWise
+              Manage settings, map each FireComply customer name (same label as the Customers page)
+              to a Manage company ID; tickets from findings pre-fill the ID or can use the mapping
+              server-side when the field is left empty.
+            </li>
+            <li>
               <strong className="text-foreground">Org service API keys:</strong> workspace settings
-              list active keys; Edge validates{" "}
+              list, create, and revoke keys; Edge validates{" "}
               <code className="text-xs">X-FireComply-Service-Key</code> / Bearer (non-JWT) on{" "}
               <code className="text-xs">/api/service-key/ping</code> and scoped routes such as{" "}
-              <code className="text-xs">GET /api/firewalls</code> when{" "}
-              <code className="text-xs">api:read</code> is granted.
+              <code className="text-xs">GET /api/firewalls</code> with{" "}
+              <code className="text-xs">api:read</code>, and{" "}
+              <code className="text-xs">GET /api/assessments</code> (list + detail) with{" "}
+              <code className="text-xs">api:read:assessments</code>. Issue/revoke via{" "}
+              <code className="text-xs">POST /api/service-key/issue</code> and{" "}
+              <code className="text-xs">/api/service-key/revoke</code> (secret shown once).
             </li>
             <li>
               Agent connector: package version from submissions is shown in Fleet views for support

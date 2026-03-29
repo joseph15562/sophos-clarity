@@ -1,5 +1,6 @@
 import { getOrgMembership } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import { getServiceKeyContext } from "../../_shared/service-key.ts";
 
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return jsonResponse(body, status, corsHeaders);
@@ -12,13 +13,24 @@ export async function handleAssessmentRoutes(
   corsHeaders: Record<string, string>,
 ): Promise<Response | null> {
   if (!(req.method === "GET" && segments[0] === "assessments")) return null;
+
+  let orgId: string | null = null;
   const authHeader = req.headers.get("authorization");
-  if (!authHeader) return json({ error: "Unauthorized" }, 401, corsHeaders);
-  const uc = userClient(authHeader);
-  const { data: { user } } = await uc.auth.getUser();
-  if (!user) return json({ error: "Unauthorized" }, 401, corsHeaders);
-  const membership = await getOrgMembership(user.id);
-  if (!membership) return json({ error: "Forbidden" }, 403, corsHeaders);
+  if (authHeader) {
+    const uc = userClient(authHeader);
+    const {
+      data: { user },
+    } = await uc.auth.getUser();
+    if (user) {
+      const membership = await getOrgMembership(user.id);
+      if (membership) orgId = membership.org_id;
+    }
+  }
+  if (!orgId) {
+    const sk = await getServiceKeyContext(req);
+    if (sk?.scopes.includes("api:read:assessments")) orgId = sk.orgId;
+  }
+  if (!orgId) return json({ error: "Unauthorized" }, 401, corsHeaders);
 
   const db = adminClient();
 
@@ -32,7 +44,7 @@ export async function handleAssessmentRoutes(
     const { data, count } = await db
       .from("assessments")
       .select("id, org_id, customer_name, environment, overall_score, overall_grade, created_at", { count: "exact" })
-      .eq("org_id", membership.org_id)
+      .eq("org_id", orgId)
       .order("created_at", { ascending: false })
       .range(from, to);
 
@@ -55,7 +67,7 @@ export async function handleAssessmentRoutes(
       .from("assessments")
       .select("*")
       .eq("id", id)
-      .eq("org_id", membership.org_id)
+      .eq("org_id", orgId)
       .single();
 
     if (assErr || !assessment) return json({ error: "Assessment not found" }, 404, corsHeaders);
@@ -68,7 +80,7 @@ export async function handleAssessmentRoutes(
     const { data: submissions } = await db
       .from("agent_submissions")
       .select("id, findings_summary, full_analysis, overall_score, overall_grade, created_at")
-      .eq("org_id", membership.org_id)
+      .eq("org_id", orgId)
       .gte("created_at", windowStart)
       .lte("created_at", windowEnd)
       .order("created_at", { ascending: false })
