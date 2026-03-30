@@ -76,6 +76,13 @@ export default function ChangelogPage() {
               <code className="text-xs">logJson</code> catalog and saved-search examples for drains.
             </li>
             <li>
+              <strong className="text-foreground">After a deploy:</strong> if you see
+              &quot;Importing a module script failed&quot;, use{" "}
+              <strong className="text-foreground">Reload page</strong> (or a normal browser refresh)
+              so the app loads the new script bundle. The error screen explains this; HTML responses
+              use <code className="text-xs">no-cache</code> to reduce stale shells.
+            </li>
+            <li>
               <strong className="text-foreground">Report exports:</strong> PDF (browser print) and
               Word downloads use Sophos-styled tables (navy headers, light row bands) and layout
               that wraps wide firewall-rule columns instead of cutting off the right edge; Word uses

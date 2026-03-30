@@ -12,6 +12,20 @@ interface State {
   error: Error | null;
 }
 
+/** Stale SPA shell after deploy: old index points at removed hashed chunks. Full reload fetches fresh HTML. */
+export function isLikelyStaleBundleError(error: Error | null): boolean {
+  if (!error?.message) return false;
+  const m = error.message.toLowerCase();
+  return (
+    m.includes("importing a module script failed") ||
+    m.includes("failed to fetch dynamically imported module") ||
+    m.includes("error loading dynamically imported module") ||
+    m.includes("loading css chunk") ||
+    m.includes("loading chunk") ||
+    m.includes("dynamically imported module")
+  );
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, error: null };
 
@@ -27,8 +41,13 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
+  handleFullReload = () => {
+    window.location.reload();
+  };
+
   render() {
     if (this.state.hasError) {
+      const staleBundle = isLikelyStaleBundleError(this.state.error);
       return (
         <div className="rounded-xl border border-border/50 bg-card p-6 text-center space-y-3">
           <div className="flex justify-center">
@@ -40,22 +59,56 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.props.fallbackTitle ?? "Something went wrong"}
           </h3>
           <p className="text-xs text-muted-foreground max-w-md mx-auto">
-            This section encountered an error. Your data is safe — try refreshing this section or
-            reload the page.
+            {staleBundle ? (
+              <>
+                This usually happens right after we publish an update: your browser still has an old
+                copy of the app that points at scripts that no longer exist.{" "}
+                <strong className="text-foreground">Reload the page</strong> to fetch the latest
+                version (a normal refresh is enough).
+              </>
+            ) : (
+              <>
+                This section encountered an error. Your data is safe — try refreshing this section
+                or reload the page.
+              </>
+            )}
           </p>
           {this.state.error && (
-            <p className="text-[10px] font-mono text-muted-foreground/60 max-w-md mx-auto truncate">
+            <p className="text-[10px] font-mono text-muted-foreground/60 max-w-md mx-auto break-all">
               {this.state.error.message}
             </p>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={this.handleRetry}
-            className="gap-1.5 text-xs"
-          >
-            <RotateCcw className="h-3 w-3" /> Try Again
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {staleBundle ? (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={this.handleFullReload}
+                className="gap-1.5 text-xs"
+              >
+                <RotateCcw className="h-3 w-3" /> Reload page
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={this.handleFullReload}
+                  className="gap-1.5 text-xs"
+                >
+                  <RotateCcw className="h-3 w-3" /> Reload page
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={this.handleRetry}
+                  className="gap-1.5 text-xs"
+                >
+                  Try again (same session)
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       );
     }

@@ -32,6 +32,7 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Changed
 
+- **Stale deploy recovery:** error UI explains “module script” / dynamic-import failures after releases, offers **Reload page** (full refresh), and once-per-session auto-reload on matching `unhandledrejection`. Non-asset routes send `Cache-Control: …, no-cache` so browsers revalidate the SPA shell sooner.
 - Portal settings: tenant/bootstrap data loads via TanStack Query (`queryKeys.portal.tenantBootstrap`) with invalidation after save.
 - Saved reports library (management drawer): list/delete via TanStack Query (`queryKeys.savedReports.packages`).
 - `api-public` / `api-agent`: structured `logJson` on 404, auth failures, and unhandled errors; observability doc catalogs messages + latency dashboard hints.
