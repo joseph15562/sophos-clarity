@@ -9,7 +9,10 @@ export function initEdgeSentry(_opts: { functionName: string }): void {
   // Integrate @sentry/deno init here after dependency is added to the function import map.
 }
 
-export function captureEdgeException(_err: unknown, _context?: Record<string, string>): void {
+export function captureEdgeException(
+  _err: unknown,
+  _context?: Record<string, string>,
+): void {
   if (!Deno.env.get("SENTRY_EDGE_DSN")) return;
   // Forward to Sentry after SDK is wired.
 }

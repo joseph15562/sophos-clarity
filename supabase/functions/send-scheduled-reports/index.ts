@@ -228,7 +228,9 @@ function computeNextDue(schedule: string, from: Date): string {
 // Main handler
 // ---------------------------------------------------------------------------
 
-export async function handleSendScheduledReports(req: Request): Promise<Response> {
+export async function handleSendScheduledReports(
+  req: Request,
+): Promise<Response> {
   // Allow both POST (cron) and GET (manual trigger)
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200 });

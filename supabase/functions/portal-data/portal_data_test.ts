@@ -37,7 +37,9 @@ Deno.test("portal-data: POST returns 405", async () => {
 Deno.test("portal-data: slug longer than 200 chars returns 400", async () => {
   const longSlug = "a".repeat(201);
   const req = new Request(
-    `https://example.com/functions/v1/portal-data?slug=${encodeURIComponent(longSlug)}`,
+    `https://example.com/functions/v1/portal-data?slug=${
+      encodeURIComponent(longSlug)
+    }`,
     {
       method: "GET",
       headers: { Origin: "http://localhost:5173" },

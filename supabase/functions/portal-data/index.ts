@@ -132,8 +132,8 @@ export async function handlePortalDataRequest(req: Request): Promise<Response> {
       );
     }
 
-    const identifier =
-      parsedQuery.data.slug?.trim() ?? parsedQuery.data.org_id?.trim() ?? "";
+    const identifier = parsedQuery.data.slug?.trim() ??
+      parsedQuery.data.org_id?.trim() ?? "";
 
     if (!identifier) {
       return new Response(
