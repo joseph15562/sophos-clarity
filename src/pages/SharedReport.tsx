@@ -147,32 +147,32 @@ const SharedReport = () => {
       {/* Match main doc shell exactly: same classes and structure as DocumentPreview ReportContent */}
       <div className="max-w-full w-full mx-auto px-4 py-8">
         <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">
-          <div className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex items-center justify-between">
+          <div className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5 opacity-60" />
               <span className="text-[11px] font-semibold text-white/70 uppercase tracking-widest">
                 Sophos FireComply — Document
               </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {report.allowDownload !== false && (
-                <div className="no-print flex items-center gap-2">
+                <div className="no-print flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
                     onClick={handleWord}
-                    className="gap-1.5 h-8 text-white/90 bg-white/10 border-white/20 hover:bg-white/20"
+                    className="gap-1.5 h-8 shrink-0 whitespace-nowrap text-white/90 bg-white/10 border-white/20 hover:bg-white/20"
                   >
-                    <FileText className="h-3.5 w-3.5" /> Download Word
+                    <FileText className="h-3.5 w-3.5 shrink-0" /> Download Word
                   </Button>
                   <Button
                     type="button"
                     size="sm"
                     onClick={handlePdf}
-                    className="gap-1.5 h-8 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white border-0"
+                    className="gap-1.5 h-8 shrink-0 whitespace-nowrap bg-[#2006F7] hover:bg-[#2006F7]/90 text-white border-0"
                   >
-                    <Download className="h-3.5 w-3.5" /> Download PDF
+                    <Download className="h-3.5 w-3.5 shrink-0" /> Download PDF
                   </Button>
                 </div>
               )}

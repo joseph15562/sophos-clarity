@@ -39,5 +39,6 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 - Report Centre empty state uses shared `EmptyState` + workspace CTA.
 - API Hub / `openapi.yaml`: document public `api-public` shared-report and shared-health-check GET paths for embeds.
 - `docs/REVIEW.md` — scorecard, Dimension 1–7 findings, Tier 2/3 checkboxes, and **§4 THE BRUTAL TRUTH** aligned with review follow-on: **E2E auth bypass**, **viewport** Playwright, **EmptyState** sweep (fleet / SE / assessments / drift / customers / AgentManager), **Invite Staff** Query + zod pilot, **`portal-data` / `parse-config`** OpenAPI, **`parse_config_unhandled`**, **debounce** / **k6** smoke / **seed** stub / **PERF-EXPLAIN** / partial stable keys.
+- **PDF (print) & Word report exports:** tables use Sophos navy headers, light zebra rows, and `table-layout: fixed` with wrapping so wide firewall-rule grids stay on the page instead of clipping; Word uses landscape + a fixed column grid. Document preview export buttons no longer shrink awkwardly in tight layouts.
 - Client toasts use Sonner only (removed duplicate shadcn toast stack).
 - Scheduled report sender batches `agent_submissions` by org; health-check follow-ups batch `se_profiles`; regulatory scanner batches `upsert` rows.

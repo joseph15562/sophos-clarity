@@ -76,6 +76,13 @@ export default function ChangelogPage() {
               <code className="text-xs">logJson</code> catalog and saved-search examples for drains.
             </li>
             <li>
+              <strong className="text-foreground">Report exports:</strong> PDF (browser print) and
+              Word downloads use Sophos-styled tables (navy headers, light row bands) and layout
+              that wraps wide firewall-rule columns instead of cutting off the right edge; Word uses
+              landscape with a fixed column grid. Export action labels keep full width in the
+              document toolbar.
+            </li>
+            <li>
               SE Health Check: config upload request list loads via TanStack Query (cancellable
               fetch); main page shell slimmed for easier maintenance — including extracted{" "}
               <strong className="text-foreground">Central API help</strong> panel component.

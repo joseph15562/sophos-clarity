@@ -20,6 +20,10 @@ import {
   TableCell,
   WidthType,
   BorderStyle,
+  TableLayoutType,
+  ShadingType,
+  PageOrientation,
+  VerticalAlignTable,
 } from "docx";
 import PptxGenJS from "pptxgenjs";
 
@@ -34,45 +38,90 @@ function isSeparatorRow(line: string): boolean {
 }
 
 function parseTableRow(line: string): string[] {
-  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
 }
 
 // ── DOCX utilities ──
 
+/** Sophos navy header + light grid (matches PDF / product palette). */
+const DOCX_TABLE_HEADER_FILL = "001A47";
+const DOCX_TABLE_HEADER_TEXT = "FFFFFF";
+const DOCX_TABLE_ZEBRA = "EDF2F9";
+const DOCX_TABLE_GRID = "94A3B8";
+
 function buildDocxTable(tableLines: string[]): Table {
   const dataRows = tableLines.filter((l) => !isSeparatorRow(l));
+  if (dataRows.length === 0) {
+    return new Table({ rows: [], width: { size: 100, type: WidthType.PERCENTAGE } });
+  }
+
+  const cellCount = Math.max(...dataRows.map((line) => parseTableRow(line).length), 1);
+  /** Twip grid for landscape body — wide firewall rule tables need room to wrap, not squeeze. */
+  const gridTotal = 13_000;
+  const baseW = Math.floor(gridTotal / cellCount);
+  const remainder = gridTotal - baseW * cellCount;
+  const columnWidths: number[] = Array.from(
+    { length: cellCount },
+    (_, i) => baseW + (i < remainder ? 1 : 0),
+  );
+
   const cellBorders = {
-    top: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
-    bottom: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
-    left: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
-    right: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+    top: { style: BorderStyle.SINGLE, size: 1, color: DOCX_TABLE_GRID },
+    bottom: { style: BorderStyle.SINGLE, size: 1, color: DOCX_TABLE_GRID },
+    left: { style: BorderStyle.SINGLE, size: 1, color: DOCX_TABLE_GRID },
+    right: { style: BorderStyle.SINGLE, size: 1, color: DOCX_TABLE_GRID },
   };
 
+  const fontBody = cellCount > 12 ? 16 : cellCount > 8 ? 18 : 20;
+  const fontHeader = cellCount > 12 ? 18 : 22;
+
   const rows = dataRows.map((line, rowIdx) => {
-    const cells = parseTableRow(line);
+    let cells = parseTableRow(line);
+    while (cells.length < cellCount) cells.push("");
+    if (cells.length > cellCount) cells = cells.slice(0, cellCount);
+    const isHeader = rowIdx === 0;
+
     return new TableRow({
-      children: cells.map((cell) =>
-        new TableCell({
-          borders: cellBorders,
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: cell,
-                  bold: rowIdx === 0,
-                  size: rowIdx === 0 ? 22 : 20,
-                }),
-              ],
-            }),
-          ],
-        })
+      children: cells.map(
+        (cell) =>
+          new TableCell({
+            borders: cellBorders,
+            verticalAlign: VerticalAlignTable.TOP,
+            margins: { top: 60, bottom: 60, left: 90, right: 90 },
+            shading: isHeader
+              ? { fill: DOCX_TABLE_HEADER_FILL, type: ShadingType.CLEAR }
+              : rowIdx % 2 === 1
+                ? { fill: DOCX_TABLE_ZEBRA, type: ShadingType.CLEAR }
+                : { fill: "FFFFFF", type: ShadingType.CLEAR },
+            children: [
+              new Paragraph({
+                spacing: { after: 0, before: 0, line: 240 },
+                children: [
+                  new TextRun({
+                    text: cell,
+                    bold: isHeader,
+                    size: isHeader ? fontHeader : fontBody,
+                    color: isHeader ? DOCX_TABLE_HEADER_TEXT : "334155",
+                    font: "Calibri",
+                  }),
+                ],
+              }),
+            ],
+          }),
       ),
     });
   });
 
   return new Table({
     rows,
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: gridTotal, type: WidthType.DXA },
+    columnWidths,
+    layout: TableLayoutType.FIXED,
   });
 }
 
@@ -138,7 +187,7 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
         new Paragraph({
           heading: headingMap[level] || HeadingLevel.HEADING_6,
           children: parseInlineFormatting(headingMatch[2]),
-        })
+        }),
       );
       i++;
       continue;
@@ -150,7 +199,7 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
         new Paragraph({
           bullet: { level: 0 },
           children: parseInlineFormatting(bulletMatch[1]),
-        })
+        }),
       );
       i++;
       continue;
@@ -162,7 +211,7 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
         new Paragraph({
           numbering: { reference: "default-numbering", level: 0 },
           children: parseInlineFormatting(numberedMatch[1]),
-        })
+        }),
       );
       i++;
       continue;
@@ -173,7 +222,7 @@ function markdownToDocxElements(md: string): (Paragraph | Table)[] {
         new Paragraph({
           border: { bottom: { color: "999999", space: 1, style: "single" as const, size: 6 } },
           children: [new TextRun("")],
-        })
+        }),
       );
       i++;
       continue;
@@ -204,8 +253,18 @@ function extractTocFromHtml(html: string): { id: string; text: string }[] {
   const h2Regex = /<h2[^>]*(?:id="([^"]*)")?[^>]*>([\s\S]*?)<\/h2>/gi;
   let m;
   while ((m = h2Regex.exec(html)) !== null) {
-    const rawText = (m[2] || "").replace(/<[^>]+>/g, "").replace(/\*\*/g, "").replace(/`/g, "").trim();
-    const id = m[1] || rawText.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "") || `h-${toc.length}`;
+    const rawText = (m[2] || "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\*\*/g, "")
+      .replace(/`/g, "")
+      .trim();
+    const id =
+      m[1] ||
+      rawText
+        .toLowerCase()
+        .replace(/[^\w]+/g, "-")
+        .replace(/^-|-$/g, "") ||
+      `h-${toc.length}`;
     toc.push({ id, text: rawText });
   }
   return toc;
@@ -237,11 +296,15 @@ export function buildPdfHtml(
   innerHTML: string,
   title: string,
   branding?: BrandingData,
-  options?: BuildPdfHtmlOptions
+  options?: BuildPdfHtmlOptions,
 ): string {
   const companyName = branding?.companyName || "";
   const customerName = branding?.customerName || "";
-  const dateStr = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   const confidential = branding?.confidential ?? false;
   const theme = options?.theme ?? "light";
   const omitInteractiveChrome = options?.omitInteractiveChrome ?? false;
@@ -265,9 +328,9 @@ export function buildPdfHtml(
     !options?.omitPdfToc && tocEntries.length >= 2
       ? `<nav class="pdf-toc" aria-label="Table of Contents">
   <h2 class="pdf-toc-title">Table of Contents</h2>
-  <ul class="pdf-toc-list">${tocEntries.map((e) =>
-      `<li><a href="#${e.id}">${e.text}</a></li>`
-    ).join("")}</ul>
+  <ul class="pdf-toc-list">${tocEntries
+    .map((e) => `<li><a href="#${e.id}">${e.text}</a></li>`)
+    .join("")}</ul>
 </nav>`
       : "";
 
@@ -458,8 +521,8 @@ export function buildPdfHtml(
       border-collapse: separate;
       border-spacing: 0;
       font-size: 9pt;
-      table-layout: auto;
-      min-width: 500px;
+      table-layout: fixed;
+      min-width: 0;
     }
     thead { display: table-header-group; }
     tr { page-break-inside: avoid; transition: background 0.15s; }
@@ -470,7 +533,9 @@ export function buildPdfHtml(
       text-align: left;
       padding: 10px 14px;
       border-bottom: 1px solid var(--border);
-      white-space: nowrap;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
       font-size: 8pt;
       text-transform: uppercase;
       letter-spacing: 0.6px;
@@ -484,7 +549,7 @@ export function buildPdfHtml(
       padding: 9px 14px;
       border-bottom: 1px solid var(--border);
       word-wrap: break-word;
-      overflow-wrap: break-word;
+      overflow-wrap: anywhere;
       vertical-align: top;
       color: var(--text-secondary);
     }
@@ -620,12 +685,46 @@ export function buildPdfHtml(
         content: "Page " counter(page) " of " counter(pages) " — ${companyName || "Sophos FireComply"}${customerName ? ` • ${customerName}` : ""}";
       }
 
-      table { font-size: 8.5pt; min-width: 0; }
-      th, td { padding: 5px 7px; }
-      th { print-color-adjust: exact; -webkit-print-color-adjust: exact; background: #f5f5f5 !important; color: #1a1a1a !important; }
-      tbody tr:nth-child(even) td { print-color-adjust: exact; -webkit-print-color-adjust: exact; background: #fafafa !important; }
-      tbody tr:nth-child(odd) td { background: #fff !important; }
-      .table-wrapper { overflow: visible; border-radius: 0; }
+      table {
+        font-size: 8pt;
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+      }
+      th, td {
+        padding: 4px 6px !important;
+        vertical-align: top !important;
+        word-wrap: break-word !important;
+        overflow-wrap: anywhere !important;
+        white-space: normal !important;
+      }
+      th {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+        background: #001A47 !important;
+        color: #ffffff !important;
+        border: 1px solid #003366 !important;
+        font-weight: 600 !important;
+      }
+      td {
+        border: 1px solid #cbd5e1 !important;
+        color: #334155 !important;
+      }
+      tbody tr:nth-child(even) td {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+        background: #EDF2F9 !important;
+      }
+      tbody tr:nth-child(odd) td {
+        background: #ffffff !important;
+      }
+      .table-wrapper {
+        overflow: visible !important;
+        border-radius: 0;
+        max-width: 100% !important;
+        border: 1px solid #cbd5e1;
+      }
     }
   </style>
 </head>
@@ -636,18 +735,21 @@ export function buildPdfHtml(
   <style>.no-print { display: none; }</style>
   <style>@media print { .no-print { display: none !important; } .print-header, .print-footer, .pdf-watermark { display: block !important; } }</style>
 
-  ${omitInteractiveChrome
-    ? ""
-    : `<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" type="button">&#9789; Dark Mode</button>`
+  ${
+    omitInteractiveChrome
+      ? ""
+      : `<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" type="button">&#9789; Dark Mode</button>`
   }
 
-  ${omitReportHeader
-    ? ""
-    : `<div class="report-header">
+  ${
+    omitReportHeader
+      ? ""
+      : `<div class="report-header">
     <div class="brand">
-      ${customLogo
-        ? `<img src="${customLogo}" alt="${companyName}" style="height:32px;width:auto;max-width:180px;object-fit:contain;" class="sophos-logo" />`
-        : `<span class="sophos-logo">${sophosLogoDark}</span>`
+      ${
+        customLogo
+          ? `<img src="${customLogo}" alt="${companyName}" style="height:32px;width:auto;max-width:180px;object-fit:contain;" class="sophos-logo" />`
+          : `<span class="sophos-logo">${sophosLogoDark}</span>`
       }
       <span class="brand-divider"></span>
       <span class="brand-sub">${companyName || "FireComply"}</span>
@@ -662,17 +764,19 @@ export function buildPdfHtml(
 
   <div class="print-content">${printContentInner}</div>
 
-  ${omitReportFooter
-    ? ""
-    : `<div class="report-footer">
+  ${
+    omitReportFooter
+      ? ""
+      : `<div class="report-footer">
     <div>${footerText || (companyName ? `Generated by ${companyName}` : "Generated by Sophos FireComply")}</div>
     <div>${dateStr}${preparedBy ? ` &mdash; ${preparedBy}` : companyName ? ` &mdash; ${companyName}` : ""}</div>
   </div>`
   }
 
-  ${omitInteractiveChrome
-    ? ""
-    : `<script>
+  ${
+    omitInteractiveChrome
+      ? ""
+      : `<script>
     function toggleTheme() {
       var html = document.documentElement;
       var btn = document.getElementById('themeBtn');
@@ -714,18 +818,22 @@ export async function generateWordBlob(markdown: string, branding: BrandingData)
         heading: HeadingLevel.TITLE,
         alignment: AlignmentType.LEFT,
         children: [new TextRun({ text: branding.companyName, bold: true, size: 36 })],
-      })
+      }),
     );
     headerParagraphs.push(
       new Paragraph({
-        children: [new TextRun({ text: "Firewall Configuration Report", color: "666666", size: 24 })],
-      })
+        children: [
+          new TextRun({ text: "Firewall Configuration Report", color: "666666", size: 24 }),
+        ],
+      }),
     );
     if (branding.customerName) {
       headerParagraphs.push(
         new Paragraph({
-          children: [new TextRun({ text: `Customer: ${branding.customerName}`, color: "333333", size: 22 })],
-        })
+          children: [
+            new TextRun({ text: `Customer: ${branding.customerName}`, color: "333333", size: 22 }),
+          ],
+        }),
       );
     }
     if (branding.preparedBy) {
@@ -739,19 +847,23 @@ export async function generateWordBlob(markdown: string, branding: BrandingData)
               italics: true,
             }),
           ],
-        })
+        }),
       );
     }
     headerParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+            text: new Date().toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }),
             color: "999999",
             size: 18,
           }),
         ],
-      })
+      }),
     );
     headerParagraphs.push(new Paragraph({ text: "" }));
   }
@@ -761,12 +873,19 @@ export async function generateWordBlob(markdown: string, branding: BrandingData)
       config: [
         {
           reference: "default-numbering",
-          levels: [{ level: 0, format: "decimal" as const, text: "%1.", alignment: AlignmentType.START }],
+          levels: [
+            { level: 0, format: "decimal" as const, text: "%1.", alignment: AlignmentType.START },
+          ],
         },
       ],
     },
     sections: [
       {
+        properties: {
+          page: {
+            size: { orientation: PageOrientation.LANDSCAPE },
+          },
+        },
         children: [...headerParagraphs, ...markdownToDocxElements(markdown)],
       },
     ],
@@ -781,7 +900,7 @@ export async function generateWordBlob(markdown: string, branding: BrandingData)
 export async function generatePptxBlob(
   markdown: string,
   reportLabel: string,
-  branding: BrandingData
+  branding: BrandingData,
 ): Promise<Blob> {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
@@ -1095,7 +1214,7 @@ export async function generatePptxBlob(
               fontFace: "Segoe UI",
               valign: "top" as const,
             },
-          }))
+          })),
         );
 
         tSlide.addTable([headerRow, ...dataRows], {

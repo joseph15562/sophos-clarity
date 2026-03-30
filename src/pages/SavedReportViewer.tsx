@@ -203,25 +203,25 @@ function SavedReportViewerInner() {
               </span>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="no-print flex items-center gap-2">
+              <div className="no-print flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   onClick={() => void handleWord()}
                   disabled={!markdown.trim()}
-                  className="gap-1.5 h-8 text-white/90 bg-white/10 border-white/20 hover:bg-white/20"
+                  className="gap-1.5 h-8 shrink-0 whitespace-nowrap text-white/90 bg-white/10 border-white/20 hover:bg-white/20"
                 >
-                  <FileText className="h-3.5 w-3.5" /> Download Word
+                  <FileText className="h-3.5 w-3.5 shrink-0" /> Download Word
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   onClick={handlePdf}
                   disabled={!markdown.trim()}
-                  className="gap-1.5 h-8 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white border-0"
+                  className="gap-1.5 h-8 shrink-0 whitespace-nowrap bg-[#2006F7] hover:bg-[#2006F7]/90 text-white border-0"
                 >
-                  <Download className="h-3.5 w-3.5" /> Download PDF
+                  <Download className="h-3.5 w-3.5 shrink-0" /> Download PDF
                 </Button>
               </div>
               <span className="text-[10px] text-white/40">Saved {savedLabel}</span>

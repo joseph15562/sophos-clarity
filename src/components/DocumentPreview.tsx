@@ -844,7 +844,7 @@ function ReportContent({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2 no-print">
+      <div className="flex flex-wrap items-center justify-end gap-2 no-print">
         {isFailed && (
           <Button variant="destructive" onClick={onRetry} className="gap-2">
             <RefreshCw className="h-4 w-4" /> Retry
@@ -855,27 +855,27 @@ function ReportContent({
             <Button
               variant="secondary"
               onClick={handleShare}
-              className="gap-2"
+              className="gap-2 shrink-0 whitespace-nowrap"
               data-tour="share-report"
             >
-              <Share2 className="h-4 w-4" /> Share Report
+              <Share2 className="h-4 w-4 shrink-0" /> Share Report
             </Button>
             <Button
               variant="secondary"
               onClick={handleWord}
-              className="gap-2"
+              className="gap-2 shrink-0 whitespace-nowrap"
               data-tour="export-word"
               data-testid="export-download-word"
             >
-              <FileText className="h-4 w-4" /> Download Word
+              <FileText className="h-4 w-4 shrink-0" /> Download Word
             </Button>
             <Button
               onClick={handlePdf}
-              className="gap-2"
+              className="gap-2 shrink-0 whitespace-nowrap"
               data-tour="export-pdf"
               data-testid="export-download-pdf"
             >
-              <Download className="h-4 w-4" /> Download PDF
+              <Download className="h-4 w-4 shrink-0" /> Download PDF
             </Button>
           </>
         )}
