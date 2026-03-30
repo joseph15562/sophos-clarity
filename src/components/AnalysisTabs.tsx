@@ -21,12 +21,7 @@ import { FindingsChanges } from "@/components/FindingsChanges";
 import { PriorityActions } from "@/components/PriorityActions";
 import { HeroOutcomePanel } from "@/components/HeroOutcomePanel";
 import { CriticalActionsPanel } from "@/components/CriticalActionsPanel";
-import {
-  SectionSkeleton,
-  ChartSkeleton,
-  StatGridSkeleton,
-  CardSkeleton,
-} from "@/components/DashboardSkeleton";
+import { ChartSkeleton, StatGridSkeleton, CardSkeleton } from "@/components/DashboardSkeleton";
 import { WidgetCustomiser } from "@/components/WidgetCustomiser";
 import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
 import { downloadInteractiveHtml } from "@/lib/analysis-interactive-html";
@@ -43,22 +38,16 @@ import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { RiskScoreResult } from "@/lib/risk-score";
 import { SecurityPostureScorecard } from "@/components/SecurityPostureScorecard";
 import { cn } from "@/lib/utils";
+import { ScoreDialGauge } from "@/components/ScoreDialGauge";
+import { ScoreDeltaBanner } from "@/components/ScoreDeltaBanner";
+import { QuickActions } from "@/components/QuickActions";
+import { RiskScoreDashboard } from "@/components/RiskScoreDashboard";
+import { RemediationPlaybooks } from "@/components/RemediationPlaybooks";
+import { ComplianceHeatmap } from "@/components/ComplianceHeatmap";
+import { InsuranceReadiness } from "@/components/InsuranceReadiness";
+import { RuleOptimiser } from "@/components/RuleOptimiser";
+import { SophosBestPractice } from "@/components/SophosBestPractice";
 
-const RiskScoreDashboard = lazy(() =>
-  import("@/components/RiskScoreDashboard").then((m) => ({ default: m.RiskScoreDashboard })),
-);
-const RemediationPlaybooks = lazy(() =>
-  import("@/components/RemediationPlaybooks").then((m) => ({ default: m.RemediationPlaybooks })),
-);
-const ComplianceHeatmap = lazy(() =>
-  import("@/components/ComplianceHeatmap").then((m) => ({ default: m.ComplianceHeatmap })),
-);
-const InsuranceReadiness = lazy(() =>
-  import("@/components/InsuranceReadiness").then((m) => ({ default: m.InsuranceReadiness })),
-);
-const RuleOptimiser = lazy(() =>
-  import("@/components/RuleOptimiser").then((m) => ({ default: m.RuleOptimiser })),
-);
 const ConsistencyChecker = lazy(() =>
   import("@/components/ConsistencyChecker").then((m) => ({ default: m.ConsistencyChecker })),
 );
@@ -67,9 +56,6 @@ const ScoreSimulator = lazy(() =>
 );
 const AttackSurfaceMap = lazy(() =>
   import("@/components/AttackSurfaceMap").then((m) => ({ default: m.AttackSurfaceMap })),
-);
-const SophosBestPractice = lazy(() =>
-  import("@/components/SophosBestPractice").then((m) => ({ default: m.SophosBestPractice })),
 );
 const SeverityBreakdown = lazy(() =>
   import("@/components/SecurityDashboards").then((m) => ({ default: m.SeverityBreakdown })),
@@ -95,12 +81,6 @@ const PriorityMatrix = lazy(() =>
 const CentralEnrichment = lazy(() =>
   import("@/components/CentralEnrichment").then((m) => ({ default: m.CentralEnrichment })),
 );
-const ScoreDialGauge = lazy(() =>
-  import("@/components/ScoreDialGauge").then((m) => ({ default: m.ScoreDialGauge })),
-);
-const ScoreDeltaBanner = lazy(() =>
-  import("@/components/ScoreDeltaBanner").then((m) => ({ default: m.ScoreDeltaBanner })),
-);
 const RiskSummaryCards = lazy(() =>
   import("@/components/RiskSummaryCards").then((m) => ({ default: m.RiskSummaryCards })),
 );
@@ -115,9 +95,6 @@ const RiskRoiWidget = lazy(() =>
 );
 const RuleAnalysisWidget = lazy(() =>
   import("@/components/RuleAnalysisWidget").then((m) => ({ default: m.RuleAnalysisWidget })),
-);
-const QuickActions = lazy(() =>
-  import("@/components/QuickActions").then((m) => ({ default: m.QuickActions })),
 );
 const FindingsByAge = lazy(() =>
   import("@/components/FindingsByAge").then((m) => ({ default: m.FindingsByAge })),
@@ -212,9 +189,6 @@ const EvidenceCollection = lazy(() =>
 const RegulatoryTracker = lazy(() =>
   import("@/components/RegulatoryTracker").then((m) => ({ default: m.RegulatoryTracker })),
 );
-const FleetComparison = lazy(() =>
-  import("@/components/FleetComparison").then((m) => ({ default: m.FleetComparison })),
-);
 const BaselineManager = lazy(() =>
   import("@/components/BaselineManager").then((m) => ({ default: m.BaselineManager })),
 );
@@ -226,6 +200,60 @@ const CompareToSavedBaseline = lazy(() =>
 const FindingsBulkView = lazy(() =>
   import("@/components/FindingsBulkView").then((m) => ({ default: m.FindingsBulkView })),
 );
+
+/**
+ * Radix Tabs unmount inactive panels; each tab’s `React.lazy` chunks only start loading on first
+ * open. In Vite dev, cold dynamic imports can leave Suspense fallbacks visible until a tab switch
+ * remounts after modules are cached. Preload every lazy module used in this file once analysis
+ * exists (plus a short dev-only second pass) so Overview and other default views hydrate without
+ * forcing a tab hop.
+ */
+function preloadAnalysisTabsLazyChunks() {
+  void import("@/components/ConsistencyChecker");
+  void import("@/components/ScoreSimulator");
+  void import("@/components/AttackSurfaceMap");
+  void import("@/components/SecurityDashboards");
+  void import("@/components/PriorityMatrix");
+  void import("@/components/CentralEnrichment");
+  void import("@/components/RiskSummaryCards");
+  void import("@/components/ProtocolServiceWidget");
+  void import("@/components/ComplianceGapWidget");
+  void import("@/components/RiskRoiWidget");
+  void import("@/components/RuleAnalysisWidget");
+  void import("@/components/FindingsByAge");
+  void import("@/components/RemediationVelocity");
+  void import("@/components/SlaComplianceGauge");
+  void import("@/components/AlertFeed");
+  void import("@/components/CategoryScoreBars");
+  void import("@/components/RuleActionDistribution");
+  void import("@/components/CoverageMatrix");
+  void import("@/components/RiskDistribution");
+  void import("@/components/CategoryTrends");
+  void import("@/components/FindingHeatmapTime");
+  void import("@/components/AdminExposureMap");
+  void import("@/components/VpnSecuritySummary");
+  void import("@/components/NetworkZoneMap");
+  void import("@/components/PolicyComplexity");
+  void import("@/components/UnusedObjects");
+  void import("@/components/ConfigSizeMetrics");
+  void import("@/components/CompliancePostureRing");
+  void import("@/components/FrameworkCoverageBars");
+  void import("@/components/GeographicFleetMap");
+  void import("@/components/ExportCentre");
+  void import("@/components/RemediationRoadmap");
+  void import("@/components/FixEffortBreakdown");
+  void import("@/components/ImpactEffortBubble");
+  void import("@/components/RemediationProgress");
+  void import("@/components/ThreatFeedTimeline");
+  void import("@/components/MdrStatus");
+  void import("@/components/FirmwareTracker");
+  void import("@/components/AssessmentPulse");
+  void import("@/components/EvidenceCollection");
+  void import("@/components/RegulatoryTracker");
+  void import("@/components/BaselineManager");
+  void import("@/components/CompareToSavedBaseline");
+  void import("@/components/FindingsBulkView");
+}
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -313,6 +341,15 @@ export function AnalysisTabs({
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
   const w = (id: string) => isWidgetVisible(widgetPrefs, id);
 
+  const analysisFileCount = Object.keys(analysisResult).length;
+  useEffect(() => {
+    if (analysisFileCount === 0) return;
+    preloadAnalysisTabsLazyChunks();
+    if (!import.meta.env.DEV) return;
+    const t = window.setTimeout(() => preloadAnalysisTabsLazyChunks(), 250);
+    return () => clearTimeout(t);
+  }, [analysisFileCount]);
+
   const handleTabChange = useCallback(
     (value: string) => {
       setActiveTab(value);
@@ -368,7 +405,7 @@ export function AnalysisTabs({
           <TourHint
             tourId="analysis-tabs"
             title="Analysis Tabs"
-            description="Deep-dive into security analysis, compliance mapping, rule optimisation, and remediation playbooks. Click any tab to explore."
+            description="Deep-dive into security analysis, compliance, remediation, optimisation, tools, and insurance readiness. Click any tab to explore."
           />
         </h2>
         <div
@@ -379,7 +416,11 @@ export function AnalysisTabs({
             className="flex-nowrap whitespace-nowrap w-max min-w-full inline-flex"
             data-tour="analysis-tabs"
           >
-            <TabsTrigger value="overview" className="gap-2">
+            <TabsTrigger
+              value="overview"
+              className="gap-2"
+              onPointerEnter={preloadAnalysisTabsLazyChunks}
+            >
               <LayoutDashboard className="h-3.5 w-3.5" />
               Overview
               {totalFindings > 0 && (
@@ -388,34 +429,63 @@ export function AnalysisTabs({
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
+            <TabsTrigger
+              value="security"
+              className="gap-2"
+              onPointerEnter={preloadAnalysisTabsLazyChunks}
+            >
               <ShieldCheck className="h-3.5 w-3.5" />
               Security Analysis
             </TabsTrigger>
-            <TabsTrigger value="compliance" className="gap-2">
+            <TabsTrigger
+              value="compliance"
+              className="gap-2"
+              onPointerEnter={preloadAnalysisTabsLazyChunks}
+            >
               <ClipboardCheck className="h-3.5 w-3.5" />
               Compliance
             </TabsTrigger>
-            <TabsTrigger value="insurance-readiness" className="gap-2">
-              <Shield className="h-3.5 w-3.5" />
-              Insurance Readiness
-            </TabsTrigger>
-            <TabsTrigger value="optimisation" className="gap-2">
-              <Zap className="h-3.5 w-3.5" />
-              Optimisation
-            </TabsTrigger>
-            <TabsTrigger value="tools" className="gap-2">
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              Tools
-            </TabsTrigger>
             {totalFindings > 0 && (
-              <TabsTrigger value="remediation" className="gap-2">
+              <TabsTrigger
+                value="remediation"
+                className="gap-2"
+                onPointerEnter={preloadAnalysisTabsLazyChunks}
+              >
                 <Wrench className="h-3.5 w-3.5" />
                 Remediation
               </TabsTrigger>
             )}
+            <TabsTrigger
+              value="optimisation"
+              className="gap-2"
+              onPointerEnter={preloadAnalysisTabsLazyChunks}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Optimisation
+            </TabsTrigger>
+            <TabsTrigger
+              value="tools"
+              className="gap-2"
+              onPointerEnter={preloadAnalysisTabsLazyChunks}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Tools
+            </TabsTrigger>
+            <TabsTrigger
+              value="insurance-readiness"
+              className="gap-2"
+              onPointerEnter={preloadAnalysisTabsLazyChunks}
+            >
+              <Shield className="h-3.5 w-3.5" />
+              Insurance Readiness
+            </TabsTrigger>
             {files.length >= 2 && (
-              <TabsTrigger value="compare" className="gap-2" data-tour="compare-tab">
+              <TabsTrigger
+                value="compare"
+                className="gap-2"
+                data-tour="compare-tab"
+                onPointerEnter={preloadAnalysisTabsLazyChunks}
+              >
                 <ArrowLeftRight className="h-3.5 w-3.5" />
                 Compare
               </TabsTrigger>
@@ -468,13 +538,9 @@ export function AnalysisTabs({
                 </div>
               </div>
 
-              <Suspense fallback={null}>
-                <ScoreDeltaBanner analysisResults={analysisResult} />
-              </Suspense>
+              <ScoreDeltaBanner analysisResults={analysisResult} />
               <SecurityWidgetShell>
-                <Suspense fallback={<ChartSkeleton height={200} />}>
-                  <ScoreDialGauge analysisResults={analysisResult} trendSnapshot={trendSnapshot} />
-                </Suspense>
+                <ScoreDialGauge analysisResults={analysisResult} trendSnapshot={trendSnapshot} />
               </SecurityWidgetShell>
 
               <SecurityWidgetShell>
@@ -526,9 +592,7 @@ export function AnalysisTabs({
               )}
 
               <SecurityWidgetShell>
-                <Suspense fallback={null}>
-                  <QuickActions onNavigate={handleTabChange} />
-                </Suspense>
+                <QuickActions onNavigate={handleTabChange} />
               </SecurityWidgetShell>
 
               {totalFindings > 0 && (
@@ -810,9 +874,7 @@ export function AnalysisTabs({
                   );
                 })()}
               <SecurityWidgetShell>
-                <Suspense fallback={<ChartSkeleton height={220} />}>
-                  <RiskScoreDashboard analysisResults={analysisResult} />
-                </Suspense>
+                <RiskScoreDashboard analysisResults={analysisResult} />
               </SecurityWidgetShell>
 
               <div className="grid gap-6 lg:grid-cols-2">
@@ -1032,25 +1094,20 @@ export function AnalysisTabs({
                     </p>
                   </div>
                 </div>
-                <Suspense fallback={<ChartSkeleton height={120} />}>
-                  <ComplianceHeatmap
-                    analysisResults={analysisResult}
-                    selectedFrameworks={branding.selectedFrameworks}
-                  />
-                </Suspense>
+                <ComplianceHeatmap
+                  analysisResults={analysisResult}
+                  selectedFrameworks={branding.selectedFrameworks}
+                />
               </div>
 
               <SecurityWidgetShell className="border-[#5A00FF]/10">
                 <div data-tour="sophos-best-practice">
-                  <Suspense fallback={<CardSkeleton />}>
-                    <SophosBestPractice
-                      analysisResults={analysisResult}
-                      centralLicences={
-                        files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment
-                          ?.licences
-                      }
-                    />
-                  </Suspense>
+                  <SophosBestPractice
+                    analysisResults={analysisResult}
+                    centralLicences={
+                      files.find((f) => f.centralEnrichment?.licences)?.centralEnrichment?.licences
+                    }
+                  />
                 </div>
               </SecurityWidgetShell>
 
@@ -1130,13 +1187,11 @@ export function AnalysisTabs({
                   </p>
                 </div>
               </div>
-              <Suspense fallback={<CardSkeleton />}>
-                <InsuranceReadiness
-                  analysisResults={analysisResult}
-                  customerName={branding.customerName}
-                  mspName={branding.companyName}
-                />
-              </Suspense>
+              <InsuranceReadiness
+                analysisResults={analysisResult}
+                customerName={branding.customerName}
+                mspName={branding.companyName}
+              />
             </div>
           </ErrorBoundary>
         </TabsContent>
@@ -1147,9 +1202,7 @@ export function AnalysisTabs({
           className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
           <ErrorBoundary fallbackTitle="Optimisation view failed to load">
-            <Suspense fallback={<SectionSkeleton />}>
-              <RuleOptimiser files={files} />
-            </Suspense>
+            <RuleOptimiser files={files} />
             {w("config-complexity") && (
               <div className="grid gap-6 lg:grid-cols-2">
                 <ErrorBoundary fallbackTitle="Policy Complexity failed">
@@ -1188,9 +1241,7 @@ export function AnalysisTabs({
           className="space-y-6 mt-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
           <ErrorBoundary fallbackTitle="Tools failed to load">
-            <Suspense fallback={<ChartSkeleton height={220} />}>
-              <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
-            </Suspense>
+            <RiskScoreDashboard analysisResults={analysisResult} projected={projectedScore} />
 
             {totalFindings > 0 && (
               <Suspense fallback={<CardSkeleton />}>
@@ -1288,9 +1339,7 @@ export function AnalysisTabs({
                 />
               </Suspense>
             )}
-            <Suspense fallback={null}>
-              <RemediationPlaybooks analysisResults={analysisResult} />
-            </Suspense>
+            <RemediationPlaybooks analysisResults={analysisResult} />
           </ErrorBoundary>
         </TabsContent>
 

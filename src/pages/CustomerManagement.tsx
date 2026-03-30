@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 
 type DemoCustomer = CustomerDirectoryEntry;
 
@@ -314,6 +315,8 @@ function CustomerManagementInner() {
           </div>
         </div>
       </header>
+
+      <WorkspacePrimaryNav />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         {org?.id && !isGuest && (

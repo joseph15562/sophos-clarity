@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRemediationPlaybookToggleMutation } from "@/hooks/queries/use-remediation-status-mutations";
 import { warnOptionalError } from "@/lib/client-error-feedback";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 import { BEST_PRACTICE_CHECKS, MODULES, type BestPracticeCheck } from "@/lib/sophos-licence";
 import { ALL_FRAMEWORK_NAMES } from "@/lib/compliance-map";
 
@@ -382,6 +383,8 @@ function PlaybookLibraryInner() {
           </div>
         </div>
       </header>
+
+      <WorkspacePrimaryNav />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* ── Category chips ── */}

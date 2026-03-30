@@ -10,6 +10,7 @@ import {
 } from "@/lib/saved-reports";
 import { loadScheduledReports as loadScheduledReportsFromStorage } from "@/lib/scheduled-reports";
 import { Button } from "@/components/ui/button";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 import {
   FileText,
   Plus,
@@ -358,6 +359,8 @@ function ReportCentreInner() {
           </div>
         </div>
       </header>
+
+      <WorkspacePrimaryNav />
 
       {loading && (
         <div className="flex items-center justify-center py-24">

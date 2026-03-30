@@ -16,6 +16,7 @@ import type { BrandingData } from "@/components/BrandingSetup";
 import { Button } from "@/components/ui/button";
 import { SafeHtml } from "@/components/SafeHtml";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 
 function packageToMarkdown(pkg: SavedReportPackage): string {
   const reps = normalizeReportEntries(pkg.reports);
@@ -79,15 +80,18 @@ function SavedReportViewerInner() {
 
   if (!user || isGuest || !org) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-xl font-bold text-foreground">Sign in required</h1>
-          <p className="text-muted-foreground">
-            Open saved reports from Report Centre while signed in to your organisation.
-          </p>
-          <Link to="/" className="text-brand-accent hover:underline font-medium inline-block">
-            Return to Sophos FireComply
-          </Link>
+      <div className="min-h-screen bg-background flex flex-col">
+        <WorkspacePrimaryNav />
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <div className="max-w-md text-center space-y-4">
+            <h1 className="text-xl font-bold text-foreground">Sign in required</h1>
+            <p className="text-muted-foreground">
+              Open saved reports from Report Centre while signed in to your organisation.
+            </p>
+            <Link to="/" className="text-brand-accent hover:underline font-medium inline-block">
+              Return to Sophos FireComply
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -95,34 +99,43 @@ function SavedReportViewerInner() {
 
   if (!id) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <p className="text-muted-foreground text-sm">Invalid link.</p>
-        <Link to="/reports" className="mt-4 text-brand-accent hover:underline text-sm">
-          Report Centre
-        </Link>
+      <div className="min-h-screen bg-background flex flex-col">
+        <WorkspacePrimaryNav />
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <p className="text-muted-foreground text-sm">Invalid link.</p>
+          <Link to="/reports" className="mt-4 text-brand-accent hover:underline text-sm">
+            Report Centre
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (pkg === undefined) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <p className="text-muted-foreground text-sm">Loading report…</p>
+      <div className="min-h-screen bg-background flex flex-col">
+        <WorkspacePrimaryNav />
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <p className="text-muted-foreground text-sm">Loading report…</p>
+        </div>
       </div>
     );
   }
 
   if (!pkg) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-xl font-bold text-foreground">Report not found</h1>
-          <p className="text-muted-foreground">
-            This saved report is missing or you do not have access. It may have been deleted.
-          </p>
-          <Link to="/reports" className="text-brand-accent hover:underline font-medium">
-            Back to Report Centre
-          </Link>
+      <div className="min-h-screen bg-background flex flex-col">
+        <WorkspacePrimaryNav />
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <div className="max-w-md text-center space-y-4">
+            <h1 className="text-xl font-bold text-foreground">Report not found</h1>
+            <p className="text-muted-foreground">
+              This saved report is missing or you do not have access. It may have been deleted.
+            </p>
+            <Link to="/reports" className="text-brand-accent hover:underline font-medium">
+              Back to Report Centre
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -179,6 +192,7 @@ function SavedReportViewerInner() {
 
   return (
     <main id="main-content" className="min-h-screen bg-background">
+      <WorkspacePrimaryNav />
       <div className="border-b border-border/60 bg-card/40 px-4 py-3">
         <div className="mx-auto max-w-4xl flex items-center gap-3 text-sm">
           <Link

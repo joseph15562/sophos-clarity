@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { routeSharedHealthCheckNotFound } from "./public-api-mocks";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixtureDir = path.join(__dirname, "fixtures");
@@ -262,6 +263,7 @@ test.describe("Tier 2 — hub & API routes", () => {
   });
 
   test("shared health check invalid token shows error state", async ({ page }) => {
+    await routeSharedHealthCheckNotFound(page);
     await page.goto("/health-check/shared/invalid-token-e2e", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
     await expect(page.getByText(/not found|invalid|expired|could not|error/i).first()).toBeVisible({

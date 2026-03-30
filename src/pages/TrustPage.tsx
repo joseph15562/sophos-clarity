@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
+import { useAuthProvider, AuthProvider } from "@/hooks/use-auth";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 
 const DATA_PRIVACY_HREF =
   "https://github.com/joseph15562/sophos-firecomply/blob/main/docs/DATA-PRIVACY.md";
@@ -10,7 +12,7 @@ const DATA_PRIVACY_HREF =
  * Trust centre: how we handle data, subprocessors, retention pointers, legal placeholders.
  * Replace highlighted copy with counsel-approved text before procurement.
  */
-export default function TrustPage() {
+function TrustPageInner() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 bg-card/50">
@@ -22,6 +24,7 @@ export default function TrustPage() {
           <h1 className="text-base font-semibold">Trust</h1>
         </div>
       </header>
+      <WorkspacePrimaryNav />
       <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
         <section className="space-y-2">
           <h2 className="text-sm font-semibold tracking-tight">Overview</h2>
@@ -218,5 +221,14 @@ export default function TrustPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function TrustPage() {
+  const auth = useAuthProvider();
+  return (
+    <AuthProvider value={auth}>
+      <TrustPageInner />
+    </AuthProvider>
   );
 }

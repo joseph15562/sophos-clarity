@@ -5,6 +5,7 @@ import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 import {
   GitCompare,
   Clock,
@@ -395,6 +396,7 @@ function DriftMonitorInner() {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />
+        <WorkspacePrimaryNav />
         <main id="main-content" className="flex-1 flex items-center justify-center px-4">
           <Loader2 className="w-8 h-8 animate-spin text-[#2006F7]" />
         </main>
@@ -406,6 +408,7 @@ function DriftMonitorInner() {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />
+        <WorkspacePrimaryNav />
         <main id="main-content" className="flex-1 flex items-center justify-center px-4">
           <EmptyState
             className="max-w-md py-12"
@@ -426,6 +429,7 @@ function DriftMonitorInner() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
+      <WorkspacePrimaryNav />
 
       <main
         id="main-content"

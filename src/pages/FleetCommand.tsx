@@ -39,6 +39,7 @@ import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { saveScoreSnapshot } from "@/lib/score-history";
 import { CentralHealthBanner } from "@/components/CentralHealthBanner";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 import { type FleetFirewall, gradeFromScore } from "@/lib/fleet-command-data";
 
 /* ------------------------------------------------------------------ */
@@ -941,6 +942,8 @@ function FleetCommandInner() {
           </div>
         </div>
       </header>
+
+      <WorkspacePrimaryNav />
 
       {/* ── Help overlay ── */}
       {showHelp && (

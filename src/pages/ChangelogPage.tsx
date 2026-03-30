@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuthProvider, AuthProvider } from "@/hooks/use-auth";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 
 /** In-app “What’s new” page (curate releases here). */
-export default function ChangelogPage() {
+function ChangelogPageInner() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/60 bg-card/50">
@@ -15,6 +17,7 @@ export default function ChangelogPage() {
           <h1 className="text-base font-semibold">What&apos;s new</h1>
         </div>
       </header>
+      <WorkspacePrimaryNav />
       <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
         <p className="text-xs text-muted-foreground">
           Technical changelog: <code className="text-xs">CHANGELOG.md</code> at the repository root
@@ -30,6 +33,20 @@ export default function ChangelogPage() {
               <code className="text-xs">src/hooks/queries</code> and{" "}
               <code className="text-xs">src/lib/data</code> helpers with TanStack Query
               invalidation.
+            </li>
+            <li>
+              <strong className="text-foreground">Workspace navigation</strong>: the same primary
+              tabs (Assess through Updates) appear under the header on Fleet, Customers, Reports,
+              Insights, Drift, Playbooks, API, Trust, and this page when you are signed in with an
+              organisation; the Reports tab stays active when viewing a saved report.
+            </li>
+            <li>
+              <strong className="text-foreground">Analysis tabs</strong>: tab order is Overview →
+              Security → Compliance → Remediation (when there are findings) → Optimisation → Tools →
+              Insurance Readiness → Compare. Primary panels on each tab (risk dashboard, heatmap,
+              rule optimiser, insurance readiness, remediation playbooks, etc.) load with the main
+              analysis bundle so Vite dev does not leave them on skeletons until you switch tabs;
+              deeper widgets still lazy-load and preload in the background.
             </li>
             <li>
               <strong className="text-foreground">Quality &amp; platform</strong>:{" "}
@@ -377,5 +394,14 @@ export default function ChangelogPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function ChangelogPage() {
+  const auth = useAuthProvider();
+  return (
+    <AuthProvider value={auth}>
+      <ChangelogPageInner />
+    </AuthProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { routeConfigUploadStatusNotFound } from "./public-api-mocks";
 
 function workspaceDropzone(page: import("@playwright/test").Page) {
   return page
@@ -25,6 +26,7 @@ test.describe("User journeys", () => {
   });
 
   test("config upload route renders shell", async ({ page }) => {
+    await routeConfigUploadStatusNotFound(page);
     await page.goto("/upload/invalid-token-e2e-placeholder", { waitUntil: "domcontentloaded" });
     await expect(page.locator("body")).toBeVisible();
     await expect(page.getByText(/invalid|not found|expired|link|token/i).first()).toBeVisible({

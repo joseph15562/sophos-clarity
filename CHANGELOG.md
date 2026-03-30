@@ -8,6 +8,8 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Added
 
+- **Workspace primary nav** (Assess, Fleet, Customers, Reports, …) on every signed-in hub page — Fleet, Customers, Reports (including saved report viewer), Insights, Drift, Playbooks, API, Trust, and What’s new — not only the Assess screen; Reports stays highlighted on `/reports/saved/:id`.
+
 - **ADR 0004 wave 2** — TanStack Query hooks and `src/lib/data` helpers for management-drawer settings: team invites/revokes, scheduled reports CRUD, portal bootstrap + save, passkey delete, MSP setup checklist, org agents + 7d submission counts, shared remediation mutations.
 - **`job_outbox`** Postgres migration for future async job processing ([`docs/job-queue-outline.md`](docs/job-queue-outline.md)).
 - **`portal-data`** GET query schema ([`portal_data_query.ts`](supabase/functions/portal-data/portal_data_query.ts)) with Deno tests (invalid / long slug).
@@ -48,6 +50,7 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Changed
 
+- **Analysis tabs** — **Tab order:** Overview → Security → Compliance → **Remediation** (if findings) → Optimisation → Tools → **Insurance Readiness** → Compare. **Eager (static) imports** in **`AnalysisTabs`** for each tab’s primary surface — **`ScoreDialGauge`**, **`ScoreDeltaBanner`**, **`QuickActions`**, **`RiskScoreDashboard`**, **`ComplianceHeatmap`**, **`SophosBestPractice`**, **`RuleOptimiser`**, **`InsuranceReadiness`**, **`RemediationPlaybooks`** — so Vite dev is not blocked on **`React.lazy` / Suspense** for those; remaining widgets still lazy-load with preload + dev retry + tab-hover prefetch (Radix unmounts inactive panels). Removed unused **`FleetComparison`** lazy stub.
 - ESLint **`@typescript-eslint/no-unused-vars`**: **`error`** under **`src/lib/**`** only; **`warn`** elsewhere (with `\_`-prefix ignores).
 - **OpenAPI** — **`portal-data`** GET query parameters include **`maxLength`** aligned with Edge Zod.
 - **`ScoreDialGauge`** wrapped in **`React.memo`** (alongside **`ScoreTrendChart`**).

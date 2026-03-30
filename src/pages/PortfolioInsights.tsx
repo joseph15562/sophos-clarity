@@ -8,6 +8,7 @@ import { loadScoreHistoryForFleet } from "@/lib/score-history";
 import { gradeForScore, GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 import { resolveCustomerName } from "@/lib/customer-name";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 import { EmptyState } from "@/components/EmptyState";
 import {
   BarChart3,
@@ -683,6 +684,8 @@ function PortfolioInsightsInner() {
           </div>
         </div>
       </header>
+
+      <WorkspacePrimaryNav />
 
       {loading && (
         <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">

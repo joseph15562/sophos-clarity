@@ -41,6 +41,7 @@ import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
+import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
 
 const CentralIntegration = lazy(() =>
   import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })),
@@ -1404,6 +1405,8 @@ function ApiHubInner() {
           </p>
         </div>
       </header>
+
+      <WorkspacePrimaryNav />
 
       {/* ── Body ── */}
       <main className="mx-auto max-w-6xl px-6 py-8 space-y-8">
