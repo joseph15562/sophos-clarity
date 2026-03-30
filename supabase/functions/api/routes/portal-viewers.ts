@@ -1,5 +1,12 @@
+import { z } from "npm:zod@3.24.2";
 import { getOrgMembership } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
+
+export const inviteBodySchema = z.object({
+  email: z.string().email().max(320),
+  name: z.string().max(200).optional().nullable(),
+});
 
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return jsonResponse(body, status, corsHeaders);
@@ -39,9 +46,13 @@ export async function handlePortalViewerRoutes(
 
   // POST /api/portal-viewers/invite — invite a new viewer
   if (req.method === "POST" && segments[1] === "invite") {
-    const body = await req.json();
-    const { email, name } = body as { email?: string; name?: string };
-    if (!email) return json({ error: "email required" }, 400, corsHeaders);
+    const raw = await req.json().catch(() => ({}));
+    const parsed = inviteBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "portal_viewers_invite_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400, corsHeaders);
+    }
+    const { email, name } = parsed.data;
 
     // Check if already invited
     const { data: existing } = await db
@@ -75,13 +86,13 @@ export async function handlePortalViewerRoutes(
           { redirectTo: portalUrl },
         );
         if (inviteErr) {
-          console.warn("[portal-viewers] invite failed, creating without auth user:", inviteErr.message);
+          logJson("warn", "portal_viewers_invite_auth_failed", { message: inviteErr.message });
         } else {
           userId = invited?.user?.id ?? null;
         }
       }
     } catch (e) {
-      console.warn("[portal-viewers] auth invite error:", e);
+      logJson("warn", "portal_viewers_auth_invite_error", { error: String(e) });
     }
 
     // Insert viewer record

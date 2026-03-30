@@ -49,7 +49,7 @@ async function fetchSEProfile(userId: string, retries = 2): Promise<SEProfile | 
         displayName: (data.display_name as string) ?? null,
         healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
         seTitle: (data.se_title as string) ?? null,
-        profileCompleted: !!(data.profile_completed),
+        profileCompleted: !!data.profile_completed,
       };
     }
 
@@ -62,11 +62,13 @@ async function fetchSEProfile(userId: string, retries = 2): Promise<SEProfile | 
   return null;
 }
 
-async function createSEProfile(userId: string, email: string, user?: User): Promise<SEProfile | null> {
+async function createSEProfile(
+  userId: string,
+  email: string,
+  user?: User,
+): Promise<SEProfile | null> {
   const metaName =
-    (user?.user_metadata?.full_name as string) ||
-    (user?.user_metadata?.name as string) ||
-    null;
+    (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || null;
 
   const insert: Record<string, unknown> = { user_id: userId, email };
   if (metaName) {
@@ -76,7 +78,7 @@ async function createSEProfile(userId: string, email: string, user?: User): Prom
 
   const { data, error } = await supabase
     .from("se_profiles")
-    .insert(insert)
+    .insert(insert as never)
     .select("id, email, display_name, health_check_prepared_by, se_title, profile_completed")
     .single();
 
@@ -90,7 +92,7 @@ async function createSEProfile(userId: string, email: string, user?: User): Prom
     displayName: (data.display_name as string) ?? null,
     healthCheckPreparedBy: (data.health_check_prepared_by as string) ?? null,
     seTitle: (data.se_title as string) ?? null,
-    profileCompleted: !!(data.profile_completed),
+    profileCompleted: !!data.profile_completed,
   };
 }
 
@@ -123,25 +125,29 @@ export function useSEAuthProvider(): SEAuthState {
     const bootTimeout = setTimeout(() => setIsLoading(false), 6_000);
 
     const sessionDeadline = new Promise<null>((r) => setTimeout(() => r(null), 5_000));
-    const sessionFetch = supabase.auth.getSession().then(({ data }) => data.session).catch(() => null);
+    const sessionFetch = supabase.auth
+      .getSession()
+      .then(({ data }) => data.session)
+      .catch(() => null);
 
-    Promise.race([sessionFetch, sessionDeadline])
-      .then((s) => {
-        clearTimeout(bootTimeout);
-        setSession(s);
-        setUser(s?.user ?? null);
-        if (s?.user) {
-          loadProfile(s.user).finally(() => {
-            clearTimeout(profileTimeout);
-            setIsLoading(false);
-          });
-          profileTimeout = setTimeout(() => setIsLoading(false), 5_000);
-        } else {
+    Promise.race([sessionFetch, sessionDeadline]).then((s) => {
+      clearTimeout(bootTimeout);
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        loadProfile(s.user).finally(() => {
+          clearTimeout(profileTimeout);
           setIsLoading(false);
-        }
-      });
+        });
+        profileTimeout = setTimeout(() => setIsLoading(false), 5_000);
+      } else {
+        setIsLoading(false);
+      }
+    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
@@ -169,7 +175,9 @@ export function useSEAuthProvider(): SEAuthState {
 
   const signUp = useCallback(async (email: string, password: string, fullName?: string) => {
     if (!isSophosDomain(email)) {
-      return { error: "Only @sophos.com email addresses can register for the SE Health Check tool." };
+      return {
+        error: "Only @sophos.com email addresses can register for the SE Health Check tool.",
+      };
     }
     const opts: Record<string, unknown> = {};
     if (fullName?.trim()) {
@@ -190,10 +198,30 @@ export function useSEAuthProvider(): SEAuthState {
 
   const isAuthenticated = !!user && !!seProfile;
 
-  return useMemo(() => ({
-    user, session, seProfile, isLoading, isAuthenticated,
-    signIn, signUp, signOut, reloadSeProfile,
-  }), [user, session, seProfile, isLoading, isAuthenticated, signIn, signUp, signOut, reloadSeProfile]);
+  return useMemo(
+    () => ({
+      user,
+      session,
+      seProfile,
+      isLoading,
+      isAuthenticated,
+      signIn,
+      signUp,
+      signOut,
+      reloadSeProfile,
+    }),
+    [
+      user,
+      session,
+      seProfile,
+      isLoading,
+      isAuthenticated,
+      signIn,
+      signUp,
+      signOut,
+      reloadSeProfile,
+    ],
+  );
 }
 
 const SEAuthContext = createContext<SEAuthState | null>(null);

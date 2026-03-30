@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { safeError } from "../_shared/db.ts";
+import { logJson } from "../_shared/logger.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -143,7 +144,11 @@ async function fetchFeedWithStatus(
     status.http_status = res.status;
     if (!res.ok) {
       status.error = `HTTP ${res.status}`;
-      console.warn(`[fetchFeed] ${source.name} ${status.error} ${source.url}`);
+      logJson("warn", "regulatory_fetch_feed_http", {
+        source: source.name,
+        error: status.error,
+        url: source.url,
+      });
       return { items: [], status };
     }
     const xml = await res.text();
@@ -152,12 +157,15 @@ async function fetchFeedWithStatus(
     status.ok = items.length > 0;
     if (items.length === 0) {
       status.error = "No RSS/Atom items parsed (empty or unknown format)";
-      console.warn(`[fetchFeed] ${source.name} parsed 0 items`);
+      logJson("warn", "regulatory_fetch_feed_empty", { source: source.name });
     }
     return { items, status };
   } catch (err) {
     status.error = err instanceof Error ? err.message : String(err);
-    console.warn(`[fetchFeed] ${source.name} failed:`, err);
+    logJson("warn", "regulatory_fetch_feed_failed", {
+      source: source.name,
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { items: [], status };
   }
 }
@@ -218,7 +226,7 @@ Return ONLY the JSON array, no markdown fencing.`;
     });
 
     if (!res.ok) {
-      console.warn("[summarise] Gemini returned", res.status);
+      logJson("warn", "regulatory_summarise_gemini_status", { status: res.status });
       throw new Error("Gemini API error");
     }
 
@@ -240,7 +248,9 @@ Return ONLY the JSON array, no markdown fencing.`;
       };
     });
   } catch (err) {
-    console.warn("[summarise] AI failed, using raw descriptions:", err);
+    logJson("warn", "regulatory_summarise_ai_failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return items.map((i) => ({
       title: i.title,
       summary: i.description.slice(0, 200),
@@ -287,7 +297,7 @@ async function runRegulatoryScan(
   for (const r of feedResults) allItems.push(...r.items);
 
   if (allItems.length === 0) {
-    console.warn(`[regulatory-scanner] ${opts.invoker}: no RSS items`);
+    logJson("warn", "regulatory_no_rss_items", { invoker: opts.invoker });
     return new Response(
       JSON.stringify({
         updates: [],
@@ -302,25 +312,32 @@ async function runRegulatoryScan(
   const summarised = await summariseWithGemini(allItems);
   const relevant = summarised.filter((s) => s.relevant);
 
+  const rows = relevant.map((item) => ({
+    source: item.source,
+    title: item.title,
+    summary: item.summary,
+    link: item.link,
+    framework: item.framework,
+    published_at: item.published_at,
+  }));
+
   let inserted = 0;
-  for (const item of relevant) {
-    const { error } = await admin.from("regulatory_updates").upsert(
-      {
-        source: item.source,
-        title: item.title,
-        summary: item.summary,
-        link: item.link,
-        framework: item.framework,
-        published_at: item.published_at,
-      },
-      { onConflict: "source,title" },
-    );
-    if (!error) inserted++;
+  const CHUNK = 80;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const { error } = await admin.from("regulatory_updates").upsert(chunk, {
+      onConflict: "source,title",
+    });
+    if (!error) inserted += chunk.length;
+    else logJson("warn", "regulatory_upsert_chunk", { message: error.message });
   }
 
-  console.log(
-    `[regulatory-scanner] ${opts.invoker}: scanned=${allItems.length} relevant=${relevant.length} inserted=${inserted}`,
-  );
+  logJson("info", "regulatory_scan_complete", {
+    invoker: opts.invoker,
+    scanned: allItems.length,
+    relevant: relevant.length,
+    inserted,
+  });
 
   return new Response(
     JSON.stringify({

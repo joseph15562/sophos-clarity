@@ -1,4 +1,6 @@
+import { z } from "npm:zod@3.24.2";
 import { authenticateSE, runConfigUploadCleanup } from "../../_shared/auth.ts";
+import { logJson } from "../../_shared/logger.ts";
 import { centralDecrypt } from "../../_shared/crypto.ts";
 import { adminClient, json as jsonResponse, safeDbError } from "../../_shared/db.ts";
 import {
@@ -7,6 +9,15 @@ import {
 } from "../../_shared/email.ts";
 
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
+
+export const configUploadRequestBodySchema = z.object({
+  expires_in_days: z.union([z.literal(1), z.literal(3), z.literal(7), z.literal(14), z.literal(30)])
+    .optional(),
+  customer_name: z.string().max(500).optional().nullable(),
+  contact_name: z.string().max(200).optional().nullable(),
+  customer_email: z.string().email().max(320).optional().nullable(),
+  team_id: z.string().uuid().optional().nullable(),
+});
 
 export async function handleConfigUploadRoutes(
   req: Request,
@@ -23,8 +34,14 @@ export async function handleConfigUploadRoutes(
     const se = await authenticateSE(req);
     if (!se) return json({ error: "Unauthorized — SE login required" }, 401);
 
-    const body = await req.json();
-    const expiresInDays = [1, 3, 7, 14, 30].includes(body.expires_in_days) ? body.expires_in_days : 7;
+    const raw = await req.json().catch(() => ({}));
+    const parsed = configUploadRequestBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "config_upload_request_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400);
+    }
+    const body = parsed.data;
+    const expiresInDays = body.expires_in_days ?? 7;
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 

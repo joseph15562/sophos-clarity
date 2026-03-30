@@ -85,7 +85,7 @@ function findConsolidationOpportunities(rules: RuleRow[]): ConsolidationSet[] {
       const sameSvc = a.service === b.service;
 
       let mergeable = false;
-      let p: typeof pattern = null;
+      let p: "src-dst" | "src-svc" | "dst-svc" | null = null;
       if (sameSrc && sameDst && !sameSvc) {
         mergeable = true;
         p = "src-dst";

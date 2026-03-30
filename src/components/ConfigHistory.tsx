@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { loadConfigSnapshots, type ConfigSnapshot } from "@/lib/config-snapshots";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { ConfigDiff } from "@/components/ConfigDiff";
+import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { GRADE_COLORS, gradeForScore } from "@/lib/design-tokens";
 import { displayCustomerNameForUi } from "@/lib/sophos-central";
@@ -62,11 +63,13 @@ export function ConfigHistory({ hostname, refreshTrigger }: Props) {
 
   if (snapshots.length === 0) {
     return (
-      <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6 text-center space-y-2">
-        <History className="h-8 w-8 mx-auto text-muted-foreground/30" />
-        <p className="text-xs text-muted-foreground">
-          No configuration snapshots yet. Snapshots are saved when analyses are run.
-        </p>
+      <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-6">
+        <EmptyState
+          className="py-10"
+          icon={<History className="h-6 w-6 text-muted-foreground/50" />}
+          title="No configuration snapshots yet"
+          description="Snapshots are saved locally when you run analyses in the workspace."
+        />
       </div>
     );
   }

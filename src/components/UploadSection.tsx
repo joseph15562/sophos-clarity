@@ -280,7 +280,10 @@ export function UploadSection({
       )}
 
       {/* Firewall configs — loaded cards + upload zone */}
-      <section ref={workbenchRef} className="space-y-4 scroll-mt-24">
+      <section
+        ref={workbenchRef as React.Ref<HTMLElement> | undefined}
+        className="space-y-4 scroll-mt-24"
+      >
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">
@@ -484,7 +487,11 @@ export function UploadSection({
 
       {/* Step 2 — Assessment Context (before findings so compliance tags are dynamic) */}
       {hasFiles && (
-        <section ref={contextRef} className="space-y-4" data-tour="step-context">
+        <section
+          ref={contextRef as React.Ref<HTMLElement> | undefined}
+          className="space-y-4"
+          data-tour="step-context"
+        >
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="flex items-center justify-center h-8 w-8 rounded-full bg-gradient-to-br from-[#2006F7] to-[#5A00FF] text-white text-xs font-bold ring-4 ring-[#2006F7]/20 dark:ring-[#00EDFF]/20 shadow-[0_0_18px_rgba(32,6,247,0.35)]">
               2
@@ -627,7 +634,11 @@ export function UploadSection({
 
       {/* Generate Reports — AI reports disabled in local mode */}
       {hasFiles && !isGuest && (
-        <div ref={reportsRef} data-tour="step-reports">
+        <div
+          ref={reportsRef as React.Ref<HTMLDivElement> | undefined}
+          data-tour="step-reports"
+          data-testid="workspace-report-cards"
+        >
           <ReportCards
             fileCount={files.length}
             localMode={localMode}

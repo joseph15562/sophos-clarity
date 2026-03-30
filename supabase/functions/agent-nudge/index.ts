@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logJson } from "../_shared/logger.ts";
 
 /**
  * agent-nudge — Supabase cron Edge Function
@@ -31,7 +32,7 @@ serve(async (_req: Request) => {
     .is("pending_command", null);
 
   if (fetchErr) {
-    console.error("[agent-nudge] fetch error:", fetchErr.message);
+    logJson("error", "agent_nudge_fetch", { message: fetchErr.message });
     return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500 });
   }
 
@@ -51,7 +52,7 @@ serve(async (_req: Request) => {
     .lt("last_seen_at", twoDaysAgo)
     .neq("status", "offline");
 
-  console.log(`[agent-nudge] nudged=${nudged}, offlined=${offlined ?? 0}`);
+  logJson("info", "agent_nudge_complete", { nudged, offlined: offlined ?? 0 });
 
   return new Response(
     JSON.stringify({ nudged, offlined: offlined ?? 0, checked: staleAgents?.length ?? 0 }),

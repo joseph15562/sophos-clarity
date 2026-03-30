@@ -7,7 +7,9 @@ export function RuleHealthOverview({
 }: {
   analysisResults: Record<string, AnalysisResult>;
 }) {
-  const [activeCard, setActiveCard] = useState<string | null>(null);
+  type CardKey = "totalRules" | "wanRules" | "disabledRules" | "natRules" | "hosts" | "interfaces";
+
+  const [activeCard, setActiveCard] = useState<CardKey | null>(null);
 
   const firewallLabels = useMemo(() => Object.keys(analysisResults), [analysisResults]);
   const isMulti = firewallLabels.length > 1;
@@ -41,8 +43,6 @@ export function RuleHealthOverview({
       interfaces: ar.stats.interfaces,
     }));
   }, [analysisResults]);
-
-  type CardKey = "totalRules" | "wanRules" | "disabledRules" | "natRules" | "hosts" | "interfaces";
 
   const cards: { key: CardKey; label: string; value: number; color: string; tooltip: string }[] = [
     {

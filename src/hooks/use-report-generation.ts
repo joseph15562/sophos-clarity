@@ -3,7 +3,7 @@ import type { ReportEntry } from "@/components/DocumentPreview";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { analyseConfig, type AnalysisResult, type Finding } from "@/lib/analyse-config";
 import type { InspectionPosture } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
@@ -22,7 +22,9 @@ export function buildCoverPageMarkdown(branding: BrandingData, titleOverride?: s
   if (!title) title = "Firewall Configuration Assessment";
   lines.push(`# ${title}`);
   lines.push("");
-  lines.push(`**Date:** ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`);
+  lines.push(
+    `**Date:** ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`,
+  );
   lines.push("");
   if (branding.preparedBy?.trim()) {
     lines.push(`**Prepared by:** ${branding.preparedBy.trim()}`);
@@ -40,18 +42,18 @@ export function buildCoverPageMarkdown(branding: BrandingData, titleOverride?: s
 export function buildExecutiveOnePagerMarkdown(
   analysisResults: Record<string, AnalysisResult>,
   _branding: BrandingData,
-  customerName: string
+  customerName: string,
 ): string {
   const allFindings: Finding[] = Object.values(analysisResults).flatMap((r) => r.findings);
   const scores = Object.values(analysisResults).map((r) => computeRiskScore(r));
-  const avgScore = scores.length > 0
-    ? Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length)
-    : 0;
-  const grade = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
+  const avgScore =
+    scores.length > 0 ? Math.round(scores.reduce((s, r) => s + r.overall, 0) / scores.length) : 0;
+  const grade =
+    avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
 
   const severityOrder: Finding["severity"][] = ["critical", "high", "medium", "low", "info"];
   const sorted = [...allFindings].sort(
-    (a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)
+    (a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity),
   );
   const top5 = sorted.slice(0, 5);
 
@@ -102,7 +104,7 @@ function displayLabelForFile(
   analysisResults?: Record<string, AnalysisResult>,
 ): string {
   const hostname = analysisResults?.[lookupKey]?.hostname || f.agentHostname;
-  return (hostname && hostname.trim()) ? hostname.trim() : lookupKey;
+  return hostname && hostname.trim() ? hostname.trim() : lookupKey;
 }
 
 export function useReportGeneration(
@@ -110,7 +112,6 @@ export function useReportGeneration(
   branding: BrandingData,
   analysisResults?: Record<string, AnalysisResult>,
 ) {
-  const { toast } = useToast();
   const [reports, setReports] = useState<ReportEntry[]>([]);
   const [activeReportId, setActiveReportId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -121,7 +122,12 @@ export function useReportGeneration(
     async (
       reportId: string,
       sections: ExtractedSections,
-      opts?: { executive?: boolean; firewallLabels?: string[]; compliance?: boolean; centralEnrichment?: CentralEnrichment }
+      opts?: {
+        executive?: boolean;
+        firewallLabels?: string[];
+        compliance?: boolean;
+        centralEnrichment?: CentralEnrichment;
+      },
     ) => {
       setLoadingReportIds((prev) => new Set(prev).add(reportId));
       setFailedReportIds((prev) => {
@@ -133,8 +139,8 @@ export function useReportGeneration(
         prev.map((r) =>
           r.id === reportId
             ? { ...r, markdown: "", errorMessage: undefined, loadingStatus: undefined }
-            : r
-        )
+            : r,
+        ),
       );
 
       const MAX_RETRIES = 2;
@@ -148,8 +154,8 @@ export function useReportGeneration(
             prev.map((r) =>
               r.id === reportId
                 ? { ...r, markdown: "", errorMessage: undefined, loadingStatus: undefined }
-                : r
-            )
+                : r,
+            ),
           );
         }
 
@@ -171,11 +177,17 @@ export function useReportGeneration(
                 prev.map((r) => {
                   if (r.id !== reportId) return r;
                   const isFirstChunk = r.markdown === "";
-                  const coverTitle = isFirstChunk && opts?.firewallLabels?.length === 1 && !opts?.executive && !opts?.compliance ? opts.firewallLabels[0] : undefined;
+                  const coverTitle =
+                    isFirstChunk &&
+                    opts?.firewallLabels?.length === 1 &&
+                    !opts?.executive &&
+                    !opts?.compliance
+                      ? opts.firewallLabels[0]
+                      : undefined;
                   const cover = buildCoverPageMarkdown(branding, coverTitle);
                   const newContent = isFirstChunk ? cover + "\n\n---\n\n" + text : text;
                   return { ...r, markdown: r.markdown + newContent };
-                })
+                }),
               ),
             onDone: () => resolve(true),
             onError: (err) => {
@@ -188,8 +200,8 @@ export function useReportGeneration(
                           ? `Generation interrupted after partial output. ${err}`
                           : err,
                       }
-                    : r
-                )
+                    : r,
+                ),
               );
               console.error(`Report ${reportId} attempt ${attempt + 1} failed:`, err);
               if (attempt >= MAX_RETRIES) {
@@ -197,15 +209,13 @@ export function useReportGeneration(
                 const description = isExecutive
                   ? `Executive summary uses data from all firewalls and often hits API limits. ${err} Try retry in a few minutes or use fewer configs.`
                   : `${err} — use the retry button to try again.`;
-                toast({ title: "Error", description, variant: "destructive" });
+                toast.error("Error", { description });
               }
               resolve(false);
             },
             onStatus: (status) =>
               setReports((prev) =>
-                prev.map((r) =>
-                  r.id === reportId ? { ...r, loadingStatus: status } : r
-                )
+                prev.map((r) => (r.id === reportId ? { ...r, loadingStatus: status } : r)),
               ),
           });
         });
@@ -222,7 +232,7 @@ export function useReportGeneration(
       });
       return succeeded;
     },
-    [branding, toast],
+    [branding],
   );
 
   const generateIndividual = async (keepLoading = false) => {
@@ -241,7 +251,10 @@ export function useReportGeneration(
     for (const f of files) {
       const reportId = `report-${f.id}`;
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
-      await generateSingleReport(reportId, f.extractedData, { firewallLabels: [label], centralEnrichment: f.centralEnrichment });
+      await generateSingleReport(reportId, f.extractedData, {
+        firewallLabels: [label],
+        centralEnrichment: f.centralEnrichment,
+      });
       if (files.length > 1) await new Promise((r) => setTimeout(r, 2000));
     }
 
@@ -301,7 +314,10 @@ export function useReportGeneration(
     const execOnePagerId = "report-executive-one-pager";
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== execOnePagerId);
-      return [...without, { id: execOnePagerId, label: "📄 Executive One-Pager", markdown: fullMarkdown }];
+      return [
+        ...without,
+        { id: execOnePagerId, label: "📄 Executive One-Pager", markdown: fullMarkdown },
+      ];
     });
     setActiveReportId(execOnePagerId);
   }, [files, branding]);
@@ -322,7 +338,10 @@ export function useReportGeneration(
     const complianceId = "report-compliance";
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== complianceId);
-      return [...without, { id: complianceId, label: "🛡️ Compliance Readiness Report", markdown: "" }];
+      return [
+        ...without,
+        { id: complianceId, label: "🛡️ Compliance Readiness Report", markdown: "" },
+      ];
     });
     setActiveReportId(complianceId);
 
@@ -331,7 +350,7 @@ export function useReportGeneration(
       files.length === 1
         ? files[0].extractedData
         : (mergedSections as unknown as ExtractedSections),
-      { compliance: true, firewallLabels: labels }
+      { compliance: true, firewallLabels: labels },
     );
 
     setIsLoading(false);
@@ -375,7 +394,10 @@ export function useReportGeneration(
     });
     setReports((prev) => {
       const without = prev.filter((r) => r.id !== complianceId);
-      return [...without, { id: complianceId, label: "🛡️ Compliance Readiness Report", markdown: "" }];
+      return [
+        ...without,
+        { id: complianceId, label: "🛡️ Compliance Readiness Report", markdown: "" },
+      ];
     });
     setActiveReportId(complianceId);
     await generateSingleReport(
@@ -383,7 +405,7 @@ export function useReportGeneration(
       files.length === 1
         ? files[0].extractedData
         : (mergedSectionsCompliance as unknown as ExtractedSections),
-      { compliance: true, firewallLabels: labelsCompliance }
+      { compliance: true, firewallLabels: labelsCompliance },
     );
 
     setIsLoading(false);
@@ -419,7 +441,7 @@ export function useReportGeneration(
           files.length === 1
             ? files[0].extractedData
             : (mergedSectionsRetry as unknown as ExtractedSections),
-          { compliance: true, firewallLabels: labelsRetry }
+          { compliance: true, firewallLabels: labelsRetry },
         );
       } else {
         const file = files.find((f) => `report-${f.id}` === reportId);
@@ -429,7 +451,7 @@ export function useReportGeneration(
         }
       }
     },
-    [files, analysisResults, generateSingleReport, generateExecutiveOnePager]
+    [files, analysisResults, generateSingleReport, generateExecutiveOnePager],
   );
 
   return {

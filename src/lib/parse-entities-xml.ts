@@ -10,16 +10,24 @@
 import { XMLParser } from "fast-xml-parser";
 
 const SKIP_KEYS = new Set([
-  "?xml", "xml", "#text", "@_version", "@_encoding",
-  "Login", "Status", "@_APIVersion", "@_IPS_CAT_VER",
+  "?xml",
+  "xml",
+  "#text",
+  "@_version",
+  "@_encoding",
+  "Login",
+  "Status",
+  "@_APIVersion",
+  "@_IPS_CAT_VER",
 ]);
 
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   textNodeName: "#text",
-  isArray: (_name: string, jpath: string) => {
-    const depth = jpath.split(".").length;
+  isArray: (_tagName, jPathOrMatcher, _isLeafNode, _isAttribute) => {
+    if (typeof jPathOrMatcher !== "string") return false;
+    const depth = jPathOrMatcher.split(".").length;
     return depth === 2;
   },
 });
@@ -27,7 +35,13 @@ const parser = new XMLParser({
 function unpackAuthServers(data: unknown): Record<string, unknown>[] {
   const items = Array.isArray(data) ? data : [data as Record<string, unknown>];
   const servers: Record<string, unknown>[] = [];
-  const childTypes = ["ActiveDirectory", "LDAPServer", "RadiusServer", "TacacsServer", "eDirectory"];
+  const childTypes = [
+    "ActiveDirectory",
+    "LDAPServer",
+    "RadiusServer",
+    "TacacsServer",
+    "eDirectory",
+  ];
 
   for (const item of items) {
     if (item == null || typeof item !== "object") continue;

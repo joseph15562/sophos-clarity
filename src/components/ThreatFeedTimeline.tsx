@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Shield } from "lucide-react";
-import { SEVERITY_COLORS } from "@/lib/design-tokens";
+import { severityToColor } from "@/lib/design-tokens";
 
 interface Alert {
   severity: string;
@@ -129,7 +129,7 @@ export function ThreatFeedTimeline({ files }: ThreatFeedTimelineProps) {
 
       <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
         {displayedAlerts.map((event, idx) => {
-          const color = SEVERITY_COLORS[event.severity?.toLowerCase()] ?? "#6b7280";
+          const color = severityToColor(event.severity?.toLowerCase() ?? "info");
           return (
             <div
               key={`${event.raisedAt}-${idx}`}

@@ -1,7 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import DOMPurify from "dompurify";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SafeHtml } from "@/components/SafeHtml";
+import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type ScheduledReportInsert = Database["public"]["Tables"]["scheduled_reports"]["Insert"];
 import { useAuth } from "@/hooks/use-auth";
+import { queryKeys } from "@/hooks/queries";
 import {
   Calendar,
   Mail,
@@ -90,8 +96,8 @@ type EmailPreview = { subject: string; markdown: string; html: string; recipient
 
 export function ScheduledReportSettings() {
   const { org } = useAuth();
-  const [reports, setReports] = useState<ScheduledReport[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const orgId = org?.id ?? "";
   const [showForm, setShowForm] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -107,21 +113,51 @@ export function ScheduledReportSettings() {
   const [formCustomer, setFormCustomer] = useState("");
   const [formSections, setFormSections] = useState(DEFAULT_SECTIONS);
 
-  const loadReports = useCallback(async () => {
-    if (!org) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from("scheduled_reports" as string)
-      .select("*")
-      .eq("org_id", org.id)
-      .order("created_at", { ascending: false });
-    setReports((data as unknown as ScheduledReport[]) ?? []);
-    setLoading(false);
-  }, [org]);
+  const { data: reports = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.org.scheduledReports(orgId),
+    enabled: Boolean(orgId),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("scheduled_reports")
+        .select("*")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false });
+      return (data as unknown as ScheduledReport[]) ?? [];
+    },
+  });
 
-  useEffect(() => {
-    loadReports();
-  }, [loadReports]);
+  const invalidateScheduled = () =>
+    void queryClient.invalidateQueries({ queryKey: queryKeys.org.scheduledReports(orgId) });
+
+  const createMutation = useMutation({
+    mutationFn: async (row: ScheduledReportInsert) => {
+      const { error } = await supabase.from("scheduled_reports").insert(row);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateScheduled();
+      resetForm();
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("scheduled_reports")
+        .update({ enabled: !enabled })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateScheduled(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("scheduled_reports").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateScheduled(),
+  });
 
   const resetForm = () => {
     setFormName("");
@@ -133,7 +169,7 @@ export function ScheduledReportSettings() {
     setShowForm(false);
   };
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!org || !formName.trim() || !formRecipients.trim()) return;
 
     const recipients = formRecipients
@@ -146,38 +182,26 @@ export function ScheduledReportSettings() {
     const scheduleDays = { weekly: 7, monthly: 30, quarterly: 90 }[formSchedule] ?? 30;
     const nextDue = new Date(Date.now() + scheduleDays * 86_400_000).toISOString();
 
-    const { error } = await supabase.from("scheduled_reports" as string).insert({
+    const insert: ScheduledReportInsert = {
       org_id: org.id,
       name: formName.trim(),
       schedule: formSchedule,
       recipients,
       report_type: formReportType,
       customer_name: formCustomer.trim() || null,
-      include_sections: formSections,
+      include_sections: formSections as ScheduledReportInsert["include_sections"],
       enabled: true,
       next_due_at: nextDue,
-    });
-
-    if (!error) {
-      resetForm();
-      loadReports();
-    }
+    };
+    createMutation.mutate(insert);
   };
 
-  const handleToggle = async (id: string, enabled: boolean) => {
-    await supabase
-      .from("scheduled_reports" as string)
-      .update({ enabled: !enabled })
-      .eq("id", id);
-    loadReports();
+  const handleToggle = (id: string, enabled: boolean) => {
+    toggleMutation.mutate({ id, enabled });
   };
 
-  const handleDelete = async (id: string) => {
-    await supabase
-      .from("scheduled_reports" as string)
-      .delete()
-      .eq("id", id);
-    loadReports();
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const handleSendNow = async (report: ScheduledReport) => {
@@ -200,7 +224,7 @@ export function ScheduledReportSettings() {
         },
       );
       if (resp.ok) {
-        loadReports();
+        invalidateScheduled();
       }
     } finally {
       setSending(null);
@@ -423,12 +447,12 @@ export function ScheduledReportSettings() {
           ))}
         </div>
       ) : reports.length === 0 ? (
-        <div className="text-center py-8 space-y-2">
-          <Mail className="h-8 w-8 mx-auto text-muted-foreground/30" />
-          <p className="text-xs text-muted-foreground">
-            No scheduled reports yet. Create one to start auto-sending compliance reports.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Mail className="h-6 w-6 text-muted-foreground/40" />}
+          title="No scheduled reports yet"
+          description="Create a schedule below to start auto-sending compliance reports to your recipients."
+          className="py-8"
+        />
       ) : (
         <div className="space-y-2">
           {reports.map((report) => (
@@ -550,9 +574,9 @@ export function ScheduledReportSettings() {
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">
                   Body
                 </p>
-                <div
+                <SafeHtml
                   className="rounded-lg border border-border bg-muted/20 p-4 text-xs prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewData.html) }}
+                  html={previewData.html}
                 />
               </div>
             </div>

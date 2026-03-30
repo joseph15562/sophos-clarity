@@ -1,5 +1,7 @@
+import { assessmentsListQuerySchema } from "../../_shared/api-schemas.ts";
 import { getOrgMembership } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 import { getServiceKeyContext } from "../../_shared/service-key.ts";
 
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
@@ -36,8 +38,16 @@ export async function handleAssessmentRoutes(
 
   // GET /api/assessments — list (cursor-based pagination)
   if (segments.length === 1) {
-    const page = parseInt(url.searchParams.get("page") ?? "1");
-    const pageSize = Math.min(parseInt(url.searchParams.get("pageSize") ?? "50"), 100);
+    const qRaw = {
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    };
+    const qParsed = assessmentsListQuerySchema.safeParse(qRaw);
+    if (!qParsed.success) {
+      logJson("warn", "assessments_list_invalid_query", { issues: qParsed.error.issues.length });
+      return json({ error: "Invalid query parameters" }, 400, corsHeaders);
+    }
+    const { page, pageSize } = qParsed.data;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 

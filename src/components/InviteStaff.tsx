@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { UserPlus, Trash2, AlertCircle, CheckCircle2, Shield, Users, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,6 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { queryKeys, useOrgTeamRosterQuery } from "@/hooks/queries";
+
+const teamInviteEmailSchema = z.string().trim().email();
 
 const ROLE_OPTIONS: { value: OrgRole; label: string; description: string }[] = [
   {
@@ -34,74 +39,54 @@ const ROLE_OPTIONS: { value: OrgRole; label: string; description: string }[] = [
   },
 ];
 
-interface Invite {
-  id: string;
-  email: string;
-  role?: string;
-  created_at: string;
-}
-
-interface Member {
-  id: string;
-  user_id: string;
-  role: string;
-  joined_at: string;
-  email?: string;
-  isYou?: boolean;
-}
-
 export function InviteStaff() {
   const { org, role } = useAuth();
+  const queryClient = useQueryClient();
+  const rosterQuery = useOrgTeamRosterQuery(org?.id);
+
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgRole>("member");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [invites, setInvites] = useState<Invite[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
 
-  const loadData = useCallback(async () => {
-    if (!org) return;
-    const [inviteRes, memberRes, sessionRes] = await Promise.all([
-      supabase
-        .from("org_invites")
-        .select("id, email, role, created_at")
-        .eq("org_id", org.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("org_members")
-        .select("id, user_id, role, joined_at")
-        .eq("org_id", org.id)
-        .order("joined_at", { ascending: true }),
-      supabase.auth.getUser(),
-    ]);
-    if (inviteRes.data) setInvites(inviteRes.data);
-    if (memberRes.data) {
-      const currentUser = sessionRes.data?.user;
-      const enriched: Member[] = memberRes.data.map((m) => ({
-        ...m,
-        email: currentUser && m.user_id === currentUser.id ? currentUser.email : undefined,
-        isYou: currentUser ? m.user_id === currentUser.id : false,
-      }));
+  const invites = rosterQuery.data?.invites ?? [];
+  const members = rosterQuery.data?.members ?? [];
 
-      if (inviteRes.data) {
-        for (const m of enriched) {
-          if (!m.email) {
-            const matchingInvite = inviteRes.data.find(
-              (inv) => enriched.filter((em) => em.email === inv.email).length === 0,
-            );
-            if (matchingInvite) m.email = matchingInvite.email;
-          }
-        }
-      }
-
-      setMembers(enriched);
+  const invalidateRoster = useCallback(() => {
+    if (org?.id) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.org.teamRoster(org.id) });
     }
-  }, [org]);
+  }, [org?.id, queryClient]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const inviteMutation = useMutation({
+    mutationFn: async (payload: { orgId: string; email: string; inviteRole: OrgRole }) => {
+      const { error: err } = await supabase.from("org_invites").insert({
+        org_id: payload.orgId,
+        email: payload.email,
+        role: payload.inviteRole,
+      });
+      if (err) throw err;
+    },
+    onSuccess: (_data, variables) => {
+      setSuccess(`Invite sent to ${variables.email}`);
+      setEmail("");
+      invalidateRoster();
+      setTimeout(() => setSuccess(null), 4000);
+      if (org?.id) {
+        logAudit(org.id, "team.invited", "org_invite", "", { email: variables.email }).catch(
+          () => {},
+        );
+      }
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: string }).message)
+          : String(err);
+      if (msg.includes("duplicate")) setError("This email has already been invited");
+      else setError(msg);
+    },
+  });
 
   const handleInvite = useCallback(
     async (e: React.FormEvent) => {
@@ -109,53 +94,53 @@ export function InviteStaff() {
       setError(null);
       setSuccess(null);
 
-      if (!email.trim() || !email.includes("@")) {
+      const parsed = teamInviteEmailSchema.safeParse(email);
+      if (!parsed.success) {
         setError("Please enter a valid email address");
         return;
       }
       if (!org) return;
 
-      setLoading(true);
-      const { error: err } = await supabase
-        .from("org_invites")
-        .insert({ org_id: org.id, email: email.trim().toLowerCase(), role: inviteRole });
-      setLoading(false);
-
-      if (err) {
-        if (err.message.includes("duplicate")) setError("This email has already been invited");
-        else setError(err.message);
-      } else {
-        setSuccess(`Invite sent to ${email.trim()}`);
-        setEmail("");
-        loadData();
-        setTimeout(() => setSuccess(null), 4000);
-        if (org?.id) {
-          logAudit(org.id, "team.invited", "org_invite", "", {
-            email: email.trim().toLowerCase(),
-          }).catch(() => {});
-        }
-      }
+      inviteMutation.mutate({ orgId: org.id, email: parsed.data.toLowerCase(), inviteRole });
     },
-    [email, org, inviteRole, loadData],
+    [email, org, inviteRole, inviteMutation],
   );
 
-  const revokeInvite = useCallback(
-    async (id: string) => {
+  const revokeMutation = useMutation({
+    mutationFn: async (id: string) => {
       await supabase.from("org_invites").delete().eq("id", id);
-      loadData();
     },
-    [loadData],
+    onSuccess: () => invalidateRoster(),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (payload: { id: string; memberEmail?: string }) => {
+      const { error: delErr } = await supabase.from("org_members").delete().eq("id", payload.id);
+      if (delErr) throw delErr;
+      return payload;
+    },
+    onSuccess: (payload) => {
+      invalidateRoster();
+      if (org?.id) {
+        logAudit(org.id, "team.removed", "org_member", payload.id, {
+          email: payload.memberEmail,
+        }).catch(() => {});
+      }
+    },
+  });
+
+  const revokeInvite = useCallback(
+    (id: string) => {
+      revokeMutation.mutate(id);
+    },
+    [revokeMutation],
   );
 
   const removeMember = useCallback(
-    async (id: string, memberEmail?: string) => {
-      const { error } = await supabase.from("org_members").delete().eq("id", id);
-      if (!error && org?.id) {
-        logAudit(org.id, "team.removed", "org_member", id, { email: memberEmail }).catch(() => {});
-      }
-      loadData();
+    (id: string, memberEmail?: string) => {
+      removeMemberMutation.mutate({ id, memberEmail });
     },
-    [loadData, org],
+    [removeMemberMutation],
   );
 
   const [resettingMfa, setResettingMfa] = useState<string | null>(null);
@@ -215,6 +200,8 @@ export function InviteStaff() {
 
   return (
     <div className="space-y-5">
+      {rosterQuery.isPending && <p className="text-[10px] text-muted-foreground">Loading team…</p>}
+
       {/* Role descriptions */}
       <div className="space-y-1.5">
         <p className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Roles</p>
@@ -248,7 +235,7 @@ export function InviteStaff() {
               ))}
             </SelectContent>
           </Select>
-          <Button type="submit" disabled={loading} className="gap-1.5 text-xs">
+          <Button type="submit" disabled={inviteMutation.isPending} className="gap-1.5 text-xs">
             <UserPlus className="h-3.5 w-3.5" />
             Invite
           </Button>
@@ -291,6 +278,7 @@ export function InviteStaff() {
                 </span>
                 {!m.isYou && (
                   <button
+                    type="button"
                     onClick={() => resetMfa(m.user_id, m.email)}
                     disabled={resettingMfa === m.user_id}
                     className="text-muted-foreground hover:text-[#F29400] transition-colors disabled:opacity-50"
@@ -301,7 +289,9 @@ export function InviteStaff() {
                 )}
                 {m.role !== "admin" && !m.isYou && (
                   <button
+                    type="button"
                     onClick={() => removeMember(m.id, m.email)}
+                    disabled={removeMemberMutation.isPending}
                     className="text-muted-foreground hover:text-[#EA0022] transition-colors"
                     title="Remove member"
                     aria-label="Remove member"
@@ -341,7 +331,9 @@ export function InviteStaff() {
                   })}
                 </span>
                 <button
+                  type="button"
                   onClick={() => revokeInvite(inv.id)}
+                  disabled={revokeMutation.isPending}
                   className="text-muted-foreground hover:text-[#EA0022] transition-colors"
                   title="Revoke invite"
                   aria-label="Revoke invite"

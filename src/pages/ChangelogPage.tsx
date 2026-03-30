@@ -16,9 +16,104 @@ export default function ChangelogPage() {
         </div>
       </header>
       <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
+        <p className="text-xs text-muted-foreground">
+          Technical changelog: <code className="text-xs">CHANGELOG.md</code> at the repository root
+          (Keep a Changelog).
+        </p>
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-foreground">2026-03</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>
+              CI Playwright can run the signed-in workspace journey{" "}
+              <strong className="text-foreground">without</strong> storing test passwords:
+              loopback-only auth bypass when the bundle is built with{" "}
+              <code className="text-xs">VITE_E2E_AUTH_BYPASS</code> (see{" "}
+              <code className="text-xs">.env.example</code>). Optional{" "}
+              <code className="text-xs">E2E_USER_*</code> secrets still exercise real sign-in.
+              Viewport checks (375 / 768 / 1024) cover home and What&apos;s new.
+            </li>
+            <li>
+              Team invites: <strong className="text-foreground">Invite Staff</strong> loads pending
+              invites and members via TanStack Query; customer search debounces for smoother typing.{" "}
+              <strong className="text-foreground">Customer Management</strong> loads the customer
+              directory via TanStack Query; the management drawer PSA summary and data-governance
+              retention line use Query too. More surfaces use the shared{" "}
+              <strong className="text-foreground">empty state</strong> pattern (fleet, SE history,
+              assessments, drift, customers, connectors, config history, audit log, notifications,
+              portfolio trend chart, SE upload-requests dialog).
+            </li>
+            <li>
+              Integrators: OpenAPI and API Hub document{" "}
+              <strong className="text-foreground">guest config upload</strong> (
+              <code className="text-xs">api-public/config-upload/…</code>) and SE{" "}
+              <code className="text-xs">/api/config-upload-request</code>, plus{" "}
+              <code className="text-xs">portal-data</code> and{" "}
+              <code className="text-xs">parse-config</code> Edge URLs; unexpected{" "}
+              <code className="text-xs">parse-config</code> errors log{" "}
+              <code className="text-xs">parse_config_unhandled</code>. Observability doc lists how
+              to grep <code className="text-xs">logJson</code> event names.
+            </li>
+            <li>
+              Ops / performance: <code className="text-xs">docs/PERF-EXPLAIN.md</code>,{" "}
+              <code className="text-xs">docs/SCALE-TRIGGERS.md</code> (when to invest in
+              Redis/queues/Gemini throttling), a minimal{" "}
+              <code className="text-xs">scripts/k6/smoke.js</code> harness (
+              <code className="text-xs">BASE_URL</code>), and a{" "}
+              <code className="text-xs">supabase/seed.sql</code> stub for future local fixtures.
+            </li>
+            <li>
+              Edge API: stricter validation on agent registration, connector heartbeat/submit, admin
+              MFA reset, MFA recovery, assessment list paging, health-check team/follow-up patches,
+              SE teams (create/rename/invite/transfer admin), passkey verify, and ConnectWise Cloud
+              credentials; partial OpenAPI sketch in repo docs for integrators.
+            </li>
+            <li>
+              API Hub / integrators: in-app API docs and{" "}
+              <code className="text-xs">openapi.yaml</code> now cover Autotask PSA and ConnectWise
+              Manage (mappings, credentials, tickets); public{" "}
+              <code className="text-xs">api-public</code> shared-report and shared-health-check GET
+              paths are documented for embeds. Self-hosted runbook links an edge{" "}
+              <code className="text-xs">logJson</code> catalog and saved-search examples for drains.
+            </li>
+            <li>
+              SE Health Check: config upload request list loads via TanStack Query (cancellable
+              fetch); main page shell slimmed for easier maintenance — including extracted{" "}
+              <strong className="text-foreground">Central API help</strong> panel component.
+              Optional Sentry browser reporting when{" "}
+              <code className="text-xs">VITE_SENTRY_DSN</code> is set.
+            </li>
+            <li>
+              Setup wizard: <strong className="text-foreground">Branding</strong> step moved to its
+              own component under <code className="text-xs">setup-wizard/steps/</code> (alongside
+              Welcome) to keep the orchestrator smaller.
+            </li>
+            <li>
+              Self-hosted / ops: <code className="text-xs">docs/observability.md</code> now includes
+              per-function <code className="text-xs">logJson</code> catalogs for{" "}
+              <code className="text-xs">api-public</code> and{" "}
+              <code className="text-xs">api-agent</code>, plus a{" "}
+              <strong className="text-foreground">latency / p95</strong> dashboard table. Tier 3
+              DX/perf items are listed timeboxed in{" "}
+              <code className="text-xs">docs/plans/tier-3-dx-backlog.md</code>.
+            </li>
+            <li>
+              Report Centre: clearer empty state when there are no saved reports, with a shortcut
+              back to the workspace. Portal settings tenant list uses the same TanStack Query
+              pattern as other portal data (bootstrap key + refresh after save).
+            </li>
+            <li>
+              Quality: signed-in Playwright journey (when{" "}
+              <code className="text-xs">E2E_USER_EMAIL</code> /{" "}
+              <code className="text-xs">E2E_USER_PASSWORD</code> are set) — workspace fixture
+              upload, Executive one-pager, <strong className="text-foreground">Word</strong>{" "}
+              download, and PDF export path (print preview <code className="text-xs">print()</code>{" "}
+              stubbed for automation). Saved reports library in the management drawer uses TanStack
+              Query for list/delete refresh. Portal viewers and scheduled-report settings use the
+              shared empty-state pattern. <code className="text-xs">api-public</code> and{" "}
+              <code className="text-xs">api-agent</code> emit structured{" "}
+              <code className="text-xs">logJson</code> events for drains. Tier-2 test plan:{" "}
+              <code className="text-xs">T9.3a</code>.
+            </li>
             <li>
               MSP attention surface on Assess, workspace settings links from Fleet and Insights.
             </li>

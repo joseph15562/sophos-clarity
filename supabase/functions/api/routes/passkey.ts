@@ -1,4 +1,6 @@
+import { passkeyRegisterVerifyBodySchema } from "../../_shared/api-schemas.ts";
 import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
@@ -65,10 +67,15 @@ export async function handlePasskeyRoutes(
     const { data: { user } } = await uc.auth.getUser();
     if (!user) return json({ error: "Unauthorized" }, 401, corsHeaders);
 
-    const body = await req.json();
-    const { credential, name } = body;
+    const raw = await req.json().catch(() => ({}));
+    const parsed = passkeyRegisterVerifyBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "passkey_register_verify_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400, corsHeaders);
+    }
+    const { credential, name } = parsed.data;
 
-    if (!credential?.id || !credential?.response) {
+    if (!credential?.response) {
       return json({ error: "Invalid credential" }, 400, corsHeaders);
     }
 

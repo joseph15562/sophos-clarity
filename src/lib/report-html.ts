@@ -7,9 +7,21 @@ import DOMPurify from "dompurify";
 
 marked.setOptions({ gfm: true, breaks: false });
 
-export const PURIFY_CONFIG: DOMPurify.Config = {
+type PurifyConfig = NonNullable<Parameters<typeof DOMPurify.sanitize>[1]>;
+
+export const PURIFY_CONFIG: PurifyConfig = {
   ADD_TAGS: ["table", "thead", "tbody", "tr", "th", "td", "colgroup", "col"],
-  FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "textarea", "select"],
+  FORBID_TAGS: [
+    "script",
+    "style",
+    "iframe",
+    "object",
+    "embed",
+    "form",
+    "input",
+    "textarea",
+    "select",
+  ],
   FORBID_ATTR: ["onerror", "onclick", "onload", "onmouseover", "onfocus", "onblur"],
 };
 
@@ -21,25 +33,33 @@ export const PURIFY_CONFIG: DOMPurify.Config = {
  */
 function normalizeMarkdownTables(md: string): string {
   const rowBoundary = " | | ";
-  return md.split("\n").map((line) => {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("|") || trimmed.length < 4) return line;
-    const hasSeparator = /\|\s*---\s*\|/.test(trimmed);
-    if (!hasSeparator || !trimmed.includes(rowBoundary)) return line;
-    const parts = trimmed.split(rowBoundary);
-    if (parts.length > 3) return line;
-    const rows = parts.map((p) => {
-      let row = p.trim();
-      if (!row.startsWith("|")) row = "| " + row;
-      if (!row.endsWith("|")) row = row + " |";
-      return row;
-    });
-    return rows.join("\n");
-  }).join("\n");
+  return md
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("|") || trimmed.length < 4) return line;
+      const hasSeparator = /\|\s*---\s*\|/.test(trimmed);
+      if (!hasSeparator || !trimmed.includes(rowBoundary)) return line;
+      const parts = trimmed.split(rowBoundary);
+      if (parts.length > 3) return line;
+      const rows = parts.map((p) => {
+        let row = p.trim();
+        if (!row.startsWith("|")) row = "| " + row;
+        if (!row.endsWith("|")) row = row + " |";
+        return row;
+      });
+      return rows.join("\n");
+    })
+    .join("\n");
 }
 
 function slugifyHeading(text: string): string {
-  return text.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-|-$/g, "") || "section";
+  return (
+    text
+      .toLowerCase()
+      .replace(/[^\w]+/g, "-")
+      .replace(/^-|-$/g, "") || "section"
+  );
 }
 
 export function extractTocHeadings(md: string): { id: string; text: string; level: number }[] {
@@ -91,5 +111,5 @@ export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptio
   if (options?.footer?.trim()) {
     out += `<footer class="report-footer report-meta text-[10px] text-muted-foreground mt-8 pt-4 border-t border-border">${DOMPurify.sanitize(options.footer)}</footer>`;
   }
-  return DOMPurify.sanitize(out, PURIFY_CONFIG);
+  return DOMPurify.sanitize(out, PURIFY_CONFIG) as string;
 }

@@ -14,6 +14,7 @@ import { extractTocHeadings, buildReportHtml } from "@/lib/report-html";
 import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
 import type { BrandingData } from "@/components/BrandingSetup";
 import { Button } from "@/components/ui/button";
+import { SafeHtml } from "@/components/SafeHtml";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 
 function packageToMarkdown(pkg: SavedReportPackage): string {
@@ -287,7 +288,9 @@ function SavedReportViewerInner() {
               </div>
             )}
 
-            <div ref={reportContentRef} dangerouslySetInnerHTML={{ __html: html }} />
+            <div ref={reportContentRef}>
+              <SafeHtml html={html} />
+            </div>
           </div>
         </div>
       </div>

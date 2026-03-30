@@ -81,7 +81,7 @@ export async function sophosFetchTenants(token: string, identity: SophosIdentity
     }
     return [{ id: identity.id, name, apiHost }];
   }
-  const multiHeader = identity.idType === "partner"
+  const multiHeader: Record<string, string> = identity.idType === "partner"
     ? { "X-Partner-ID": identity.id }
     : { "X-Organization-ID": identity.id };
   const endpoint = identity.idType === "partner"

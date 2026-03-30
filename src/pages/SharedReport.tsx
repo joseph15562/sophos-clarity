@@ -7,6 +7,7 @@ import { extractTocHeadings, buildReportHtml } from "@/lib/report-html";
 import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
 import type { BrandingData } from "@/components/BrandingSetup";
 import { Button } from "@/components/ui/button";
+import { SafeHtml } from "@/components/SafeHtml";
 
 const SharedReport = () => {
   const { token } = useParams<{ token: string }>();
@@ -254,7 +255,9 @@ const SharedReport = () => {
               </div>
             )}
             {/* Report body: no prose class so it matches main doc styling exactly */}
-            <div ref={reportContentRef} dangerouslySetInnerHTML={{ __html: html }} />
+            <div ref={reportContentRef}>
+              <SafeHtml html={html} />
+            </div>
           </div>
         </div>
       </div>

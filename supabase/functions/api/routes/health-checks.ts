@@ -1,5 +1,11 @@
+import {
+  healthCheckBulkTeamBodySchema,
+  healthCheckFollowupBodySchema,
+  healthCheckTeamBodySchema,
+} from "../../_shared/api-schemas.ts";
 import { authenticateSE } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 import {
   buildSophosEmailHtml,
   CONFIG_UPLOAD_FROM_EMAIL,
@@ -28,8 +34,13 @@ export async function handleHealthCheckRoutes(
   // PATCH /api/health-checks/:id/team — reassign single check
   if (req.method === "PATCH" && segments.length === 3 && segments[2] === "team") {
     const checkId = segments[1];
-    const body = await req.json();
-    const newTeamId = body.team_id ?? null;
+    const raw = await req.json().catch(() => ({}));
+    const parsed = healthCheckTeamBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "health_check_team_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400, corsHeaders);
+    }
+    const newTeamId = parsed.data.team_id ?? null;
 
     const { data: row } = await db
       .from("se_health_checks")
@@ -55,10 +66,14 @@ export async function handleHealthCheckRoutes(
 
   // PATCH /api/health-checks/bulk-team — bulk reassign
   if (req.method === "PATCH" && segments.length === 2 && segments[1] === "bulk-team") {
-    const body = await req.json();
-    const ids: string[] = body.ids;
-    const newTeamId = body.team_id ?? null;
-    if (!ids?.length) return json({ error: "ids array is required" }, 400, corsHeaders);
+    const raw = await req.json().catch(() => ({}));
+    const parsed = healthCheckBulkTeamBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "health_check_bulk_team_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400, corsHeaders);
+    }
+    const { ids, team_id: teamIdRaw } = parsed.data;
+    const newTeamId = teamIdRaw ?? null;
 
     if (newTeamId) {
       const { data: mem } = await db
@@ -86,8 +101,13 @@ export async function handleHealthCheckRoutes(
   // PATCH /api/health-checks/:id/followup — set or clear follow-up reminder
   if (req.method === "PATCH" && segments.length === 3 && segments[2] === "followup") {
     const checkId = segments[1];
-    const body = await req.json();
-    const followupAt: string | null = body.followup_at ?? null;
+    const raw = await req.json().catch(() => ({}));
+    const parsed = healthCheckFollowupBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "health_check_followup_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400, corsHeaders);
+    }
+    const followupAt: string | null = parsed.data.followup_at ?? null;
 
     const { data: row } = await db
       .from("se_health_checks")
@@ -115,13 +135,16 @@ export async function handleHealthCheckRoutes(
       .eq("followup_sent", false)
       .limit(50);
 
+    const seUserIds = [...new Set((due ?? []).map((r) => r.se_user_id))];
+    const { data: profiles } = await db
+      .from("se_profiles")
+      .select("id, email, display_name")
+      .in("id", seUserIds);
+    const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
     let sent = 0;
     for (const row of due ?? []) {
-      const { data: profile } = await db
-        .from("se_profiles")
-        .select("email, display_name")
-        .eq("id", row.se_user_id)
-        .maybeSingle();
+      const profile = profileById.get(row.se_user_id);
       if (!profile?.email) continue;
 
       const checkedDate = new Date(row.checked_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });

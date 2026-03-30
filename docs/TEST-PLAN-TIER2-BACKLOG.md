@@ -98,12 +98,23 @@
 
 ## 6. `LoadingState`, `SafeHtml`, `EmptyState`
 
-| ID   | Objective                        | Type   | Steps                                                                                | Pass |
-| ---- | -------------------------------- | ------ | ------------------------------------------------------------------------------------ | ---- |
-| T6.1 | Loading consistency              | Manual | Key pages: loading/skeleton still sensible.                                          | ☐    |
-| T6.2 | Report HTML renders              | Manual | Open document preview + shared report: tables/lists/formatting OK.                   | ☐    |
-| T6.3 | Sanitization not over-aggressive | Manual | Spot-check AI HTML (code blocks, lists); compare to pre-change screenshot if needed. | ☐    |
-| T6.4 | Empty lists                      | Manual | Each wired empty state: copy + CTA correct; data appears when added.                 | ☐    |
+| ID    | Objective                        | Type   | Steps                                                                                       | Pass |
+| ----- | -------------------------------- | ------ | ------------------------------------------------------------------------------------------- | ---- |
+| T6.1  | Loading consistency              | Manual | Key pages: loading/skeleton still sensible.                                                 | ☐    |
+| T6.2  | Report HTML renders              | Manual | Open document preview + shared report: tables/lists/formatting OK.                          | ☐    |
+| T6.3  | Sanitization not over-aggressive | Manual | Spot-check AI HTML (code blocks, lists); compare to pre-change screenshot if needed.        | ☐    |
+| T6.4  | Empty lists                      | Manual | Each wired empty state: copy + CTA correct; data appears when added.                        | ☐    |
+| T6.5  | Report Centre — no saved reports | Manual | With no reports: `EmptyState` shows; **Go to workspace** navigates to workspace.            | ☐    |
+| T6.6  | Portal viewers empty             | Manual | No viewers: `EmptyState` + copy; invite form still usable.                                  | ☐    |
+| T6.7  | Scheduled reports empty          | Manual | No schedules: `EmptyState`; create flow still reachable.                                    | ☐    |
+| T6.8  | Saved library (drawer) empty     | Manual | No packages: `EmptyState` in Management drawer library.                                     | ☐    |
+| T6.9  | Agent fleet / connector          | Manual | No agents, no submissions, filter miss: `EmptyState` copy + actions in **AgentFleetPanel**. | ☐    |
+| T6.10 | SE health history                | Manual | No rows: `EmptyState` in **SEHealthCheckHistory2**.                                         | ☐    |
+| T6.11 | Assessment history               | Manual | No snapshots: `EmptyState` in **AssessmentHistory**.                                        | ☐    |
+| T6.12 | Drift monitor                    | Manual | No snapshots: `EmptyState` + back CTA on **DriftMonitor**.                                  | ☐    |
+| T6.13 | Tenant dashboard                 | Manual | No customers: `EmptyState` in **TenantDashboard**.                                          | ☐    |
+| T6.14 | Customer management              | Manual | No customers: `EmptyState` + onboard CTA on **CustomerManagement**.                         | ☐    |
+| T6.15 | Connector register               | Manual | No agents: `EmptyState` in **AgentManager** (Management drawer).                            | ☐    |
 
 ---
 
@@ -130,12 +141,13 @@
 
 ## 9. Automated tests and accessibility
 
-| ID   | Objective           | Type      | Steps                                    | Pass |
-| ---- | ------------------- | --------- | ---------------------------------------- | ---- |
-| T9.1 | Unit tests          | Automated | `npm test`                               | ☐    |
-| T9.2 | Deno shared/tests   | Automated | `npm run test:deno`                      | ☐    |
-| T9.3 | Playwright          | Automated | `npm run test:e2e`                       | ☐    |
-| T9.4 | axe (if integrated) | Automated | CI axe step green or waivers documented. | ☐    |
+| ID    | Objective                   | Type      | Steps                                                                                                                                                                                                                                                                                                                                                                                  | Pass |
+| ----- | --------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| T9.1  | Unit tests                  | Automated | `npm test`                                                                                                                                                                                                                                                                                                                                                                             | ☐    |
+| T9.2  | Deno shared/tests           | Automated | `npm run test:deno`                                                                                                                                                                                                                                                                                                                                                                    | ☐    |
+| T9.3  | Playwright                  | Automated | `npm run test:e2e`                                                                                                                                                                                                                                                                                                                                                                     | ☐    |
+| T9.3a | Signed-in workspace journey | Automated | **Bypass (no secrets):** CI build sets `VITE_E2E_AUTH_BYPASS=1`; Playwright webServer passes same; `tier2-flows` describe **signed-in hub (E2E bypass)** runs upload → **Executive One-Pager** → Word `.docx` + PDF print stub (`__E2E_PDF_PRINT__`). **Optional secrets:** `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` still run the **real sign-in** duplicate journey for live Supabase. | ☐    |
+| T9.4  | axe (if integrated)         | Automated | CI axe step green or waivers documented.                                                                                                                                                                                                                                                                                                                                               | ☐    |
 
 ---
 

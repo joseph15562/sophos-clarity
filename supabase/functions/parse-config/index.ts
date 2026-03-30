@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { safeError } from "../_shared/db.ts";
+import { logJson } from "../_shared/logger.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -279,7 +280,7 @@ serve(async (req) => {
 
   // Per-user rate limit (DB-backed via gemini_usage table)
   if (adminClient && await isRateLimited(user.id, adminClient)) {
-    console.warn(`parse-config: rate limited user=${user.id.slice(0, 8)}…`);
+    logJson("warn", "parse_config_rate_limited", { userPrefix: user.id.slice(0, 8) });
     return new Response(
       JSON.stringify({ error: "Too many requests. Please wait a moment before generating another report." }),
       { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -491,21 +492,28 @@ serve(async (req) => {
     const max429Retries = 2;
     for (let retries = 0; response.status === 429 && retries < max429Retries; retries++) {
       const retrySec = 15 + retries * 15;
-      console.log(`parse-config: 429 rate limit. Waiting ${retrySec}s before retry (attempt ${retries + 1}/${max429Retries}).`);
+      logJson("info", "parse_config_429_retry", { retrySec, attempt: retries + 1, max429Retries });
       await new Promise((r) => setTimeout(r, retrySec * 1000));
       response = await doRequest(primaryModel);
     }
 
     if (!response.ok && response.status !== 429 && response.status !== 402 && fallbackModel !== primaryModel) {
-      console.log(`parse-config: primary model ${primaryModel} failed (${response.status}), falling back to ${fallbackModel}`);
+      logJson("info", "parse_config_model_fallback", {
+        primaryModel,
+        status: response.status,
+        fallbackModel,
+      });
       usedModel = fallbackModel;
       response = await doRequest(fallbackModel);
     }
-    console.log(`parse-config: using model=${usedModel}`);
+    logJson("info", "parse_config_using_model", { usedModel });
 
     if (!response.ok) {
       const text = await response.text();
-      console.error("Gemini API error:", response.status, text.slice(0, 500));
+      logJson("error", "parse_config_gemini_http", {
+        status: response.status,
+        bodyPrefix: text.slice(0, 500),
+      });
 
       let message = `AI processing failed (HTTP ${response.status})`;
       try {
@@ -513,7 +521,7 @@ serve(async (req) => {
         const detail = errJson.error?.message ?? errJson.message ?? errJson.error;
         if (typeof detail === "string") message = detail;
       } catch (parseErr) {
-        console.warn("[parse-config] Gemini error JSON parse", parseErr);
+        logJson("warn", "parse_config_gemini_json_parse", { error: String(parseErr) });
         if (text.length > 0 && text.length < 200) message = text;
       }
 
@@ -538,7 +546,7 @@ serve(async (req) => {
         );
       }
 
-      console.error("[parse-config] Gemini error detail:", message);
+      logJson("error", "parse_config_gemini_error_detail", { message });
       return new Response(
         JSON.stringify({ error: "AI processing failed. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -575,7 +583,13 @@ serve(async (req) => {
                   const totalFromMeta = meta?.total_token_count;
                   const total = totalFromUsage ?? totalFromMeta ?? (promptTokens != null || completionTokens != null ? (promptTokens ?? 0) + (completionTokens ?? 0) : 0);
                   if (total > 0) {
-                    console.log(`parse-config token usage: prompt=${promptTokens ?? "-"} completion=${completionTokens ?? "-"} total=${total} (model=${model} chat=${chat})`);
+                    logJson("info", "parse_config_token_usage", {
+                      promptTokens,
+                      completionTokens,
+                      total,
+                      model,
+                      chat,
+                    });
                     if (adminClient) {
                       adminClient.from("gemini_usage").insert({
                         total_tokens: total,
@@ -584,11 +598,18 @@ serve(async (req) => {
                         model,
                         is_chat: chat,
                         user_id: user.id,
-                      }).then(() => {}).catch((err) => console.warn("[parse-config] gemini_usage insert failed:", err.message));
+                      }).then(() => {}).catch((err) =>
+                        logJson("warn", "parse_config_gemini_usage_insert", {
+                          error: err instanceof Error ? err.message : String(err),
+                        })
+                      );
                     }
                     const FREE_TIER_TPM = 250_000;
                     if (total >= FREE_TIER_TPM) {
-                      console.warn(`parse-config: single request used ${total} tokens (>= ${FREE_TIER_TPM} TPM free tier). Check gemini_usage table for per-minute totals.`);
+                      logJson("warn", "parse_config_high_token_usage", {
+                        total,
+                        freeTierTpm: FREE_TIER_TPM,
+                      });
                     }
                   }
                 } catch (_) {
@@ -610,6 +631,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
+    logJson("error", "parse_config_unhandled", {
+      message: e instanceof Error ? e.message : String(e),
+    });
     return new Response(
       JSON.stringify({ error: safeError(e) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

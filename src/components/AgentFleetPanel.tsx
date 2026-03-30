@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -22,6 +22,7 @@ import { analyseConfig } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
 import { getLatestConnectorVersion, isConnectorVersionOutdated } from "@/lib/connector-version";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -213,30 +214,33 @@ function AgentSummaryCard({
 
   if (!submission) {
     return (
-      <div className="py-4 text-center space-y-2">
-        <p className="text-xs text-muted-foreground">
-          No submissions yet. The agent will submit data after its first scheduled run.
-        </p>
-        {agent.status === "online" && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-[10px] h-7"
-            onClick={onRequestScan}
-            disabled={scanRequested}
-          >
-            {scanRequested ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" /> Scan Requested…
-              </>
-            ) : (
-              <>
-                <Play className="h-3 w-3" /> Request Scan Now
-              </>
-            )}
-          </Button>
-        )}
-      </div>
+      <EmptyState
+        className="py-6"
+        icon={<Activity className="h-6 w-6 text-muted-foreground/50" />}
+        title="No submissions yet"
+        description="The agent will submit data after its first scheduled run."
+        action={
+          agent.status === "online" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-[10px] h-7"
+              onClick={onRequestScan}
+              disabled={scanRequested}
+            >
+              {scanRequested ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" /> Scan Requested…
+                </>
+              ) : (
+                <>
+                  <Play className="h-3 w-3" /> Request Scan Now
+                </>
+              )}
+            </Button>
+          ) : undefined
+        }
+      />
     );
   }
 
@@ -357,7 +361,10 @@ function AgentSummaryCard({
           </p>
           <div className="space-y-0.5">
             {findings.slice(0, 5).map((f, i) => (
-              <div key={i} className="flex items-center gap-2 text-[10px]">
+              <div
+                key={`${f.title}-${f.severity}-${i}`}
+                className="flex items-center gap-2 text-[10px]"
+              >
                 <SeverityBadge severity={f.severity} />
                 <span className="text-foreground truncate">{f.title}</span>
               </div>
@@ -439,6 +446,14 @@ export function AgentFleetPanel({
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
   const [fleetFilter, setFleetFilter] = useState<FleetFilter>("all");
   const [submissionCounts7d, setSubmissionCounts7d] = useState<Record<string, number>>({});
+  const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+
+  useEffect(() => {
+    return () => {
+      for (const iv of pollIntervalsRef.current.values()) clearInterval(iv);
+      pollIntervalsRef.current.clear();
+    };
+  }, []);
 
   const loadAgents = useCallback(async () => {
     if (!org?.id) return;
@@ -508,40 +523,61 @@ export function AgentFleetPanel({
     }
   }, [grouped]);
 
+  const loadSubmissionsBatch = useCallback(async (agentIds: string[]) => {
+    const unique = [...new Set(agentIds)];
+    let toFetch: string[] = [];
+    setSubmissions((prev) => {
+      toFetch = unique.filter((id) => prev[id] === undefined);
+      return prev;
+    });
+    if (toFetch.length === 0) return;
+
+    setLoadingSub((p) => {
+      const n = { ...p };
+      for (const id of toFetch) n[id] = true;
+      return n;
+    });
+
+    const { data } = await supabase
+      .from("agent_submissions")
+      .select("*")
+      .in("agent_id", toFetch)
+      .order("created_at", { ascending: false });
+
+    const latestByAgent = new Map<string, Submission>();
+    for (const row of data ?? []) {
+      if (!latestByAgent.has(row.agent_id)) latestByAgent.set(row.agent_id, row);
+    }
+
+    setSubmissions((prev) => {
+      const n = { ...prev };
+      for (const id of toFetch) {
+        if (n[id] === undefined) n[id] = latestByAgent.get(id) ?? null;
+      }
+      return n;
+    });
+    setLoadingSub((p) => {
+      const n = { ...p };
+      for (const id of toFetch) n[id] = false;
+      return n;
+    });
+  }, []);
+
   useEffect(() => {
     if (!expandedTenant) return;
     const tenantAgents = grouped.find(([name]) => name === expandedTenant)?.[1];
-    if (!tenantAgents) return;
-    for (const agent of tenantAgents) {
-      if (submissions[agent.id] === undefined) {
-        loadSubmission(agent.id);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expandedTenant, grouped]);
-
-  const loadSubmission = useCallback(
-    async (agentId: string) => {
-      if (submissions[agentId] !== undefined) return;
-      setLoadingSub((p) => ({ ...p, [agentId]: true }));
-      const { data } = await supabase
-        .from("agent_submissions")
-        .select("*")
-        .eq("agent_id", agentId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      setSubmissions((p) => ({ ...p, [agentId]: data?.[0] ?? null }));
-      setLoadingSub((p) => ({ ...p, [agentId]: false }));
-    },
-    [submissions],
-  );
+    if (!tenantAgents?.length) return;
+    const need = tenantAgents.map((a) => a.id).filter((id) => submissions[id] === undefined);
+    if (need.length === 0) return;
+    void loadSubmissionsBatch(need);
+  }, [expandedTenant, grouped, submissions, loadSubmissionsBatch]);
 
   const handleAgentClick = (agentId: string) => {
     if (expandedAgent === agentId) {
       setExpandedAgent(null);
     } else {
       setExpandedAgent(agentId);
-      loadSubmission(agentId);
+      void loadSubmissionsBatch([agentId]);
     }
   };
 
@@ -577,6 +613,10 @@ export function AgentFleetPanel({
       const existingTs = submissions[agentId]?.created_at;
       let attempts = 0;
       const maxAttempts = 36; // 3 minutes at 5s intervals
+
+      const prevIv = pollIntervalsRef.current.get(agentId);
+      if (prevIv) clearInterval(prevIv);
+
       const pollInterval = setInterval(async () => {
         attempts++;
         const { data } = await supabase
@@ -589,6 +629,7 @@ export function AgentFleetPanel({
         const latest = data?.[0] ?? null;
         if (latest && latest.created_at !== existingTs) {
           clearInterval(pollInterval);
+          pollIntervalsRef.current.delete(agentId);
           setSubmissions((p) => ({ ...p, [agentId]: latest }));
           setScanRequested((p) => ({ ...p, [agentId]: false }));
           toast.success(`Scan complete — Score: ${latest.overall_score}/${latest.overall_grade}`);
@@ -598,10 +639,12 @@ export function AgentFleetPanel({
 
         if (attempts >= maxAttempts) {
           clearInterval(pollInterval);
+          pollIntervalsRef.current.delete(agentId);
           setScanRequested((p) => ({ ...p, [agentId]: false }));
           toast.info("Scan is taking longer than expected — refresh the page to check results");
         }
       }, 5000);
+      pollIntervalsRef.current.set(agentId, pollInterval);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed");
     }
@@ -737,33 +780,25 @@ export function AgentFleetPanel({
       </div>
 
       {agentsForUi.length === 0 && agents.length > 0 && fleetFilter !== "all" && (
-        <div className="px-6 py-4 text-center text-xs text-muted-foreground">
-          No agents match this filter — try{" "}
-          <button
-            type="button"
-            className="underline font-medium text-foreground"
-            onClick={() => setFleetFilter("all")}
-          >
-            show all
-          </button>
-          .
-        </div>
+        <EmptyState
+          className="py-8 px-6"
+          title="No agents match this filter"
+          description="Try showing all firewalls or pick a different filter."
+          action={
+            <Button type="button" variant="outline" size="sm" onClick={() => setFleetFilter("all")}>
+              Show all
+            </Button>
+          }
+        />
       )}
 
       {agents.length === 0 && (
-        <div className="px-6 py-8 text-center space-y-3">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-muted/40 flex items-center justify-center">
-            <Server className="h-6 w-6 text-muted-foreground/70" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">No connected firewalls yet</p>
-            <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
-              Register an agent in the{" "}
-              <span className="font-semibold text-foreground">Management Panel</span> to turn
-              one-off reviews into a continuous managed assessment workflow.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          className="py-8 px-6"
+          icon={<Server className="h-6 w-6 text-muted-foreground/50" />}
+          title="No connected firewalls yet"
+          description="Register an agent in the Management Panel to turn one-off reviews into a continuous managed assessment workflow."
+        />
       )}
 
       <div className="divide-y divide-border">

@@ -5,7 +5,12 @@
 
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfVfs from "pdfmake/build/vfs_fonts";
-import type { Content, CustomTableLayout, TableCell, TDocumentDefinitions } from "pdfmake/interfaces";
+import type {
+  Content,
+  CustomTableLayout,
+  TableCell,
+  TDocumentDefinitions,
+} from "pdfmake/interfaces";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html-v2";
 import { getActiveModules, MODULES } from "@/lib/sophos-licence";
@@ -32,14 +37,22 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
  * Render an SVG string to a high-resolution PNG data URL via offscreen canvas.
  * Scale factor 3x ensures crisp rendering in PDF viewers.
  */
-function svgToHighResPng(svgText: string, width: number, height: number, scale = 3): Promise<string | null> {
+function svgToHighResPng(
+  svgText: string,
+  width: number,
+  height: number,
+  scale = 3,
+): Promise<string | null> {
   if (typeof document === "undefined") return Promise.resolve(null);
   return new Promise((resolve) => {
     const canvas = document.createElement("canvas");
     canvas.width = width * scale;
     canvas.height = height * scale;
     const ctx = canvas.getContext("2d");
-    if (!ctx) { resolve(null); return; }
+    if (!ctx) {
+      resolve(null);
+      return;
+    }
     const img = new Image();
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -48,7 +61,10 @@ function svgToHighResPng(svgText: string, width: number, height: number, scale =
       URL.revokeObjectURL(url);
       resolve(canvas.toDataURL("image/png"));
     };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
     img.src = url;
   });
 }
@@ -74,7 +90,9 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const svgText = await res.text();
         const dataUrl = await svgToHighResPng(svgText, 600, 65);
         if (dataUrl) out.wordmark = dataUrl;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     })(),
   );
 
@@ -87,7 +105,9 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const svgText = await res.text();
         const dataUrl = await svgToHighResPng(svgText, 600, 65);
         if (dataUrl) out.wordmarkDark = dataUrl;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     })(),
   );
 
@@ -100,7 +120,9 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const svgText = await res.text();
         const dataUrl = await svgToHighResPng(svgText, 65, 65, 12);
         if (dataUrl) out.shield = dataUrl;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     })(),
   );
 
@@ -135,7 +157,8 @@ let vfsAttached = false;
 
 function ensurePdfMakeVfs(): void {
   if (vfsAttached) return;
-  pdfMake.vfs = pdfVfs as typeof pdfMake.vfs;
+  const pm = pdfMake as typeof pdfMake & { vfs: Record<string, string> };
+  pm.vfs = pdfVfs as Record<string, string>;
   vfsAttached = true;
 }
 
@@ -257,9 +280,7 @@ function p(text: string, marginBottom = 6): Content {
 /** Paragraph with inline bold segments (matches HTML `<strong>`). */
 function pRich(parts: (string | { t: string; b?: boolean })[], marginBottom = 6): Content {
   const text = parts.map((part) =>
-    typeof part === "string"
-      ? part
-      : { text: part.t, bold: part.b ?? true, font: "ZalandoSans" },
+    typeof part === "string" ? part : { text: part.t, bold: part.b ?? true, font: "ZalandoSans" },
   );
   return {
     text,
@@ -323,28 +344,32 @@ function buildCoverPage(
     coverMetaLine("Customer Name: ", coverCustomer, 5, metaSize),
     coverMetaLine("Prepared For: ", coverPreparedFor, 5, metaSize),
     coverMetaLine("Prepared By: ", coverPrepared, 5, metaSize),
-    coverMetaLine("Serial Number: ", serialNumbers.length > 0 ? serialNumbers.join(", ") : "—", 5, metaSize),
+    coverMetaLine(
+      "Serial Number: ",
+      serialNumbers.length > 0 ? serialNumbers.join(", ") : "—",
+      5,
+      metaSize,
+    ),
     coverMetaLine("Date: ", dateLocal, 0, metaSize),
   );
 
-  const shieldRow: TableCell =
-    assets.shield != null
-      ? {
-          stack: [
-            {
-              image: assets.shield,
-              width: 220,
-              alignment: "center",
-            },
-          ],
-          border: [false, false, false, false],
-          verticalAlignment: "middle",
-        }
-      : {
-          text: "",
-          border: [false, false, false, false],
-          verticalAlignment: "middle",
-        };
+  const shieldRow = (assets.shield != null
+    ? {
+        stack: [
+          {
+            image: assets.shield,
+            width: 220,
+            alignment: "center" as const,
+          },
+        ],
+        border: [false, false, false, false] as const,
+        verticalAlignment: "middle",
+      }
+    : {
+        text: "",
+        border: [false, false, false, false] as const,
+        verticalAlignment: "middle",
+      }) as unknown as TableCell;
 
   const coverTable: Content = {
     table: {
@@ -478,7 +503,9 @@ function buildLicenceSection(licence: LicenceSelection): Content[] {
       ],
       fillColor: selected ? "#eef2ff" : "#ffffff",
       border: [true, true, true, true],
-      borderColor: selected ? ["#4f46e5", "#4f46e5", "#4f46e5", "#4f46e5"] : ["#e5e7eb", "#e5e7eb", "#e5e7eb", "#e5e7eb"],
+      borderColor: selected
+        ? ["#4f46e5", "#4f46e5", "#4f46e5", "#4f46e5"]
+        : ["#e5e7eb", "#e5e7eb", "#e5e7eb", "#e5e7eb"],
       margin: [0, 0, 0, 0],
     } as TableCell;
   });
@@ -589,15 +616,40 @@ function buildBPScoreSection(bp: SophosBPScore): Content[] {
 
   const statBlock = (count: number, label: string, color: string) => ({
     stack: [
-      { text: String(count), font: "ZalandoSans", bold: true, fontSize: 20, color, alignment: "center" as const },
-      { text: label, font: "ZalandoSans", fontSize: 8, color: "#6b7280", alignment: "center" as const, margin: [0, 2, 0, 0] as [number, number, number, number] },
+      {
+        text: String(count),
+        font: "ZalandoSans",
+        bold: true,
+        fontSize: 20,
+        color,
+        alignment: "center" as const,
+      },
+      {
+        text: label,
+        font: "ZalandoSans",
+        fontSize: 8,
+        color: "#6b7280",
+        alignment: "center" as const,
+        margin: [0, 2, 0, 0] as [number, number, number, number],
+      },
     ],
     width: "auto" as const,
   });
 
   const gaugeCol = gaugeDataUrl
-    ? { image: gaugeDataUrl, width: 120, alignment: "center" as const, margin: [0, 0, 16, 0] as [number, number, number, number] }
-    : { text: `${bp.overall} / Grade ${bp.grade}`, font: "ZalandoSans", bold: true, fontSize: 18, width: 120 };
+    ? {
+        image: gaugeDataUrl,
+        width: 120,
+        alignment: "center" as const,
+        margin: [0, 0, 16, 0] as [number, number, number, number],
+      }
+    : {
+        text: `${bp.overall} / Grade ${bp.grade}`,
+        font: "ZalandoSans",
+        bold: true,
+        fontSize: 18,
+        width: 120,
+      };
 
   const summaryRow: Content = {
     columns: [
@@ -638,7 +690,14 @@ function buildBPScoreSection(bp: SophosBPScore): Content[] {
     for (const row of rows) {
       const color = BP_STATUS_COLORS[row.status] ?? "#94a3b8";
       const detailParts: Content[] = [
-        { text: row.check.title, font: "ZalandoSans", bold: true, fontSize: 8, color: BODY_TEXT, lineHeight: 1.15 },
+        {
+          text: row.check.title,
+          font: "ZalandoSans",
+          bold: true,
+          fontSize: 8,
+          color: BODY_TEXT,
+          lineHeight: 1.15,
+        },
       ];
       if (row.detail) {
         detailParts.push({
@@ -674,11 +733,7 @@ function buildBPScoreSection(bp: SophosBPScore): Content[] {
     }
   }
 
-  return [
-    h4("Sophos Best Practice Score"),
-    summaryRow,
-    ...checkRows,
-  ];
+  return [h4("Sophos Best Practice Score"), summaryRow, ...checkRows];
 }
 
 /** Build pdfmake document definition (for tests and createPdf). */
@@ -790,9 +845,7 @@ export function buildSeHealthCheckPdfDocDefinition(
   const provenance: Content[] = [
     h2Section("Provenance and limitations", assets.wordmarkDark),
     p(`Generated: ${dateUtc} (UTC) / ${dateLocal} (local)`),
-    p(
-      `Tool: Sophos FireComply — SE Firewall Health Check${appVersion ? ` (${appVersion})` : ""}.`,
-    ),
+    p(`Tool: Sophos FireComply — SE Firewall Health Check${appVersion ? ` (${appVersion})` : ""}.`),
     p(
       "This assessment is point in time and based solely on the configuration files supplied. It is not a penetration test. Completeness depends on export quality and parser coverage. Validate critical items in the live Sophos XGS / SFOS console before making architectural or contractual commitments.",
     ),
@@ -804,9 +857,7 @@ export function buildSeHealthCheckPdfDocDefinition(
     ...(dpiExemptZones.length === 0 && dpiExemptNetworks.length === 0
       ? [p("None selected.")]
       : [
-          ...(dpiExemptZones.length > 0
-            ? [p(`Zones: ${dpiExemptZones.join(", ")}`)]
-            : []),
+          ...(dpiExemptZones.length > 0 ? [p(`Zones: ${dpiExemptZones.join(", ")}`)] : []),
           ...(dpiExemptNetworks.length > 0
             ? [p(`Source networks: ${dpiExemptNetworks.join(", ")}`)]
             : []),
@@ -815,8 +866,12 @@ export function buildSeHealthCheckPdfDocDefinition(
     p(
       `MDR threat feeds configured (export gap): ${seAckMdrThreatFeeds ? "Yes — SE confirmed on appliance" : "No"}`,
     ),
-    p(`NDR Essentials enabled (export gap): ${seAckNdrEssentials ? "Yes — SE confirmed on appliance" : "No"}`),
-    p(`DNS Protection configured (export gap): ${seAckDnsProtection ? "Yes — SE confirmed on appliance" : "No"}`),
+    p(
+      `NDR Essentials enabled (export gap): ${seAckNdrEssentials ? "Yes — SE confirmed on appliance" : "No"}`,
+    ),
+    p(
+      `DNS Protection configured (export gap): ${seAckDnsProtection ? "Yes — SE confirmed on appliance" : "No"}`,
+    ),
     h3("Synchronized Security scope"),
     p(
       `Security Heartbeat check excluded (no Sophos endpoints): ${seExcludeSecurityHeartbeat ? "Yes" : "No"}`,
@@ -847,20 +902,19 @@ export function buildSeHealthCheckPdfDocDefinition(
 
     const counts = countBySeverity(ar.findings);
     const countRow = SEVERITY_ORDER.map((sev) => String(counts[sev]));
-    executive.push(
-      h4("Finding counts by severity"),
-      {
-        table: {
-          headerRows: 1,
-          widths: ["20%", "20%", "20%", "20%", "20%"],
-          body: [SEVERITY_ORDER.map((s) => th(s)), countRow],
-        },
-        layout: LAYOUT_TABLE_REPORT,
-        margin: [0, 0, 0, 8],
+    executive.push(h4("Finding counts by severity"), {
+      table: {
+        headerRows: 1,
+        widths: ["20%", "20%", "20%", "20%", "20%"],
+        body: [SEVERITY_ORDER.map((s) => th(s)), countRow],
       },
-    );
+      layout: LAYOUT_TABLE_REPORT,
+      margin: [0, 0, 0, 8],
+    });
 
-    const top = sortedFindings(ar).filter((f) => f.severity === "critical" || f.severity === "high").slice(0, 5);
+    const top = sortedFindings(ar)
+      .filter((f) => f.severity === "critical" || f.severity === "high")
+      .slice(0, 5);
     if (top.length > 0) {
       executive.push({
         text: `Priority next steps (top ${top.length} critical/high):`,
@@ -882,10 +936,11 @@ export function buildSeHealthCheckPdfDocDefinition(
 
   const seNotesBlock: Content[] = [];
   if (seNotes?.trim()) {
-    seNotesBlock.push(
-      h2Section("SE Engineer Notes", assets.wordmarkDark),
-      { text: seNotes.trim(), style: "body", margin: [0, 0, 0, 10] },
-    );
+    seNotesBlock.push(h2Section("SE Engineer Notes", assets.wordmarkDark), {
+      text: seNotes.trim(),
+      style: "body",
+      margin: [0, 0, 0, 10],
+    });
   }
 
   const baselineFindingsBlocks: Content[] = [];

@@ -7,10 +7,11 @@ import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 export interface BuildAutoSeNotesParams {
   analysisResults: Record<string, AnalysisResult>;
   licence: LicenceSelection;
-  centralLinkedForAnalysis: Record<string, string>;
-  seCentralHaLabels: Set<string>;
-  seThreatResponseAck: Set<string>;
-  seExcludedBpChecks: Set<string>;
+  /** True when Central is linked/validated for this session (same as `centralLinkedForAnalysis` in HealthCheck2). */
+  centralLinkedForAnalysis: boolean;
+  seCentralHaLabels?: Set<string> | undefined;
+  seThreatResponseAck?: Set<string> | undefined;
+  seExcludedBpChecks?: Set<string> | undefined;
   dpiExemptZones: string[];
   dpiExemptNetworks: string[];
   webFilterExemptRuleNames: string[];
@@ -42,6 +43,10 @@ export function buildAutoSeNotes(params: BuildAutoSeNotesParams): string {
   const labels = Object.keys(analysisResults);
   if (labels.length === 0) return "";
 
+  const haLabels = seCentralHaLabels ?? new Set<string>();
+  const threatAck = seThreatResponseAck ?? new Set<string>();
+  const excludedBp = seExcludedBpChecks ?? new Set<string>();
+
   const manualOverrides = loadSeHealthCheckBpOverrides();
   const paras: string[] = [];
 
@@ -60,14 +65,14 @@ export function buildAutoSeNotes(params: BuildAutoSeNotesParams): string {
   for (const label of labels) {
     const ar = analysisResults[label];
     if (!ar) continue;
-    const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
+    const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, haLabels);
     const bp = computeSophosBPScore(
       ar,
       licence,
       manualOverrides,
       centralAuto,
-      seThreatResponseAck,
-      seExcludedBpChecks,
+      threatAck,
+      excludedBp,
     );
 
     if (multi) paras.push(`Regarding ${label}:`);

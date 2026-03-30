@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 
 const DEFAULT_TEMPLATE = {
@@ -21,18 +22,26 @@ export function ReportTemplateSettings() {
 
   useEffect(() => {
     if (!org?.id) return;
-    supabase
-      .from("organisations")
-      .select("report_template")
-      .eq("id", org.id)
-      .single()
-      .then(({ data }) => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("organisations")
+          .select("report_template")
+          .eq("id", org.id)
+          .single();
+        if (cancelled) return;
         const rt = (data as { report_template?: unknown } | null)?.report_template;
         setTemplateJson(
           rt ? JSON.stringify(rt, null, 2) : JSON.stringify(DEFAULT_TEMPLATE, null, 2),
         );
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [org?.id]);
 
   const handleSave = async () => {
@@ -60,7 +69,10 @@ export function ReportTemplateSettings() {
         ? (parsed as Record<string, unknown>)
         : {}),
     };
-    await supabase.from("organisations").update({ report_template: merged }).eq("id", org.id);
+    await supabase
+      .from("organisations")
+      .update({ report_template: merged as Json })
+      .eq("id", org.id);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);

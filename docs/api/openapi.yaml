@@ -1,0 +1,633 @@
+openapi: 3.0.3
+info:
+  title: Sophos FireComply — Edge API (partial)
+  description: >
+    Machine-readable sketch of high-traffic Edge routes. Primary `servers` URL targets the **`api`**
+    JWT router; paths under **`/shared/*`** use the path-level **`api-public`** server (no JWT).
+    Not exhaustive — see docs/api/edge-routes.md.
+  version: 0.1.0
+servers:
+  - url: https://{project}.supabase.co/functions/v1/api
+    variables:
+      project:
+        default: your-project-ref
+paths:
+  /api/agent/register:
+    post:
+      summary: Register connector agent (JWT, admin/engineer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRegisterBody"
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Invalid body (Zod)
+  /api/agent/heartbeat:
+    post:
+      summary: Agent heartbeat (X-API-Key)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body
+  /api/agent/submit:
+    post:
+      summary: Submit assessment from connector (X-API-Key)
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body
+  /api/agent/verify-identity:
+    post:
+      summary: Verify SE identity via TOTP (X-API-Key)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, totpCode]
+              properties:
+                email:
+                  type: string
+                  format: email
+                totpCode:
+                  type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body
+  /api/admin/reset-mfa:
+    post:
+      summary: Reset MFA for org user (org admin)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetUserId]
+              properties:
+                targetUserId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body
+  /api/auth/mfa-recovery:
+    post:
+      summary: MFA recovery flow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetEmail]
+              properties:
+                targetEmail:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body
+  /api/config-upload-request:
+    post:
+      summary: SE creates guest entities.xml upload link (SE JWT)
+      description: >
+        Returns `token` and SPA `url` (`/upload/{token}`). Optional email to customer.
+        Body validated with Zod in `supabase/functions/api/routes/config-upload.ts`.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expires_in_days:
+                  type: integer
+                  enum: [1, 3, 7, 14, 30]
+                customer_name:
+                  type: string
+                  maxLength: 500
+                contact_name:
+                  type: string
+                  maxLength: 200
+                customer_email:
+                  type: string
+                  format: email
+                team_id:
+                  type: string
+                  format: uuid
+      responses:
+        "201":
+          description: Created (id, token, url, expires_at, email_sent)
+        "400":
+          description: Invalid body
+        "401":
+          description: SE JWT required
+  /api/config-upload-requests:
+    get:
+      summary: List config upload requests for SE / team (SE JWT)
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+  /api/assessments:
+    get:
+      summary: List assessments (JWT or service key)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid query
+  /api/health-checks/{id}/team:
+    patch:
+      summary: Reassign health check team (SE JWT)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        "400":
+          description: Invalid body
+  /api/health-checks/bulk-team:
+    patch:
+      summary: Bulk reassign health checks (SE JWT)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                team_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+  /api/se-teams:
+    post:
+      summary: Create SE team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+  /api/passkey/register-verify:
+    post:
+      summary: Complete passkey registration
+      responses:
+        "400":
+          description: Invalid body
+  /api/connectwise/credentials:
+    post:
+      summary: Store ConnectWise Cloud API credentials (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [publicMemberId, subscriptionKey]
+              properties:
+                publicMemberId:
+                  type: string
+                subscriptionKey:
+                  type: string
+                scope:
+                  type: string
+                  enum: [Partner, Distributor]
+  /api/autotask-psa/company-mappings:
+    put:
+      summary: Upsert Autotask PSA customer → company mapping (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PsaCompanyMappingPutBody"
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+    delete:
+      summary: Remove mapping (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PsaCompanyMappingDeleteBody"
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+  /api/autotask-psa/credentials:
+    post:
+      summary: Store or update Autotask PSA credentials (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - apiZoneBaseUrl
+                - username
+                - defaultQueueId
+                - defaultPriority
+                - defaultStatus
+                - defaultSource
+                - defaultTicketType
+              properties:
+                apiZoneBaseUrl:
+                  type: string
+                username:
+                  type: string
+                secret:
+                  type: string
+                integrationCode:
+                  type: string
+                defaultQueueId:
+                  type: number
+                defaultPriority:
+                  type: number
+                defaultStatus:
+                  type: number
+                defaultSource:
+                  type: number
+                defaultTicketType:
+                  type: number
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+  /api/autotask-psa/tickets:
+    post:
+      summary: Create Autotask ticket (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, idempotencyKey]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                companyId:
+                  type: number
+                firecomplyCustomerKey:
+                  type: string
+                idempotencyKey:
+                  type: string
+                  maxLength: 512
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+  /api/connectwise-manage/company-mappings:
+    put:
+      summary: Upsert ConnectWise Manage customer → company mapping (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PsaCompanyMappingPutBody"
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+    delete:
+      summary: Remove mapping (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PsaCompanyMappingDeleteBody"
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+  /api/connectwise-manage/credentials:
+    post:
+      summary: Store or update Manage API keys (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [apiBaseUrl, integratorCompanyId, defaultBoardId]
+              properties:
+                apiBaseUrl:
+                  type: string
+                integratorCompanyId:
+                  type: string
+                publicKey:
+                  type: string
+                privateKey:
+                  type: string
+                defaultBoardId:
+                  type: number
+                defaultStatusId:
+                  type: number
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+  /api/connectwise-manage/tickets:
+    post:
+      summary: Create Manage service ticket (org admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [summary, idempotencyKey]
+              properties:
+                summary:
+                  type: string
+                initialDescription:
+                  type: string
+                customerCompanyId:
+                  type: number
+                firecomplyCustomerKey:
+                  type: string
+                boardId:
+                  type: number
+                statusId:
+                  type: number
+                idempotencyKey:
+                  type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid body (Zod)
+  /shared/{token}:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1/api-public
+        variables:
+          project:
+            default: your-project-ref
+    get:
+      summary: Public shared report (token)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Markdown payload and metadata
+        "404":
+          description: Not found
+        "410":
+          description: Expired
+  /shared-health-check/{token}:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1/api-public
+        variables:
+          project:
+            default: your-project-ref
+    get:
+      summary: Public shared SE health check (HTML)
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: HTML snapshot and metadata
+        "404":
+          description: Not found
+        "410":
+          description: Expired
+
+  /config-upload/{token}:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1/api-public
+        variables:
+          project:
+            default: your-project-ref
+    get:
+      summary: Guest upload link — status (no JWT)
+      description: >
+        Token is UUID from `POST /api/config-upload-request`. Used by `/upload/:token` SPA.
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: status, customer_name, expires_at, optional Central fields
+        "404":
+          description: Unknown token
+        "410":
+          description: Expired
+    post:
+      summary: Guest upload — submit entities.xml (no JWT)
+      description: >
+        `multipart/form-data` with field `file`, or raw XML body. Max ~10 MB; must be valid Sophos XML.
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+          application/xml:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: ok + message
+        "400":
+          description: Missing or empty file
+        "404":
+          description: Unknown token
+        "409":
+          description: Already downloaded by SE
+        "410":
+          description: Expired
+        "413":
+          description: File too large
+        "422":
+          description: Not valid Sophos XML
+
+  /portal-data:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1/portal-data
+        variables:
+          project:
+            default: your-project-ref
+    get:
+      summary: Client portal JSON bundle (read-only)
+      description: >
+        Query with `slug` (portal slug) or `org_id` (UUID). Returns aggregated score, findings,
+        reports metadata, and optional firewall breakdown. No JWT; relies on slug secrecy and RLS via service role.
+      parameters:
+        - in: query
+          name: slug
+          schema:
+            type: string
+          description: Portal slug from `portal_config`
+        - in: query
+          name: org_id
+          schema:
+            type: string
+            format: uuid
+          description: Organisation UUID (alternative to slug)
+      responses:
+        "200":
+          description: Portal payload (JSON)
+        "400":
+          description: Missing slug and org_id
+        "404":
+          description: Portal not found
+        "500":
+          description: Server error
+
+  /parse-config:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1/parse-config
+        variables:
+          project:
+            default: your-project-ref
+    post:
+      summary: AI-assisted firewall config parse (SSE stream)
+      description: >
+        Authenticated user JWT. Multipart or JSON body per live contract; response is `text/event-stream`.
+        See deployed function and app client for payload shape; Zod validation may be added later.
+      responses:
+        "200":
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limited
+        "500":
+          description: Parse or provider error
+
+components:
+  schemas:
+    PsaCompanyMappingPutBody:
+      type: object
+      required: [customerKey, companyId]
+      properties:
+        customerKey:
+          type: string
+          maxLength: 512
+        companyId:
+          type: number
+    PsaCompanyMappingDeleteBody:
+      type: object
+      required: [customerKey]
+      properties:
+        customerKey:
+          type: string
+    AgentRegisterBody:
+      type: object
+      required: [name, firewall_host]
+      properties:
+        name:
+          type: string
+          maxLength: 500
+        firewall_host:
+          type: string
+          maxLength: 2048
+        firewall_port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        customer_name:
+          type: string
+        environment:
+          type: string
+        schedule_cron:
+          type: string
+        tenant_id:
+          type: string
+        tenant_name:
+          type: string
+        serial_number:
+          type: string
+        hardware_model:
+          type: string
+        firmware_version_override:
+          type: string

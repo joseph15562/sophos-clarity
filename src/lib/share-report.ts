@@ -73,7 +73,7 @@ export async function saveSharedReport(
     expires_at: expiresAt.toISOString(),
     allow_download: allowDownload,
     advisor_notes: notes ?? null,
-  } as Record<string, unknown>);
+  } as never);
 
   if (error) {
     throw new Error(`Unable to publish share link: ${error.message}`);

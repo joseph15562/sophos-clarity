@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
   Trash2,
@@ -12,8 +13,10 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { queryKeys } from "@/hooks/queries/keys";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import {
   loadSavedReportsCloud,
   loadSavedReportsLocal,
@@ -57,45 +60,50 @@ function formatDate(ts: number): string {
   });
 }
 
-export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
+export function SavedReportsLibrary({ onLoadReports, refreshTrigger = 0 }: Props) {
   const { isGuest, org } = useAuth();
   const useCloud = !isGuest && !!org;
+  const scope = useCloud && org ? org.id : "local";
+  const queryClient = useQueryClient();
 
-  const [packages, setPackages] = useState<SavedReportPackage[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<SortField>("date");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const items = useCloud ? await loadSavedReportsCloud() : await loadSavedReportsLocal();
-      setPackages(items);
-    } catch (err) {
-      console.warn("[refresh] SavedReportsLibrary", err);
-    }
-    setLoading(false);
-  }, [useCloud]);
+  const {
+    data: packages = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.savedReports.packages(scope, refreshTrigger),
+    queryFn: async () => (useCloud ? loadSavedReportsCloud() : loadSavedReportsLocal()),
+  });
 
   useEffect(() => {
-    refresh();
-  }, [refresh, refreshTrigger]);
+    if (error) console.warn("[SavedReportsLibrary]", error);
+  }, [error]);
 
-  const handleDelete = useCallback(
-    async (pkg: SavedReportPackage) => {
+  const deleteMutation = useMutation({
+    mutationFn: async (pkg: SavedReportPackage) => {
       if (useCloud) await deleteSavedReportCloud(pkg.id);
       else await deleteSavedReportLocal(pkg.id);
-      setPackages((prev) => prev.filter((p) => p.id !== pkg.id));
       if (org?.id) {
-        logAudit(org.id, "report.deleted", "report", pkg.id, {
+        await logAudit(org.id, "report.deleted", "report", pkg.id, {
           customerName: pkg.customerName,
         }).catch(() => {});
       }
     },
-    [useCloud, org],
-  );
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          q.queryKey[0] === "saved-reports" &&
+          q.queryKey[1] === "packages" &&
+          q.queryKey[2] === scope,
+      });
+    },
+  });
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const toggleSort = useCallback(
     (field: SortField) => {
@@ -147,12 +155,13 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
 
   if (packages.length === 0) {
     return (
-      <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-8 text-center space-y-2">
-        <FileText className="h-8 w-8 mx-auto text-brand-accent/30" />
-        <p className="text-xs text-muted-foreground">
-          No saved reports yet. Generate reports for a customer and click "Save Reports" to store
-          them here.
-        </p>
+      <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_12px_40px_rgba(32,6,247,0.06)] p-4">
+        <EmptyState
+          icon={<FileText className="h-6 w-6 text-brand-accent/40" />}
+          title="No saved reports yet"
+          description='Generate reports for a customer and click "Save Reports" to store them here.'
+          className="py-10"
+        />
       </div>
     );
   }
@@ -217,6 +226,7 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
             const score = pkg.analysisSummary.overallScore;
             const color = scoreToColor(score);
             const grade = gradeForScore(score);
+            const deleting = deleteMutation.isPending && deleteMutation.variables?.id === pkg.id;
             return (
               <div key={pkg.id}>
                 <button
@@ -263,14 +273,19 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger }: Props) {
                       type="button"
                       size="icon"
                       variant="ghost"
+                      disabled={deleting}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(pkg);
+                        deleteMutation.mutate(pkg);
                       }}
                       className="h-7 w-7 text-muted-foreground hover:text-severity-critical"
                       title="Delete"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      {deleting ? (
+                        <span className="inline-block h-3.5 w-3.5 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
                     </Button>
                   </div>
                 </button>

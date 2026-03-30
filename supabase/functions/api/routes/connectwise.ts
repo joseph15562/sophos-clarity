@@ -1,3 +1,4 @@
+import { connectwiseCredentialsPostSchema } from "../../_shared/api-schemas.ts";
 import { getOrgMembership } from "../../_shared/auth.ts";
 import {
   connectWiseFetchToken,
@@ -5,6 +6,7 @@ import {
 } from "../../_shared/connectwise-cloud.ts";
 import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
 import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 
 function publicIdSuffix(id: string): string {
   const t = id.trim();
@@ -88,19 +90,15 @@ export async function handleConnectWiseRoutes(
   }
 
   if (route === "credentials" && req.method === "POST") {
-    let body: { publicMemberId?: string; subscriptionKey?: string; scope?: string };
-    try {
-      body = await req.json();
-    } catch {
-      return j({ error: "Invalid JSON" }, 400);
+    const raw = await req.json().catch(() => ({}));
+    const parsed = connectwiseCredentialsPostSchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "connectwise_credentials_invalid_body", { issues: parsed.error.issues.length });
+      return j({ error: "Invalid request body" }, 400);
     }
-    const publicMemberId = typeof body.publicMemberId === "string" ? body.publicMemberId.trim() : "";
-    const subscriptionKey = typeof body.subscriptionKey === "string" ? body.subscriptionKey.trim() : "";
-    const scopeRaw = typeof body.scope === "string" ? body.scope.trim() : "Partner";
-    const scope = scopeRaw === "Distributor" ? "Distributor" : "Partner";
-    if (!publicMemberId || !subscriptionKey) {
-      return j({ error: "publicMemberId and subscriptionKey are required" }, 400);
-    }
+    const publicMemberId = parsed.data.publicMemberId.trim();
+    const subscriptionKey = parsed.data.subscriptionKey.trim();
+    const scope = parsed.data.scope === "Distributor" ? "Distributor" : "Partner";
 
     try {
       const { expires_in } = await connectWiseFetchToken(publicMemberId, subscriptionKey, scope);

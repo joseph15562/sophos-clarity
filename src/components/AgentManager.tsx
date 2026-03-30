@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Plug,
   Plus,
@@ -22,6 +22,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/queries";
+import { EmptyState } from "@/components/EmptyState";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -379,6 +382,16 @@ function RegisterDialog({
 
 export function AgentManager() {
   const { org, canManageAgents, canManageTeam } = useAuth();
+  const queryClient = useQueryClient();
+  const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+
+  useEffect(() => {
+    return () => {
+      for (const iv of pollIntervalsRef.current.values()) clearInterval(iv);
+      pollIntervalsRef.current.clear();
+    };
+  }, []);
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRegister, setShowRegister] = useState(false);
@@ -413,14 +426,37 @@ export function AgentManager() {
     loadRetention();
   }, [loadAgents, loadRetention]);
 
-  const loadSubmissions = useCallback(async (agentId: string) => {
+  const loadSubmissionsBatch = useCallback(async (agentIds: string[]) => {
+    const unique = [...new Set(agentIds)];
+    let toFetch: string[] = [];
+    setSubmissions((prev) => {
+      toFetch = unique.filter((id) => prev[id] === undefined);
+      return prev;
+    });
+    if (toFetch.length === 0) return;
+
     const { data } = await supabase
       .from("agent_submissions")
       .select("*")
-      .eq("agent_id", agentId)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    setSubmissions((prev) => ({ ...prev, [agentId]: data ?? [] }));
+      .in("agent_id", toFetch)
+      .order("created_at", { ascending: false });
+
+    const byAgent = new Map<string, Submission[]>();
+    for (const row of data ?? []) {
+      const arr = byAgent.get(row.agent_id) ?? [];
+      if (arr.length < 10) {
+        arr.push(row);
+        byAgent.set(row.agent_id, arr);
+      }
+    }
+
+    setSubmissions((prev) => {
+      const n = { ...prev };
+      for (const id of toFetch) {
+        if (n[id] === undefined) n[id] = byAgent.get(id) ?? [];
+      }
+      return n;
+    });
   }, []);
 
   const handleExpand = (agentId: string) => {
@@ -428,7 +464,7 @@ export function AgentManager() {
       setExpanded(null);
     } else {
       setExpanded(agentId);
-      if (!submissions[agentId]) loadSubmissions(agentId);
+      if (submissions[agentId] === undefined) void loadSubmissionsBatch([agentId]);
     }
   };
 
@@ -494,6 +530,9 @@ export function AgentManager() {
 
       toast.success("Scan requested — waiting for agent to complete…");
 
+      const prevIv = pollIntervalsRef.current.get(agentId);
+      if (prevIv) clearInterval(prevIv);
+
       let attempts = 0;
       const pollInterval = setInterval(async () => {
         attempts++;
@@ -505,6 +544,7 @@ export function AgentManager() {
 
         if (agentData && !agentData.pending_command) {
           clearInterval(pollInterval);
+          pollIntervalsRef.current.delete(agentId);
           setScanRequested((p) => ({ ...p, [agentId]: false }));
           toast.success(`Scan complete — Score: ${agentData.last_score}/${agentData.last_grade}`);
           loadAgents();
@@ -513,23 +553,39 @@ export function AgentManager() {
 
         if (attempts >= 36) {
           clearInterval(pollInterval);
+          pollIntervalsRef.current.delete(agentId);
           setScanRequested((p) => ({ ...p, [agentId]: false }));
           toast.info("Scan is taking longer than expected — refresh to check results");
         }
       }, 5000);
+      pollIntervalsRef.current.set(agentId, pollInterval);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Request failed");
     }
   };
 
-  const handleRetentionChange = async (days: number) => {
-    if (!org) return;
-    setRetention(days);
-    await supabase
-      .from("organisations")
-      .update({ submission_retention_days: days })
-      .eq("id", org.id);
-    toast.success(`Retention set to ${days} days`);
+  const retentionMutation = useMutation({
+    mutationFn: async (days: number) => {
+      if (!org) throw new Error("No organisation");
+      const { error } = await supabase
+        .from("organisations")
+        .update({ submission_retention_days: days })
+        .eq("id", org.id);
+      if (error) throw error;
+      return days;
+    },
+    onSuccess: (days) => {
+      setRetention(days);
+      toast.success(`Retention set to ${days} days`);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.org.all });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Update failed");
+    },
+  });
+
+  const handleRetentionChange = (days: number) => {
+    retentionMutation.mutate(days);
   };
 
   if (loading && !showRegister) {
@@ -578,24 +634,25 @@ export function AgentManager() {
 
       {/* Agent list grouped by tenant */}
       {agents.length === 0 ? (
-        <div className="rounded-[20px] border border-dashed border-brand-accent/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] py-8 text-center">
-          <Plug className="h-8 w-8 mx-auto mb-2 text-brand-accent/30" />
-          <p className="text-[11px] font-display font-semibold text-foreground">
-            No agents registered
-          </p>
-          <p className="text-[9px] text-muted-foreground/60 mt-1">
-            Register an agent to start automated firewall monitoring
-          </p>
-          {canManageAgents && (
-            <Button
-              size="sm"
-              onClick={() => setShowRegister(true)}
-              className="mt-3 gap-1.5 text-[10px] h-8 rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 border-0 shadow-sm"
-              data-tour="connector-register"
-            >
-              <Plus className="h-3 w-3" /> Register Agent
-            </Button>
-          )}
+        <div className="rounded-[20px] border border-dashed border-brand-accent/20 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))]">
+          <EmptyState
+            className="py-8"
+            icon={<Plug className="h-8 w-8 text-brand-accent/40" />}
+            title="No agents registered"
+            description="Register an agent to start automated firewall monitoring."
+            action={
+              canManageAgents ? (
+                <Button
+                  size="sm"
+                  onClick={() => setShowRegister(true)}
+                  className="gap-1.5 text-[10px] h-8 rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 border-0 shadow-sm"
+                  data-tour="connector-register"
+                >
+                  <Plus className="h-3 w-3" /> Register Agent
+                </Button>
+              ) : undefined
+            }
+          />
         </div>
       ) : (
         <div className="space-y-2">

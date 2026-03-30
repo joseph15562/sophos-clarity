@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -1540,39 +1541,42 @@ function FleetCommandInner() {
           </div>
         ) : filtered.length === 0 && fleet.length === 0 ? (
           <div
-            className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm px-6 py-16 flex flex-col items-center text-center"
+            className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm"
             style={glassCard(isDark)}
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2006F7]/[0.08] mb-5">
-              <WifiOff className="h-7 w-7 text-[#2006F7]" />
-            </div>
-            <h2 className="text-lg font-display font-black text-foreground mb-2">
-              No firewalls discovered yet
-            </h2>
-            <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
-              Connect Sophos Central or deploy the connector agent to start monitoring your fleet.
-            </p>
-            <Button className="mt-6 bg-[#2006F7] hover:bg-[#2006F7]/90 text-white" asChild>
-              <Link to="/">Get started</Link>
-            </Button>
+            <EmptyState
+              className="py-14 px-6"
+              icon={<WifiOff className="h-6 w-6 text-[#2006F7]" />}
+              title="No firewalls discovered yet"
+              description="Connect Sophos Central or deploy the connector agent to start monitoring your fleet."
+              action={
+                <Button className="bg-[#2006F7] hover:bg-[#2006F7]/90 text-white" asChild>
+                  <Link to="/">Get started</Link>
+                </Button>
+              }
+            />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            <Search className="h-8 w-8 text-muted-foreground/40 mb-3" />
-            <p className="text-sm text-muted-foreground">
-              No firewalls match your current filters.
-            </p>
-            <button
-              onClick={() => {
-                setSearch("");
-                setGradeFilter("All");
-                setStatusFilter("All");
-              }}
-              className="mt-2 text-xs text-[#2006F7] hover:underline"
-            >
-              Clear filters
-            </button>
-          </div>
+          <EmptyState
+            className="py-14"
+            icon={<Search className="h-6 w-6 text-muted-foreground" />}
+            title="No matches"
+            description="No firewalls match your current filters."
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-[#2006F7]"
+                onClick={() => {
+                  setSearch("");
+                  setGradeFilter("All");
+                  setStatusFilter("All");
+                }}
+              >
+                Clear filters
+              </Button>
+            }
+          />
         ) : viewMode === "list" ? (
           <div className="space-y-2">
             {/* Column headers (lg+ only) */}

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jwtVerify } from "https://esm.sh/jose@4.15.4?target=deno";
 import { safeError } from "../_shared/db.ts";
+import { logJson } from "../_shared/logger.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -318,18 +319,15 @@ serve(async (req) => {
       }
 
       if (!guestAuthOk) {
-        console.warn(
-          "[sophos-central] guest auth failed (lengths only)",
-          JSON.stringify({
-            publishableLen: publishable.length,
-            incomingLen: incoming.length,
-            hadJwtSecret: jwtSecret.length > 0,
-            hadSupabaseUrl: supabaseUrl.length > 0,
-            hadBearer: bearer.length > 0,
-            hadApikeyHeader: apikeyHeader.length > 0,
-            stringMatch: publishable.length > 0 && incoming === publishable,
-          }),
-        );
+        logJson("warn", "sophos_central_guest_auth_failed", {
+          publishableLen: publishable.length,
+          incomingLen: incoming.length,
+          hadJwtSecret: jwtSecret.length > 0,
+          hadSupabaseUrl: supabaseUrl.length > 0,
+          hadBearer: bearer.length > 0,
+          hadApikeyHeader: apikeyHeader.length > 0,
+          stringMatch: publishable.length > 0 && incoming === publishable,
+        });
         return json({ error: "Unauthorized" }, 401);
       }
 
@@ -763,7 +761,9 @@ serve(async (req) => {
         );
         return json(data);
       } catch (err) {
-        console.warn("[sophos-central] MDR threat feed", err);
+        logJson("warn", "sophos_central_mdr_threat_feed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
         return json({ items: [], note: "MDR threat feed not available for this tenant" });
       }
     }

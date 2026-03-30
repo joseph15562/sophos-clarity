@@ -1,9 +1,38 @@
 import { hmacVerify } from "./crypto.ts";
 import { adminClient, userClient } from "./db.ts";
 
-export async function authenticateAgent(apiKey: string) {
+export type AuthAdminClient = ReturnType<typeof adminClient>;
+
+/** Optional overrides for unit tests (fake Supabase clients). */
+export type AuthenticateAgentOpts = {
+  admin?: AuthAdminClient;
+};
+
+export type GetOrgMembershipOpts = {
+  admin?: AuthAdminClient;
+};
+
+export type SeUser = {
+  id: string;
+  /** Present on real Supabase Auth users; optional for test doubles. */
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+};
+
+export type UserClientForSE = {
+  auth: {
+    getUser: () => Promise<{ data: { user: SeUser | null } }>;
+  };
+};
+
+export type AuthenticateSEOpts = {
+  admin?: AuthAdminClient;
+  createUserClient?: (authHeader: string) => UserClientForSE;
+};
+
+export async function authenticateAgent(apiKey: string, opts?: AuthenticateAgentOpts) {
   const prefix = apiKey.slice(0, 8);
-  const db = adminClient();
+  const db = opts?.admin ?? adminClient();
   const { data: agents, error } = await db
     .from("agents")
     .select("*")
@@ -19,8 +48,8 @@ export async function authenticateAgent(apiKey: string) {
   return null;
 }
 
-export async function getOrgMembership(userId: string) {
-  const db = adminClient();
+export async function getOrgMembership(userId: string, opts?: GetOrgMembershipOpts) {
+  const db = opts?.admin ?? adminClient();
   const { data } = await db
     .from("org_members")
     .select("org_id, role")
@@ -30,13 +59,14 @@ export async function getOrgMembership(userId: string) {
   return data;
 }
 
-export async function authenticateSE(req: Request) {
+export async function authenticateSE(req: Request, opts?: AuthenticateSEOpts) {
   const authHeader = req.headers.get("authorization");
   if (!authHeader) return null;
-  const uc = userClient(authHeader);
+  const clientFactory = opts?.createUserClient ?? ((h: string) => userClient(h) as UserClientForSE);
+  const uc = clientFactory(authHeader);
   const { data: { user } } = await uc.auth.getUser();
   if (!user) return null;
-  const db = adminClient();
+  const db = opts?.admin ?? adminClient();
   const { data: seProfile } = await db
     .from("se_profiles")
     .select("id, email, display_name, health_check_prepared_by")

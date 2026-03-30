@@ -66,9 +66,12 @@ export function FirmwareTracker({ files }: FirmwareTrackerProps) {
                 <td className="py-2 text-foreground font-mono">{row.firmware}</td>
                 <td className="py-2">
                   {updateAvailable ? (
-                    <AlertTriangle className="h-4 w-4 text-[#F29400]" title="Update available" />
+                    <AlertTriangle
+                      className="h-4 w-4 text-[#F29400]"
+                      aria-label="Update available"
+                    />
                   ) : isLatest ? (
-                    <CheckCircle className="h-4 w-4 text-[#00F2B3]" title="Latest" />
+                    <CheckCircle className="h-4 w-4 text-[#00F2B3]" aria-label="Latest" />
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}

@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useMemo, createContext, useContext } 
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { logAudit } from "@/lib/audit";
+import {
+  isE2EAuthBypassAllowed,
+  buildE2EAuthBypassUser,
+  buildE2EAuthBypassSession,
+  buildE2EAuthBypassOrg,
+} from "@/lib/e2e-auth-bypass";
 
 export interface OrgInfo {
   id: string;
@@ -54,12 +60,29 @@ async function fetchOrgMembership(userId: string): Promise<{ org: OrgInfo; role:
   };
 }
 
+function readE2EAuthBypassInitial(): {
+  user: User;
+  session: Session;
+  org: OrgInfo;
+  role: OrgRole;
+} | null {
+  if (typeof window === "undefined" || !isE2EAuthBypassAllowed()) return null;
+  const u = buildE2EAuthBypassUser();
+  return {
+    user: u,
+    session: buildE2EAuthBypassSession(u),
+    org: buildE2EAuthBypassOrg(),
+    role: "admin",
+  };
+}
+
 export function useAuthProvider(): AuthState {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [org, setOrg] = useState<OrgInfo | null>(null);
-  const [role, setRole] = useState<OrgRole | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const e2eInitial = readE2EAuthBypassInitial();
+  const [user, setUser] = useState<User | null>(() => e2eInitial?.user ?? null);
+  const [session, setSession] = useState<Session | null>(() => e2eInitial?.session ?? null);
+  const [org, setOrg] = useState<OrgInfo | null>(() => e2eInitial?.org ?? null);
+  const [role, setRole] = useState<OrgRole | null>(() => e2eInitial?.role ?? null);
+  const [isLoading, setIsLoading] = useState(() => e2eInitial === null);
   const [needsMfa, setNeedsMfa] = useState(false);
 
   const loadOrg = useCallback(async (uid: string) => {
@@ -76,39 +99,52 @@ export function useAuthProvider(): AuthState {
   }, []);
 
   useEffect(() => {
+    if (isE2EAuthBypassAllowed()) {
+      return;
+    }
+
     let loadingTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        loadOrg(s.user.id).finally(() => {
-          clearTimeout(loadingTimeout);
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          loadOrg(s.user.id).finally(() => {
+            clearTimeout(loadingTimeout);
+            setIsLoading(false);
+          });
+          loadingTimeout = setTimeout(() => {
+            console.warn("[useAuth] loadOrg timed out after 10s — forcing isLoading=false");
+            setIsLoading(false);
+          }, 10_000);
+        } else {
           setIsLoading(false);
-        });
-        loadingTimeout = setTimeout(() => {
-          console.warn("[useAuth] loadOrg timed out after 10s — forcing isLoading=false");
-          setIsLoading(false);
-        }, 10_000);
-      } else {
+        }
+      })
+      .catch((err) => {
+        console.warn("[useAuth] getSession failed", err);
         setIsLoading(false);
-      }
-    }).catch((err) => {
-      console.warn("[useAuth] getSession failed", err);
-      setIsLoading(false);
-    });
+      });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        loadOrg(s.user.id).then((membership) => {
-          if (event === "SIGNED_IN" && membership) {
-            logAudit(membership.org.id, "auth.login", "", "", { email: s?.user?.email ?? undefined }).catch(() => {});
-          }
-        }).catch((err) => {
-          console.warn("[useAuth] loadOrg in onAuthStateChange failed", err);
-        });
+        loadOrg(s.user.id)
+          .then((membership) => {
+            if (event === "SIGNED_IN" && membership) {
+              logAudit(membership.org.id, "auth.login", "", "", {
+                email: s?.user?.email ?? undefined,
+              }).catch(() => {});
+            }
+          })
+          .catch((err) => {
+            console.warn("[useAuth] loadOrg in onAuthStateChange failed", err);
+          });
       } else {
         setOrg(null);
         setRole(null);
@@ -122,6 +158,15 @@ export function useAuthProvider(): AuthState {
   }, [loadOrg]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (isE2EAuthBypassAllowed()) {
+      const u = buildE2EAuthBypassUser();
+      setSession(buildE2EAuthBypassSession(u));
+      setUser(u);
+      setOrg(buildE2EAuthBypassOrg());
+      setRole("admin");
+      setNeedsMfa(false);
+      return { error: null };
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
 
@@ -150,6 +195,13 @@ export function useAuthProvider(): AuthState {
   const signOut = useCallback(async () => {
     const currentOrgId = org?.id ?? "";
     const currentEmail = user?.email ?? undefined;
+    if (isE2EAuthBypassAllowed()) {
+      setSession(null);
+      setUser(null);
+      setOrg(null);
+      setRole(null);
+      return;
+    }
     await supabase.auth.signOut();
     setOrg(null);
     setRole(null);
@@ -158,18 +210,21 @@ export function useAuthProvider(): AuthState {
     }
   }, [org, user]);
 
-  const createOrg = useCallback(async (name: string) => {
-    if (!user) return { error: "Not authenticated" };
+  const createOrg = useCallback(
+    async (name: string) => {
+      if (!user) return { error: "Not authenticated" };
 
-    const { data, error: rpcErr } = await supabase.rpc("create_organisation", { org_name: name });
+      const { data, error: rpcErr } = await supabase.rpc("create_organisation", { org_name: name });
 
-    if (rpcErr || !data) return { error: rpcErr?.message ?? "Failed to create organisation" };
+      if (rpcErr || !data) return { error: rpcErr?.message ?? "Failed to create organisation" };
 
-    const orgData = data as unknown as { id: string; name: string };
-    setOrg({ id: orgData.id, name: orgData.name });
-    setRole("admin");
-    return { error: null };
-  }, [user]);
+      const orgData = data as unknown as { id: string; name: string };
+      setOrg({ id: orgData.id, name: orgData.name });
+      setRole("admin");
+      return { error: null };
+    },
+    [user],
+  );
 
   const refreshOrg = useCallback(async () => {
     if (user) await loadOrg(user.id);
@@ -182,11 +237,48 @@ export function useAuthProvider(): AuthState {
   const canRunAssessments = role === "admin" || role === "engineer" || role === "member";
   const isViewerOnly = role === "viewer";
 
-  return useMemo(() => ({
-    user, session, org, role, isGuest, isLoading, needsOrg, needsMfa,
-    canManageTeam, canManageAgents, canRunAssessments, isViewerOnly,
-    signIn, signUp, signOut, createOrg, refreshOrg, clearMfaRequired,
-  }), [user, session, org, role, isGuest, isLoading, needsOrg, needsMfa, canManageTeam, canManageAgents, canRunAssessments, isViewerOnly, signIn, signUp, signOut, createOrg, refreshOrg, clearMfaRequired]);
+  return useMemo(
+    () => ({
+      user,
+      session,
+      org,
+      role,
+      isGuest,
+      isLoading,
+      needsOrg,
+      needsMfa,
+      canManageTeam,
+      canManageAgents,
+      canRunAssessments,
+      isViewerOnly,
+      signIn,
+      signUp,
+      signOut,
+      createOrg,
+      refreshOrg,
+      clearMfaRequired,
+    }),
+    [
+      user,
+      session,
+      org,
+      role,
+      isGuest,
+      isLoading,
+      needsOrg,
+      needsMfa,
+      canManageTeam,
+      canManageAgents,
+      canRunAssessments,
+      isViewerOnly,
+      signIn,
+      signUp,
+      signOut,
+      createOrg,
+      refreshOrg,
+      clearMfaRequired,
+    ],
+  );
 }
 
 const AuthContext = createContext<AuthState | null>(null);

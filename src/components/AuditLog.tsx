@@ -19,6 +19,7 @@ import {
 import { loadAuditLog, type AuditEntry, type AuditAction } from "@/lib/audit";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import {
   Select,
   SelectContent,
@@ -255,12 +256,16 @@ export function AuditLog({ layout = "drawer" }: { layout?: "drawer" | "page" }) 
       )}
 
       {!loading && filtered.length === 0 && (
-        <div className="text-center py-6 text-xs text-muted-foreground">
-          <Clock className="h-6 w-6 mx-auto mb-2 text-brand-accent/30" />
-          {entries.length === 0
-            ? "No activity recorded yet. Actions like saving reports, uploading configs, and managing your team will appear here."
-            : "No matching events found."}
-        </div>
+        <EmptyState
+          className="py-8"
+          icon={<Clock className="h-6 w-6 text-brand-accent/40" />}
+          title={entries.length === 0 ? "No activity yet" : "No matching events"}
+          description={
+            entries.length === 0
+              ? "Actions like saving reports, uploading configs, and managing your team will appear here."
+              : "Try adjusting filters or the date range."
+          }
+        />
       )}
 
       {!loading && filtered.length > 0 && (

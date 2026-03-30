@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/hooks/queries";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import {
   Save,
   Copy,
@@ -86,6 +89,27 @@ function slugify(name: string): string {
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{10,46}[a-z0-9]$/;
 
+function rowToConfig(row: Record<string, unknown>): PortalConfig {
+  return {
+    id: row.id as string,
+    org_id: row.org_id as string,
+    slug: (row.slug as string) ?? "",
+    tenant_name: (row.tenant_name as string) ?? null,
+    logo_url: (row.logo_url as string) ?? null,
+    company_name: (row.company_name as string) ?? "",
+    accent_color: (row.accent_color as string) ?? "#2006F7",
+    welcome_message: (row.welcome_message as string) ?? "",
+    sla_info: (row.sla_info as string) ?? "",
+    contact_email: (row.contact_email as string) ?? "",
+    contact_phone: (row.contact_phone as string) ?? "",
+    footer_text: (row.footer_text as string) ?? "",
+    visible_sections: Array.isArray(row.visible_sections)
+      ? (row.visible_sections as SectionId[])
+      : ["score", "history", "findings", "compliance", "reports", "feedback"],
+    show_branding: (row.show_branding as boolean) ?? true,
+  };
+}
+
 export interface PortalConfiguratorProps {
   /** Raw `tenant_name` to select when opening from Customer Management (must match DB). */
   initialTenantName?: string | null;
@@ -100,15 +124,11 @@ export function PortalConfigurator({
   onSaved,
 }: PortalConfiguratorProps) {
   const { org } = useAuth();
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const orgDisplayName = org?.name ?? "";
 
-  const [tenants, setTenants] = useState<string[]>([]);
-  const [portalConfigs, setPortalConfigs] = useState<PortalConfig[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const [config, setConfig] = useState<PortalConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [slugError, setSlugError] = useState<string | null>(null);
   const [configExpanded, setConfigExpanded] = useState(false);
   const [portalSurface, setPortalSurface] = useState<"consultant" | "customer">("consultant");
@@ -121,36 +141,47 @@ export function PortalConfigurator({
     selectedTenantRef.current = selectedTenant;
   }, [selectedTenant]);
 
-  // Load distinct tenant names from agents + all existing portal configs
-  const loadTenants = useCallback(async () => {
-    if (!orgId) return;
-    setLoading(true);
+  const {
+    data: bootstrap,
+    isPending: bootstrapPending,
+    isError: bootstrapError,
+    error: bootstrapErrorDetail,
+  } = useQuery({
+    queryKey: queryKeys.portal.tenantBootstrap(orgId),
+    enabled: Boolean(orgId),
+    queryFn: async () => {
+      const [{ data: agents }, { data: configs }] = await Promise.all([
+        supabase.from("agents").select("tenant_name").not("tenant_name", "is", null),
+        supabase.from("portal_config").select("*").eq("org_id", orgId),
+      ]);
 
-    const [{ data: agents }, { data: configs }] = await Promise.all([
-      supabase.from("agents").select("tenant_name").not("tenant_name", "is", null),
-      supabase.from("portal_config").select("*").eq("org_id", orgId),
-    ]);
+      const tenantSet = new Set<string>();
+      for (const a of (agents ?? []) as Array<{ tenant_name: string | null }>) {
+        if (a.tenant_name) tenantSet.add(a.tenant_name);
+      }
 
-    const tenantSet = new Set<string>();
-    for (const a of (agents ?? []) as Array<{ tenant_name: string | null }>) {
-      if (a.tenant_name) tenantSet.add(a.tenant_name);
-    }
+      const configList: PortalConfig[] = [];
+      for (const row of (configs ?? []) as Array<Record<string, unknown>>) {
+        const pc = rowToConfig(row);
+        configList.push(pc);
+        if (pc.tenant_name) tenantSet.add(pc.tenant_name);
+      }
 
-    const configList: PortalConfig[] = [];
-    for (const row of (configs ?? []) as Array<Record<string, unknown>>) {
-      const pc = rowToConfig(row);
-      configList.push(pc);
-      if (pc.tenant_name) tenantSet.add(pc.tenant_name);
-    }
+      if (initialTenantName) tenantSet.add(initialTenantName);
 
-    if (initialTenantName) tenantSet.add(initialTenantName);
+      const sortedTenants = [...tenantSet].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: "base" }),
+      );
+      return { tenants: sortedTenants, portalConfigs: configList };
+    },
+  });
 
-    const sortedTenants = [...tenantSet].sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" }),
-    );
-    setTenants(sortedTenants);
-    setPortalConfigs(configList);
+  const tenants = bootstrap?.tenants ?? [];
+  const portalConfigs = bootstrap?.portalConfigs ?? [];
 
+  useEffect(() => {
+    if (!bootstrap || !orgId) return;
+    const sortedTenants = bootstrap.tenants;
     const prev = selectedTenantRef.current;
     const nextSelected =
       tenantListMode === "focused" && initialTenantName
@@ -159,13 +190,7 @@ export function PortalConfigurator({
           ? prev
           : (sortedTenants[0] ?? null);
     setSelectedTenant(nextSelected);
-
-    setLoading(false);
-  }, [orgId, initialTenantName, tenantListMode]);
-
-  useEffect(() => {
-    loadTenants();
-  }, [loadTenants]);
+  }, [bootstrap, orgId, initialTenantName, tenantListMode]);
 
   useEffect(() => {
     setPortalSurface("consultant");
@@ -182,27 +207,6 @@ export function PortalConfigurator({
     setSlugError(null);
     setConfigExpanded(true);
   }, [selectedTenant, portalConfigs, orgId]);
-
-  function rowToConfig(row: Record<string, unknown>): PortalConfig {
-    return {
-      id: row.id as string,
-      org_id: row.org_id as string,
-      slug: (row.slug as string) ?? "",
-      tenant_name: (row.tenant_name as string) ?? null,
-      logo_url: (row.logo_url as string) ?? null,
-      company_name: (row.company_name as string) ?? "",
-      accent_color: (row.accent_color as string) ?? "#2006F7",
-      welcome_message: (row.welcome_message as string) ?? "",
-      sla_info: (row.sla_info as string) ?? "",
-      contact_email: (row.contact_email as string) ?? "",
-      contact_phone: (row.contact_phone as string) ?? "",
-      footer_text: (row.footer_text as string) ?? "",
-      visible_sections: Array.isArray(row.visible_sections)
-        ? (row.visible_sections as SectionId[])
-        : ["score", "history", "findings", "compliance", "reports", "feedback"],
-      show_branding: (row.show_branding as boolean) ?? true,
-    };
-  }
 
   const update = useCallback((patch: Partial<PortalConfig>) => {
     setConfig((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -226,11 +230,7 @@ export function PortalConfigurator({
       const file = e.target.files?.[0];
       if (!file) return;
       if (file.size > 512_000) {
-        toast({
-          title: "Logo too large",
-          description: "Maximum file size is 500 KB.",
-          variant: "destructive",
-        });
+        toast.error("Logo too large", { description: "Maximum file size is 500 KB." });
         return;
       }
       const reader = new FileReader();
@@ -239,7 +239,7 @@ export function PortalConfigurator({
       };
       reader.readAsDataURL(file);
     },
-    [update, toast],
+    [update],
   );
 
   const toggleSection = useCallback((sectionId: SectionId) => {
@@ -252,72 +252,78 @@ export function PortalConfigurator({
     });
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!config || !orgId) return;
-
-    if (config.slug && !SLUG_RE.test(config.slug)) {
-      setSlugError("Invalid slug format");
-      return;
-    }
-
-    setSaving(true);
-    const row = {
-      org_id: orgId,
-      slug: config.slug || null,
-      tenant_name: config.tenant_name,
-      logo_url: config.logo_url,
-      company_name: config.company_name || null,
-      accent_color: config.accent_color || "#2006F7",
-      welcome_message: config.welcome_message || null,
-      sla_info: config.sla_info || null,
-      contact_email: config.contact_email || null,
-      contact_phone: config.contact_phone || null,
-      footer_text: config.footer_text || null,
-      visible_sections: config.visible_sections,
-      show_branding: config.show_branding,
-    };
-
-    let error;
-    if (config.id) {
-      ({ error } = await supabase.from("portal_config").update(row).eq("id", config.id));
-    } else {
-      const { data, error: insertErr } = await supabase
+  const { mutate: savePortalMutate, isPending: savePortalPending } = useMutation({
+    mutationFn: async (args: { config: PortalConfig; orgId: string }) => {
+      const { config, orgId: oid } = args;
+      const row = {
+        org_id: oid,
+        slug: config.slug || null,
+        tenant_name: config.tenant_name,
+        logo_url: config.logo_url,
+        company_name: config.company_name || null,
+        accent_color: config.accent_color || "#2006F7",
+        welcome_message: config.welcome_message || null,
+        sla_info: config.sla_info || null,
+        contact_email: config.contact_email || null,
+        contact_phone: config.contact_phone || null,
+        footer_text: config.footer_text || null,
+        visible_sections: config.visible_sections,
+        show_branding: config.show_branding,
+      };
+      if (config.id) {
+        const { error } = await supabase.from("portal_config").update(row).eq("id", config.id);
+        if (error) throw error;
+        return {} as { newId?: string };
+      }
+      const { data, error } = await supabase
         .from("portal_config")
         .insert(row)
         .select("id")
         .single();
-      error = insertErr;
-      if (data) update({ id: data.id });
-    }
-
-    setSaving(false);
-
-    if (error) {
-      const isDupe = error.message?.includes("duplicate") || error.code === "23505";
-      toast({
-        title: isDupe ? "Slug already taken" : "Save failed",
-        description: isDupe ? "Another portal is already using this slug." : error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({ title: "Portal configuration saved" });
+      if (error) throw error;
+      return { newId: data.id as string };
+    },
+    onSuccess: async (result, variables) => {
+      if (result.newId) update({ id: result.newId });
+      toast.success("Portal configuration saved");
       onSaved?.();
-      await loadTenants();
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.portal.tenantBootstrap(variables.orgId),
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.portal.configs(variables.orgId) });
+    },
+    onError: (error: unknown) => {
+      const e = error as { message?: string; code?: string };
+      const msg = e.message ?? "Save failed";
+      const isDupe = msg.includes("duplicate") || e.code === "23505";
+      toast.error(isDupe ? "Slug already taken" : "Save failed", {
+        description: isDupe ? "Another portal is already using this slug." : msg,
+      });
+    },
+  });
+
+  const handleSave = useCallback(() => {
+    if (!config || !orgId) return;
+    if (config.slug && !SLUG_RE.test(config.slug)) {
+      setSlugError("Invalid slug format");
+      return;
     }
-  }, [config, orgId, toast, update, loadTenants, onSaved]);
+    savePortalMutate({ config, orgId });
+  }, [config, orgId, savePortalMutate]);
 
   const portalUrl = config?.slug ? `${window.location.origin}/portal/${config.slug}` : "";
 
-  const copyLink = useCallback(
-    (url: string) => {
-      if (!url) return;
-      navigator.clipboard.writeText(url);
-      toast({ title: "Portal link copied to clipboard" });
-    },
-    [toast],
-  );
+  const copyLink = useCallback((url: string) => {
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    toast.success("Portal link copied to clipboard");
+  }, []);
 
-  if (loading) {
+  if (!orgId) {
+    return null;
+  }
+
+  if (bootstrapPending) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -325,14 +331,37 @@ export function PortalConfigurator({
     );
   }
 
+  if (bootstrapError) {
+    return (
+      <div className="rounded-[20px] border border-destructive/20 bg-destructive/5 p-6 text-center space-y-3">
+        <p className="text-sm text-foreground font-medium">Could not load portal data</p>
+        <p className="text-xs text-muted-foreground">
+          {bootstrapErrorDetail instanceof Error ? bootstrapErrorDetail.message : "Try again."}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.portal.tenantBootstrap(orgId),
+            })
+          }
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   if (tenants.length === 0) {
     return (
-      <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-6 text-center">
-        <Building2 className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-        <p className="text-sm text-muted-foreground">
-          No tenants found. Connect a FireComply Connector agent with a tenant name to create tenant
-          portals.
-        </p>
+      <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-6">
+        <EmptyState
+          icon={<Building2 className="h-6 w-6 text-muted-foreground/50" />}
+          title="No tenants yet"
+          description="Connect a FireComply Connector agent with a tenant name to create tenant portals."
+        />
       </div>
     );
   }
@@ -720,15 +749,15 @@ export function PortalConfigurator({
                   <div className="flex justify-end pt-2">
                     <Button
                       onClick={handleSave}
-                      disabled={saving || !!slugError}
+                      disabled={savePortalPending || !!slugError}
                       className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
                     >
-                      {saving ? (
+                      {savePortalPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Save className="h-4 w-4" />
                       )}
-                      {saving ? "Saving..." : "Save Configuration"}
+                      {savePortalPending ? "Saving..." : "Save Configuration"}
                     </Button>
                   </div>
                 </div>

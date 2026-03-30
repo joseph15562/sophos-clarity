@@ -102,7 +102,10 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div
+      className="min-h-screen bg-background flex flex-col"
+      data-testid="se-health-check-auth-gate"
+    >
       <header className="border-b border-[#10037C]/20 bg-[#001A47]">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center">

@@ -8,965 +8,159 @@ export type Database = {
   };
   public: {
     Tables: {
-      organisations: {
-        Row: {
-          id: string;
-          name: string;
-          submission_retention_days: number;
-          mfa_required: boolean;
-          webhook_url: string | null;
-          webhook_secret: string | null;
-          report_template: Json | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          name: string;
-          submission_retention_days?: number;
-          mfa_required?: boolean;
-          webhook_url?: string | null;
-          webhook_secret?: string | null;
-          report_template?: Json | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          name?: string;
-          submission_retention_days?: number;
-          mfa_required?: boolean;
-          webhook_url?: string | null;
-          webhook_secret?: string | null;
-          report_template?: Json | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      org_service_api_keys: {
-        Row: {
-          id: string;
-          org_id: string;
-          label: string;
-          key_prefix: string;
-          key_hash: string;
-          scopes: string[];
-          created_by: string | null;
-          created_at: string;
-          revoked_at: string | null;
-          last_used_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          label: string;
-          key_prefix: string;
-          key_hash: string;
-          scopes?: string[];
-          created_by?: string | null;
-          created_at?: string;
-          revoked_at?: string | null;
-          last_used_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          label?: string;
-          key_prefix?: string;
-          key_hash?: string;
-          scopes?: string[];
-          created_by?: string | null;
-          created_at?: string;
-          revoked_at?: string | null;
-          last_used_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "org_service_api_keys_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      regulatory_updates: {
-        Row: {
-          id: string;
-          source: string;
-          title: string;
-          summary: string;
-          link: string;
-          framework: string | null;
-          published_at: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          source: string;
-          title: string;
-          summary: string;
-          link: string;
-          framework?: string | null;
-          published_at?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          source?: string;
-          title?: string;
-          summary?: string;
-          link?: string;
-          framework?: string | null;
-          published_at?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      passkey_credentials: {
-        Row: {
-          id: string;
-          user_id: string;
-          credential_id: string;
-          public_key: string;
-          counter: number;
-          device_type: string;
-          transports: string[];
-          name: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          credential_id: string;
-          public_key: string;
-          counter?: number;
-          device_type?: string;
-          transports?: string[];
-          name?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          credential_id?: string;
-          public_key?: string;
-          counter?: number;
-          device_type?: string;
-          transports?: string[];
-          name?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      agents: {
-        Row: {
-          id: string;
-          org_id: string;
-          name: string;
-          api_key_hash: string;
-          api_key_prefix: string;
-          tenant_id: string | null;
-          tenant_name: string | null;
-          firewall_host: string;
-          firewall_port: number;
-          customer_name: string;
-          environment: string;
-          schedule_cron: string;
-          firmware_version: string | null;
-          firmware_version_override: string | null;
-          serial_number: string | null;
-          hardware_model: string | null;
-          connector_version: string | null;
-          last_seen_at: string | null;
-          last_score: number | null;
-          last_grade: string | null;
-          status: string;
-          error_message: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          name: string;
-          api_key_hash: string;
-          api_key_prefix: string;
-          tenant_id?: string | null;
-          tenant_name?: string | null;
-          firewall_host: string;
-          firewall_port?: number;
-          customer_name?: string;
-          environment?: string;
-          schedule_cron?: string;
-          firmware_version?: string | null;
-          firmware_version_override?: string | null;
-          serial_number?: string | null;
-          hardware_model?: string | null;
-          connector_version?: string | null;
-          last_seen_at?: string | null;
-          last_score?: number | null;
-          last_grade?: string | null;
-          status?: string;
-          error_message?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          name?: string;
-          api_key_hash?: string;
-          api_key_prefix?: string;
-          tenant_id?: string | null;
-          tenant_name?: string | null;
-          firewall_host?: string;
-          firewall_port?: number;
-          customer_name?: string;
-          environment?: string;
-          schedule_cron?: string;
-          firmware_version?: string | null;
-          firmware_version_override?: string | null;
-          serial_number?: string | null;
-          hardware_model?: string | null;
-          connector_version?: string | null;
-          last_seen_at?: string | null;
-          last_score?: number | null;
-          last_grade?: string | null;
-          status?: string;
-          error_message?: string | null;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "agents_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       agent_submissions: {
         Row: {
-          id: string;
           agent_id: string;
-          org_id: string;
-          customer_name: string;
-          overall_score: number;
-          overall_grade: string;
-          firewalls: Json;
-          findings_summary: Json;
-          finding_titles: string[];
-          threat_status: Json | null;
-          drift: Json | null;
-          full_analysis: Json | null;
-          raw_config: Json | null;
           created_at: string;
+          customer_name: string;
+          drift: Json | null;
+          finding_titles: string[];
+          findings_summary: Json;
+          firewalls: Json;
+          full_analysis: Json | null;
+          id: string;
+          org_id: string;
+          overall_grade: string;
+          overall_score: number;
+          raw_config: Json | null;
+          threat_status: Json | null;
         };
         Insert: {
-          id?: string;
           agent_id: string;
-          org_id: string;
-          customer_name?: string;
-          overall_score?: number;
-          overall_grade?: string;
-          firewalls?: Json;
-          findings_summary?: Json;
-          finding_titles?: string[];
-          threat_status?: Json | null;
-          drift?: Json | null;
-          full_analysis?: Json | null;
-          raw_config?: Json | null;
           created_at?: string;
+          customer_name?: string;
+          drift?: Json | null;
+          finding_titles?: string[];
+          findings_summary?: Json;
+          firewalls?: Json;
+          full_analysis?: Json | null;
+          id?: string;
+          org_id: string;
+          overall_grade?: string;
+          overall_score?: number;
+          raw_config?: Json | null;
+          threat_status?: Json | null;
         };
         Update: {
-          id?: string;
           agent_id?: string;
-          org_id?: string;
-          customer_name?: string;
-          overall_score?: number;
-          overall_grade?: string;
-          firewalls?: Json;
-          findings_summary?: Json;
-          finding_titles?: string[];
-          threat_status?: Json | null;
-          drift?: Json | null;
-          full_analysis?: Json | null;
           created_at?: string;
+          customer_name?: string;
+          drift?: Json | null;
+          finding_titles?: string[];
+          findings_summary?: Json;
+          firewalls?: Json;
+          full_analysis?: Json | null;
+          id?: string;
+          org_id?: string;
+          overall_grade?: string;
+          overall_score?: number;
+          raw_config?: Json | null;
+          threat_status?: Json | null;
         };
         Relationships: [
           {
             foreignKeyName: "agent_submissions_agent_id_fkey";
             columns: ["agent_id"];
+            isOneToOne: false;
             referencedRelation: "agents";
             referencedColumns: ["id"];
           },
           {
             foreignKeyName: "agent_submissions_org_id_fkey";
             columns: ["org_id"];
+            isOneToOne: false;
             referencedRelation: "organisations";
             referencedColumns: ["id"];
           },
         ];
       };
-      org_members: {
-        Row: { id: string; org_id: string; user_id: string; role: string; joined_at: string };
-        Insert: { id?: string; org_id: string; user_id: string; role?: string; joined_at?: string };
-        Update: {
-          id?: string;
-          org_id?: string;
-          user_id?: string;
-          role?: string;
-          joined_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "org_members_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      assessments: {
+      agents: {
         Row: {
-          id: string;
-          org_id: string;
-          created_by: string | null;
+          api_key_hash: string;
+          api_key_prefix: string;
+          central_firewall_id: string | null;
+          connector_version: string | null;
+          created_at: string;
           customer_name: string;
           environment: string;
-          firewalls: Json;
-          overall_score: number;
-          overall_grade: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          created_by?: string | null;
-          customer_name?: string;
-          environment?: string;
-          firewalls?: Json;
-          overall_score?: number;
-          overall_grade?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          created_by?: string | null;
-          customer_name?: string;
-          environment?: string;
-          firewalls?: Json;
-          overall_score?: number;
-          overall_grade?: string;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "assessments_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      org_invites: {
-        Row: {
+          error_message: string | null;
+          firewall_host: string;
+          firewall_port: number;
+          firmware_version: string | null;
+          firmware_version_override: string | null;
+          hardware_model: string | null;
           id: string;
-          org_id: string;
-          email: string;
-          invited_by: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          email: string;
-          invited_by?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          email?: string;
-          invited_by?: string | null;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "org_invites_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      saved_reports: {
-        Row: {
-          id: string;
-          org_id: string;
-          created_by: string | null;
-          customer_name: string;
-          environment: string;
-          report_type: string;
-          reports: Json;
-          analysis_summary: Json;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          created_by?: string | null;
-          customer_name: string;
-          environment?: string;
-          report_type?: string;
-          reports?: Json;
-          analysis_summary?: Json;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          created_by?: string | null;
-          customer_name?: string;
-          environment?: string;
-          report_type?: string;
-          reports?: Json;
-          analysis_summary?: Json;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "saved_reports_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      central_credentials: {
-        Row: {
-          org_id: string;
-          encrypted_client_id: string;
-          encrypted_client_secret: string;
-          partner_id: string;
-          partner_type: string;
-          api_hosts: Json;
-          connected_at: string;
-          last_synced_at: string | null;
-        };
-        Insert: {
-          org_id: string;
-          encrypted_client_id: string;
-          encrypted_client_secret: string;
-          partner_id?: string;
-          partner_type?: string;
-          api_hosts?: Json;
-          connected_at?: string;
-          last_synced_at?: string | null;
-        };
-        Update: {
-          org_id?: string;
-          encrypted_client_id?: string;
-          encrypted_client_secret?: string;
-          partner_id?: string;
-          partner_type?: string;
-          api_hosts?: Json;
-          connected_at?: string;
-          last_synced_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "central_credentials_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      connectwise_cloud_credentials: {
-        Row: {
-          org_id: string;
-          encrypted_public_member_id: string;
-          encrypted_subscription_key: string;
-          scope: string;
-          public_id_suffix: string;
-          connected_at: string;
-          last_token_ok_at: string | null;
-          last_error: string | null;
-        };
-        Insert: {
-          org_id: string;
-          encrypted_public_member_id: string;
-          encrypted_subscription_key: string;
-          scope?: string;
-          public_id_suffix?: string;
-          connected_at?: string;
-          last_token_ok_at?: string | null;
-          last_error?: string | null;
-        };
-        Update: {
-          org_id?: string;
-          encrypted_public_member_id?: string;
-          encrypted_subscription_key?: string;
-          scope?: string;
-          public_id_suffix?: string;
-          connected_at?: string;
-          last_token_ok_at?: string | null;
-          last_error?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "connectwise_cloud_credentials_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      connectwise_manage_credentials: {
-        Row: {
-          org_id: string;
-          api_base_url: string;
-          integrator_company_id: string;
-          encrypted_public_key: string;
-          encrypted_private_key: string;
-          default_board_id: number;
-          default_status_id: number;
-          connected_at: string;
-        };
-        Insert: {
-          org_id: string;
-          api_base_url: string;
-          integrator_company_id: string;
-          encrypted_public_key: string;
-          encrypted_private_key: string;
-          default_board_id: number;
-          default_status_id?: number;
-          connected_at?: string;
-        };
-        Update: {
-          org_id?: string;
-          api_base_url?: string;
-          integrator_company_id?: string;
-          encrypted_public_key?: string;
-          encrypted_private_key?: string;
-          default_board_id?: number;
-          default_status_id?: number;
-          connected_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "connectwise_manage_credentials_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      autotask_psa_credentials: {
-        Row: {
-          org_id: string;
-          api_zone_base_url: string;
-          username: string;
-          encrypted_secret: string;
-          encrypted_integration_code: string;
-          default_queue_id: number;
-          default_priority: number;
-          default_status: number;
-          default_source: number;
-          default_ticket_type: number;
-          connected_at: string;
-        };
-        Insert: {
-          org_id: string;
-          api_zone_base_url: string;
-          username: string;
-          encrypted_secret: string;
-          encrypted_integration_code: string;
-          default_queue_id: number;
-          default_priority: number;
-          default_status: number;
-          default_source: number;
-          default_ticket_type: number;
-          connected_at?: string;
-        };
-        Update: {
-          org_id?: string;
-          api_zone_base_url?: string;
-          username?: string;
-          encrypted_secret?: string;
-          encrypted_integration_code?: string;
-          default_queue_id?: number;
-          default_priority?: number;
-          default_status?: number;
-          default_source?: number;
-          default_ticket_type?: number;
-          connected_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "autotask_psa_credentials_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      psa_ticket_idempotency: {
-        Row: {
-          id: string;
-          org_id: string;
-          provider: string;
-          idempotency_key: string;
-          external_ticket_id: string;
-          metadata: Json;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          provider?: string;
-          idempotency_key: string;
-          external_ticket_id: string;
-          metadata?: Json;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          provider?: string;
-          idempotency_key?: string;
-          external_ticket_id?: string;
-          metadata?: Json;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "psa_ticket_idempotency_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      psa_customer_company_map: {
-        Row: {
-          org_id: string;
-          provider: string;
-          customer_key: string;
-          company_id: number;
-          updated_at: string;
-        };
-        Insert: {
-          org_id: string;
-          provider?: string;
-          customer_key: string;
-          company_id: number;
-          updated_at?: string;
-        };
-        Update: {
-          org_id?: string;
-          provider?: string;
-          customer_key?: string;
-          company_id?: number;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "psa_customer_company_map_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      central_tenants: {
-        Row: {
-          id: string;
-          org_id: string;
-          central_tenant_id: string;
+          last_grade: string | null;
+          last_score: number | null;
+          last_seen_at: string | null;
           name: string;
-          data_region: string;
-          api_host: string;
-          billing_type: string;
-          synced_at: string;
+          org_id: string;
+          pending_command: string | null;
+          schedule_cron: string;
+          serial_number: string | null;
+          status: string;
+          tenant_id: string | null;
+          tenant_name: string | null;
         };
         Insert: {
+          api_key_hash: string;
+          api_key_prefix: string;
+          central_firewall_id?: string | null;
+          connector_version?: string | null;
+          created_at?: string;
+          customer_name?: string;
+          environment?: string;
+          error_message?: string | null;
+          firewall_host: string;
+          firewall_port?: number;
+          firmware_version?: string | null;
+          firmware_version_override?: string | null;
+          hardware_model?: string | null;
           id?: string;
-          org_id: string;
-          central_tenant_id: string;
-          name?: string;
-          data_region?: string;
-          api_host?: string;
-          billing_type?: string;
-          synced_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          central_tenant_id?: string;
-          name?: string;
-          data_region?: string;
-          api_host?: string;
-          billing_type?: string;
-          synced_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "central_tenants_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      central_firewalls: {
-        Row: {
-          id: string;
-          org_id: string;
-          central_tenant_id: string;
-          firewall_id: string;
-          serial_number: string;
-          hostname: string;
+          last_grade?: string | null;
+          last_score?: number | null;
+          last_seen_at?: string | null;
           name: string;
-          firmware_version: string;
-          model: string;
-          status_json: Json;
-          cluster_json: Json | null;
-          group_json: Json | null;
-          external_ips: Json;
-          geo_location: Json | null;
-          synced_at: string;
-        };
-        Insert: {
-          id?: string;
           org_id: string;
-          central_tenant_id: string;
-          firewall_id: string;
-          serial_number?: string;
-          hostname?: string;
-          name?: string;
-          firmware_version?: string;
-          model?: string;
-          status_json?: Json;
-          cluster_json?: Json | null;
-          group_json?: Json | null;
-          external_ips?: Json;
-          geo_location?: Json | null;
-          synced_at?: string;
+          pending_command?: string | null;
+          schedule_cron?: string;
+          serial_number?: string | null;
+          status?: string;
+          tenant_id?: string | null;
+          tenant_name?: string | null;
         };
         Update: {
-          id?: string;
-          org_id?: string;
-          central_tenant_id?: string;
-          firewall_id?: string;
-          serial_number?: string;
-          hostname?: string;
-          name?: string;
-          firmware_version?: string;
-          model?: string;
-          status_json?: Json;
-          cluster_json?: Json | null;
-          group_json?: Json | null;
-          external_ips?: Json;
-          geo_location?: Json | null;
-          synced_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "central_firewalls_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      firewall_config_links: {
-        Row: {
-          id: string;
-          org_id: string;
-          config_hostname: string;
-          config_hash: string;
-          central_firewall_id: string;
-          central_tenant_id: string;
-          linked_by: string | null;
-          linked_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          config_hostname?: string;
-          config_hash?: string;
-          central_firewall_id: string;
-          central_tenant_id: string;
-          linked_by?: string | null;
-          linked_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          config_hostname?: string;
-          config_hash?: string;
-          central_firewall_id?: string;
-          central_tenant_id?: string;
-          linked_by?: string | null;
-          linked_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "firewall_config_links_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      audit_log: {
-        Row: {
-          id: string;
-          org_id: string;
-          user_id: string | null;
-          action: string;
-          resource_type: string;
-          resource_id: string;
-          metadata: Json;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          user_id?: string | null;
-          action: string;
-          resource_type?: string;
-          resource_id?: string;
-          metadata?: Json;
+          api_key_hash?: string;
+          api_key_prefix?: string;
+          central_firewall_id?: string | null;
+          connector_version?: string | null;
           created_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          user_id?: string | null;
-          action?: string;
-          resource_type?: string;
-          resource_id?: string;
-          metadata?: Json;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "audit_log_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      finding_snapshots: {
-        Row: {
-          id: string;
-          org_id: string;
-          hostname: string;
-          titles: string[];
-          score: number;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          hostname: string;
-          titles?: string[];
-          score?: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          hostname?: string;
-          titles?: string[];
-          score?: number;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "finding_snapshots_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      remediation_status: {
-        Row: {
-          id: string;
-          org_id: string;
-          playbook_id: string;
-          customer_hash: string;
-          completed_by: string | null;
-          completed_at: string;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          playbook_id: string;
-          customer_hash: string;
-          completed_by?: string | null;
-          completed_at?: string;
-        };
-        Update: {
-          id?: string;
-          org_id?: string;
-          playbook_id?: string;
-          customer_hash?: string;
-          completed_by?: string | null;
-          completed_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "remediation_status_org_id_fkey";
-            columns: ["org_id"];
-            referencedRelation: "organisations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      shared_reports: {
-        Row: {
-          id: string;
-          org_id: string;
-          share_token: string;
-          markdown: string;
-          customer_name: string;
-          created_by: string | null;
-          expires_at: string;
-          created_at: string;
-          allow_download: boolean;
-          advisor_notes: string | null;
-        };
-        Insert: {
-          id?: string;
-          org_id: string;
-          share_token: string;
-          markdown: string;
           customer_name?: string;
-          created_by?: string | null;
-          expires_at: string;
-          created_at?: string;
-          allow_download?: boolean;
-          advisor_notes?: string | null;
-        };
-        Update: {
+          environment?: string;
+          error_message?: string | null;
+          firewall_host?: string;
+          firewall_port?: number;
+          firmware_version?: string | null;
+          firmware_version_override?: string | null;
+          hardware_model?: string | null;
           id?: string;
+          last_grade?: string | null;
+          last_score?: number | null;
+          last_seen_at?: string | null;
+          name?: string;
           org_id?: string;
-          share_token?: string;
-          markdown?: string;
-          customer_name?: string;
-          created_by?: string | null;
-          expires_at?: string;
-          created_at?: string;
-          allow_download?: boolean;
-          advisor_notes?: string | null;
+          pending_command?: string | null;
+          schedule_cron?: string;
+          serial_number?: string | null;
+          status?: string;
+          tenant_id?: string | null;
+          tenant_name?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "shared_reports_org_id_fkey";
+            foreignKeyName: "agents_org_id_fkey";
             columns: ["org_id"];
+            isOneToOne: false;
             referencedRelation: "organisations";
             referencedColumns: ["id"];
           },
@@ -974,100 +168,1442 @@ export type Database = {
       };
       alert_rules: {
         Row: {
-          id: string;
-          org_id: string;
-          event_type: string;
           channel: string;
           config: Json;
-          enabled: boolean;
           created_at: string;
+          enabled: boolean;
+          event_type: string;
+          id: string;
+          org_id: string;
         };
         Insert: {
-          id?: string;
-          org_id: string;
-          event_type: string;
           channel: string;
           config?: Json;
-          enabled?: boolean;
           created_at?: string;
+          enabled?: boolean;
+          event_type: string;
+          id?: string;
+          org_id: string;
         };
         Update: {
-          id?: string;
-          org_id?: string;
-          event_type?: string;
           channel?: string;
           config?: Json;
-          enabled?: boolean;
           created_at?: string;
+          enabled?: boolean;
+          event_type?: string;
+          id?: string;
+          org_id?: string;
         };
         Relationships: [
           {
             foreignKeyName: "alert_rules_org_id_fkey";
             columns: ["org_id"];
+            isOneToOne: false;
             referencedRelation: "organisations";
             referencedColumns: ["id"];
           },
         ];
       };
-      portal_config: {
+      assessments: {
         Row: {
+          created_at: string;
+          created_by: string | null;
+          customer_name: string;
+          environment: string;
+          firewalls: Json;
           id: string;
           org_id: string;
-          slug: string | null;
-          tenant_name: string | null;
-          logo_url: string | null;
-          company_name: string | null;
-          accent_color: string;
-          welcome_message: string | null;
-          sla_info: string | null;
-          contact_email: string | null;
-          contact_phone: string | null;
-          footer_text: string | null;
-          visible_sections: Json;
-          show_branding: boolean;
+          overall_grade: string;
+          overall_score: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          customer_name?: string;
+          environment?: string;
+          firewalls?: Json;
+          id?: string;
+          org_id: string;
+          overall_grade?: string;
+          overall_score?: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          customer_name?: string;
+          environment?: string;
+          firewalls?: Json;
+          id?: string;
+          org_id?: string;
+          overall_grade?: string;
+          overall_score?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "assessments_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      audit_log: {
+        Row: {
+          action: string;
           created_at: string;
-          updated_at: string;
+          id: string;
+          metadata: Json;
+          org_id: string;
+          resource_id: string;
+          resource_type: string;
+          user_id: string | null;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json;
+          org_id: string;
+          resource_id?: string;
+          resource_type?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          id?: string;
+          metadata?: Json;
+          org_id?: string;
+          resource_id?: string;
+          resource_type?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      autotask_psa_credentials: {
+        Row: {
+          api_zone_base_url: string;
+          connected_at: string;
+          default_priority: number;
+          default_queue_id: number;
+          default_source: number;
+          default_status: number;
+          default_ticket_type: number;
+          encrypted_integration_code: string;
+          encrypted_secret: string;
+          org_id: string;
+          username: string;
+        };
+        Insert: {
+          api_zone_base_url: string;
+          connected_at?: string;
+          default_priority: number;
+          default_queue_id: number;
+          default_source: number;
+          default_status: number;
+          default_ticket_type: number;
+          encrypted_integration_code: string;
+          encrypted_secret: string;
+          org_id: string;
+          username: string;
+        };
+        Update: {
+          api_zone_base_url?: string;
+          connected_at?: string;
+          default_priority?: number;
+          default_queue_id?: number;
+          default_source?: number;
+          default_status?: number;
+          default_ticket_type?: number;
+          encrypted_integration_code?: string;
+          encrypted_secret?: string;
+          org_id?: string;
+          username?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "autotask_psa_credentials_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: true;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      central_credentials: {
+        Row: {
+          api_hosts: Json;
+          connected_at: string;
+          encrypted_client_id: string;
+          encrypted_client_secret: string;
+          last_synced_at: string | null;
+          org_id: string;
+          partner_id: string;
+          partner_type: string;
+        };
+        Insert: {
+          api_hosts?: Json;
+          connected_at?: string;
+          encrypted_client_id: string;
+          encrypted_client_secret: string;
+          last_synced_at?: string | null;
+          org_id: string;
+          partner_id?: string;
+          partner_type?: string;
+        };
+        Update: {
+          api_hosts?: Json;
+          connected_at?: string;
+          encrypted_client_id?: string;
+          encrypted_client_secret?: string;
+          last_synced_at?: string | null;
+          org_id?: string;
+          partner_id?: string;
+          partner_type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "central_credentials_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: true;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      central_firewalls: {
+        Row: {
+          central_tenant_id: string;
+          cluster_json: Json | null;
+          external_ips: Json;
+          firewall_id: string;
+          firmware_version: string;
+          geo_location: Json | null;
+          group_json: Json | null;
+          hostname: string;
+          id: string;
+          model: string;
+          name: string;
+          org_id: string;
+          serial_number: string;
+          status_json: Json;
+          synced_at: string;
+        };
+        Insert: {
+          central_tenant_id: string;
+          cluster_json?: Json | null;
+          external_ips?: Json;
+          firewall_id: string;
+          firmware_version?: string;
+          geo_location?: Json | null;
+          group_json?: Json | null;
+          hostname?: string;
+          id?: string;
+          model?: string;
+          name?: string;
+          org_id: string;
+          serial_number?: string;
+          status_json?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          central_tenant_id?: string;
+          cluster_json?: Json | null;
+          external_ips?: Json;
+          firewall_id?: string;
+          firmware_version?: string;
+          geo_location?: Json | null;
+          group_json?: Json | null;
+          hostname?: string;
+          id?: string;
+          model?: string;
+          name?: string;
+          org_id?: string;
+          serial_number?: string;
+          status_json?: Json;
+          synced_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "central_firewalls_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      central_tenants: {
+        Row: {
+          api_host: string;
+          billing_type: string;
+          central_tenant_id: string;
+          data_region: string;
+          id: string;
+          name: string;
+          org_id: string;
+          synced_at: string;
+        };
+        Insert: {
+          api_host?: string;
+          billing_type?: string;
+          central_tenant_id: string;
+          data_region?: string;
+          id?: string;
+          name?: string;
+          org_id: string;
+          synced_at?: string;
+        };
+        Update: {
+          api_host?: string;
+          billing_type?: string;
+          central_tenant_id?: string;
+          data_region?: string;
+          id?: string;
+          name?: string;
+          org_id?: string;
+          synced_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "central_tenants_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      config_upload_requests: {
+        Row: {
+          central_client_id_enc: string | null;
+          central_client_secret_enc: string | null;
+          central_connected_at: string | null;
+          central_data: Json | null;
+          central_linked_firewall_id: string | null;
+          central_linked_firewall_name: string | null;
+          config_xml: string | null;
+          contact_name: string | null;
+          created_at: string;
+          customer_email: string | null;
+          customer_name: string | null;
+          downloaded_at: string | null;
+          email_sent: boolean;
+          expires_at: string;
+          file_name: string | null;
+          id: string;
+          reminder_sent: boolean;
+          se_email: string | null;
+          se_user_id: string;
+          status: string;
+          team_id: string | null;
+          token: string;
+          uploaded_at: string | null;
+        };
+        Insert: {
+          central_client_id_enc?: string | null;
+          central_client_secret_enc?: string | null;
+          central_connected_at?: string | null;
+          central_data?: Json | null;
+          central_linked_firewall_id?: string | null;
+          central_linked_firewall_name?: string | null;
+          config_xml?: string | null;
+          contact_name?: string | null;
+          created_at?: string;
+          customer_email?: string | null;
+          customer_name?: string | null;
+          downloaded_at?: string | null;
+          email_sent?: boolean;
+          expires_at: string;
+          file_name?: string | null;
+          id?: string;
+          reminder_sent?: boolean;
+          se_email?: string | null;
+          se_user_id: string;
+          status?: string;
+          team_id?: string | null;
+          token?: string;
+          uploaded_at?: string | null;
+        };
+        Update: {
+          central_client_id_enc?: string | null;
+          central_client_secret_enc?: string | null;
+          central_connected_at?: string | null;
+          central_data?: Json | null;
+          central_linked_firewall_id?: string | null;
+          central_linked_firewall_name?: string | null;
+          config_xml?: string | null;
+          contact_name?: string | null;
+          created_at?: string;
+          customer_email?: string | null;
+          customer_name?: string | null;
+          downloaded_at?: string | null;
+          email_sent?: boolean;
+          expires_at?: string;
+          file_name?: string | null;
+          id?: string;
+          reminder_sent?: boolean;
+          se_email?: string | null;
+          se_user_id?: string;
+          status?: string;
+          team_id?: string | null;
+          token?: string;
+          uploaded_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "config_upload_requests_se_user_id_fkey";
+            columns: ["se_user_id"];
+            isOneToOne: false;
+            referencedRelation: "se_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "config_upload_requests_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "se_teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      connectwise_cloud_credentials: {
+        Row: {
+          connected_at: string;
+          encrypted_public_member_id: string;
+          encrypted_subscription_key: string;
+          last_error: string | null;
+          last_token_ok_at: string | null;
+          org_id: string;
+          public_id_suffix: string;
+          scope: string;
+        };
+        Insert: {
+          connected_at?: string;
+          encrypted_public_member_id: string;
+          encrypted_subscription_key: string;
+          last_error?: string | null;
+          last_token_ok_at?: string | null;
+          org_id: string;
+          public_id_suffix?: string;
+          scope?: string;
+        };
+        Update: {
+          connected_at?: string;
+          encrypted_public_member_id?: string;
+          encrypted_subscription_key?: string;
+          last_error?: string | null;
+          last_token_ok_at?: string | null;
+          org_id?: string;
+          public_id_suffix?: string;
+          scope?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "connectwise_cloud_credentials_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: true;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      connectwise_manage_credentials: {
+        Row: {
+          api_base_url: string;
+          connected_at: string;
+          default_board_id: number;
+          default_status_id: number;
+          encrypted_private_key: string;
+          encrypted_public_key: string;
+          integrator_company_id: string;
+          org_id: string;
+        };
+        Insert: {
+          api_base_url: string;
+          connected_at?: string;
+          default_board_id: number;
+          default_status_id?: number;
+          encrypted_private_key: string;
+          encrypted_public_key: string;
+          integrator_company_id: string;
+          org_id: string;
+        };
+        Update: {
+          api_base_url?: string;
+          connected_at?: string;
+          default_board_id?: number;
+          default_status_id?: number;
+          encrypted_private_key?: string;
+          encrypted_public_key?: string;
+          integrator_company_id?: string;
+          org_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "connectwise_manage_credentials_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: true;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      finding_snapshots: {
+        Row: {
+          created_at: string;
+          hostname: string;
+          id: string;
+          org_id: string;
+          score: number;
+          titles: string[];
+        };
+        Insert: {
+          created_at?: string;
+          hostname: string;
+          id?: string;
+          org_id: string;
+          score?: number;
+          titles?: string[];
+        };
+        Update: {
+          created_at?: string;
+          hostname?: string;
+          id?: string;
+          org_id?: string;
+          score?: number;
+          titles?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "finding_snapshots_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      firewall_config_links: {
+        Row: {
+          central_firewall_id: string;
+          central_tenant_id: string;
+          config_hash: string;
+          config_hostname: string;
+          id: string;
+          linked_at: string;
+          linked_by: string | null;
+          org_id: string;
+        };
+        Insert: {
+          central_firewall_id: string;
+          central_tenant_id: string;
+          config_hash?: string;
+          config_hostname?: string;
+          id?: string;
+          linked_at?: string;
+          linked_by?: string | null;
+          org_id: string;
+        };
+        Update: {
+          central_firewall_id?: string;
+          central_tenant_id?: string;
+          config_hash?: string;
+          config_hostname?: string;
+          id?: string;
+          linked_at?: string;
+          linked_by?: string | null;
+          org_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "firewall_config_links_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gemini_usage: {
+        Row: {
+          completion_tokens: number | null;
+          created_at: string;
+          id: string;
+          is_chat: boolean;
+          model: string | null;
+          prompt_tokens: number | null;
+          total_tokens: number;
+          user_id: string | null;
+        };
+        Insert: {
+          completion_tokens?: number | null;
+          created_at?: string;
+          id?: string;
+          is_chat?: boolean;
+          model?: string | null;
+          prompt_tokens?: number | null;
+          total_tokens: number;
+          user_id?: string | null;
+        };
+        Update: {
+          completion_tokens?: number | null;
+          created_at?: string;
+          id?: string;
+          is_chat?: boolean;
+          model?: string | null;
+          prompt_tokens?: number | null;
+          total_tokens?: number;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      org_invites: {
+        Row: {
+          created_at: string;
+          email: string;
+          id: string;
+          invited_by: string | null;
+          org_id: string;
+          role: string;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id: string;
+          role?: string;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id?: string;
+          role?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "org_invites_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      org_members: {
+        Row: {
+          id: string;
+          joined_at: string;
+          org_id: string;
+          role: string;
+          user_id: string;
         };
         Insert: {
           id?: string;
+          joined_at?: string;
           org_id: string;
-          slug?: string | null;
-          tenant_name?: string | null;
-          logo_url?: string | null;
-          company_name?: string | null;
-          accent_color?: string;
-          welcome_message?: string | null;
-          sla_info?: string | null;
-          contact_email?: string | null;
-          contact_phone?: string | null;
-          footer_text?: string | null;
-          visible_sections?: Json;
-          show_branding?: boolean;
-          created_at?: string;
-          updated_at?: string;
+          role?: string;
+          user_id: string;
         };
         Update: {
           id?: string;
+          joined_at?: string;
           org_id?: string;
-          slug?: string | null;
-          tenant_name?: string | null;
-          logo_url?: string | null;
+          role?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "org_members_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      org_service_api_keys: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          key_hash: string;
+          key_prefix: string;
+          label: string;
+          last_used_at: string | null;
+          org_id: string;
+          revoked_at: string | null;
+          scopes: string[];
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          key_hash: string;
+          key_prefix: string;
+          label: string;
+          last_used_at?: string | null;
+          org_id: string;
+          revoked_at?: string | null;
+          scopes?: string[];
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          key_hash?: string;
+          key_prefix?: string;
+          label?: string;
+          last_used_at?: string | null;
+          org_id?: string;
+          revoked_at?: string | null;
+          scopes?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "org_service_api_keys_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      organisations: {
+        Row: {
+          created_at: string;
+          id: string;
+          mfa_required: boolean;
+          name: string;
+          report_template: Json | null;
+          submission_retention_days: number;
+          webhook_secret: string | null;
+          webhook_url: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          mfa_required?: boolean;
+          name: string;
+          report_template?: Json | null;
+          submission_retention_days?: number;
+          webhook_secret?: string | null;
+          webhook_url?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          mfa_required?: boolean;
+          name?: string;
+          report_template?: Json | null;
+          submission_retention_days?: number;
+          webhook_secret?: string | null;
+          webhook_url?: string | null;
+        };
+        Relationships: [];
+      };
+      passkey_credentials: {
+        Row: {
+          counter: number;
+          created_at: string;
+          credential_id: string;
+          device_type: string;
+          id: string;
+          name: string;
+          public_key: string;
+          transports: string[];
+          user_id: string;
+        };
+        Insert: {
+          counter?: number;
+          created_at?: string;
+          credential_id: string;
+          device_type?: string;
+          id?: string;
+          name?: string;
+          public_key: string;
+          transports?: string[];
+          user_id: string;
+        };
+        Update: {
+          counter?: number;
+          created_at?: string;
+          credential_id?: string;
+          device_type?: string;
+          id?: string;
+          name?: string;
+          public_key?: string;
+          transports?: string[];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      portal_config: {
+        Row: {
+          accent_color: string | null;
+          company_name: string | null;
+          contact_email: string | null;
+          contact_phone: string | null;
+          created_at: string | null;
+          footer_text: string | null;
+          id: string;
+          logo_url: string | null;
+          org_id: string;
+          show_branding: boolean | null;
+          sla_info: string | null;
+          slug: string | null;
+          tenant_name: string | null;
+          updated_at: string | null;
+          visible_sections: Json | null;
+          welcome_message: string | null;
+        };
+        Insert: {
+          accent_color?: string | null;
           company_name?: string | null;
-          accent_color?: string;
-          welcome_message?: string | null;
-          sla_info?: string | null;
           contact_email?: string | null;
           contact_phone?: string | null;
+          created_at?: string | null;
           footer_text?: string | null;
-          visible_sections?: Json;
-          show_branding?: boolean;
-          created_at?: string;
-          updated_at?: string;
+          id?: string;
+          logo_url?: string | null;
+          org_id: string;
+          show_branding?: boolean | null;
+          sla_info?: string | null;
+          slug?: string | null;
+          tenant_name?: string | null;
+          updated_at?: string | null;
+          visible_sections?: Json | null;
+          welcome_message?: string | null;
+        };
+        Update: {
+          accent_color?: string | null;
+          company_name?: string | null;
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          created_at?: string | null;
+          footer_text?: string | null;
+          id?: string;
+          logo_url?: string | null;
+          org_id?: string;
+          show_branding?: boolean | null;
+          sla_info?: string | null;
+          slug?: string | null;
+          tenant_name?: string | null;
+          updated_at?: string | null;
+          visible_sections?: Json | null;
+          welcome_message?: string | null;
         };
         Relationships: [
           {
             foreignKeyName: "portal_config_org_id_fkey";
             columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      portal_viewers: {
+        Row: {
+          email: string;
+          id: string;
+          invited_at: string;
+          invited_by: string | null;
+          last_login_at: string | null;
+          name: string | null;
+          org_id: string;
+          status: string;
+          user_id: string | null;
+        };
+        Insert: {
+          email: string;
+          id?: string;
+          invited_at?: string;
+          invited_by?: string | null;
+          last_login_at?: string | null;
+          name?: string | null;
+          org_id: string;
+          status?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          email?: string;
+          id?: string;
+          invited_at?: string;
+          invited_by?: string | null;
+          last_login_at?: string | null;
+          name?: string | null;
+          org_id?: string;
+          status?: string;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "portal_viewers_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      psa_customer_company_map: {
+        Row: {
+          company_id: number;
+          customer_key: string;
+          org_id: string;
+          provider: string;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: number;
+          customer_key: string;
+          org_id: string;
+          provider?: string;
+          updated_at?: string;
+        };
+        Update: {
+          company_id?: number;
+          customer_key?: string;
+          org_id?: string;
+          provider?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "psa_customer_company_map_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      psa_ticket_idempotency: {
+        Row: {
+          created_at: string;
+          external_ticket_id: string;
+          id: string;
+          idempotency_key: string;
+          metadata: Json;
+          org_id: string;
+          provider: string;
+        };
+        Insert: {
+          created_at?: string;
+          external_ticket_id: string;
+          id?: string;
+          idempotency_key: string;
+          metadata?: Json;
+          org_id: string;
+          provider?: string;
+        };
+        Update: {
+          created_at?: string;
+          external_ticket_id?: string;
+          id?: string;
+          idempotency_key?: string;
+          metadata?: Json;
+          org_id?: string;
+          provider?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "psa_ticket_idempotency_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      regulatory_updates: {
+        Row: {
+          created_at: string | null;
+          framework: string | null;
+          id: string;
+          link: string;
+          published_at: string | null;
+          source: string;
+          summary: string;
+          title: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          framework?: string | null;
+          id?: string;
+          link: string;
+          published_at?: string | null;
+          source: string;
+          summary: string;
+          title: string;
+        };
+        Update: {
+          created_at?: string | null;
+          framework?: string | null;
+          id?: string;
+          link?: string;
+          published_at?: string | null;
+          source?: string;
+          summary?: string;
+          title?: string;
+        };
+        Relationships: [];
+      };
+      remediation_status: {
+        Row: {
+          completed_at: string;
+          completed_by: string | null;
+          customer_hash: string;
+          id: string;
+          org_id: string;
+          playbook_id: string;
+        };
+        Insert: {
+          completed_at?: string;
+          completed_by?: string | null;
+          customer_hash: string;
+          id?: string;
+          org_id: string;
+          playbook_id: string;
+        };
+        Update: {
+          completed_at?: string;
+          completed_by?: string | null;
+          customer_hash?: string;
+          id?: string;
+          org_id?: string;
+          playbook_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "remediation_status_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      saved_reports: {
+        Row: {
+          analysis_summary: Json;
+          created_at: string;
+          created_by: string | null;
+          customer_name: string;
+          environment: string;
+          id: string;
+          org_id: string;
+          report_type: string;
+          reports: Json;
+        };
+        Insert: {
+          analysis_summary?: Json;
+          created_at?: string;
+          created_by?: string | null;
+          customer_name: string;
+          environment?: string;
+          id?: string;
+          org_id: string;
+          report_type?: string;
+          reports?: Json;
+        };
+        Update: {
+          analysis_summary?: Json;
+          created_at?: string;
+          created_by?: string | null;
+          customer_name?: string;
+          environment?: string;
+          id?: string;
+          org_id?: string;
+          report_type?: string;
+          reports?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "saved_reports_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      scheduled_reports: {
+        Row: {
+          created_at: string;
+          customer_name: string | null;
+          enabled: boolean;
+          id: string;
+          include_sections: Json;
+          last_sent_at: string | null;
+          name: string;
+          next_due_at: string;
+          org_id: string;
+          recipients: string[];
+          report_type: string;
+          schedule: string;
+        };
+        Insert: {
+          created_at?: string;
+          customer_name?: string | null;
+          enabled?: boolean;
+          id?: string;
+          include_sections?: Json;
+          last_sent_at?: string | null;
+          name: string;
+          next_due_at?: string;
+          org_id: string;
+          recipients?: string[];
+          report_type?: string;
+          schedule: string;
+        };
+        Update: {
+          created_at?: string;
+          customer_name?: string | null;
+          enabled?: boolean;
+          id?: string;
+          include_sections?: Json;
+          last_sent_at?: string | null;
+          name?: string;
+          next_due_at?: string;
+          org_id?: string;
+          recipients?: string[];
+          report_type?: string;
+          schedule?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_reports_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      score_history: {
+        Row: {
+          assessed_at: string;
+          category_scores: Json;
+          customer_name: string;
+          findings_count: number;
+          hostname: string;
+          id: string;
+          org_id: string;
+          overall_grade: string;
+          overall_score: number;
+        };
+        Insert: {
+          assessed_at?: string;
+          category_scores?: Json;
+          customer_name?: string;
+          findings_count?: number;
+          hostname: string;
+          id?: string;
+          org_id: string;
+          overall_grade?: string;
+          overall_score: number;
+        };
+        Update: {
+          assessed_at?: string;
+          category_scores?: Json;
+          customer_name?: string;
+          findings_count?: number;
+          hostname?: string;
+          id?: string;
+          org_id?: string;
+          overall_grade?: string;
+          overall_score?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "score_history_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      se_health_checks: {
+        Row: {
+          checked_at: string;
+          customer_name: string | null;
+          findings_count: number | null;
+          firewall_count: number | null;
+          followup_at: string | null;
+          followup_sent: boolean | null;
+          id: string;
+          overall_grade: string | null;
+          overall_score: number | null;
+          se_user_id: string;
+          serial_numbers: string[];
+          share_expires_at: string | null;
+          share_token: string | null;
+          shared_html: string | null;
+          summary_json: Json | null;
+          team_id: string | null;
+        };
+        Insert: {
+          checked_at?: string;
+          customer_name?: string | null;
+          findings_count?: number | null;
+          firewall_count?: number | null;
+          followup_at?: string | null;
+          followup_sent?: boolean | null;
+          id?: string;
+          overall_grade?: string | null;
+          overall_score?: number | null;
+          se_user_id: string;
+          serial_numbers?: string[];
+          share_expires_at?: string | null;
+          share_token?: string | null;
+          shared_html?: string | null;
+          summary_json?: Json | null;
+          team_id?: string | null;
+        };
+        Update: {
+          checked_at?: string;
+          customer_name?: string | null;
+          findings_count?: number | null;
+          firewall_count?: number | null;
+          followup_at?: string | null;
+          followup_sent?: boolean | null;
+          id?: string;
+          overall_grade?: string | null;
+          overall_score?: number | null;
+          se_user_id?: string;
+          serial_numbers?: string[];
+          share_expires_at?: string | null;
+          share_token?: string | null;
+          shared_html?: string | null;
+          summary_json?: Json | null;
+          team_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "se_health_checks_se_user_id_fkey";
+            columns: ["se_user_id"];
+            isOneToOne: false;
+            referencedRelation: "se_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "se_health_checks_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "se_teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      se_profiles: {
+        Row: {
+          created_at: string;
+          display_name: string | null;
+          email: string;
+          health_check_prepared_by: string | null;
+          id: string;
+          profile_completed: boolean;
+          se_title: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_name?: string | null;
+          email: string;
+          health_check_prepared_by?: string | null;
+          id?: string;
+          profile_completed?: boolean;
+          se_title?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          display_name?: string | null;
+          email?: string;
+          health_check_prepared_by?: string | null;
+          id?: string;
+          profile_completed?: boolean;
+          se_title?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      se_team_invites: {
+        Row: {
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string;
+          status: string;
+          team_id: string;
+          token: string;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          expires_at: string;
+          id?: string;
+          invited_by: string;
+          status?: string;
+          team_id: string;
+          token?: string;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string;
+          status?: string;
+          team_id?: string;
+          token?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "se_team_invites_invited_by_fkey";
+            columns: ["invited_by"];
+            isOneToOne: false;
+            referencedRelation: "se_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "se_team_invites_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "se_teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      se_team_members: {
+        Row: {
+          id: string;
+          is_primary: boolean;
+          joined_at: string;
+          role: string;
+          se_profile_id: string;
+          team_id: string;
+        };
+        Insert: {
+          id?: string;
+          is_primary?: boolean;
+          joined_at?: string;
+          role?: string;
+          se_profile_id: string;
+          team_id: string;
+        };
+        Update: {
+          id?: string;
+          is_primary?: boolean;
+          joined_at?: string;
+          role?: string;
+          se_profile_id?: string;
+          team_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "se_team_members_se_profile_id_fkey";
+            columns: ["se_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "se_profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "se_team_members_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "se_teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      se_teams: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          name: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          name: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          name?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "se_teams_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "se_profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      shared_reports: {
+        Row: {
+          advisor_notes: string | null;
+          allow_download: boolean;
+          created_at: string;
+          created_by: string | null;
+          customer_name: string;
+          expires_at: string;
+          id: string;
+          markdown: string;
+          org_id: string;
+          share_token: string;
+        };
+        Insert: {
+          advisor_notes?: string | null;
+          allow_download?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          customer_name?: string;
+          expires_at: string;
+          id?: string;
+          markdown: string;
+          org_id: string;
+          share_token: string;
+        };
+        Update: {
+          advisor_notes?: string | null;
+          allow_download?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          customer_name?: string;
+          expires_at?: string;
+          id?: string;
+          markdown?: string;
+          org_id?: string;
+          share_token?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shared_reports_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
             referencedRelation: "organisations";
             referencedColumns: ["id"];
           },
@@ -1078,9 +1614,11 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      user_org_id: { Args: Record<string, never>; Returns: string };
+      cleanup_expired_submissions: { Args: never; Returns: number };
       create_organisation: { Args: { org_name: string }; Returns: Json };
-      cleanup_expired_submissions: { Args: Record<string, never>; Returns: number };
+      get_my_team_ids: { Args: never; Returns: string[] };
+      is_team_admin: { Args: { p_team_id: string }; Returns: boolean };
+      user_org_id: { Args: never; Returns: string };
     };
     Enums: {
       [_ in never]: never;

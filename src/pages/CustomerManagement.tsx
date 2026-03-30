@@ -1,9 +1,14 @@
-import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useCustomerDirectoryQuery } from "@/hooks/queries/use-customer-directory-query";
+import { queryKeys } from "@/hooks/queries/keys";
+import type { CustomerDirectoryEntry, HealthStatus } from "@/lib/customer-directory";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 
 const PortalViewerManager = lazy(() =>
   import("@/components/PortalViewerManager").then((m) => ({ default: m.PortalViewerManager })),
@@ -33,31 +38,10 @@ import {
   UserCog,
   Settings,
 } from "lucide-react";
-import { resolveCustomerName } from "@/lib/customer-name";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 
-type HealthStatus = "Healthy" | "At Risk" | "Critical" | "Overdue";
-
-interface DemoCustomer {
-  id: string;
-  name: string;
-  sector: string;
-  country: string;
-  countryFlag: string;
-  score: number;
-  grade: string;
-  firewallCount: number;
-  unassessedCount: number;
-  lastAssessed: string;
-  daysAgo: number;
-  frameworks: string[];
-  health: HealthStatus;
-  /** Set when a row exists in portal_config with a slug; empty means View Portal is disabled. */
-  portalSlug: string;
-  /** Raw `tenant_name` / Central name for portal_config and PortalConfigurator. */
-  tenantNameRaw: string | null;
-  originalNames?: string[];
-}
+type DemoCustomer = CustomerDirectoryEntry;
 
 const DEMO_CUSTOMERS: DemoCustomer[] = [
   {
@@ -164,7 +148,6 @@ const DEMO_CUSTOMERS: DemoCustomer[] = [
   },
 ];
 
-const SECTORS = [...new Set(DEMO_CUSTOMERS.map((c) => c.sector))];
 const HEALTH_OPTIONS: HealthStatus[] = ["Healthy", "At Risk", "Critical", "Overdue"];
 
 const GRADE_COLORS: Record<string, string> = {
@@ -198,75 +181,32 @@ const SECTOR_BADGE_STYLE: Record<string, string> = {
   Retail: "bg-pink-500/15 text-pink-400 border-pink-500/20",
 };
 
-type AssessmentRow = {
-  id: string;
-  customer_name: string;
-  created_at: string;
-  firewalls: unknown;
-  overall_score: number;
-  overall_grade: string;
-  environment?: string | null;
-};
-
-type FirewallSnapshot = { riskScore?: { overall?: number } };
-
-function gradeFromNumericScore(s: number): string {
-  return s >= 85 ? "A" : s >= 70 ? "B" : s >= 55 ? "C" : s >= 40 ? "D" : "F";
-}
-
-/** Latest assessment firewall list: average of positive per-fw scores; 0 / missing counts as unassessed. */
-function metricsFromAssessmentSnapshot(a: AssessmentRow) {
-  const fws = a.firewalls as FirewallSnapshot[] | null;
-  if (!Array.isArray(fws) || fws.length === 0) {
-    const assessed = a.overall_score > 0;
-    return {
-      score: assessed ? a.overall_score : 0,
-      grade: assessed ? a.overall_grade : "F",
-      snapshotFwCount: 1,
-      unassessedInSnapshot: assessed ? 0 : 1,
-    };
-  }
-  const positives: number[] = [];
-  let unassessed = 0;
-  for (const f of fws) {
-    const o = f.riskScore?.overall;
-    if (o != null && o > 0) positives.push(o);
-    else unassessed++;
-  }
-  const assessedCount = positives.length;
-  const score =
-    assessedCount > 0 ? Math.round(positives.reduce((sum, x) => sum + x, 0) / assessedCount) : 0;
-  const grade = assessedCount > 0 ? gradeFromNumericScore(score) : "F";
-  return {
-    score,
-    grade,
-    snapshotFwCount: fws.length,
-    unassessedInSnapshot: unassessed,
-  };
-}
-
-function daysAgoLabel(daysSince: number) {
-  if (daysSince === 0) return "Today";
-  if (daysSince === 1) return "Yesterday";
-  return `${daysSince} days ago`;
-}
-
 function CustomerManagementInner() {
   const { org, isGuest } = useAuth();
+  const queryClient = useQueryClient();
   const { resolvedTheme, setTheme } = useTheme();
+  const customerDirectoryQuery = useCustomerDirectoryQuery(org?.id, org?.name);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sectorFilter, setSectorFilter] = useState<string>("");
   const [healthFilter, setHealthFilter] = useState<HealthStatus | "">("");
   const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [customers, setCustomers] = useState<DemoCustomer[]>(DEMO_CUSTOMERS);
   const [deleteTarget, setDeleteTarget] = useState<DemoCustomer | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [accessTarget, setAccessTarget] = useState<DemoCustomer | null>(null);
   const [portalConfigTarget, setPortalConfigTarget] = useState<DemoCustomer | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
+
+  const customers = useMemo(() => {
+    if (!org?.id) return isGuest ? DEMO_CUSTOMERS : [];
+    if (customerDirectoryQuery.isError) return DEMO_CUSTOMERS;
+    return customerDirectoryQuery.data ?? [];
+  }, [org?.id, isGuest, customerDirectoryQuery.isError, customerDirectoryQuery.data]);
+
+  const loading = Boolean(org?.id) && customerDirectoryQuery.isPending;
+
+  const sectors = useMemo(() => [...new Set(customers.map((c) => c.sector))].sort(), [customers]);
 
   const handleDelete = useCallback(
     async (customer: DemoCustomer) => {
@@ -278,244 +218,21 @@ function CustomerManagementInner() {
           await supabase.from("assessments").delete().eq("org_id", org.id).eq("customer_name", n);
           await supabase.from("saved_reports").delete().eq("org_id", org.id).eq("customer_name", n);
         }
-        setCustomers((prev) => prev.filter((c) => c.id !== customer.id));
         setDeleteTarget(null);
+        await queryClient.invalidateQueries({ queryKey: queryKeys.org.customerDirectory(org.id) });
       } catch (err) {
         console.warn("[CustomerManagement] delete failed", err);
       } finally {
         setDeleting(false);
       }
     },
-    [org?.id],
+    [org?.id, queryClient],
   );
-
-  useEffect(() => {
-    if (!org?.id) {
-      if (isGuest) setCustomers(DEMO_CUSTOMERS);
-      else setCustomers([]);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const [assessRes, tenantRes, agentRes, fwRes, portalRes] = await Promise.all([
-          supabase
-            .from("assessments")
-            .select("*")
-            .eq("org_id", org.id)
-            .order("created_at", { ascending: false }),
-          supabase.from("central_tenants").select("central_tenant_id, name").eq("org_id", org.id),
-          supabase
-            .from("agents")
-            .select(
-              "id, name, firewall_host, customer_name, tenant_name, last_score, last_grade, last_seen_at, status, hardware_model",
-            )
-            .eq("org_id", org.id),
-          supabase
-            .from("central_firewalls")
-            .select("central_tenant_id, hostname, name, firmware_version, model, status_json")
-            .eq("org_id", org.id),
-          supabase.from("portal_config").select("slug, tenant_name").eq("org_id", org.id),
-        ]);
-
-        if (cancelled) return;
-
-        const assessments = (assessRes.data ?? []) as AssessmentRow[];
-        const tenants = tenantRes.data ?? [];
-        const agents = agentRes.data ?? [];
-        const firewalls = fwRes.data ?? [];
-        const portalRows = portalRes.data ?? [];
-
-        const gradeFor = (s: number) =>
-          s >= 85 ? "A" : s >= 70 ? "B" : s >= 55 ? "C" : s >= 40 ? "D" : "F";
-
-        const slugByResolvedName = new Map<string, { slug: string; rawTenantName: string }>();
-        const portalSorted = [...portalRows].sort((a, b) => {
-          const as = String(a.slug ?? "").length > 0 ? 1 : 0;
-          const bs = String(b.slug ?? "").length > 0 ? 1 : 0;
-          return bs - as;
-        });
-        for (const row of portalSorted) {
-          const raw = row.tenant_name as string | null;
-          if (!raw) continue;
-          const resolved = resolveCustomerName(raw, org.name);
-          if (slugByResolvedName.has(resolved)) continue;
-          slugByResolvedName.set(resolved, {
-            slug: String(row.slug ?? ""),
-            rawTenantName: raw,
-          });
-        }
-
-        const namesByResolved = new Map<string, Set<string>>();
-        const latestByResolved = new Map<string, AssessmentRow>();
-        for (const a of assessments) {
-          const resolved = resolveCustomerName(a.customer_name, org.name);
-          if (!namesByResolved.has(resolved)) namesByResolved.set(resolved, new Set());
-          namesByResolved.get(resolved)!.add(a.customer_name);
-          const prev = latestByResolved.get(resolved);
-          if (!prev || new Date(a.created_at) > new Date(prev.created_at)) {
-            latestByResolved.set(resolved, a);
-          }
-        }
-
-        const customerMap = new Map<string, DemoCustomer>();
-
-        for (const t of tenants) {
-          const tName = resolveCustomerName(t.name || "", org.name);
-          if (!tName || customerMap.has(tName)) continue;
-          const tFws = firewalls.filter((fw) => fw.central_tenant_id === t.central_tenant_id);
-          customerMap.set(tName, {
-            id: t.central_tenant_id,
-            name: tName,
-            sector: "Private Sector",
-            country: "United Kingdom",
-            countryFlag: "🇬🇧",
-            score: 0,
-            grade: "F",
-            firewallCount: tFws.length,
-            unassessedCount: tFws.length,
-            lastAssessed: "Not assessed",
-            daysAgo: 999,
-            frameworks: [],
-            health: "Overdue" as HealthStatus,
-            portalSlug: "",
-            tenantNameRaw: t.name || null,
-          });
-        }
-
-        for (const [resolvedName, latest] of latestByResolved) {
-          const m = metricsFromAssessmentSnapshot(latest);
-          const daysSince = Math.floor(
-            (Date.now() - new Date(latest.created_at).getTime()) / 86_400_000,
-          );
-          let health: HealthStatus;
-          if (latest.overall_score < 40) health = "Critical";
-          else if (daysSince > 90) health = "Overdue";
-          else if (latest.overall_score < 60 || daysSince > 60) health = "At Risk";
-          else health = "Healthy";
-
-          const orig = Array.from(namesByResolved.get(resolvedName) ?? []);
-          const existing = customerMap.get(resolvedName);
-          const totalFw = existing
-            ? Math.max(existing.firewallCount, m.snapshotFwCount)
-            : m.snapshotFwCount;
-          const extraOutsideSnapshot = Math.max(0, totalFw - m.snapshotFwCount);
-          const unassessedCount = m.unassessedInSnapshot + extraOutsideSnapshot;
-
-          if (existing) {
-            existing.originalNames = orig;
-            existing.score = m.score;
-            existing.grade = m.grade;
-            existing.firewallCount = totalFw;
-            existing.unassessedCount = unassessedCount;
-            existing.sector = latest.environment || existing.sector;
-            existing.lastAssessed = daysAgoLabel(daysSince);
-            existing.daysAgo = daysSince;
-            existing.health = health;
-            existing.tenantNameRaw = latest.customer_name;
-          } else {
-            customerMap.set(resolvedName, {
-              id: latest.id,
-              name: resolvedName,
-              sector: latest.environment || "Private Sector",
-              country: "United Kingdom",
-              countryFlag: "🇬🇧",
-              score: m.score,
-              grade: m.grade,
-              firewallCount: totalFw,
-              unassessedCount,
-              lastAssessed: daysAgoLabel(daysSince),
-              daysAgo: daysSince,
-              frameworks: [],
-              health,
-              portalSlug: "",
-              tenantNameRaw: latest.customer_name,
-              originalNames: orig,
-            });
-          }
-        }
-
-        for (const ag of agents) {
-          const rawAgName = ag.tenant_name || ag.customer_name || ag.name;
-          const resolvedName = resolveCustomerName(rawAgName, org.name);
-          const existing = customerMap.get(resolvedName);
-          if (existing) {
-            if (existing.score === 0 && ag.last_score != null && ag.last_score > 0) {
-              existing.score = ag.last_score;
-              existing.grade = ag.last_grade || gradeFor(ag.last_score);
-              existing.unassessedCount = 0;
-              const daysSince = ag.last_seen_at
-                ? Math.floor((Date.now() - new Date(ag.last_seen_at).getTime()) / 86_400_000)
-                : 999;
-              existing.lastAssessed = daysAgoLabel(daysSince);
-              existing.daysAgo = daysSince;
-              if (ag.last_score < 40) existing.health = "Critical";
-              else if (ag.last_score < 60) existing.health = "At Risk";
-              else existing.health = "Healthy";
-            }
-            if (!existing.tenantNameRaw) existing.tenantNameRaw = rawAgName;
-          } else {
-            const daysSince = ag.last_seen_at
-              ? Math.floor((Date.now() - new Date(ag.last_seen_at).getTime()) / 86_400_000)
-              : 999;
-            let health: HealthStatus = "Overdue";
-            if (ag.last_score != null) {
-              if (ag.last_score < 40) health = "Critical";
-              else if (ag.last_score < 60 || daysSince > 60) health = "At Risk";
-              else if (daysSince <= 90) health = "Healthy";
-            }
-            const assessed = ag.last_score != null && ag.last_score > 0;
-            customerMap.set(resolvedName, {
-              id: ag.id,
-              name: resolvedName,
-              sector: "Private Sector",
-              country: "United Kingdom",
-              countryFlag: "🇬🇧",
-              score: ag.last_score ?? 0,
-              grade: ag.last_grade || gradeFor(ag.last_score ?? 0),
-              firewallCount: 1,
-              unassessedCount: assessed ? 0 : 1,
-              lastAssessed:
-                daysSince === 0
-                  ? "Today"
-                  : daysSince === 1
-                    ? "Yesterday"
-                    : daysSince < 999
-                      ? `${daysSince} days ago`
-                      : "Not assessed",
-              daysAgo: daysSince,
-              frameworks: [],
-              health,
-              portalSlug: "",
-              tenantNameRaw: rawAgName,
-            });
-          }
-        }
-
-        for (const c of customerMap.values()) {
-          const info = slugByResolvedName.get(c.name);
-          if (info?.slug) c.portalSlug = info.slug;
-          if (info?.rawTenantName) c.tenantNameRaw = info.rawTenantName;
-        }
-
-        setCustomers(customerMap.size > 0 ? Array.from(customerMap.values()) : []);
-      } catch (err) {
-        console.warn("[CustomerManagement] load failed", err);
-        setCustomers(DEMO_CUSTOMERS);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [org?.id, org?.name, isGuest, refreshTrigger]);
 
   const filtered = useMemo(() => {
     let list = customers;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter((c) => c.name.toLowerCase().includes(q));
     }
     if (sectorFilter) {
@@ -525,7 +242,7 @@ function CustomerManagementInner() {
       list = list.filter((c) => c.health === healthFilter);
     }
     return list;
-  }, [searchQuery, sectorFilter, healthFilter, customers]);
+  }, [debouncedSearch, sectorFilter, healthFilter, customers]);
 
   const stats = useMemo(() => {
     const total = customers.length;
@@ -658,7 +375,7 @@ function CustomerManagementInner() {
             </span>
             <div className="flex flex-wrap gap-1.5">
               <FilterPill label="All" active={!sectorFilter} onClick={() => setSectorFilter("")} />
-              {SECTORS.map((s) => (
+              {sectors.map((s) => (
                 <FilterPill
                   key={s}
                   label={s}
@@ -711,18 +428,19 @@ function CustomerManagementInner() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-900/[0.10] bg-white/40 px-6 py-20 text-center backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.02]">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2006F7]/10">
-              <Users className="h-8 w-8 text-[#2006F7]" />
-            </div>
-            <h3 className="mb-2 text-lg font-semibold">No customers yet</h3>
-            <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-              Start by running your first assessment.
-            </p>
-            <Button onClick={() => setShowOnboardModal(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Onboard Customer
-            </Button>
+          <div className="rounded-2xl border border-dashed border-slate-900/[0.10] bg-white/40 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.02]">
+            <EmptyState
+              className="py-16 px-6"
+              icon={<Users className="h-8 w-8 text-[#2006F7]" />}
+              title="No customers yet"
+              description="Start by running your first assessment."
+              action={
+                <Button onClick={() => setShowOnboardModal(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Onboard Customer
+                </Button>
+              }
+            />
           </div>
         )}
       </main>
@@ -789,7 +507,13 @@ function CustomerManagementInner() {
                     portalConfigTarget.originalNames?.[0] ??
                     portalConfigTarget.name
                   }
-                  onSaved={() => setRefreshTrigger((k) => k + 1)}
+                  onSaved={() => {
+                    if (org?.id) {
+                      void queryClient.invalidateQueries({
+                        queryKey: queryKeys.org.customerDirectory(org.id),
+                      });
+                    }
+                  }}
                 />
               </Suspense>
             </div>

@@ -20,6 +20,7 @@ import {
   type SeHealthCheckSnapshotV1,
 } from "@/lib/se-health-check-snapshot-v2";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 import type { SETeam } from "@/hooks/use-active-team";
 
 interface HealthCheckRow {
@@ -369,11 +370,12 @@ export function SEHealthCheckHistory({
           </div>
 
           {rows.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">
-              <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              No health checks saved yet. Run a check and click &quot;Save health check&quot; to
-              start building your history.
-            </div>
+            <EmptyState
+              className="py-10 px-4"
+              icon={<FileText className="h-6 w-6 text-muted-foreground/50" />}
+              title="No health checks saved yet"
+              description='Run a check and click "Save health check" to start building your history.'
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -426,7 +428,7 @@ export function SEHealthCheckHistory({
                             ) : (
                               <Users
                                 className="h-3.5 w-3.5 text-muted-foreground"
-                                title="Teammate's check"
+                                aria-label="Teammate's check"
                               />
                             )}
                           </td>
@@ -477,7 +479,7 @@ export function SEHealthCheckHistory({
                           {row.followup_at && new Date(row.followup_at) > new Date() && (
                             <span
                               className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-primary"
-                              title={`Follow-up: ${new Date(row.followup_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+                              aria-label={`Follow-up: ${new Date(row.followup_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
                             >
                               <CalendarClock className="h-3 w-3" />
                             </span>
@@ -491,7 +493,7 @@ export function SEHealthCheckHistory({
                               size="sm"
                               className="h-8 px-2 text-xs gap-1"
                               disabled={!onRestoreSnapshot || busyPdf || busyHtml}
-                              title="Open in editor"
+                              aria-label="Open in editor"
                               onClick={async () => {
                                 if (!onRestoreSnapshot) return;
                                 const snap = await fetchSnapshot(row.id);
@@ -515,7 +517,7 @@ export function SEHealthCheckHistory({
                               size="sm"
                               className="h-8 px-2 text-xs gap-1"
                               disabled={busyPdf || busyHtml}
-                              title="Download PDF"
+                              aria-label="Download PDF"
                               onClick={() => void runExport(row, "pdf")}
                             >
                               {busyPdf ? (
@@ -531,7 +533,7 @@ export function SEHealthCheckHistory({
                               size="sm"
                               className="h-8 px-2 text-xs gap-1"
                               disabled={busyPdf || busyHtml}
-                              title="Download HTML"
+                              aria-label="Download HTML"
                               onClick={() => void runExport(row, "html")}
                             >
                               {busyHtml ? (

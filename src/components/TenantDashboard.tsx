@@ -24,6 +24,7 @@ import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadScoreHistoryForFleet, type ScoreHistoryEntry } from "@/lib/score-history";
 import { useAuth } from "@/hooks/use-auth";
+import { EmptyState } from "@/components/EmptyState";
 
 type SortField = "customer" | "score" | "findings" | "date";
 type SortDir = "asc" | "desc";
@@ -583,26 +584,24 @@ export function TenantDashboard() {
   }
 
   if (customers.length === 0) {
+    const title = useCloud
+      ? `No customer assessments in ${org?.name ?? "your organisation"} yet`
+      : "No customer assessments saved yet";
+    const description = (
+      <>
+        Upload a firewall config and click <strong className="text-foreground">Save Reports</strong>{" "}
+        or <strong className="text-foreground">Save Assessment (Pre-AI)</strong> — the assessment
+        will appear here automatically so you can track scores across all your customers.
+        {!useCloud && <> Sign in to sync assessments across your team via the cloud.</>}
+      </>
+    );
     return (
-      <div className="p-5 text-center space-y-3">
-        <Building2 className="h-8 w-8 mx-auto text-muted-foreground/40" />
-        <p className="text-xs text-muted-foreground">
-          {useCloud
-            ? `No customer assessments in ${org?.name ?? "your organisation"} yet.`
-            : "No customer assessments saved yet."}
-        </p>
-        <p className="text-[10px] text-muted-foreground max-w-md mx-auto">
-          Upload a firewall config and click{" "}
-          <strong className="text-foreground">Save Reports</strong> or{" "}
-          <strong className="text-foreground">Save Assessment (Pre-AI)</strong> — the assessment
-          will appear here automatically so you can track scores across all your customers.
-        </p>
-        {!useCloud && (
-          <p className="text-[9px] text-muted-foreground">
-            Sign in to sync assessments across your team via the cloud.
-          </p>
-        )}
-      </div>
+      <EmptyState
+        className="p-5 py-10"
+        icon={<Building2 className="h-8 w-8 text-muted-foreground/50" />}
+        title={title}
+        description={description}
+      />
     );
   }
 

@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/hooks/queries/keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +18,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 interface PortalViewerManagerProps {
   orgId: string;
@@ -54,43 +57,43 @@ function formatDate(iso: string | null): string {
 }
 
 export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
-  const [viewers, setViewers] = useState<PortalViewer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [actionInFlight, setActionInFlight] = useState<string | null>(null);
 
-  const loadViewers = useCallback(async () => {
-    try {
-      setLoading(true);
+  const {
+    data: viewers = [],
+    isLoading: loading,
+    error: viewersError,
+  } = useQuery({
+    queryKey: queryKeys.portal.viewers(orgId),
+    enabled: Boolean(orgId),
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("portal_viewers")
         .select("id, email, name, status, invited_at, last_login_at")
         .eq("org_id", orgId)
         .order("invited_at", { ascending: false });
       if (error) throw new Error(error.message);
-      setViewers(
-        (data ?? []).map((v) => ({
-          id: v.id,
-          email: v.email,
-          name: v.name,
-          status: v.status as "pending" | "active" | "revoked",
-          invited_at: v.invited_at,
-          last_login: v.last_login_at,
-        })),
-      );
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      toast.error(`Could not load portal viewers: ${msg}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [orgId]);
+      return (data ?? []).map((v) => ({
+        id: v.id,
+        email: v.email,
+        name: v.name,
+        status: v.status as "pending" | "active" | "revoked",
+        invited_at: v.invited_at,
+        last_login: v.last_login_at,
+      })) as PortalViewer[];
+    },
+  });
 
   useEffect(() => {
-    loadViewers();
-  }, [orgId, loadViewers]);
+    if (!viewersError) return;
+    toast.error(
+      `Could not load portal viewers: ${viewersError instanceof Error ? viewersError.message : "Unknown error"}`,
+    );
+  }, [viewersError]);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -129,7 +132,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
       toast.success(`Invitation sent to ${email}. They'll receive an email to set their password.`);
       setInviteEmail("");
       setInviteName("");
-      loadViewers();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
@@ -162,7 +165,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
         .eq("org_id", orgId);
       if (error) throw new Error(error.message);
       toast.success(`Access revoked for ${viewer.email}`);
-      loadViewers();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
@@ -181,7 +184,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
         .eq("org_id", orgId);
       if (error) throw new Error(error.message);
       toast.success(`${viewer.email} removed`);
-      loadViewers();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
@@ -226,6 +229,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
       } else {
         toast.success(`Invite re-sent to ${viewer.email}`);
       }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
@@ -298,10 +302,12 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
           Loading viewers…
         </div>
       ) : viewers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <Users className="h-8 w-8 mb-2 opacity-40" />
-          <p className="text-sm">No portal viewers yet. Send an invite above.</p>
-        </div>
+        <EmptyState
+          icon={<Users className="h-6 w-6 text-muted-foreground/50" />}
+          title="No portal viewers yet"
+          description="Send an invite using the form above. Viewers get access to the client portal with the permissions you grant."
+          className="py-12"
+        />
       ) : (
         <div className="overflow-x-auto -mx-6 px-6">
           <table className="w-full min-w-[720px] text-sm">

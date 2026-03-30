@@ -138,6 +138,7 @@ export function ReportCards({
             {[
               {
                 title: "Generate Technical Report",
+                testId: "generate-technical-report",
                 desc: "Comprehensive per-firewall assessment covering rules, NAT, interfaces, hosts, policies, and security posture. Includes prioritised findings, NCSC-aligned recommendations, and remediation guidance.",
                 icon: FileText,
                 hex: "#2006F7",
@@ -175,6 +176,7 @@ export function ReportCards({
               },
               {
                 title: "Generate Executive One-Pager",
+                testId: "generate-one-pager",
                 desc: "Instant one-page summary with overall score, grade, top 5 risks, and 3 recommended next steps. No AI required — generated locally from your analysis.",
                 icon: FileText,
                 hex: "#B529F7",
@@ -261,6 +263,7 @@ export function ReportCards({
                     </p>
                     <Button
                       size="sm"
+                      data-testid={(card as { testId?: string }).testId}
                       className="w-full gap-2 font-bold border-0 text-white transition-all duration-200 shadow-[0_4px_16px_rgba(0,0,0,0.2)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.3)] hover:brightness-110 mt-3"
                       style={{
                         background: `linear-gradient(135deg, ${card.hex}, ${card.hexEnd})`,
@@ -295,6 +298,7 @@ export function ReportCards({
               />
               <Button
                 size="lg"
+                data-testid="generate-all-reports"
                 onClick={onGenerateAll}
                 className="relative w-full gap-2 text-base font-bold bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white border-0 shadow-[0_6px_24px_rgba(32,6,247,0.3)] hover:shadow-[0_8px_32px_rgba(32,6,247,0.4)] transition-all duration-200"
               >

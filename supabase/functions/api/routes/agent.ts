@@ -1,6 +1,13 @@
 import { authenticateAgent, getOrgMembership } from "../../_shared/auth.ts";
+import {
+  agentHeartbeatBodySchema,
+  agentRegisterBodySchema,
+  agentSubmitBodySchema,
+  agentVerifyIdentityBodySchema,
+} from "../../_shared/api-schemas.ts";
 import { generateApiKey, hmacHash } from "../../_shared/crypto.ts";
 import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return jsonResponse(body, status, corsHeaders);
@@ -24,10 +31,13 @@ async function handleRegister(req: Request, corsHeaders: Record<string, string>)
   if (!membership || !["admin", "engineer"].includes(membership.role))
     return json({ error: "Admin or engineer access required" }, 403, corsHeaders);
 
-  const body = await req.json();
-  const { name, firewall_host } = body;
-  if (!name || !firewall_host)
-    return json({ error: "name and firewall_host are required" }, 400, corsHeaders);
+  const raw = await req.json().catch(() => ({}));
+  const parsed = agentRegisterBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    logJson("warn", "agent_register_invalid_body", { issues: parsed.error.issues.length });
+    return json({ error: "Invalid request body" }, 400, corsHeaders);
+  }
+  const body = parsed.data;
 
   const apiKey = generateApiKey();
   const hash = await hmacHash(apiKey);
@@ -38,10 +48,10 @@ async function handleRegister(req: Request, corsHeaders: Record<string, string>)
     .from("agents")
     .insert({
       org_id: membership.org_id,
-      name,
+      name: body.name,
       api_key_hash: hash,
       api_key_prefix: prefix,
-      firewall_host,
+      firewall_host: body.firewall_host,
       firewall_port: body.firewall_port ?? 4444,
       customer_name: body.customer_name ?? "Unnamed",
       environment: body.environment ?? "Unknown",
@@ -191,7 +201,13 @@ async function handleHeartbeat(
   agent: Record<string, unknown>,
   corsHeaders: Record<string, string>,
 ) {
-  const body = await req.json();
+  const raw = await req.json().catch(() => ({}));
+  const parsed = agentHeartbeatBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    logJson("warn", "agent_heartbeat_invalid_body", { issues: parsed.error.issues.length });
+    return json({ error: "Invalid request body" }, 400, corsHeaders);
+  }
+  const body = parsed.data;
   const db = adminClient();
 
   const update: Record<string, unknown> = {
@@ -254,7 +270,13 @@ async function handleSubmit(
   agent: Record<string, unknown>,
   corsHeaders: Record<string, string>,
 ) {
-  const body = await req.json();
+  const raw = await req.json().catch(() => ({}));
+  const parsed = agentSubmitBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    logJson("warn", "agent_submit_invalid_body", { issues: parsed.error.issues.length });
+    return json({ error: "Invalid request body" }, 400, corsHeaders);
+  }
+  const body = parsed.data;
   const db = adminClient();
   const agentId = agent.id as string;
   const orgId = agent.org_id as string;
@@ -340,9 +362,13 @@ async function handleVerifyIdentity(
   agent: Record<string, unknown>,
   corsHeaders: Record<string, string>,
 ) {
-  const body = await req.json();
-  const { email, totpCode } = body;
-  if (!email || !totpCode) return json({ error: "email and totpCode required" }, 400, corsHeaders);
+  const raw = await req.json().catch(() => ({}));
+  const parsed = agentVerifyIdentityBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    logJson("warn", "agent_verify_identity_invalid_body", { issues: parsed.error.issues.length });
+    return json({ error: "Invalid request body" }, 400, corsHeaders);
+  }
+  const { email, totpCode } = parsed.data;
 
   const db = adminClient();
 

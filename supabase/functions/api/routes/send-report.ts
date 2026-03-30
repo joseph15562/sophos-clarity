@@ -1,6 +1,23 @@
+import { z } from "npm:zod@3.24.2";
 import { authenticateSE } from "../../_shared/auth.ts";
 import { json as jsonResponse, safeError } from "../../_shared/db.ts";
 import { buildSophosEmailHtml, CONFIG_UPLOAD_FROM_EMAIL, escapeHtml, RESEND_API_KEY } from "../../_shared/email.ts";
+import { logJson } from "../../_shared/logger.ts";
+
+export const sendReportBodySchema = z
+  .object({
+    customer_email: z.string().email().max(320),
+    customer_name: z.string().max(500).optional(),
+    prepared_for: z.string().max(500).optional(),
+    prepared_by: z.string().max(500).optional(),
+    se_title: z.string().max(500).optional(),
+    pdf_base64: z.string().max(50_000_000).optional(),
+    html_base64: z.string().max(50_000_000).optional(),
+    filename_base: z.string().max(200).optional(),
+  })
+  .refine((b) => Boolean(b.pdf_base64?.trim() || b.html_base64?.trim()), {
+    message: "At least one of pdf_base64 or html_base64 is required",
+  });
 
 export async function handleSendReportRoutes(
   req: Request,
@@ -19,20 +36,22 @@ export async function handleSendReportRoutes(
   const se = await authenticateSE(req);
   if (!se) return json({ error: "Unauthorized" }, 401);
 
-  const body = await req.json();
-  const { customer_email, customer_name, prepared_for, prepared_by, se_title, pdf_base64, html_base64, filename_base } = body as {
-    customer_email?: string;
-    customer_name?: string;
-    prepared_for?: string;
-    prepared_by?: string;
-    se_title?: string;
-    pdf_base64?: string;
-    html_base64?: string;
-    filename_base?: string;
-  };
-
-  if (!customer_email) return json({ error: "customer_email is required" }, 400);
-  if (!pdf_base64 && !html_base64) return json({ error: "At least one of pdf_base64 or html_base64 is required" }, 400);
+  const raw = await req.json().catch(() => ({}));
+  const parsed = sendReportBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    logJson("warn", "send_report_invalid_body", { issues: parsed.error.issues.length });
+    return json({ error: "Invalid request body" }, 400);
+  }
+  const {
+    customer_email,
+    customer_name,
+    prepared_for,
+    prepared_by,
+    se_title,
+    pdf_base64,
+    html_base64,
+    filename_base,
+  } = parsed.data;
 
   const seName = se.seProfile.display_name || se.seProfile.email || "Your SE";
   const recipientGreeting = escapeHtml(prepared_for || customer_name || "Customer");
@@ -76,7 +95,10 @@ export async function handleSendReportRoutes(
     });
     if (!resp.ok) {
       const errBody = await resp.text();
-      console.error("[send-report] Resend error:", resp.status, errBody);
+      logJson("error", "send_report_email_provider_failed", {
+        status: resp.status,
+        bodyPrefix: errBody.slice(0, 500),
+      });
       return json({ error: "Email delivery failed" }, 500);
     }
     return json({ ok: true });

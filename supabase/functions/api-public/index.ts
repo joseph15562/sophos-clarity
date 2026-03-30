@@ -23,6 +23,7 @@ import {
   sophosWhoAmI,
 } from "../_shared/sophos-central-api.ts";
 import { centralDecrypt, centralEncrypt } from "../_shared/crypto.ts";
+import { logJson } from "../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
@@ -418,7 +419,7 @@ async function handleConfigUploadPublic(
 
 // ── Main router ──
 
-serve(async (req: Request) => {
+export async function handleApiPublicRequest(req: Request): Promise<Response> {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -459,8 +460,18 @@ serve(async (req: Request) => {
       if (result) return result;
     }
 
+    logJson("warn", "api_public_not_found", {
+      method: req.method,
+      path: url.pathname,
+      segments: segments.join("/"),
+    });
     return json({ error: "Not found" }, 404, corsHeaders);
   } catch (err) {
+    logJson("error", "api_public_unhandled", {
+      detail: err instanceof Error ? err.message : String(err),
+    });
     return json({ error: safeError(err) }, 500, corsHeaders);
   }
-});
+}
+
+serve((req: Request) => handleApiPublicRequest(req));

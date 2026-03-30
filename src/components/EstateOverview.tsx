@@ -958,10 +958,9 @@ function FindingsPanel({
                 onClick={() => toggleSection(g.section)}
                 className="relative w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors group"
               >
-                <Icon
-                  className="h-4 w-4 transition-colors shrink-0"
-                  style={{ color: hex, opacity: 0.7 }}
-                />
+                <span className="inline-flex shrink-0" style={{ color: hex, opacity: 0.7 }}>
+                  <Icon className="h-4 w-4 transition-colors" />
+                </span>
                 <span className="text-[13px] font-display font-bold tracking-tight text-foreground flex-1 min-w-0 truncate">
                   {g.section}
                 </span>

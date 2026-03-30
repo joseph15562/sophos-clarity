@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { deleteSavedReportCloud } from "@/lib/saved-reports";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 const PLACEHOLDER_NAMES = /^\s*(\(this tenant\)|unnamed|unknown|customer)\s*$/i;
 
@@ -114,12 +115,21 @@ const DEMO_REPORTS = [
   },
 ];
 
-const DEMO_SCHEDULES = [
+type ReportCentreSchedule = {
+  id: string;
+  customer: string;
+  template: string;
+  frequency: "Weekly" | "Monthly" | "Quarterly";
+  nextRun: string;
+  active: boolean;
+};
+
+const DEMO_SCHEDULES: ReportCentreSchedule[] = [
   {
     id: "s1",
     customer: "Acme Corp",
     template: "Board Summary",
-    frequency: "Monthly" as const,
+    frequency: "Monthly",
     nextRun: "2026-04-01",
     active: true,
   },
@@ -127,7 +137,7 @@ const DEMO_SCHEDULES = [
     id: "s2",
     customer: "Globex Industries",
     template: "Technical Assessment",
-    frequency: "Quarterly" as const,
+    frequency: "Quarterly",
     nextRun: "2026-06-01",
     active: true,
   },
@@ -135,7 +145,7 @@ const DEMO_SCHEDULES = [
     id: "s3",
     customer: "Initech",
     template: "Compliance Evidence Pack",
-    frequency: "Monthly" as const,
+    frequency: "Monthly",
     nextRun: "2026-04-15",
     active: false,
   },
@@ -218,7 +228,7 @@ function ReportCentreInner() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState(DEMO_REPORTS);
-  const [schedules, setSchedules] = useState(DEMO_SCHEDULES);
+  const [schedules, setSchedules] = useState<ReportCentreSchedule[]>(DEMO_SCHEDULES);
 
   useEffect(() => {
     if (!org?.id) {
@@ -258,24 +268,29 @@ function ReportCentreInner() {
         }
 
         if (storedSchedules.length > 0) {
-          const mappedSchedules = storedSchedules.map((s) => ({
-            id: s.id,
-            customer: s.name,
-            template:
-              s.report_type === "executive"
-                ? "Board Summary"
-                : s.report_type === "compliance"
-                  ? "Compliance Evidence Pack"
-                  : "Technical Assessment",
-            frequency: s.schedule === "weekly" ? "Weekly" : "Monthly",
-            nextRun: s.last_sent_at
-              ? new Date(
-                  new Date(s.last_sent_at).getTime() +
-                    (s.schedule === "weekly" ? 7 : 30) * 86_400_000,
-                ).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-              : "Pending",
-            active: s.enabled,
-          }));
+          const mappedSchedules: ReportCentreSchedule[] = storedSchedules.map((s) => {
+            const sched = s.schedule as "weekly" | "monthly" | "quarterly";
+            const frequency: ReportCentreSchedule["frequency"] =
+              sched === "weekly" ? "Weekly" : sched === "quarterly" ? "Quarterly" : "Monthly";
+            return {
+              id: s.id,
+              customer: s.name,
+              template:
+                s.report_type === "executive"
+                  ? "Board Summary"
+                  : s.report_type === "compliance"
+                    ? "Compliance Evidence Pack"
+                    : "Technical Assessment",
+              frequency,
+              nextRun: s.last_sent_at
+                ? new Date(
+                    new Date(s.last_sent_at).getTime() +
+                      (sched === "weekly" ? 7 : sched === "quarterly" ? 90 : 30) * 86_400_000,
+                  ).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                : "Pending",
+              active: s.enabled,
+            };
+          });
           setSchedules(mappedSchedules);
         } else {
           setSchedules([]);
@@ -421,12 +436,18 @@ function ReportCentreInner() {
           <h2 className="mb-4 text-sm font-semibold tracking-tight">Recent Reports</h2>
 
           {!hasReports ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-card/30 backdrop-blur-md py-16 text-center">
-              <FileText className="mb-3 h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm font-medium text-muted-foreground">No reports generated yet.</p>
-              <p className="mt-1 text-xs text-muted-foreground/60">
-                Run an assessment and generate your first report.
-              </p>
+            <div className="rounded-2xl border border-dashed border-white/[0.08] bg-card/30 backdrop-blur-md">
+              <EmptyState
+                className="py-12"
+                icon={<FileText className="h-6 w-6 text-muted-foreground/50" />}
+                title="No reports generated yet"
+                description="Run an assessment and generate your first report."
+                action={
+                  <Button asChild size="sm" className="rounded-lg">
+                    <Link to="/">Go to workspace</Link>
+                  </Button>
+                }
+              />
             </div>
           ) : (
             <div className="space-y-2">

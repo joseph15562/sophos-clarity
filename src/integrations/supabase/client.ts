@@ -62,7 +62,8 @@ function buildClient(): ReturnType<typeof createClient<Database>> {
   };
 
   try {
-    const c = createClient<Database>(supabaseUrl, supabaseKey, options);
+    // Custom auth.lock is supported at runtime; generated client options type is narrower.
+    const c = createClient<Database>(supabaseUrl, supabaseKey, options as never);
     resolvedPublicUrl = supabaseUrl;
     resolvedPublicKey = supabaseKey;
     return c;
@@ -74,7 +75,7 @@ function buildClient(): ReturnType<typeof createClient<Database>> {
       );
       resolvedPublicUrl = PLACEHOLDER_URL;
       resolvedPublicKey = PLACEHOLDER_KEY;
-      return createClient<Database>(PLACEHOLDER_URL, PLACEHOLDER_KEY, options);
+      return createClient<Database>(PLACEHOLDER_URL, PLACEHOLDER_KEY, options as never);
     }
     throw err;
   }

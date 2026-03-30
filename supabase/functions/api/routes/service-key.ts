@@ -1,4 +1,6 @@
+import { z } from "npm:zod@3.24.2";
 import { getOrgMembership } from "../../_shared/auth.ts";
+import { logJson } from "../../_shared/logger.ts";
 import {
   generateServiceKeySecret,
   getServiceKeyContext,
@@ -25,6 +27,15 @@ async function requireOrgAdmin(
   return { orgId: membership.org_id, userId: user.id };
 }
 
+export const serviceKeyIssueBodySchema = z.object({
+  label: z.string().trim().min(1).max(200),
+  scopes: z.unknown().optional(),
+});
+
+export const serviceKeyRevokeBodySchema = z.object({
+  id: z.string().uuid(),
+});
+
 /**
  * GET /api/service-key/ping — service secret (no user JWT).
  * POST /api/service-key/issue — JWT + org admin; returns secret once.
@@ -49,15 +60,14 @@ export async function handleServiceKeyRoutes(
   if (sub === "issue" && req.method === "POST") {
     const admin = await requireOrgAdmin(req, corsHeaders);
     if (admin instanceof Response) return admin;
-    let body: { label?: string; scopes?: unknown };
-    try {
-      body = await req.json();
-    } catch {
-      return json({ error: "Invalid JSON" }, 400);
+    const raw = await req.json().catch(() => ({}));
+    const parsed = serviceKeyIssueBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "service_key_issue_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400);
     }
-    const label = typeof body.label === "string" ? body.label.trim() : "";
-    if (!label) return json({ error: "label is required" }, 400);
-    const scopes = normalizeIssuableScopes(body.scopes);
+    const { label, scopes: scopesRaw } = parsed.data;
+    const scopes = normalizeIssuableScopes(scopesRaw);
     const secret = generateServiceKeySecret();
     const keyHash = await hashServiceKeySecret(secret);
     const keyPrefix = secret.slice(0, 12);
@@ -85,14 +95,13 @@ export async function handleServiceKeyRoutes(
   if (sub === "revoke" && req.method === "POST") {
     const admin = await requireOrgAdmin(req, corsHeaders);
     if (admin instanceof Response) return admin;
-    let body: { id?: string };
-    try {
-      body = await req.json();
-    } catch {
-      return json({ error: "Invalid JSON" }, 400);
+    const raw = await req.json().catch(() => ({}));
+    const parsed = serviceKeyRevokeBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "service_key_revoke_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400);
     }
-    const id = typeof body.id === "string" ? body.id.trim() : "";
-    if (!id) return json({ error: "id is required" }, 400);
+    const { id } = parsed.data;
     const db = adminClient();
     const { data: existing, error: fetchErr } = await db
       .from("org_service_api_keys")

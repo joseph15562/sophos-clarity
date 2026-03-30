@@ -32,6 +32,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -308,10 +309,12 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
       <ScoreTrendChart snapshots={history} />
 
       {history.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4">
-          No assessment snapshots yet. Upload configs and save a snapshot to start tracking changes
-          over time.
-        </p>
+        <EmptyState
+          className="py-8"
+          icon={<History className="h-6 w-6 text-muted-foreground/50" />}
+          title="No assessment snapshots yet"
+          description="Upload configs and save a snapshot to start tracking changes over time."
+        />
       ) : (
         <div className="space-y-2">
           {history.map((snap, idx) => {

@@ -33,7 +33,7 @@ import {
   seCentralAutoForLabel,
   seCentralAutoForOverall,
 } from "@/lib/se-health-check-bp";
-import { GRADE_COLORS } from "@/lib/design-tokens";
+import { GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -314,7 +314,7 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
   const r = 48;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;
-  const color = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
+  const color = GRADE_COLORS[grade as Grade] ?? GRADE_COLORS.C;
 
   return (
     <svg

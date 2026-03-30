@@ -60,7 +60,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
       setDragActive(false);
       if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
     },
-    [handleFiles]
+    [handleFiles],
   );
 
   const onBrowse = () => {
@@ -123,7 +123,7 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               value={f.label}
               onChange={(e) => {
                 const updated = files.map((file) =>
-                  file.id === f.id ? { ...file, label: e.target.value } : file
+                  file.id === f.id ? { ...file, label: e.target.value } : file,
                 );
                 onFilesChange(updated);
               }}
@@ -157,7 +157,8 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
       ))}
       {files.length > 0 && (
         <p className="text-xs font-medium text-foreground/80 dark:text-white/70">
-          Click on the <span className="text-brand-accent font-semibold">config name</span> above to rename the firewall for the{" "}
+          Click on the <span className="text-brand-accent font-semibold">config name</span> above to
+          rename the firewall for the{" "}
           <span className="text-foreground dark:text-white font-semibold">report</span>.
         </p>
       )}
@@ -165,7 +166,11 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
       {/* Drop zone */}
       <div
         data-tour="step-upload"
-        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+        data-testid="workspace-upload-dropzone"
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
         onDragLeave={() => setDragActive(false)}
         onDrop={onDrop}
         onClick={onBrowse}
@@ -180,7 +185,9 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
         {files.length > 0 ? (
           <div className="flex items-center justify-center gap-2.5 text-foreground/80 dark:text-white/75">
             <Plus className="h-5 w-5 text-brand-accent" />
-            <span className="text-sm font-semibold tracking-tight">Add another firewall config</span>
+            <span className="text-sm font-semibold tracking-tight">
+              Add another firewall config
+            </span>
           </div>
         ) : (
           <>
@@ -191,12 +198,19 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
               Drop your Sophos firewall export here
             </p>
             <p className="text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Upload HTML, HTM, or XML exports to generate deterministic findings, posture scoring, compliance mapping, and client-ready reports.
+              Upload HTML, HTM, or XML exports to generate deterministic findings, posture scoring,
+              compliance mapping, and client-ready reports.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2 text-[11px] text-muted-foreground">
-              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">HTML / HTM / XML</span>
-              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">Multiple files supported</span>
-              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">Estate comparison ready</span>
+              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">
+                HTML / HTM / XML
+              </span>
+              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">
+                Multiple files supported
+              </span>
+              <span className="rounded-full border border-border bg-background/70 px-2.5 py-1">
+                Estate comparison ready
+              </span>
             </div>
           </>
         )}

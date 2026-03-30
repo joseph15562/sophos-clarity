@@ -13,17 +13,25 @@ export function WebhookSettings() {
 
   useEffect(() => {
     if (!org?.id) return;
-    supabase
-      .from("organisations")
-      .select("webhook_url, webhook_secret")
-      .eq("id", org.id)
-      .single()
-      .then(({ data }) => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("organisations")
+          .select("webhook_url, webhook_secret")
+          .eq("id", org.id)
+          .single();
+        if (cancelled) return;
         const row = data as { webhook_url?: string | null; webhook_secret?: string | null } | null;
         setWebhookUrl(row?.webhook_url ?? "");
         setWebhookSecret(row?.webhook_secret ?? "");
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [org?.id]);
 
   const handleSave = async () => {
@@ -43,15 +51,20 @@ export function WebhookSettings() {
   };
 
   if (loading) return <div className="text-xs text-muted-foreground">Loading…</div>;
-  if (!canManageTeam) return <p className="text-xs text-muted-foreground">Only admins can configure webhooks.</p>;
+  if (!canManageTeam)
+    return <p className="text-xs text-muted-foreground">Only admins can configure webhooks.</p>;
 
   return (
     <div className="space-y-4">
       <p className="text-[11px] text-muted-foreground">
-        When a report or assessment is saved, FireComply can POST a JSON payload to your URL (e.g. for PSA/RMM or ticketing). Optional secret is used to sign the request (X-Webhook-Signature: HMAC-SHA256).
+        When a report or assessment is saved, FireComply can POST a JSON payload to your URL (e.g.
+        for PSA/RMM or ticketing). Optional secret is used to sign the request (X-Webhook-Signature:
+        HMAC-SHA256).
       </p>
       <div>
-        <label className="block text-[10px] font-medium text-muted-foreground mb-1">Webhook URL</label>
+        <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+          Webhook URL
+        </label>
         <input
           type="url"
           value={webhookUrl}
@@ -61,7 +74,9 @@ export function WebhookSettings() {
         />
       </div>
       <div>
-        <label className="block text-[10px] font-medium text-muted-foreground mb-1">Secret (optional)</label>
+        <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+          Secret (optional)
+        </label>
         <input
           type="password"
           value={webhookSecret}

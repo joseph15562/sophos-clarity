@@ -1,4 +1,6 @@
-const HASH_SECRET = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+/** Prefer dedicated secret so API key HMAC can rotate independently of the service role. */
+const HASH_SECRET =
+  Deno.env.get("API_KEY_HMAC_SECRET") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const CENTRAL_ENCRYPTION_KEY = Deno.env.get("CENTRAL_ENCRYPTION_KEY") ?? "";
 
 export async function hmacHash(data: string): Promise<string> {

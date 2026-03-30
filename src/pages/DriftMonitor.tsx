@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import {
   GitCompare,
   Clock,
@@ -406,18 +407,17 @@ function DriftMonitorInner() {
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header />
         <main id="main-content" className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center max-w-md space-y-4">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 flex items-center justify-center">
-              <Server className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-semibold">No configuration snapshots yet</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Deploy the connector agent to start tracking changes automatically.
-            </p>
-            <Button asChild>
-              <Link to="/">Back to Dashboard</Link>
-            </Button>
-          </div>
+          <EmptyState
+            className="max-w-md py-12"
+            icon={<Server className="h-8 w-8 text-muted-foreground/60" />}
+            title="No configuration snapshots yet"
+            description="Deploy the connector agent to start tracking changes automatically."
+            action={
+              <Button asChild>
+                <Link to="/">Back to Dashboard</Link>
+              </Button>
+            }
+          />
         </main>
       </div>
     );

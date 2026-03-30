@@ -22,6 +22,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SafeHtml } from "@/components/SafeHtml";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -864,10 +865,16 @@ function ReportContent({
               onClick={handleWord}
               className="gap-2"
               data-tour="export-word"
+              data-testid="export-download-word"
             >
               <FileText className="h-4 w-4" /> Download Word
             </Button>
-            <Button onClick={handlePdf} className="gap-2" data-tour="export-pdf">
+            <Button
+              onClick={handlePdf}
+              className="gap-2"
+              data-tour="export-pdf"
+              data-testid="export-download-pdf"
+            >
               <Download className="h-4 w-4" /> Download PDF
             </Button>
           </>
@@ -1062,7 +1069,7 @@ function ReportContent({
               )}
             </div>
           )}
-          {html && <div dangerouslySetInnerHTML={{ __html: html }} />}
+          {html && <SafeHtml html={html} />}
 
           {isLoading && markdown && (
             <div className="flex items-center gap-2 text-muted-foreground mt-4">

@@ -167,7 +167,7 @@ export function CoverageMatrix({ analysisResults }: Props) {
                   return (
                     <td
                       key={col}
-                      className={`text-xs font-bold py-2.5 px-2 text-center rounded-lg backdrop-blur-sm ${statusClass(cell.status)}`}
+                      className={`text-xs font-bold py-2.5 px-2 text-center rounded-lg backdrop-blur-sm ${statusClass(cell.status as CellStatus)}`}
                       style={{ border: "1px solid rgba(255,255,255,0.06)" }}
                     >
                       {cell.display}

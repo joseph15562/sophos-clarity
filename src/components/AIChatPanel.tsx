@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MessageCircle, X, Send, Loader2, Trash2, FileText } from "lucide-react";
 import { streamChat } from "@/lib/stream-ai";
 import type { AnalysisResult } from "@/lib/analyse-config";
-import DOMPurify from "dompurify";
 import { marked } from "marked";
+import { SafeHtml } from "@/components/SafeHtml";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -315,11 +315,6 @@ ${reportSummary}`;
     }
   };
 
-  const renderMarkdown = (text: string) => {
-    const html = marked.parse(text, { async: false }) as string;
-    return DOMPurify.sanitize(html);
-  };
-
   return (
     <>
       {/* Floating trigger button */}
@@ -417,9 +412,9 @@ ${reportSummary}`;
                   }`}
                 >
                   {msg.role === "assistant" && msg.content ? (
-                    <div
+                    <SafeHtml
                       className="prose prose-xs dark:prose-invert max-w-none [&_p]:text-xs [&_p]:my-1 [&_ul]:text-xs [&_li]:text-xs [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_code]:text-[10px]"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                      html={marked.parse(msg.content, { async: false }) as string}
                     />
                   ) : msg.role === "assistant" && !msg.content && isStreaming ? (
                     <div className="flex items-center gap-2 text-muted-foreground">

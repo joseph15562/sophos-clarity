@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { logJson } from "../_shared/logger.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -128,7 +129,10 @@ serve(async (req: Request) => {
     const { data: config, error: configErr } = await configQuery.maybeSingle();
 
     if (configErr) {
-      console.error("[portal-data] config lookup failed", configErr);
+      logJson("error", "portal_data_config_lookup", {
+        message: configErr.message,
+        code: configErr.code ?? "",
+      });
       return new Response(
         JSON.stringify({ error: "Portal not found" }),
         { status: 404, headers: { ...cors, "Content-Type": "application/json" } },
@@ -642,7 +646,9 @@ serve(async (req: Request) => {
       headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=60" },
     });
   } catch (err) {
-    console.error("[portal-data] unexpected error", err);
+    logJson("error", "portal_data_unexpected", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },

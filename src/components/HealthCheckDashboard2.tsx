@@ -21,7 +21,7 @@ import {
 } from "@/lib/sophos-licence";
 import { loadSeHealthCheckBpOverrides, seCentralAutoForLabel } from "@/lib/se-health-check-bp-v2";
 import { evaluateBaseline, type BaselineResult } from "@/lib/policy-baselines";
-import { GRADE_COLORS } from "@/lib/design-tokens";
+import { GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 
 const NO_SE_CENTRAL_HA_LABELS = new Set<string>();
 
@@ -29,7 +29,7 @@ function GaugeRing({ score, grade }: { score: number; grade: string }) {
   const r = 48;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (score / 100) * circumference;
-  const color = GRADE_COLORS[grade] ?? GRADE_COLORS.C;
+  const color = GRADE_COLORS[grade as Grade] ?? GRADE_COLORS.C;
 
   return (
     <svg

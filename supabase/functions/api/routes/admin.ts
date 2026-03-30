@@ -1,5 +1,7 @@
+import { adminResetMfaBodySchema, authMfaRecoveryBodySchema } from "../../_shared/api-schemas.ts";
 import { getOrgMembership } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 
 function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
   return jsonResponse(body, status, corsHeaders);
@@ -27,9 +29,13 @@ export async function handleAdminRoutes(
     }
 
     if (req.method === "POST" && route === "reset-mfa") {
-      const body = await req.json();
-      const { targetUserId } = body;
-      if (!targetUserId) return json({ error: "targetUserId required" }, 400, corsHeaders);
+      const raw = await req.json().catch(() => ({}));
+      const parsed = adminResetMfaBodySchema.safeParse(raw);
+      if (!parsed.success) {
+        logJson("warn", "admin_reset_mfa_invalid_body", { issues: parsed.error.issues.length });
+        return json({ error: "Invalid request body" }, 400, corsHeaders);
+      }
+      const { targetUserId } = parsed.data;
 
       const db = adminClient();
 
@@ -78,9 +84,13 @@ export async function handleAdminRoutes(
     const { data: { user: caller } } = await uc.auth.getUser();
     if (!caller) return json({ error: "Invalid session" }, 401, corsHeaders);
 
-    const body = await req.json();
-    const { targetEmail } = body;
-    if (!targetEmail) return json({ error: "targetEmail required" }, 400, corsHeaders);
+    const raw = await req.json().catch(() => ({}));
+    const parsed = authMfaRecoveryBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "auth_mfa_recovery_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400, corsHeaders);
+    }
+    const { targetEmail } = parsed.data;
 
     const db = adminClient();
 

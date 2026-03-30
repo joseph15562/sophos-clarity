@@ -1,5 +1,12 @@
+import {
+  seTeamCreateBodySchema,
+  seTeamInviteBodySchema,
+  seTeamRenameBodySchema,
+  seTeamTransferAdminBodySchema,
+} from "../../_shared/api-schemas.ts";
 import { authenticateSE } from "../../_shared/auth.ts";
 import { adminClient, json as jsonResponse, safeDbError } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 import { buildSophosEmailHtml, escapeHtml, sendConfigUploadEmail } from "../../_shared/email.ts";
 
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
@@ -66,9 +73,13 @@ export async function handleSeTeamRoutes(
 
   // POST /api/se-teams — create a new team
   if (req.method === "POST" && segments.length === 1) {
-    const body = await req.json();
-    const name = body.name?.trim();
-    if (!name) return json({ error: "Team name is required" }, 400);
+    const raw = await req.json().catch(() => ({}));
+    const parsed = seTeamCreateBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "se_team_create_invalid_body", { issues: parsed.error.issues.length });
+      return json({ error: "Invalid request body" }, 400);
+    }
+    const name = parsed.data.name.trim();
 
     const { data: team, error } = await db
       .from("se_teams")
@@ -236,9 +247,13 @@ export async function handleSeTeamRoutes(
     // PATCH /api/se-teams/:id — rename (admin only)
     if (req.method === "PATCH" && !subRoute) {
       if (!isAdmin) return json({ error: "Admin access required" }, 403);
-      const body = await req.json();
-      const name = body.name?.trim();
-      if (!name) return json({ error: "Team name is required" }, 400);
+      const raw = await req.json().catch(() => ({}));
+      const parsed = seTeamRenameBodySchema.safeParse(raw);
+      if (!parsed.success) {
+        logJson("warn", "se_team_rename_invalid_body", { issues: parsed.error.issues.length });
+        return json({ error: "Invalid request body" }, 400);
+      }
+      const name = parsed.data.name.trim();
       const { error } = await db.from("se_teams").update({ name }).eq("id", teamId);
       if (error) return json({ error: safeDbError(error) }, 500);
       return json({ ok: true, name });
@@ -247,9 +262,13 @@ export async function handleSeTeamRoutes(
     // POST /api/se-teams/:id/invite — send an email invite (admin only)
     if (req.method === "POST" && subRoute === "invite") {
       if (!isAdmin) return json({ error: "Admin access required" }, 403);
-      const body = await req.json();
-      const email = body.email?.trim()?.toLowerCase();
-      if (!email) return json({ error: "Email is required" }, 400);
+      const raw = await req.json().catch(() => ({}));
+      const parsed = seTeamInviteBodySchema.safeParse(raw);
+      if (!parsed.success) {
+        logJson("warn", "se_team_invite_invalid_body", { issues: parsed.error.issues.length });
+        return json({ error: "Invalid request body" }, 400);
+      }
+      const email = parsed.data.email.trim().toLowerCase();
 
       const { data: teamInfo } = await db.from("se_teams").select("name").eq("id", teamId).single();
       const inviterName = se.seProfile.display_name || se.user.email || "A team admin";
@@ -318,9 +337,13 @@ export async function handleSeTeamRoutes(
     // POST /api/se-teams/:id/transfer-admin (admin only)
     if (req.method === "POST" && subRoute === "transfer-admin") {
       if (!isAdmin) return json({ error: "Admin access required" }, 403);
-      const body = await req.json();
-      const targetProfileId = body.target_se_profile_id;
-      if (!targetProfileId) return json({ error: "target_se_profile_id is required" }, 400);
+      const raw = await req.json().catch(() => ({}));
+      const parsed = seTeamTransferAdminBodySchema.safeParse(raw);
+      if (!parsed.success) {
+        logJson("warn", "se_team_transfer_admin_invalid_body", { issues: parsed.error.issues.length });
+        return json({ error: "Invalid request body" }, 400);
+      }
+      const targetProfileId = parsed.data.target_se_profile_id;
 
       const { data: targetMember } = await db
         .from("se_team_members")

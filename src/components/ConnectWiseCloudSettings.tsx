@@ -21,7 +21,7 @@ type StatusRow = {
 /** ConnectWise Cloud Services API credentials (client credentials + subscription key). */
 export function ConnectWiseCloudSettings() {
   const { org } = useAuth();
-  const [status, setStatus] = useState<StatusRow | null>(undefined);
+  const [status, setStatus] = useState<StatusRow | null>(null);
   const [publicMemberId, setPublicMemberId] = useState("");
   const [subscriptionKey, setSubscriptionKey] = useState("");
   const [scope, setScope] = useState<"Partner" | "Distributor">("Partner");

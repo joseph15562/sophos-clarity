@@ -8,6 +8,7 @@ import { loadScoreHistoryForFleet } from "@/lib/score-history";
 import { gradeForScore, GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 import { resolveCustomerName } from "@/lib/customer-name";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
+import { EmptyState } from "@/components/EmptyState";
 import {
   BarChart3,
   TrendingUp,
@@ -434,9 +435,12 @@ function TrendChart({ data }: { data: { month: string; score: number }[] }) {
 
   if (data.length === 0) {
     return (
-      <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
-        No trend data yet
-      </div>
+      <EmptyState
+        className="min-h-[200px] py-10"
+        icon={<TrendingUp className="h-6 w-6 text-muted-foreground/50" />}
+        title="No trend data yet"
+        description="Score history will appear after assessments are recorded for your organisation."
+      />
     );
   }
 

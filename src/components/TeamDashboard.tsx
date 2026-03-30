@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useHealthChecksQuery, queryKeys } from "@/hooks/queries";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingState } from "@/components/LoadingState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -185,13 +187,15 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
           </div>
 
           {loading ? (
-            <div className="p-8 text-center">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+            <div className="p-8">
+              <LoadingState variant="spinner" />
             </div>
           ) : !stats ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">
-              No health checks in this team yet.
-            </div>
+            <EmptyState
+              className="py-10"
+              title="No health checks yet"
+              description="Run a health check for this team to see distribution and trends here."
+            />
           ) : (
             <div className="p-4 space-y-5">
               {/* Stats cards */}

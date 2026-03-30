@@ -1,6 +1,6 @@
 {
   "test": {
-    "include": ["_shared/"]
+    "include": ["_shared/", "api-agent/", "api-public/", "api/routes/"]
   },
   "imports": {
     "https://deno.land/std@0.168.0/": "https://deno.land/std@0.168.0/"

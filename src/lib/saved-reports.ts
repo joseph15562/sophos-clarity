@@ -207,7 +207,7 @@ export async function saveReportCloud(
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return null;
 
-  const reportType = reports.length > 0 ? "full" : "pre-ai";
+  const reportType: "full" | "pre-ai" = reports.length > 0 ? "full" : "pre-ai";
   const analysisSummary = buildAnalysisSummary(analysisResults);
 
   const { data, error } = await supabase
@@ -238,11 +238,9 @@ export async function saveReportCloud(
   };
 
   // Notify org webhook if configured (fire-and-forget)
-  supabase
-    .from("organisations")
-    .select("webhook_url, webhook_secret")
-    .eq("id", orgId)
-    .single()
+  void Promise.resolve(
+    supabase.from("organisations").select("webhook_url, webhook_secret").eq("id", orgId).single(),
+  )
     .then(async ({ data: org }) => {
       const url = (org as { webhook_url?: string; webhook_secret?: string } | null)?.webhook_url;
       if (!url?.trim()) return;
@@ -371,7 +369,7 @@ export async function saveReportLocal(
   reports: SavedReportEntry[],
   analysisResults: Record<string, AnalysisResult>,
 ): Promise<SavedReportPackage> {
-  const reportType = reports.length > 0 ? "full" : "pre-ai";
+  const reportType: "full" | "pre-ai" = reports.length > 0 ? "full" : "pre-ai";
   const analysisSummary = buildAnalysisSummary(analysisResults);
   const pkg: SavedReportPackage = {
     id: `sr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

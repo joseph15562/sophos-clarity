@@ -24,12 +24,14 @@ jobs:
         run: npm run lint
 
       - name: Type-check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Run tests
         run: npm test
 
       - name: Build
+        env:
+          VITE_E2E_AUTH_BYPASS: "1"
         run: npm run build
 
       - name: Audit production dependencies
@@ -39,6 +41,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
         run: npm run test:e2e
 
       - name: Upload E2E report

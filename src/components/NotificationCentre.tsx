@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { AppNotification, NotificationType } from "@/hooks/use-notifications";
+import { EmptyState } from "@/components/EmptyState";
 
 interface Props {
   notifications: AppNotification[];
@@ -96,10 +97,12 @@ export function NotificationCentre({
 
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 && (
-                <div className="px-4 py-8 text-center text-xs text-muted-foreground">
-                  <Bell className="h-6 w-6 mx-auto mb-2 text-muted-foreground/30" />
-                  No notifications yet
-                </div>
+                <EmptyState
+                  className="py-8 px-4"
+                  icon={<Bell className="h-6 w-6 text-muted-foreground/50" />}
+                  title="No notifications yet"
+                  description="In-app alerts will show here when something needs your attention."
+                />
               )}
 
               {notifications.map((n) => {

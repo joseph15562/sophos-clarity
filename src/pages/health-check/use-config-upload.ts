@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { UploadedFile } from "@/components/FileUpload";
 import { supabase } from "@/integrations/supabase/client";
 import type { SEProfile } from "@/hooks/use-se-auth";
+import { queryKeys } from "@/hooks/queries/keys";
 
 export type ConfigUploadRequestRow = {
   id: string;
@@ -44,6 +46,7 @@ export type UseConfigUploadOptions = {
 };
 
 export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseConfigUploadOptions) {
+  const queryClient = useQueryClient();
   const [configUploadDialogOpen, setConfigUploadDialogOpen] = useState(false);
   const [configUploadCustomerName, setConfigUploadCustomerName] = useState("");
   const [configUploadContactName, setConfigUploadContactName] = useState("");
@@ -56,37 +59,43 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
   const [configUploadStatus, setConfigUploadStatus] = useState<string | null>(null);
   const [configUploadResending, setConfigUploadResending] = useState(false);
   const [configUploadLoading, setConfigUploadLoading] = useState(false);
-  const [configUploadRequests, setConfigUploadRequests] = useState<ConfigUploadRequestRow[]>([]);
   const [configUploadRequestsOpen, setConfigUploadRequestsOpen] = useState(false);
-  const [configUploadListLoading, setConfigUploadListLoading] = useState(false);
   const [resendingUploadToken, setResendingUploadToken] = useState<string | null>(null);
   const configUploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchConfigUploadRequests = useCallback(async () => {
+  const listQueryKey = seProfile
+    ? queryKeys.seHealthCheck.configUploadRequests(seProfile.id, activeTeamId ?? null)
+    : (["se-health-check", "config-upload-requests", "disabled"] as const);
+
+  const invalidateConfigUploadList = useCallback(() => {
     if (!seProfile) return;
-    setConfigUploadListLoading(true);
-    try {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.seHealthCheck.configUploadRequests(seProfile.id, activeTeamId ?? null),
+    });
+  }, [queryClient, seProfile, activeTeamId]);
+
+  const { data: configUploadRequests = [], isLoading: configUploadListLoading } = useQuery({
+    queryKey: [...listQueryKey],
+    enabled: Boolean(seProfile),
+    queryFn: async ({ signal }) => {
+      if (!seProfile) return [];
       const params = activeTeamId ? `?team_id=${activeTeamId}` : "";
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-requests${params}`;
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const res = await fetch(url, {
+        signal,
         headers: {
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           authorization: `Bearer ${session?.access_token}`,
         },
       });
-      if (res.ok) {
-        const json = (await res.json()) as { data?: ConfigUploadRequestRow[] };
-        setConfigUploadRequests(json.data ?? []);
-      }
-    } catch {
-      /* silent */
-    } finally {
-      setConfigUploadListLoading(false);
-    }
-  }, [seProfile, activeTeamId]);
+      if (!res.ok) return [];
+      const json = (await res.json()) as { data?: ConfigUploadRequestRow[] };
+      return json.data ?? [];
+    },
+  });
 
   const handleCreateConfigUploadRequest = useCallback(async () => {
     if (!seProfile) return;
@@ -132,7 +141,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
         toast.success("Upload link created — copy and share it with the customer.");
       }
 
-      void fetchConfigUploadRequests();
+      invalidateConfigUploadList();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not create upload request.");
     } finally {
@@ -144,7 +153,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
     configUploadContactName,
     configUploadCustomerEmail,
     configUploadDays,
-    fetchConfigUploadRequests,
+    invalidateConfigUploadList,
     activeTeamId,
   ]);
 
@@ -258,14 +267,14 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
 
         setConfigUploadDialogOpen(false);
         setConfigUploadRequestsOpen(false);
-        void fetchConfigUploadRequests();
+        invalidateConfigUploadList();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not load config.");
       } finally {
         setConfigUploadLoading(false);
       }
     },
-    [configUploadRequests, fetchConfigUploadRequests, onLoadConfig],
+    [configUploadRequests, invalidateConfigUploadList, onLoadConfig],
   );
 
   const handleRevokeConfigUpload = useCallback(
@@ -288,12 +297,12 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
           setConfigUploadUrl(null);
           setConfigUploadStatus(null);
         }
-        void fetchConfigUploadRequests();
+        invalidateConfigUploadList();
       } catch {
         toast.error("Could not revoke upload request.");
       }
     },
-    [configUploadToken, fetchConfigUploadRequests],
+    [configUploadToken, invalidateConfigUploadList],
   );
 
   const handleClaimConfigUpload = useCallback(
@@ -315,12 +324,12 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
           throw new Error(errJson.error || "Claim failed");
         }
         toast.success("Upload request claimed — it's now yours.");
-        void fetchConfigUploadRequests();
+        invalidateConfigUploadList();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not claim upload request.");
       }
     },
-    [fetchConfigUploadRequests],
+    [invalidateConfigUploadList],
   );
 
   useEffect(() => {
@@ -339,7 +348,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
           if (statusJson.status === "uploaded") {
             setConfigUploadStatus("uploaded");
             toast.success("Customer has uploaded their configuration!");
-            void fetchConfigUploadRequests();
+            invalidateConfigUploadList();
           }
         }
       } catch {
@@ -350,11 +359,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
     return () => {
       if (configUploadPollRef.current) clearInterval(configUploadPollRef.current);
     };
-  }, [configUploadToken, configUploadStatus, fetchConfigUploadRequests]);
-
-  useEffect(() => {
-    if (seProfile) void fetchConfigUploadRequests();
-  }, [seProfile, fetchConfigUploadRequests]);
+  }, [configUploadToken, configUploadStatus, invalidateConfigUploadList]);
 
   return {
     configUploadDialogOpen,

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { json as jsonResponse, safeError } from "../_shared/db.ts";
+import { logJson } from "../_shared/logger.ts";
 
 import { handleAdminRoutes } from "./routes/admin.ts";
 import { handleAgentRoutes } from "./routes/agent.ts";
@@ -118,6 +119,7 @@ serve(async (req: Request) => {
 
   return json({ error: "Not found" }, 404);
   } catch (err) {
+    logJson("error", "api_unhandled", { error: safeError(err) });
     return json({ error: safeError(err) }, 500);
   }
 });

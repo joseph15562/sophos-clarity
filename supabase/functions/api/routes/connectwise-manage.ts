@@ -1,3 +1,9 @@
+import {
+  connectwiseManageCredentialsPostSchema,
+  connectwiseManageTicketPostSchema,
+  psaCompanyMappingDeleteSchema,
+  psaCompanyMappingPutSchema,
+} from "../../_shared/api-schemas.ts";
 import { getOrgMembership } from "../../_shared/auth.ts";
 import {
   connectWiseManageCreateServiceTicket,
@@ -5,6 +11,7 @@ import {
 } from "../../_shared/connectwise-manage.ts";
 import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
 import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 
 async function requireOrgAdmin(
   req: Request,
@@ -57,20 +64,20 @@ export async function handleConnectWiseManageRoutes(
   }
 
   if (route === "company-mappings" && req.method === "PUT") {
-    let body: { customerKey?: string; companyId?: number };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const customerKey = typeof body.customerKey === "string" ? body.customerKey.trim() : "";
-    const companyId = typeof body.companyId === "number" && Number.isFinite(body.companyId) ? body.companyId : NaN;
-    if (!customerKey || customerKey.length > 512) {
-      return j({ error: "customerKey is required (max 512 chars)" }, 400);
+    const parsed = psaCompanyMappingPutSchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "connectwise_manage_company_mapping_put_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
     }
-    if (!Number.isFinite(companyId)) {
-      return j({ error: "companyId must be a finite number" }, 400);
-    }
+    const { customerKey, companyId } = parsed.data;
     const { error: upErr } = await db.from("psa_customer_company_map").upsert(
       {
         org_id: orgId,
@@ -86,14 +93,20 @@ export async function handleConnectWiseManageRoutes(
   }
 
   if (route === "company-mappings" && req.method === "DELETE") {
-    let body: { customerKey?: string };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const customerKey = typeof body.customerKey === "string" ? body.customerKey.trim() : "";
-    if (!customerKey) return j({ error: "customerKey is required" }, 400);
+    const parsed = psaCompanyMappingDeleteSchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "connectwise_manage_company_mapping_delete_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
+    }
+    const { customerKey } = parsed.data;
     const { error: delErr } = await db
       .from("psa_customer_company_map")
       .delete()
@@ -142,35 +155,31 @@ export async function handleConnectWiseManageRoutes(
   }
 
   if (route === "credentials" && req.method === "POST") {
-    let body: {
-      apiBaseUrl?: string;
-      integratorCompanyId?: string;
-      publicKey?: string;
-      privateKey?: string;
-      defaultBoardId?: number;
-      defaultStatusId?: number;
-    };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const apiBaseUrl = typeof body.apiBaseUrl === "string" ? body.apiBaseUrl.trim() : "";
-    const integratorCompanyId = typeof body.integratorCompanyId === "string"
-      ? body.integratorCompanyId.trim()
-      : "";
-    const publicKey = typeof body.publicKey === "string" ? body.publicKey.trim() : "";
-    const privateKey = typeof body.privateKey === "string" ? body.privateKey.trim() : "";
-    const defaultBoardId = typeof body.defaultBoardId === "number" && Number.isFinite(body.defaultBoardId)
-      ? body.defaultBoardId
-      : NaN;
-    const defaultStatusId =
-      typeof body.defaultStatusId === "number" && Number.isFinite(body.defaultStatusId)
-        ? body.defaultStatusId
-        : 1;
-    if (!apiBaseUrl || !integratorCompanyId || !Number.isFinite(defaultBoardId)) {
-      return j({ error: "apiBaseUrl, integratorCompanyId, and defaultBoardId are required" }, 400);
+    const parsed = connectwiseManageCredentialsPostSchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "connectwise_manage_credentials_post_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
     }
+    const {
+      apiBaseUrl,
+      integratorCompanyId,
+      publicKey: publicKeyRaw,
+      privateKey: privateKeyRaw,
+      defaultBoardId,
+      defaultStatusId: defaultStatusIdRaw,
+    } = parsed.data;
+    const publicKey = (publicKeyRaw ?? "").trim();
+    const privateKey = (privateKeyRaw ?? "").trim();
+    const defaultStatusId =
+      defaultStatusIdRaw != null && Number.isFinite(defaultStatusIdRaw) ? defaultStatusIdRaw : 1;
 
     const { data: existingRow, error: exErr } = await db
       .from("connectwise_manage_credentials")
@@ -235,36 +244,25 @@ export async function handleConnectWiseManageRoutes(
   }
 
   if (route === "tickets" && req.method === "POST") {
-    let body: {
-      summary?: string;
-      initialDescription?: string;
-      customerCompanyId?: number;
-      firecomplyCustomerKey?: string;
-      boardId?: number;
-      statusId?: number;
-      idempotencyKey?: string;
-    };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const summary = typeof body.summary === "string" ? body.summary.trim() : "";
-    const idempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
-    if (!summary || !idempotencyKey || idempotencyKey.length > 512) {
-      return j({ error: "summary and idempotencyKey (max 512 chars) are required" }, 400);
+    const ticketParsed = connectwiseManageTicketPostSchema.safeParse(raw);
+    if (!ticketParsed.success) {
+      logJson("warn", "connectwise_manage_ticket_post_invalid_body", {
+        issues: ticketParsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
     }
+    const body = ticketParsed.data;
+    const summary = body.summary;
+    const idempotencyKey = body.idempotencyKey;
 
-    let customerCompanyId =
-      typeof body.customerCompanyId === "number" && Number.isFinite(body.customerCompanyId)
-        ? body.customerCompanyId
-        : NaN;
-    const firecomplyCustomerKey =
-      typeof body.firecomplyCustomerKey === "string" ? body.firecomplyCustomerKey.trim() : "";
-
-    if (Number.isFinite(customerCompanyId) && firecomplyCustomerKey) {
-      return j({ error: "Send either customerCompanyId or firecomplyCustomerKey, not both" }, 400);
-    }
+    let customerCompanyId = body.customerCompanyId ?? NaN;
+    const firecomplyCustomerKey = (body.firecomplyCustomerKey ?? "").trim();
 
     if (!Number.isFinite(customerCompanyId)) {
       if (!firecomplyCustomerKey) {
@@ -347,7 +345,7 @@ export async function handleConnectWiseManageRoutes(
         {
           customerCompanyId,
           summary,
-          initialDescription: typeof body.initialDescription === "string" ? body.initialDescription : undefined,
+          initialDescription: body.initialDescription,
           boardId,
           statusId,
         },

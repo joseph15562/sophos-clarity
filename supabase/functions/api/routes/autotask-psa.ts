@@ -1,3 +1,9 @@
+import {
+  autotaskPsaCredentialsPostSchema,
+  autotaskPsaTicketPostSchema,
+  psaCompanyMappingDeleteSchema,
+  psaCompanyMappingPutSchema,
+} from "../../_shared/api-schemas.ts";
 import { getOrgMembership } from "../../_shared/auth.ts";
 import {
   autotaskCreateTicket,
@@ -5,6 +11,7 @@ import {
 } from "../../_shared/autotask-psa.ts";
 import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
 import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import { logJson } from "../../_shared/logger.ts";
 
 async function requireOrgAdmin(
   req: Request,
@@ -57,20 +64,20 @@ export async function handleAutotaskPsaRoutes(
   }
 
   if (route === "company-mappings" && req.method === "PUT") {
-    let body: { customerKey?: string; companyId?: number };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const customerKey = typeof body.customerKey === "string" ? body.customerKey.trim() : "";
-    const companyId = typeof body.companyId === "number" && Number.isFinite(body.companyId) ? body.companyId : NaN;
-    if (!customerKey || customerKey.length > 512) {
-      return j({ error: "customerKey is required (max 512 chars)" }, 400);
+    const parsed = psaCompanyMappingPutSchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "autotask_psa_company_mapping_put_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
     }
-    if (!Number.isFinite(companyId)) {
-      return j({ error: "companyId must be a finite number" }, 400);
-    }
+    const { customerKey, companyId } = parsed.data;
     const { error: upErr } = await db.from("psa_customer_company_map").upsert(
       {
         org_id: orgId,
@@ -86,14 +93,20 @@ export async function handleAutotaskPsaRoutes(
   }
 
   if (route === "company-mappings" && req.method === "DELETE") {
-    let body: { customerKey?: string };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const customerKey = typeof body.customerKey === "string" ? body.customerKey.trim() : "";
-    if (!customerKey) return j({ error: "customerKey is required" }, 400);
+    const parsed = psaCompanyMappingDeleteSchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "autotask_psa_company_mapping_delete_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
+    }
+    const { customerKey } = parsed.data;
     const { error: delErr } = await db
       .from("psa_customer_company_map")
       .delete()
@@ -142,64 +155,32 @@ export async function handleAutotaskPsaRoutes(
   }
 
   if (route === "credentials" && req.method === "POST") {
-    let body: {
-      apiZoneBaseUrl?: string;
-      username?: string;
-      secret?: string;
-      integrationCode?: string;
-      defaultQueueId?: number;
-      defaultPriority?: number;
-      defaultStatus?: number;
-      defaultSource?: number;
-      defaultTicketType?: number;
-    };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const apiZoneBaseUrl = typeof body.apiZoneBaseUrl === "string" ? body.apiZoneBaseUrl.trim() : "";
-    const username = typeof body.username === "string" ? body.username.trim() : "";
-    const secret = typeof body.secret === "string" ? body.secret : "";
-    const integrationCode = typeof body.integrationCode === "string" ? body.integrationCode : "";
-    const defaultQueueId = typeof body.defaultQueueId === "number" && Number.isFinite(body.defaultQueueId)
-      ? body.defaultQueueId
-      : NaN;
-    const defaultPriority =
-      typeof body.defaultPriority === "number" && Number.isFinite(body.defaultPriority)
-        ? body.defaultPriority
-        : NaN;
-    const defaultStatus =
-      typeof body.defaultStatus === "number" && Number.isFinite(body.defaultStatus)
-        ? body.defaultStatus
-        : NaN;
-    const defaultSource =
-      typeof body.defaultSource === "number" && Number.isFinite(body.defaultSource)
-        ? body.defaultSource
-        : NaN;
-    const defaultTicketType =
-      typeof body.defaultTicketType === "number" && Number.isFinite(body.defaultTicketType)
-        ? body.defaultTicketType
-        : NaN;
-
-    if (!apiZoneBaseUrl || !username) {
-      return j({ error: "apiZoneBaseUrl and username are required" }, 400);
+    const parsed = autotaskPsaCredentialsPostSchema.safeParse(raw);
+    if (!parsed.success) {
+      logJson("warn", "autotask_psa_credentials_post_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
     }
-    if (
-      !Number.isFinite(defaultQueueId) ||
-      !Number.isFinite(defaultPriority) ||
-      !Number.isFinite(defaultStatus) ||
-      !Number.isFinite(defaultSource) ||
-      !Number.isFinite(defaultTicketType)
-    ) {
-      return j(
-        {
-          error:
-            "defaultQueueId, defaultPriority, defaultStatus, defaultSource, and defaultTicketType are required (Autotask picklist IDs)",
-        },
-        400,
-      );
-    }
+    const {
+      apiZoneBaseUrl,
+      username,
+      secret: secretRaw,
+      integrationCode: integrationCodeRaw,
+      defaultQueueId,
+      defaultPriority,
+      defaultStatus,
+      defaultSource,
+      defaultTicketType,
+    } = parsed.data;
+    const secret = secretRaw ?? "";
+    const integrationCode = integrationCodeRaw ?? "";
 
     const { data: existingRow, error: exErr } = await db
       .from("autotask_psa_credentials")
@@ -270,37 +251,25 @@ export async function handleAutotaskPsaRoutes(
   }
 
   if (route === "tickets" && req.method === "POST") {
-    let body: {
-      title?: string;
-      description?: string;
-      companyId?: number;
-      firecomplyCustomerKey?: string;
-      queueId?: number;
-      priority?: number;
-      status?: number;
-      source?: number;
-      ticketType?: number;
-      idempotencyKey?: string;
-    };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return j({ error: "Invalid JSON" }, 400);
     }
-    const title = typeof body.title === "string" ? body.title.trim() : "";
-    const idempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey.trim() : "";
-    if (!title || !idempotencyKey || idempotencyKey.length > 512) {
-      return j({ error: "title and idempotencyKey (max 512 chars) are required" }, 400);
+    const ticketParsed = autotaskPsaTicketPostSchema.safeParse(raw);
+    if (!ticketParsed.success) {
+      logJson("warn", "autotask_psa_ticket_post_invalid_body", {
+        issues: ticketParsed.error.issues.length,
+      });
+      return j({ error: "Invalid request body" }, 400);
     }
+    const body = ticketParsed.data;
+    const title = body.title;
+    const idempotencyKey = body.idempotencyKey;
 
-    let companyId =
-      typeof body.companyId === "number" && Number.isFinite(body.companyId) ? body.companyId : NaN;
-    const firecomplyCustomerKey =
-      typeof body.firecomplyCustomerKey === "string" ? body.firecomplyCustomerKey.trim() : "";
-
-    if (Number.isFinite(companyId) && firecomplyCustomerKey) {
-      return j({ error: "Send either companyId or firecomplyCustomerKey, not both" }, 400);
-    }
+    let companyId = body.companyId ?? NaN;
+    const firecomplyCustomerKey = (body.firecomplyCustomerKey ?? "").trim();
 
     if (!Number.isFinite(companyId)) {
       if (!firecomplyCustomerKey) {
@@ -394,7 +363,7 @@ export async function handleAutotaskPsaRoutes(
         {
           companyID: companyId,
           title,
-          description: typeof body.description === "string" ? body.description : "",
+          description: body.description ?? "",
           queueID: queueId,
           priority,
           status,

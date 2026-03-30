@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface ScoreHistoryEntry {
   id: string;
@@ -26,9 +27,9 @@ export async function saveScoreSnapshot(
     customer_name: customerName,
     overall_score: overallScore,
     overall_grade: overallGrade,
-    category_scores: categoryScores,
+    category_scores: categoryScores as unknown as Json,
     findings_count: findingsCount,
-  } as Record<string, unknown>);
+  });
   if (error) console.warn("[score-history] save failed", error.message);
 }
 

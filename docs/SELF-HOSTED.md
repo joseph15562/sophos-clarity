@@ -6,7 +6,8 @@ This document is a **starting runbook** for teams that need dedicated infrastruc
 
 1. **Supabase-compatible stack** (or managed Supabase dedicated project): Postgres, Auth, Storage (if used), Edge Functions runtime.
 2. **Secrets**: AI provider keys (if AI reports enabled), email, Sophos Central proxy secrets — injected as function secrets, not in the repo.
-3. **Connector releases**: Host GitHub Release binaries or an internal artefact registry; set `VITE_CONNECTOR_VERSION_LATEST` to match the bundle you distribute.
+3. **`API_KEY_HMAC_SECRET`** (recommended): 32+ byte random string used to HMAC org service API keys. If unset, Edge Functions fall back to `SUPABASE_SERVICE_ROLE_KEY` so existing deployments keep working. **Rotation:** set the new secret, redeploy functions, then **re-issue** service keys from workspace settings (old signatures will no longer verify). Clear the old secret only after all keys are rotated.
+4. **Connector releases**: Host GitHub Release binaries or an internal artefact registry; set `VITE_CONNECTOR_VERSION_LATEST` to match the bundle you distribute.
 
 ## High-level steps
 
@@ -15,6 +16,11 @@ This document is a **starting runbook** for teams that need dedicated infrastruc
 3. Deploy the SPA (e.g. static hosting + CDN) and Edge Functions (`supabase functions deploy` or CI).
 4. Lock **CORS** and **Auth** providers to your domain; enable MFA policies per your org standard.
 5. Optional: disable cloud-only features (AI, external Geo-IP) via product flags if you add them for your build.
+
+## Observability (optional)
+
+- **Browser (Sentry):** If you use Sentry, set **`VITE_SENTRY_DSN`** on the static build. If unset, the app skips `Sentry.init` and sends nothing. Keep **PII off** in Sentry project settings; the client uses `sendDefaultPii: false`.
+- **Edge:** Functions emit structured **`logJson`** events for many routes. Point your Supabase log drain (e.g. Logflare) at saved searches / alerts on stable `message` values. Full naming convention and catalog: [observability.md](observability.md). **Edge Sentry** (or similar) is optional and should use a **separate DSN** from the SPA after policy review (PII, retention).
 
 ## Helm / Docker
 

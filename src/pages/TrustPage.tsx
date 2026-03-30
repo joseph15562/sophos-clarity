@@ -102,7 +102,7 @@ export default function TrustPage() {
                   href="https://ai.google.dev/terms"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-brand-accent hover:underline"
+                  className="text-foreground underline underline-offset-2 decoration-brand-accent hover:text-brand-accent"
                 >
                   Google AI terms
                 </a>

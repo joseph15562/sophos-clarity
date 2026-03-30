@@ -30,7 +30,8 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 
 import { Badge } from "@/components/ui/badge";
@@ -709,7 +710,6 @@ function PortalLoginForm({
 export default function ClientPortal() {
   const { tenantId: rawParam } = useParams<{ tenantId: string }>();
   const { setTheme, resolvedTheme } = useTheme();
-  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -901,9 +901,12 @@ export default function ClientPortal() {
             footerText: config.footer_text,
             showBranding: config.show_branding ?? true,
           });
+          const rawSections = Array.isArray(config.visible_sections)
+            ? config.visible_sections
+            : null;
           setVisibleSections(
-            Array.isArray(config.visible_sections)
-              ? config.visible_sections
+            rawSections
+              ? rawSections.filter((x): x is string => typeof x === "string")
               : ["score", "history", "findings", "compliance", "reports", "feedback"],
           );
         }
@@ -1002,10 +1005,7 @@ export default function ClientPortal() {
   }, [portalFirewalls]);
 
   const handleFeedbackSubmit = () => {
-    toast({
-      title: "Thank you",
-      description: "Your feedback has been submitted.",
-    });
+    toast.success("Thank you", { description: "Your feedback has been submitted." });
     setFeedbackStars(0);
     setFeedbackText("");
   };
@@ -1042,31 +1042,20 @@ export default function ClientPortal() {
     };
   }, [branding, customerName]);
 
-  const handleDownloadMarkdown = useCallback(
-    (entry: PortalSavedReportEntry) => {
-      if (!entry.markdown?.trim()) {
-        toast({
-          title: "Nothing to download",
-          description: "This report section is empty.",
-          variant: "destructive",
-        });
-        return;
-      }
-      const blob = new Blob([entry.markdown], { type: "text/markdown;charset=utf-8" });
-      saveAs(blob, `${sanitizeFilenameBase(entry.label)}.md`);
-    },
-    [toast],
-  );
+  const handleDownloadMarkdown = useCallback((entry: PortalSavedReportEntry) => {
+    if (!entry.markdown?.trim()) {
+      toast.error("Nothing to download", { description: "This report section is empty." });
+      return;
+    }
+    const blob = new Blob([entry.markdown], { type: "text/markdown;charset=utf-8" });
+    saveAs(blob, `${sanitizeFilenameBase(entry.label)}.md`);
+  }, []);
 
   const handleDownloadWord = useCallback(
     async (pkg: PortalSavedReportPackage, entry: PortalSavedReportEntry) => {
       const key = `${pkg.id}-${entry.id}-word`;
       if (!entry.markdown?.trim()) {
-        toast({
-          title: "Nothing to export",
-          description: "This report section is empty.",
-          variant: "destructive",
-        });
+        toast.error("Nothing to export", { description: "This report section is empty." });
         return;
       }
       setReportActionKey(key);
@@ -1075,33 +1064,25 @@ export default function ClientPortal() {
         const prefix = sanitizeFilenameBase(`${customerName}-${entry.label}`);
         saveAs(blob, `${prefix}.docx`);
       } catch {
-        toast({ title: "Word export failed", variant: "destructive" });
+        toast.error("Word export failed");
       } finally {
         setReportActionKey(null);
       }
     },
-    [toast, reportExportBranding, customerName],
+    [reportExportBranding, customerName],
   );
 
   const handleDownloadPdf = useCallback(
     (entry: PortalSavedReportEntry) => {
       if (!entry.markdown?.trim()) {
-        toast({
-          title: "Nothing to print",
-          description: "This report section is empty.",
-          variant: "destructive",
-        });
+        toast.error("Nothing to print", { description: "This report section is empty." });
         return;
       }
       const inner = buildReportHtml(entry.markdown);
       const html = buildPdfHtml(inner, entry.label, reportExportBranding, { theme: "light" });
       const w = window.open("", "_blank");
       if (!w) {
-        toast({
-          title: "Pop-up blocked",
-          description: "Allow pop-ups to print or save as PDF.",
-          variant: "destructive",
-        });
+        toast.error("Pop-up blocked", { description: "Allow pop-ups to print or save as PDF." });
         return;
       }
       w.document.write(html);
@@ -1109,7 +1090,7 @@ export default function ClientPortal() {
       w.focus();
       setTimeout(() => w.print(), 300);
     },
-    [toast, reportExportBranding],
+    [reportExportBranding],
   );
 
   if (loading || !authChecked) {
@@ -1895,10 +1876,11 @@ export default function ClientPortal() {
                   </p>
                 </div>
                 {portalSavedReports.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-2">
-                    No saved reports are available yet. When your MSP generates and saves a report
-                    for this account in FireComply, it will appear here.
-                  </p>
+                  <EmptyState
+                    className="py-6"
+                    title="No saved reports yet"
+                    description={`When your MSP generates and saves a report for ${customerName} in FireComply, it will appear here.`}
+                  />
                 ) : (
                   <div className="space-y-4">
                     {portalSavedReports.map((pkg) => {

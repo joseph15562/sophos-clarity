@@ -68,7 +68,7 @@ describe("TeamDashboard", () => {
 
     await user.click(screen.getByRole("button", { name: /team dashboard/i }));
 
-    expect(screen.getByText(/no health checks in this team yet/i)).toBeVisible();
+    expect(screen.getByText(/no health checks yet/i)).toBeVisible();
   });
 
   it("renders score cards with data", async () => {

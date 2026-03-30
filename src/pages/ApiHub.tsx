@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
@@ -34,6 +35,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ApiDocumentation } from "@/components/ApiDocumentation";
+import { EmptyState } from "@/components/EmptyState";
 import { getLatestConnectorVersion, isConnectorVersionOutdated } from "@/lib/connector-version";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -837,10 +839,21 @@ function WebhooksTab() {
       });
   }, [org?.id]);
 
-  const saveWebhookUrl = async () => {
+  const saveWebhookMutation = useMutation({
+    mutationFn: async (url: string) => {
+      if (!org?.id) throw new Error("No organisation");
+      const { error } = await supabase
+        .from("organisations")
+        .update({ webhook_url: url })
+        .eq("id", org.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, url) => setSavedUrl(url),
+  });
+
+  const saveWebhookUrl = () => {
     if (!org?.id) return;
-    await supabase.from("organisations").update({ webhook_url: webhookUrl }).eq("id", org.id);
-    setSavedUrl(webhookUrl);
+    saveWebhookMutation.mutate(webhookUrl);
   };
 
   const toggle = (id: string) =>
@@ -914,22 +927,23 @@ function WebhooksTab() {
         </div>
         <div className="divide-y divide-border/40">
           {deliveries.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted-foreground space-y-3 max-w-lg mx-auto">
-              <p>
-                No webhook deliveries logged yet. Rows appear when outbound webhooks run and write
-                to the <strong className="text-foreground">audit log</strong>.
-              </p>
-              <p className="text-xs leading-relaxed">
-                Trace activity in Assess → workspace → Settings →{" "}
-                <WorkspacePanelLink
-                  section="audit"
-                  className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
-                >
-                  Activity Log
-                </WorkspacePanelLink>
-                .
-              </p>
-            </div>
+            <EmptyState
+              className="py-8 px-5 max-w-lg mx-auto"
+              title="No webhook deliveries yet"
+              description="Rows appear when outbound webhooks run and write to the audit log."
+              action={
+                <p className="text-xs text-muted-foreground leading-relaxed text-center max-w-md">
+                  Trace activity in Assess → workspace → Settings →{" "}
+                  <WorkspacePanelLink
+                    section="audit"
+                    className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+                  >
+                    Activity Log
+                  </WorkspacePanelLink>
+                  .
+                </p>
+              }
+            />
           ) : (
             deliveries.map((d) => (
               <div key={d.id} className="flex items-center gap-4 px-5 py-3 text-sm">
@@ -1109,10 +1123,11 @@ function AgentsTab() {
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
                 </div>
               ) : activityRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  No submissions yet. After the agent uploads a config, each run appears here with
-                  score and time.
-                </p>
+                <EmptyState
+                  className="py-6"
+                  title="No submissions yet"
+                  description="After the agent uploads a config, each run appears here with score and time."
+                />
               ) : (
                 <div className="rounded-xl border border-border/50 overflow-hidden">
                   <table className="w-full text-xs">
@@ -1159,21 +1174,29 @@ function AgentsTab() {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
         </div>
       ) : realAgents.length === 0 ? (
-        <div className={`${GLASS} p-8 text-center space-y-3 max-w-lg mx-auto`}>
-          <Server className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-foreground mb-1">No agents deployed</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Register and download installers from Assess → workspace panel → Settings →{" "}
-            <WorkspacePanelLink section="agents">FireComply Connector Agents</WorkspacePanelLink>.
-            After deployment, monitor the fleet from{" "}
-            <Link
-              to="/command"
-              className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
-            >
-              Fleet
-            </Link>
-            .
-          </p>
+        <div className={GLASS}>
+          <EmptyState
+            className="py-10 px-5 max-w-lg mx-auto"
+            icon={<Server className="h-6 w-6 text-muted-foreground" />}
+            title="No agents deployed"
+            description="Register and download installers from the workspace settings, then monitor the fleet from Fleet Command."
+            action={
+              <p className="text-xs text-muted-foreground leading-relaxed text-center max-w-md">
+                Assess → workspace → Settings →{" "}
+                <WorkspacePanelLink section="agents">
+                  FireComply Connector Agents
+                </WorkspacePanelLink>
+                . After deployment, open{" "}
+                <Link
+                  to="/command"
+                  className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+                >
+                  Fleet
+                </Link>
+                .
+              </p>
+            }
+          />
         </div>
       ) : (
         <div className={`${GLASS} overflow-hidden`}>

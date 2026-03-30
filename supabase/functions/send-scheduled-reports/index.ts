@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { escapeHtml } from "../_shared/email.ts";
 import { safeDbError, safeError } from "../_shared/db.ts";
+import { logJson } from "../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -172,13 +173,15 @@ async function sendEmail(
 
     if (!resp.ok) {
       const body = await resp.text();
-      console.error("[send-scheduled-reports] Resend error:", resp.status, body);
+      logJson("error", "send_scheduled_reports_resend", { status: resp.status, bodyPrefix: body.slice(0, 500) });
       return { success: false, error: "Email delivery failed" };
     }
 
     return { success: true };
   } catch (err) {
-    console.error("[send-scheduled-reports] sendEmail error:", err);
+    logJson("error", "send_scheduled_reports_send_email", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { success: false, error: "Email delivery failed" };
   }
 }
@@ -293,15 +296,30 @@ serve(async (req: Request) => {
 
   const results: Array<{ id: string; name: string; success: boolean; error?: string }> = [];
 
+  const orgIds = [...new Set(dueReports.map((r) => r.org_id))];
+  const { data: subsRows } = await sb
+    .from("agent_submissions")
+    .select("full_analysis, customer_name, org_id, created_at")
+    .in("org_id", orgIds)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(5000, orgIds.length * 8));
+
+  const submissionsByOrg = new Map<string, { full_analysis: unknown; customer_name: unknown }[]>();
+  for (const row of subsRows ?? []) {
+    const oid = row.org_id as string;
+    const list = submissionsByOrg.get(oid) ?? [];
+    if (list.length < 5) {
+      list.push({
+        full_analysis: row.full_analysis,
+        customer_name: row.customer_name,
+      });
+      submissionsByOrg.set(oid, list);
+    }
+  }
+
   for (const report of dueReports) {
     try {
-      // Get latest assessment data for the org
-      const { data: submissions } = await sb
-        .from("agent_submissions")
-        .select("full_analysis, customer_name")
-        .eq("org_id", report.org_id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const submissions = submissionsByOrg.get(report.org_id) ?? [];
 
       // Extract findings from the latest submissions
       const allFindings: Finding[] = [];

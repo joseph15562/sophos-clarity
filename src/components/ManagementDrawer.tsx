@@ -8,6 +8,10 @@ import {
   Suspense,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useOrgPsaIntegrationFlagsQuery } from "@/hooks/queries/use-org-psa-integration-query";
+import { useOrgSubmissionRetentionQuery } from "@/hooks/queries/use-org-submission-retention-query";
+import { queryKeys } from "@/hooks/queries/keys";
 import {
   X,
   LayoutDashboard,
@@ -59,7 +63,8 @@ import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
 import { useCompanyLogo } from "@/hooks/use-company-logo";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import type { LoadSavedReportArgs } from "@/components/SavedReportsLibrary";
 
 const TenantDashboard = lazy(() =>
   import("@/components/TenantDashboard").then((m) => ({ default: m.TenantDashboard })),
@@ -221,7 +226,7 @@ interface Props {
   analysisResults: Record<string, AnalysisResult>;
   customerName: string;
   environment: string;
-  onLoadReports: (args: unknown) => void;
+  onLoadReports: (args: LoadSavedReportArgs) => void;
   savedReportsTrigger?: number;
   hasFiles: boolean;
   initialTab?: TabId;
@@ -315,28 +320,7 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
   const [confirmText, setConfirmText] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleted, setDeleted] = useState(false);
-  const [submissionRetentionDays, setSubmissionRetentionDays] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!org?.id) {
-      setSubmissionRetentionDays(null);
-      return;
-    }
-    let cancelled = false;
-    void supabase
-      .from("organisations")
-      .select("submission_retention_days")
-      .eq("id", org.id)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled && data) {
-          setSubmissionRetentionDays(data.submission_retention_days ?? null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [org?.id]);
+  const { data: submissionRetentionDays = null } = useOrgSubmissionRetentionQuery(org?.id);
 
   const handleDelete = async () => {
     const id = org?.id;
@@ -546,7 +530,6 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
 
 function CompanyLogoSettings() {
   const { logoUrl, setLogo, saving, canEdit } = useCompanyLogo();
-  const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(
@@ -554,21 +537,17 @@ function CompanyLogoSettings() {
       const file = e.target.files?.[0];
       if (!file) return;
       if (file.size > 512_000) {
-        toast({
-          title: "Logo too large",
-          description: "Maximum file size is 500 KB.",
-          variant: "destructive",
-        });
+        toast.error("Logo too large", { description: "Maximum file size is 500 KB." });
         return;
       }
       const reader = new FileReader();
       reader.onload = () => {
         setLogo(reader.result as string);
-        toast({ title: "Company logo updated" });
+        toast.success("Company logo updated");
       };
       reader.readAsDataURL(file);
     },
-    [setLogo, toast],
+    [setLogo],
   );
 
   if (!canEdit) return null;
@@ -617,7 +596,7 @@ function CompanyLogoSettings() {
               className="gap-1.5 text-[10px] h-7 text-muted-foreground hover:text-destructive"
               onClick={() => {
                 setLogo(null);
-                toast({ title: "Company logo removed" });
+                toast.success("Company logo removed");
               }}
               disabled={saving}
             >
@@ -661,6 +640,7 @@ export function ManagementDrawer({
   initialSettingsSection,
 }: Props) {
   const { org, isViewerOnly, canManageTeam } = useAuth();
+  const queryClient = useQueryClient();
   const { logoUrl: companyLogo } = useCompanyLogo();
   const [clientViewOpen, setClientViewOpen] = useState(false);
   const [clientViewAssessments, setClientViewAssessments] = useState<Assessment[]>([]);
@@ -720,12 +700,14 @@ export function ManagementDrawer({
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? visibleTabs[0]?.id ?? "reports");
   const [settingsExpandSignal, setSettingsExpandSignal] = useState(0);
   const [psaSetupModal, setPsaSetupModal] = useState<PsaSetupModalId | null>(null);
-  const [psaLinks, setPsaLinks] = useState({
+  const prevPsaSetupModal = useRef<PsaSetupModalId | null>(null);
+  const { data: psaFlags } = useOrgPsaIntegrationFlagsQuery(org?.id);
+  const psaLinks = psaFlags ?? {
     cwCloud: false,
     cwManage: false,
     autotask: false,
     serviceKeys: false,
-  });
+  };
   const settingsExpandBumpedForOpen = useRef<string | null>(null);
   const drawerBodyScrollRef = useRef<HTMLDivElement>(null);
 
@@ -802,42 +784,11 @@ export function ManagementDrawer({
   }, [open, initialTab, initialSettingsSection]);
 
   useEffect(() => {
-    if (!org?.id) {
-      setPsaLinks({ cwCloud: false, cwManage: false, autotask: false, serviceKeys: false });
-      return;
+    if (prevPsaSetupModal.current !== null && psaSetupModal === null && org?.id) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.org.psaIntegrationFlags(org.id) });
     }
-    let cancelled = false;
-    void Promise.all([
-      supabase
-        .from("connectwise_cloud_credentials")
-        .select("org_id")
-        .eq("org_id", org.id)
-        .maybeSingle(),
-      supabase
-        .from("connectwise_manage_credentials")
-        .select("org_id")
-        .eq("org_id", org.id)
-        .maybeSingle(),
-      supabase.from("autotask_psa_credentials").select("org_id").eq("org_id", org.id).maybeSingle(),
-      supabase
-        .from("org_service_api_keys")
-        .select("id")
-        .eq("org_id", org.id)
-        .is("revoked_at", null)
-        .limit(1),
-    ]).then(([cwC, cwM, at, keys]) => {
-      if (cancelled) return;
-      setPsaLinks({
-        cwCloud: !!cwC.data,
-        cwManage: !!cwM.data,
-        autotask: !!at.data,
-        serviceKeys: (keys.data?.length ?? 0) > 0,
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [org?.id, psaSetupModal]);
+    prevPsaSetupModal.current = psaSetupModal;
+  }, [psaSetupModal, org?.id, queryClient]);
 
   const currentTab = visibleTabs.find((t) => t.id === activeTab) ? activeTab : visibleTabs[0]?.id;
   const expandCtx = { canManageTeam, isViewerOnly, localMode };

@@ -6,8 +6,12 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { authenticateAgent } from "../_shared/auth.ts";
+import {
+  authenticateAgent as defaultAuthenticateAgent,
+  type AuthenticateAgentOpts,
+} from "../_shared/auth.ts";
 import { adminClient, json as jsonResponse, safeDbError, safeError } from "../_shared/db.ts";
+import { logJson } from "../_shared/logger.ts";
 import {
   sophosFetchFirewalls,
   sophosFetchTenants,
@@ -274,7 +278,16 @@ async function handleVerifyIdentity(
 
   const factorId = totpFactors[0].id;
 
-  const { data: challenge, error: challengeErr } = await db.auth.admin.mfa.createChallenge({
+  const mfaAdmin = db.auth.admin.mfa as unknown as {
+    createChallenge: (args: { factorId: string; userId: string }) => Promise<
+      { data: { id: string } | null; error: { message: string } | null }
+    >;
+    verify: (args: { factorId: string; challengeId: string; code: string }) => Promise<
+      { data: unknown; error: { message: string } | null }
+    >;
+  };
+
+  const { data: challenge, error: challengeErr } = await mfaAdmin.createChallenge({
     factorId,
     userId: targetUser.id,
   });
@@ -283,7 +296,7 @@ async function handleVerifyIdentity(
     return json({ error: "Failed to create MFA challenge" }, 500, corsHeaders);
   }
 
-  const { data: verification, error: verifyErr } = await db.auth.admin.mfa.verify({
+  const { data: verification, error: verifyErr } = await mfaAdmin.verify({
     factorId,
     challengeId: challenge.id,
     code: totpCode,
@@ -300,7 +313,7 @@ async function handleVerifyIdentity(
     resource_type: "agent",
     resource_id: agent.id as string,
     metadata: { email, agentName: agent.name },
-  }).then(() => {}).catch(() => {});
+  });
 
   return json({
     sessionToken: crypto.randomUUID(),
@@ -311,8 +324,21 @@ async function handleVerifyIdentity(
 
 // ── Main router ──
 
-serve(async (req: Request) => {
-  const corsHeaders = getCorsHeaders(req);
+export type ApiAgentRequestDeps = {
+  authenticateAgent?: (
+    apiKey: string,
+    opts?: AuthenticateAgentOpts,
+  ) => Promise<Record<string, unknown> | null>;
+  getCorsHeaders?: (req: Request) => Record<string, string>;
+};
+
+export async function handleApiAgentRequest(
+  req: Request,
+  deps: ApiAgentRequestDeps = {},
+): Promise<Response> {
+  const corsFn = deps.getCorsHeaders ?? getCorsHeaders;
+  const authAgent = deps.authenticateAgent ?? defaultAuthenticateAgent;
+  const corsHeaders = corsFn(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
@@ -325,10 +351,16 @@ serve(async (req: Request) => {
     const route = rest.split("/").filter(Boolean)[0] ?? "";
 
     const apiKey = req.headers.get("X-API-Key") ?? req.headers.get("x-api-key");
-    if (!apiKey) return json({ error: "Missing X-API-Key header" }, 401, corsHeaders);
+    if (!apiKey) {
+      logJson("warn", "api_agent_missing_api_key", { route });
+      return json({ error: "Missing X-API-Key header" }, 401, corsHeaders);
+    }
 
-    const agent = await authenticateAgent(apiKey);
-    if (!agent) return json({ error: "Invalid API key" }, 401, corsHeaders);
+    const agent = await authAgent(apiKey);
+    if (!agent) {
+      logJson("warn", "api_agent_invalid_api_key", { route });
+      return json({ error: "Invalid API key" }, 401, corsHeaders);
+    }
 
     if (req.method === "GET" && route === "config") return handleConfig(agent, corsHeaders);
     if (req.method === "GET" && route === "firewalls") return handleFirewalls(agent, corsHeaders);
@@ -344,8 +376,16 @@ serve(async (req: Request) => {
     if (req.method === "POST" && route === "submit") return handleSubmit(req, agent, corsHeaders);
     if (req.method === "POST" && route === "verify-identity") return handleVerifyIdentity(req, agent, corsHeaders);
 
+    logJson("warn", "api_agent_not_found", { method: req.method, route });
     return json({ error: "Not found" }, 404, corsHeaders);
   } catch (err) {
+    logJson("error", "api_agent_unhandled", {
+      detail: err instanceof Error ? err.message : String(err),
+    });
     return json({ error: safeError(err) }, 500, corsHeaders);
   }
-});
+}
+
+if (import.meta.main) {
+  serve((req: Request) => handleApiAgentRequest(req));
+}
