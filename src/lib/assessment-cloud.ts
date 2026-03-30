@@ -20,7 +20,15 @@ export async function saveAssessmentCloud(
   const scores = firewalls.map((f) => f.riskScore.overall);
   const overallScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   const overallGrade =
-    overallScore >= 90 ? "A" : overallScore >= 75 ? "B" : overallScore >= 60 ? "C" : overallScore >= 40 ? "D" : "F";
+    overallScore >= 90
+      ? "A"
+      : overallScore >= 75
+        ? "B"
+        : overallScore >= 60
+          ? "C"
+          : overallScore >= 40
+            ? "D"
+            : "F";
 
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return null;
@@ -52,11 +60,13 @@ export async function saveAssessmentCloud(
   };
 }
 
-export async function loadHistoryCloud(): Promise<AssessmentSnapshot[]> {
-  const { data, error } = await supabase
+export async function loadHistoryCloud(signal?: AbortSignal): Promise<AssessmentSnapshot[]> {
+  let q = supabase
     .from("assessments")
     .select("id, customer_name, environment, firewalls, overall_score, overall_grade, created_at")
     .order("created_at", { ascending: false });
+  if (signal) q = q.abortSignal(signal);
+  const { data, error } = await q;
 
   if (error || !data) return [];
 

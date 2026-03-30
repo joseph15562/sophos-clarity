@@ -1,13 +1,21 @@
 /** Prefer dedicated secret so API key HMAC can rotate independently of the service role. */
-const HASH_SECRET =
-  Deno.env.get("API_KEY_HMAC_SECRET") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const HASH_SECRET = Deno.env.get("API_KEY_HMAC_SECRET") ??
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const CENTRAL_ENCRYPTION_KEY = Deno.env.get("CENTRAL_ENCRYPTION_KEY") ?? "";
 
 export async function hmacHash(data: string): Promise<string> {
   const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey("raw", enc.encode(HASH_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(HASH_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
-  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(sig)).map((b) =>
+    b.toString(16).padStart(2, "0")
+  ).join("");
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -34,7 +42,9 @@ export function generateApiKey(): string {
 }
 
 async function centralDeriveKeyHkdf(): Promise<CryptoKey> {
-  if (!CENTRAL_ENCRYPTION_KEY) throw new Error("CENTRAL_ENCRYPTION_KEY not configured");
+  if (!CENTRAL_ENCRYPTION_KEY) {
+    throw new Error("CENTRAL_ENCRYPTION_KEY not configured");
+  }
   const enc = new TextEncoder();
   const baseKey = await crypto.subtle.importKey(
     "raw",
@@ -59,7 +69,9 @@ async function centralDeriveKeyHkdf(): Promise<CryptoKey> {
 
 /** Legacy key derivation — kept for decrypting data encrypted before HKDF migration. */
 async function centralDeriveKeyLegacy(): Promise<CryptoKey> {
-  if (!CENTRAL_ENCRYPTION_KEY) throw new Error("CENTRAL_ENCRYPTION_KEY not configured");
+  if (!CENTRAL_ENCRYPTION_KEY) {
+    throw new Error("CENTRAL_ENCRYPTION_KEY not configured");
+  }
   const enc = new TextEncoder();
   return crypto.subtle.importKey(
     "raw",
@@ -72,9 +84,15 @@ async function centralDeriveKeyLegacy(): Promise<CryptoKey> {
 
 function encryptWithKey(key: CryptoKey, plaintext: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  return crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(plaintext)).then(
+  return crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    new TextEncoder().encode(plaintext),
+  ).then(
     (ciphertext) => {
-      const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+      const combined = new Uint8Array(
+        iv.length + new Uint8Array(ciphertext).length,
+      );
       combined.set(iv);
       combined.set(new Uint8Array(ciphertext), iv.length);
       return btoa(String.fromCharCode(...combined));
@@ -113,7 +131,10 @@ export async function centralDecrypt(
     const legacyKey = await centralDeriveKeyLegacy();
     const plaintext = await decryptWithKey(legacyKey, encoded);
     if (onLegacyDecrypt) {
-      const reEncrypted = await encryptWithKey(await centralDeriveKeyHkdf(), plaintext);
+      const reEncrypted = await encryptWithKey(
+        await centralDeriveKeyHkdf(),
+        plaintext,
+      );
       await onLegacyDecrypt(reEncrypted);
     }
     return plaintext;

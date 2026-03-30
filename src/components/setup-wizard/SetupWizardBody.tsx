@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -24,8 +24,6 @@ import {
   Activity,
   ExternalLink,
   Plug,
-  Key,
-  RefreshCw,
   Bell,
   Globe,
   Lock,
@@ -60,18 +58,15 @@ import { markSetupComplete } from "./setup-storage";
 import { AGENT_STEP, BASE_STEPS, type Props } from "./wizard-types";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { BrandingStep } from "./steps/BrandingStep";
+import { CentralSetupStep } from "./steps/CentralSetupStep";
+import { ConnectorAgentStep } from "./steps/ConnectorAgentStep";
+import { GuidePreAiStep } from "./steps/GuidePreAiStep";
 import { GuideUploadStep } from "./steps/GuideUploadStep";
+import { GuideAiReportsStep } from "./steps/GuideAiReportsStep";
 import {
-  GuideStep,
-  Skeleton,
   SetupPreviewFrame,
   FeatureOverlay,
   FeatureButton,
-  MockGauge,
-  MockRadar,
-  MockSeverityBar,
-  MockInspectionPosture,
-  MockComplianceGrid,
   MockReportViewer,
   MockTenantDashboard,
   MockSavedReports,
@@ -93,10 +88,6 @@ import {
   MockScheduledReports,
   MockWebhookPanel,
 } from "./wizard-ui";
-
-const CentralIntegration = lazy(() =>
-  import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })),
-);
 
 export function SetupWizard({
   open,
@@ -210,406 +201,21 @@ export function SetupWizard({
               <BrandingStep branding={branding} onBrandingChange={onBrandingChange} />
             )}
 
-            {step.id === "central" && (
-              <div className="space-y-5">
-                <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr] items-start">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-brand-accent/15 bg-brand-accent/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-accent">
-                      Live estate enrichment
-                    </div>
-                    <h3 className="text-xl font-display font-black tracking-tight text-foreground mt-2">
-                      Connect Sophos Central
-                    </h3>
-                    <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
-                      Link your Sophos Central Partner or Tenant account to enrich reports with live
-                      firewall data, licence info, and alerts. You can skip this and connect later.
-                    </p>
-                    <SetupPreviewFrame
-                      title="Managed estate visibility"
-                      subtitle="Linking Sophos Central adds live tenancy, device, and enrichment context to your compliance workflow."
-                    >
-                      <MockTenantDashboard />
-                    </SetupPreviewFrame>
-                  </div>
-                  <div className="rounded-2xl border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(32,6,247,0.04),rgba(0,242,179,0.03))] dark:bg-[linear-gradient(135deg,rgba(32,6,247,0.10),rgba(0,242,179,0.04))] shadow-card">
-                    <Suspense fallback={<Skeleton />}>
-                      <CentralIntegration />
-                    </Suspense>
-                  </div>
-                </div>
-              </div>
-            )}
+            {step.id === "central" && <CentralSetupStep />}
 
-            {step.id === "connector-agent" && (
-              <div className="space-y-5">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
-                    FireComply Connector Agent
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    The Connector Agent is a lightweight desktop app that sits on your customer's
-                    network and automatically pulls firewall configs, runs security assessments, and
-                    submits results back to FireComply — on a schedule, with no manual exports
-                    needed.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <GuideStep
-                    number={1}
-                    title="Register an agent"
-                    description="Open the Management Panel > Connector Agents > Register Agent. Enter the firewall details and schedule. An API key is generated for you."
-                    icon={<Key className="h-4 w-4" />}
-                    color="text-[#2006F7]"
-                  />
-                  <GuideStep
-                    number={2}
-                    title="Download & install"
-                    description="Download the FireComply Connector for Windows, macOS, or Linux. Install it on a machine that can reach the firewall's admin interface."
-                    icon={<Download className="h-4 w-4" />}
-                    color="text-[#005BC8]"
-                  />
-                  <GuideStep
-                    number={3}
-                    title="Set up the agent"
-                    description="Paste your API key into the setup wizard, add the firewall's IP/hostname and API credentials, choose a schedule, and start monitoring."
-                    icon={<Plug className="h-4 w-4" />}
-                    color="text-[#6B5BFF]"
-                  />
-                  <GuideStep
-                    number={4}
-                    title="Automated assessments"
-                    description="The agent pulls configs via the Sophos XML API, runs the same deterministic analysis, and submits scores, findings, and drift detection to your dashboard."
-                    icon={<RefreshCw className="h-4 w-4" />}
-                    color="text-[#00F2B3]"
-                  />
-                </div>
-
-                {/* Mock agent card */}
-                <div className="rounded-xl border border-border/50 bg-card p-3 space-y-2">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    What you'll see in the dashboard
-                  </p>
-                  <div className="rounded-lg border border-border bg-muted/20 p-2.5 flex items-center gap-3">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#00F2B3]" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-foreground">HQ Primary Agent</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        Acme Corp · 192.168.1.1:4444
-                      </p>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-semibold">
-                      v22.0
-                    </span>
-                    <span className="text-[10px] font-bold text-[#00F2B3]">82/B</span>
-                    <span className="text-[9px] text-muted-foreground">2h ago</span>
-                  </div>
-                  <div className="rounded-lg border border-border bg-muted/20 p-2.5 flex items-center gap-3">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#F29400]" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-foreground">Branch Office Agent</p>
-                      <p className="text-[9px] text-muted-foreground">Acme Corp · 10.0.0.1:4444</p>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#F29400]/10 text-[#F29400] font-semibold">
-                      v21.0
-                    </span>
-                    <span className="text-[10px] font-bold text-[#F29400]">58/D</span>
-                    <span className="text-[9px] text-muted-foreground">6h ago</span>
-                  </div>
-                </div>
-
-                <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
-                  <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Optional:</strong> The agent is completely
-                    optional. You can always upload firewall configs manually instead. The agent
-                    just automates the process for ongoing monitoring.
-                  </p>
-                </div>
-              </div>
-            )}
+            {step.id === "connector-agent" && <ConnectorAgentStep />}
 
             {step.id === "guide-upload" && <GuideUploadStep />}
 
             {step.id === "guide-pre-ai" && (
-              <div className="space-y-5 relative">
-                {activeOverlay === "risk-score" && (
-                  <FeatureOverlay
-                    title="Risk Score & Grade"
-                    subtitle="A-F rating based on weighted security checks"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      <MockGauge score={54} grade="D" color="#F29400" />
-                      <MockRadar />
-                      <div className="w-full grid grid-cols-4 gap-1.5">
-                        {[
-                          { label: "Network", pct: 45 },
-                          { label: "Access", pct: 62 },
-                          { label: "Logging", pct: 80 },
-                          { label: "Hardening", pct: 35 },
-                        ].map((c) => (
-                          <div
-                            key={c.label}
-                            className="rounded border border-border bg-muted/20 p-2 text-center"
-                          >
-                            <p className="text-sm font-bold text-foreground">{c.pct}%</p>
-                            <p className="text-[8px] text-muted-foreground">{c.label}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Each security
-                        check is weighted by severity. The gauge shows the overall risk score
-                        (0–100) and assigns a letter grade. The radar chart breaks down scores by
-                        category.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "findings" && (
-                  <FeatureOverlay
-                    title="Findings & Severity"
-                    subtitle="Critical, high, medium, low categorised issues"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockSeverityBar />
-                    <div className="mt-4 space-y-1.5">
-                      {[
-                        {
-                          severity: "CRITICAL",
-                          title: "Default admin password unchanged",
-                          color: "#EA0022",
-                        },
-                        { severity: "HIGH", title: "WAN admin services exposed", color: "#F29400" },
-                        {
-                          severity: "MEDIUM",
-                          title: "DNS rebinding protection disabled",
-                          color: "#F8E300",
-                        },
-                        {
-                          severity: "LOW",
-                          title: "SNMP community string is 'public'",
-                          color: "#00F2B3",
-                        },
-                      ].map((f) => (
-                        <div
-                          key={f.title}
-                          className="flex items-center gap-2 rounded border border-border/50 bg-card p-2"
-                        >
-                          <span
-                            className="px-1.5 py-0.5 rounded text-[8px] font-bold"
-                            style={{ backgroundColor: f.color + "15", color: f.color }}
-                          >
-                            {f.severity}
-                          </span>
-                          <span className="text-[10px] text-foreground">{f.title}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Every parsed
-                        configuration item is checked against known security anti-patterns. Findings
-                        are categorised by severity and grouped by domain.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "inspection" && (
-                  <FeatureOverlay
-                    title="Inspection Posture"
-                    subtitle="IPS, web filter, app control, SSL/TLS coverage"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockInspectionPosture />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> FireComply
-                        examines every firewall rule to determine which security features (IPS, web
-                        filter, app control, SSL/TLS inspection) are applied and reports the
-                        coverage as a percentage of WAN-facing rules.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "compliance" && (
-                  <FeatureOverlay
-                    title="Compliance Mapping"
-                    subtitle="ISO 27001, NIST, PCI DSS, Cyber Essentials"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockComplianceGrid />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Firewall findings
-                        are mapped to controls from selected compliance frameworks. Each control is
-                        marked as pass, fail, or partial based on the configuration analysis.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-
-                <div className="space-y-1">
-                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
-                    Pre-AI Assessment (Instant)
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    As soon as you upload a config, FireComply runs a{" "}
-                    <strong className="text-foreground">deterministic analysis</strong> — no AI
-                    needed. Click each panel below to preview.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <FeatureButton
-                    icon={<Shield className="h-4 w-4" />}
-                    title="Risk Score & Grade"
-                    desc="A-F rating with radar chart and category scores"
-                    color="text-[#00F2B3]"
-                    onClick={() => setActiveOverlay("risk-score")}
-                  />
-                  <FeatureButton
-                    icon={<BarChart3 className="h-4 w-4" />}
-                    title="Findings & Severity"
-                    desc="Critical, high, medium, low categorised issues"
-                    color="text-[#EA0022]"
-                    onClick={() => setActiveOverlay("findings")}
-                  />
-                  <FeatureButton
-                    icon={<Eye className="h-4 w-4" />}
-                    title="Inspection Posture"
-                    desc="IPS, web filter, app control, SSL/TLS coverage"
-                    color="text-[#2006F7]"
-                    onClick={() => setActiveOverlay("inspection")}
-                  />
-                  <FeatureButton
-                    icon={<FileText className="h-4 w-4" />}
-                    title="Compliance Mapping"
-                    desc="ISO 27001, NIST, PCI DSS, Cyber Essentials"
-                    color="text-[#6B5BFF]"
-                    onClick={() => setActiveOverlay("compliance")}
-                  />
-                </div>
-
-                <div className="rounded-lg bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
-                  <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Why Pre-AI?</strong> The deterministic
-                    analysis is repeatable and consistent — same config always gives the same score.
-                    It's the baseline before AI adds narrative reporting.
-                  </p>
-                </div>
-              </div>
+              <GuidePreAiStep activeOverlay={activeOverlay} setActiveOverlay={setActiveOverlay} />
             )}
 
             {step.id === "guide-ai-reports" && (
-              <div className="space-y-5 relative">
-                {activeOverlay === "report-individual" && (
-                  <FeatureOverlay
-                    title="Individual Firewall Report"
-                    subtitle="Deep-dive analysis per firewall with finding-level detail"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockReportViewer type="individual" />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">What you get:</strong> A detailed,
-                        AI-generated narrative for each firewall covering every finding, remediation
-                        steps, and priority ranking. If linked to Central, live firmware and alert
-                        data is woven in.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "report-executive" && (
-                  <FeatureOverlay
-                    title="Executive Summary"
-                    subtitle="High-level overview for management"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockReportViewer type="executive" />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">What you get:</strong> A
-                        management-friendly document with key metrics, risk posture overview, and
-                        prioritised recommendations — ideal for board-level or stakeholder
-                        reporting.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "report-compliance" && (
-                  <FeatureOverlay
-                    title="Compliance Report"
-                    subtitle="Maps findings against selected compliance frameworks"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockReportViewer type="compliance" />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">What you get:</strong> Findings mapped
-                        to ISO 27001, NIST CSF, PCI DSS, or Cyber Essentials controls. Each control
-                        is assessed as pass, fail, or partial with remediation guidance.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-
-                <div className="space-y-1">
-                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
-                    AI-Powered Reports
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    After the Pre-AI assessment, generate{" "}
-                    <strong className="text-foreground">AI narrative reports</strong> for your
-                    customers. Click each to preview.
-                  </p>
-                </div>
-
-                <div className="space-y-2.5">
-                  <FeatureButton
-                    icon={<FileText className="h-4 w-4" />}
-                    title="Individual Firewall Report"
-                    desc="Deep-dive analysis per firewall with finding-level detail and remediation"
-                    color="text-[#2006F7]"
-                    onClick={() => setActiveOverlay("report-individual")}
-                  />
-                  <FeatureButton
-                    icon={<BarChart3 className="h-4 w-4" />}
-                    title="Executive Summary"
-                    desc="High-level overview for management with key metrics and recommendations"
-                    color="text-[#6B5BFF]"
-                    onClick={() => setActiveOverlay("report-executive")}
-                  />
-                  <FeatureButton
-                    icon={<Shield className="h-4 w-4" />}
-                    title="Compliance Report"
-                    desc="Maps findings against ISO 27001, NIST, PCI DSS, Cyber Essentials"
-                    color="text-[#005BC8]"
-                    onClick={() => setActiveOverlay("report-compliance")}
-                  />
-                </div>
-
-                <div className="rounded-lg bg-muted/30 border border-border p-3 flex items-start gap-2">
-                  <BarChart3 className="h-3.5 w-3.5 text-[#2006F7] shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Keyboard shortcuts:</strong>{" "}
-                    <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">
-                      Ctrl+G
-                    </kbd>{" "}
-                    generate all,{" "}
-                    <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">
-                      Ctrl+S
-                    </kbd>{" "}
-                    save,{" "}
-                    <kbd className="px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono">
-                      1-9
-                    </kbd>{" "}
-                    switch tabs
-                  </p>
-                </div>
-              </div>
+              <GuideAiReportsStep
+                activeOverlay={activeOverlay}
+                setActiveOverlay={setActiveOverlay}
+              />
             )}
 
             {step.id === "guide-optimisation" && (
@@ -1129,7 +735,13 @@ export function SetupWizard({
                 {/* Visual representation of the navbar button */}
                 <div className="rounded-lg border border-border overflow-hidden">
                   <div className="bg-[#001A47] px-4 py-2.5 flex items-center gap-3">
-                    <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5" />
+                    <img
+                      src="/sophos-icon-white.svg"
+                      alt=""
+                      className="h-5 w-5"
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <span className="text-[11px] font-bold text-white flex-1">
                       Sophos FireComply
                     </span>

@@ -1,5 +1,6 @@
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { GuestHaGroup } from "@/lib/guest-central-ha-groups";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 /** SE Health Check Sophos BP manual overrides — keep in sync with `SophosBestPractice` on this page. */
 export const SE_HEALTH_CHECK_BP_OVERRIDES_KEY = "se-health-check-bp-manual-overrides";
@@ -16,7 +17,11 @@ export const SE_HEALTH_CHECK_BP_NO_MANUAL_COMPLY_IDS = new Set<string>([
 ]);
 
 /** When set, `computeSophosBPScore` treats matching checks as pass if they are verify (export gap) only. */
-export function buildSeThreatResponseAckSet(mdrAck: boolean, ndrAck: boolean, dnsAck = false): Set<string> | undefined {
+export function buildSeThreatResponseAckSet(
+  mdrAck: boolean,
+  ndrAck: boolean,
+  dnsAck = false,
+): Set<string> | undefined {
   if (!mdrAck && !ndrAck && !dnsAck) return undefined;
   const s = new Set<string>();
   if (mdrAck) s.add("bp-mdr-feeds");
@@ -82,8 +87,8 @@ export function loadSeHealthCheckBpOverrides(): Set<string> {
   try {
     const raw = localStorage.getItem(SE_HEALTH_CHECK_BP_OVERRIDES_KEY);
     if (raw) return new Set(JSON.parse(raw) as string[]);
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("se-health-check-bp.load-overrides", e);
   }
   return new Set();
 }

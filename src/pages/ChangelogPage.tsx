@@ -24,13 +24,67 @@ export default function ChangelogPage() {
           <h2 className="text-sm font-semibold text-foreground">2026-03</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">ADR 0004 wave 2</strong>: management drawer
+              settings (invites, scheduled reports, portal save, passkeys, MSP checklist, fleet
+              agents list, playbook remediation sync) route Supabase reads/writes through shared{" "}
+              <code className="text-xs">src/hooks/queries</code> and{" "}
+              <code className="text-xs">src/lib/data</code> helpers with TanStack Query
+              invalidation.
+            </li>
+            <li>
+              <strong className="text-foreground">Quality &amp; platform</strong>:{" "}
+              <code className="text-xs">job_outbox</code> database table for future async jobs;{" "}
+              <code className="text-xs">portal-data</code> GET validated at the Edge (Zod + OpenAPI
+              limits); scheduled-report sender exports a testable handler with Deno coverage; main
+              score dial chart wrapped to skip unnecessary re-renders; unused-variable lint is
+              stricter in shared <code className="text-xs">src/lib</code> code.
+            </li>
+            <li>
+              <strong className="text-foreground">Frontend data boundary (ADR 0004)</strong>: org
+              cloud purge goes through shared helpers under{" "}
+              <code className="text-xs">src/lib/data/</code> with coordinated TanStack Query
+              invalidation (including client portal preview and regulatory digest). Self-hosted
+              operators can enable an optional{" "}
+              <strong className="text-foreground">portal read cache</strong> (Upstash Redis —{" "}
+              <code className="text-xs">docs/redis-pilot.md</code>). The curated{" "}
+              <strong className="text-foreground">engineering scorecard</strong> in{" "}
+              <code className="text-xs">docs/REVIEW.md</code> summarises platform maturity; the
+              weighted narrative moved meaningfully when architecture, scalability, and
+              documentation were rescored together; the March follow-on nudged the weighted score
+              again (see the scorecard note at the top of that doc).
+            </li>
+            <li>
+              <strong className="text-foreground">Workspace data purge</strong> uses a shared
+              mutation hook; optional <code className="text-xs">VITE_ANALYTICS_INGEST_URL</code> can
+              receive a <code className="text-xs">workspace_data_purged</code> event (see{" "}
+              <code className="text-xs">docs/SELF-HOSTED.md</code>). More TanStack Query loads
+              (agents, customer directory, team roster, PSA flags, submission retention, passkeys,
+              SE teams, SE health-check list) pass an{" "}
+              <strong className="text-foreground">abort signal</strong> so navigation cancels
+              in-flight requests. SE Health Check uploads show clearer copy when a file is not a
+              valid Sophos export; AI report failures point you to{" "}
+              <strong className="text-foreground">Retry analysis</strong> on the report panel.
+            </li>
+            <li>
+              <strong className="text-foreground">Compliance heatmap</strong> tooltips debounce
+              briefly so moving across cells stays smooth. Secondary brand images on shared / portal
+              / wizard previews use lazy loading where appropriate. Optional{" "}
+              <code className="text-xs">VITE_ANALYTICS_INGEST_URL</code> also receives{" "}
+              <code className="text-xs">spa_page_view</code> on navigation (see{" "}
+              <code className="text-xs">docs/SELF-HOSTED.md</code>).
+            </li>
+            <li>
               CI Playwright can run the signed-in workspace journey{" "}
               <strong className="text-foreground">without</strong> storing test passwords:
               loopback-only auth bypass when the bundle is built with{" "}
               <code className="text-xs">VITE_E2E_AUTH_BYPASS</code> (see{" "}
               <code className="text-xs">.env.example</code>). Optional{" "}
               <code className="text-xs">E2E_USER_*</code> secrets still exercise real sign-in.
-              Viewport checks (375 / 768 / 1024) cover home and What&apos;s new.
+              Viewport checks (375 / 768 / 1024) cover the public home and What&apos;s new pages;
+              <strong className="text-foreground"> signed-in</strong> viewport + accessibility smoke
+              covers workspace home and <strong className="text-foreground">Fleet Command</strong>{" "}
+              under the same bypass. Use <code className="text-xs">npm run test:e2e:ci</code>{" "}
+              locally so the preview bundle includes the bypass flag before running Playwright.
             </li>
             <li>
               Team invites: <strong className="text-foreground">Invite Staff</strong> loads pending
@@ -41,6 +95,23 @@ export default function ChangelogPage() {
               <strong className="text-foreground">empty state</strong> pattern (fleet, SE history,
               assessments, drift, customers, connectors, config history, audit log, notifications,
               portfolio trend chart, SE upload-requests dialog).
+            </li>
+            <li>
+              <strong className="text-foreground">Fleet Command</strong> loads the combined Central
+              / agent / links view via TanStack Query. Empty states are aligned on more lists
+              (playbook library, drawer history, client portal findings, firewall linking, licence
+              filters, control map, remediation playbooks). Firewall link saves, playbook completion
+              sync, passkey removal, org-wide data delete, and customer delete use mutations with
+              cache refresh. The connector <strong className="text-foreground">fleet panel</strong>{" "}
+              drops stale Supabase loads when you navigate away or request a newer batch.
+            </li>
+            <li>
+              <strong className="text-foreground">Management drawer</strong> Client View preview and
+              regulatory digest headlines use TanStack Query (loading and error states in the
+              preview dialog). <strong className="text-foreground">Fleet Command</strong> search is
+              debounced on large lists. SE Health Check{" "}
+              <strong className="text-foreground">PDF / ZIP</strong> downloads load the large PDF
+              engine only when you start an export.
             </li>
             <li>
               Integrators: OpenAPI and API Hub document{" "}
@@ -57,9 +128,15 @@ export default function ChangelogPage() {
               Ops / performance: <code className="text-xs">docs/PERF-EXPLAIN.md</code>,{" "}
               <code className="text-xs">docs/SCALE-TRIGGERS.md</code> (when to invest in
               Redis/queues/Gemini throttling), a minimal{" "}
-              <code className="text-xs">scripts/k6/smoke.js</code> harness (
-              <code className="text-xs">BASE_URL</code>), and a{" "}
-              <code className="text-xs">supabase/seed.sql</code> stub for future local fixtures.
+              <code className="text-xs">scripts/k6/smoke.js</code> and{" "}
+              <code className="text-xs">scripts/k6/sustained.js</code> harnesses (
+              <code className="text-xs">BASE_URL</code>), an optional GitHub Action when{" "}
+              <code className="text-xs">K6_BASE_URL</code> is configured, and a{" "}
+              <code className="text-xs">supabase/seed.sql</code> stub for future local fixtures. A
+              composite index on agent submission history speeds org-scoped time-range queries (
+              <code className="text-xs">EXPLAIN</code> on your data per{" "}
+              <code className="text-xs">docs/PERF-EXPLAIN.md</code>). Apply pending migrations with{" "}
+              <code className="text-xs">supabase db push</code> on each environment.
             </li>
             <li>
               Edge API: stricter validation on agent registration, connector heartbeat/submit, admin
@@ -84,10 +161,14 @@ export default function ChangelogPage() {
             </li>
             <li>
               <strong className="text-foreground">Report exports:</strong> PDF (browser print) and
-              Word downloads use Sophos-styled tables (navy headers, light row bands) and layout
-              that wraps wide firewall-rule columns instead of cutting off the right edge; Word uses
-              landscape with a fixed column grid. Export action labels keep full width in the
-              document toolbar.
+              Word downloads use Sophos-styled tables (navy headers, purple accent rule, light row
+              bands). PDF/print uses <strong className="text-foreground">A4 landscape</strong>{" "}
+              throughout (same idea as Word); wide rule tables (10+ columns) get denser typography.
+              Headers wrap by word; the top brand bar no longer clips dates. Fixed “page x of y”
+              footers that showed <strong className="text-foreground">0 of 0</strong> and cut off
+              the last lines are removed — margins come from <code className="text-xs">@page</code>{" "}
+              instead. Word stays landscape with a fixed column grid. Export action labels keep full
+              width in the document toolbar.
             </li>
             <li>
               SE Health Check: config upload request list loads via TanStack Query (cancellable

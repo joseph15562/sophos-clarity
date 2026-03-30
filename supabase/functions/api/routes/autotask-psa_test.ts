@@ -8,9 +8,16 @@ import {
 
 Deno.test("autotask-psa: company mapping put/delete schemas", () => {
   assertEquals(psaCompanyMappingPutSchema.safeParse({}).success, false);
-  assertEquals(psaCompanyMappingPutSchema.safeParse({ customerKey: "k", companyId: 1 }).success, true);
+  assertEquals(
+    psaCompanyMappingPutSchema.safeParse({ customerKey: "k", companyId: 1 })
+      .success,
+    true,
+  );
   assertEquals(psaCompanyMappingDeleteSchema.safeParse({}).success, false);
-  assertEquals(psaCompanyMappingDeleteSchema.safeParse({ customerKey: "k" }).success, true);
+  assertEquals(
+    psaCompanyMappingDeleteSchema.safeParse({ customerKey: "k" }).success,
+    true,
+  );
 });
 
 Deno.test("autotask-psa: credentials post requires core fields", () => {

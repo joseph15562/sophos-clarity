@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { Download, Scale } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import {
@@ -66,6 +66,8 @@ const STATUS_LABELS: Record<ControlStatus, string> = {
   na: "N/A",
 };
 
+const TOOLTIP_DEBOUNCE_MS = 48;
+
 export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props) {
   const [selectedFw, setSelectedFw] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{
@@ -82,26 +84,45 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
   } | null>(null);
   const [showGapsOnly, setShowGapsOnly] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showTooltip = useCallback(
+  const clearTooltipTimer = useCallback(() => {
+    if (tooltipTimerRef.current !== null) {
+      clearTimeout(tooltipTimerRef.current);
+      tooltipTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearTooltipTimer(), [clearTooltipTimer]);
+
+  const showTooltipDebounced = useCallback(
     (
       e: React.MouseEvent<HTMLTableCellElement>,
       ctrl: { controlName: string; evidence: string; status: ControlStatus },
     ) => {
-      const card = cardRef.current;
-      if (!card) return;
-      const cardRect = card.getBoundingClientRect();
-      const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setTooltip({
-        controlName: ctrl.controlName,
-        evidence: ctrl.evidence,
-        status: ctrl.status,
-        x: cellRect.left + cellRect.width / 2 - cardRect.left,
-        y: cellRect.top - cardRect.top,
-      });
+      clearTooltipTimer();
+      tooltipTimerRef.current = setTimeout(() => {
+        tooltipTimerRef.current = null;
+        const card = cardRef.current;
+        if (!card) return;
+        const cardRect = card.getBoundingClientRect();
+        const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setTooltip({
+          controlName: ctrl.controlName,
+          evidence: ctrl.evidence,
+          status: ctrl.status,
+          x: cellRect.left + cellRect.width / 2 - cardRect.left,
+          y: cellRect.top - cardRect.top,
+        });
+      }, TOOLTIP_DEBOUNCE_MS);
     },
-    [],
+    [clearTooltipTimer],
   );
+
+  const hideTooltip = useCallback(() => {
+    clearTooltipTimer();
+    setTooltip(null);
+  }, [clearTooltipTimer]);
 
   const firstResult = Object.values(analysisResults)[0];
   const mappings = useMemo<FrameworkMapping[]>(() => {
@@ -354,7 +375,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
       <div
         className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] shadow-card"
         style={{ background: "linear-gradient(145deg, rgba(90,0,255,0.04), rgba(0,237,255,0.02))" }}
-        onMouseLeave={() => setTooltip(null)}
+        onMouseLeave={hideTooltip}
       >
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"
@@ -436,14 +457,14 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                         onMouseEnter={
                           ctrl
                             ? (e) =>
-                                showTooltip(e, {
+                                showTooltipDebounced(e, {
                                   controlName: ctrl.controlName,
                                   evidence: ctrl.evidence,
                                   status,
                                 })
                             : undefined
                         }
-                        onMouseLeave={() => setTooltip(null)}
+                        onMouseLeave={hideTooltip}
                       >
                         <span
                           className="inline-flex items-center justify-center h-6 w-6 rounded-md text-[13px] font-black"

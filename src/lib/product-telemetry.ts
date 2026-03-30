@@ -1,4 +1,10 @@
-/** Product funnel events: console in dev; optional POST to VITE_ANALYTICS_INGEST_URL. */
+import { warnOptionalError } from "@/lib/client-error-feedback";
+
+/**
+ * Product funnel events: console in dev; optional POST to `VITE_ANALYTICS_INGEST_URL`.
+ * Point the URL at a PostHog HTTP API proxy, your own ingestor, or any JSON `POST` receiver;
+ * payload shape: `{ event, props, ts, path }` (`path` = current pathname when `window` exists).
+ */
 export function trackProductEvent(event: string, props?: Record<string, unknown>): void {
   if (import.meta.env.DEV) {
     console.debug("[product-telemetry]", event, props ?? {});
@@ -16,7 +22,7 @@ export function trackProductEvent(event: string, props?: Record<string, unknown>
     headers: { "Content-Type": "application/json" },
     body,
     keepalive: true,
-  }).catch(() => {
-    /* ignore network errors */
+  }).catch((e) => {
+    warnOptionalError("product-telemetry.ingest", e);
   });
 }

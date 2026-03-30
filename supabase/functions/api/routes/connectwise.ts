@@ -5,7 +5,12 @@ import {
   connectWisePartnerGetJson,
 } from "../../_shared/connectwise-cloud.ts";
 import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
-import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+  userClient,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
 
 function publicIdSuffix(id: string): string {
@@ -19,7 +24,9 @@ async function requireOrgAdmin(
   corsHeaders: Record<string, string>,
 ): Promise<{ orgId: string } | Response> {
   const authHeader = req.headers.get("authorization");
-  if (!authHeader) return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  if (!authHeader) {
+    return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  }
   const uc = userClient(authHeader);
   const {
     data: { user },
@@ -35,15 +42,21 @@ async function requireOrgAdmin(
 async function loadDecryptedCredentials(
   db: ReturnType<typeof adminClient>,
   orgId: string,
-): Promise<{ publicMemberId: string; subscriptionKey: string; scope: string } | null> {
+): Promise<
+  { publicMemberId: string; subscriptionKey: string; scope: string } | null
+> {
   const { data: row, error } = await db
     .from("connectwise_cloud_credentials")
     .select("encrypted_public_member_id, encrypted_subscription_key, scope")
     .eq("org_id", orgId)
     .maybeSingle();
   if (error || !row) return null;
-  const publicMemberId = await centralDecrypt(row.encrypted_public_member_id as string);
-  const subscriptionKey = await centralDecrypt(row.encrypted_subscription_key as string);
+  const publicMemberId = await centralDecrypt(
+    row.encrypted_public_member_id as string,
+  );
+  const subscriptionKey = await centralDecrypt(
+    row.encrypted_subscription_key as string,
+  );
   const scope = ((row.scope as string) || "Partner").trim() || "Partner";
   return { publicMemberId, subscriptionKey, scope };
 }
@@ -93,15 +106,23 @@ export async function handleConnectWiseRoutes(
     const raw = await req.json().catch(() => ({}));
     const parsed = connectwiseCredentialsPostSchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "connectwise_credentials_invalid_body", { issues: parsed.error.issues.length });
+      logJson("warn", "connectwise_credentials_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
       return j({ error: "Invalid request body" }, 400);
     }
     const publicMemberId = parsed.data.publicMemberId.trim();
     const subscriptionKey = parsed.data.subscriptionKey.trim();
-    const scope = parsed.data.scope === "Distributor" ? "Distributor" : "Partner";
+    const scope = parsed.data.scope === "Distributor"
+      ? "Distributor"
+      : "Partner";
 
     try {
-      const { expires_in } = await connectWiseFetchToken(publicMemberId, subscriptionKey, scope);
+      const { expires_in } = await connectWiseFetchToken(
+        publicMemberId,
+        subscriptionKey,
+        scope,
+      );
       const encPub = await centralEncrypt(publicMemberId);
       const encKey = await centralEncrypt(subscriptionKey);
       const suffix = publicIdSuffix(publicMemberId);
@@ -113,24 +134,26 @@ export async function handleConnectWiseRoutes(
         .eq("org_id", orgId)
         .maybeSingle();
 
-      const connectedAt =
-        existing && typeof (existing as { connected_at?: string }).connected_at === "string"
-          ? (existing as { connected_at: string }).connected_at
-          : now;
+      const connectedAt = existing &&
+          typeof (existing as { connected_at?: string }).connected_at ===
+            "string"
+        ? (existing as { connected_at: string }).connected_at
+        : now;
 
-      const { error: upErr } = await db.from("connectwise_cloud_credentials").upsert(
-        {
-          org_id: orgId,
-          encrypted_public_member_id: encPub,
-          encrypted_subscription_key: encKey,
-          scope,
-          public_id_suffix: suffix,
-          connected_at: connectedAt,
-          last_token_ok_at: now,
-          last_error: null,
-        },
-        { onConflict: "org_id" },
-      );
+      const { error: upErr } = await db.from("connectwise_cloud_credentials")
+        .upsert(
+          {
+            org_id: orgId,
+            encrypted_public_member_id: encPub,
+            encrypted_subscription_key: encKey,
+            scope,
+            public_id_suffix: suffix,
+            connected_at: connectedAt,
+            last_token_ok_at: now,
+            last_error: null,
+          },
+          { onConflict: "org_id" },
+        );
       if (upErr) return j({ error: safeDbError(upErr) }, 500);
       return j({ ok: true, expires_in, public_id_suffix: suffix, scope });
     } catch (e) {
@@ -140,7 +163,8 @@ export async function handleConnectWiseRoutes(
   }
 
   if (route === "credentials" && req.method === "DELETE") {
-    const { error: delErr } = await db.from("connectwise_cloud_credentials").delete().eq("org_id", orgId);
+    const { error: delErr } = await db.from("connectwise_cloud_credentials")
+      .delete().eq("org_id", orgId);
     if (delErr) return j({ error: safeDbError(delErr) }, 500);
     return j({ ok: true });
   }
@@ -157,12 +181,16 @@ export async function handleConnectWiseRoutes(
       );
       await db
         .from("connectwise_cloud_credentials")
-        .update({ last_token_ok_at: new Date().toISOString(), last_error: null })
+        .update({
+          last_token_ok_at: new Date().toISOString(),
+          last_error: null,
+        })
         .eq("org_id", orgId);
       return j({ ok: true, expires_in });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Token request failed";
-      await db.from("connectwise_cloud_credentials").update({ last_error: msg }).eq("org_id", orgId);
+      await db.from("connectwise_cloud_credentials").update({ last_error: msg })
+        .eq("org_id", orgId);
       return j({ error: msg }, 400);
     }
   }

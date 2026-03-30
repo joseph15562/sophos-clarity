@@ -1,11 +1,13 @@
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCustomerDirectoryQuery } from "@/hooks/queries/use-customer-directory-query";
 import { queryKeys } from "@/hooks/queries/keys";
+import { invalidateOrgScopedQueries } from "@/lib/invalidate-org-queries";
+import { toast } from "sonner";
 import type { CustomerDirectoryEntry, HealthStatus } from "@/lib/customer-directory";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
@@ -193,7 +195,6 @@ function CustomerManagementInner() {
   const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DemoCustomer | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [accessTarget, setAccessTarget] = useState<DemoCustomer | null>(null);
   const [portalConfigTarget, setPortalConfigTarget] = useState<DemoCustomer | null>(null);
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
@@ -208,26 +209,33 @@ function CustomerManagementInner() {
 
   const sectors = useMemo(() => [...new Set(customers.map((c) => c.sector))].sort(), [customers]);
 
-  const handleDelete = useCallback(
-    async (customer: DemoCustomer) => {
-      if (!org?.id) return;
-      setDeleting(true);
-      try {
-        const names = customer.originalNames ?? [customer.name];
-        for (const n of names) {
-          await supabase.from("assessments").delete().eq("org_id", org.id).eq("customer_name", n);
-          await supabase.from("saved_reports").delete().eq("org_id", org.id).eq("customer_name", n);
-        }
-        setDeleteTarget(null);
-        await queryClient.invalidateQueries({ queryKey: queryKeys.org.customerDirectory(org.id) });
-      } catch (err) {
-        console.warn("[CustomerManagement] delete failed", err);
-      } finally {
-        setDeleting(false);
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async (payload: { orgId: string; customer: DemoCustomer }) => {
+      const names = payload.customer.originalNames ?? [payload.customer.name];
+      for (const n of names) {
+        const { error: aErr } = await supabase
+          .from("assessments")
+          .delete()
+          .eq("org_id", payload.orgId)
+          .eq("customer_name", n);
+        if (aErr) throw aErr;
+        const { error: sErr } = await supabase
+          .from("saved_reports")
+          .delete()
+          .eq("org_id", payload.orgId)
+          .eq("customer_name", n);
+        if (sErr) throw sErr;
       }
     },
-    [org?.id, queryClient],
-  );
+    onSuccess: async (_data, { orgId }) => {
+      await invalidateOrgScopedQueries(queryClient, orgId);
+      setDeleteTarget(null);
+    },
+    onError: (err) => {
+      console.warn("[CustomerManagement] delete failed", err);
+      toast.error("Could not delete customer data.");
+    },
+  });
 
   const filtered = useMemo(() => {
     let list = customers;
@@ -598,17 +606,20 @@ function CustomerManagementInner() {
                 variant="outline"
                 size="sm"
                 onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
+                disabled={deleteCustomerMutation.isPending}
               >
                 Cancel
               </Button>
               <Button
                 size="sm"
                 className="bg-[#EA0022] hover:bg-[#EA0022]/90 text-white gap-1.5"
-                onClick={() => handleDelete(deleteTarget)}
-                disabled={deleting}
+                onClick={() => {
+                  if (!org?.id) return;
+                  deleteCustomerMutation.mutate({ orgId: org.id, customer: deleteTarget });
+                }}
+                disabled={deleteCustomerMutation.isPending}
               >
-                {deleting ? "Deleting…" : "Delete"}
+                {deleteCustomerMutation.isPending ? "Deleting…" : "Delete"}
               </Button>
             </div>
           </div>

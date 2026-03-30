@@ -1,34 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Fingerprint, Plus, Trash2, Smartphone, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-interface PasskeyCredential {
-  id: string;
-  credential_id: string;
-  device_type: string;
-  name: string;
-  created_at: string;
-}
+import { usePasskeysQuery } from "@/hooks/queries/use-passkeys-query";
+import { queryKeys } from "@/hooks/queries/keys";
+import { usePasskeyDeleteMutation } from "@/hooks/queries/use-passkey-delete-mutation";
 
 export function PasskeyManager() {
-  const [passkeys, setPasskeys] = useState<PasskeyCredential[]>([]);
+  const queryClient = useQueryClient();
+  const { data: passkeys = [], isPending: passkeysLoading } = usePasskeysQuery();
+  const deletePasskeyMutation = usePasskeyDeleteMutation();
   const [registering, setRegistering] = useState(false);
   const [newName, setNewName] = useState("");
-
-  const loadPasskeys = useCallback(async () => {
-    const { data } = await supabase
-      .from("passkey_credentials")
-      .select("id, credential_id, device_type, name, created_at")
-      .order("created_at", { ascending: false });
-    setPasskeys(data ?? []);
-  }, []);
-
-  useEffect(() => {
-    loadPasskeys();
-  }, [loadPasskeys]);
 
   const registerPasskey = async () => {
     setRegistering(true);
@@ -42,7 +28,6 @@ export function PasskeyManager() {
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       };
 
-      // Get registration options from server
       const optionsRes = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/register-options`,
         { method: "POST", headers: fnHeaders },
@@ -56,7 +41,6 @@ export function PasskeyManager() {
       }
       const options = await optionsRes.json();
 
-      // Use WebAuthn API
       const credential = await navigator.credentials.create({
         publicKey: {
           ...options,
@@ -79,7 +63,6 @@ export function PasskeyManager() {
       const attestationResponse = credential as PublicKeyCredential;
       const response = attestationResponse.response as AuthenticatorAttestationResponse;
 
-      // Verify with server
       const verifyRes = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/register-verify`,
         {
@@ -113,7 +96,7 @@ export function PasskeyManager() {
 
       toast.success("Passkey registered");
       setNewName("");
-      loadPasskeys();
+      void queryClient.invalidateQueries({ queryKey: queryKeys.passkeys.list() });
     } catch (err) {
       if (err instanceof Error && err.name !== "NotAllowedError") {
         toast.error(err.message);
@@ -122,14 +105,9 @@ export function PasskeyManager() {
     setRegistering(false);
   };
 
-  const deletePasskey = async (id: string) => {
+  const deletePasskey = (id: string) => {
     if (!confirm("Remove this passkey?")) return;
-    const { error } = await supabase.from("passkey_credentials").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Passkey removed");
-      loadPasskeys();
-    }
+    deletePasskeyMutation.mutate(id);
   };
 
   return (
@@ -141,7 +119,9 @@ export function PasskeyManager() {
         <span className="text-xs font-display font-semibold text-foreground">Passkeys</span>
       </div>
 
-      {passkeys.length > 0 ? (
+      {passkeysLoading ? (
+        <p className="text-[10px] text-muted-foreground">Loading passkeys…</p>
+      ) : passkeys.length > 0 ? (
         <div className="space-y-2">
           {passkeys.map((pk) => (
             <div
@@ -171,6 +151,7 @@ export function PasskeyManager() {
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-[#EA0022]"
                 onClick={() => deletePasskey(pk.id)}
+                disabled={deletePasskeyMutation.isPending}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>

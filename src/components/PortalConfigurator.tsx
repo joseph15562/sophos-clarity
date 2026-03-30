@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/hooks/queries";
+import { usePortalTenantBootstrapQuery } from "@/hooks/queries/use-portal-tenant-bootstrap-query";
+import { usePortalConfigSaveMutation } from "@/hooks/queries/use-portal-config-save-mutation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -146,38 +147,14 @@ export function PortalConfigurator({
     isPending: bootstrapPending,
     isError: bootstrapError,
     error: bootstrapErrorDetail,
-  } = useQuery({
-    queryKey: queryKeys.portal.tenantBootstrap(orgId),
-    enabled: Boolean(orgId),
-    queryFn: async () => {
-      const [{ data: agents }, { data: configs }] = await Promise.all([
-        supabase.from("agents").select("tenant_name").not("tenant_name", "is", null),
-        supabase.from("portal_config").select("*").eq("org_id", orgId),
-      ]);
+  } = usePortalTenantBootstrapQuery(orgId, initialTenantName, Boolean(orgId));
 
-      const tenantSet = new Set<string>();
-      for (const a of (agents ?? []) as Array<{ tenant_name: string | null }>) {
-        if (a.tenant_name) tenantSet.add(a.tenant_name);
-      }
-
-      const configList: PortalConfig[] = [];
-      for (const row of (configs ?? []) as Array<Record<string, unknown>>) {
-        const pc = rowToConfig(row);
-        configList.push(pc);
-        if (pc.tenant_name) tenantSet.add(pc.tenant_name);
-      }
-
-      if (initialTenantName) tenantSet.add(initialTenantName);
-
-      const sortedTenants = [...tenantSet].sort((a, b) =>
-        a.localeCompare(b, undefined, { sensitivity: "base" }),
-      );
-      return { tenants: sortedTenants, portalConfigs: configList };
-    },
-  });
+  const portalConfigs = useMemo(
+    () => (bootstrap?.configRows ?? []).map((row) => rowToConfig(row)),
+    [bootstrap?.configRows],
+  );
 
   const tenants = bootstrap?.tenants ?? [];
-  const portalConfigs = bootstrap?.portalConfigs ?? [];
 
   useEffect(() => {
     if (!bootstrap || !orgId) return;
@@ -252,55 +229,7 @@ export function PortalConfigurator({
     });
   }, []);
 
-  const { mutate: savePortalMutate, isPending: savePortalPending } = useMutation({
-    mutationFn: async (args: { config: PortalConfig; orgId: string }) => {
-      const { config, orgId: oid } = args;
-      const row = {
-        org_id: oid,
-        slug: config.slug || null,
-        tenant_name: config.tenant_name,
-        logo_url: config.logo_url,
-        company_name: config.company_name || null,
-        accent_color: config.accent_color || "#2006F7",
-        welcome_message: config.welcome_message || null,
-        sla_info: config.sla_info || null,
-        contact_email: config.contact_email || null,
-        contact_phone: config.contact_phone || null,
-        footer_text: config.footer_text || null,
-        visible_sections: config.visible_sections,
-        show_branding: config.show_branding,
-      };
-      if (config.id) {
-        const { error } = await supabase.from("portal_config").update(row).eq("id", config.id);
-        if (error) throw error;
-        return {} as { newId?: string };
-      }
-      const { data, error } = await supabase
-        .from("portal_config")
-        .insert(row)
-        .select("id")
-        .single();
-      if (error) throw error;
-      return { newId: data.id as string };
-    },
-    onSuccess: async (result, variables) => {
-      if (result.newId) update({ id: result.newId });
-      toast.success("Portal configuration saved");
-      onSaved?.();
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.portal.tenantBootstrap(variables.orgId),
-      });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.portal.configs(variables.orgId) });
-    },
-    onError: (error: unknown) => {
-      const e = error as { message?: string; code?: string };
-      const msg = e.message ?? "Save failed";
-      const isDupe = msg.includes("duplicate") || e.code === "23505";
-      toast.error(isDupe ? "Slug already taken" : "Save failed", {
-        description: isDupe ? "Another portal is already using this slug." : msg,
-      });
-    },
-  });
+  const savePortalMutation = usePortalConfigSaveMutation();
 
   const handleSave = useCallback(() => {
     if (!config || !orgId) return;
@@ -308,8 +237,40 @@ export function PortalConfigurator({
       setSlugError("Invalid slug format");
       return;
     }
-    savePortalMutate({ config, orgId });
-  }, [config, orgId, savePortalMutate]);
+    const row = {
+      org_id: orgId,
+      slug: config.slug || null,
+      tenant_name: config.tenant_name,
+      logo_url: config.logo_url,
+      company_name: config.company_name || null,
+      accent_color: config.accent_color || "#2006F7",
+      welcome_message: config.welcome_message || null,
+      sla_info: config.sla_info || null,
+      contact_email: config.contact_email || null,
+      contact_phone: config.contact_phone || null,
+      footer_text: config.footer_text || null,
+      visible_sections: config.visible_sections as string[],
+      show_branding: config.show_branding,
+    };
+    savePortalMutation.mutate(
+      { orgId, configId: config.id, row },
+      {
+        onSuccess: (result) => {
+          if (result.newId) update({ id: result.newId });
+          toast.success("Portal configuration saved");
+          onSaved?.();
+        },
+        onError: (error: unknown) => {
+          const e = error as { message?: string; code?: string };
+          const msg = e.message ?? "Save failed";
+          const isDupe = msg.includes("duplicate") || e.code === "23505";
+          toast.error(isDupe ? "Slug already taken" : "Save failed", {
+            description: isDupe ? "Another portal is already using this slug." : msg,
+          });
+        },
+      },
+    );
+  }, [config, orgId, savePortalMutation, update, onSaved]);
 
   const portalUrl = config?.slug ? `${window.location.origin}/portal/${config.slug}` : "";
 
@@ -749,15 +710,15 @@ export function PortalConfigurator({
                   <div className="flex justify-end pt-2">
                     <Button
                       onClick={handleSave}
-                      disabled={savePortalPending || !!slugError}
+                      disabled={savePortalMutation.isPending || !!slugError}
                       className="rounded-xl bg-gradient-to-r from-[#5A00FF] to-[#2006F7] text-white hover:opacity-90 gap-1.5"
                     >
-                      {savePortalPending ? (
+                      {savePortalMutation.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Save className="h-4 w-4" />
                       )}
-                      {savePortalPending ? "Saving..." : "Save Configuration"}
+                      {savePortalMutation.isPending ? "Saving..." : "Save Configuration"}
                     </Button>
                   </div>
                 </div>

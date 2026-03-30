@@ -1,5 +1,6 @@
 export const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-export const CONFIG_UPLOAD_FROM_EMAIL = Deno.env.get("REPORT_FROM_EMAIL") ?? "reports@firecomply.io";
+export const CONFIG_UPLOAD_FROM_EMAIL = Deno.env.get("REPORT_FROM_EMAIL") ??
+  "reports@firecomply.io";
 
 /** Escape user/DB text before interpolating into HTML email templates. */
 export function escapeHtml(str: string): string {
@@ -14,15 +15,30 @@ export function escapeHtml(str: string): string {
 export const MAX_CONFIG_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export const SOPHOS_ENTITY_TAGS = [
-  "Response", "FirewallRule", "NATRule", "IPHost", "IPHostGroup",
-  "Zone", "ServiceObject", "Interface", "DNSRequestRoute",
-  "LocalServiceACL", "DoSRule", "AntiVirus", "IPS", "WebFilter",
-  "ApplicationFilter", "SSLVPNPolicy", "IPSecConnection",
+  "Response",
+  "FirewallRule",
+  "NATRule",
+  "IPHost",
+  "IPHostGroup",
+  "Zone",
+  "ServiceObject",
+  "Interface",
+  "DNSRequestRoute",
+  "LocalServiceACL",
+  "DoSRule",
+  "AntiVirus",
+  "IPS",
+  "WebFilter",
+  "ApplicationFilter",
+  "SSLVPNPolicy",
+  "IPSecConnection",
 ];
 
 export function isValidSophosXml(xml: string): boolean {
   const trimmed = xml.trimStart();
-  if (!trimmed.startsWith("<?xml") && !trimmed.startsWith("<Response")) return false;
+  if (!trimmed.startsWith("<?xml") && !trimmed.startsWith("<Response")) {
+    return false;
+  }
   return SOPHOS_ENTITY_TAGS.some((tag) => xml.includes(`<${tag}`));
 }
 
@@ -35,10 +51,17 @@ export function isValidSophosXml(xml: string): boolean {
  * `ctaLabel` — plain text, escaped here.
  * `footNote` — may contain intentional HTML (e.g. <strong>), passed through as-is.
  */
-export function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUrl?: string, ctaLabel?: string, footNote?: string): string {
+export function buildSophosEmailHtml(
+  heading: string,
+  bodyContent: string,
+  ctaUrl?: string,
+  ctaLabel?: string,
+  footNote?: string,
+): string {
   const safeHeading = escapeHtml(heading);
   const safeCtaLabel = escapeHtml(ctaLabel ?? "Open");
-  const ctaBlock = ctaUrl ? `
+  const ctaBlock = ctaUrl
+    ? `
 <tr><td align="center" style="padding:8px 40px 16px 40px;">
   <table cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#2006F7;border-radius:25px;">
     <a href="${ctaUrl}" style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;font-family:'Zalando Sans','Segoe UI',Roboto,sans-serif;">${safeCtaLabel}</a>
@@ -46,8 +69,11 @@ export function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUr
 </td></tr>
 <tr><td align="center" style="padding:8px 40px 8px 40px;">
   <p style="margin:0;font-size:12px;color:#6A889B;line-height:1.5;">Do not share this link or forward this email.</p>
-</td></tr>` : "";
-  const footNoteBlock = footNote ? `<p style="margin:16px 0 0;font-size:13px;color:#6A889B;line-height:1.5;">${footNote}</p>` : "";
+</td></tr>`
+    : "";
+  const footNoteBlock = footNote
+    ? `<p style="margin:16px 0 0;font-size:13px;color:#6A889B;line-height:1.5;">${footNote}</p>`
+    : "";
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;font-family:'Zalando Sans','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#EDF2F9;" bgcolor="#EDF2F9">
@@ -66,7 +92,9 @@ export function buildSophosEmailHtml(heading: string, bodyContent: string, ctaUr
   </p>
 </td></tr>
 <tr><td style="padding:20px 40px;border-top:1px solid #BBCFDE;text-align:center;">
-  <p style="margin:0 0 8px;font-size:11px;color:#6A889B;line-height:1.5;">&copy; ${new Date().getFullYear()} Sophos Ltd. All rights reserved.</p>
+  <p style="margin:0 0 8px;font-size:11px;color:#6A889B;line-height:1.5;">&copy; ${
+    new Date().getFullYear()
+  } Sophos Ltd. All rights reserved.</p>
   <p style="margin:0;font-size:11px;color:#6A889B;line-height:1.5;">Sophos FireComply &bull; Sales Engineering Tools</p>
 </td></tr>
 </table></td></tr></table></body></html>`;
@@ -77,7 +105,9 @@ export async function sendConfigUploadEmail(
   subject: string,
   bodyHtml: string,
 ): Promise<{ success: boolean; error?: string }> {
-  if (!RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
+  if (!RESEND_API_KEY) {
+    return { success: false, error: "RESEND_API_KEY not configured" };
+  }
   try {
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -85,7 +115,12 @@ export async function sendConfigUploadEmail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from: CONFIG_UPLOAD_FROM_EMAIL, to: [to], subject, html: bodyHtml }),
+      body: JSON.stringify({
+        from: CONFIG_UPLOAD_FROM_EMAIL,
+        to: [to],
+        subject,
+        html: bodyHtml,
+      }),
     });
     if (!resp.ok) {
       const body = await resp.text();
@@ -99,7 +134,12 @@ export async function sendConfigUploadEmail(
   }
 }
 
-export function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, expiresDate: string, contactName?: string): string {
+export function buildCustomerUploadEmailHtml(
+  uploadUrl: string,
+  seName: string,
+  expiresDate: string,
+  contactName?: string,
+): string {
   const safeName = escapeHtml(contactName ?? "");
   const greeting = safeName ? `Hi ${safeName},` : "Hi,";
   const safeSe = escapeHtml(seName);
@@ -117,7 +157,12 @@ export function buildCustomerUploadEmailHtml(uploadUrl: string, seName: string, 
   );
 }
 
-export function buildSeNotificationEmailHtml(customerName: string, clarityUrl: string, centralNote = "", seName = ""): string {
+export function buildSeNotificationEmailHtml(
+  customerName: string,
+  clarityUrl: string,
+  centralNote = "",
+  seName = "",
+): string {
   const label = escapeHtml(customerName || "A customer");
   const greeting = seName ? `Hi ${escapeHtml(seName)},` : "Hi,";
   return buildSophosEmailHtml(
@@ -130,7 +175,10 @@ ${centralNote}<p style="margin:0 0 20px;">Open Sophos FireComply to run the heal
   );
 }
 
-export function buildReminderEmailHtml(uploadUrl: string, expiresDate: string): string {
+export function buildReminderEmailHtml(
+  uploadUrl: string,
+  expiresDate: string,
+): string {
   return buildSophosEmailHtml(
     "Reminder: Upload Pending",
     `<p style="margin:0 0 20px;">Hi,</p>

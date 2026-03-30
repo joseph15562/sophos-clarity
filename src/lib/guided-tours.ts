@@ -1,5 +1,6 @@
 import { driver, type DriveStep, type Driver } from "driver.js";
 import "driver.js/dist/driver.css";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 export interface TourCallbacks {
   openDrawer?: () => void;
@@ -1040,7 +1041,8 @@ const MICRO_TOUR_PREFIX = "firecomply-micro-tour-tab-";
 function hasMicroTourRun(tab: string): boolean {
   try {
     return localStorage.getItem(MICRO_TOUR_PREFIX + tab) === "1";
-  } catch {
+  } catch (e) {
+    warnOptionalError("guided-tours.hasMicroTourRun", e);
     return false;
   }
 }
@@ -1048,8 +1050,8 @@ function hasMicroTourRun(tab: string): boolean {
 function markMicroTourRun(tab: string): void {
   try {
     localStorage.setItem(MICRO_TOUR_PREFIX + tab, "1");
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("guided-tours.markMicroTourRun", e);
   }
 }
 

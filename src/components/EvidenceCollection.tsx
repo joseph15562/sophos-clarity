@@ -6,6 +6,7 @@ import {
   type FrameworkMapping,
   type ControlMapping,
 } from "@/lib/compliance-map";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 const STORAGE_KEY = "firecomply-evidence";
 
@@ -22,7 +23,8 @@ function loadEvidence(): EvidenceItem[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (e) {
+    warnOptionalError("EvidenceCollection.load", e);
     return [];
   }
 }
@@ -30,8 +32,8 @@ function loadEvidence(): EvidenceItem[] {
 function saveEvidence(items: EvidenceItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("EvidenceCollection.save", e);
   }
 }
 

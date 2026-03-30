@@ -4,6 +4,7 @@ import { streamChat } from "@/lib/stream-ai";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { marked } from "marked";
 import { SafeHtml } from "@/components/SafeHtml";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -161,8 +162,8 @@ export function AIChatPanel({
           didLoadFromStorage.current = true;
         }
       }
-    } catch {
-      // ignore parse errors
+    } catch (e) {
+      warnOptionalError("AIChatPanel.loadStorage", e);
     }
   }, [storageKey]);
 
@@ -180,8 +181,8 @@ export function AIChatPanel({
       };
       localStorage.setItem(storageKey, JSON.stringify(stored));
       setLastActive(stored.lastActive);
-    } catch {
-      // ignore quota errors
+    } catch (e) {
+      warnOptionalError("AIChatPanel.saveStorage", e);
     }
   }, [messages, storageKey]);
 
@@ -204,8 +205,8 @@ export function AIChatPanel({
     setLastActive(null);
     try {
       localStorage.removeItem(storageKey);
-    } catch {
-      // ignore
+    } catch (e) {
+      warnOptionalError("AIChatPanel.clearStorage", e);
     }
   }, [storageKey]);
 

@@ -1,5 +1,6 @@
 /** ConnectWise Cloud Services gateway (Partner / Distributor scope). */
-export const CONNECTWISE_CLOUD_API = "https://apis.cloudservices.connectwise.com";
+export const CONNECTWISE_CLOUD_API =
+  "https://apis.cloudservices.connectwise.com";
 const TOKEN_URL = `${CONNECTWISE_CLOUD_API}/auth/token`;
 
 /** Documented in Get Started; extend allowlist as vendor publishes more paths on this host. */
@@ -45,7 +46,10 @@ export async function connectWiseFetchToken(
     const msg = data.error_description || data.error || `HTTP ${res.status}`;
     throw new Error(msg);
   }
-  return { access_token: data.access_token, expires_in: data.expires_in ?? 3600 };
+  return {
+    access_token: data.access_token,
+    expires_in: data.expires_in ?? 3600,
+  };
 }
 
 export async function connectWisePartnerGetJson(
@@ -74,10 +78,9 @@ export async function connectWisePartnerGetJson(
     throw new Error(`ConnectWise API non-JSON response (HTTP ${res.status})`);
   }
   if (!res.ok) {
-    const err =
-      typeof data === "object" && data !== null && "message" in data
-        ? String((data as { message?: string }).message)
-        : `HTTP ${res.status}`;
+    const err = typeof data === "object" && data !== null && "message" in data
+      ? String((data as { message?: string }).message)
+      : `HTTP ${res.status}`;
     throw new Error(err);
   }
   return data;

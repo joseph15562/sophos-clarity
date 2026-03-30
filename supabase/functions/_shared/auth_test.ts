@@ -2,7 +2,9 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-secret-key-for-hmac");
 
-const { authenticateAgent, getOrgMembership, authenticateSE } = await import("./auth.ts");
+const { authenticateAgent, getOrgMembership, authenticateSE } = await import(
+  "./auth.ts"
+);
 type AuthAdminClient = import("./auth.ts").AuthAdminClient;
 const { hmacHash } = await import("./crypto.ts");
 
@@ -20,7 +22,9 @@ function agentsAdmin(
           return this;
         },
         limit(_n: number) {
-          return Promise.resolve(result) as Promise<{ data: unknown; error: unknown }>;
+          return Promise.resolve(result) as Promise<
+            { data: unknown; error: unknown }
+          >;
         },
       };
     },
@@ -44,7 +48,9 @@ function orgMembersAdmin(
           return this;
         },
         single() {
-          return Promise.resolve(result) as Promise<{ data: unknown; error: unknown }>;
+          return Promise.resolve(result) as Promise<
+            { data: unknown; error: unknown }
+          >;
         },
       };
     },
@@ -65,7 +71,9 @@ function seProfilesAdmin(
           return this;
         },
         maybeSingle() {
-          return Promise.resolve(result) as Promise<{ data: unknown; error: unknown }>;
+          return Promise.resolve(result) as Promise<
+            { data: unknown; error: unknown }
+          >;
         },
       };
     },
@@ -127,7 +135,9 @@ Deno.test("authenticateSE returns user and profile when stubbed chain succeeds",
     createUserClient: () => ({
       auth: {
         getUser: async () => ({
-          data: { user: { id: "user-1", user_metadata: { full_name: "Ignored" } } },
+          data: {
+            user: { id: "user-1", user_metadata: { full_name: "Ignored" } },
+          },
         }),
       },
     }),

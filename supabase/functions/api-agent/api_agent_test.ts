@@ -9,18 +9,27 @@ const stubCors = (): Record<string, string> => ({
 });
 
 Deno.test("handleApiAgentRequest OPTIONS returns 204 with CORS headers", async () => {
-  const req = new Request("https://example.supabase.co/functions/v1/api-agent/config", {
-    method: "OPTIONS",
-  });
+  const req = new Request(
+    "https://example.supabase.co/functions/v1/api-agent/config",
+    {
+      method: "OPTIONS",
+    },
+  );
   const res = await handleApiAgentRequest(req, { getCorsHeaders: stubCors });
   assertEquals(res.status, 204);
-  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:5173");
+  assertEquals(
+    res.headers.get("Access-Control-Allow-Origin"),
+    "http://localhost:5173",
+  );
 });
 
 Deno.test("handleApiAgentRequest rejects missing X-API-Key", async () => {
-  const req = new Request("https://example.supabase.co/functions/v1/api-agent/config", {
-    method: "GET",
-  });
+  const req = new Request(
+    "https://example.supabase.co/functions/v1/api-agent/config",
+    {
+      method: "GET",
+    },
+  );
   const res = await handleApiAgentRequest(req, { getCorsHeaders: stubCors });
   assertEquals(res.status, 401);
   const body = await res.json();
@@ -28,10 +37,13 @@ Deno.test("handleApiAgentRequest rejects missing X-API-Key", async () => {
 });
 
 Deno.test("handleApiAgentRequest rejects invalid API key", async () => {
-  const req = new Request("https://example.supabase.co/functions/v1/api-agent/config", {
-    method: "GET",
-    headers: { "X-API-Key": "bad" },
-  });
+  const req = new Request(
+    "https://example.supabase.co/functions/v1/api-agent/config",
+    {
+      method: "GET",
+      headers: { "X-API-Key": "bad" },
+    },
+  );
   const res = await handleApiAgentRequest(req, {
     getCorsHeaders: stubCors,
     authenticateAgent: async () => null,
@@ -54,10 +66,13 @@ Deno.test("handleApiAgentRequest GET config returns agent fields", async () => {
     tenant_id: "t1",
     tenant_name: "Tenant",
   };
-  const req = new Request("https://example.supabase.co/functions/v1/api-agent/config", {
-    method: "GET",
-    headers: { "X-API-Key": "ck_test" },
-  });
+  const req = new Request(
+    "https://example.supabase.co/functions/v1/api-agent/config",
+    {
+      method: "GET",
+      headers: { "X-API-Key": "ck_test" },
+    },
+  );
   const res = await handleApiAgentRequest(req, {
     getCorsHeaders: stubCors,
     authenticateAgent: async () => agent,

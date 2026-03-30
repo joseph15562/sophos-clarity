@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { resolveCustomerName } from "@/lib/customer-name";
+import { supabaseWithAbort } from "@/lib/supabase-with-abort";
 
 export type HealthStatus = "Healthy" | "At Risk" | "Critical" | "Overdue";
 
@@ -81,25 +82,40 @@ function daysAgoLabel(daysSince: number) {
 export async function fetchCustomerDirectory(
   orgId: string,
   orgDisplayName: string,
+  opts?: { signal?: AbortSignal },
 ): Promise<CustomerDirectoryEntry[]> {
+  const s = opts?.signal;
   const [assessRes, tenantRes, agentRes, fwRes, portalRes] = await Promise.all([
-    supabase
-      .from("assessments")
-      .select("*")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false }),
-    supabase.from("central_tenants").select("central_tenant_id, name").eq("org_id", orgId),
-    supabase
-      .from("agents")
-      .select(
-        "id, name, firewall_host, customer_name, tenant_name, last_score, last_grade, last_seen_at, status, hardware_model",
-      )
-      .eq("org_id", orgId),
-    supabase
-      .from("central_firewalls")
-      .select("central_tenant_id, hostname, name, firmware_version, model, status_json")
-      .eq("org_id", orgId),
-    supabase.from("portal_config").select("slug, tenant_name").eq("org_id", orgId),
+    supabaseWithAbort(
+      supabase.from("assessments").select("*").eq("org_id", orgId).order("created_at", {
+        ascending: false,
+      }),
+      s,
+    ),
+    supabaseWithAbort(
+      supabase.from("central_tenants").select("central_tenant_id, name").eq("org_id", orgId),
+      s,
+    ),
+    supabaseWithAbort(
+      supabase
+        .from("agents")
+        .select(
+          "id, name, firewall_host, customer_name, tenant_name, last_score, last_grade, last_seen_at, status, hardware_model",
+        )
+        .eq("org_id", orgId),
+      s,
+    ),
+    supabaseWithAbort(
+      supabase
+        .from("central_firewalls")
+        .select("central_tenant_id, hostname, name, firmware_version, model, status_json")
+        .eq("org_id", orgId),
+      s,
+    ),
+    supabaseWithAbort(
+      supabase.from("portal_config").select("slug, tenant_name").eq("org_id", orgId),
+      s,
+    ),
   ]);
 
   const assessments = (assessRes.data ?? []) as AssessmentRow[];

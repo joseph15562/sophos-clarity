@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useOrgAgentsQuery } from "@/hooks/queries/use-org-agents-query";
+import { useAgentSubmissionCounts7dQuery } from "@/hooks/queries/use-agent-submission-counts-7d-query";
+import { queryKeys } from "@/hooks/queries/keys";
 import {
   ChevronDown,
   ChevronRight,
@@ -81,6 +85,15 @@ function isEffectivelyOffline(a: Agent): boolean {
 }
 
 type FleetFilter = "all" | "attention" | "error" | "offline" | "outdated";
+
+/** Supabase query builders expose `abortSignal` in the real client; tests may omit it. */
+function withQueryAbort<T extends { abortSignal?: (s: AbortSignal) => T }>(
+  q: T,
+  signal?: AbortSignal,
+): T {
+  if (signal && typeof q.abortSignal === "function") return q.abortSignal(signal);
+  return q;
+}
 
 const SEV_COLORS: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
@@ -437,46 +450,28 @@ export function AgentFleetPanel({
   loadedLabels,
 }: AgentFleetPanelProps) {
   const { org, isGuest } = useAuth();
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const agentsQuery = useOrgAgentsQuery(org?.id ?? null);
+  const countsQuery = useAgentSubmissionCounts7dQuery(org?.id ?? null);
+  const agents = agentsQuery.data ?? [];
+  const loading = agentsQuery.isPending;
+  const submissionCounts7d = countsQuery.data ?? {};
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Record<string, Submission | null>>({});
   const [loadingSub, setLoadingSub] = useState<Record<string, boolean>>({});
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
   const [fleetFilter, setFleetFilter] = useState<FleetFilter>("all");
-  const [submissionCounts7d, setSubmissionCounts7d] = useState<Record<string, number>>({});
   const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const submissionsBatchAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
       for (const iv of pollIntervalsRef.current.values()) clearInterval(iv);
       pollIntervalsRef.current.clear();
+      submissionsBatchAbortRef.current?.abort();
     };
   }, []);
-
-  const loadAgents = useCallback(async () => {
-    if (!org?.id) return;
-    setLoading(true);
-    const { data } = await supabase.from("agents").select("*").order("customer_name").order("name");
-    setAgents(data ?? []);
-    const sevenAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: subRows } = await supabase
-      .from("agent_submissions")
-      .select("agent_id")
-      .eq("org_id", org.id)
-      .gte("created_at", sevenAgo);
-    const cmap: Record<string, number> = {};
-    for (const r of subRows ?? []) {
-      cmap[r.agent_id] = (cmap[r.agent_id] ?? 0) + 1;
-    }
-    setSubmissionCounts7d(cmap);
-    setLoading(false);
-  }, [org?.id]);
-
-  useEffect(() => {
-    loadAgents();
-  }, [loadAgents]);
 
   const agentsForUi = useMemo(() => {
     if (fleetFilter === "all") return agents;
@@ -532,35 +527,45 @@ export function AgentFleetPanel({
     });
     if (toFetch.length === 0) return;
 
+    submissionsBatchAbortRef.current?.abort();
+    const ac = new AbortController();
+    submissionsBatchAbortRef.current = ac;
+    const signal = ac.signal;
+
     setLoadingSub((p) => {
       const n = { ...p };
       for (const id of toFetch) n[id] = true;
       return n;
     });
 
-    const { data } = await supabase
-      .from("agent_submissions")
-      .select("*")
-      .in("agent_id", toFetch)
-      .order("created_at", { ascending: false });
+    try {
+      const q = supabase
+        .from("agent_submissions")
+        .select("*")
+        .in("agent_id", toFetch)
+        .order("created_at", { ascending: false });
+      const { data } = await withQueryAbort(q, signal);
+      if (signal.aborted) return;
 
-    const latestByAgent = new Map<string, Submission>();
-    for (const row of data ?? []) {
-      if (!latestByAgent.has(row.agent_id)) latestByAgent.set(row.agent_id, row);
-    }
-
-    setSubmissions((prev) => {
-      const n = { ...prev };
-      for (const id of toFetch) {
-        if (n[id] === undefined) n[id] = latestByAgent.get(id) ?? null;
+      const latestByAgent = new Map<string, Submission>();
+      for (const row of data ?? []) {
+        if (!latestByAgent.has(row.agent_id)) latestByAgent.set(row.agent_id, row);
       }
-      return n;
-    });
-    setLoadingSub((p) => {
-      const n = { ...p };
-      for (const id of toFetch) n[id] = false;
-      return n;
-    });
+
+      setSubmissions((prev) => {
+        const n = { ...prev };
+        for (const id of toFetch) {
+          if (n[id] === undefined) n[id] = latestByAgent.get(id) ?? null;
+        }
+        return n;
+      });
+    } finally {
+      setLoadingSub((p) => {
+        const n = { ...p };
+        for (const id of toFetch) n[id] = false;
+        return n;
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -633,7 +638,12 @@ export function AgentFleetPanel({
           setSubmissions((p) => ({ ...p, [agentId]: latest }));
           setScanRequested((p) => ({ ...p, [agentId]: false }));
           toast.success(`Scan complete — Score: ${latest.overall_score}/${latest.overall_grade}`);
-          loadAgents();
+          if (org?.id) {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.org.agents(org.id) });
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.org.agentSubmissionCounts7d(org.id),
+            });
+          }
           return;
         }
 

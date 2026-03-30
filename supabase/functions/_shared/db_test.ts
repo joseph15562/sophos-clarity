@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
-import { safeError, safeDbError } from "./db.ts";
+import { safeDbError, safeError } from "./db.ts";
 
 Deno.env.set("SUPABASE_URL", "https://test.supabase.co");
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-key");
@@ -26,7 +26,10 @@ Deno.test("safeError handles null/undefined", () => {
 });
 
 Deno.test("safeDbError returns generic message", () => {
-  const msg = safeDbError({ message: "relation 'users' does not exist", code: "42P01" });
+  const msg = safeDbError({
+    message: "relation 'users' does not exist",
+    code: "42P01",
+  });
   assertEquals(msg, "Database query failed");
 });
 

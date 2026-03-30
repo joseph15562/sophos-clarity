@@ -12,6 +12,28 @@ export const queryKeys = {
     submissionRetention: (orgId: string) => ["org", orgId, "submission_retention"] as const,
     /** Customer Management directory (tenants + assessments + agents + portal_config) */
     customerDirectory: (orgId: string) => ["org", orgId, "customer_directory"] as const,
+    /** Fleet Command — central_firewalls + assessments + agents + links + tenants + reports */
+    fleetBundle: (orgId: string) => ["org", orgId, "fleet_bundle"] as const,
+    /** Playbook / remediation panel — remediation_status rows (invalidate after upsert/delete) */
+    remediationStatus: (orgId: string) => ["org", orgId, "remediation_status"] as const,
+    /** MSP first-time setup checklist — central + counts + portal slug */
+    mspSetupStatus: (orgId: string) => ["org", orgId, "msp_setup_status"] as const,
+    /** Agent submissions in last 7 days — per-agent counts (AgentFleetPanel) */
+    agentSubmissionCounts7d: (orgId: string) =>
+      ["org", orgId, "agent_submission_counts_7d"] as const,
+    /** Management drawer Client View preview — assessments + score_history */
+    clientPortalPreview: (orgKey: string, guest: boolean, fingerprint: string) =>
+      ["org", orgKey, "client_portal_preview", guest ? "guest" : "member", fingerprint] as const,
+    /** Invalidate every Client View preview variant for an org (e.g. after purge). */
+    clientPortalPreviewAll: (orgId: string) => ["org", orgId, "client_portal_preview"] as const,
+  },
+  /** Regulatory digest rows (RLS-scoped; global key — invalidate rarely) */
+  regulatoryDigest: {
+    recent: () => ["regulatory_updates", "recent"] as const,
+  },
+  /** Current user passkeys list (settings drawer) */
+  passkeys: {
+    list: () => ["passkeys", "list"] as const,
   },
   seTeams: {
     all: ["se-teams"] as const,

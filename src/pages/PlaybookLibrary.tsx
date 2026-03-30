@@ -26,7 +26,10 @@ import {
   Cloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
+import { useRemediationPlaybookToggleMutation } from "@/hooks/queries/use-remediation-status-mutations";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { BEST_PRACTICE_CHECKS, MODULES, type BestPracticeCheck } from "@/lib/sophos-licence";
 import { ALL_FRAMEWORK_NAMES } from "@/lib/compliance-map";
@@ -171,6 +174,7 @@ function deriveSteps(recommendation: string): string[] {
 function PlaybookLibraryInner() {
   const { theme, setTheme } = useTheme();
   const { org } = useAuth();
+  const { mutate: syncPlaybookRemediation } = useRemediationPlaybookToggleMutation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const appliedHighlightRef = useRef(false);
@@ -206,8 +210,8 @@ function PlaybookLibraryInner() {
             next.add(row.playbook_id);
             try {
               localStorage.setItem(`firecomply_playbook_completed_${row.playbook_id}`, "true");
-            } catch {
-              /* ignore */
+            } catch (e) {
+              warnOptionalError("PlaybookLibrary.markCompletedLocal", e);
             }
           }
           return next;
@@ -277,23 +281,12 @@ function PlaybookLibraryInner() {
         localStorage.setItem(`firecomply_playbook_completed_${id}`, "true");
       }
       if (org?.id) {
-        if (adding) {
-          void supabase.from("remediation_status").upsert(
-            {
-              org_id: org.id,
-              playbook_id: id,
-              customer_hash: REMEDIATION_CUSTOMER_HASH,
-            },
-            { onConflict: "org_id,customer_hash,playbook_id" },
-          );
-        } else {
-          void supabase
-            .from("remediation_status")
-            .delete()
-            .eq("org_id", org.id)
-            .eq("customer_hash", REMEDIATION_CUSTOMER_HASH)
-            .eq("playbook_id", id);
-        }
+        syncPlaybookRemediation({
+          orgId: org.id,
+          adding,
+          playbookId: id,
+          customerHash: REMEDIATION_CUSTOMER_HASH,
+        });
       }
       return next;
     });
@@ -563,9 +556,13 @@ function PlaybookLibraryInner() {
             })}
 
             {filtered.length === 0 && (
-              <div className="col-span-full text-center py-16">
-                <Search className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">No playbooks match your search.</p>
+              <div className="col-span-full">
+                <EmptyState
+                  className="!py-12"
+                  icon={<Search className="h-6 w-6 text-muted-foreground/50" />}
+                  title="No playbooks match your search"
+                  description="Try a different category, difficulty, or clear the search box."
+                />
               </div>
             )}
           </div>

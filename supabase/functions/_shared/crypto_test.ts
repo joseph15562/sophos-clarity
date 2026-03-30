@@ -1,9 +1,13 @@
-import { assertEquals, assertNotEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertNotEquals,
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-secret-key-for-hmac");
 Deno.env.set("CENTRAL_ENCRYPTION_KEY", "test-central-key-32chars!!");
 
-const { hmacHash, hmacVerify, generateApiKey, centralEncrypt, centralDecrypt } = await import("./crypto.ts");
+const { hmacHash, hmacVerify, generateApiKey, centralEncrypt, centralDecrypt } =
+  await import("./crypto.ts");
 
 Deno.test("hmacHash returns a 64-char hex string", async () => {
   const hash = await hmacHash("hello");

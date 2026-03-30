@@ -28,6 +28,8 @@ Ship **(1)** first (or land **(1)** with **CI secrets** / mocks decided). Run **
 
 **Implementation notes:** Upload fixture → Executive one-pager → assert export controls; **Word** download asserted in CI (PDF is print-dialog). Document in `docs/TEST-PLAN-TIER2-BACKLOG.md` (T9.3a).
 
+**Follow-ups:** (1) **Real PDF file** — when the product serves PDF as a download, extend `e2e/tier2-flows.spec.ts` with a download assertion (keep print-stub coverage if both paths exist). (2) **`page.route` auth mocks** — if CI removes `VITE_E2E_AUTH_BYPASS`, stub Supabase auth REST or use a test project + fixtures. (3) **Live AI** — use describe-scoped timeouts (e.g. 120s) for flaky LLM assertions, not a higher global `testTimeout`.
+
 ---
 
 ## Track 2 — Query / mutation sweep + exception table

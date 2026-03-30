@@ -17,6 +17,19 @@ This document is a **starting runbook** for teams that need dedicated infrastruc
 4. Lock **CORS** and **Auth** providers to your domain; enable MFA policies per your org standard.
 5. Optional: disable cloud-only features (AI, external Geo-IP) via product flags if you add them for your build.
 
+## Product telemetry (optional)
+
+- The SPA can **`POST` JSON events** to your own endpoint when **`VITE_ANALYTICS_INGEST_URL`** is set (see [`src/lib/product-telemetry.ts`](../src/lib/product-telemetry.ts)). Events are **no-op** when unset. In **dev**, events are also logged to the console. Point the URL at your collector (PostHog ingest proxy, internal API, etc.) and strip or hash identifiers per policy.
+- **Route views:** the app emits **`spa_page_view`** with `pathname` when navigation changes (same ingest pipeline as other `trackProductEvent` calls).
+
+## Portal read cache (optional)
+
+- **Upstash Redis** (REST): set Edge secrets **`UPSTASH_REDIS_REST_URL`** and **`UPSTASH_REDIS_REST_TOKEN`** to enable a short-TTL cache on **`portal-data`** GET responses. Omit both to disable. See [redis-pilot.md](redis-pilot.md).
+
+## Feature flags (optional build)
+
+- Use **`VITE_FEATURE_<NAME>=1`** (or `true`) and [`src/lib/feature-flags.ts`](../src/lib/feature-flags.ts) — call `isFeatureEnabled("my-feature")` (normalized to `VITE_FEATURE_MY_FEATURE`). Useful for staging rollouts alongside telemetry.
+
 ## Observability (optional)
 
 - **Browser (Sentry):** If you use Sentry, set **`VITE_SENTRY_DSN`** on the static build. If unset, the app skips `Sentry.init` and sends nothing. Keep **PII off** in Sentry project settings; the client uses `sendDefaultPii: false`.

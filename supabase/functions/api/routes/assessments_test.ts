@@ -2,7 +2,10 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import { assessmentsListQuerySchema } from "../../_shared/api-schemas.ts";
 
 Deno.test("assessments list query: rejects out-of-range page", () => {
-  assertEquals(assessmentsListQuerySchema.safeParse({ page: "0" }).success, false);
+  assertEquals(
+    assessmentsListQuerySchema.safeParse({ page: "0" }).success,
+    false,
+  );
 });
 
 Deno.test("assessments list query: accepts defaults", () => {

@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 export interface FindingSnapshot {
   hostname: string;
@@ -16,7 +17,9 @@ const STORAGE_KEY_PREFIX = "firecomply-finding-snapshots:";
 const MAX_SNAPSHOTS_PER_HOST = 20;
 
 async function getOrgId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from("org_members")
@@ -30,7 +33,7 @@ async function getOrgId(): Promise<string | null> {
 export async function saveFindingSnapshot(
   hostname: string,
   findings: { title: string }[],
-  score: number
+  score: number,
 ): Promise<void> {
   const titles = findings.map((f) => f.title);
   const orgId = await getOrgId();
@@ -42,12 +45,21 @@ export async function saveFindingSnapshot(
       titles,
       score,
     });
-    if (error) console.warn("[finding-snapshots] Supabase insert failed, falling back to localStorage", error.message);
+    if (error)
+      console.warn(
+        "[finding-snapshots] Supabase insert failed, falling back to localStorage",
+        error.message,
+      );
     else return;
   }
 
   // localStorage fallback for guests
-  const snapshot: FindingSnapshot = { hostname, titles, score, timestamp: new Date().toISOString() };
+  const snapshot: FindingSnapshot = {
+    hostname,
+    titles,
+    score,
+    timestamp: new Date().toISOString(),
+  };
   const key = `${STORAGE_KEY_PREFIX}${hostname}`;
   try {
     let history: FindingSnapshot[] = [];
@@ -75,7 +87,12 @@ export async function loadPreviousSnapshot(hostname: string): Promise<FindingSna
       .order("created_at", { ascending: false })
       .limit(1);
     if (data && data.length > 0) {
-      return { hostname: data[0].hostname, titles: data[0].titles, score: data[0].score, timestamp: data[0].created_at };
+      return {
+        hostname: data[0].hostname,
+        titles: data[0].titles,
+        score: data[0].score,
+        timestamp: data[0].created_at,
+      };
     }
   }
 
@@ -85,10 +102,15 @@ export async function loadPreviousSnapshot(hostname: string): Promise<FindingSna
     if (!raw) return null;
     const parsed = JSON.parse(raw) as FindingSnapshot[];
     return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : null;
-  } catch { return null; }
+  } catch (e) {
+    warnOptionalError("finding-snapshots.localStorage", e);
+    return null;
+  }
 }
 
-export async function loadSnapshotBeforePrevious(hostname: string): Promise<FindingSnapshot | null> {
+export async function loadSnapshotBeforePrevious(
+  hostname: string,
+): Promise<FindingSnapshot | null> {
   const orgId = await getOrgId();
 
   if (orgId) {
@@ -100,7 +122,12 @@ export async function loadSnapshotBeforePrevious(hostname: string): Promise<Find
       .order("created_at", { ascending: false })
       .limit(2);
     if (data && data.length >= 2) {
-      return { hostname: data[1].hostname, titles: data[1].titles, score: data[1].score, timestamp: data[1].created_at };
+      return {
+        hostname: data[1].hostname,
+        titles: data[1].titles,
+        score: data[1].score,
+        timestamp: data[1].created_at,
+      };
     }
   }
 
@@ -110,14 +137,17 @@ export async function loadSnapshotBeforePrevious(hostname: string): Promise<Find
     if (!raw) return null;
     const parsed = JSON.parse(raw) as FindingSnapshot[];
     return Array.isArray(parsed) && parsed.length >= 2 ? parsed[1] : null;
-  } catch { return null; }
+  } catch (e) {
+    warnOptionalError("finding-snapshots.localStorage", e);
+    return null;
+  }
 }
 
 /** Load recent finding snapshots for a hostname (for baseline comparison). */
 export async function loadFindingSnapshotsForHostname(
   orgId: string,
   hostname: string,
-  limit = 50
+  limit = 50,
 ): Promise<FindingSnapshot[]> {
   const { data } = await supabase
     .from("finding_snapshots")
@@ -136,7 +166,10 @@ export async function loadFindingSnapshotsForHostname(
 }
 
 /** Get the snapshot closest to a given date (at or before) for baseline comparison. */
-export function snapshotClosestToDate(snapshots: FindingSnapshot[], targetDate: string): FindingSnapshot | null {
+export function snapshotClosestToDate(
+  snapshots: FindingSnapshot[],
+  targetDate: string,
+): FindingSnapshot | null {
   const target = new Date(targetDate).getTime();
   let best: FindingSnapshot | null = null;
   let bestDiff = Infinity;
@@ -160,7 +193,7 @@ export interface FindingDiff {
 export function diffFindings(
   previous: FindingSnapshot | null,
   current: { title: string }[],
-  beforePrevious?: FindingSnapshot | null
+  beforePrevious?: FindingSnapshot | null,
 ): FindingDiff {
   const currentTitles = new Set(current.map((f) => f.title));
   const previousTitles = previous ? new Set(previous.titles) : new Set<string>();
@@ -193,7 +226,7 @@ export function diffFindings(
 export async function getFirstDetectedAt(
   orgId: string | null,
   hostname: string,
-  findingTitle: string
+  findingTitle: string,
 ): Promise<string | null> {
   if (!orgId) return null;
 
@@ -212,7 +245,7 @@ export async function getFirstDetectedAt(
 /** Batch-load earliest detection timestamps for multiple (hostname, findingTitle) pairs. */
 export async function getFirstDetectedAtBatch(
   orgId: string | null,
-  pairs: { hostname: string; findingTitle: string }[]
+  pairs: { hostname: string; findingTitle: string }[],
 ): Promise<Map<string, string>> {
   const result = new Map<string, string>();
   if (!orgId || pairs.length === 0) return result;

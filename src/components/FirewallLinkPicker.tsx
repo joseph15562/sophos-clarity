@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link2, Search, Server, ChevronDown, CheckCircle2 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthOptional } from "@/hooks/use-auth";
@@ -10,6 +12,7 @@ import {
   type CentralTenant,
 } from "@/lib/sophos-central";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateFleetRelatedQueries } from "@/lib/invalidate-org-queries";
 
 interface CachedFw {
   firewallId: string;
@@ -63,6 +66,39 @@ export function FirewallLinkPicker({
   const org = auth?.org ?? null;
   const isGuest = auth?.isGuest ?? true;
   const orgId = org?.id ?? "";
+  const queryClient = useQueryClient();
+
+  const linkUpsertMutation = useMutation({
+    mutationFn: async (row: {
+      org_id: string;
+      config_hostname: string;
+      config_hash: string;
+      central_firewall_id: string;
+      central_tenant_id: string;
+    }) => {
+      const { error } = await supabase
+        .from("firewall_config_links")
+        .upsert(row, { onConflict: "org_id,config_hash" });
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      void invalidateFleetRelatedQueries(queryClient, variables.org_id);
+    },
+  });
+
+  const linkDeleteMutation = useMutation({
+    mutationFn: async (vars: { orgId: string; configHash: string }) => {
+      const { error } = await supabase
+        .from("firewall_config_links")
+        .delete()
+        .eq("org_id", vars.orgId)
+        .eq("config_hash", vars.configHash);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      void invalidateFleetRelatedQueries(queryClient, variables.orgId);
+    },
+  });
 
   const [tenants, setTenants] = useState<CentralTenant[]>([]);
   const [firewalls, setFirewalls] = useState<CachedFw[]>([]);
@@ -121,16 +157,13 @@ export function FirewallLinkPicker({
   const autoLink = useCallback(
     async (fw: CachedFw) => {
       if (!orgId) return;
-      await supabase.from("firewall_config_links").upsert(
-        {
-          org_id: orgId,
-          config_hostname: configHostname,
-          config_hash: configHash,
-          central_firewall_id: fw.firewallId,
-          central_tenant_id: fw.centralTenantId,
-        },
-        { onConflict: "org_id,config_hash" },
-      );
+      await linkUpsertMutation.mutateAsync({
+        org_id: orgId,
+        config_hostname: configHostname,
+        config_hash: configHash,
+        central_firewall_id: fw.firewallId,
+        central_tenant_id: fw.centralTenantId,
+      });
       const l: FirewallLink = {
         configId,
         firewallId: fw.firewallId,
@@ -144,7 +177,7 @@ export function FirewallLinkPicker({
       setOpen(false);
       onLinked?.(l);
     },
-    [orgId, configId, configHostname, configHash, onLinked],
+    [orgId, configId, configHostname, configHash, onLinked, linkUpsertMutation],
   );
 
   // Load firewalls when tenant changes
@@ -252,16 +285,13 @@ export function FirewallLinkPicker({
     const fw = firewalls.find((f) => f.firewallId === selectedFwId);
     if (!fw || !orgId) return;
 
-    await supabase.from("firewall_config_links").upsert(
-      {
-        org_id: orgId,
-        config_hostname: configHostname,
-        config_hash: configHash,
-        central_firewall_id: fw.firewallId,
-        central_tenant_id: fw.centralTenantId,
-      },
-      { onConflict: "org_id,config_hash" },
-    );
+    await linkUpsertMutation.mutateAsync({
+      org_id: orgId,
+      config_hostname: configHostname,
+      config_hash: configHash,
+      central_firewall_id: fw.firewallId,
+      central_tenant_id: fw.centralTenantId,
+    });
 
     const l: FirewallLink = {
       configId,
@@ -279,11 +309,7 @@ export function FirewallLinkPicker({
 
   const handleUnlink = async () => {
     if (!orgId || !configHash) return;
-    await supabase
-      .from("firewall_config_links")
-      .delete()
-      .eq("org_id", orgId)
-      .eq("config_hash", configHash);
+    await linkDeleteMutation.mutateAsync({ orgId, configHash });
     setLinked(null);
     setSelectedFwId("");
     onLinked?.(null);
@@ -455,9 +481,12 @@ export function FirewallLinkPicker({
                   );
                 })}
                 {filtered.length === 0 && (
-                  <p className="text-center text-[10px] text-muted-foreground py-3">
-                    No firewalls found
-                  </p>
+                  <EmptyState
+                    className="!py-6"
+                    icon={<Search className="h-5 w-5 text-muted-foreground/50" />}
+                    title="No firewalls found"
+                    description="Try another search term."
+                  />
                 )}
               </div>
 
@@ -475,10 +504,12 @@ export function FirewallLinkPicker({
           )}
 
           {selectedTenantId && firewalls.length === 0 && (
-            <p className="text-[10px] text-muted-foreground text-center py-2">
-              No firewalls cached for this tenant. Sync firewalls in the Sophos Central API section
-              first.
-            </p>
+            <EmptyState
+              className="!py-4"
+              icon={<Server className="h-5 w-5 text-muted-foreground/50" />}
+              title="No cached firewalls"
+              description="Sync firewalls in the Sophos Central API section first."
+            />
           )}
         </div>
       )}

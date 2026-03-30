@@ -1,10 +1,11 @@
 openapi: 3.0.3
 info:
-  title: Sophos FireComply — Edge API (partial)
+  title: Sophos FireComply — Edge API (evolving)
   description: >
-    Machine-readable sketch of high-traffic Edge routes. Primary `servers` URL targets the **`api`**
-    JWT router; paths under **`/shared/*`** use the path-level **`api-public`** server (no JWT).
-    Not exhaustive — see docs/api/edge-routes.md.
+    Machine-readable sketch of Edge routes. Primary `servers` URL targets the **`api`** JWT router;
+    paths under **`/shared/*`** use the path-level **`api-public`** server (no JWT). Cron/proxy
+    functions use path-level `servers` with base `.../functions/v1` plus the path segment below.
+    See docs/api/edge-routes.md for the full map.
   version: 0.1.0
 servers:
   - url: https://{project}.supabase.co/functions/v1/api
@@ -542,18 +543,20 @@ paths:
           name: slug
           schema:
             type: string
+            maxLength: 200
           description: Portal slug from `portal_config`
         - in: query
           name: org_id
           schema:
             type: string
+            maxLength: 200
             format: uuid
           description: Organisation UUID (alternative to slug)
       responses:
         "200":
           description: Portal payload (JSON)
         "400":
-          description: Missing slug and org_id
+          description: Missing or invalid query (slug/org_id length, Zod validation)
         "404":
           description: Portal not found
         "500":
@@ -583,6 +586,81 @@ paths:
           description: Rate limited
         "500":
           description: Parse or provider error
+
+  /send-scheduled-reports:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1
+        variables:
+          project:
+            default: your-project-ref
+    post:
+      summary: Send scheduled report emails (cron or authenticated preview)
+      description: >
+        POST from Supabase cron (service role) or manual preview with JWT per live function logic.
+      responses:
+        "200":
+          description: Batch run finished (see function logs for per-org outcomes)
+        "401":
+          description: Unauthorized
+        "405":
+          description: Method not allowed
+        "500":
+          description: Server error
+
+  /agent-nudge:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1
+        variables:
+          project:
+            default: your-project-ref
+    post:
+      summary: Queue stale-agent nudges and mark long-idle agents offline
+      description: Intended for daily cron; uses service role inside the function.
+      responses:
+        "200":
+          description: OK
+        "500":
+          description: Server error
+
+  /regulatory-scanner:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1
+        variables:
+          project:
+            default: your-project-ref
+    post:
+      summary: Regulatory RSS ingest (cron) or list updates (user JWT)
+      description: >
+        JSON body with `action` — `scan` (cron via service-role Bearer or user JWT) or `list` (user JWT).
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Not authenticated (user paths)
+        "500":
+          description: Server error
+
+  /sophos-central:
+    servers:
+      - url: https://{project}.supabase.co/functions/v1
+        variables:
+          project:
+            default: your-project-ref
+    get:
+      summary: Browser proxy to Sophos Central (read paths)
+      description: Authenticated Sophos Central integration; see deployed function for route matrix.
+      responses:
+        "200":
+          description: Proxied JSON or binary
+        "401":
+          description: Unauthorized
+    post:
+      summary: Browser proxy to Sophos Central (mutations)
+      responses:
+        "200":
+          description: Proxied response
+        "401":
+          description: Unauthorized
 
 components:
   schemas:

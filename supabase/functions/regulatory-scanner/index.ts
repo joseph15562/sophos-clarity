@@ -13,10 +13,13 @@ const ALLOWED_ORIGINS = [
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "";
+  const allowed = ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : ALLOWED_ORIGINS[0] ?? "";
   return {
     "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Vary": "Origin",
   };
@@ -77,7 +80,10 @@ interface FeedFetchStatus {
 }
 
 function extractTag(xml: string, tag: string): string {
-  const re = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>|<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i");
+  const re = new RegExp(
+    `<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>|<${tag}[^>]*>([\\s\\S]*?)</${tag}>`,
+    "i",
+  );
   const m = xml.match(re);
   return ((m?.[1] ?? m?.[2]) ?? "").trim();
 }
@@ -88,7 +94,11 @@ function extractLinkHref(xml: string): string {
   return extractTag(xml, "link");
 }
 
-function parseRssFeed(xml: string, source: string, framework: string): RssItem[] {
+function parseRssFeed(
+  xml: string,
+  source: string,
+  framework: string,
+): RssItem[] {
   const items: RssItem[] = [];
 
   // RSS 2.0 <item>
@@ -97,7 +107,8 @@ function parseRssFeed(xml: string, source: string, framework: string): RssItem[]
     items.push({
       title: extractTag(block, "title"),
       link: extractLinkHref(block) || extractTag(block, "link"),
-      description: extractTag(block, "description").replace(/<[^>]*>/g, "").slice(0, 500),
+      description: extractTag(block, "description").replace(/<[^>]*>/g, "")
+        .slice(0, 500),
       pubDate: extractTag(block, "pubDate") || extractTag(block, "dc:date"),
       source,
       framework,
@@ -111,7 +122,9 @@ function parseRssFeed(xml: string, source: string, framework: string): RssItem[]
       items.push({
         title: extractTag(block, "title"),
         link: extractLinkHref(block),
-        description: (extractTag(block, "summary") || extractTag(block, "content")).replace(/<[^>]*>/g, "").slice(0, 500),
+        description:
+          (extractTag(block, "summary") || extractTag(block, "content"))
+            .replace(/<[^>]*>/g, "").slice(0, 500),
         pubDate: extractTag(block, "published") || extractTag(block, "updated"),
         source,
         framework,
@@ -170,15 +183,17 @@ async function fetchFeedWithStatus(
   }
 }
 
-async function summariseWithGemini(items: RssItem[]): Promise<Array<{
-  title: string;
-  summary: string;
-  link: string;
-  source: string;
-  framework: string;
-  published_at: string | null;
-  relevant: boolean;
-}>> {
+async function summariseWithGemini(items: RssItem[]): Promise<
+  Array<{
+    title: string;
+    summary: string;
+    link: string;
+    source: string;
+    framework: string;
+    published_at: string | null;
+    relevant: boolean;
+  }>
+> {
   if (!GEMINI_API_KEY || items.length === 0) {
     return items.map((i) => ({
       title: i.title,
@@ -191,9 +206,12 @@ async function summariseWithGemini(items: RssItem[]): Promise<Array<{
     }));
   }
 
-  const itemList = items.map((i, idx) => `[${idx}] "${i.title}" — ${i.description.slice(0, 200)}`).join("\n");
+  const itemList = items.map((i, idx) =>
+    `[${idx}] "${i.title}" — ${i.description.slice(0, 200)}`
+  ).join("\n");
 
-  const prompt = `You are a firewall security compliance analyst. Below are news items from regulatory bodies.
+  const prompt =
+    `You are a firewall security compliance analyst. Below are news items from regulatory bodies.
 
 For each item, determine if it is relevant to network security, firewall configuration, or compliance frameworks (PCI DSS, Cyber Essentials, GDPR, NIST CSF, NIS2, ISO 27001, SOC 2).
 
@@ -208,32 +226,44 @@ ${itemList}
 Return ONLY the JSON array, no markdown fencing.`;
 
   try {
-    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${GEMINI_API_KEY}`,
-        "Content-Type": "application/json",
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gemini-2.0-flash",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a security compliance analyst. Return only valid JSON.",
+            },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.2,
+          max_tokens: 2000,
+        }),
       },
-      body: JSON.stringify({
-        model: "gemini-2.0-flash",
-        messages: [
-          { role: "system", content: "You are a security compliance analyst. Return only valid JSON." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.2,
-        max_tokens: 2000,
-      }),
-    });
+    );
 
     if (!res.ok) {
-      logJson("warn", "regulatory_summarise_gemini_status", { status: res.status });
+      logJson("warn", "regulatory_summarise_gemini_status", {
+        status: res.status,
+      });
       throw new Error("Gemini API error");
     }
 
     const data = await res.json();
     const text = data.choices?.[0]?.message?.content ?? "";
-    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const parsed = JSON.parse(cleaned) as Array<{ index: number; relevant: boolean; summary?: string }>;
+    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "")
+      .trim();
+    const parsed = JSON.parse(cleaned) as Array<
+      { index: number; relevant: boolean; summary?: string }
+    >;
 
     return items.map((item, idx) => {
       const ai = parsed.find((p) => p.index === idx);
@@ -243,7 +273,9 @@ Return ONLY the JSON array, no markdown fencing.`;
         link: item.link,
         source: item.source,
         framework: item.framework,
-        published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
+        published_at: item.pubDate
+          ? new Date(item.pubDate).toISOString()
+          : null,
         relevant: ai?.relevant ?? true,
       };
     });
@@ -277,14 +309,19 @@ async function runRegulatoryScan(
       .single();
 
     const COOLDOWN_MS = 24 * 60 * 60 * 1000;
-    if (lastScan?.created_at && Date.now() - new Date(lastScan.created_at).getTime() < COOLDOWN_MS) {
+    if (
+      lastScan?.created_at &&
+      Date.now() - new Date(lastScan.created_at).getTime() < COOLDOWN_MS
+    ) {
       const hoursLeft = Math.ceil(
-        (COOLDOWN_MS - (Date.now() - new Date(lastScan.created_at).getTime())) / 3_600_000,
+        (COOLDOWN_MS - (Date.now() - new Date(lastScan.created_at).getTime())) /
+          3_600_000,
       );
       return new Response(
         JSON.stringify({
           throttled: true,
-          message: `Already scanned today. Next scan available in ~${hoursLeft}h.`,
+          message:
+            `Already scanned today. Next scan available in ~${hoursLeft}h.`,
         }),
         { headers: { ...cors, "Content-Type": "application/json" } },
       );
@@ -344,7 +381,8 @@ async function runRegulatoryScan(
       scanned: allItems.length,
       relevant: relevant.length,
       inserted,
-      message: `Scanned ${allItems.length} items, ${relevant.length} relevant, ${inserted} stored`,
+      message:
+        `Scanned ${allItems.length} items, ${relevant.length} relevant, ${inserted} stored`,
       feed_status,
       invoker: opts.invoker,
     }),
@@ -366,12 +404,19 @@ serve(async (req) => {
 
     if (action === "scan") {
       if (cron) {
-        return await runRegulatoryScan(admin, cors, { enforceUserCooldown: false, invoker: "cron" });
+        return await runRegulatoryScan(admin, cors, {
+          enforceUserCooldown: false,
+          invoker: "cron",
+        });
       }
       const authHeader = req.headers.get("Authorization") ?? "";
-      const { data: { user } } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      }).auth.getUser();
+      const { data: { user } } = await createClient(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_KEY,
+        {
+          global: { headers: { Authorization: authHeader } },
+        },
+      ).auth.getUser();
 
       if (!user) {
         return new Response(JSON.stringify({ error: "Not authenticated" }), {
@@ -380,14 +425,21 @@ serve(async (req) => {
         });
       }
 
-      return await runRegulatoryScan(admin, cors, { enforceUserCooldown: true, invoker: "user" });
+      return await runRegulatoryScan(admin, cors, {
+        enforceUserCooldown: true,
+        invoker: "user",
+      });
     }
 
     if (action === "list") {
       const authHeader = req.headers.get("Authorization") ?? "";
-      const { data: { user } } = await createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      }).auth.getUser();
+      const { data: { user } } = await createClient(
+        SUPABASE_URL,
+        SUPABASE_SERVICE_KEY,
+        {
+          global: { headers: { Authorization: authHeader } },
+        },
+      ).auth.getUser();
 
       if (!user) {
         return new Response(JSON.stringify({ error: "Not authenticated" }), {

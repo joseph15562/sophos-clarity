@@ -17,12 +17,23 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Deno format check
+        run: npm run format:check:deno
+
+      - name: Deno tests
+        run: npm run test:deno
+
       - name: Lint
         run: npm run lint
       - name: Type-check
         run: npm run typecheck
-      - name: Run tests
-        run: npm test
+      - name: Run tests (with coverage floors)
+        run: npm test -- --coverage
       - name: Build
         env:
           VITE_E2E_AUTH_BYPASS: "1"

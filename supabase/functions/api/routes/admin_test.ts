@@ -1,5 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
-import { adminResetMfaBodySchema, authMfaRecoveryBodySchema } from "../../_shared/api-schemas.ts";
+import {
+  adminResetMfaBodySchema,
+  authMfaRecoveryBodySchema,
+} from "../../_shared/api-schemas.ts";
 
 Deno.test("admin routes: reset-mfa body schema", () => {
   assertEquals(adminResetMfaBodySchema.safeParse({}).success, false);
@@ -12,6 +15,13 @@ Deno.test("admin routes: reset-mfa body schema", () => {
 });
 
 Deno.test("admin routes: mfa-recovery body schema", () => {
-  assertEquals(authMfaRecoveryBodySchema.safeParse({ targetEmail: "bad" }).success, false);
-  assertEquals(authMfaRecoveryBodySchema.safeParse({ targetEmail: "u@example.com" }).success, true);
+  assertEquals(
+    authMfaRecoveryBodySchema.safeParse({ targetEmail: "bad" }).success,
+    false,
+  );
+  assertEquals(
+    authMfaRecoveryBodySchema.safeParse({ targetEmail: "u@example.com" })
+      .success,
+    true,
+  );
 });

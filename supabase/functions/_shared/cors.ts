@@ -11,7 +11,8 @@ function isLocalHttpLoopbackOrigin(origin: string): boolean {
   try {
     const u = new URL(origin);
     if (u.protocol !== "http:") return false;
-    return u.hostname === "localhost" || u.hostname === "127.0.0.1" || u.hostname === "[::1]";
+    return u.hostname === "localhost" || u.hostname === "127.0.0.1" ||
+      u.hostname === "[::1]";
   } catch {
     return false;
   }
@@ -22,11 +23,12 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   const allowed = ALLOWED_ORIGINS.includes(origin)
     ? origin
     : isLocalHttpLoopbackOrigin(origin)
-      ? origin
-      : ALLOWED_ORIGINS[0] ?? "";
+    ? origin
+    : ALLOWED_ORIGINS[0] ?? "";
   return {
     "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, PATCH, OPTIONS",
     "Vary": "Origin",
   };

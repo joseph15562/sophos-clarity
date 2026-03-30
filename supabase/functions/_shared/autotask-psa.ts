@@ -61,7 +61,11 @@ function autotaskHeaders(
 
 function parseAutotaskError(text: string, status: number): string {
   try {
-    const j = JSON.parse(text) as { message?: string; errors?: string[]; Message?: string };
+    const j = JSON.parse(text) as {
+      message?: string;
+      errors?: string[];
+      Message?: string;
+    };
     if (Array.isArray(j.errors) && j.errors.length) return j.errors.join("; ");
     if (typeof j.message === "string") return j.message;
     if (typeof j.Message === "string") return j.Message;
@@ -100,7 +104,9 @@ export async function autotaskQueryCompanies(
   try {
     parsed = text ? (JSON.parse(text) as typeof parsed) : { items: [] };
   } catch {
-    throw new Error(`Autotask companies returned non-JSON (HTTP ${res.status})`);
+    throw new Error(
+      `Autotask companies returned non-JSON (HTTP ${res.status})`,
+    );
   }
   const raw = parsed.items ?? parsed.Items ?? [];
   const rows = Array.isArray(raw) ? raw : [];
@@ -113,10 +119,14 @@ export async function autotaskQueryCompanies(
       ? o.companyID
       : NaN;
     if (!Number.isFinite(id)) continue;
-    const name = String(o.companyName ?? o.CompanyName ?? `Company ${id}`).trim() || `Company ${id}`;
+    const name =
+      String(o.companyName ?? o.CompanyName ?? `Company ${id}`).trim() ||
+      `Company ${id}`;
     out.push({ id, name });
   }
-  out.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  out.sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  );
   return out;
 }
 
@@ -161,7 +171,9 @@ export async function autotaskCreateTicket(
   try {
     data = text ? (JSON.parse(text) as typeof data) : {};
   } catch {
-    throw new Error(`Autotask ticket create returned non-JSON (HTTP ${res.status})`);
+    throw new Error(
+      `Autotask ticket create returned non-JSON (HTTP ${res.status})`,
+    );
   }
   const itemId = typeof data.itemId === "number"
     ? data.itemId

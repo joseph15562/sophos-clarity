@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Link2,
   Unlink,
@@ -9,6 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +30,7 @@ import {
 } from "@/lib/sophos-central";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateFleetRelatedQueries } from "@/lib/invalidate-org-queries";
 
 interface FirewallLinkerProps {
   configs: Array<{
@@ -65,6 +68,39 @@ export function FirewallLinker({
   const [syncing, setSyncing] = useState(false);
 
   const orgId = org?.id ?? "";
+  const queryClient = useQueryClient();
+
+  const linkFirewallMutation = useMutation({
+    mutationFn: async (row: {
+      org_id: string;
+      config_hash: string;
+      config_hostname: string;
+      central_firewall_id: string;
+      central_tenant_id: string;
+    }) => {
+      const { error } = await supabase
+        .from("firewall_config_links")
+        .upsert(row, { onConflict: "org_id,config_hash" });
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      void invalidateFleetRelatedQueries(queryClient, variables.org_id);
+    },
+  });
+
+  const unlinkFirewallMutation = useMutation({
+    mutationFn: async (vars: { orgId: string; configHash: string }) => {
+      const { error } = await supabase
+        .from("firewall_config_links")
+        .delete()
+        .eq("org_id", vars.orgId)
+        .eq("config_hash", vars.configHash);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      void invalidateFleetRelatedQueries(queryClient, variables.orgId);
+    },
+  });
 
   const matchedTenant = useMemo(() => {
     if (!central.isConnected) return null;
@@ -172,19 +208,16 @@ export function FirewallLinker({
         ...prev,
         [configHash]: { firewallId: fw.id, tenantId: matchedTenant.id, firewall: fw, method },
       }));
-      await supabase.from("firewall_config_links").upsert(
-        {
-          org_id: orgId,
-          config_hash: configHash,
-          config_hostname: hostname,
-          central_firewall_id: fw.id,
-          central_tenant_id: matchedTenant.id,
-        },
-        { onConflict: "org_id,config_hash" },
-      );
+      await linkFirewallMutation.mutateAsync({
+        org_id: orgId,
+        config_hash: configHash,
+        config_hostname: hostname,
+        central_firewall_id: fw.id,
+        central_tenant_id: matchedTenant.id,
+      });
       onLink?.();
     },
-    [matchedTenant, orgId, configs, onLink],
+    [matchedTenant, orgId, configs, onLink, linkFirewallMutation],
   );
 
   const handleUnlink = useCallback(
@@ -195,14 +228,10 @@ export function FirewallLinker({
         return next;
       });
       if (orgId) {
-        await supabase
-          .from("firewall_config_links")
-          .delete()
-          .eq("org_id", orgId)
-          .eq("config_hash", configHash);
+        await unlinkFirewallMutation.mutateAsync({ orgId, configHash });
       }
     },
-    [orgId],
+    [orgId, unlinkFirewallMutation],
   );
 
   const handleSerialSearch = useCallback(
@@ -536,9 +565,12 @@ export function FirewallLinker({
                             );
                           })}
                           {filteredFirewalls.length === 0 && (
-                            <p className="px-3 py-2 text-[10px] text-muted-foreground text-center">
-                              No firewalls match this filter
-                            </p>
+                            <EmptyState
+                              className="!py-6 !px-2"
+                              icon={<Search className="h-5 w-5 text-muted-foreground/50" />}
+                              title="No firewalls match this filter"
+                              description="Adjust search or pick another tenant."
+                            />
                           )}
                         </div>
                       </div>

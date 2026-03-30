@@ -37,6 +37,7 @@ export async function loadScoreHistory(
   orgId: string,
   hostname?: string,
   limit = 30,
+  signal?: AbortSignal,
 ): Promise<ScoreHistoryEntry[]> {
   let query = supabase
     .from("score_history")
@@ -46,6 +47,7 @@ export async function loadScoreHistory(
     .limit(limit);
 
   if (hostname) query = query.eq("hostname", hostname);
+  if (signal) query = query.abortSignal(signal);
 
   const { data, error } = await query;
   if (error || !data || !Array.isArray(data)) return [];

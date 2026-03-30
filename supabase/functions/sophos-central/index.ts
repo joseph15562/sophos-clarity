@@ -19,7 +19,8 @@ function isLocalHttpLoopbackOrigin(origin: string): boolean {
   try {
     const u = new URL(origin);
     if (u.protocol !== "http:") return false;
-    return u.hostname === "localhost" || u.hostname === "127.0.0.1" || u.hostname === "[::1]";
+    return u.hostname === "localhost" || u.hostname === "127.0.0.1" ||
+      u.hostname === "[::1]";
   } catch {
     return false;
   }
@@ -34,7 +35,8 @@ function getCorsHeaders(req: Request): Record<string, string> {
     : ALLOWED_ORIGINS[0] ?? "";
   return {
     "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Vary": "Origin",
   };
@@ -76,7 +78,8 @@ async function verifyGuestAnonJwt(
     const role = payload["role"];
     const ref = payload["ref"];
     const expectedRef = projectRefFromSupabaseUrl(supabaseUrl);
-    return role === "anon" && typeof ref === "string" && ref === expectedRef && expectedRef.length > 0;
+    return role === "anon" && typeof ref === "string" && ref === expectedRef &&
+      expectedRef.length > 0;
   } catch {
     return false;
   }
@@ -105,12 +108,17 @@ function decodeJwtPayloadUnsafe(token: string): Record<string, unknown> | null {
  * If string compare to SUPABASE_ANON_KEY fails (drift), ask the API gateway to validate the JWT
  * and require claims role=anon + ref matching this project (reject service_role).
  */
-async function verifyGuestAnonViaSupabaseGateway(supabaseUrl: string, incoming: string): Promise<boolean> {
+async function verifyGuestAnonViaSupabaseGateway(
+  supabaseUrl: string,
+  incoming: string,
+): Promise<boolean> {
   const payload = decodeJwtPayloadUnsafe(incoming);
   if (!payload || payload["role"] !== "anon") return false;
   const ref = payload["ref"];
   const expectedRef = projectRefFromSupabaseUrl(supabaseUrl);
-  if (typeof ref !== "string" || ref !== expectedRef || !expectedRef) return false;
+  if (typeof ref !== "string" || ref !== expectedRef || !expectedRef) {
+    return false;
+  }
 
   const base = supabaseUrl.replace(/\/$/, "");
   try {
@@ -132,8 +140,11 @@ async function verifyGuestAnonViaSupabaseGateway(supabaseUrl: string, incoming: 
 async function deriveKey(secret: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
-    "raw", enc.encode(secret.padEnd(32, "0").slice(0, 32)),
-    { name: "AES-GCM" }, false, ["encrypt", "decrypt"],
+    "raw",
+    enc.encode(secret.padEnd(32, "0").slice(0, 32)),
+    { name: "AES-GCM" },
+    false,
+    ["encrypt", "decrypt"],
   );
   return keyMaterial;
 }
@@ -144,9 +155,13 @@ async function encrypt(plaintext: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const enc = new TextEncoder();
   const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv }, key, enc.encode(plaintext),
+    { name: "AES-GCM", iv },
+    key,
+    enc.encode(plaintext),
   );
-  const combined = new Uint8Array(iv.length + new Uint8Array(ciphertext).length);
+  const combined = new Uint8Array(
+    iv.length + new Uint8Array(ciphertext).length,
+  );
   combined.set(iv);
   combined.set(new Uint8Array(ciphertext), iv.length);
   return btoa(String.fromCharCode(...combined));
@@ -159,7 +174,9 @@ async function decrypt(encoded: string): Promise<string> {
   const iv = raw.slice(0, 12);
   const ciphertext = raw.slice(12);
   const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv }, key, ciphertext,
+    { name: "AES-GCM", iv },
+    key,
+    ciphertext,
   );
   return new TextDecoder().decode(decrypted);
 }
@@ -181,11 +198,16 @@ interface TokenResponse {
   refresh_token?: string;
 }
 
-async function getToken(clientId: string, clientSecret: string): Promise<TokenResponse> {
+async function getToken(
+  clientId: string,
+  clientSecret: string,
+): Promise<TokenResponse> {
   const res = await fetch(SOPHOS_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=token`,
+    body: `grant_type=client_credentials&client_id=${
+      encodeURIComponent(clientId)
+    }&client_secret=${encodeURIComponent(clientSecret)}&scope=token`,
   });
   if (!res.ok) {
     const text = await res.text();
@@ -210,7 +232,11 @@ async function whoami(token: string): Promise<WhoAmIResponse> {
   return res.json();
 }
 
-async function sophosGet(url: string, token: string, headers: Record<string, string> = {}) {
+async function sophosGet(
+  url: string,
+  token: string,
+  headers: Record<string, string> = {},
+) {
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}`, ...headers },
   });
@@ -222,7 +248,9 @@ async function sophosGet(url: string, token: string, headers: Record<string, str
 }
 
 async function fetchAllPages(
-  baseUrl: string, token: string, headers: Record<string, string>,
+  baseUrl: string,
+  token: string,
+  headers: Record<string, string>,
   pageSize = 100,
 ): Promise<unknown[]> {
   const items: unknown[] = [];
@@ -230,7 +258,9 @@ async function fetchAllPages(
   let totalPages = 1;
   do {
     const sep = baseUrl.includes("?") ? "&" : "?";
-    const url = `${baseUrl}${sep}page=${page}&pageSize=${pageSize}${page === 1 ? "&pageTotal=true" : ""}`;
+    const url = `${baseUrl}${sep}page=${page}&pageSize=${pageSize}${
+      page === 1 ? "&pageTotal=true" : ""
+    }`;
     const data = await sophosGet(url, token, headers);
     if (data.items) items.push(...data.items);
     if (page === 1 && data.pages?.total) totalPages = data.pages.total;
@@ -241,12 +271,17 @@ async function fetchAllPages(
 
 // ── Verify the calling user belongs to the given org ──
 
-async function verifyOrgMembership(authHeader: string, orgId: string): Promise<string> {
+async function verifyOrgMembership(
+  authHeader: string,
+  orgId: string,
+): Promise<string> {
   const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: authHeader } },
   });
-  const { data: { user }, error } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+  const { data: { user }, error } = await sb.auth.getUser(
+    authHeader.replace("Bearer ", ""),
+  );
   if (error || !user) throw new Error("Unauthorized");
   const admin = adminClient();
   const { data } = await admin
@@ -261,7 +296,17 @@ async function verifyOrgMembership(authHeader: string, orgId: string): Promise<s
 
 // ── Load stored credentials for an org ──
 
-async function loadCredentials(orgId: string): Promise<{ clientId: string; clientSecret: string; partnerId: string; partnerType: string; apiHosts: Record<string, string> } | null> {
+async function loadCredentials(
+  orgId: string,
+): Promise<
+  {
+    clientId: string;
+    clientSecret: string;
+    partnerId: string;
+    partnerType: string;
+    apiHosts: Record<string, string>;
+  } | null
+> {
   const sb = adminClient();
   const { data } = await sb
     .from("central_credentials")
@@ -300,10 +345,14 @@ serve(async (req) => {
       mode === "guest_health_firewall_licenses"
     ) {
       const publishable = (Deno.env.get("SUPABASE_ANON_KEY") ?? "").trim();
-      const jwtSecret = (Deno.env.get("SUPABASE_JWT_SECRET") ?? Deno.env.get("JWT_SECRET") ?? "").trim();
+      const jwtSecret =
+        (Deno.env.get("SUPABASE_JWT_SECRET") ?? Deno.env.get("JWT_SECRET") ??
+          "").trim();
       const supabaseUrl = SUPABASE_URL.trim();
       const bearer = authHeader.replace(/^Bearer\s+/i, "").trim();
-      const apikeyHeader = (req.headers.get("apikey") ?? req.headers.get("x-api-key") ?? "").trim();
+      const apikeyHeader =
+        (req.headers.get("apikey") ?? req.headers.get("x-api-key") ?? "")
+          .trim();
       const incoming = bearer || apikeyHeader;
 
       if (!incoming) {
@@ -312,10 +361,17 @@ serve(async (req) => {
 
       let guestAuthOk = publishable.length > 0 && incoming === publishable;
       if (!guestAuthOk && jwtSecret.length > 0 && supabaseUrl.length > 0) {
-        guestAuthOk = await verifyGuestAnonJwt(incoming, jwtSecret, supabaseUrl);
+        guestAuthOk = await verifyGuestAnonJwt(
+          incoming,
+          jwtSecret,
+          supabaseUrl,
+        );
       }
       if (!guestAuthOk && supabaseUrl.length > 0) {
-        guestAuthOk = await verifyGuestAnonViaSupabaseGateway(supabaseUrl, incoming);
+        guestAuthOk = await verifyGuestAnonViaSupabaseGateway(
+          supabaseUrl,
+          incoming,
+        );
       }
 
       if (!guestAuthOk) {
@@ -355,7 +411,8 @@ serve(async (req) => {
 
       if (mode === "guest_health_tenants") {
         if (identity.idType === "tenant") {
-          const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
+          const apiHost = identity.apiHosts.dataRegion ??
+            identity.apiHosts.global;
           let name = "(This tenant)";
           try {
             const acctInfo = await sophosGet(
@@ -363,7 +420,9 @@ serve(async (req) => {
               token,
               { "X-Tenant-ID": identity.id },
             ) as { name?: string; showAs?: string };
-            if (acctInfo.showAs || acctInfo.name) name = (acctInfo.showAs ?? acctInfo.name) as string;
+            if (acctInfo.showAs || acctInfo.name) {
+              name = (acctInfo.showAs ?? acctInfo.name) as string;
+            }
           } catch (_) { /* account-info not available */ }
           if (name === "(This tenant)") {
             try {
@@ -374,7 +433,9 @@ serve(async (req) => {
                 1,
               ) as Array<{ id: string; name?: string; showAs?: string }>;
               const self = tenantList?.find((t) => t.id === identity.id);
-              if (self && (self.showAs ?? self.name)) name = (self.showAs ?? self.name) as string;
+              if (self && (self.showAs ?? self.name)) {
+                name = (self.showAs ?? self.name) as string;
+              }
             } catch (_) { /* optional name */ }
           }
           return json({
@@ -394,7 +455,11 @@ serve(async (req) => {
         const endpoint = identity.idType === "partner"
           ? `${SOPHOS_GLOBAL_URL}/partner/v1/tenants`
           : `${SOPHOS_GLOBAL_URL}/organization/v1/tenants`;
-        const items = await fetchAllPages(endpoint, token, multiHeader) as Array<{
+        const items = await fetchAllPages(
+          endpoint,
+          token,
+          multiHeader,
+        ) as Array<{
           id: string;
           name?: string;
           showAs?: string;
@@ -418,7 +483,10 @@ serve(async (req) => {
         if (!tenantId?.trim()) return json({ error: "Missing tenantId" }, 400);
         const tidLic = tenantId.trim();
         if (identity.idType === "tenant" && tidLic !== identity.id) {
-          return json({ error: "Tenant ID does not match this API client" }, 400);
+          return json(
+            { error: "Tenant ID does not match this API client" },
+            400,
+          );
         }
         const licHeaders: Record<string, string> = {};
         if (identity.idType === "partner") {
@@ -446,7 +514,10 @@ serve(async (req) => {
       let apiHost: string;
       if (identity.idType === "tenant") {
         if (tid !== identity.id) {
-          return json({ error: "Tenant ID does not match this API client" }, 400);
+          return json(
+            { error: "Tenant ID does not match this API client" },
+            400,
+          );
         }
         apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
       } else {
@@ -456,11 +527,17 @@ serve(async (req) => {
         const endpoint = identity.idType === "partner"
           ? `${SOPHOS_GLOBAL_URL}/partner/v1/tenants`
           : `${SOPHOS_GLOBAL_URL}/organization/v1/tenants`;
-        const items = await fetchAllPages(endpoint, token, multiHeader) as Array<{ id: string; apiHost?: string }>;
+        const items = await fetchAllPages(
+          endpoint,
+          token,
+          multiHeader,
+        ) as Array<{ id: string; apiHost?: string }>;
         const row = items.find((t) => t.id === tid);
         apiHost = row?.apiHost ?? "";
         if (!apiHost) {
-          return json({ error: "Tenant not found or API host missing — check tenant ID" }, 400);
+          return json({
+            error: "Tenant not found or API host missing — check tenant ID",
+          }, 400);
         }
       }
 
@@ -474,7 +551,10 @@ serve(async (req) => {
 
     // ── Mode: connect ── validate + store credentials
     if (mode === "connect") {
-      const { clientId, clientSecret } = body as { clientId: string; clientSecret: string };
+      const { clientId, clientSecret } = body as {
+        clientId: string;
+        clientSecret: string;
+      };
       if (!orgId || !clientId || !clientSecret) {
         return json({ error: "Missing orgId, clientId, or clientSecret" }, 400);
       }
@@ -498,7 +578,12 @@ serve(async (req) => {
         last_synced_at: new Date().toISOString(),
       }, { onConflict: "org_id" });
 
-      return json({ ok: true, partnerId: identity.id, partnerType: identity.idType, apiHosts: identity.apiHosts });
+      return json({
+        ok: true,
+        partnerId: identity.id,
+        partnerType: identity.idType,
+        apiHosts: identity.apiHosts,
+      });
     }
 
     // ── Mode: disconnect ── remove credentials
@@ -519,7 +604,9 @@ serve(async (req) => {
       const sb = adminClient();
       const { data } = await sb
         .from("central_credentials")
-        .select("partner_id, partner_type, api_hosts, connected_at, last_synced_at")
+        .select(
+          "partner_id, partner_type, api_hosts, connected_at, last_synced_at",
+        )
         .eq("org_id", orgId)
         .single();
       if (!data) return json({ connected: false });
@@ -530,7 +617,11 @@ serve(async (req) => {
     if (!orgId) return json({ error: "Missing orgId" }, 400);
     await verifyOrgMembership(authHeader, orgId);
     const creds = await loadCredentials(orgId);
-    if (!creds) return json({ error: "No Central credentials configured. Connect first." }, 400);
+    if (!creds) {
+      return json({
+        error: "No Central credentials configured. Connect first.",
+      }, 400);
+    }
 
     const tokenRes = await getToken(creds.clientId, creds.clientSecret);
     const token = tokenRes.access_token;
@@ -538,14 +629,15 @@ serve(async (req) => {
     const multiTenancyHeader = creds.partnerType === "partner"
       ? { "X-Partner-ID": creds.partnerId }
       : creds.partnerType === "organization"
-        ? { "X-Organization-ID": creds.partnerId }
-        : {};
+      ? { "X-Organization-ID": creds.partnerId }
+      : {};
 
     // ── Mode: tenants ── list all managed tenants (partner/org only)
     if (mode === "tenants") {
       if (creds.partnerType === "tenant") {
         const identity = await whoami(token);
-        const apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
+        const apiHost = identity.apiHosts.dataRegion ??
+          identity.apiHosts.global;
         let tenantName = "(This tenant)";
 
         // Try /account-info/v1/account-info for the company display name
@@ -555,7 +647,9 @@ serve(async (req) => {
             token,
             { "X-Tenant-ID": identity.id },
           ) as { name?: string; showAs?: string };
-          if (acctInfo.showAs || acctInfo.name) tenantName = (acctInfo.showAs ?? acctInfo.name) as string;
+          if (acctInfo.showAs || acctInfo.name) {
+            tenantName = (acctInfo.showAs ?? acctInfo.name) as string;
+          }
         } catch (_) {
           /* account-info not available — try org API as fallback */
         }
@@ -569,7 +663,9 @@ serve(async (req) => {
               1,
             ) as Array<{ id: string; name?: string; showAs?: string }>;
             const self = tenantList?.find((t) => t.id === identity.id);
-            if (self && (self.showAs ?? self.name)) tenantName = (self.showAs ?? self.name) as string;
+            if (self && (self.showAs ?? self.name)) {
+              tenantName = (self.showAs ?? self.name) as string;
+            }
           } catch (_) {
             /* org API not available for tenant-type credentials */
           }
@@ -577,7 +673,11 @@ serve(async (req) => {
         const tenantItem = {
           id: identity.id,
           name: tenantName,
-          dataRegion: identity.apiHosts.dataRegion?.replace("https://api-", "").replace(".central.sophos.com", "") ?? "",
+          dataRegion:
+            identity.apiHosts.dataRegion?.replace("https://api-", "").replace(
+              ".central.sophos.com",
+              "",
+            ) ?? "",
           apiHost,
           billingType: "",
         };
@@ -592,7 +692,9 @@ serve(async (req) => {
           billing_type: tenantItem.billingType,
           synced_at: new Date().toISOString(),
         }, { onConflict: "org_id,central_tenant_id" });
-        await sb.from("central_credentials").update({ last_synced_at: new Date().toISOString() }).eq("org_id", orgId);
+        await sb.from("central_credentials").update({
+          last_synced_at: new Date().toISOString(),
+        }).eq("org_id", orgId);
 
         return json({ items: [tenantItem] });
       }
@@ -604,7 +706,16 @@ serve(async (req) => {
       const items = await fetchAllPages(endpoint, token, multiTenancyHeader);
 
       const sb = adminClient();
-      const rows = (items as Array<{ id: string; name?: string; showAs?: string; dataRegion?: string; apiHost?: string; billingType?: string }>).map((t) => ({
+      const rows = (items as Array<
+        {
+          id: string;
+          name?: string;
+          showAs?: string;
+          dataRegion?: string;
+          apiHost?: string;
+          billingType?: string;
+        }
+      >).map((t) => ({
         org_id: orgId,
         central_tenant_id: t.id,
         name: t.showAs ?? t.name ?? "",
@@ -618,13 +729,25 @@ serve(async (req) => {
         await sb.from("central_tenants").delete().eq("org_id", orgId);
         const BATCH = 500;
         for (let i = 0; i < rows.length; i += BATCH) {
-          await sb.from("central_tenants").upsert(rows.slice(i, i + BATCH), { onConflict: "org_id,central_tenant_id" });
+          await sb.from("central_tenants").upsert(rows.slice(i, i + BATCH), {
+            onConflict: "org_id,central_tenant_id",
+          });
         }
       }
 
-      await sb.from("central_credentials").update({ last_synced_at: new Date().toISOString() }).eq("org_id", orgId);
+      await sb.from("central_credentials").update({
+        last_synced_at: new Date().toISOString(),
+      }).eq("org_id", orgId);
 
-      return json({ items: rows.map((r) => ({ id: r.central_tenant_id, name: r.name, dataRegion: r.data_region, apiHost: r.api_host, billingType: r.billing_type })) });
+      return json({
+        items: rows.map((r) => ({
+          id: r.central_tenant_id,
+          name: r.name,
+          dataRegion: r.data_region,
+          apiHost: r.api_host,
+          billingType: r.billing_type,
+        })),
+      });
     }
 
     // ── Mode: firewalls ── list firewalls for a specific tenant
@@ -645,7 +768,9 @@ serve(async (req) => {
           .eq("central_tenant_id", tenantId)
           .single();
         apiHost = tenantRow?.api_host ?? "";
-        if (!apiHost) return json({ error: "Tenant not found. Sync tenants first." }, 400);
+        if (!apiHost) {
+          return json({ error: "Tenant not found. Sync tenants first." }, 400);
+        }
       }
 
       const items = await fetchAllPages(
@@ -655,7 +780,9 @@ serve(async (req) => {
       );
 
       const sb = adminClient();
-      const fwRows = (items as Array<Record<string, unknown>>).map((fw: Record<string, unknown>) => ({
+      const fwRows = (items as Array<Record<string, unknown>>).map((
+        fw: Record<string, unknown>,
+      ) => ({
         org_id: orgId,
         central_tenant_id: tenantId,
         firewall_id: fw.id as string,
@@ -673,8 +800,13 @@ serve(async (req) => {
       }));
 
       if (fwRows.length > 0) {
-        await sb.from("central_firewalls").delete().eq("org_id", orgId).eq("central_tenant_id", tenantId);
-        await sb.from("central_firewalls").upsert(fwRows, { onConflict: "org_id,firewall_id" });
+        await sb.from("central_firewalls").delete().eq("org_id", orgId).eq(
+          "central_tenant_id",
+          tenantId,
+        );
+        await sb.from("central_firewalls").upsert(fwRows, {
+          onConflict: "org_id,firewall_id",
+        });
       }
 
       return json({ items });
@@ -764,7 +896,10 @@ serve(async (req) => {
         logJson("warn", "sophos_central_mdr_threat_feed", {
           error: err instanceof Error ? err.message : String(err),
         });
-        return json({ items: [], note: "MDR threat feed not available for this tenant" });
+        return json({
+          items: [],
+          note: "MDR threat feed not available for this tenant",
+        });
       }
     }
 
@@ -777,7 +912,8 @@ serve(async (req) => {
 // ── Helpers ──
 
 async function resolveApiHost(
-  orgId: string, tenantId: string,
+  orgId: string,
+  tenantId: string,
   creds: { partnerType: string; apiHosts: Record<string, string> },
   token: string,
 ): Promise<string> {

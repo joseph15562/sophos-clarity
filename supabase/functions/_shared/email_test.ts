@@ -6,7 +6,10 @@ Deno.test("escapeHtml escapes ampersand", () => {
 });
 
 Deno.test("escapeHtml escapes angle brackets", () => {
-  assertEquals(escapeHtml("<script>alert(1)</script>"), "&lt;script&gt;alert(1)&lt;/script&gt;");
+  assertEquals(
+    escapeHtml("<script>alert(1)</script>"),
+    "&lt;script&gt;alert(1)&lt;/script&gt;",
+  );
 });
 
 Deno.test("escapeHtml escapes quotes", () => {
@@ -33,7 +36,12 @@ Deno.test("escapeHtml handles multiple special chars", () => {
 });
 
 Deno.test("isValidSophosXml accepts valid XML with Response tag", () => {
-  assertEquals(isValidSophosXml('<?xml version="1.0"?><Response><FirewallRule/></Response>'), true);
+  assertEquals(
+    isValidSophosXml(
+      '<?xml version="1.0"?><Response><FirewallRule/></Response>',
+    ),
+    true,
+  );
 });
 
 Deno.test("isValidSophosXml accepts XML starting with Response", () => {
@@ -45,7 +53,10 @@ Deno.test("isValidSophosXml rejects non-XML input", () => {
 });
 
 Deno.test("isValidSophosXml rejects XML without Sophos tags", () => {
-  assertEquals(isValidSophosXml('<?xml version="1.0"?><Root><Item/></Root>'), false);
+  assertEquals(
+    isValidSophosXml('<?xml version="1.0"?><Root><Item/></Root>'),
+    false,
+  );
 });
 
 Deno.test("isValidSophosXml rejects empty input", () => {

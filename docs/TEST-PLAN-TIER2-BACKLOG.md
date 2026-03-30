@@ -149,6 +149,8 @@
 | T9.3a | Signed-in workspace journey | Automated | **Bypass (no secrets):** CI build sets `VITE_E2E_AUTH_BYPASS=1`; Playwright webServer passes same; `tier2-flows` describe **signed-in hub (E2E bypass)** runs upload → **Executive One-Pager** → Word `.docx` + PDF print stub (`__E2E_PDF_PRINT__`). **Optional secrets:** `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` still run the **real sign-in** duplicate journey for live Supabase. | ☐    |
 | T9.4  | axe (if integrated)         | Automated | CI axe step green or waivers documented.                                                                                                                                                                                                                                                                                                                                               | ☐    |
 
+**Playwright follow-ons (when product or CI changes):** If PDF export becomes a real browser **download** (blob / `Content-Disposition`) instead of print, add `page.waitForEvent("download")` and assert `.pdf` filename or minimum size. If CI **drops** `VITE_E2E_AUTH_BYPASS`, use **`page.route`** mocks for Supabase auth/session (or a dedicated test project with seed data) so signed-in journeys stay green without `E2E_USER_*` secrets. For any spec that waits on **live AI** or slow network, use **`test.describe.configure({ timeout: 120_000 })`** (or an env gate) rather than raising the global Playwright timeout in `playwright.config.ts`.
+
 ---
 
 ## 10. AI-generated reports (regression band)

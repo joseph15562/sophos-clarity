@@ -8,6 +8,22 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Added
 
+- **ADR 0004 wave 2** — TanStack Query hooks and `src/lib/data` helpers for management-drawer settings: team invites/revokes, scheduled reports CRUD, portal bootstrap + save, passkey delete, MSP setup checklist, org agents + 7d submission counts, shared remediation mutations.
+- **`job_outbox`** Postgres migration for future async job processing ([`docs/job-queue-outline.md`](docs/job-queue-outline.md)).
+- **`portal-data`** GET query schema ([`portal_data_query.ts`](supabase/functions/portal-data/portal_data_query.ts)) with Deno tests (invalid / long slug).
+- **`send-scheduled-reports`** — exported **`handleSendScheduledReports`** + Deno OPTIONS smoke test.
+- Setup wizard **`GuideAiReportsStep`** extraction; optional Edge Sentry placeholder **`supabase/functions/_shared/sentry-edge.ts`**.
+- **Product route telemetry** — `spa_page_view` via `ProductRouteTelemetry` when `VITE_ANALYTICS_INGEST_URL` is set (`src/components/ProductRouteTelemetry.tsx`).
+- **Optional Upstash Redis** for **`portal-data`** GET caching (`UPSTASH_REDIS_REST_*` Edge secrets); docs in **`docs/redis-pilot.md`**.
+- **Engineering docs:** **`docs/job-queue-outline.md`**, **`docs/pdf-generation-client-ceiling.md`**, **`docs/threat-model-stride-oneshot.md`**, **`docs/bundle-lighthouse-notes.md`**.
+- **`src/lib/feature-flags.ts`** — build-time `VITE_FEATURE_*` toggles; Vitest coverage in **`src/lib/__tests__/feature-flags.test.ts`**.
+- **CI:** Deno `fmt --check` + **`npm run test:deno`** on **`deploy.yml`** / **`staging.yml`**; **`npm test -- --coverage`** with Vitest threshold floors.
+- **OpenAPI** path entries for **`send-scheduled-reports`**, **`agent-nudge`**, **`regulatory-scanner`**, **`sophos-central`** (with `functions/v1` base server).
+- **`npm run format:deno`** / **`format:check:deno`**; **`deno fmt`** applied across **`supabase/functions`**.
+
+- **`src/lib/supabase-with-abort.ts`** — shared helper so TanStack Query `signal` can cancel Supabase reads; wired into agents, customer directory, team roster, PSA flags, submission retention, passkeys, health-check list, and SE teams fetch.
+- **`useOrgCloudPurgeMutation`** — org data-governance purge + cache invalidation; optional **`workspace_data_purged`** product telemetry when **`VITE_ANALYTICS_INGEST_URL`** is set (**`docs/SELF-HOSTED.md`**).
+- **`docs/SELF-HOSTED.md`** — optional **`VITE_ANALYTICS_INGEST_URL`** for SPA event ingest.
 - **`docs/SCALE-TRIGGERS.md`** — when to prioritise Redis, job queues, and Gemini throttling vs client/API structural work; linked from **`docs/observability.md`**.
 - **`src/lib/customer-directory.ts`** + **`useCustomerDirectoryQuery`** (`queryKeys.org.customerDirectory`); **Customer Management** loads directory via TanStack Query with invalidation on delete / portal save.
 - **`useOrgPsaIntegrationFlagsQuery`** + **`useOrgSubmissionRetentionQuery`**; **Management drawer** PSA summary and data-governance retention copy use Query (invalidate PSA flags when PSA modals close).
@@ -32,6 +48,14 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Changed
 
+- ESLint **`@typescript-eslint/no-unused-vars`**: **`error`** under **`src/lib/**`** only; **`warn`** elsewhere (with `\_`-prefix ignores).
+- **OpenAPI** — **`portal-data`** GET query parameters include **`maxLength`** aligned with Edge Zod.
+- **`ScoreDialGauge`** wrapped in **`React.memo`** (alongside **`ScoreTrendChart`**).
+- **Compliance heatmap** — debounced cell tooltips; secondary **`<img>`** marks: **`loading="lazy"`** / **`decoding="async"`** on several shared / portal / wizard / drawer surfaces.
+- **`docs/REVIEW.md`** — scorecard (**~79/100** March 30 follow-on), Dimension 8 ESLint finding, Tier 2/3 Zod/API checklist, **`job_outbox`** / **`ScoreDialGauge`** / Deno coverage narrative.
+- SE Health Check: clearer toast when an uploaded file is not a valid Sophos HTML/XML export; **`health_check_config_parse_failed`** telemetry event (optional ingest).
+- AI report generation: failure toasts title **Analysis did not finish** and mention **Retry analysis** on the report panel.
+- LocalStorage JSON fallbacks in **finding-snapshots**, **scheduled-reports**, and **config-snapshots** log via **`warnOptionalError`** instead of silent **`catch`**.
 - **Stale deploy recovery:** error UI explains “module script” / dynamic-import failures after releases, offers **Reload page** (full refresh), and once-per-session auto-reload on matching `unhandledrejection`. Non-asset routes send `Cache-Control: …, no-cache` so browsers revalidate the SPA shell sooner.
 - Portal settings: tenant/bootstrap data loads via TanStack Query (`queryKeys.portal.tenantBootstrap`) with invalidation after save.
 - Saved reports library (management drawer): list/delete via TanStack Query (`queryKeys.savedReports.packages`).
@@ -41,5 +65,6 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 - API Hub / `openapi.yaml`: document public `api-public` shared-report and shared-health-check GET paths for embeds.
 - `docs/REVIEW.md` — scorecard, Dimension 1–7 findings, Tier 2/3 checkboxes, and **§4 THE BRUTAL TRUTH** aligned with review follow-on: **E2E auth bypass**, **viewport** Playwright, **EmptyState** sweep (fleet / SE / assessments / drift / customers / AgentManager), **Invite Staff** Query + zod pilot, **`portal-data` / `parse-config`** OpenAPI, **`parse_config_unhandled`**, **debounce** / **k6** smoke / **seed** stub / **PERF-EXPLAIN** / partial stable keys.
 - **PDF (print) & Word report exports:** tables use Sophos navy headers, light zebra rows, and `table-layout: fixed` with wrapping so wide firewall-rule grids stay on the page instead of clipping; Word uses landscape + a fixed column grid. Document preview export buttons no longer shrink awkwardly in tight layouts.
+- **PDF print (refine):** report header bar no longer clips date/meta in print; tables use Sophos accent left rule, `break-word` (not per-letter breaks), tighter header typography, and **sticky `th` disabled** for print. **A4 landscape** for all PDF/print exports (aligned with Word); removed fixed print chrome that caused **“Page 0 of 0”** and text sliced by the footer — use **@page** margins instead; paragraph **orphans/widows** tuned for print.
 - Client toasts use Sonner only (removed duplicate shadcn toast stack).
 - Scheduled report sender batches `agent_submissions` by org; health-check follow-ups batch `se_profiles`; regulatory scanner batches `upsert` rows.

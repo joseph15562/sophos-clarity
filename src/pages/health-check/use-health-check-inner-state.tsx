@@ -80,9 +80,11 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { trackProductEvent } from "@/lib/product-telemetry";
 import { useSEAuthProvider, useSEAuth, SEAuthProvider } from "@/hooks/use-se-auth";
 import { SEAuthGate } from "@/components/SEAuthGate";
 import { getSupabasePublicEdgeAuth, supabase } from "@/integrations/supabase/client";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 import { readJwtPayloadClaim } from "@/lib/jwt-payload";
 import { getFirewallDisplayName } from "@/lib/sophos-central";
 import {
@@ -204,8 +206,8 @@ export function useHealthCheckInnerState() {
     if (p.healthCheckPreparedBy?.trim()) {
       try {
         localStorage.removeItem(SE_HEALTH_CHECK_PREPARED_BY_KEY);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnOptionalError("health-check.preparedByMigration.remove", e);
       }
       return;
     }
@@ -218,8 +220,8 @@ export function useHealthCheckInnerState() {
       if (cancelled || error) return;
       try {
         localStorage.removeItem(SE_HEALTH_CHECK_PREPARED_BY_KEY);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnOptionalError("health-check.preparedByMigration.removeAfterSync", e);
       }
       await seAuth.reloadSeProfile();
     })();
@@ -417,9 +419,16 @@ export function useHealthCheckInnerState() {
           }
         } catch (err) {
           console.warn(`[health-check] parse failed ${file.fileName}`, err);
-          toast.error(
-            `Could not parse ${file.fileName} — use a valid Sophos HTML or entities XML export`,
-          );
+          const isXmlHint = isXml
+            ? "Export entities.xml from your Sophos firewall (System → Backup & firmware → Export) and upload that file, not a partial or renamed copy."
+            : "Use a full HTML export from your Sophos firewall admin console, or an entities.xml configuration export.";
+          toast.error("This file does not look like a Sophos firewall export", {
+            description: `${file.fileName}: ${isXmlHint} Then try uploading again.`,
+          });
+          trackProductEvent("health_check_config_parse_failed", {
+            fileName: file.fileName,
+            treatedAsXml: isXml,
+          });
           extractedData = {} as ExtractedSections;
         }
         parsed.push({ ...file, extractedData, source: "upload" });
@@ -1530,8 +1539,8 @@ export function useHealthCheckInnerState() {
           SE_HEALTH_CHECK_BP_OVERRIDES_KEY,
           JSON.stringify(snapshot.manualBpOverrideIds),
         );
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnOptionalError("health-check.restoreSnapshot.bpOverrides", e);
       }
       setCustomerName(snapshot.customerName);
       setCustomerEmail(snapshot.customerEmail ?? "");

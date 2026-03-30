@@ -10,7 +10,12 @@ import {
   autotaskQueryCompanies,
 } from "../../_shared/autotask-psa.ts";
 import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
-import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+  userClient,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
 
 async function requireOrgAdmin(
@@ -18,7 +23,9 @@ async function requireOrgAdmin(
   corsHeaders: Record<string, string>,
 ): Promise<{ orgId: string; userId: string } | Response> {
   const authHeader = req.headers.get("authorization");
-  if (!authHeader) return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  if (!authHeader) {
+    return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  }
   const uc = userClient(authHeader);
   const {
     data: { user },
@@ -120,12 +127,16 @@ export async function handleAutotaskPsaRoutes(
   if (route === "companies" && req.method === "GET") {
     const { data: cred, error: credErr } = await db
       .from("autotask_psa_credentials")
-      .select("api_zone_base_url, username, encrypted_secret, encrypted_integration_code")
+      .select(
+        "api_zone_base_url, username, encrypted_secret, encrypted_integration_code",
+      )
       .eq("org_id", orgId)
       .maybeSingle();
     if (credErr) return j({ error: safeDbError(credErr) }, 500);
     if (!cred) {
-      return j({ error: "Autotask PSA is not configured for this organisation" }, 404);
+      return j({
+        error: "Autotask PSA is not configured for this organisation",
+      }, 404);
     }
     const row = cred as {
       api_zone_base_url: string;
@@ -150,7 +161,10 @@ export async function handleAutotaskPsaRoutes(
       );
       return j({ companies });
     } catch (e) {
-      return j({ error: e instanceof Error ? e.message : "Autotask API error" }, 400);
+      return j(
+        { error: e instanceof Error ? e.message : "Autotask API error" },
+        400,
+      );
     }
   }
 
@@ -191,7 +205,9 @@ export async function handleAutotaskPsaRoutes(
 
     const secretsProvided = !!(secret && integrationCode);
     if (!existingRow && !secretsProvided) {
-      return j({ error: "secret and integrationCode are required for a new connection" }, 400);
+      return j({
+        error: "secret and integrationCode are required for a new connection",
+      }, 400);
     }
 
     try {
@@ -234,7 +250,10 @@ export async function handleAutotaskPsaRoutes(
       if (upErr) return j({ error: safeDbError(upErr) }, 500);
       return j({ ok: true });
     } catch (e) {
-      return j({ error: e instanceof Error ? e.message : "Encrypt failed" }, 500);
+      return j(
+        { error: e instanceof Error ? e.message : "Encrypt failed" },
+        500,
+      );
     }
   }
 
@@ -244,8 +263,11 @@ export async function handleAutotaskPsaRoutes(
       .delete()
       .eq("org_id", orgId)
       .eq("provider", AT_PROVIDER);
-    if (mapErr) console.warn("[autotask-psa] clear mappings", safeDbError(mapErr));
-    const { error: delErr } = await db.from("autotask_psa_credentials").delete().eq("org_id", orgId);
+    if (mapErr) {
+      console.warn("[autotask-psa] clear mappings", safeDbError(mapErr));
+    }
+    const { error: delErr } = await db.from("autotask_psa_credentials").delete()
+      .eq("org_id", orgId);
     if (delErr) return j({ error: safeDbError(delErr) }, 500);
     return j({ ok: true });
   }
@@ -273,7 +295,10 @@ export async function handleAutotaskPsaRoutes(
 
     if (!Number.isFinite(companyId)) {
       if (!firecomplyCustomerKey) {
-        return j({ error: "companyId or firecomplyCustomerKey is required" }, 400);
+        return j(
+          { error: "companyId or firecomplyCustomerKey is required" },
+          400,
+        );
       }
       const { data: mapRow, error: mapErr } = await db
         .from("psa_customer_company_map")
@@ -285,7 +310,10 @@ export async function handleAutotaskPsaRoutes(
       if (mapErr) return j({ error: safeDbError(mapErr) }, 500);
       if (!mapRow) {
         return j(
-          { error: "No Autotask company mapping for this FireComply customer. Add it under PSA settings." },
+          {
+            error:
+              "No Autotask company mapping for this FireComply customer. Add it under PSA settings.",
+          },
           400,
         );
       }
@@ -303,7 +331,9 @@ export async function handleAutotaskPsaRoutes(
       return j({
         ok: true,
         deduped: true,
-        ticket_id: Number((existingDup as { external_ticket_id: string }).external_ticket_id),
+        ticket_id: Number(
+          (existingDup as { external_ticket_id: string }).external_ticket_id,
+        ),
       });
     }
 
@@ -315,7 +345,11 @@ export async function handleAutotaskPsaRoutes(
       .eq("org_id", orgId)
       .maybeSingle();
     if (credErr) return j({ error: safeDbError(credErr) }, 500);
-    if (!cred) return j({ error: "Autotask PSA is not configured for this organisation" }, 404);
+    if (!cred) {
+      return j({
+        error: "Autotask PSA is not configured for this organisation",
+      }, 404);
+    }
 
     const row = cred as {
       api_zone_base_url: string;
@@ -330,15 +364,21 @@ export async function handleAutotaskPsaRoutes(
     };
 
     const queueId =
-      typeof body.queueId === "number" && Number.isFinite(body.queueId) ? body.queueId : row.default_queue_id;
+      typeof body.queueId === "number" && Number.isFinite(body.queueId)
+        ? body.queueId
+        : row.default_queue_id;
     const priority =
       typeof body.priority === "number" && Number.isFinite(body.priority)
         ? body.priority
         : row.default_priority;
     const status =
-      typeof body.status === "number" && Number.isFinite(body.status) ? body.status : row.default_status;
+      typeof body.status === "number" && Number.isFinite(body.status)
+        ? body.status
+        : row.default_status;
     const source =
-      typeof body.source === "number" && Number.isFinite(body.source) ? body.source : row.default_source;
+      typeof body.source === "number" && Number.isFinite(body.source)
+        ? body.source
+        : row.default_source;
     const ticketType =
       typeof body.ticketType === "number" && Number.isFinite(body.ticketType)
         ? body.ticketType
@@ -373,7 +413,10 @@ export async function handleAutotaskPsaRoutes(
       );
       ticketId = created.id;
     } catch (e) {
-      return j({ error: e instanceof Error ? e.message : "Autotask API error" }, 400);
+      return j(
+        { error: e instanceof Error ? e.message : "Autotask API error" },
+        400,
+      );
     }
 
     const meta: Record<string, unknown> = {
@@ -384,15 +427,19 @@ export async function handleAutotaskPsaRoutes(
       source,
       ticketType,
     };
-    if (firecomplyCustomerKey) meta.firecomplyCustomerKey = firecomplyCustomerKey;
+    if (firecomplyCustomerKey) {
+      meta.firecomplyCustomerKey = firecomplyCustomerKey;
+    }
 
-    const { error: insDupErr } = await db.from("psa_ticket_idempotency").insert({
-      org_id: orgId,
-      provider: AT_PROVIDER,
-      idempotency_key: idempotencyKey,
-      external_ticket_id: String(ticketId),
-      metadata: meta,
-    });
+    const { error: insDupErr } = await db.from("psa_ticket_idempotency").insert(
+      {
+        org_id: orgId,
+        provider: AT_PROVIDER,
+        idempotency_key: idempotencyKey,
+        external_ticket_id: String(ticketId),
+        metadata: meta,
+      },
+    );
     if (insDupErr) {
       console.warn("[autotask-psa] idempotency insert", safeDbError(insDupErr));
     }
@@ -402,7 +449,9 @@ export async function handleAutotaskPsaRoutes(
       companyId,
       provider: AT_PROVIDER,
     };
-    if (firecomplyCustomerKey) auditMeta.firecomplyCustomerKey = firecomplyCustomerKey;
+    if (firecomplyCustomerKey) {
+      auditMeta.firecomplyCustomerKey = firecomplyCustomerKey;
+    }
 
     await db.from("audit_log").insert({
       org_id: orgId,

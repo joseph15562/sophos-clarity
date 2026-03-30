@@ -13,6 +13,7 @@ import {
   Download,
   X,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
@@ -31,6 +32,8 @@ import {
   type AcceptedFinding,
 } from "@/lib/accepted-findings";
 import { SEVERITY_ORDER } from "@/lib/design-tokens";
+import { useRemediationDeltaMutation } from "@/hooks/queries/use-remediation-status-mutations";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -107,7 +110,8 @@ function loadSlaConfig(): SlaConfig {
     if (!raw) return { ...DEFAULT_SLA_DAYS };
     const parsed = JSON.parse(raw) as Partial<SlaConfig>;
     return { ...DEFAULT_SLA_DAYS, ...parsed };
-  } catch {
+  } catch (e) {
+    warnOptionalError("RemediationPlaybooks.loadSlaConfig", e);
     return { ...DEFAULT_SLA_DAYS };
   }
 }
@@ -115,8 +119,8 @@ function loadSlaConfig(): SlaConfig {
 function saveSlaConfig(config: SlaConfig): void {
   try {
     localStorage.setItem(SLA_STORAGE_KEY, JSON.stringify(config));
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("RemediationPlaybooks.saveSlaConfig", e);
   }
 }
 
@@ -151,6 +155,8 @@ const SEV_BADGE: Record<Severity, string> = {
 };
 
 export function RemediationPlaybooks({ analysisResults }: Props) {
+  const { mutateAsync: persistRemediationRows } = useRemediationDeltaMutation();
+
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [completed, setCompleted] = useState<Set<string>>(new Set());
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -231,8 +237,8 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
               setCompleted(new Set(arr));
             }
           }
-        } catch {
-          /* ignore */
+        } catch (e) {
+          warnOptionalError("RemediationPlaybooks.loadCompletedLocal", e);
         }
       }
     })();
@@ -247,39 +253,19 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
       if (!orgId) {
         try {
           localStorage.setItem(`${STORAGE_PREFIX}${customerHash}`, JSON.stringify([...next]));
-        } catch {
-          /* ignore */
+        } catch (e) {
+          warnOptionalError("RemediationPlaybooks.persistCompletedLocal", e);
         }
         return;
       }
 
       const added = [...next].filter((id) => !prev.has(id));
       const removed = [...prev].filter((id) => !next.has(id));
+      if (added.length === 0 && removed.length === 0) return;
 
-      if (added.length > 0) {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        await supabase.from("remediation_status").upsert(
-          added.map((playbook_id) => ({
-            org_id: orgId,
-            playbook_id,
-            customer_hash: customerHash,
-            completed_by: user?.id ?? null,
-          })),
-          { onConflict: "org_id,customer_hash,playbook_id" },
-        );
-      }
-      if (removed.length > 0) {
-        await supabase
-          .from("remediation_status")
-          .delete()
-          .eq("org_id", orgId)
-          .eq("customer_hash", customerHash)
-          .in("playbook_id", removed);
-      }
+      await persistRemediationRows({ orgId, customerHash, added, removed });
     },
-    [customerHash],
+    [customerHash, persistRemediationRows],
   );
 
   // Load first-detected timestamps for SLA tracking
@@ -320,7 +306,16 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
     toast.success("Console path copied to clipboard — paste into your Sophos XGS admin URL");
   }, []);
 
-  if (playbooks.length === 0) return null;
+  if (playbooks.length === 0) {
+    return (
+      <EmptyState
+        className="!py-10"
+        icon={<Wrench className="h-6 w-6 text-muted-foreground/50" />}
+        title="No remediation playbooks"
+        description="There are no open findings with remediation guides for this analysis."
+      />
+    );
+  }
 
   function getProjectedScore(
     pb: Playbook & { fwLabel: string },

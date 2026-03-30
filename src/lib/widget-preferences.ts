@@ -1,3 +1,5 @@
+import { warnOptionalError } from "@/lib/client-error-feedback";
+
 const STORAGE_KEY = "firecomply_widget_preferences";
 
 export interface WidgetDef {
@@ -109,8 +111,8 @@ export function loadWidgetPreferences(): WidgetPreferences {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw) as WidgetPreferences;
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("widget-preferences.load", e);
   }
   return {};
 }
@@ -118,8 +120,8 @@ export function loadWidgetPreferences(): WidgetPreferences {
 export function saveWidgetPreferences(prefs: WidgetPreferences): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("widget-preferences.save", e);
   }
 }
 

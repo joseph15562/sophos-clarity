@@ -5,6 +5,7 @@ import type { UploadedFile } from "@/components/FileUpload";
 import { supabase } from "@/integrations/supabase/client";
 import type { SEProfile } from "@/hooks/use-se-auth";
 import { queryKeys } from "@/hooks/queries/keys";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 export type ConfigUploadRequestRow = {
   id: string;
@@ -351,8 +352,8 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
             invalidateConfigUploadList();
           }
         }
-      } catch {
-        /* silent */
+      } catch (e) {
+        warnOptionalError("use-config-upload.poll", e);
       }
     };
     configUploadPollRef.current = setInterval(poll, 10_000);

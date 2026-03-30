@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AutotaskTicketFromFindingDialog } from "@/components/AutotaskTicketFromFindingDialog";
 import { ConnectWiseTicketFromFindingDialog } from "@/components/ConnectWiseTicketFromFindingDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 const STORAGE_KEY_PLAN = "sophos-remediation-plan-ids";
 
@@ -22,7 +23,8 @@ function loadPlanIds(): Set<string> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PLAN);
     return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-  } catch {
+  } catch (e) {
+    warnOptionalError("FindingsBulkView.loadPlanIds", e);
     return new Set();
   }
 }
@@ -30,8 +32,8 @@ function loadPlanIds(): Set<string> {
 function savePlanIds(ids: Set<string>): void {
   try {
     localStorage.setItem(STORAGE_KEY_PLAN, JSON.stringify([...ids]));
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("FindingsBulkView.savePlanIds", e);
   }
 }
 

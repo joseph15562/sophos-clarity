@@ -4,7 +4,8 @@ import { z } from "npm:zod@3.24.2";
 export const agentRegisterBodySchema = z.object({
   name: z.string().min(1).max(500),
   firewall_host: z.string().min(1).max(2048),
-  firewall_port: z.coerce.number().int().min(1).max(65535).optional().nullable(),
+  firewall_port: z.coerce.number().int().min(1).max(65535).optional()
+    .nullable(),
   customer_name: z.string().max(500).optional().nullable(),
   environment: z.string().max(200).optional().nullable(),
   schedule_cron: z.string().max(200).optional().nullable(),
@@ -59,7 +60,10 @@ export const authMfaRecoveryBodySchema = z.object({
   targetEmail: z.string().email().max(320),
 });
 
-const digitString = z.string().regex(/^\d+$/, "must be a non-negative integer string");
+const digitString = z.string().regex(
+  /^\d+$/,
+  "must be a non-negative integer string",
+);
 
 /** GET /api/assessments list query (`page` / `pageSize` from URL search params) */
 export const assessmentsListQuerySchema = z.object({
@@ -204,5 +208,8 @@ export const connectwiseManageTicketPostSchema = z
         Number.isFinite(b.customerCompanyId) &&
         (b.firecomplyCustomerKey ?? "").trim() !== ""
       ),
-    { message: "Send either customerCompanyId or firecomplyCustomerKey, not both" },
+    {
+      message:
+        "Send either customerCompanyId or firecomplyCustomerKey, not both",
+    },
   );

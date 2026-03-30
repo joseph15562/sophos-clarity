@@ -11,13 +11,9 @@
 
 import type { ExtractedSections } from "./extract-sections";
 import type {
-  Severity,
   ConfigStats,
-  SslTlsRule,
   InspectionPosture,
   Finding,
-  AtpStatus,
-  ThreatStatus,
   AnalysisResult,
   AnalyseOptions,
 } from "./analysis/types";
@@ -39,45 +35,78 @@ export { severityIcon } from "./analysis/types";
 
 // --- Extracted modules ---
 import {
-  isWanDest, isWebService, hasWebFilter, isAllowAllWebPolicy, getWebFilterPolicyDisplayName,
-  isLoggingOff, isRuleDisabled, isAnyService, isBroadSource, isBroadDest,
-  ruleName, hasAppControl, hasIps, ruleSignature,
+  isWanDest,
+  isWebService,
+  hasWebFilter,
+  isAllowAllWebPolicy,
+  getWebFilterPolicyDisplayName,
+  isLoggingOff,
+  isRuleDisabled,
+  isAnyService,
+  isBroadSource,
+  isBroadDest,
+  ruleName,
+  hasAppControl,
+  hasIps,
+  ruleSignature,
 } from "./analysis/rule-predicates";
 import {
-  findFirewallRulesTable, countRows, countInterfaceRows,
-  extractHostname, extractManagementIp,
+  findFirewallRulesTable,
+  countRows,
+  countInterfaceRows,
+  extractHostname,
+  extractManagementIp,
 } from "./analysis/section-meta";
-import { findOtpSection } from "./analysis/section-meta";
 import {
-  parseSslTlsRules, findUncoveredZones, findUncoveredNetworks,
+  parseSslTlsRules,
+  findUncoveredZones,
+  findUncoveredNetworks,
 } from "./analysis/ssl-tls-inspection";
 import { analyseThreatStatus as _analyseThreatStatus } from "./analysis/threat-status-findings";
 import {
-  extractAtpStatus, analyseATP, analyseMdrFeed, analyseNdrEssentials,
-  analyseSecurityHeartbeat, analyseSyncAppControl,
+  extractAtpStatus,
+  analyseATP,
+  analyseMdrFeed,
+  analyseNdrEssentials,
+  analyseSecurityHeartbeat,
+  analyseSyncAppControl,
 } from "./analysis/domains/atp-services";
 import { analyseNatRules as analyseNatRulesDomain } from "./analysis/domains/nat";
 import { analyseLocalServiceAcl, analyseWebFilterPolicies } from "./analysis/domains/web-filter";
 import { analyseIpsPolicies, analyseVirusScanning } from "./analysis/domains/ips-av";
 import {
-  analyseAdminSettings, analyseBackupRestore, analyseNotificationSettings,
-  analysePatternDownload, analyseTimeSettings, analyseAuthServers,
-  analyseHotfix, analyseOtpSettings, analyseAdminProfiles,
+  analyseAdminSettings,
+  analyseBackupRestore,
+  analyseNotificationSettings,
+  analysePatternDownload,
+  analyseTimeSettings,
+  analyseAuthServers,
+  analyseHotfix,
+  analyseOtpSettings,
 } from "./analysis/domains/admin-hardening";
 import {
-  analyseVpnSecurity, analyseDoSProtection, analyseSyslogServers,
-  analyseWirelessSecurity, analyseSnmpCommunity, analyseDnsSecurity,
+  analyseVpnSecurity,
+  analyseDoSProtection,
+  analyseSyslogServers,
+  analyseWirelessSecurity,
+  analyseSnmpCommunity,
+  analyseDnsSecurity,
   analyseRedSecurity,
 } from "./analysis/domains/vpn-network";
 import {
-  analyseRuleOrdering, analyseUserGroupRules, analyseWafPolicies,
+  analyseRuleOrdering,
+  analyseUserGroupRules,
+  analyseWafPolicies,
   analyseAppFilterPolicies,
 } from "./analysis/domains/rules-waf";
 import {
-  analyseCertificates, analyseHotspots, analyseInterfaceSecurity,
-  analyseZtna, analyseFirmwareVersion, analyseLicenceUsage,
+  analyseCertificates,
+  analyseHotspots,
+  analyseInterfaceSecurity,
+  analyseZtna,
+  analyseFirmwareVersion,
+  analyseLicenceUsage,
 } from "./analysis/domains/infra";
-import { analyseHA } from "./analysis/domains/ha";
 
 // Re-export for backward compatibility
 export const analyseThreatStatus = _analyseThreatStatus;
@@ -85,7 +114,10 @@ export const analyseThreatStatus = _analyseThreatStatus;
 /**
  * Run deterministic analysis on a single firewall's extracted sections.
  */
-export function analyseConfig(sections: ExtractedSections, options?: AnalyseOptions): AnalysisResult {
+export function analyseConfig(
+  sections: ExtractedSections,
+  options?: AnalyseOptions,
+): AnalysisResult {
   const findings: Finding[] = [];
   let fid = 0;
 
@@ -108,17 +140,38 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   }
 
   const stats: ConfigStats = {
-    totalRules, totalSections, totalHosts, totalNatRules, interfaces,
-    populatedSections, emptySections: emptySectionCount, sectionNames,
+    totalRules,
+    totalSections,
+    totalHosts,
+    totalNatRules,
+    interfaces,
+    populatedSections,
+    emptySections: emptySectionCount,
+    sectionNames,
   };
 
   const emptyPosture: InspectionPosture = {
-    totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
-    webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
-    withAppControl: 0, withIps: 0, withSslInspection: 0,
-    sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
-    allWanSourceZones: [], allWanSourceNetworks: [],
-    wanRuleNames: [], wanWebServiceRuleNames: [], wanMissingWebFilterRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+    totalWanRules: 0,
+    enabledWanRules: 0,
+    disabledWanRules: 0,
+    webFilterableRules: 0,
+    withWebFilter: 0,
+    withoutWebFilter: 0,
+    withAppControl: 0,
+    withIps: 0,
+    withSslInspection: 0,
+    sslDecryptRules: 0,
+    sslExclusionRules: 0,
+    sslRules: [],
+    sslUncoveredZones: [],
+    sslUncoveredNetworks: [],
+    allWanSourceZones: [],
+    allWanSourceNetworks: [],
+    wanRuleNames: [],
+    wanWebServiceRuleNames: [],
+    wanMissingWebFilterRuleNames: [],
+    totalDisabledRules: 0,
+    dpiEngineEnabled: false,
   };
 
   if (!rulesTable || totalRules === 0) {
@@ -131,7 +184,15 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       confidence: "medium",
       evidence: "No table matching 'firewall rules' section found in parsed HTML",
     });
-    return { stats, findings, inspectionPosture: emptyPosture, ruleColumns: [], hostname: extractHostname(sections), managementIp: extractManagementIp(sections), atpStatus: extractAtpStatus(sections) };
+    return {
+      stats,
+      findings,
+      inspectionPosture: emptyPosture,
+      ruleColumns: [],
+      hostname: extractHostname(sections),
+      managementIp: extractManagementIp(sections),
+      atpStatus: extractAtpStatus(sections),
+    };
   }
 
   // --- Track disabled rules across all rules ---
@@ -154,14 +215,19 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     (options?.webFilterExemptRuleNames ?? []).map((s) => s.toLowerCase().trim()).filter(Boolean),
   );
 
-  let webFilterableRules = 0, withWebFilter = 0, withoutWebFilter = 0;
-  let withAppControl = 0, withIps = 0, withSslInspection = 0;
+  let webFilterableRules = 0,
+    withWebFilter = 0,
+    withoutWebFilter = 0;
+  let withAppControl = 0,
+    withIps = 0,
+    withSslInspection = 0;
   for (const { name, row, enabled } of wanRules) {
     if (!enabled) continue;
     if (isWebService(row)) {
       if (!wfExempt.has(name.toLowerCase().trim())) {
         webFilterableRules++;
-        if (hasWebFilter(row)) withWebFilter++; else withoutWebFilter++;
+        if (hasWebFilter(row)) withWebFilter++;
+        else withoutWebFilter++;
       }
     }
     if (hasAppControl(row)) withAppControl++;
@@ -173,9 +239,16 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const sslDecryptRules = sslRules.filter((r) => r.action === "decrypt" && r.enabled).length;
   const sslExclusionRules = sslRules.filter((r) => r.action === "exclude").length;
   const dpiEngineEnabled = sslDecryptRules > 0;
-  const { uncovered: sslUncoveredZones, allWanSourceZones } = findUncoveredZones(wanRules, sslRules, options?.dpiExemptZones);
-  const { uncoveredNetworks: sslUncoveredNetworks, allWanSourceNetworks } =
-    findUncoveredNetworks(wanRules, sslRules, options?.dpiExemptNetworks);
+  const { uncovered: sslUncoveredZones, allWanSourceZones } = findUncoveredZones(
+    wanRules,
+    sslRules,
+    options?.dpiExemptZones,
+  );
+  const { uncoveredNetworks: sslUncoveredNetworks, allWanSourceNetworks } = findUncoveredNetworks(
+    wanRules,
+    sslRules,
+    options?.dpiExemptNetworks,
+  );
 
   const wfMode = options?.webFilterComplianceMode ?? "strict";
 
@@ -187,13 +260,23 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
     totalWanRules: wanRules.length,
     enabledWanRules: enabledWanRules.length,
     disabledWanRules: disabledWanRules.length,
-    webFilterableRules, withWebFilter, withoutWebFilter,
-    withAppControl, withIps, withSslInspection,
-    sslDecryptRules, sslExclusionRules, sslRules,
-    sslUncoveredZones, sslUncoveredNetworks,
-    allWanSourceZones, allWanSourceNetworks,
+    webFilterableRules,
+    withWebFilter,
+    withoutWebFilter,
+    withAppControl,
+    withIps,
+    withSslInspection,
+    sslDecryptRules,
+    sslExclusionRules,
+    sslRules,
+    sslUncoveredZones,
+    sslUncoveredNetworks,
+    allWanSourceZones,
+    allWanSourceNetworks,
     wanRuleNames: wanRules.map((w) => w.name),
-    wanWebServiceRuleNames: wanRules.filter((w) => w.enabled && isWebService(w.row)).map((w) => w.name),
+    wanWebServiceRuleNames: wanRules
+      .filter((w) => w.enabled && isWebService(w.row))
+      .map((w) => w.name),
     wanMissingWebFilterRuleNames,
     totalDisabledRules,
     dpiEngineEnabled,
@@ -205,11 +288,20 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       id: `f${++fid}`,
       severity: "medium",
       title: `${disabledWanRules.length} WAN rule${disabledWanRules.length > 1 ? "s" : ""} disabled`,
-      detail: `Disabled WAN-facing rules: ${disabledWanRules.map((r) => r.name).slice(0, 6).join(", ")}${disabledWanRules.length > 6 ? ` (+${disabledWanRules.length - 6} more)` : ""}. These rules provide no protection — verify if they should be re-enabled or removed.`,
+      detail: `Disabled WAN-facing rules: ${disabledWanRules
+        .map((r) => r.name)
+        .slice(0, 6)
+        .join(
+          ", ",
+        )}${disabledWanRules.length > 6 ? ` (+${disabledWanRules.length - 6} more)` : ""}. These rules provide no protection — verify if they should be re-enabled or removed.`,
       section: "Firewall Rules",
-      remediation: "Go to Rules and policies > Firewall rules. Review disabled WAN rules — if no longer needed, delete them. If they should be active, re-enable them and configure web filtering, IPS, and app control.",
+      remediation:
+        "Go to Rules and policies > Firewall rules. Review disabled WAN rules — if no longer needed, delete them. If they should be active, re-enable them and configure web filtering, IPS, and app control.",
       confidence: "high",
-      evidence: `Rules with Status=Off/Disabled and Destination Zone=WAN: ${disabledWanRules.map((r) => r.name).slice(0, 4).join(", ")}`,
+      evidence: `Rules with Status=Off/Disabled and Destination Zone=WAN: ${disabledWanRules
+        .map((r) => r.name)
+        .slice(0, 4)
+        .join(", ")}`,
     });
   }
 
@@ -251,7 +343,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
           ? `${baseDetail} Web filter compliance mode is set to Informational — this is shown for visibility; it is not framed as a default regulatory failure. Review scope with the customer.${exemptNote}`
           : `${baseDetail} This is a KCSIE/DfE compliance gap.${exemptNote}`,
       section: "Firewall Rules",
-      remediation: "Go to Rules and policies > Firewall rules. Edit each affected rule → expand Web filtering → set a Web policy. Manage policies under Web > Policies. Ensure the policy blocks inappropriate content for your environment.",
+      remediation:
+        "Go to Rules and policies > Firewall rules. Edit each affected rule → expand Web filtering → set a Web policy. Manage policies under Web > Policies. Ensure the policy blocks inappropriate content for your environment.",
       confidence: "high",
       evidence: `Rules ${wanNoFilter.slice(0, 3).join(", ")} have Web Filter=none/empty with Service=HTTP/HTTPS/ANY`,
     });
@@ -269,7 +362,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${wanAllowAllWeb.length} WAN rule${wanAllowAllWeb.length > 1 ? "s" : ""} use an "allow all" style web policy`,
       detail: `These enabled WAN rules have a web filter policy attached, but the policy name indicates all categories are allowed — there is no meaningful URL/category restriction for compliance purposes: ${wanAllowAllWeb.slice(0, 8).join(", ")}${wanAllowAllWeb.length > 8 ? ` (+${wanAllowAllWeb.length - 8} more)` : ""}. If you only need logging, document that; otherwise use None (no policy) for efficiency or a restrictive policy for protection.`,
       section: "Firewall Rules",
-      remediation: "Go to Web > Policies and either use a restrictive policy on these rules, or remove the web policy from the rule if inspection is not required.",
+      remediation:
+        "Go to Web > Policies and either use a restrictive policy on these rules, or remove the web policy from the rule if inspection is not required.",
       confidence: "high",
       evidence: `Rules ${wanAllowAllWeb.slice(0, 4).join(", ")} use Allow All / Permit All style web policy names`,
     });
@@ -287,14 +381,16 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${loggingOff.length} rule${loggingOff.length > 1 ? "s" : ""} with logging disabled`,
       detail: `Logging is turned off on: ${loggingOff.slice(0, 8).join(", ")}${loggingOff.length > 8 ? ` (+${loggingOff.length - 8} more)` : ""}. Disabled logging creates gaps in audit trails and monitoring.`,
       section: "Firewall Rules",
-      remediation: "Go to Rules and policies > Firewall rules. Edit each affected rule → tick 'Log firewall traffic' (near the top, below the Action setting). To send logs externally, configure System services > Log settings.",
+      remediation:
+        "Go to Rules and policies > Firewall rules. Edit each affected rule → tick 'Log firewall traffic' (near the top, below the Action setting). To send logs externally, configure System services > Log settings.",
       confidence: "high",
       evidence: `Rules ${loggingOff.slice(0, 3).join(", ")} have Log=disabled/off`,
     });
   }
 
   // --- Classify rules by openness ---
-  const KNOWN_SYSTEM_RULES = /^(allow dns requests|auto added firewall policy for mta|auto added rule for mta)$/i;
+  const KNOWN_SYSTEM_RULES =
+    /^(allow dns requests|auto added firewall policy for mta|auto added rule for mta)$/i;
   const fullyOpen: string[] = [];
   const anySvcOnly: string[] = [];
   const broadNetOnly: string[] = [];
@@ -318,7 +414,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${fullyOpen.length} fully open rule${fullyOpen.length > 1 ? "s" : ""} (any source, destination, and service)`,
       detail: `These rules permit all traffic from any source to any destination on any service: ${fullyOpen.slice(0, 6).join(", ")}${fullyOpen.length > 6 ? ` (+${fullyOpen.length - 6} more)` : ""}. Fully open rules effectively bypass firewall protection.`,
       section: "Firewall Rules",
-      remediation: "Review each rule under Rules and policies > Firewall rules. Restrict source/destination to specific network objects and replace 'Any' service with specific protocols. Use the Log viewer to identify actual traffic patterns before tightening.",
+      remediation:
+        "Review each rule under Rules and policies > Firewall rules. Restrict source/destination to specific network objects and replace 'Any' service with specific protocols. Use the Log viewer to identify actual traffic patterns before tightening.",
       confidence: "high",
       evidence: `Rules ${fullyOpen.slice(0, 3).join(", ")} have Source=Any, Destination=Any, Service=ANY`,
     });
@@ -331,7 +428,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${anySvcOnly.length} rule${anySvcOnly.length > 1 ? "s" : ""} using "ANY" service`,
       detail: `Rules permitting all services but with specific source/destination: ${anySvcOnly.slice(0, 8).join(", ")}${anySvcOnly.length > 8 ? ` (+${anySvcOnly.length - 8} more)` : ""}. Broad service rules increase attack surface.`,
       section: "Firewall Rules",
-      remediation: "Review traffic logs via the Log viewer to identify which protocols are in use. Create specific service objects under Hosts and services > Services. Edit each rule to replace 'Any' with specific services.",
+      remediation:
+        "Review traffic logs via the Log viewer to identify which protocols are in use. Create specific service objects under Hosts and services > Services. Edit each rule to replace 'Any' with specific services.",
       confidence: "high",
       evidence: `Rules ${anySvcOnly.slice(0, 3).join(", ")} have Service=ANY`,
     });
@@ -344,7 +442,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${broadNetOnly.length} rule${broadNetOnly.length > 1 ? "s" : ""} with broad source and destination`,
       detail: `Rules with both Source and Destination set to "Any" but with specific services: ${broadNetOnly.slice(0, 6).join(", ")}${broadNetOnly.length > 6 ? ` (+${broadNetOnly.length - 6} more)` : ""}. Consider restricting to specific networks.`,
       section: "Firewall Rules",
-      remediation: "Create specific IP host or IP host group objects under Hosts and services. Edit each broad rule under Rules and policies > Firewall rules to replace 'Any' source/destination with named network objects.",
+      remediation:
+        "Create specific IP host or IP host group objects under Hosts and services. Edit each broad rule under Rules and policies > Firewall rules to replace 'Any' source/destination with named network objects.",
       confidence: "high",
       evidence: `Rules ${broadNetOnly.slice(0, 3).join(", ")} have Source=Any and Destination=Any`,
     });
@@ -366,16 +465,23 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   const duplicateGroups = [...sigMap.values()].filter((g) => g.length > 1);
   if (duplicateGroups.length > 0) {
     const totalDupes = duplicateGroups.reduce((s, g) => s + g.length, 0);
-    const examples = duplicateGroups.slice(0, 3).map((g) => g.join(" / ")).join("; ");
+    const examples = duplicateGroups
+      .slice(0, 3)
+      .map((g) => g.join(" / "))
+      .join("; ");
     findings.push({
       id: `f${++fid}`,
       severity: "medium",
       title: `${totalDupes} rules in ${duplicateGroups.length} overlapping group${duplicateGroups.length > 1 ? "s" : ""}`,
       detail: `Rules with identical source zone, source network, destination zone, destination network, and service: ${examples}${duplicateGroups.length > 3 ? ` (+${duplicateGroups.length - 3} more groups)` : ""}. Overlapping rules may cause shadowing or redundant processing.`,
       section: "Firewall Rules",
-      remediation: "Go to Rules and policies > Firewall rules. Review overlapping rule groups and consolidate or delete duplicates. Sophos Firewall evaluates rules top-down — shadowed rules never fire. Use rule groups to organise.",
+      remediation:
+        "Go to Rules and policies > Firewall rules. Review overlapping rule groups and consolidate or delete duplicates. Sophos Firewall evaluates rules top-down — shadowed rules never fire. Use rule groups to organise.",
       confidence: "high",
-      evidence: `Identical rule signatures: ${duplicateGroups.slice(0, 2).map((g) => g.join("/")).join("; ")}`,
+      evidence: `Identical rule signatures: ${duplicateGroups
+        .slice(0, 2)
+        .map((g) => g.join("/"))
+        .join("; ")}`,
     });
   }
 
@@ -392,7 +498,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${wanNoIps.length} enabled WAN rule${wanNoIps.length > 1 ? "s" : ""} without IPS`,
       detail: `Intrusion Prevention is not applied on active rules: ${wanNoIps.slice(0, 6).join(", ")}${wanNoIps.length > 6 ? ` (+${wanNoIps.length - 6} more)` : ""}. WAN-facing traffic should have IPS enabled to detect exploit attempts.`,
       section: "Intrusion Prevention",
-      remediation: "Go to Intrusion prevention > IPS policies and ensure IPS protection is turned on. Create or select a policy. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Detect and prevent exploits (IPS)'.",
+      remediation:
+        "Go to Intrusion prevention > IPS policies and ensure IPS protection is turned on. Create or select a policy. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Detect and prevent exploits (IPS)'.",
       confidence: "high",
       evidence: `Rules ${wanNoIps.slice(0, 3).join(", ")} have IPS=none/empty`,
     });
@@ -411,7 +518,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${wanNoApp.length} enabled WAN rule${wanNoApp.length > 1 ? "s" : ""} without Application Control`,
       detail: `Application Control is not enabled on active rules: ${wanNoApp.slice(0, 6).join(", ")}${wanNoApp.length > 6 ? ` (+${wanNoApp.length - 6} more)` : ""}. Application-layer visibility is limited without this feature.`,
       section: "Application Control",
-      remediation: "Create an application filter policy under Applications > Application filter. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Identify and control applications (App control)'.",
+      remediation:
+        "Create an application filter policy under Applications > Application filter. Then edit each affected rule under Rules and policies > Firewall rules → Other security features → 'Identify and control applications (App control)'.",
       confidence: "high",
       evidence: `Rules ${wanNoApp.slice(0, 3).join(", ")} have Application Control=none/empty`,
     });
@@ -423,9 +531,11 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       id: `f${++fid}`,
       severity: "critical",
       title: "No SSL/TLS inspection rules configured (DPI inactive)",
-      detail: "No SSL/TLS inspection rules were found. On Sophos XGS, SSL/TLS inspection is the DPI engine — without it, the firewall cannot decrypt and inspect HTTPS traffic for threats, significantly reducing the effectiveness of web filtering, IPS, and application control on encrypted traffic.",
+      detail:
+        "No SSL/TLS inspection rules were found. On Sophos XGS, SSL/TLS inspection is the DPI engine — without it, the firewall cannot decrypt and inspect HTTPS traffic for threats, significantly reducing the effectiveness of web filtering, IPS, and application control on encrypted traffic.",
       section: "SSL/TLS Inspection",
-      remediation: "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints. Add exclusion rules ('Don't decrypt') above for incompatible services.",
+      remediation:
+        "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints. Add exclusion rules ('Don't decrypt') above for incompatible services.",
       confidence: "medium",
       evidence: "No SSL/TLS inspection rules section found in parsed config",
     });
@@ -436,7 +546,8 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
       title: `${withSslInspection} SSL/TLS rule${withSslInspection !== 1 ? "s" : ""} but none decrypt traffic (DPI inactive)`,
       detail: `All ${withSslInspection} SSL/TLS inspection rules are exclusions ("Do not decrypt"). Without at least one Decrypt rule, no encrypted traffic is being inspected — web filtering, IPS, and application control cannot operate on HTTPS traffic.`,
       section: "SSL/TLS Inspection",
-      remediation: "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic below the exclusion rules. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints.",
+      remediation:
+        "Go to Rules and policies > SSL/TLS inspection rules. Add a Decrypt rule for LAN→WAN traffic below the exclusion rules. Download the signing CA from SSL/TLS inspection settings and deploy to endpoints.",
       confidence: "medium",
       evidence: `All ${withSslInspection} SSL/TLS rules have Action=Do-not-decrypt (no Decrypt rules)`,
     });
@@ -460,10 +571,11 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
   // --- SSL/TLS network coverage gaps ---
   if (sslUncoveredNetworks.length > 0 && sslDecryptRules > 0) {
     const netList = sslUncoveredNetworks.join(", ");
-    const exemptNets = (options?.dpiExemptNetworks ?? []);
-    const exemptNote = exemptNets.length > 0
-      ? ` ${exemptNets.length} network${exemptNets.length > 1 ? "s" : ""} excluded by user (acknowledged): ${exemptNets.join(", ")}.`
-      : "";
+    const exemptNets = options?.dpiExemptNetworks ?? [];
+    const exemptNote =
+      exemptNets.length > 0
+        ? ` ${exemptNets.length} network${exemptNets.length > 1 ? "s" : ""} excluded by user (acknowledged): ${exemptNets.join(", ")}.`
+        : "";
     findings.push({
       id: `f${++fid}`,
       severity: "medium",
@@ -543,7 +655,15 @@ export function analyseConfig(sections: ExtractedSections, options?: AnalyseOpti
 
   const atpStatus = extractAtpStatus(sections);
 
-  return { stats, findings, inspectionPosture, ruleColumns: rulesTable.headers, hostname: extractHostname(sections), managementIp: extractManagementIp(sections), atpStatus };
+  return {
+    stats,
+    findings,
+    inspectionPosture,
+    ruleColumns: rulesTable.headers,
+    hostname: extractHostname(sections),
+    managementIp: extractManagementIp(sections),
+    atpStatus,
+  };
 }
 
 /**

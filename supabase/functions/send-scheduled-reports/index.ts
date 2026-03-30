@@ -40,23 +40,32 @@ function computeSimpleScore(findings: Finding[]): ScoreResult {
     else if (f.severity === "low") score -= 1;
   }
   score = Math.max(0, Math.min(100, score));
-  const grade =
-    score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F";
+  const grade = score >= 90
+    ? "A"
+    : score >= 75
+    ? "B"
+    : score >= 60
+    ? "C"
+    : score >= 40
+    ? "D"
+    : "F";
   return { overall: score, grade, categories: [] };
 }
 
 function buildOnePagerContent(
   customerName: string,
   findings: Finding[],
-  score: ScoreResult
+  score: ScoreResult,
 ): { subject: string; markdown: string } {
   const severityOrder = ["critical", "high", "medium", "low", "info"];
   const sorted = [...findings].sort(
-    (a, b) => severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity)
+    (a, b) =>
+      severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity),
   );
   const top5 = sorted.slice(0, 5);
 
-  const criticalCount = findings.filter((f) => f.severity === "critical").length;
+  const criticalCount =
+    findings.filter((f) => f.severity === "critical").length;
   const highCount = findings.filter((f) => f.severity === "high").length;
   const mediumCount = findings.filter((f) => f.severity === "medium").length;
 
@@ -64,9 +73,13 @@ function buildOnePagerContent(
   const lines: string[] = [];
   lines.push(`# Compliance Report — ${safeName}`);
   lines.push("");
-  lines.push(`**Overall Score:** ${score.overall}/100 | **Grade:** ${score.grade}`);
+  lines.push(
+    `**Overall Score:** ${score.overall}/100 | **Grade:** ${score.grade}`,
+  );
   lines.push("");
-  lines.push(`**Findings:** ${criticalCount} Critical · ${highCount} High · ${mediumCount} Medium · ${findings.length} Total`);
+  lines.push(
+    `**Findings:** ${criticalCount} Critical · ${highCount} High · ${mediumCount} Medium · ${findings.length} Total`,
+  );
   lines.push("");
   lines.push("## Top 5 Risks");
   lines.push("");
@@ -74,7 +87,9 @@ function buildOnePagerContent(
     lines.push("No findings identified — excellent posture.");
   } else {
     top5.forEach((f, i) => {
-      lines.push(`${i + 1}. **${escapeHtml(f.title)}** — *${escapeHtml(f.severity)}*`);
+      lines.push(
+        `${i + 1}. **${escapeHtml(f.title)}** — *${escapeHtml(f.severity)}*`,
+      );
     });
   }
   lines.push("");
@@ -84,7 +99,8 @@ function buildOnePagerContent(
   lines.push("2. Review and remediate the top 5 risks listed above.");
   lines.push("3. Schedule a follow-up assessment after remediation.");
 
-  const subject = `${safeName} Compliance Report — Score: ${score.overall}/100 (${score.grade})`;
+  const subject =
+    `${safeName} Compliance Report — Score: ${score.overall}/100 (${score.grade})`;
   return { subject, markdown: lines.join("\n") };
 }
 
@@ -95,14 +111,23 @@ function buildOnePagerContent(
 function markdownToHtml(md: string): string {
   let html = md
     .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm, "<h2 style=\"margin-top:24px;margin-bottom:8px;font-size:18px;color:#111;\">$1</h2>")
-    .replace(/^# (.+)$/gm, "<h1 style=\"margin-top:0;margin-bottom:16px;font-size:24px;color:#111;\">$1</h1>")
+    .replace(
+      /^## (.+)$/gm,
+      '<h2 style="margin-top:24px;margin-bottom:8px;font-size:18px;color:#111;">$1</h2>',
+    )
+    .replace(
+      /^# (.+)$/gm,
+      '<h1 style="margin-top:0;margin-bottom:16px;font-size:24px;color:#111;">$1</h1>',
+    )
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
     .replace(/^- (.+)$/gm, "<li>$1</li>");
 
-  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, "<ol style=\"padding-left:20px;margin:8px 0;\">$1</ol>");
+  html = html.replace(
+    /((?:<li>.*<\/li>\n?)+)/g,
+    '<ol style="padding-left:20px;margin:8px 0;">$1</ol>',
+  );
   html = html.replace(/\n{2,}/g, "<br/><br/>");
   html = html.replace(/\n/g, "<br/>");
 
@@ -116,7 +141,7 @@ function markdownToHtml(md: string): string {
 function buildEmailHtml(
   bodyHtml: string,
   orgName: string,
-  logoUrl?: string
+  logoUrl?: string,
 ): string {
   const safeOrg = escapeHtml(orgName);
   const logo = logoUrl
@@ -150,7 +175,7 @@ function buildEmailHtml(
 async function sendEmail(
   to: string[],
   subject: string,
-  html: string
+  html: string,
 ): Promise<{ success: boolean; error?: string }> {
   if (!RESEND_API_KEY) {
     return { success: false, error: "RESEND_API_KEY not configured" };
@@ -173,7 +198,10 @@ async function sendEmail(
 
     if (!resp.ok) {
       const body = await resp.text();
-      logJson("error", "send_scheduled_reports_resend", { status: resp.status, bodyPrefix: body.slice(0, 500) });
+      logJson("error", "send_scheduled_reports_resend", {
+        status: resp.status,
+        bodyPrefix: body.slice(0, 500),
+      });
       return { success: false, error: "Email delivery failed" };
     }
 
@@ -200,7 +228,7 @@ function computeNextDue(schedule: string, from: Date): string {
 // Main handler
 // ---------------------------------------------------------------------------
 
-serve(async (req: Request) => {
+export async function handleSendScheduledReports(req: Request): Promise<Response> {
   // Allow both POST (cron) and GET (manual trigger)
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200 });
@@ -211,21 +239,38 @@ serve(async (req: Request) => {
   // Preview: POST { report_id, preview: true } with Authorization → return subject, markdown, html, recipients (no send)
   if (req.method === "POST") {
     try {
-      const body = await req.json().catch(() => ({})) as { report_id?: string; preview?: boolean };
+      const body = await req.json().catch(() => ({})) as {
+        report_id?: string;
+        preview?: boolean;
+      };
       if (body.preview && body.report_id) {
         const authHeader = req.headers.get("authorization");
         if (!authHeader?.startsWith("Bearer ")) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         const userJwt = authHeader.slice(7);
-        const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", { global: { headers: { Authorization: `Bearer ${userJwt}` } } });
+        const userClient = createClient(
+          SUPABASE_URL,
+          Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+          { global: { headers: { Authorization: `Bearer ${userJwt}` } } },
+        );
         const { data: { user } } = await userClient.auth.getUser();
         if (!user) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
         }
-        const { data: member } = await sb.from("org_members").select("org_id").eq("user_id", user.id).limit(1).maybeSingle();
+        const { data: member } = await sb.from("org_members").select("org_id")
+          .eq("user_id", user.id).limit(1).maybeSingle();
         if (!member?.org_id) {
-          return new Response(JSON.stringify({ error: "No organisation" }), { status: 403, headers: { "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "No organisation" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         const { data: report, error: reportErr } = await sb
           .from("scheduled_reports")
@@ -234,7 +279,10 @@ serve(async (req: Request) => {
           .eq("org_id", member.org_id)
           .maybeSingle();
         if (reportErr || !report) {
-          return new Response(JSON.stringify({ error: "Report not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+          return new Response(JSON.stringify({ error: "Report not found" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         const { data: submissions } = await sb
           .from("agent_submissions")
@@ -247,16 +295,29 @@ serve(async (req: Request) => {
           const analysis = sub.full_analysis as Record<string, unknown> | null;
           if (analysis && Array.isArray(analysis.findings)) {
             for (const f of analysis.findings) {
-              if (f && typeof f === "object" && "title" in f && "severity" in f) {
-                allFindings.push({ title: String(f.title), severity: String(f.severity), detail: String(f.detail ?? "") });
+              if (
+                f && typeof f === "object" && "title" in f && "severity" in f
+              ) {
+                allFindings.push({
+                  title: String(f.title),
+                  severity: String(f.severity),
+                  detail: String(f.detail ?? ""),
+                });
               }
             }
           }
         }
-        const customerName = report.customer_name || (submissions?.[0]?.customer_name as string) || "Client";
+        const customerName = report.customer_name ||
+          (submissions?.[0]?.customer_name as string) || "Client";
         const score = computeSimpleScore(allFindings);
-        const { subject, markdown } = buildOnePagerContent(customerName, allFindings, score);
-        const org = report.organisations as { name?: string; logo_url?: string } | undefined;
+        const { subject, markdown } = buildOnePagerContent(
+          customerName,
+          allFindings,
+          score,
+        );
+        const org = report.organisations as
+          | { name?: string; logo_url?: string }
+          | undefined;
         const orgName = org?.name ?? "FireComply";
         const logoUrl = org?.logo_url ?? undefined;
         const bodyHtml = markdownToHtml(markdown);
@@ -264,7 +325,7 @@ serve(async (req: Request) => {
         const recipients = (report.recipients as string[]) ?? [];
         return new Response(
           JSON.stringify({ subject, markdown, html: emailHtml, recipients }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
+          { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
     } catch {
@@ -288,13 +349,28 @@ serve(async (req: Request) => {
   }
 
   if (!dueReports || dueReports.length === 0) {
-    return new Response(JSON.stringify({ message: "No reports due", processed: 0 }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    logJson("info", "send_scheduled_reports_complete", {
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+      dueCount: 0,
     });
+    return new Response(
+      JSON.stringify({ message: "No reports due", processed: 0 }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 
-  const results: Array<{ id: string; name: string; success: boolean; error?: string }> = [];
+  logJson("info", "send_scheduled_reports_start", {
+    dueCount: dueReports.length,
+  });
+
+  const results: Array<
+    { id: string; name: string; success: boolean; error?: string }
+  > = [];
 
   const orgIds = [...new Set(dueReports.map((r) => r.org_id))];
   const { data: subsRows } = await sb
@@ -304,7 +380,10 @@ serve(async (req: Request) => {
     .order("created_at", { ascending: false })
     .limit(Math.min(5000, orgIds.length * 8));
 
-  const submissionsByOrg = new Map<string, { full_analysis: unknown; customer_name: unknown }[]>();
+  const submissionsByOrg = new Map<
+    string,
+    { full_analysis: unknown; customer_name: unknown }[]
+  >();
   for (const row of subsRows ?? []) {
     const oid = row.org_id as string;
     const list = submissionsByOrg.get(oid) ?? [];
@@ -328,19 +407,30 @@ serve(async (req: Request) => {
         if (analysis && Array.isArray(analysis.findings)) {
           for (const f of analysis.findings) {
             if (f && typeof f === "object" && "title" in f && "severity" in f) {
-              allFindings.push({ title: String(f.title), severity: String(f.severity), detail: String(f.detail ?? "") });
+              allFindings.push({
+                title: String(f.title),
+                severity: String(f.severity),
+                detail: String(f.detail ?? ""),
+              });
             }
           }
         }
       }
 
       // Build the report content
-      const customerName = report.customer_name || (submissions?.[0]?.customer_name as string) || "Client";
+      const customerName = report.customer_name ||
+        (submissions?.[0]?.customer_name as string) || "Client";
       const score = computeSimpleScore(allFindings);
-      const { subject, markdown } = buildOnePagerContent(customerName, allFindings, score);
+      const { subject, markdown } = buildOnePagerContent(
+        customerName,
+        allFindings,
+        score,
+      );
 
       // Convert to HTML email
-      const org = report.organisations as { name?: string; logo_url?: string } | undefined;
+      const org = report.organisations as
+        | { name?: string; logo_url?: string }
+        | undefined;
       const orgName = org?.name ?? "FireComply";
       const logoUrl = org?.logo_url ?? undefined;
       const bodyHtml = markdownToHtml(markdown);
@@ -349,7 +439,12 @@ serve(async (req: Request) => {
       // Send via Resend
       const recipients = (report.recipients as string[]) ?? [];
       if (recipients.length === 0) {
-        results.push({ id: report.id, name: report.name, success: false, error: "No recipients" });
+        results.push({
+          id: report.id,
+          name: report.name,
+          success: false,
+          error: "No recipients",
+        });
         continue;
       }
 
@@ -372,15 +467,33 @@ serve(async (req: Request) => {
         error: emailResult.error,
       });
     } catch (err) {
-      results.push({ id: report.id, name: report.name, success: false, error: safeError(err, "Report processing failed") });
+      results.push({
+        id: report.id,
+        name: report.name,
+        success: false,
+        error: safeError(err, "Report processing failed"),
+      });
     }
   }
 
   const processed = results.length;
   const succeeded = results.filter((r) => r.success).length;
+  const failed = processed - succeeded;
+
+  logJson("info", "send_scheduled_reports_complete", {
+    processed,
+    succeeded,
+    failed,
+    dueCount: dueReports.length,
+  });
 
   return new Response(
-    JSON.stringify({ message: `Processed ${processed} reports, ${succeeded} sent`, results }),
-    { status: 200, headers: { "Content-Type": "application/json" } }
+    JSON.stringify({
+      message: `Processed ${processed} reports, ${succeeded} sent`,
+      results,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
   );
-});
+}
+
+serve(handleSendScheduledReports);

@@ -1,5 +1,6 @@
 import type { AnalysisResult, ConfigStats, InspectionPosture } from "@/lib/analysis/types";
 import { BEST_PRACTICE_CHECKS } from "@/lib/sophos-licence";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 function minimalInspectionPosture(): InspectionPosture {
   return {
@@ -63,8 +64,8 @@ export function playbookCheckIdForFindingTitle(findingTitle: string): string | n
     try {
       const { status } = check.evaluate(stub);
       if (status === "fail" || status === "warn") return check.id;
-    } catch {
-      /* ignore evaluator edge cases */
+    } catch (e) {
+      warnOptionalError("playbook-link.evaluator", e);
     }
   }
   return null;

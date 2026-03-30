@@ -14,7 +14,9 @@ vi.mock("@/integrations/supabase/client", () => {
   chain.order = () => chain;
   chain.eq = () => chain;
   chain.gte = () => chain;
+  chain.in = () => chain;
   chain.limit = () => chain;
+  chain.abortSignal = () => chain;
   chain.then = (
     onFulfilled?: ((v: unknown) => unknown) | null,
     onRejected?: ((e: unknown) => unknown) | null,

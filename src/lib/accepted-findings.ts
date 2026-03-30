@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 const STORAGE_KEY = "sophos-accepted-findings";
 
@@ -14,30 +15,23 @@ export interface AcceptedFinding {
   reason?: string;
 }
 
-async function getOrgId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase
-    .from("org_members")
-    .select("org_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-  return data?.org_id ?? null;
-}
-
 function loadFromStorage(): AcceptedFinding[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch (e) {
+    warnOptionalError("accepted-findings.load", e);
+    return [];
+  }
 }
 
 function saveToStorage(items: AcceptedFinding[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent("accepted-findings-changed"));
-  } catch { /* ignore */ }
+  } catch (e) {
+    warnOptionalError("accepted-findings.save", e);
+  }
 }
 
 export async function loadAcceptedFindings(): Promise<AcceptedFinding[]> {
@@ -48,7 +42,9 @@ export async function acceptFinding(title: string, reason?: string): Promise<voi
   const items = loadFromStorage();
   if (items.some((i) => i.findingTitle === title)) return;
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   items.push({
     findingTitle: title,

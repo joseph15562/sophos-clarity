@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { logJson } from "../_shared/logger.ts";
+import { redisGet, redisSet } from "../_shared/upstash-redis.ts";
+import { portalDataGetQuerySchema } from "./portal_data_query.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -12,7 +14,9 @@ const ALLOWED_ORIGINS = [
 
 function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "";
+  const allowed = ALLOWED_ORIGINS.includes(origin)
+    ? origin
+    : ALLOWED_ORIGINS[0] ?? "";
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers":
@@ -25,7 +29,8 @@ function getCorsHeaders(req: Request): Record<string, string> {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isPlaceholderCustomerName(raw: string): boolean {
   const key = String(raw ?? "")
@@ -40,7 +45,10 @@ function isPlaceholderCustomerName(raw: string): boolean {
   );
 }
 
-function resolveCustomerName(raw: string | null | undefined, orgName: string): string {
+function resolveCustomerName(
+  raw: string | null | undefined,
+  orgName: string,
+): string {
   const trimmed = String(raw ?? "").trim();
   if (!trimmed || isPlaceholderCustomerName(trimmed)) {
     return String(orgName ?? "").trim() || "Customer";
@@ -91,7 +99,7 @@ function extractFindingsRich(fullAnalysis: unknown): PortalFindingRich[] {
   });
 }
 
-serve(async (req: Request) => {
+export async function handlePortalDataRequest(req: Request): Promise<Response> {
   const cors = getCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
@@ -107,12 +115,33 @@ serve(async (req: Request) => {
 
   try {
     const url = new URL(req.url);
-    const identifier = url.searchParams.get("slug") ?? url.searchParams.get("org_id") ?? "";
+    const parsedQuery = portalDataGetQuerySchema.safeParse({
+      slug: url.searchParams.get("slug") ?? undefined,
+      org_id: url.searchParams.get("org_id") ?? undefined,
+    });
+    if (!parsedQuery.success) {
+      logJson("warn", "portal_data_invalid_query", {
+        issues: parsedQuery.error.issues.length,
+      });
+      return new Response(
+        JSON.stringify({ error: "Invalid query parameters" }),
+        {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const identifier =
+      parsedQuery.data.slug?.trim() ?? parsedQuery.data.org_id?.trim() ?? "";
 
     if (!identifier) {
       return new Response(
         JSON.stringify({ error: "Missing slug or org_id parameter" }),
-        { status: 400, headers: { ...cors, "Content-Type": "application/json" } },
+        {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -135,7 +164,10 @@ serve(async (req: Request) => {
       });
       return new Response(
         JSON.stringify({ error: "Portal not found" }),
-        { status: 404, headers: { ...cors, "Content-Type": "application/json" } },
+        {
+          status: 404,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -143,7 +175,10 @@ serve(async (req: Request) => {
     if (!orgId) {
       return new Response(
         JSON.stringify({ error: "Portal not found" }),
-        { status: 404, headers: { ...cors, "Content-Type": "application/json" } },
+        {
+          status: 404,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -158,7 +193,24 @@ serve(async (req: Request) => {
       "feedback",
     ];
 
-    const includeDetailedFindings = visibleSections.includes("detailed_findings");
+    const includeDetailedFindings = visibleSections.includes(
+      "detailed_findings",
+    );
+
+    const cacheKey = `portal_data:v2:${orgId}:${
+      encodeURIComponent(tenantName ?? "")
+    }:${includeDetailedFindings ? "d" : "s"}`;
+    const cached = await redisGet(cacheKey);
+    if (cached) {
+      return new Response(cached, {
+        status: 200,
+        headers: {
+          ...cors,
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=60",
+        },
+      });
+    }
 
     // 2. Build data from agents + agent_submissions (tenant-filtered when applicable)
     let scoreHistory: Array<Record<string, unknown>> = [];
@@ -175,7 +227,9 @@ serve(async (req: Request) => {
       .select("name")
       .eq("id", orgId)
       .maybeSingle();
-    const orgDisplayName = String((orgRow as Record<string, unknown> | null)?.name ?? "");
+    const orgDisplayName = String(
+      (orgRow as Record<string, unknown> | null)?.name ?? "",
+    );
 
     if (tenantName) {
       const displayTenant = resolveCustomerName(tenantName, orgDisplayName);
@@ -211,7 +265,9 @@ serve(async (req: Request) => {
 
       const { data: agents } = await admin
         .from("agents")
-        .select("id, name, serial_number, hardware_model, tenant_name, last_seen_at, firewall_host")
+        .select(
+          "id, name, serial_number, hardware_model, tenant_name, last_seen_at, firewall_host",
+        )
         .eq("org_id", orgId)
         .eq("tenant_name", tenantName)
         .limit(500);
@@ -237,17 +293,25 @@ serve(async (req: Request) => {
         .order("assessed_at", { ascending: false })
         .limit(500);
 
-      const tenantHistoryRaw = ((shAll ?? []) as Array<Record<string, unknown>>).filter((row) => {
-        const hn = normHost(String(row.hostname ?? ""));
-        if (tenantHostnames.size > 0 && hn && tenantHostnames.has(hn)) return true;
-        const cn = resolveCustomerName(String(row.customer_name ?? ""), orgDisplayName);
-        return cn === displayTenant;
-      });
+      const tenantHistoryRaw = ((shAll ?? []) as Array<Record<string, unknown>>)
+        .filter((row) => {
+          const hn = normHost(String(row.hostname ?? ""));
+          if (tenantHostnames.size > 0 && hn && tenantHostnames.has(hn)) {
+            return true;
+          }
+          const cn = resolveCustomerName(
+            String(row.customer_name ?? ""),
+            orgDisplayName,
+          );
+          return cn === displayTenant;
+        });
       scoreHistory = tenantHistoryRaw.slice(0, 30);
 
       const { data: assessBatch } = await admin
         .from("assessments")
-        .select("firewalls, customer_name, created_at, overall_score, overall_grade")
+        .select(
+          "firewalls, customer_name, created_at, overall_score, overall_grade",
+        )
         .eq("org_id", orgId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -255,7 +319,12 @@ serve(async (req: Request) => {
       let tenantLatestAssessment: Record<string, unknown> | null = null;
       for (const a of assessBatch ?? []) {
         const ar = a as Record<string, unknown>;
-        if (resolveCustomerName(String(ar.customer_name ?? ""), orgDisplayName) === displayTenant) {
+        if (
+          resolveCustomerName(
+            String(ar.customer_name ?? ""),
+            orgDisplayName,
+          ) === displayTenant
+        ) {
           tenantLatestAssessment = ar;
           break;
         }
@@ -265,17 +334,30 @@ serve(async (req: Request) => {
         string,
         { score: number; grade: string; at: string }
       >();
-      if (tenantLatestAssessment?.firewalls && Array.isArray(tenantLatestAssessment.firewalls)) {
+      if (
+        tenantLatestAssessment?.firewalls &&
+        Array.isArray(tenantLatestAssessment.firewalls)
+      ) {
         const assessedAt = String(tenantLatestAssessment.created_at ?? "");
-        for (const fw of tenantLatestAssessment.firewalls as Array<Record<string, unknown>>) {
+        for (
+          const fw of tenantLatestAssessment.firewalls as Array<
+            Record<string, unknown>
+          >
+        ) {
           const label = String(fw.label ?? fw.hostname ?? "").trim();
-          const rs = fw.riskScore as { overall?: number; grade?: string } | undefined;
+          const rs = fw.riskScore as
+            | { overall?: number; grade?: string }
+            | undefined;
           const overall = rs?.overall;
           if (overall == null || overall <= 0) continue;
           const grade = rs?.grade ?? gradeFromNumericScore(overall);
           const key = normHost(label) || label.toLowerCase();
           if (!assessmentScoreByHost.has(key)) {
-            assessmentScoreByHost.set(key, { score: overall, grade, at: assessedAt });
+            assessmentScoreByHost.set(key, {
+              score: overall,
+              grade,
+              at: assessedAt,
+            });
           }
         }
       }
@@ -304,7 +386,11 @@ serve(async (req: Request) => {
           .order("created_at", { ascending: false })
           .limit(1000);
 
-        for (const sub of (submissions ?? []) as Array<Record<string, unknown>>) {
+        for (
+          const sub of (submissions ?? []) as unknown as Array<
+            Record<string, unknown>
+          >
+        ) {
           const aid = sub.agent_id as string;
           if (!latestByAgent.has(aid)) latestByAgent.set(aid, sub);
           allSubs.push(sub);
@@ -333,7 +419,9 @@ serve(async (req: Request) => {
           (hn ? agentByHostNorm.get(hn) : null);
         if (agent) {
           const sub = latestByAgent.get(agent.id as string);
-          if (sub && sub.overall_score != null && Number(sub.overall_score) > 0) {
+          if (
+            sub && sub.overall_score != null && Number(sub.overall_score) > 0
+          ) {
             return {
               score: Number(sub.overall_score),
               grade: String(sub.overall_grade ?? ""),
@@ -344,7 +432,9 @@ serve(async (req: Request) => {
           }
         }
         const hist = hn ? latestHistByHost.get(hn) : undefined;
-        if (hist && hist.overall_score != null && Number(hist.overall_score) > 0) {
+        if (
+          hist && hist.overall_score != null && Number(hist.overall_score) > 0
+        ) {
           return {
             score: Number(hist.overall_score),
             grade: String(hist.overall_grade ?? ""),
@@ -365,7 +455,13 @@ serve(async (req: Request) => {
             submission: null,
           };
         }
-        return { score: null, grade: null, lastAssessed: null, agent: agent ?? null, submission: null };
+        return {
+          score: null,
+          grade: null,
+          lastAssessed: null,
+          agent: agent ?? null,
+          submission: null,
+        };
       }
 
       const usedAgentIds = new Set<string>();
@@ -393,7 +489,9 @@ serve(async (req: Request) => {
             lastAssessed: picked.lastAssessed,
           };
           if (includeDetailedFindings && picked.submission) {
-            base.findingsRich = extractFindingsRich(picked.submission.full_analysis);
+            base.findingsRich = extractFindingsRich(
+              picked.submission.full_analysis,
+            );
           }
           firewallBreakdown.push(base);
         }
@@ -401,7 +499,6 @@ serve(async (req: Request) => {
 
       for (const agent of agentList) {
         if (usedAgentIds.has(agent.id as string)) continue;
-        const hn = normHost(String(agent.firewall_host ?? agent.name ?? ""));
         const label = String(agent.name ?? agent.firewall_host ?? "Firewall");
         const latest = latestByAgent.get(agent.id as string);
         const row: Record<string, unknown> = {
@@ -410,7 +507,8 @@ serve(async (req: Request) => {
           label,
           serialNumber: agent.serial_number ?? null,
           model: agent.hardware_model ?? null,
-          score: latest && latest.overall_score != null && Number(latest.overall_score) > 0
+          score: latest && latest.overall_score != null &&
+              Number(latest.overall_score) > 0
             ? Number(latest.overall_score)
             : null,
           grade: latest ? (latest.overall_grade as string) : null,
@@ -426,7 +524,7 @@ serve(async (req: Request) => {
       firewallBreakdown.sort((a, b) =>
         String(a.label ?? "").localeCompare(String(b.label ?? ""), undefined, {
           sensitivity: "base",
-        }),
+        })
       );
 
       if (scoreHistory.length === 0 && allSubs.length > 0) {
@@ -450,16 +548,21 @@ serve(async (req: Request) => {
         .map((f) => f.score as number | null)
         .filter((s): s is number => s != null && s > 0);
       if (scoredFw.length > 0) {
-        aggregateScore = Math.round(scoredFw.reduce((a, b) => a + b, 0) / scoredFw.length);
+        aggregateScore = Math.round(
+          scoredFw.reduce((a, b) => a + b, 0) / scoredFw.length,
+        );
         aggregateGrade = gradeFromNumericScore(aggregateScore);
       } else if (tenantHistoryRaw[0]) {
         const top = tenantHistoryRaw[0];
         aggregateScore = Number(top.overall_score ?? 0);
         aggregateGrade = String(top.overall_grade ?? "F");
-      } else if (tenantLatestAssessment && tenantLatestAssessment.overall_score != null) {
+      } else if (
+        tenantLatestAssessment && tenantLatestAssessment.overall_score != null
+      ) {
         aggregateScore = Number(tenantLatestAssessment.overall_score);
         aggregateGrade = String(
-          tenantLatestAssessment.overall_grade ?? gradeFromNumericScore(aggregateScore),
+          tenantLatestAssessment.overall_grade ??
+            gradeFromNumericScore(aggregateScore),
         );
       }
 
@@ -479,8 +582,15 @@ serve(async (req: Request) => {
         )[0];
       }
 
-      if (tenantLatestAssessment?.firewalls && Array.isArray(tenantLatestAssessment.firewalls)) {
-        for (const fw of tenantLatestAssessment.firewalls as Array<Record<string, unknown>>) {
+      if (
+        tenantLatestAssessment?.firewalls &&
+        Array.isArray(tenantLatestAssessment.firewalls)
+      ) {
+        for (
+          const fw of tenantLatestAssessment.firewalls as Array<
+            Record<string, unknown>
+          >
+        ) {
           const fwFindings = fw.findings;
           if (Array.isArray(fwFindings)) {
             for (const f of fwFindings) {
@@ -510,7 +620,10 @@ serve(async (req: Request) => {
         }
       }
 
-      if (findings.length === 0 && tenantHistoryRaw.length > 0 && !tenantLatestAssessment) {
+      if (
+        findings.length === 0 && tenantHistoryRaw.length > 0 &&
+        !tenantLatestAssessment
+      ) {
         const { data: latestAny } = await admin
           .from("assessments")
           .select("firewalls")
@@ -537,14 +650,19 @@ serve(async (req: Request) => {
 
       const { data: srRows } = await admin
         .from("saved_reports")
-        .select("id, customer_name, environment, report_type, reports, analysis_summary, created_at")
+        .select(
+          "id, customer_name, environment, report_type, reports, analysis_summary, created_at",
+        )
         .eq("org_id", orgId)
         .order("created_at", { ascending: false })
         .limit(80);
 
       savedReportPackages = ((srRows ?? []) as Array<Record<string, unknown>>)
         .filter((row) =>
-          resolveCustomerName(String(row.customer_name ?? ""), orgDisplayName) === displayTenant
+          resolveCustomerName(
+            String(row.customer_name ?? ""),
+            orgDisplayName,
+          ) === displayTenant
         )
         .map((row) => ({
           id: row.id,
@@ -559,7 +677,9 @@ serve(async (req: Request) => {
       // ── Org-wide fallback: use score_history + assessments (legacy behaviour) ──
       const { data: sh } = await admin
         .from("score_history")
-        .select("id, overall_score, overall_grade, findings_count, assessed_at, customer_name, hostname, category_scores")
+        .select(
+          "id, overall_score, overall_grade, findings_count, assessed_at, customer_name, hostname, category_scores",
+        )
         .eq("org_id", orgId)
         .order("assessed_at", { ascending: false })
         .limit(30);
@@ -568,7 +688,9 @@ serve(async (req: Request) => {
 
       const { data: latestAssessment } = await admin
         .from("assessments")
-        .select("id, overall_score, overall_grade, customer_name, firewalls, created_at")
+        .select(
+          "id, overall_score, overall_grade, customer_name, firewalls, created_at",
+        )
         .eq("org_id", orgId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -597,29 +719,29 @@ serve(async (req: Request) => {
     // 3. Build branding object
     const branding = config
       ? {
-          logoUrl: config.logo_url,
-          companyName: config.company_name,
-          accentColor: config.accent_color ?? "#2006F7",
-          welcomeMessage: config.welcome_message,
-          slaInfo: config.sla_info,
-          contactEmail: config.contact_email,
-          contactPhone: config.contact_phone,
-          footerText: config.footer_text,
-          showBranding: config.show_branding ?? true,
-        }
+        logoUrl: config.logo_url,
+        companyName: config.company_name,
+        accentColor: config.accent_color ?? "#2006F7",
+        welcomeMessage: config.welcome_message,
+        slaInfo: config.sla_info,
+        contactEmail: config.contact_email,
+        contactPhone: config.contact_phone,
+        footerText: config.footer_text,
+        showBranding: config.show_branding ?? true,
+      }
       : null;
 
     const historyCustomerRaw = String(
-      (scoreHistory[0] as Record<string, unknown> | undefined)?.customer_name ?? "",
+      (scoreHistory[0] as Record<string, unknown> | undefined)?.customer_name ??
+        "",
     );
-    const customerNameResolved =
-      resolveCustomerName(
-        (tenantDisplayName ??
-          tenantName ??
-          historyCustomerRaw ??
-          "") as string,
-        orgDisplayName,
-      ) || orgDisplayName || "Customer";
+    const customerNameResolved = resolveCustomerName(
+      (tenantDisplayName ??
+        tenantName ??
+        historyCustomerRaw ??
+        "") as string,
+      orgDisplayName,
+    ) || orgDisplayName || "Customer";
 
     const payload: Record<string, unknown> = {
       orgId,
@@ -641,9 +763,16 @@ serve(async (req: Request) => {
       payload.firewalls = firewallBreakdown;
     }
 
-    return new Response(JSON.stringify(payload), {
+    const body = JSON.stringify(payload);
+    await redisSet(cacheKey, body, 45);
+
+    return new Response(body, {
       status: 200,
-      headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=60" },
+      headers: {
+        ...cors,
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=60",
+      },
     });
   } catch (err) {
     logJson("error", "portal_data_unexpected", {
@@ -654,4 +783,6 @@ serve(async (req: Request) => {
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }
-});
+}
+
+serve(handlePortalDataRequest);

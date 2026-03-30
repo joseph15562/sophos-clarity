@@ -1,39 +1,12 @@
-import { useEffect, useState } from "react";
 import { Loader2, Newspaper } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { useRegulatoryDigestQuery } from "@/hooks/queries/use-regulatory-digest-query";
 
-type Row = Tables<"regulatory_updates">;
+type RegulatoryRow = Tables<"regulatory_updates">;
 
 /** Latest regulatory digest rows (populated by regulatory-scanner Edge Function). */
 export function RegulatoryDigestSettings() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setLoading(true);
-      setErr(null);
-      const { data, error } = await supabase
-        .from("regulatory_updates")
-        .select("id, source, title, summary, link, framework, published_at, created_at")
-        .order("created_at", { ascending: false })
-        .limit(8);
-      if (cancelled) return;
-      if (error) {
-        setErr(error.message);
-        setRows([]);
-      } else {
-        setRows(data ?? []);
-      }
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: rows = [], isPending: loading, isError, error } = useRegulatoryDigestQuery();
 
   if (loading) {
     return (
@@ -43,10 +16,11 @@ export function RegulatoryDigestSettings() {
     );
   }
 
-  if (err) {
+  if (isError) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return (
       <p className="text-xs text-muted-foreground py-2">
-        Regulatory digest could not be loaded ({err}). Ensure the{" "}
+        Regulatory digest could not be loaded ({message}). Ensure the{" "}
         <code className="text-[10px]">regulatory_updates</code> table exists and RLS allows your
         role.
       </p>
@@ -74,7 +48,7 @@ export function RegulatoryDigestSettings() {
         not legal advice.
       </p>
       <ul className="space-y-2.5 max-h-[320px] overflow-y-auto">
-        {rows.map((r) => (
+        {(rows as RegulatoryRow[]).map((r) => (
           <li
             key={r.id}
             className="rounded-lg border border-border/50 bg-background/40 px-3 py-2.5 text-xs"

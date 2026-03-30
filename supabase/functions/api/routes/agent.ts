@@ -6,10 +6,19 @@ import {
   agentVerifyIdentityBodySchema,
 } from "../../_shared/api-schemas.ts";
 import { generateApiKey, hmacHash } from "../../_shared/crypto.ts";
-import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+  userClient,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
 
-function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
+function json(
+  body: unknown,
+  status = 200,
+  corsHeaders: Record<string, string> = {},
+) {
   return jsonResponse(body, status, corsHeaders);
 }
 
@@ -17,7 +26,10 @@ function json(body: unknown, status = 200, corsHeaders: Record<string, string> =
 // Web-app routes (JWT auth)
 // ════════════════════════════════════════════════════════════════════
 
-async function handleRegister(req: Request, corsHeaders: Record<string, string>) {
+async function handleRegister(
+  req: Request,
+  corsHeaders: Record<string, string>,
+) {
   const authHeader = req.headers.get("authorization");
   if (!authHeader) return json({ error: "Unauthorized" }, 401, corsHeaders);
 
@@ -28,13 +40,20 @@ async function handleRegister(req: Request, corsHeaders: Record<string, string>)
   if (!user) return json({ error: "Invalid session" }, 401, corsHeaders);
 
   const membership = await getOrgMembership(user.id);
-  if (!membership || !["admin", "engineer"].includes(membership.role))
-    return json({ error: "Admin or engineer access required" }, 403, corsHeaders);
+  if (!membership || !["admin", "engineer"].includes(membership.role)) {
+    return json(
+      { error: "Admin or engineer access required" },
+      403,
+      corsHeaders,
+    );
+  }
 
   const raw = await req.json().catch(() => ({}));
   const parsed = agentRegisterBodySchema.safeParse(raw);
   if (!parsed.success) {
-    logJson("warn", "agent_register_invalid_body", { issues: parsed.error.issues.length });
+    logJson("warn", "agent_register_invalid_body", {
+      issues: parsed.error.issues.length,
+    });
     return json({ error: "Invalid request body" }, 400, corsHeaders);
   }
   const body = parsed.data;
@@ -78,7 +97,11 @@ async function handleRegister(req: Request, corsHeaders: Record<string, string>)
   );
 }
 
-async function handleDelete(req: Request, agentId: string, corsHeaders: Record<string, string>) {
+async function handleDelete(
+  req: Request,
+  agentId: string,
+  corsHeaders: Record<string, string>,
+) {
   const authHeader = req.headers.get("authorization");
   if (!authHeader) return json({ error: "Unauthorized" }, 401, corsHeaders);
 
@@ -89,8 +112,13 @@ async function handleDelete(req: Request, agentId: string, corsHeaders: Record<s
   if (!user) return json({ error: "Invalid session" }, 401, corsHeaders);
 
   const membership = await getOrgMembership(user.id);
-  if (!membership || !["admin", "engineer"].includes(membership.role))
-    return json({ error: "Admin or engineer access required" }, 403, corsHeaders);
+  if (!membership || !["admin", "engineer"].includes(membership.role)) {
+    return json(
+      { error: "Admin or engineer access required" },
+      403,
+      corsHeaders,
+    );
+  }
 
   const db = adminClient();
   const { data: agent } = await db
@@ -99,8 +127,9 @@ async function handleDelete(req: Request, agentId: string, corsHeaders: Record<s
     .eq("id", agentId)
     .single();
 
-  if (!agent || agent.org_id !== membership.org_id)
+  if (!agent || agent.org_id !== membership.org_id) {
     return json({ error: "Agent not found" }, 404, corsHeaders);
+  }
 
   await db.from("agent_submissions").delete().eq("agent_id", agentId);
   await db.from("agents").delete().eq("id", agentId);
@@ -108,7 +137,11 @@ async function handleDelete(req: Request, agentId: string, corsHeaders: Record<s
   return json({ ok: true }, 200, corsHeaders);
 }
 
-async function handleRunNow(req: Request, agentId: string, corsHeaders: Record<string, string>) {
+async function handleRunNow(
+  req: Request,
+  agentId: string,
+  corsHeaders: Record<string, string>,
+) {
   const authHeader = req.headers.get("authorization");
   if (!authHeader) return json({ error: "Unauthorized" }, 401, corsHeaders);
 
@@ -117,8 +150,9 @@ async function handleRunNow(req: Request, agentId: string, corsHeaders: Record<s
   if (!user) return json({ error: "Invalid session" }, 401, corsHeaders);
 
   const membership = await getOrgMembership(user.id);
-  if (!membership || !["admin", "engineer"].includes(membership.role))
+  if (!membership || !["admin", "engineer"].includes(membership.role)) {
     return json({ error: "Insufficient permissions" }, 403, corsHeaders);
+  }
 
   const db = adminClient();
   const { data: agent } = await db
@@ -127,12 +161,24 @@ async function handleRunNow(req: Request, agentId: string, corsHeaders: Record<s
     .eq("id", agentId)
     .single();
 
-  if (!agent || agent.org_id !== membership.org_id)
+  if (!agent || agent.org_id !== membership.org_id) {
     return json({ error: "Agent not found" }, 404, corsHeaders);
+  }
 
-  await db.from("agents").update({ pending_command: "run-now" }).eq("id", agentId);
+  await db.from("agents").update({ pending_command: "run-now" }).eq(
+    "id",
+    agentId,
+  );
 
-  return json({ ok: true, message: "Scan queued — agent will run on next heartbeat (within 5 minutes)" }, 200, corsHeaders);
+  return json(
+    {
+      ok: true,
+      message:
+        "Scan queued — agent will run on next heartbeat (within 5 minutes)",
+    },
+    200,
+    corsHeaders,
+  );
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -141,25 +187,35 @@ async function handleRunNow(req: Request, agentId: string, corsHeaders: Record<s
 // that call /api/agent/* continue to work.
 // ════════════════════════════════════════════════════════════════════
 
-async function handleConfig(agent: Record<string, unknown>, corsHeaders: Record<string, string>) {
+async function handleConfig(
+  agent: Record<string, unknown>,
+  corsHeaders: Record<string, string>,
+) {
   const resolvedName = (agent.customer_name === "Unnamed" && agent.tenant_name)
     ? agent.tenant_name
     : agent.customer_name;
-  return json({
-    id: agent.id,
-    name: agent.name,
-    customer_name: resolvedName,
-    environment: agent.environment,
-    schedule_cron: agent.schedule_cron,
-    firewall_host: agent.firewall_host,
-    firewall_port: agent.firewall_port,
-    firmware_version_override: agent.firmware_version_override,
-    tenant_id: agent.tenant_id,
-    tenant_name: agent.tenant_name,
-  }, 200, corsHeaders);
+  return json(
+    {
+      id: agent.id,
+      name: agent.name,
+      customer_name: resolvedName,
+      environment: agent.environment,
+      schedule_cron: agent.schedule_cron,
+      firewall_host: agent.firewall_host,
+      firewall_port: agent.firewall_port,
+      firmware_version_override: agent.firmware_version_override,
+      tenant_id: agent.tenant_id,
+      tenant_name: agent.tenant_name,
+    },
+    200,
+    corsHeaders,
+  );
 }
 
-async function handleFirewalls(agent: Record<string, unknown>, corsHeaders: Record<string, string>) {
+async function handleFirewalls(
+  agent: Record<string, unknown>,
+  corsHeaders: Record<string, string>,
+) {
   const db = adminClient();
   const orgId = agent.org_id as string;
 
@@ -181,7 +237,9 @@ async function handleFirewalls(agent: Record<string, unknown>, corsHeaders: Reco
   for (const tenant of tenants ?? []) {
     const { data: firewalls } = await db
       .from("central_firewalls")
-      .select("firewall_id, serial_number, hostname, name, firmware_version, model, status_json")
+      .select(
+        "firewall_id, serial_number, hostname, name, firmware_version, model, status_json",
+      )
       .eq("org_id", orgId)
       .eq("central_tenant_id", tenant.central_tenant_id)
       .limit(1000);
@@ -204,7 +262,9 @@ async function handleHeartbeat(
   const raw = await req.json().catch(() => ({}));
   const parsed = agentHeartbeatBodySchema.safeParse(raw);
   if (!parsed.success) {
-    logJson("warn", "agent_heartbeat_invalid_body", { issues: parsed.error.issues.length });
+    logJson("warn", "agent_heartbeat_invalid_body", {
+      issues: parsed.error.issues.length,
+    });
     return json({ error: "Invalid request body" }, 400, corsHeaders);
   }
   const body = parsed.data;
@@ -240,7 +300,9 @@ async function handleHeartbeat(
         .maybeSingle();
 
       if (tenant) update.tenant_name = tenant.name;
-      if (centralFw.model && !body.hardware_model) update.hardware_model = centralFw.model;
+      if (centralFw.model && !body.hardware_model) {
+        update.hardware_model = centralFw.model;
+      }
     }
   }
 
@@ -248,21 +310,30 @@ async function handleHeartbeat(
 
   const pendingCommand = agent.pending_command as string | null;
   if (pendingCommand) {
-    await db.from("agents").update({ pending_command: null }).eq("id", agent.id);
+    await db.from("agents").update({ pending_command: null }).eq(
+      "id",
+      agent.id,
+    );
   }
 
-  const currentName = (update.customer_name as string) || (agent.customer_name as string);
-  const resolvedName = (currentName === "Unnamed" && (update.tenant_name || agent.tenant_name))
-    ? (update.tenant_name || agent.tenant_name)
-    : currentName;
+  const currentName = (update.customer_name as string) ||
+    (agent.customer_name as string);
+  const resolvedName =
+    (currentName === "Unnamed" && (update.tenant_name || agent.tenant_name))
+      ? (update.tenant_name || agent.tenant_name)
+      : currentName;
 
-  return json({
-    schedule_cron: agent.schedule_cron,
-    customer_name: resolvedName,
-    environment: agent.environment,
-    firmware_version_override: agent.firmware_version_override,
-    pending_command: pendingCommand,
-  }, 200, corsHeaders);
+  return json(
+    {
+      schedule_cron: agent.schedule_cron,
+      customer_name: resolvedName,
+      environment: agent.environment,
+      firmware_version_override: agent.firmware_version_override,
+      pending_command: pendingCommand,
+    },
+    200,
+    corsHeaders,
+  );
 }
 
 async function handleSubmit(
@@ -273,7 +344,9 @@ async function handleSubmit(
   const raw = await req.json().catch(() => ({}));
   const parsed = agentSubmitBodySchema.safeParse(raw);
   if (!parsed.success) {
-    logJson("warn", "agent_submit_invalid_body", { issues: parsed.error.issues.length });
+    logJson("warn", "agent_submit_invalid_body", {
+      issues: parsed.error.issues.length,
+    });
     return json({ error: "Invalid request body" }, 400, corsHeaders);
   }
   const body = parsed.data;
@@ -297,10 +370,9 @@ async function handleSubmit(
     const newFindings = [...currentTitles].filter((t) => !prevTitles.has(t));
     const fixedFindings = [...prevTitles].filter((t) => !currentTitles.has(t));
 
-    const olderTitles =
-      prevSubs.length > 1
-        ? new Set<string>(prevSubs[1].finding_titles ?? [])
-        : new Set<string>();
+    const olderTitles = prevSubs.length > 1
+      ? new Set<string>(prevSubs[1].finding_titles ?? [])
+      : new Set<string>();
 
     const regressed = newFindings.filter((t) => olderTitles.has(t));
     const trulyNew = newFindings.filter((t) => !olderTitles.has(t));
@@ -365,7 +437,9 @@ async function handleVerifyIdentity(
   const raw = await req.json().catch(() => ({}));
   const parsed = agentVerifyIdentityBodySchema.safeParse(raw);
   if (!parsed.success) {
-    logJson("warn", "agent_verify_identity_invalid_body", { issues: parsed.error.issues.length });
+    logJson("warn", "agent_verify_identity_invalid_body", {
+      issues: parsed.error.issues.length,
+    });
     return json({ error: "Invalid request body" }, 400, corsHeaders);
   }
   const { email, totpCode } = parsed.data;
@@ -383,35 +457,56 @@ async function handleVerifyIdentity(
     .eq("org_id", agent.org_id as string)
     .maybeSingle();
 
-  if (!membership) return json({ error: "User not in agent's organisation" }, 403, corsHeaders);
+  if (!membership) {
+    return json(
+      { error: "User not in agent's organisation" },
+      403,
+      corsHeaders,
+    );
+  }
 
-  const { data: factors, error: factorsErr } = await db.auth.admin.mfa.listFactors({
-    userId: targetUser.id,
-  });
+  const { data: factors, error: factorsErr } = await db.auth.admin.mfa
+    .listFactors({
+      userId: targetUser.id,
+    });
 
-  if (factorsErr) return json({ error: "Failed to retrieve MFA factors" }, 500, corsHeaders);
+  if (factorsErr) {
+    return json({ error: "Failed to retrieve MFA factors" }, 500, corsHeaders);
+  }
 
-  const totpFactors = factors?.factors?.filter((f: any) => f.factor_type === "totp" && f.status === "verified") ?? [];
+  const totpFactors =
+    factors?.factors?.filter((f: any) =>
+      f.factor_type === "totp" && f.status === "verified"
+    ) ?? [];
   if (totpFactors.length === 0) {
-    return json({ error: "User has no enrolled TOTP factor. Enrol MFA in the web app first." }, 412, corsHeaders);
+    return json(
+      {
+        error:
+          "User has no enrolled TOTP factor. Enrol MFA in the web app first.",
+      },
+      412,
+      corsHeaders,
+    );
   }
 
   const factorId = totpFactors[0].id;
 
-  const { data: challenge, error: challengeErr } = await db.auth.admin.mfa.createChallenge({
-    factorId,
-    userId: targetUser.id,
-  });
+  const { data: challenge, error: challengeErr } = await db.auth.admin.mfa
+    .createChallenge({
+      factorId,
+      userId: targetUser.id,
+    });
 
   if (challengeErr || !challenge) {
     return json({ error: "Failed to create MFA challenge" }, 500, corsHeaders);
   }
 
-  const { data: verification, error: verifyErr } = await db.auth.admin.mfa.verify({
-    factorId,
-    challengeId: challenge.id,
-    code: totpCode,
-  });
+  const { data: verification, error: verifyErr } = await db.auth.admin.mfa
+    .verify({
+      factorId,
+      challengeId: challenge.id,
+      code: totpCode,
+    });
 
   if (verifyErr || !verification) {
     return json({ error: "Invalid TOTP code" }, 401, corsHeaders);
@@ -426,11 +521,15 @@ async function handleVerifyIdentity(
     metadata: { email, agentName: agent.name },
   }).then(() => {}).catch(() => {});
 
-  return json({
-    sessionToken: crypto.randomUUID(),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    userName: email,
-  }, 200, corsHeaders);
+  return json(
+    {
+      sessionToken: crypto.randomUUID(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      userName: email,
+    },
+    200,
+    corsHeaders,
+  );
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -453,30 +552,47 @@ export async function handleAgentRoutes(
   if (req.method === "DELETE" && route) {
     return handleDelete(req, route, corsHeaders);
   }
-  if (req.method === "POST" && segments.length === 3 && segments[2] === "run-now") {
+  if (
+    req.method === "POST" && segments.length === 3 && segments[2] === "run-now"
+  ) {
     return handleRunNow(req, route, corsHeaders);
   }
 
   // Connector API-key routes
   const apiKey = req.headers.get("X-API-Key") ?? req.headers.get("x-api-key");
-  if (!apiKey) return json({ error: "Missing X-API-Key header" }, 401, corsHeaders);
+  if (!apiKey) {
+    return json({ error: "Missing X-API-Key header" }, 401, corsHeaders);
+  }
 
   const agent = await authenticateAgent(apiKey);
   if (!agent) return json({ error: "Invalid API key" }, 401, corsHeaders);
 
-  if (req.method === "GET" && route === "config") return handleConfig(agent, corsHeaders);
-  if (req.method === "GET" && route === "firewalls") return handleFirewalls(agent, corsHeaders);
+  if (req.method === "GET" && route === "config") {
+    return handleConfig(agent, corsHeaders);
+  }
+  if (req.method === "GET" && route === "firewalls") {
+    return handleFirewalls(agent, corsHeaders);
+  }
   if (req.method === "GET" && route === "commands") {
     const cmd = agent.pending_command as string | null;
     if (cmd) {
       const db = adminClient();
-      await db.from("agents").update({ pending_command: null }).eq("id", agent.id);
+      await db.from("agents").update({ pending_command: null }).eq(
+        "id",
+        agent.id,
+      );
     }
     return json({ command: cmd ?? null }, 200, corsHeaders);
   }
-  if (req.method === "POST" && route === "heartbeat") return handleHeartbeat(req, agent, corsHeaders);
-  if (req.method === "POST" && route === "submit") return handleSubmit(req, agent, corsHeaders);
-  if (req.method === "POST" && route === "verify-identity") return handleVerifyIdentity(req, agent, corsHeaders);
+  if (req.method === "POST" && route === "heartbeat") {
+    return handleHeartbeat(req, agent, corsHeaders);
+  }
+  if (req.method === "POST" && route === "submit") {
+    return handleSubmit(req, agent, corsHeaders);
+  }
+  if (req.method === "POST" && route === "verify-identity") {
+    return handleVerifyIdentity(req, agent, corsHeaders);
+  }
 
   return json({ error: "Not found" }, 404, corsHeaders);
 }

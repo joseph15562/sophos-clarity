@@ -10,7 +10,12 @@ import {
   connectWiseManageListCompanies,
 } from "../../_shared/connectwise-manage.ts";
 import { centralDecrypt, centralEncrypt } from "../../_shared/crypto.ts";
-import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+  userClient,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
 
 async function requireOrgAdmin(
@@ -18,7 +23,9 @@ async function requireOrgAdmin(
   corsHeaders: Record<string, string>,
 ): Promise<{ orgId: string; userId: string } | Response> {
   const authHeader = req.headers.get("authorization");
-  if (!authHeader) return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  if (!authHeader) {
+    return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  }
   const uc = userClient(authHeader);
   const {
     data: { user },
@@ -39,7 +46,9 @@ export async function handleConnectWiseManageRoutes(
   segments: string[],
   corsHeaders: Record<string, string>,
 ): Promise<Response | null> {
-  if (segments[0] !== "connectwise-manage" || segments.length !== 2) return null;
+  if (segments[0] !== "connectwise-manage" || segments.length !== 2) {
+    return null;
+  }
 
   const admin = await requireOrgAdmin(req, corsHeaders);
   if (admin instanceof Response) return admin;
@@ -101,9 +110,13 @@ export async function handleConnectWiseManageRoutes(
     }
     const parsed = psaCompanyMappingDeleteSchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "connectwise_manage_company_mapping_delete_invalid_body", {
-        issues: parsed.error.issues.length,
-      });
+      logJson(
+        "warn",
+        "connectwise_manage_company_mapping_delete_invalid_body",
+        {
+          issues: parsed.error.issues.length,
+        },
+      );
       return j({ error: "Invalid request body" }, 400);
     }
     const { customerKey } = parsed.data;
@@ -120,12 +133,16 @@ export async function handleConnectWiseManageRoutes(
   if (route === "companies" && req.method === "GET") {
     const { data: cred, error: credErr } = await db
       .from("connectwise_manage_credentials")
-      .select("api_base_url, integrator_company_id, encrypted_public_key, encrypted_private_key")
+      .select(
+        "api_base_url, integrator_company_id, encrypted_public_key, encrypted_private_key",
+      )
       .eq("org_id", orgId)
       .maybeSingle();
     if (credErr) return j({ error: safeDbError(credErr) }, 500);
     if (!cred) {
-      return j({ error: "ConnectWise Manage is not configured for this organisation" }, 404);
+      return j({
+        error: "ConnectWise Manage is not configured for this organisation",
+      }, 404);
     }
     const row = cred as {
       api_base_url: string;
@@ -150,7 +167,10 @@ export async function handleConnectWiseManageRoutes(
       );
       return j({ companies });
     } catch (e) {
-      return j({ error: e instanceof Error ? e.message : "Manage API error" }, 400);
+      return j(
+        { error: e instanceof Error ? e.message : "Manage API error" },
+        400,
+      );
     }
   }
 
@@ -179,7 +199,9 @@ export async function handleConnectWiseManageRoutes(
     const publicKey = (publicKeyRaw ?? "").trim();
     const privateKey = (privateKeyRaw ?? "").trim();
     const defaultStatusId =
-      defaultStatusIdRaw != null && Number.isFinite(defaultStatusIdRaw) ? defaultStatusIdRaw : 1;
+      defaultStatusIdRaw != null && Number.isFinite(defaultStatusIdRaw)
+        ? defaultStatusIdRaw
+        : 1;
 
     const { data: existingRow, error: exErr } = await db
       .from("connectwise_manage_credentials")
@@ -190,7 +212,9 @@ export async function handleConnectWiseManageRoutes(
 
     const keysProvided = !!(publicKey && privateKey);
     if (!existingRow && !keysProvided) {
-      return j({ error: "publicKey and privateKey are required for a new connection" }, 400);
+      return j({
+        error: "publicKey and privateKey are required for a new connection",
+      }, 400);
     }
 
     try {
@@ -211,23 +235,27 @@ export async function handleConnectWiseManageRoutes(
 
       const encPub = await centralEncrypt(publicKey);
       const encPriv = await centralEncrypt(privateKey);
-      const { error: upErr } = await db.from("connectwise_manage_credentials").upsert(
-        {
-          org_id: orgId,
-          api_base_url: apiBaseUrl,
-          integrator_company_id: integratorCompanyId,
-          encrypted_public_key: encPub,
-          encrypted_private_key: encPriv,
-          default_board_id: defaultBoardId,
-          default_status_id: defaultStatusId,
-          connected_at: new Date().toISOString(),
-        },
-        { onConflict: "org_id" },
-      );
+      const { error: upErr } = await db.from("connectwise_manage_credentials")
+        .upsert(
+          {
+            org_id: orgId,
+            api_base_url: apiBaseUrl,
+            integrator_company_id: integratorCompanyId,
+            encrypted_public_key: encPub,
+            encrypted_private_key: encPriv,
+            default_board_id: defaultBoardId,
+            default_status_id: defaultStatusId,
+            connected_at: new Date().toISOString(),
+          },
+          { onConflict: "org_id" },
+        );
       if (upErr) return j({ error: safeDbError(upErr) }, 500);
       return j({ ok: true });
     } catch (e) {
-      return j({ error: e instanceof Error ? e.message : "Encrypt failed" }, 500);
+      return j(
+        { error: e instanceof Error ? e.message : "Encrypt failed" },
+        500,
+      );
     }
   }
 
@@ -237,8 +265,11 @@ export async function handleConnectWiseManageRoutes(
       .delete()
       .eq("org_id", orgId)
       .eq("provider", CW_MANAGE_PROVIDER);
-    if (mapErr) console.warn("[connectwise-manage] clear mappings", safeDbError(mapErr));
-    const { error: delErr } = await db.from("connectwise_manage_credentials").delete().eq("org_id", orgId);
+    if (mapErr) {
+      console.warn("[connectwise-manage] clear mappings", safeDbError(mapErr));
+    }
+    const { error: delErr } = await db.from("connectwise_manage_credentials")
+      .delete().eq("org_id", orgId);
     if (delErr) return j({ error: safeDbError(delErr) }, 500);
     return j({ ok: true });
   }
@@ -266,7 +297,9 @@ export async function handleConnectWiseManageRoutes(
 
     if (!Number.isFinite(customerCompanyId)) {
       if (!firecomplyCustomerKey) {
-        return j({ error: "customerCompanyId or firecomplyCustomerKey is required" }, 400);
+        return j({
+          error: "customerCompanyId or firecomplyCustomerKey is required",
+        }, 400);
       }
       const { data: mapRow, error: mapErr } = await db
         .from("psa_customer_company_map")
@@ -278,7 +311,10 @@ export async function handleConnectWiseManageRoutes(
       if (mapErr) return j({ error: safeDbError(mapErr) }, 500);
       if (!mapRow) {
         return j(
-          { error: "No ConnectWise company mapping for this FireComply customer. Add it under PSA settings." },
+          {
+            error:
+              "No ConnectWise company mapping for this FireComply customer. Add it under PSA settings.",
+          },
           400,
         );
       }
@@ -296,7 +332,9 @@ export async function handleConnectWiseManageRoutes(
       return j({
         ok: true,
         deduped: true,
-        ticket_id: Number((existingDup as { external_ticket_id: string }).external_ticket_id),
+        ticket_id: Number(
+          (existingDup as { external_ticket_id: string }).external_ticket_id,
+        ),
       });
     }
 
@@ -308,7 +346,11 @@ export async function handleConnectWiseManageRoutes(
       .eq("org_id", orgId)
       .maybeSingle();
     if (credErr) return j({ error: safeDbError(credErr) }, 500);
-    if (!cred) return j({ error: "ConnectWise Manage is not configured for this organisation" }, 404);
+    if (!cred) {
+      return j({
+        error: "ConnectWise Manage is not configured for this organisation",
+      }, 404);
+    }
 
     const row = cred as {
       api_base_url: string;
@@ -320,7 +362,9 @@ export async function handleConnectWiseManageRoutes(
     };
 
     const boardId =
-      typeof body.boardId === "number" && Number.isFinite(body.boardId) ? body.boardId : row.default_board_id;
+      typeof body.boardId === "number" && Number.isFinite(body.boardId)
+        ? body.boardId
+        : row.default_board_id;
     const statusId =
       typeof body.statusId === "number" && Number.isFinite(body.statusId)
         ? body.statusId
@@ -352,21 +396,35 @@ export async function handleConnectWiseManageRoutes(
       );
       ticketId = created.id;
     } catch (e) {
-      return j({ error: e instanceof Error ? e.message : "Manage API error" }, 400);
+      return j(
+        { error: e instanceof Error ? e.message : "Manage API error" },
+        400,
+      );
     }
 
-    const meta: Record<string, unknown> = { customerCompanyId, boardId, statusId };
-    if (firecomplyCustomerKey) meta.firecomplyCustomerKey = firecomplyCustomerKey;
+    const meta: Record<string, unknown> = {
+      customerCompanyId,
+      boardId,
+      statusId,
+    };
+    if (firecomplyCustomerKey) {
+      meta.firecomplyCustomerKey = firecomplyCustomerKey;
+    }
 
-    const { error: insDupErr } = await db.from("psa_ticket_idempotency").insert({
-      org_id: orgId,
-      provider: "connectwise_manage",
-      idempotency_key: idempotencyKey,
-      external_ticket_id: String(ticketId),
-      metadata: meta,
-    });
+    const { error: insDupErr } = await db.from("psa_ticket_idempotency").insert(
+      {
+        org_id: orgId,
+        provider: "connectwise_manage",
+        idempotency_key: idempotencyKey,
+        external_ticket_id: String(ticketId),
+        metadata: meta,
+      },
+    );
     if (insDupErr) {
-      console.warn("[connectwise-manage] idempotency insert", safeDbError(insDupErr));
+      console.warn(
+        "[connectwise-manage] idempotency insert",
+        safeDbError(insDupErr),
+      );
     }
 
     const auditMeta: Record<string, unknown> = {
@@ -374,7 +432,9 @@ export async function handleConnectWiseManageRoutes(
       customerCompanyId,
       provider: "connectwise_manage",
     };
-    if (firecomplyCustomerKey) auditMeta.firecomplyCustomerKey = firecomplyCustomerKey;
+    if (firecomplyCustomerKey) {
+      auditMeta.firecomplyCustomerKey = firecomplyCustomerKey;
+    }
 
     await db.from("audit_log").insert({
       org_id: orgId,

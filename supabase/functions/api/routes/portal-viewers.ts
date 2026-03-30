@@ -1,6 +1,10 @@
 import { z } from "npm:zod@3.24.2";
 import { getOrgMembership } from "../../_shared/auth.ts";
-import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  userClient,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
 
 export const inviteBodySchema = z.object({
@@ -8,7 +12,11 @@ export const inviteBodySchema = z.object({
   name: z.string().max(200).optional().nullable(),
 });
 
-function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
+function json(
+  body: unknown,
+  status = 200,
+  corsHeaders: Record<string, string> = {},
+) {
   return jsonResponse(body, status, corsHeaders);
 }
 
@@ -28,7 +36,13 @@ export async function handlePortalViewerRoutes(
   if (!user) return json({ error: "Unauthorized" }, 401, corsHeaders);
 
   const membership = await getOrgMembership(user.id);
-  if (!membership) return json({ error: "Not a member of any organisation" }, 403, corsHeaders);
+  if (!membership) {
+    return json(
+      { error: "Not a member of any organisation" },
+      403,
+      corsHeaders,
+    );
+  }
 
   const db = adminClient();
   const orgId = membership.org_id;
@@ -49,7 +63,9 @@ export async function handlePortalViewerRoutes(
     const raw = await req.json().catch(() => ({}));
     const parsed = inviteBodySchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "portal_viewers_invite_invalid_body", { issues: parsed.error.issues.length });
+      logJson("warn", "portal_viewers_invite_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
       return json({ error: "Invalid request body" }, 400, corsHeaders);
     }
     const { email, name } = parsed.data;
@@ -64,8 +80,16 @@ export async function handlePortalViewerRoutes(
 
     if (existing) {
       if (existing.status === "revoked") {
-        await db.from("portal_viewers").update({ status: "pending", invited_at: new Date().toISOString(), invited_by: user.id }).eq("id", existing.id);
-        return json({ message: "Re-invited", id: existing.id }, 200, corsHeaders);
+        await db.from("portal_viewers").update({
+          status: "pending",
+          invited_at: new Date().toISOString(),
+          invited_by: user.id,
+        }).eq("id", existing.id);
+        return json(
+          { message: "Re-invited", id: existing.id },
+          200,
+          corsHeaders,
+        );
       }
       return json({ error: "Already invited" }, 409, corsHeaders);
     }
@@ -76,17 +100,22 @@ export async function handlePortalViewerRoutes(
     try {
       // Check if user already exists in auth
       const { data: existingUsers } = await db.auth.admin.listUsers();
-      const existingUser = existingUsers?.users?.find((u: { email?: string }) => u.email?.toLowerCase() === email.toLowerCase());
-      
+      const existingUser = existingUsers?.users?.find((u: { email?: string }) =>
+        u.email?.toLowerCase() === email.toLowerCase()
+      );
+
       if (existingUser) {
         userId = existingUser.id;
       } else {
-        const { data: invited, error: inviteErr } = await db.auth.admin.inviteUserByEmail(
-          email.toLowerCase(),
-          { redirectTo: portalUrl },
-        );
+        const { data: invited, error: inviteErr } = await db.auth.admin
+          .inviteUserByEmail(
+            email.toLowerCase(),
+            { redirectTo: portalUrl },
+          );
         if (inviteErr) {
-          logJson("warn", "portal_viewers_invite_auth_failed", { message: inviteErr.message });
+          logJson("warn", "portal_viewers_invite_auth_failed", {
+            message: inviteErr.message,
+          });
         } else {
           userId = invited?.user?.id ?? null;
         }
@@ -110,7 +139,11 @@ export async function handlePortalViewerRoutes(
       .single();
 
     if (insertErr) return json({ error: insertErr.message }, 500, corsHeaders);
-    return json({ message: "Invited", id: viewer.id, userId }, 201, corsHeaders);
+    return json(
+      { message: "Invited", id: viewer.id, userId },
+      201,
+      corsHeaders,
+    );
   }
 
   // POST /api/portal-viewers/reset-password — send password reset
@@ -128,7 +161,8 @@ export async function handlePortalViewerRoutes(
       .maybeSingle();
     if (!viewer) return json({ error: "Viewer not found" }, 404, corsHeaders);
 
-    const portalResetUrl = `https://sophos-firecomply.vercel.app/portal/${orgId}`;
+    const portalResetUrl =
+      `https://sophos-firecomply.vercel.app/portal/${orgId}`;
     const { error: resetErr } = await db.auth.admin.generateLink({
       type: "recovery",
       email: email.toLowerCase(),

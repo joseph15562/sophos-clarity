@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useFleetCommandQuery } from "@/hooks/queries/use-fleet-command-query";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Link } from "react-router-dom";
 import {
   Monitor,
@@ -29,7 +31,6 @@ import { useTheme } from "next-themes";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 import { extractSections } from "@/lib/extract-sections";
 import { analyseConfig } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
@@ -38,33 +39,11 @@ import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { saveScoreSnapshot } from "@/lib/score-history";
 import { CentralHealthBanner } from "@/components/CentralHealthBanner";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
+import { type FleetFirewall, gradeFromScore } from "@/lib/fleet-command-data";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
-
-interface FleetFirewall {
-  id: string;
-  hostname: string;
-  customer: string;
-  score: number;
-  grade: string;
-  findings: number;
-  criticalFindings: number;
-  lastAssessed: string | null;
-  status: "online" | "offline" | "stale" | "suspended";
-  firmware: string;
-  model: string;
-  serialNumber: string;
-  haRole?: string;
-  haClusterId?: string;
-  tenantId?: string;
-  tenantName?: string;
-  source: "central" | "agent" | "both";
-  configLinked: boolean;
-  latestReportId?: string;
-  latestReportDate?: string;
-}
 
 /** Main app dashboard with customer context (same query as Customer Management cards). */
 function assessmentDashboardHref(fw: Pick<FleetFirewall, "customer" | "tenantName">): string {
@@ -218,14 +197,6 @@ const DEMO_FLEET: FleetFirewall[] = [
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
-
-function gradeFromScore(score: number): string {
-  if (score >= 85) return "A";
-  if (score >= 70) return "B";
-  if (score >= 55) return "C";
-  if (score >= 40) return "D";
-  return "F";
-}
 
 function gradeColor(grade: string): string {
   switch (grade) {
@@ -740,9 +711,21 @@ function FleetCommandInner() {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
+  const fleetQuery = useFleetCommandQuery(org?.id, org?.name);
+  const baseFleet = useMemo(() => {
+    if (!org?.id) return isGuest ? DEMO_FLEET : [];
+    if (fleetQuery.isError) return DEMO_FLEET;
+    return fleetQuery.data ?? [];
+  }, [org?.id, isGuest, fleetQuery.isError, fleetQuery.data]);
+
   const [fleet, setFleet] = useState<FleetFirewall[]>([]);
-  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setFleet(baseFleet);
+  }, [baseFleet]);
+
+  const loading = Boolean(org?.id) && fleetQuery.isPending;
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [gradeFilter, setGradeFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -753,314 +736,6 @@ function FleetCommandInner() {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-
-  /* ---- Load real data, fall back to demo ---- */
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      if (!org?.id) {
-        if (isGuest) setFleet(DEMO_FLEET);
-        else setFleet([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const [fwRes, assessRes, agentRes, linksRes, tenantRes, reportsRes] = await Promise.all([
-          supabase.from("central_firewalls").select("*").eq("org_id", org.id),
-          supabase
-            .from("assessments")
-            .select("*")
-            .eq("org_id", org.id)
-            .order("created_at", { ascending: false }),
-          supabase.from("agents").select("*").eq("org_id", org.id),
-          supabase.from("firewall_config_links").select("*").eq("org_id", org.id),
-          supabase.from("central_tenants").select("*").eq("org_id", org.id),
-          supabase
-            .from("saved_reports")
-            .select("id, customer_name, created_at")
-            .eq("org_id", org.id)
-            .order("created_at", { ascending: false }),
-        ]);
-
-        if (cancelled) return;
-
-        const firewalls = fwRes.data ?? [];
-        const assessments = assessRes.data ?? [];
-        const agents = agentRes.data ?? [];
-        const links = linksRes.data ?? [];
-        const tenants = tenantRes.data ?? [];
-        const reports = reportsRes.data ?? [];
-
-        // 1. configLinkMap: central_firewall_id → config_hostname
-        const configLinkMap = new Map<string, string>();
-        const configLinkedIds = new Set<string>();
-        for (const link of links) {
-          const fwId = (link as Record<string, unknown>).central_firewall_id as string | undefined;
-          const hostname = (link as Record<string, unknown>).config_hostname as string | undefined;
-          if (fwId && hostname) {
-            configLinkMap.set(fwId, hostname);
-            configLinkedIds.add(fwId);
-          }
-        }
-
-        // 2. scoreByLabel from assessments.firewalls JSON
-        const scoreByLabel = new Map<
-          string,
-          { score: number; grade: string; date: string; findings: number }
-        >();
-        for (const a of assessments) {
-          const fws = a.firewalls as Array<{
-            label?: string;
-            hostname?: string;
-            riskScore?: { overall: number; grade: string; categories?: unknown[] };
-            totalFindings?: number;
-            findingCount?: number;
-          }> | null;
-          if (fws) {
-            for (const f of fws) {
-              const label = f.label ?? f.hostname ?? a.customer_name;
-              if (!scoreByLabel.has(label)) {
-                scoreByLabel.set(label, {
-                  score: f.riskScore?.overall ?? a.overall_score ?? 0,
-                  grade:
-                    f.riskScore?.grade ??
-                    a.overall_grade ??
-                    gradeFromScore(f.riskScore?.overall ?? 0),
-                  date: a.created_at,
-                  findings: f.totalFindings ?? f.findingCount ?? 0,
-                });
-              }
-            }
-          }
-          if (!scoreByLabel.has(a.customer_name)) {
-            scoreByLabel.set(a.customer_name, {
-              score: a.overall_score ?? 0,
-              grade: a.overall_grade ?? gradeFromScore(a.overall_score ?? 0),
-              date: a.created_at,
-              findings: 0,
-            });
-          }
-        }
-
-        // 5. tenantMap: central_tenant_id → name
-        const tenantMap = new Map<string, string>();
-        for (const t of tenants) {
-          const tid = (t as Record<string, unknown>).central_tenant_id as string;
-          const name = (t as Record<string, unknown>).name as string;
-          if (tid && name) tenantMap.set(tid, name);
-        }
-
-        // 5b. agentScoreMap: hostname (no port) → { score, grade, findings, date }
-        const agentScoreMap = new Map<
-          string,
-          { score: number; grade: string; date: string; findings: number }
-        >();
-        for (const ag of agents) {
-          const host = (ag.firewall_host || ag.name || "").split(":")[0].toLowerCase();
-          if (host && ag.last_score != null) {
-            agentScoreMap.set(host, {
-              score: ag.last_score,
-              grade: ag.last_grade ?? gradeFromScore(ag.last_score),
-              date: ag.last_seen_at ?? "",
-              findings: 0,
-            });
-          }
-        }
-
-        // 6. latestReportMap: customer_name → {id, date} (first match = latest due to order)
-        const latestReportMap = new Map<string, { id: string; date: string }>();
-        for (const r of reports) {
-          const cname = (r as Record<string, unknown>).customer_name as string;
-          if (cname && !latestReportMap.has(cname)) {
-            latestReportMap.set(cname, {
-              id: (r as Record<string, unknown>).id as string,
-              date: (r as Record<string, unknown>).created_at as string,
-            });
-          }
-        }
-
-        const mapped: FleetFirewall[] = [];
-        const seenHostnames = new Set<string>();
-        const clusterMembers = new Map<string, typeof firewalls>();
-
-        for (const fw of firewalls) {
-          const cluster = fw.cluster_json as { id?: string; mode?: string; status?: string } | null;
-          if (cluster?.id) {
-            const arr = clusterMembers.get(cluster.id) ?? [];
-            arr.push(fw);
-            clusterMembers.set(cluster.id, arr);
-          }
-        }
-
-        const processedClusterIds = new Set<string>();
-        const agentHostnames = new Set(
-          agents.map((a) => (a.firewall_host || a.name || "").split(":")[0].toLowerCase()),
-        );
-
-        for (const fw of firewalls) {
-          const hn = fw.hostname || fw.name;
-          const cluster = fw.cluster_json as { id?: string; mode?: string; status?: string } | null;
-          const fwTenantId = fw.central_tenant_id as string | undefined;
-          const rawTenantName = fwTenantId ? tenantMap.get(fwTenantId) : undefined;
-          const fwTenantName =
-            rawTenantName === "(This tenant)" ? (org?.name ?? rawTenantName) : rawTenantName;
-
-          if (cluster?.id && clusterMembers.get(cluster.id)!.length > 1) {
-            if (processedClusterIds.has(cluster.id)) continue;
-            processedClusterIds.add(cluster.id);
-            const peers = clusterMembers.get(cluster.id)!;
-            const primary = peers[0];
-            const primaryHn = primary.hostname || primary.name;
-            const peerNames = peers.map((p) => p.hostname || p.name);
-            seenHostnames.add(primaryHn.toLowerCase());
-            for (const p of peers) seenHostnames.add((p.hostname || p.name).toLowerCase());
-
-            // 3. look up score via configLinkMap → scoreByLabel → agentScoreMap
-            const configHostname = configLinkMap.get(primary.firewall_id);
-            const match =
-              (configHostname ? scoreByLabel.get(configHostname) : null) ??
-              scoreByLabel.get(primaryHn) ??
-              scoreByLabel.get(primary.name) ??
-              agentScoreMap.get(primaryHn.toLowerCase());
-
-            const anyOnline = peers.some((p) => {
-              const sj = p.status_json as { connected?: boolean } | null;
-              return sj?.connected;
-            });
-            const anySuspended = peers.some((p) => {
-              const sj = p.status_json as { suspended?: boolean } | null;
-              return sj?.suspended;
-            });
-            let status: "online" | "offline" | "stale" | "suspended" = anySuspended
-              ? "suspended"
-              : "offline";
-            if (anyOnline) {
-              const syncAge = Date.now() - new Date(primary.synced_at).getTime();
-              status = syncAge > 24 * 3_600_000 ? "stale" : "online";
-            }
-
-            const isLinked = peers.some((p) => configLinkedIds.has(p.firewall_id));
-            const hasAgent = peerNames.some((n) => agentHostnames.has(n.toLowerCase()));
-            const report =
-              latestReportMap.get(peerNames.join(" + ")) ?? latestReportMap.get(primaryHn);
-
-            mapped.push({
-              id: primary.id,
-              hostname: `${primaryHn} (HA ${peers.length}-node)`,
-              customer: peerNames.join(" + "),
-              score: match?.score ?? 0,
-              grade: match ? (match.grade ?? gradeFromScore(match.score)) : "—",
-              findings: match?.findings ?? 0,
-              criticalFindings: 0,
-              lastAssessed: match?.date ?? null,
-              status,
-              firmware: primary.firmware_version,
-              model: primary.model,
-              serialNumber: peers.map((p) => p.serial_number).join(", "),
-              haRole: (cluster.mode ?? "cluster").toUpperCase(),
-              haClusterId: cluster.id,
-              tenantId: fwTenantId,
-              tenantName: fwTenantName,
-              source: hasAgent ? "both" : "central",
-              configLinked: isLinked,
-              latestReportId: report?.id,
-              latestReportDate: report?.date,
-            });
-            continue;
-          }
-
-          seenHostnames.add(hn.toLowerCase());
-
-          // 3. look up score via configLinkMap → scoreByLabel → agentScoreMap
-          const configHostname = configLinkMap.get(fw.firewall_id);
-          const match =
-            (configHostname ? scoreByLabel.get(configHostname) : null) ??
-            scoreByLabel.get(hn) ??
-            scoreByLabel.get(fw.name) ??
-            agentScoreMap.get(hn.toLowerCase());
-
-          const statusJson = fw.status_json as { connected?: boolean; suspended?: boolean } | null;
-          let status: "online" | "offline" | "stale" | "suspended" = statusJson?.suspended
-            ? "suspended"
-            : "offline";
-          if (statusJson?.connected) {
-            const syncAge = Date.now() - new Date(fw.synced_at).getTime();
-            status = syncAge > 24 * 3_600_000 ? "stale" : "online";
-          }
-
-          const hasAgent = agentHostnames.has(hn.toLowerCase());
-          const report = latestReportMap.get(fw.name || hn) ?? latestReportMap.get(hn);
-
-          mapped.push({
-            id: fw.id,
-            hostname: hn,
-            customer: fw.name || fw.hostname,
-            score: match?.score ?? 0,
-            grade: match ? (match.grade ?? gradeFromScore(match.score)) : "—",
-            findings: match?.findings ?? 0,
-            criticalFindings: 0,
-            lastAssessed: match?.date ?? null,
-            status,
-            firmware: fw.firmware_version,
-            model: fw.model,
-            serialNumber: fw.serial_number,
-            tenantId: fwTenantId,
-            tenantName: fwTenantName,
-            source: hasAgent ? "both" : "central",
-            configLinked: configLinkedIds.has(fw.firewall_id),
-            latestReportId: report?.id,
-            latestReportDate: report?.date,
-          });
-        }
-
-        // 4. Agent-only firewalls
-        for (const ag of agents) {
-          const hn = ag.firewall_host || ag.name;
-          if (seenHostnames.has(hn.toLowerCase())) continue;
-          seenHostnames.add(hn.toLowerCase());
-          let status: "online" | "offline" | "stale" | "suspended" = "offline";
-          if (ag.status === "online") status = "online";
-          else if (ag.last_seen_at) {
-            const age = Date.now() - new Date(ag.last_seen_at).getTime();
-            status = age > 24 * 3_600_000 ? "stale" : "online";
-          }
-          const report = latestReportMap.get(ag.customer_name || ag.name || hn);
-          mapped.push({
-            id: ag.id,
-            hostname: hn,
-            customer: ag.customer_name || ag.name,
-            score: ag.last_score ?? 0,
-            grade: ag.last_score != null ? (ag.last_grade ?? gradeFromScore(ag.last_score)) : "—",
-            findings: 0,
-            criticalFindings: 0,
-            lastAssessed: ag.last_score != null ? ag.last_seen_at : null,
-            status,
-            firmware: ag.firmware_version ?? "Unknown",
-            model: ag.hardware_model ?? "Agent",
-            serialNumber: ag.serial_number ?? "",
-            source: "agent",
-            configLinked: false,
-            latestReportId: report?.id,
-            latestReportDate: report?.date,
-          });
-        }
-
-        setFleet(mapped.length > 0 ? mapped : []);
-      } catch (err) {
-        console.warn("[FleetCommand] data load failed, using demo", err);
-        setFleet(DEMO_FLEET);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [org?.id, org?.name, isGuest]);
 
   /* ---- Drag-and-drop config analysis ---- */
   const handleDragOver = useCallback((e: React.DragEvent, fwId: string) => {
@@ -1145,8 +820,8 @@ function FleetCommandInner() {
   /* ---- Computed stats ---- */
   const filtered = useMemo(() => {
     let list = fleet;
-    if (search) {
-      const q = search.toLowerCase();
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter(
         (f) =>
           f.hostname.toLowerCase().includes(q) ||
@@ -1162,7 +837,7 @@ function FleetCommandInner() {
       list = list.filter((f) => f.status === statusFilter.toLowerCase());
     }
     return list;
-  }, [fleet, search, gradeFilter, statusFilter]);
+  }, [fleet, debouncedSearch, gradeFilter, statusFilter]);
 
   const tenantGroups = useMemo(() => {
     const groups = new Map<string, FleetFirewall[]>();

@@ -7,14 +7,22 @@ import {
   hashServiceKeySecret,
   normalizeIssuableScopes,
 } from "../../_shared/service-key.ts";
-import { adminClient, json as jsonResponse, safeDbError, safeError, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+  safeError,
+  userClient,
+} from "../../_shared/db.ts";
 
 async function requireOrgAdmin(
   req: Request,
   corsHeaders: Record<string, string>,
 ): Promise<{ orgId: string; userId: string } | Response> {
   const authHeader = req.headers.get("authorization");
-  if (!authHeader) return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  if (!authHeader) {
+    return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
+  }
   const uc = userClient(authHeader);
   const {
     data: { user },
@@ -47,7 +55,11 @@ export async function handleServiceKeyRoutes(
   segments: string[],
   corsHeaders: Record<string, string>,
 ): Promise<Response | null> {
-  function json(body: unknown, status = 200, headers: Record<string, string> = corsHeaders) {
+  function json(
+    body: unknown,
+    status = 200,
+    headers: Record<string, string> = corsHeaders,
+  ) {
     return jsonResponse(body, status, headers);
   }
 
@@ -63,7 +75,9 @@ export async function handleServiceKeyRoutes(
     const raw = await req.json().catch(() => ({}));
     const parsed = serviceKeyIssueBodySchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "service_key_issue_invalid_body", { issues: parsed.error.issues.length });
+      logJson("warn", "service_key_issue_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
       return json({ error: "Invalid request body" }, 400);
     }
     const { label, scopes: scopesRaw } = parsed.data;
@@ -98,7 +112,9 @@ export async function handleServiceKeyRoutes(
     const raw = await req.json().catch(() => ({}));
     const parsed = serviceKeyRevokeBodySchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "service_key_revoke_invalid_body", { issues: parsed.error.issues.length });
+      logJson("warn", "service_key_revoke_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
       return json({ error: "Invalid request body" }, 400);
     }
     const { id } = parsed.data;
@@ -127,7 +143,12 @@ export async function handleServiceKeyRoutes(
   if (sub === "ping" && req.method === "GET") {
     try {
       const ctx = await getServiceKeyContext(req);
-      if (!ctx) return json({ ok: false, error: "Invalid or missing service key" }, 401);
+      if (!ctx) {
+        return json(
+          { ok: false, error: "Invalid or missing service key" },
+          401,
+        );
+      }
       return json({
         ok: true,
         org_id: ctx.orgId,

@@ -14,9 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { queryKeys, useOrgTeamRosterQuery } from "@/hooks/queries";
+import {
+  useOrgTeamRosterQuery,
+  useOrgInviteMutation,
+  useOrgInviteRevokeMutation,
+  useOrgMemberRemoveMutation,
+} from "@/hooks/queries";
 
 const teamInviteEmailSchema = z.string().trim().email();
 
@@ -41,8 +45,10 @@ const ROLE_OPTIONS: { value: OrgRole; label: string; description: string }[] = [
 
 export function InviteStaff() {
   const { org, role } = useAuth();
-  const queryClient = useQueryClient();
   const rosterQuery = useOrgTeamRosterQuery(org?.id);
+  const inviteMutation = useOrgInviteMutation();
+  const revokeMutation = useOrgInviteRevokeMutation();
+  const removeMemberMutation = useOrgMemberRemoveMutation();
 
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgRole>("member");
@@ -51,42 +57,6 @@ export function InviteStaff() {
 
   const invites = rosterQuery.data?.invites ?? [];
   const members = rosterQuery.data?.members ?? [];
-
-  const invalidateRoster = useCallback(() => {
-    if (org?.id) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.org.teamRoster(org.id) });
-    }
-  }, [org?.id, queryClient]);
-
-  const inviteMutation = useMutation({
-    mutationFn: async (payload: { orgId: string; email: string; inviteRole: OrgRole }) => {
-      const { error: err } = await supabase.from("org_invites").insert({
-        org_id: payload.orgId,
-        email: payload.email,
-        role: payload.inviteRole,
-      });
-      if (err) throw err;
-    },
-    onSuccess: (_data, variables) => {
-      setSuccess(`Invite sent to ${variables.email}`);
-      setEmail("");
-      invalidateRoster();
-      setTimeout(() => setSuccess(null), 4000);
-      if (org?.id) {
-        logAudit(org.id, "team.invited", "org_invite", "", { email: variables.email }).catch(
-          () => {},
-        );
-      }
-    },
-    onError: (err: unknown) => {
-      const msg =
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message: string }).message)
-          : String(err);
-      if (msg.includes("duplicate")) setError("This email has already been invited");
-      else setError(msg);
-    },
-  });
 
   const handleInvite = useCallback(
     async (e: React.FormEvent) => {
@@ -101,46 +71,56 @@ export function InviteStaff() {
       }
       if (!org) return;
 
-      inviteMutation.mutate({ orgId: org.id, email: parsed.data.toLowerCase(), inviteRole });
+      inviteMutation.mutate(
+        { orgId: org.id, email: parsed.data.toLowerCase(), inviteRole },
+        {
+          onSuccess: (_data, variables) => {
+            setSuccess(`Invite sent to ${variables.email}`);
+            setEmail("");
+            setTimeout(() => setSuccess(null), 4000);
+            if (org?.id) {
+              logAudit(org.id, "team.invited", "org_invite", "", {
+                email: variables.email,
+              }).catch(() => {});
+            }
+          },
+          onError: (err: unknown) => {
+            const msg =
+              err && typeof err === "object" && "message" in err
+                ? String((err as { message: string }).message)
+                : String(err);
+            if (msg.includes("duplicate")) setError("This email has already been invited");
+            else setError(msg);
+          },
+        },
+      );
     },
     [email, org, inviteRole, inviteMutation],
   );
 
-  const revokeMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await supabase.from("org_invites").delete().eq("id", id);
-    },
-    onSuccess: () => invalidateRoster(),
-  });
-
-  const removeMemberMutation = useMutation({
-    mutationFn: async (payload: { id: string; memberEmail?: string }) => {
-      const { error: delErr } = await supabase.from("org_members").delete().eq("id", payload.id);
-      if (delErr) throw delErr;
-      return payload;
-    },
-    onSuccess: (payload) => {
-      invalidateRoster();
-      if (org?.id) {
-        logAudit(org.id, "team.removed", "org_member", payload.id, {
-          email: payload.memberEmail,
-        }).catch(() => {});
-      }
-    },
-  });
-
   const revokeInvite = useCallback(
     (id: string) => {
-      revokeMutation.mutate(id);
+      if (!org?.id) return;
+      revokeMutation.mutate({ orgId: org.id, inviteId: id });
     },
-    [revokeMutation],
+    [revokeMutation, org?.id],
   );
 
   const removeMember = useCallback(
     (id: string, memberEmail?: string) => {
-      removeMemberMutation.mutate({ id, memberEmail });
+      if (!org?.id) return;
+      removeMemberMutation.mutate(
+        { orgId: org.id, memberId: id },
+        {
+          onSuccess: () => {
+            logAudit(org.id, "team.removed", "org_member", id, {
+              email: memberEmail,
+            }).catch(() => {});
+          },
+        },
+      );
     },
-    [removeMemberMutation],
+    [removeMemberMutation, org?.id],
   );
 
   const [resettingMfa, setResettingMfa] = useState<string | null>(null);

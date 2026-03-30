@@ -4,3 +4,4 @@ export { BASE_STEPS, AGENT_STEP } from "../wizard-types";
 export { WelcomeStep } from "./WelcomeStep";
 export { BrandingStep } from "./BrandingStep";
 export { GuideUploadStep } from "./GuideUploadStep";
+export { GuideAiReportsStep } from "./GuideAiReportsStep";

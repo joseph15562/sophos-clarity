@@ -5,11 +5,20 @@ import {
   seTeamTransferAdminBodySchema,
 } from "../../_shared/api-schemas.ts";
 import { authenticateSE } from "../../_shared/auth.ts";
-import { adminClient, json as jsonResponse, safeDbError } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
-import { buildSophosEmailHtml, escapeHtml, sendConfigUploadEmail } from "../../_shared/email.ts";
+import {
+  buildSophosEmailHtml,
+  escapeHtml,
+  sendConfigUploadEmail,
+} from "../../_shared/email.ts";
 
-const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
+const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ??
+  "https://sophos-firecomply.vercel.app";
 
 export async function handleSeTeamRoutes(
   req: Request,
@@ -17,7 +26,11 @@ export async function handleSeTeamRoutes(
   segments: string[],
   corsHeaders: Record<string, string>,
 ): Promise<Response | null> {
-  function json(body: unknown, status = 200, hdrs: Record<string, string> = corsHeaders) {
+  function json(
+    body: unknown,
+    status = 200,
+    hdrs: Record<string, string> = corsHeaders,
+  ) {
     return jsonResponse(body, status, hdrs);
   }
 
@@ -76,7 +89,9 @@ export async function handleSeTeamRoutes(
     const raw = await req.json().catch(() => ({}));
     const parsed = seTeamCreateBodySchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "se_team_create_invalid_body", { issues: parsed.error.issues.length });
+      logJson("warn", "se_team_create_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
       return json({ error: "Invalid request body" }, 400);
     }
     const name = parsed.data.name.trim();
@@ -103,7 +118,12 @@ export async function handleSeTeamRoutes(
       is_primary: shouldBePrimary,
     });
 
-    return json({ ...team, role: "admin", is_primary: shouldBePrimary, member_count: 1 }, 201);
+    return json({
+      ...team,
+      role: "admin",
+      is_primary: shouldBePrimary,
+      member_count: 1,
+    }, 201);
   }
 
   // POST /api/se-teams/accept-invite/:token — accept an email invite (SE must be signed in)
@@ -115,9 +135,14 @@ export async function handleSeTeamRoutes(
       .eq("token", token)
       .maybeSingle();
     if (!invite) return json({ error: "Invalid invite link" }, 404);
-    if (invite.status !== "pending") return json({ error: "This invite has already been used" }, 400);
+    if (invite.status !== "pending") {
+      return json({ error: "This invite has already been used" }, 400);
+    }
     if (new Date(invite.expires_at) < new Date()) {
-      await db.from("se_team_invites").update({ status: "expired" }).eq("id", invite.id);
+      await db.from("se_team_invites").update({ status: "expired" }).eq(
+        "id",
+        invite.id,
+      );
       return json({ error: "This invite has expired" }, 410);
     }
 
@@ -133,7 +158,10 @@ export async function handleSeTeamRoutes(
       .eq("se_profile_id", se.seProfile.id)
       .maybeSingle();
     if (existingMember) {
-      await db.from("se_team_invites").update({ status: "accepted" }).eq("id", invite.id);
+      await db.from("se_team_invites").update({ status: "accepted" }).eq(
+        "id",
+        invite.id,
+      );
       return json({ error: "You are already a member of this team" }, 409);
     }
 
@@ -152,9 +180,15 @@ export async function handleSeTeamRoutes(
       is_primary: shouldBePrimary,
     });
 
-    await db.from("se_team_invites").update({ status: "accepted" }).eq("id", invite.id);
+    await db.from("se_team_invites").update({ status: "accepted" }).eq(
+      "id",
+      invite.id,
+    );
 
-    const { data: teamInfo } = await db.from("se_teams").select("name").eq("id", invite.team_id).single();
+    const { data: teamInfo } = await db.from("se_teams").select("name").eq(
+      "id",
+      invite.team_id,
+    ).single();
 
     // Notify team admins
     const { data: admins } = await db
@@ -176,13 +210,25 @@ export async function handleSeTeamRoutes(
           await sendConfigUploadEmail(
             ap.email,
             `${joinerName} joined your team "${teamInfo?.name ?? "your team"}"`,
-            buildSophosEmailHtml("New Team Member", `<p><strong>${escapeHtml(joinerName)}</strong> has joined your team <strong>${escapeHtml(teamInfo?.name ?? "your team")}</strong> on Sophos FireComply.</p>`),
+            buildSophosEmailHtml(
+              "New Team Member",
+              `<p><strong>${
+                escapeHtml(joinerName)
+              }</strong> has joined your team <strong>${
+                escapeHtml(teamInfo?.name ?? "your team")
+              }</strong> on Sophos FireComply.</p>`,
+            ),
           );
         }
       }
     }
 
-    return json({ team_id: invite.team_id, team_name: teamInfo?.name ?? "", role: "member", is_primary: shouldBePrimary }, 201);
+    return json({
+      team_id: invite.team_id,
+      team_name: teamInfo?.name ?? "",
+      role: "member",
+      is_primary: shouldBePrimary,
+    }, 201);
   }
 
   // Routes with team ID: /api/se-teams/:id/...
@@ -197,7 +243,9 @@ export async function handleSeTeamRoutes(
       .eq("team_id", teamId)
       .eq("se_profile_id", se.seProfile.id)
       .maybeSingle();
-    if (!membership) return json({ error: "Team not found or you are not a member" }, 404);
+    if (!membership) {
+      return json({ error: "Team not found or you are not a member" }, 404);
+    }
 
     const isAdmin = membership.role === "admin";
 
@@ -237,7 +285,10 @@ export async function handleSeTeamRoutes(
           .eq("role", "admin")
           .limit(100);
         if ((adminCount?.length ?? 0) <= 1) {
-          return json({ error: "You are the only admin. Transfer admin role to another member before leaving." }, 400);
+          return json({
+            error:
+              "You are the only admin. Transfer admin role to another member before leaving.",
+          }, 400);
         }
       }
       await db.from("se_team_members").delete().eq("id", membership.id);
@@ -250,11 +301,16 @@ export async function handleSeTeamRoutes(
       const raw = await req.json().catch(() => ({}));
       const parsed = seTeamRenameBodySchema.safeParse(raw);
       if (!parsed.success) {
-        logJson("warn", "se_team_rename_invalid_body", { issues: parsed.error.issues.length });
+        logJson("warn", "se_team_rename_invalid_body", {
+          issues: parsed.error.issues.length,
+        });
         return json({ error: "Invalid request body" }, 400);
       }
       const name = parsed.data.name.trim();
-      const { error } = await db.from("se_teams").update({ name }).eq("id", teamId);
+      const { error } = await db.from("se_teams").update({ name }).eq(
+        "id",
+        teamId,
+      );
       if (error) return json({ error: safeDbError(error) }, 500);
       return json({ ok: true, name });
     }
@@ -265,13 +321,19 @@ export async function handleSeTeamRoutes(
       const raw = await req.json().catch(() => ({}));
       const parsed = seTeamInviteBodySchema.safeParse(raw);
       if (!parsed.success) {
-        logJson("warn", "se_team_invite_invalid_body", { issues: parsed.error.issues.length });
+        logJson("warn", "se_team_invite_invalid_body", {
+          issues: parsed.error.issues.length,
+        });
         return json({ error: "Invalid request body" }, 400);
       }
       const email = parsed.data.email.trim().toLowerCase();
 
-      const { data: teamInfo } = await db.from("se_teams").select("name").eq("id", teamId).single();
-      const inviterName = se.seProfile.display_name || se.user.email || "A team admin";
+      const { data: teamInfo } = await db.from("se_teams").select("name").eq(
+        "id",
+        teamId,
+      ).single();
+      const inviterName = se.seProfile.display_name || se.user.email ||
+        "A team admin";
 
       const { data: existingPending } = await db
         .from("se_team_invites")
@@ -280,12 +342,23 @@ export async function handleSeTeamRoutes(
         .eq("email", email)
         .eq("status", "pending")
         .maybeSingle();
-      if (existingPending) return json({ error: "An invite is already pending for this email" }, 409);
+      if (existingPending) {
+        return json(
+          { error: "An invite is already pending for this email" },
+          409,
+        );
+      }
 
-      const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+        .toISOString();
       const { data: invite, error } = await db
         .from("se_team_invites")
-        .insert({ team_id: teamId, invited_by: se.seProfile.id, email, expires_at: expiresAt })
+        .insert({
+          team_id: teamId,
+          invited_by: se.seProfile.id,
+          email,
+          expires_at: expiresAt,
+        })
         .select("id, token")
         .single();
       if (error) return json({ error: safeDbError(error) }, 500);
@@ -296,7 +369,11 @@ export async function handleSeTeamRoutes(
       const emailHtml = buildSophosEmailHtml(
         "Team Invite",
         `<p style="margin:0 0 20px;">Hi,</p>
-<p style="margin:0 0 20px;"><strong>${escapeHtml(inviterName)}</strong> has invited you to join the <strong>${escapeHtml(teamName)}</strong> team on Sophos FireComply.</p>
+<p style="margin:0 0 20px;"><strong>${
+          escapeHtml(inviterName)
+        }</strong> has invited you to join the <strong>${
+          escapeHtml(teamName)
+        }</strong> team on Sophos FireComply.</p>
 <p style="margin:0 0 20px;">Simply click on the link below to accept the invitation and join the team.</p>`,
         joinLink,
         "Join Team",
@@ -329,7 +406,10 @@ export async function handleSeTeamRoutes(
     if (req.method === "DELETE" && subRoute === "invites" && segments[3]) {
       if (!isAdmin) return json({ error: "Admin access required" }, 403);
       const inviteId = segments[3];
-      const { error } = await db.from("se_team_invites").delete().eq("id", inviteId).eq("team_id", teamId);
+      const { error } = await db.from("se_team_invites").delete().eq(
+        "id",
+        inviteId,
+      ).eq("team_id", teamId);
       if (error) return json({ error: safeDbError(error) }, 500);
       return json({ ok: true });
     }
@@ -340,7 +420,9 @@ export async function handleSeTeamRoutes(
       const raw = await req.json().catch(() => ({}));
       const parsed = seTeamTransferAdminBodySchema.safeParse(raw);
       if (!parsed.success) {
-        logJson("warn", "se_team_transfer_admin_invalid_body", { issues: parsed.error.issues.length });
+        logJson("warn", "se_team_transfer_admin_invalid_body", {
+          issues: parsed.error.issues.length,
+        });
         return json({ error: "Invalid request body" }, 400);
       }
       const targetProfileId = parsed.data.target_se_profile_id;
@@ -351,10 +433,18 @@ export async function handleSeTeamRoutes(
         .eq("team_id", teamId)
         .eq("se_profile_id", targetProfileId)
         .maybeSingle();
-      if (!targetMember) return json({ error: "Target is not a member of this team" }, 404);
+      if (!targetMember) {
+        return json({ error: "Target is not a member of this team" }, 404);
+      }
 
-      await db.from("se_team_members").update({ role: "admin" }).eq("id", targetMember.id);
-      await db.from("se_team_members").update({ role: "member" }).eq("id", membership.id);
+      await db.from("se_team_members").update({ role: "admin" }).eq(
+        "id",
+        targetMember.id,
+      );
+      await db.from("se_team_members").update({ role: "member" }).eq(
+        "id",
+        membership.id,
+      );
       return json({ ok: true });
     }
 
@@ -383,7 +473,12 @@ export async function handleSeTeamRoutes(
         .eq("team_id", teamId)
         .maybeSingle();
       if (!target) return json({ error: "Member not found" }, 404);
-      if (target.se_profile_id === se.seProfile.id) return json({ error: "Cannot remove yourself — use leave instead" }, 400);
+      if (target.se_profile_id === se.seProfile.id) {
+        return json(
+          { error: "Cannot remove yourself — use leave instead" },
+          400,
+        );
+      }
       await db.from("se_team_members").delete().eq("id", memberId);
       return json({ ok: true });
     }

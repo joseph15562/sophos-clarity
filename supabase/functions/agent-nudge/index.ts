@@ -33,8 +33,14 @@ serve(async (_req: Request) => {
 
   if (fetchErr) {
     logJson("error", "agent_nudge_fetch", { message: fetchErr.message });
-    return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: fetchErr.message }), {
+      status: 500,
+    });
   }
+
+  logJson("info", "agent_nudge_start", {
+    staleCandidates: staleAgents?.length ?? 0,
+  });
 
   let nudged = 0;
   for (const agent of staleAgents ?? []) {
@@ -55,7 +61,11 @@ serve(async (_req: Request) => {
   logJson("info", "agent_nudge_complete", { nudged, offlined: offlined ?? 0 });
 
   return new Response(
-    JSON.stringify({ nudged, offlined: offlined ?? 0, checked: staleAgents?.length ?? 0 }),
+    JSON.stringify({
+      nudged,
+      offlined: offlined ?? 0,
+      checked: staleAgents?.length ?? 0,
+    }),
     { status: 200, headers: { "Content-Type": "application/json" } },
   );
 });

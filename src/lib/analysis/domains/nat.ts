@@ -18,13 +18,13 @@ export function analyseNatRules(
   for (const t of natSection.tables) {
     for (const row of t.rows) {
       const name = row["Rule Name"] ?? row["Name"] ?? row["#"] ?? "Unnamed";
-      const type = (row["Type"] ?? row["NAT Type"] ?? row["Rule Type"] ?? row["Action"] ?? "")
+      const _type = (row["Type"] ?? row["NAT Type"] ?? row["Rule Type"] ?? row["Action"] ?? "")
         .toLowerCase()
         .trim();
       const origDest = (row["Original Destination"] ?? row["Destination"] ?? row["Dest"] ?? "")
         .toLowerCase()
         .trim();
-      const transTo = (
+      const _transTo = (
         row["Translated To"] ??
         row["Translated Destination"] ??
         row["Translation"] ??

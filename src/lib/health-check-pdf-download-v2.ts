@@ -5,7 +5,6 @@
 
 import type { BrandingData } from "@/components/BrandingSetup";
 import { buildSeHealthCheckBrowserHtmlDocument } from "@/lib/se-health-check-browser-html-v2";
-import { buildSeHealthCheckPdfBlob } from "@/lib/se-health-check-pdfmake-v2";
 import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html-v2";
 import { sanitizePdfFilenamePart } from "@/lib/pdf-utils";
 import { saveAs } from "file-saver";
@@ -19,6 +18,7 @@ export async function runHealthCheckPdfDownload(args: {
   filenameCustomerPart: string;
 }): Promise<string> {
   const { reportParams, filenameCustomerPart } = args;
+  const { buildSeHealthCheckPdfBlob } = await import("@/lib/se-health-check-pdfmake-v2");
   const blob = await buildSeHealthCheckPdfBlob(reportParams);
   const part = sanitizePdfFilenamePart(filenameCustomerPart);
   const date = new Date().toISOString().slice(0, 10);
@@ -53,6 +53,7 @@ export async function runHealthCheckZipDownload(args: {
   const date = new Date().toISOString().slice(0, 10);
   const baseName = `Sophos-Firewall-Health-Check-${part}-${date}`;
 
+  const { buildSeHealthCheckPdfBlob } = await import("@/lib/se-health-check-pdfmake-v2");
   const [pdfBlob, html] = await Promise.all([
     buildSeHealthCheckPdfBlob(reportParams),
     Promise.resolve(buildSeHealthCheckBrowserHtmlDocument(reportParams)),

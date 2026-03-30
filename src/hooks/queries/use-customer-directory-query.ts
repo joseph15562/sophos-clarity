@@ -10,7 +10,7 @@ export function useCustomerDirectoryQuery(
     queryKey: orgId
       ? queryKeys.org.customerDirectory(orgId)
       : ["org", "none", "customer_directory"],
-    queryFn: () => fetchCustomerDirectory(orgId!, orgDisplayName ?? ""),
+    queryFn: ({ signal }) => fetchCustomerDirectory(orgId!, orgDisplayName ?? "", { signal }),
     enabled: Boolean(orgId),
     staleTime: 15_000,
   });

@@ -1,0 +1,23 @@
+# Optional load check against a staging URL. Set repo variable K6_BASE_URL (e.g. https://preview.example/)
+# to enable; otherwise this workflow is a no-op.
+name: k6 sustained (optional)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/k6/**"
+      - ".github/workflows/k6-sustained.yml"
+
+jobs:
+  k6:
+    if: vars.K6_BASE_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Run sustained scenario
+        run: BASE_URL="${{ vars.K6_BASE_URL }}" k6 run scripts/k6/sustained.js

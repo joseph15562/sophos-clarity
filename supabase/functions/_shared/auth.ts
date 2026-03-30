@@ -30,7 +30,10 @@ export type AuthenticateSEOpts = {
   createUserClient?: (authHeader: string) => UserClientForSE;
 };
 
-export async function authenticateAgent(apiKey: string, opts?: AuthenticateAgentOpts) {
+export async function authenticateAgent(
+  apiKey: string,
+  opts?: AuthenticateAgentOpts,
+) {
   const prefix = apiKey.slice(0, 8);
   const db = opts?.admin ?? adminClient();
   const { data: agents, error } = await db
@@ -48,7 +51,10 @@ export async function authenticateAgent(apiKey: string, opts?: AuthenticateAgent
   return null;
 }
 
-export async function getOrgMembership(userId: string, opts?: GetOrgMembershipOpts) {
+export async function getOrgMembership(
+  userId: string,
+  opts?: GetOrgMembershipOpts,
+) {
   const db = opts?.admin ?? adminClient();
   const { data } = await db
     .from("org_members")
@@ -62,7 +68,8 @@ export async function getOrgMembership(userId: string, opts?: GetOrgMembershipOp
 export async function authenticateSE(req: Request, opts?: AuthenticateSEOpts) {
   const authHeader = req.headers.get("authorization");
   if (!authHeader) return null;
-  const clientFactory = opts?.createUserClient ?? ((h: string) => userClient(h) as UserClientForSE);
+  const clientFactory = opts?.createUserClient ??
+    ((h: string) => userClient(h) as UserClientForSE);
   const uc = clientFactory(authHeader);
   const { data: { user } } = await uc.auth.getUser();
   if (!user) return null;
@@ -74,8 +81,7 @@ export async function authenticateSE(req: Request, opts?: AuthenticateSEOpts) {
     .maybeSingle();
   if (!seProfile) return null;
   if (!seProfile.display_name) {
-    seProfile.display_name =
-      (seProfile.health_check_prepared_by as string) ||
+    seProfile.display_name = (seProfile.health_check_prepared_by as string) ||
       (user.user_metadata as Record<string, unknown>)?.full_name as string ||
       (user.user_metadata as Record<string, unknown>)?.name as string ||
       null;
@@ -89,7 +95,8 @@ export async function runConfigUploadCleanup() {
   await db.from("config_upload_requests").delete()
     .lt("expires_at", now)
     .in("status", ["pending", "uploaded"]);
-  const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+  const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+    .toISOString();
   await db.from("config_upload_requests").delete()
     .lt("downloaded_at", fiveDaysAgo)
     .eq("status", "downloaded");

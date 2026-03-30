@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { useTheme } from "next-themes";
 import { TrendingUp, Download } from "lucide-react";
 import { toPng } from "html-to-image";
@@ -16,7 +16,7 @@ interface ScoreTrendChartProps {
 
 const CATEGORY_OVERALL = "__overall__";
 
-export function ScoreTrendChart({
+function ScoreTrendChartInner({
   orgId,
   hostname,
   data: propData,
@@ -562,3 +562,5 @@ export function ScoreTrendChart({
     </div>
   );
 }
+
+export const ScoreTrendChart = memo(ScoreTrendChartInner);

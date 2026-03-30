@@ -1,3 +1,5 @@
+import { warnOptionalError } from "@/lib/client-error-feedback";
+
 /**
  * Configuration snapshots — store config metadata over time for version control.
  * For now, stored in localStorage. Supabase migration pending.
@@ -24,7 +26,7 @@ export function hashConfig(sections: Record<string, unknown>): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash |= 0;
   }
   return Math.abs(hash).toString(36);
@@ -32,13 +34,16 @@ export function hashConfig(sections: Record<string, unknown>): string {
 
 const STORAGE_KEY = "sophos-config-snapshots";
 
-export function saveConfigSnapshot(snapshot: Omit<ConfigSnapshot, "id" | "created_at">): ConfigSnapshot {
+export function saveConfigSnapshot(
+  snapshot: Omit<ConfigSnapshot, "id" | "created_at">,
+): ConfigSnapshot {
   const snapshots = loadConfigSnapshots();
   // Skip if identical hash already exists for same hostname within 1 hour
-  const recent = snapshots.find(s =>
-    s.hostname === snapshot.hostname &&
-    s.snapshot_hash === snapshot.snapshot_hash &&
-    Date.now() - new Date(s.created_at).getTime() < 3600000
+  const recent = snapshots.find(
+    (s) =>
+      s.hostname === snapshot.hostname &&
+      s.snapshot_hash === snapshot.snapshot_hash &&
+      Date.now() - new Date(s.created_at).getTime() < 3600000,
   );
   if (recent) return recent;
 
@@ -54,7 +59,11 @@ export function saveConfigSnapshot(snapshot: Omit<ConfigSnapshot, "id" | "create
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
   } catch {
     while (snapshots.length > 10) snapshots.shift();
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots)); } catch { /* quota still exceeded, give up */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots));
+    } catch {
+      /* quota still exceeded, give up */
+    }
   }
   return newSnapshot;
 }
@@ -63,7 +72,10 @@ export function loadConfigSnapshots(hostname?: string): ConfigSnapshot[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const all: ConfigSnapshot[] = raw ? JSON.parse(raw) : [];
-    if (hostname) return all.filter(s => s.hostname === hostname);
+    if (hostname) return all.filter((s) => s.hostname === hostname);
     return all;
-  } catch { return []; }
+  } catch (e) {
+    warnOptionalError("config-snapshots.load", e);
+    return [];
+  }
 }

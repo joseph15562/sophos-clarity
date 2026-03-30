@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { mapToAllFrameworks, type ControlMapping, type ControlStatus } from "@/lib/compliance-map";
@@ -187,7 +188,11 @@ export function ControlFindingMap({ analysisResults, selectedFrameworks }: Props
         })}
       </div>
       {filteredMappings.length === 0 && (
-        <p className="text-sm text-muted-foreground py-4">No controls match the selected filter</p>
+        <EmptyState
+          className="!py-8"
+          title="No controls match this filter"
+          description="Adjust framework or status filters to see mapped controls."
+        />
       )}
     </div>
   );

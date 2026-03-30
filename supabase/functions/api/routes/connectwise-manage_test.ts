@@ -5,7 +5,10 @@ import {
 } from "../../_shared/api-schemas.ts";
 
 Deno.test("connectwise-manage: credentials post requires core fields", () => {
-  assertEquals(connectwiseManageCredentialsPostSchema.safeParse({}).success, false);
+  assertEquals(
+    connectwiseManageCredentialsPostSchema.safeParse({}).success,
+    false,
+  );
   const ok = connectwiseManageCredentialsPostSchema.safeParse({
     apiBaseUrl: "https://example/",
     integratorCompanyId: "x",

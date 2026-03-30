@@ -207,9 +207,9 @@ export function useReportGeneration(
               if (attempt >= MAX_RETRIES) {
                 const isExecutive = reportId === "report-executive";
                 const description = isExecutive
-                  ? `Executive summary uses data from all firewalls and often hits API limits. ${err} Try retry in a few minutes or use fewer configs.`
-                  : `${err} — use the retry button to try again.`;
-                toast.error("Error", { description });
+                  ? `Executive summary uses data from all firewalls and often hits API limits. ${err} Try again in a few minutes, use fewer firewalls, or use the Retry analysis control on the report.`
+                  : `${err} Use Retry analysis on the report panel to run generation again.`;
+                toast.error("Analysis did not finish", { description });
               }
               resolve(false);
             },

@@ -15,7 +15,11 @@ export function userClient(authHeader: string) {
   });
 }
 
-export function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
+export function json(
+  body: unknown,
+  status = 200,
+  corsHeaders: Record<string, string> = {},
+) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -23,7 +27,10 @@ export function json(body: unknown, status = 200, corsHeaders: Record<string, st
 }
 
 /** Log the real error server-side, return a generic message for the client. */
-export function safeError(err: unknown, fallback = "Internal server error"): string {
+export function safeError(
+  err: unknown,
+  fallback = "Internal server error",
+): string {
   logJson("error", "edge_fn_error", {
     detail: err instanceof Error ? (err.stack ?? err.message) : String(err),
   });
@@ -31,7 +38,14 @@ export function safeError(err: unknown, fallback = "Internal server error"): str
 }
 
 /** Log a DB/PostgREST error, return generic message. */
-export function safeDbError(err: { message: string; code?: string } | null): string {
-  if (err) logJson("error", "db_error", { message: err.message, code: err.code ?? "" });
+export function safeDbError(
+  err: { message: string; code?: string } | null,
+): string {
+  if (err) {
+    logJson("error", "db_error", {
+      message: err.message,
+      code: err.code ?? "",
+    });
+  }
   return "Database query failed";
 }

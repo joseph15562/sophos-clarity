@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Check, Circle, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { buildManagePanelSearch } from "@/lib/workspace-deeplink";
 import { trackProductEvent } from "@/lib/product-telemetry";
+import { warnOptionalError } from "@/lib/client-error-feedback";
+import { useMspSetupStatusQuery } from "@/hooks/queries/use-msp-setup-status-query";
 
 const DISMISS_KEY = "firecomply-msp-checklist-dismissed";
 
@@ -17,45 +18,19 @@ export function MspSetupChecklist({ orgId, canManage }: Props) {
   const [dismissed, setDismissed] = useState(() => {
     try {
       return localStorage.getItem(DISMISS_KEY) === "1";
-    } catch {
+    } catch (e) {
+      warnOptionalError("MspSetupChecklist.readDismissed", e);
       return false;
     }
   });
-  const [centralOk, setCentralOk] = useState(false);
-  const [agentCount, setAgentCount] = useState(0);
-  const [assessmentCount, setAssessmentCount] = useState(0);
-  const [portalSlugOk, setPortalSlugOk] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const statusQuery = useMspSetupStatusQuery(orgId);
+  const centralOk = statusQuery.data?.centralOk ?? false;
+  const agentCount = statusQuery.data?.agentCount ?? 0;
+  const assessmentCount = statusQuery.data?.assessmentCount ?? 0;
+  const portalSlugOk = statusQuery.data?.portalSlugOk ?? false;
+  const loading = statusQuery.isPending;
   const prevAgentCount = useRef(0);
   const checklistCompleteFired = useRef(false);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [cred, agents, assess, portals] = await Promise.all([
-        supabase.from("central_credentials").select("org_id").eq("org_id", orgId).maybeSingle(),
-        supabase.from("agents").select("id", { count: "exact", head: true }).eq("org_id", orgId),
-        supabase
-          .from("assessments")
-          .select("id", { count: "exact", head: true })
-          .eq("org_id", orgId),
-        supabase.from("portal_config").select("slug").eq("org_id", orgId),
-      ]);
-      setCentralOk(!!cred.data);
-      setAgentCount(agents.count ?? 0);
-      setAssessmentCount(assess.count ?? 0);
-      const rows = portals.data ?? [];
-      setPortalSlugOk(
-        rows.some((r) => String((r as { slug?: string }).slug ?? "").trim().length > 0),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [orgId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   useEffect(() => {
     if (loading) return;
@@ -76,8 +51,8 @@ export function MspSetupChecklist({ orgId, canManage }: Props) {
   const dismiss = () => {
     try {
       localStorage.setItem(DISMISS_KEY, "1");
-    } catch {
-      /* ignore */
+    } catch (e) {
+      warnOptionalError("MspSetupChecklist.dismiss", e);
     }
     trackProductEvent("msp_checklist_dismissed", { orgId });
     setDismissed(true);

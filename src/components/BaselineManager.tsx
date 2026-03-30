@@ -3,6 +3,7 @@ import { Check, Trash2 } from "lucide-react";
 import { computeRiskScore } from "@/lib/risk-score";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { Button } from "@/components/ui/button";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 const BASELINE_KEY = "firecomply-baseline-config";
 
@@ -31,7 +32,8 @@ export function BaselineManager({ analysisResults }: BaselineManagerProps) {
         localStorage.removeItem(BASELINE_KEY);
         setBaselineLabel(null);
       }
-    } catch {
+    } catch (e) {
+      warnOptionalError("BaselineManager.load", e);
       setBaselineLabel(null);
     }
   }, [labels]);
@@ -40,8 +42,8 @@ export function BaselineManager({ analysisResults }: BaselineManagerProps) {
     setBaselineLabel(label);
     try {
       localStorage.setItem(BASELINE_KEY, label);
-    } catch {
-      // ignore
+    } catch (e) {
+      warnOptionalError("BaselineManager.set", e);
     }
   }, []);
 
@@ -49,8 +51,8 @@ export function BaselineManager({ analysisResults }: BaselineManagerProps) {
     setBaselineLabel(null);
     try {
       localStorage.removeItem(BASELINE_KEY);
-    } catch {
-      // ignore
+    } catch (e) {
+      warnOptionalError("BaselineManager.clear", e);
     }
   }, []);
 

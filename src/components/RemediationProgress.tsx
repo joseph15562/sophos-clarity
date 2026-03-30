@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { generatePlaybook } from "@/lib/remediation-playbooks";
 import { supabase } from "@/integrations/supabase/client";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -48,8 +49,8 @@ async function loadCompleted(customerHash: string): Promise<Set<string>> {
   try {
     const raw = localStorage.getItem(`firecomply_remediation_${customerHash}`);
     if (raw) return new Set(JSON.parse(raw));
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("RemediationProgress.loadCompleted", e);
   }
   return new Set();
 }

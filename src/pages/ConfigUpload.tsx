@@ -740,7 +740,13 @@ const ConfigUpload = () => {
       {/* Header */}
       <div className="bg-[#001A47]/95 backdrop-blur border-b border-white/10 px-6 py-4">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5 opacity-70" />
+          <img
+            src="/sophos-icon-white.svg"
+            alt=""
+            className="h-5 w-5 opacity-70"
+            loading="lazy"
+            decoding="async"
+          />
           <span className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">
             Sophos Firewall Health Check
           </span>

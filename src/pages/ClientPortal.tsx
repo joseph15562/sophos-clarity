@@ -1225,7 +1225,13 @@ export default function ClientPortal() {
               />
             ) : (
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-elevated shrink-0">
-                <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
+                <img
+                  src="/sophos-icon-white.svg"
+                  alt="Sophos"
+                  className="h-7 w-7"
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
             )}
             <div className="min-w-0">
@@ -1636,14 +1642,18 @@ export default function ClientPortal() {
                     ))}
                   </div>
                   {findings.length === 0 && !mergedRichFindings?.length ? (
-                    <p className="text-sm text-muted-foreground py-4">
-                      No findings data available.
-                    </p>
+                    <EmptyState
+                      className="!py-8"
+                      title="No findings data"
+                      description="Findings will appear here when the MSP publishes them for this portal."
+                    />
                   ) : mergedRichFindings && filteredRichFindings ? (
                     filteredRichFindings.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-4">
-                        No findings match the selected filters.
-                      </p>
+                      <EmptyState
+                        className="!py-8"
+                        title="No findings match these filters"
+                        description="Clear or change severity filters above to see more rows."
+                      />
                     ) : (
                       <Table>
                         <TableHeader>
@@ -1783,13 +1793,17 @@ export default function ClientPortal() {
                       </Table>
                     )
                   ) : findings.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-4">
-                      No findings data available.
-                    </p>
+                    <EmptyState
+                      className="!py-8"
+                      title="No findings data"
+                      description="Findings will appear here when the MSP publishes them for this portal."
+                    />
                   ) : filteredFindings.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-4">
-                      No findings match the selected filters.
-                    </p>
+                    <EmptyState
+                      className="!py-8"
+                      title="No findings match these filters"
+                      description="Clear or change severity filters above to see more rows."
+                    />
                   ) : (
                     <ul className="space-y-2">
                       {filteredFindings.map((f) => (

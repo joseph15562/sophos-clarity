@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Shield, Download, ChevronDown, RefreshCw, Server, Clock, Link2 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useCentral } from "@/hooks/use-central";
@@ -762,24 +763,28 @@ export function LicenceExpiryWidget() {
               </p>
             </>
           ) : (
-            <div className="text-center py-3 space-y-2">
-              <p className="text-xs text-muted-foreground">
-                {flattened.length === 0
-                  ? "No firewall licence data available. Ensure your API credentials have licensing scope."
-                  : "No licences match this filter."}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setHasFetched(false);
-                }}
-                disabled={loading}
-                className="gap-1 text-[10px] h-7"
-              >
-                <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Retry
-              </Button>
-            </div>
+            <EmptyState
+              className="!py-6"
+              title={flattened.length === 0 ? "No licence data" : "No licences match this filter"}
+              description={
+                flattened.length === 0
+                  ? "Ensure your API credentials include licensing scope, then refresh."
+                  : "Change the filter above or refresh to reload from Sophos Central."
+              }
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setHasFetched(false);
+                  }}
+                  disabled={loading}
+                  className="gap-1 text-[10px] h-7"
+                >
+                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Retry
+                </Button>
+              }
+            />
           )}
         </div>
       )}

@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useManagementDrawerClientPreviewQuery } from "@/hooks/queries/use-management-drawer-client-preview-query";
+import { useOrgCloudPurgeMutation } from "@/hooks/queries/use-org-cloud-purge-mutation";
 import { useOrgPsaIntegrationFlagsQuery } from "@/hooks/queries/use-org-psa-integration-query";
 import { useOrgSubmissionRetentionQuery } from "@/hooks/queries/use-org-submission-retention-query";
 import { queryKeys } from "@/hooks/queries/keys";
@@ -31,7 +33,6 @@ import {
   Fingerprint,
   Code,
   Eye,
-  ClipboardCheck,
   Globe,
   Newspaper,
   Webhook,
@@ -44,9 +45,8 @@ import {
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { settingsSectionExpandAllowed } from "@/lib/workspace-deeplink";
 import { RerunSetupButton } from "@/components/SetupWizard";
-import { supabase } from "@/integrations/supabase/client";
+import { trackProductEvent } from "@/lib/product-telemetry";
 import { useAuth } from "@/hooks/use-auth";
-import { computeRiskScore } from "@/lib/risk-score";
 import { ScoreTrendChart } from "@/components/ScoreTrendChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,12 +58,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ApiDocumentation } from "@/components/ApiDocumentation";
-import { ClientPortalView, type Assessment } from "@/components/ClientPortalView";
-import { loadHistory } from "@/lib/assessment-history";
-import { loadHistoryCloud } from "@/lib/assessment-cloud";
-import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
+import { ClientPortalView } from "@/components/ClientPortalView";
 import { useCompanyLogo } from "@/hooks/use-company-logo";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingState } from "@/components/LoadingState";
 import type { LoadSavedReportArgs } from "@/components/SavedReportsLibrary";
 
 const TenantDashboard = lazy(() =>
@@ -316,34 +315,29 @@ function SettingsSection({
 
 function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
   const { org } = useAuth();
-  const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const { data: submissionRetentionDays = null } = useOrgSubmissionRetentionQuery(org?.id);
 
-  const handleDelete = async () => {
+  const purgeMutation = useOrgCloudPurgeMutation();
+
+  const handleDelete = () => {
     const id = org?.id;
     if (!id) return;
-    setDeleting(true);
-    try {
-      await supabase.from("finding_snapshots").delete().eq("org_id", id);
-      await supabase.from("remediation_status").delete().eq("org_id", id);
-      await supabase.from("shared_reports").delete().eq("org_id", id);
-      await supabase.from("alert_rules").delete().eq("org_id", id);
-      await supabase.from("audit_log").delete().eq("org_id", id);
-      await supabase.from("saved_reports").delete().eq("org_id", id);
-      await supabase.from("assessments").delete().eq("org_id", id);
-      await supabase.from("central_firewalls").delete().eq("org_id", id);
-      await supabase.from("central_tenants").delete().eq("org_id", id);
-      await supabase.from("central_credentials").delete().eq("org_id", id);
-      setDeleted(true);
-      setShowConfirm(false);
-    } catch (err) {
-      console.warn("[DataGovernance] Delete failed", err);
-    } finally {
-      setDeleting(false);
-    }
+    purgeMutation.mutate(id, {
+      onSuccess: () => {
+        setDeleted(true);
+        setShowConfirm(false);
+        setConfirmText("");
+        toast.success("All workspace data removed from the cloud.");
+        trackProductEvent("workspace_data_purged", { orgId: id });
+      },
+      onError: (err) => {
+        console.warn("[DataGovernance] Delete failed", err);
+        toast.error("Could not delete all data. Try again or contact support.");
+      },
+    });
   };
 
   return (
@@ -494,12 +488,12 @@ function DataGovernanceSection({ orgId: _orgId }: { orgId?: string }) {
               <div className="flex gap-2">
                 <Button
                   onClick={handleDelete}
-                  disabled={confirmText !== "DELETE" || deleting}
+                  disabled={confirmText !== "DELETE" || purgeMutation.isPending}
                   variant="destructive"
                   className="gap-1.5 text-[10px] h-8"
                 >
                   <Trash2 className="h-3 w-3" />
-                  {deleting ? "Deleting…" : "Delete All Data"}
+                  {purgeMutation.isPending ? "Deleting…" : "Delete All Data"}
                 </Button>
                 <Button
                   onClick={() => {
@@ -643,59 +637,14 @@ export function ManagementDrawer({
   const queryClient = useQueryClient();
   const { logoUrl: companyLogo } = useCompanyLogo();
   const [clientViewOpen, setClientViewOpen] = useState(false);
-  const [clientViewAssessments, setClientViewAssessments] = useState<Assessment[]>([]);
-  const [clientViewScoreHistory, setClientViewScoreHistory] = useState<ScoreHistoryEntry[]>([]);
-
-  useEffect(() => {
-    if (!clientViewOpen) return;
-    let cancelled = false;
-    (async () => {
-      const useCloud = !isGuest && !!org;
-      const snapshots = useCloud ? await loadHistoryCloud() : await loadHistory();
-      if (cancelled) return;
-      const assessments: Assessment[] = snapshots
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .map((s) => ({
-          id: s.id,
-          date: new Date(s.timestamp).toISOString(),
-          score: s.overallScore,
-          grade: s.overallGrade,
-          label: s.environment,
-        }));
-      if (Object.keys(analysisResults).length > 0) {
-        const scores = Object.values(analysisResults).map((r) => computeRiskScore(r).overall);
-        const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-        const grade =
-          avgScore >= 90
-            ? "A"
-            : avgScore >= 75
-              ? "B"
-              : avgScore >= 60
-                ? "C"
-                : avgScore >= 40
-                  ? "D"
-                  : "F";
-        assessments.unshift({
-          id: "current",
-          date: new Date().toISOString(),
-          score: avgScore,
-          grade,
-          label: "Current",
-        });
-      }
-      setClientViewAssessments(assessments);
-
-      if (org?.id) {
-        const history = await loadScoreHistory(org.id, undefined, 30);
-        if (!cancelled) setClientViewScoreHistory(history);
-      } else {
-        setClientViewScoreHistory([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [clientViewOpen, isGuest, org, analysisResults]);
+  const clientPreviewQuery = useManagementDrawerClientPreviewQuery({
+    enabled: clientViewOpen && canManageTeam,
+    isGuest,
+    orgId: org?.id,
+    analysisResults,
+  });
+  const clientViewAssessments = clientPreviewQuery.data?.assessments ?? [];
+  const clientViewScoreHistory = clientPreviewQuery.data?.scoreHistory ?? [];
   const visibleTabs = TABS.filter((t) => t.guestVisible || !isGuest);
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? visibleTabs[0]?.id ?? "reports");
   const [settingsExpandSignal, setSettingsExpandSignal] = useState(0);
@@ -815,7 +764,13 @@ export function ManagementDrawer({
           <div className="flex items-center gap-3 px-5 py-4 bg-card/70 backdrop-blur-sm">
             {companyLogo && (
               <div className="shrink-0 h-10 w-10 rounded-xl border border-border/50 bg-white dark:bg-white/10 flex items-center justify-center overflow-hidden">
-                <img src={companyLogo} alt="Company logo" className="h-8 w-8 object-contain" />
+                <img
+                  src={companyLogo}
+                  alt="Company logo"
+                  className="h-8 w-8 object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -846,13 +801,24 @@ export function ManagementDrawer({
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-border bg-background p-0 text-foreground shadow-2xl">
                     <div className="min-h-[400px] bg-background">
-                      <ClientPortalView
-                        customerName={customerName || "Customer"}
-                        assessments={clientViewAssessments}
-                        scoreHistory={clientViewScoreHistory}
-                        onDownloadReport={onDownloadReport}
-                        orgId={org?.id}
-                      />
+                      {clientPreviewQuery.isPending ? (
+                        <LoadingState className="py-16" />
+                      ) : clientPreviewQuery.isError ? (
+                        <p className="p-6 text-xs text-muted-foreground">
+                          Could not load client preview.{" "}
+                          {clientPreviewQuery.error instanceof Error
+                            ? clientPreviewQuery.error.message
+                            : "Try again."}
+                        </p>
+                      ) : (
+                        <ClientPortalView
+                          customerName={customerName || "Customer"}
+                          assessments={clientViewAssessments}
+                          scoreHistory={clientViewScoreHistory}
+                          onDownloadReport={onDownloadReport}
+                          orgId={org?.id}
+                        />
+                      )}
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -937,11 +903,13 @@ export function ManagementDrawer({
                   />
                 </Suspense>
               ) : (
-                <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] text-center py-12 space-y-2">
-                  <History className="h-8 w-8 mx-auto text-muted-foreground/30" />
-                  <p className="text-xs text-muted-foreground">
-                    Upload a firewall config to view assessment history.
-                  </p>
+                <div className="rounded-[24px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))]">
+                  <EmptyState
+                    className="!py-10"
+                    icon={<History className="h-6 w-6 text-muted-foreground/50" />}
+                    title="No assessment history yet"
+                    description="Upload a firewall config in the workspace to view assessment history here."
+                  />
                 </div>
               )}
               <Suspense fallback={<Skeleton />}>

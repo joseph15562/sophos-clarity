@@ -2,16 +2,27 @@ import { z } from "npm:zod@3.24.2";
 import { authenticateSE, runConfigUploadCleanup } from "../../_shared/auth.ts";
 import { logJson } from "../../_shared/logger.ts";
 import { centralDecrypt } from "../../_shared/crypto.ts";
-import { adminClient, json as jsonResponse, safeDbError } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+} from "../../_shared/db.ts";
 import {
   buildCustomerUploadEmailHtml,
   sendConfigUploadEmail,
 } from "../../_shared/email.ts";
 
-const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ?? "https://sophos-firecomply.vercel.app";
+const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ??
+  "https://sophos-firecomply.vercel.app";
 
 export const configUploadRequestBodySchema = z.object({
-  expires_in_days: z.union([z.literal(1), z.literal(3), z.literal(7), z.literal(14), z.literal(30)])
+  expires_in_days: z.union([
+    z.literal(1),
+    z.literal(3),
+    z.literal(7),
+    z.literal(14),
+    z.literal(30),
+  ])
     .optional(),
   customer_name: z.string().max(500).optional().nullable(),
   contact_name: z.string().max(200).optional().nullable(),
@@ -25,19 +36,28 @@ export async function handleConfigUploadRoutes(
   segments: string[],
   corsHeaders: Record<string, string>,
 ): Promise<Response | null> {
-  function json(body: unknown, status = 200, headers: Record<string, string> = corsHeaders) {
+  function json(
+    body: unknown,
+    status = 200,
+    headers: Record<string, string> = corsHeaders,
+  ) {
     return jsonResponse(body, status, headers);
   }
 
   // POST /api/config-upload-request — SE creates an upload link (JWT required)
-  if (req.method === "POST" && segments[0] === "config-upload-request" && segments.length === 1) {
+  if (
+    req.method === "POST" && segments[0] === "config-upload-request" &&
+    segments.length === 1
+  ) {
     const se = await authenticateSE(req);
     if (!se) return json({ error: "Unauthorized — SE login required" }, 401);
 
     const raw = await req.json().catch(() => ({}));
     const parsed = configUploadRequestBodySchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "config_upload_request_invalid_body", { issues: parsed.error.issues.length });
+      logJson("warn", "config_upload_request_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
       return json({ error: "Invalid request body" }, 400);
     }
     const body = parsed.data;
@@ -70,10 +90,20 @@ export async function handleConfigUploadRoutes(
     let emailSent = false;
 
     if (body.customer_email?.trim()) {
-      const seName = se.seProfile.display_name || se.user.email || "Your Sophos SE";
-      const expiresFormatted = expiresAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      const seName = se.seProfile.display_name || se.user.email ||
+        "Your Sophos SE";
+      const expiresFormatted = expiresAt.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
       const contactName = body.contact_name?.trim() || null;
-      const emailHtml = buildCustomerUploadEmailHtml(uploadUrl, seName, expiresFormatted, contactName ?? undefined);
+      const emailHtml = buildCustomerUploadEmailHtml(
+        uploadUrl,
+        seName,
+        expiresFormatted,
+        contactName ?? undefined,
+      );
       const result = await sendConfigUploadEmail(
         body.customer_email.trim(),
         "Sophos Firewall Health Check — Configuration Upload",
@@ -81,15 +111,27 @@ export async function handleConfigUploadRoutes(
       );
       emailSent = result.success;
       if (emailSent) {
-        await db.from("config_upload_requests").update({ email_sent: true }).eq("id", row.id);
+        await db.from("config_upload_requests").update({ email_sent: true }).eq(
+          "id",
+          row.id,
+        );
       }
     }
 
-    return json({ id: row.id, token, url: uploadUrl, expires_at: row.expires_at, email_sent: emailSent }, 201);
+    return json({
+      id: row.id,
+      token,
+      url: uploadUrl,
+      expires_at: row.expires_at,
+      email_sent: emailSent,
+    }, 201);
   }
 
   // GET /api/config-upload-requests — list requests (JWT required)
-  if (req.method === "GET" && segments[0] === "config-upload-requests" && segments.length === 1) {
+  if (
+    req.method === "GET" && segments[0] === "config-upload-requests" &&
+    segments.length === 1
+  ) {
     const se = await authenticateSE(req);
     if (!se) return json({ error: "Unauthorized" }, 401);
 
@@ -101,7 +143,9 @@ export async function handleConfigUploadRoutes(
 
     let query = db
       .from("config_upload_requests")
-      .select("id, token, customer_name, contact_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at, se_user_id, team_id, central_connected_at")
+      .select(
+        "id, token, customer_name, contact_name, customer_email, status, expires_at, email_sent, uploaded_at, downloaded_at, created_at, se_user_id, team_id, central_connected_at",
+      )
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -142,14 +186,28 @@ export async function handleConfigUploadRoutes(
 
       if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
-      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
-      if (!row.customer_email) return json({ error: "No customer email on file" }, 400);
-      if (new Date(row.expires_at) <= new Date()) return json({ error: "This upload link has expired" }, 410);
+      if (row.se_user_id !== se.seProfile.id) {
+        return json({ error: "Forbidden" }, 403);
+      }
+      if (!row.customer_email) {
+        return json({ error: "No customer email on file" }, 400);
+      }
+      if (new Date(row.expires_at) <= new Date()) {
+        return json({ error: "This upload link has expired" }, 410);
+      }
 
       const uploadUrl = `${APP_URL}/upload/${token}`;
-      const seName = se.seProfile.display_name || se.user.email || "Your Sophos SE";
-      const expiresFormatted = new Date(row.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-      const emailHtml = buildCustomerUploadEmailHtml(uploadUrl, seName, expiresFormatted);
+      const seName = se.seProfile.display_name || se.user.email ||
+        "Your Sophos SE";
+      const expiresFormatted = new Date(row.expires_at).toLocaleDateString(
+        "en-GB",
+        { day: "numeric", month: "short", year: "numeric" },
+      );
+      const emailHtml = buildCustomerUploadEmailHtml(
+        uploadUrl,
+        seName,
+        expiresFormatted,
+      );
       const result = await sendConfigUploadEmail(
         row.customer_email,
         "Sophos Firewall Health Check — Configuration Upload",
@@ -157,10 +215,16 @@ export async function handleConfigUploadRoutes(
       );
 
       if (result.success) {
-        await db.from("config_upload_requests").update({ email_sent: true }).eq("id", row.id);
+        await db.from("config_upload_requests").update({ email_sent: true }).eq(
+          "id",
+          row.id,
+        );
       }
 
-      return json({ email_sent: result.success, error: result.error ?? undefined });
+      return json({
+        email_sent: result.success,
+        error: result.error ?? undefined,
+      });
     }
 
     // GET /api/config-upload/:token/download — SE downloads the XML
@@ -188,11 +252,16 @@ export async function handleConfigUploadRoutes(
         hasAccess = !!mem;
       }
       if (!hasAccess) return json({ error: "Forbidden" }, 403);
-      if (!row.config_xml) return json({ error: "No configuration has been uploaded yet" }, 404);
+      if (!row.config_xml) {
+        return json({ error: "No configuration has been uploaded yet" }, 404);
+      }
 
       await db
         .from("config_upload_requests")
-        .update({ downloaded_at: new Date().toISOString(), status: "downloaded" })
+        .update({
+          downloaded_at: new Date().toISOString(),
+          status: "downloaded",
+        })
         .eq("id", row.id);
 
       return json({ config_xml: row.config_xml, file_name: row.file_name });
@@ -211,8 +280,12 @@ export async function handleConfigUploadRoutes(
 
       if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
-      if (!row.team_id) return json({ error: "Only team upload requests can be claimed" }, 400);
-      if (row.se_user_id === se.seProfile.id) return json({ error: "You already own this request" }, 400);
+      if (!row.team_id) {
+        return json({ error: "Only team upload requests can be claimed" }, 400);
+      }
+      if (row.se_user_id === se.seProfile.id) {
+        return json({ error: "You already own this request" }, 400);
+      }
 
       const { data: mem } = await db
         .from("se_team_members")
@@ -220,7 +293,9 @@ export async function handleConfigUploadRoutes(
         .eq("team_id", row.team_id)
         .eq("se_profile_id", se.seProfile.id)
         .maybeSingle();
-      if (!mem) return json({ error: "You are not a member of this team" }, 403);
+      if (!mem) {
+        return json({ error: "You are not a member of this team" }, 403);
+      }
 
       const { error: updateErr } = await db
         .from("config_upload_requests")
@@ -238,7 +313,9 @@ export async function handleConfigUploadRoutes(
 
       const { data: row, error: fetchErr } = await db
         .from("config_upload_requests")
-        .select("id, se_user_id, team_id, central_data, central_connected_at, central_linked_firewall_id, central_linked_firewall_name")
+        .select(
+          "id, se_user_id, team_id, central_data, central_connected_at, central_linked_firewall_id, central_linked_firewall_name",
+        )
         .eq("token", token)
         .maybeSingle();
       if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
@@ -277,7 +354,9 @@ export async function handleConfigUploadRoutes(
 
       if (fetchErr) return json({ error: safeDbError(fetchErr) }, 500);
       if (!row) return json({ error: "Upload request not found" }, 404);
-      if (row.se_user_id !== se.seProfile.id) return json({ error: "Forbidden" }, 403);
+      if (row.se_user_id !== se.seProfile.id) {
+        return json({ error: "Forbidden" }, 403);
+      }
 
       await db.from("config_upload_requests").delete().eq("id", row.id);
       return json({ ok: true });

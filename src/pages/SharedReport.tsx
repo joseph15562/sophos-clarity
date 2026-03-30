@@ -149,7 +149,13 @@ const SharedReport = () => {
         <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">
           <div className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
-              <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5 opacity-60" />
+              <img
+                src="/sophos-icon-white.svg"
+                alt=""
+                className="h-5 w-5 opacity-60"
+                loading="lazy"
+                decoding="async"
+              />
               <span className="text-[11px] font-semibold text-white/70 uppercase tracking-widest">
                 Sophos FireComply — Document
               </span>

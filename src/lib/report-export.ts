@@ -503,7 +503,13 @@ export function buildPdfHtml(
       color: var(--text);
     }
     h4, h5, h6 { font-size: 10.5pt; font-weight: 600; margin: 14px 0 6px; color: var(--text-secondary); }
-    p { margin: 0 0 12px; color: var(--text-secondary); line-height: 1.7; }
+    p {
+      margin: 0 0 12px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      orphans: 3;
+      widows: 3;
+    }
     ul, ol { margin: 0 0 12px; padding-left: 24px; color: var(--text-secondary); }
     li { margin: 5px 0; line-height: 1.6; }
     li::marker { color: var(--text-muted); }
@@ -514,6 +520,7 @@ export function buildPdfHtml(
       margin: 16px 0;
       border-radius: 12px;
       border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
       -webkit-overflow-scrolling: touch;
     }
     table {
@@ -535,7 +542,8 @@ export function buildPdfHtml(
       border-bottom: 1px solid var(--border);
       white-space: normal;
       word-wrap: break-word;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
       font-size: 8pt;
       text-transform: uppercase;
       letter-spacing: 0.6px;
@@ -549,7 +557,8 @@ export function buildPdfHtml(
       padding: 9px 14px;
       border-bottom: 1px solid var(--border);
       word-wrap: break-word;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
       vertical-align: top;
       color: var(--text-secondary);
     }
@@ -641,48 +650,36 @@ export function buildPdfHtml(
       }
       h2 { page-break-before: always; }
       h2:first-of-type { page-break-before: avoid; }
-      .print-content { padding: 0; max-width: 186mm; margin: 0 auto; }
-      .report-header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .print-content { padding: 0; max-width: 100%; margin: 0; }
+      .report-header {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+        padding: 14px 18px 16px !important;
+        align-items: flex-start !important;
+        overflow: visible !important;
+      }
+      .report-header .brand {
+        align-items: center;
+      }
+      .report-header .meta {
+        line-height: 1.5 !important;
+        overflow: visible !important;
+        padding: 2px 0;
+      }
+      .report-header .meta > div {
+        line-height: 1.5 !important;
+      }
       .theme-toggle { display: none !important; }
       .report-footer { display: none; }
       .pdf-toc { page-break-after: always; }
       .pdf-toc-list a::after { content: " ... " target-counter(attr(href), page); }
-      ${confidential ? `.pdf-watermark { display: block !important; }` : ""}
-      .print-header, .print-footer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
+      /*
+       * Avoid fixed print header/footer: Chromium often reports counter(pages) as 0 and fixed
+       * footers overlap the last lines of body text. Match Word export: A4 landscape + @page margins.
+       */
       @page {
-        size: A4;
-        margin: 15mm;
-      }
-
-      /* Print header/footer via fixed elements — counter(page) works in print context */
-      .print-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        padding: 4mm 0;
-        font-family: 'Zalando Sans', sans-serif;
-        font-size: 8pt;
-        color: #333;
-        border-bottom: 1px solid #ddd;
-        background: #fff;
-      }
-      .print-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 4mm 0;
-        font-family: 'Zalando Sans', system-ui, sans-serif;
-        font-size: 9pt;
-        color: #666;
-        border-top: 1px solid #ddd;
-        background: #fff;
-        text-align: center;
-      }
-      .print-footer::after {
-        content: "Page " counter(page) " of " counter(pages) " — ${companyName || "Sophos FireComply"}${customerName ? ` • ${customerName}` : ""}";
+        size: A4 landscape;
+        margin: 12mm 14mm 14mm 14mm;
       }
 
       table {
@@ -696,7 +693,9 @@ export function buildPdfHtml(
         padding: 4px 6px !important;
         vertical-align: top !important;
         word-wrap: break-word !important;
-        overflow-wrap: anywhere !important;
+        overflow-wrap: break-word !important;
+        word-break: normal !important;
+        hyphens: manual !important;
         white-space: normal !important;
       }
       th {
@@ -706,6 +705,26 @@ export function buildPdfHtml(
         color: #ffffff !important;
         border: 1px solid #003366 !important;
         font-weight: 600 !important;
+        position: static !important;
+        text-transform: none !important;
+        letter-spacing: 0.02em !important;
+        font-size: 7pt !important;
+        line-height: 1.25 !important;
+      }
+      table.pdf-table--wide th {
+        font-size: 6.5pt !important;
+        padding: 3px 4px !important;
+        line-height: 1.2 !important;
+      }
+      table.pdf-table--wide td {
+        font-size: 6.5pt !important;
+        padding: 3px 4px !important;
+      }
+      table.pdf-table--wide {
+        font-size: 6.5pt !important;
+      }
+      .pdf-table--wide tr {
+        page-break-inside: auto !important;
       }
       td {
         border: 1px solid #cbd5e1 !important;
@@ -724,16 +743,15 @@ export function buildPdfHtml(
         border-radius: 0;
         max-width: 100% !important;
         border: 1px solid #cbd5e1;
+        border-left: 4px solid #2006f7 !important;
       }
     }
   </style>
 </head>
 <body>
   ${confidential ? '<div class="pdf-watermark no-print" aria-hidden="true">CONFIDENTIAL</div>' : ""}
-  <div class="print-header no-print" aria-hidden="true">${companyName || "Sophos FireComply"} — ${title}${customerName ? ` | ${customerName}` : ""}</div>
-  <div class="print-footer no-print" aria-hidden="true"></div>
   <style>.no-print { display: none; }</style>
-  <style>@media print { .no-print { display: none !important; } .print-header, .print-footer, .pdf-watermark { display: block !important; } }</style>
+  <style>@media print { .no-print { display: none !important; }${confidential ? " .pdf-watermark { display: block !important; }" : ""} }</style>
 
   ${
     omitInteractiveChrome
@@ -784,25 +802,50 @@ export function buildPdfHtml(
       html.setAttribute('data-theme', isDark ? 'light' : 'dark');
       btn.innerHTML = isDark ? '&#9789; Dark Mode' : '&#9788; Light Mode';
     }
-
-    /* Wrap bare tables in .table-wrapper for rounded corners + scroll */
-    document.querySelectorAll('table').forEach(function(t) {
-      if (t.parentElement && t.parentElement.classList.contains('table-wrapper')) return;
-      var w = document.createElement('div');
-      w.className = 'table-wrapper';
+  </script>`
+  }
+  <script>
+(function () {
+  function prepPrintLayout() {
+    document.querySelectorAll("table").forEach(function (t) {
+      if (t.parentElement && t.parentElement.classList.contains("table-wrapper")) return;
+      var w = document.createElement("div");
+      w.className = "table-wrapper";
       t.parentNode.insertBefore(w, t);
       w.appendChild(t);
     });
 
-    /* Ensure h2 elements have ids for ToC navigation */
-    document.querySelectorAll('.print-content h2').forEach(function(h2, i) {
+    document.querySelectorAll("table").forEach(function (t) {
+      var row = t.rows[0];
+      if (!row) return;
+      var n = row.cells.length;
+      if (n >= 10) {
+        t.classList.add("pdf-table--wide");
+        var wrap = t.parentElement;
+        if (wrap && wrap.classList.contains("table-wrapper")) wrap.classList.add("pdf-table-wrap--wide");
+      }
+    });
+
+    document.querySelectorAll(".print-content h2").forEach(function (h2, i) {
       if (!h2.id) {
-        var text = (h2.textContent || '').replace(/[^\\w\\s-]/g, '').trim().toLowerCase().replace(/\\s+/g, '-').replace(/-+/g, '-') || 'section-' + i;
+        var text =
+          (h2.textContent || "")
+            .replace(/[^\\w\\s-]/g, "")
+            .trim()
+            .toLowerCase()
+            .replace(/\\s+/g, "-")
+            .replace(/-+/g, "-") || "section-" + i;
         h2.id = text;
       }
     });
-  </script>`
   }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", prepPrintLayout);
+  } else {
+    prepPrintLayout();
+  }
+})();
+  </script>
 </body>
 </html>`;
 }

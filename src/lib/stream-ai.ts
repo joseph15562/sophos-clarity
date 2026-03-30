@@ -1,5 +1,10 @@
 import type { ExtractedSections } from "./extract-sections";
-import { buildAnonymisationMap, anonymiseData, anonymiseString, createStreamDeanonymiser } from "./anonymise";
+import {
+  buildAnonymisationMap,
+  anonymiseData,
+  anonymiseString,
+  createStreamDeanonymiser,
+} from "./anonymise";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -7,67 +12,181 @@ import { supabase } from "@/integrations/supabase/client";
  * before sending saves 30-50% of input tokens on a typical config.
  */
 const OMITTED_SECTIONS: Set<string> = new Set([
-  "dhcp", "dhcp servers", "dhcpbinding", "clidhcp",
-  "waf tls settings", "arpflux", "authcta", "fqdn hosts",
-  "qos policies", "cellular wan", "gateway hosts", "high availability",
-  "network groups", "letsencrypt", "parent proxy", "parentproxy", "qos settings", "qossettings",
-  "waf slow http", "antivirus ftp", "country groups", "anti-spam rules",
-  "fqdn host groups", "fqdnhostgroups", "filetype", "schedules",
-  "services", "webproxy", "admin profiles", "adminprofiles",
-  "web filters", "web filter categories", "web filter url groups",
-  "web filter exceptions", "webfiltersettings", "webfilterexceptions",
-  "web filter settings", "zero day protection", "malware protection",
-  "antivirushttpsconfiguration", "antivirusmailsmtpscanningrules",
-  "antivirushttpsscanningexceptions", "pop/imap scanning",
-  "pop/imap scanning policy", "dns request routes",
-  "application control policies", "web filtering policies",
-  "admin accounts and profiles", "user groups", "application objects",
-  "sd-wan routes", "api & service accounts", "snmp community",
-  "syslog servers", "syslogservers", "system services",
-  "overridepolicy", "datamanagement", "httpproxy",
-  "networks", "networks (hosts)", "hosts",
-  "web filtering / inspection method", "default captive portal",
-  "sophos connect client", "decryption profiles",
-  "application filter policies", "application classification",
-  "application filter categories", "email protection", "email scanning",
-  "smtp scanning", "anti-spam", "firewall rule groups", "user activity",
-  "service groups", "ssl vpn policies", "spx templates", "notifications", "notification list", "notificationlist",
-  "user portal authentication", "vpnconnremoveonfailover",
-  "vpnconnremovetunnelup", "ssl vpn authentication",
-  "mta spx configuration", "advanced smtp setting", "spoof prevention",
-  "route precedence", "mta spx templates", "mta address group",
-  "local service acl", "ips full signature pack", "gateway configuration",
+  "dhcp",
+  "dhcp servers",
+  "dhcpbinding",
+  "clidhcp",
+  "waf tls settings",
+  "arpflux",
+  "authcta",
+  "fqdn hosts",
+  "qos policies",
+  "cellular wan",
+  "gateway hosts",
+  "high availability",
+  "network groups",
+  "letsencrypt",
+  "parent proxy",
+  "parentproxy",
+  "qos settings",
+  "qossettings",
+  "waf slow http",
+  "antivirus ftp",
+  "country groups",
+  "anti-spam rules",
+  "fqdn host groups",
+  "fqdnhostgroups",
+  "filetype",
+  "schedules",
+  "services",
+  "webproxy",
+  "admin profiles",
+  "adminprofiles",
+  "web filters",
+  "web filter categories",
+  "web filter url groups",
+  "web filter exceptions",
+  "webfiltersettings",
+  "webfilterexceptions",
+  "web filter settings",
+  "zero day protection",
+  "malware protection",
+  "antivirushttpsconfiguration",
+  "antivirusmailsmtpscanningrules",
+  "antivirushttpsscanningexceptions",
+  "pop/imap scanning",
+  "pop/imap scanning policy",
+  "dns request routes",
+  "application control policies",
+  "web filtering policies",
+  "admin accounts and profiles",
+  "user groups",
+  "application objects",
+  "sd-wan routes",
+  "api & service accounts",
+  "snmp community",
+  "syslog servers",
+  "syslogservers",
+  "system services",
+  "overridepolicy",
+  "datamanagement",
+  "httpproxy",
+  "networks",
+  "networks (hosts)",
+  "hosts",
+  "web filtering / inspection method",
+  "default captive portal",
+  "sophos connect client",
+  "decryption profiles",
+  "application filter policies",
+  "application classification",
+  "application filter categories",
+  "email protection",
+  "email scanning",
+  "smtp scanning",
+  "anti-spam",
+  "firewall rule groups",
+  "user activity",
+  "service groups",
+  "ssl vpn policies",
+  "spx templates",
+  "notifications",
+  "notification list",
+  "notificationlist",
+  "user portal authentication",
+  "vpnconnremoveonfailover",
+  "vpnconnremovetunnelup",
+  "ssl vpn authentication",
+  "mta spx configuration",
+  "advanced smtp setting",
+  "spoof prevention",
+  "route precedence",
+  "mta spx templates",
+  "mta address group",
+  "local service acl",
+  "ips full signature pack",
+  "gateway configuration",
   "virtual host failover notification",
-  "default web filter notification settings", "web authentication",
-  "voucher definition", "smarthost settings", "pptp configuration",
-  "snmp agent config", "multicast configuration",
-  "firewall authentication", "ssl vpn tunnel access",
+  "default web filter notification settings",
+  "web authentication",
+  "voucher definition",
+  "smarthost settings",
+  "pptp configuration",
+  "snmp agent config",
+  "multicast configuration",
+  "firewall authentication",
+  "ssl vpn tunnel access",
   "red configuration",
-  "virus scanning", "virusscanning",
-  "smsgateway", "vpn profiles", "vpnprofiles",
-  "antivirusftp", "spxtemplates", "relaysettings", "groups",
-  "dns configuration", "dnsconfiguration", "time settings", "timesettings",
-  "useractivity", "admin authentication", "adminauthentication",
-  "support access", "supportaccess", "system modules", "systemmodules",
-  "third-party feeds", "thirdpartyfeeds", "fqdnhostsetting",
-  "mtaaddressgroup", "mtaspxtemplates", "patterndownload", "routeprecedence",
-  "arpconfiguration", "avasaddressgroup",
-  "access time policies", "accesstimepolicies", "dkimverification",
-  "protocol security", "protocolsecurity", "spxconfiguration",
-  "pimdynamicrouting", "pptpconfiguration", "smarthostsettings",
-  "vpn authentication", "vpnauthentication", "voucherdefinition",
-  "bookmarkmanagement", "chromebookssologin",
-  "data transfer policies", "datatransferpolicies", "dhcpleaseoveripsec",
-  "emailconfiguration", "mtadatacontrollist",
-  "surfing quota policies", "surfingquotapolicies", "ipsec vpn connections", "ipsecvpnconnections",
-  "advancedsmtpsetting", "mtaspxconfiguration", "ipsfullsignaturepack",
-  "reverseauthentication", "multicastconfiguration",
-  "vpnportalauthentication", "userportalauthentication",
-  "antivirushttpscanningrule", "web filter advanced settings", "webfilteradvancedsettings",
-  "varpartitionusagewatermark", "webfilterprotectionsettings",
-  "directwebproxyauthentication", "webfilternotificationsettings",
-  "virtualhostfailovernotification", "antispamquarantinedigestsettings",
-  "defaultwebfilternotificationsettings", "applicationclassificationbatchassignment",
+  "virus scanning",
+  "virusscanning",
+  "smsgateway",
+  "vpn profiles",
+  "vpnprofiles",
+  "antivirusftp",
+  "spxtemplates",
+  "relaysettings",
+  "groups",
+  "dns configuration",
+  "dnsconfiguration",
+  "time settings",
+  "timesettings",
+  "useractivity",
+  "admin authentication",
+  "adminauthentication",
+  "support access",
+  "supportaccess",
+  "system modules",
+  "systemmodules",
+  "third-party feeds",
+  "thirdpartyfeeds",
+  "fqdnhostsetting",
+  "mtaaddressgroup",
+  "mtaspxtemplates",
+  "patterndownload",
+  "routeprecedence",
+  "arpconfiguration",
+  "avasaddressgroup",
+  "access time policies",
+  "accesstimepolicies",
+  "dkimverification",
+  "protocol security",
+  "protocolsecurity",
+  "spxconfiguration",
+  "pimdynamicrouting",
+  "pptpconfiguration",
+  "smarthostsettings",
+  "vpn authentication",
+  "vpnauthentication",
+  "voucherdefinition",
+  "bookmarkmanagement",
+  "chromebookssologin",
+  "data transfer policies",
+  "datatransferpolicies",
+  "dhcpleaseoveripsec",
+  "emailconfiguration",
+  "mtadatacontrollist",
+  "surfing quota policies",
+  "surfingquotapolicies",
+  "ipsec vpn connections",
+  "ipsecvpnconnections",
+  "advancedsmtpsetting",
+  "mtaspxconfiguration",
+  "ipsfullsignaturepack",
+  "reverseauthentication",
+  "multicastconfiguration",
+  "vpnportalauthentication",
+  "userportalauthentication",
+  "antivirushttpscanningrule",
+  "web filter advanced settings",
+  "webfilteradvancedsettings",
+  "varpartitionusagewatermark",
+  "webfilterprotectionsettings",
+  "directwebproxyauthentication",
+  "webfilternotificationsettings",
+  "virtualhostfailovernotification",
+  "antispamquarantinedigestsettings",
+  "defaultwebfilternotificationsettings",
+  "applicationclassificationbatchassignment",
 ]);
 
 function isOmittedSection(key: string): boolean {
@@ -134,7 +253,9 @@ type ChatStreamOptions = {
 
 /** Get Bearer token for Supabase edge functions: user JWT when signed in, else anon key. */
 async function getAuthBearer(): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (session?.access_token) return session.access_token;
   return import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
 }
@@ -151,17 +272,39 @@ async function parseErrorBody(resp: Response): Promise<{ error: string }> {
     }
   }
   if (resp.status === 401) return { error: "Please sign in to generate AI reports." };
-  return { error: `Request failed (${resp.status}). If you're signed in, try refreshing the page.` };
+  return {
+    error: `Request failed (${resp.status}). If you're signed in, try refreshing the page.`,
+  };
 }
 
 /** Request backend debug info: what input the function received and what it will send to the AI (no Gemini call). */
 export type ParseConfigDebugPayload = Pick<
   StreamOptions,
-  "sections" | "environment" | "country" | "customerName" | "selectedFrameworks" | "executive" | "firewallLabels" | "compliance" | "centralEnrichment"
+  | "sections"
+  | "environment"
+  | "country"
+  | "customerName"
+  | "selectedFrameworks"
+  | "executive"
+  | "firewallLabels"
+  | "compliance"
+  | "centralEnrichment"
 >;
 
-export async function fetchParseConfigDebug(payload: ParseConfigDebugPayload): Promise<Record<string, unknown>> {
-  const { sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, centralEnrichment } = payload;
+export async function fetchParseConfigDebug(
+  payload: ParseConfigDebugPayload,
+): Promise<Record<string, unknown>> {
+  const {
+    sections,
+    environment,
+    country,
+    customerName,
+    selectedFrameworks,
+    executive,
+    firewallLabels,
+    compliance,
+    centralEnrichment,
+  } = payload;
   const stripped = stripOmittedSections(sections);
   const anonMap = buildAnonymisationMap(stripped, customerName, firewallLabels);
   const anonSections = anonymiseData(stripped, anonMap);
@@ -197,7 +340,13 @@ export async function fetchParseConfigDebug(payload: ParseConfigDebugPayload): P
   return resp.json() as Promise<Record<string, unknown>>;
 }
 
-export async function streamChat({ chatContext, onDelta, onDone, onError, onStatus }: ChatStreamOptions) {
+export async function streamChat({
+  chatContext,
+  onDelta,
+  onDone,
+  onError,
+  onStatus,
+}: ChatStreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const timeoutMs = 60_000;
@@ -220,9 +369,12 @@ export async function streamChat({ chatContext, onDelta, onDone, onError, onStat
   } catch (e) {
     clearTimeout(timeoutId);
     onStatus?.("");
-    const msg = e instanceof Error && e.name === "AbortError"
-      ? "Request timed out — try again in a moment."
-      : (e instanceof Error ? e.message : "Request failed");
+    const msg =
+      e instanceof Error && e.name === "AbortError"
+        ? "Request timed out — try again in a moment."
+        : e instanceof Error
+          ? e.message
+          : "Request failed";
     onError(msg);
     return;
   }
@@ -245,7 +397,22 @@ export async function streamChat({ chatContext, onDelta, onDone, onError, onStat
   await consumeSSEStream(resp.body, onDelta, onDone, onStatus);
 }
 
-export async function streamConfigParse({ sections, environment, country, customerName, selectedFrameworks, executive, firewallLabels, compliance, webFilterComplianceMode, centralEnrichment, onDelta, onDone, onError, onStatus }: StreamOptions) {
+export async function streamConfigParse({
+  sections,
+  environment,
+  country,
+  customerName,
+  selectedFrameworks,
+  executive,
+  firewallLabels,
+  compliance,
+  webFilterComplianceMode,
+  centralEnrichment,
+  onDelta,
+  onDone,
+  onError,
+  onStatus,
+}: StreamOptions) {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const stripped = stripOmittedSections(sections);
@@ -263,33 +430,68 @@ export async function streamConfigParse({ sections, environment, country, custom
   const timeoutId = setTimeout(() => ac.abort(), timeoutMs);
 
   onStatus?.("Sending request…");
-  let resp: Response;
-  try {
-    const token = await getAuthBearer();
-    resp = await fetch(url, {
-      method: "POST",
-      signal: ac.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ sections: anonSections, environment, country, customerName: anonCustomerName, selectedFrameworks, executive, firewallLabels: anonLabels, compliance, webFilterComplianceMode, centralEnrichment, reportType }),
-    });
-  } catch (e) {
+  const bodyJson = JSON.stringify({
+    sections: anonSections,
+    environment,
+    country,
+    customerName: anonCustomerName,
+    selectedFrameworks,
+    executive,
+    firewallLabels: anonLabels,
+    compliance,
+    webFilterComplianceMode,
+    centralEnrichment,
+    reportType,
+  });
+
+  const RETRYABLE = new Set([429, 502, 503, 504]);
+  const MAX_ATTEMPTS = 2;
+  let resp: Response | null = null;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      onStatus?.("Retrying analysis…");
+      await new Promise((r) => setTimeout(r, 1200 * attempt));
+    }
+    try {
+      const token = await getAuthBearer();
+      resp = await fetch(url, {
+        method: "POST",
+        signal: ac.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: bodyJson,
+      });
+    } catch (e) {
+      clearTimeout(timeoutId);
+      onStatus?.("");
+      const msg =
+        e instanceof Error && e.name === "AbortError"
+          ? `Request timed out after ${timeoutMs / 60_000} minutes. Large or multi-firewall reports can take a long time. Try generating individual reports first, or use fewer configs and retry.`
+          : e instanceof Error
+            ? e.message
+            : "Request failed";
+      onError(msg);
+      return;
+    }
+
+    if (resp.ok) break;
+    if (attempt < MAX_ATTEMPTS - 1 && RETRYABLE.has(resp.status)) {
+      continue;
+    }
     clearTimeout(timeoutId);
     onStatus?.("");
-    const msg = e instanceof Error && e.name === "AbortError"
-      ? `Request timed out after ${timeoutMs / 60_000} minutes. Large or multi-firewall reports can take a long time. Try generating individual reports first, or use fewer configs and retry.`
-      : (e instanceof Error ? e.message : "Request failed");
-    onError(msg);
+    const errBody = await parseErrorBody(resp);
+    onError(errBody.error);
     return;
   }
   clearTimeout(timeoutId);
 
-  if (!resp.ok) {
+  if (!resp?.ok) {
     onStatus?.("");
-    const body = await parseErrorBody(resp);
-    onError(body.error);
+    onError("Analysis request failed after retries.");
     return;
   }
 
@@ -300,15 +502,21 @@ export async function streamConfigParse({ sections, environment, country, custom
   }
 
   onStatus?.("Waiting for response…");
-  await consumeSSEStream(resp.body, (raw) => {
-    const decoded = deanon.push(raw);
-    if (decoded) onDelta(decoded);
-  }, () => {
-    const remaining = deanon.flush();
-    if (remaining) onDelta(remaining);
-    onStatus?.("");
-    onDone();
-  }, onStatus, onError);
+  await consumeSSEStream(
+    resp.body,
+    (raw) => {
+      const decoded = deanon.push(raw);
+      if (decoded) onDelta(decoded);
+    },
+    () => {
+      const remaining = deanon.flush();
+      if (remaining) onDelta(remaining);
+      onStatus?.("");
+      onDone();
+    },
+    onStatus,
+    onError,
+  );
 }
 
 const SSE_INACTIVITY_MS = 90_000; // If no new content for 90s after we've started receiving, treat stream as done so UI doesn't stay on "Still generating..."

@@ -24,14 +24,24 @@ export function generateServiceKeySecret(): string {
 }
 
 /** Scopes that may be granted at issue time (expand with route matrix in api/index.ts). */
-export const ISSUABLE_SERVICE_KEY_SCOPES = ["api:read", "api:read:assessments"] as const;
-export type IssuableServiceKeyScope = (typeof ISSUABLE_SERVICE_KEY_SCOPES)[number];
+export const ISSUABLE_SERVICE_KEY_SCOPES = [
+  "api:read",
+  "api:read:assessments",
+] as const;
+export type IssuableServiceKeyScope =
+  (typeof ISSUABLE_SERVICE_KEY_SCOPES)[number];
 
-export function normalizeIssuableScopes(raw: unknown): IssuableServiceKeyScope[] {
+export function normalizeIssuableScopes(
+  raw: unknown,
+): IssuableServiceKeyScope[] {
   const allowed = new Set<string>(ISSUABLE_SERVICE_KEY_SCOPES);
   if (!Array.isArray(raw) || raw.length === 0) return ["api:read"];
-  const out = raw.filter((s): s is string => typeof s === "string" && allowed.has(s));
-  return (out.length ? [...new Set(out)] : ["api:read"]) as IssuableServiceKeyScope[];
+  const out = raw.filter((s): s is string =>
+    typeof s === "string" && allowed.has(s)
+  );
+  return (out.length
+    ? [...new Set(out)]
+    : ["api:read"]) as IssuableServiceKeyScope[];
 }
 
 /** Raw secret from Authorization: Bearer <key> or X-FireComply-Service-Key. */

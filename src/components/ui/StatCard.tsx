@@ -44,7 +44,7 @@ export function StatCard({
         style={{ backgroundColor: `${accentHex}18` }}
       >
         {typeof icon === "string" ? (
-          <img src={icon} alt="" className="h-7 w-7 sophos-icon" />
+          <img src={icon} alt="" className="h-7 w-7 sophos-icon" loading="lazy" decoding="async" />
         ) : (
           icon
         )}

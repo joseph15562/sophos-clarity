@@ -1,6 +1,14 @@
 {
   "test": {
-    "include": ["_shared/", "api-agent/", "api-public/", "api/routes/"]
+    "include": [
+      "_shared/",
+      "api-agent/",
+      "api-public/",
+      "api/routes/",
+      "parse-config/",
+      "portal-data/",
+      "send-scheduled-reports/"
+    ]
   },
   "imports": {
     "https://deno.land/std@0.168.0/": "https://deno.land/std@0.168.0/"

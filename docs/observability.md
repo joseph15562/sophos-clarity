@@ -35,6 +35,18 @@ Use your provider’s query language; examples assume one JSON object per log li
 
 **Edge error capture:** optional **Sentry** (or similar) for Edge requires a separate DSN and policy review (PII, retention). Document DSN scope in [SELF-HOSTED.md](SELF-HOSTED.md) if enabled.
 
+**Implementation checklist (when you enable Edge Sentry):**
+
+1. Create a **project/DNS** used **only** for Edge (never reuse the SPA DSN).
+2. Initialise **after** `logJson` for request context; attach **function name** + **safe** org/user id if policy allows.
+3. Set **sample rates** (e.g. 100% errors, low % transactions).
+4. Add one **alert** on **new issue spike** or error rate vs baseline.
+5. Cross-link saved searches in this doc with Sentry **issue** tags if your org uses both.
+
+Placeholder hooks (no SDK dependency until DSN is set): [`supabase/functions/_shared/sentry-edge.ts`](../supabase/functions/_shared/sentry-edge.ts).
+
+See [review-follow-on-from-REVIEW.md](plans/review-follow-on-from-REVIEW.md) §3b.
+
 ## Latency dashboards (Supabase / drain provider)
 
 Use your host’s **Edge Function** HTTP metrics (Supabase Dashboard → Edge Functions → per-function invocations / duration, or exported metrics via drain).
@@ -109,8 +121,10 @@ Use your host’s **Edge Function** HTTP metrics (Supabase Dashboard → Edge Fu
 | **parse-config**           | `parse_config_rate_limited`, `parse_config_gemini_*`, `parse_config_token_usage` | warn/info/error | See function source for full set                                   |
 | **portal-data**            | `portal_data_config_lookup`, `portal_data_unexpected`                            | error           | Config resolution vs unexpected                                    |
 | **sophos-central**         | `sophos_central_*`                                                               | warn            | Guest auth, MDR feed, etc.                                         |
-| **send-scheduled-reports** | `send_scheduled_reports_*`                                                       | error           | Email send path                                                    |
-| **agent-nudge**            | `agent_nudge_*`                                                                  | info/error      | Cron nudge completion / fetch errors                               |
+| **send-scheduled-reports** | `send_scheduled_reports_start`, `send_scheduled_reports_complete`                | info            | Cron batch: `dueCount`, `processed`, `succeeded`, `failed`         |
+| **send-scheduled-reports** | `send_scheduled_reports_resend`, `send_scheduled_reports_send_email`             | error           | Resend API / unexpected send errors                                |
+| **agent-nudge**            | `agent_nudge_start`                                                              | info            | Cron: `staleCandidates` before updates                             |
+| **agent-nudge**            | `agent_nudge_complete`, `agent_nudge_fetch`                                      | info/error      | Summary counts / DB fetch failure                                  |
 | **regulatory-scanner**     | `regulatory_*`                                                                   | warn/info       | RSS / Gemini / upsert                                              |
 
 ## Parity with the repo

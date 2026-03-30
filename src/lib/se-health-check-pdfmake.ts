@@ -15,6 +15,7 @@ import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import type { SEHealthCheckReportParams } from "@/lib/se-health-check-report-html";
 import { getActiveModules, MODULES } from "@/lib/sophos-licence";
 import type { LicenceSelection, SophosBPScore } from "@/lib/sophos-licence";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 /** Data URLs for PNGs (fetched from `/public` at PDF generation time). */
 export type SeHealthCheckPdfImageAssets = {
@@ -90,8 +91,8 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const svgText = await res.text();
         const dataUrl = await svgToHighResPng(svgText, 600, 65);
         if (dataUrl) out.wordmark = dataUrl;
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnOptionalError("se-health-check-pdf.remote-asset", e);
       }
     })(),
   );
@@ -105,8 +106,8 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const svgText = await res.text();
         const dataUrl = await svgToHighResPng(svgText, 600, 65);
         if (dataUrl) out.wordmarkDark = dataUrl;
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnOptionalError("se-health-check-pdf.remote-asset", e);
       }
     })(),
   );
@@ -120,8 +121,8 @@ export async function loadSeHealthCheckPdfImageAssets(): Promise<SeHealthCheckPd
         const svgText = await res.text();
         const dataUrl = await svgToHighResPng(svgText, 65, 65, 12);
         if (dataUrl) out.shield = dataUrl;
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnOptionalError("se-health-check-pdf.remote-asset", e);
       }
     })(),
   );
@@ -196,8 +197,8 @@ export async function loadSeHealthCheckPdfFonts(): Promise<boolean> {
         if (!res.ok) return;
         const buf = await res.arrayBuffer();
         entries[name] = arrayBufferToBase64(buf);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnOptionalError("se-health-check-pdf.remote-asset", e);
       }
     }),
   );
@@ -944,7 +945,7 @@ export function buildSeHealthCheckPdfDocDefinition(
   }
 
   const baselineFindingsBlocks: Content[] = [];
-  labels.forEach((label, fwIndex) => {
+  labels.forEach((label, _fwIndex) => {
     const ar = analysisResults[label];
     const bl = baselineResults[label];
     if (!ar || !bl) return;

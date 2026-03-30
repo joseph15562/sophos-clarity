@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Preview/staging base URL (optional). Defaults to local Vite dev server. */
+/** Preview/staging base URL (optional). Must match `webServer.url` when using the bundled server (127.0.0.1:4173). */
 const stagingBase = process.env.PLAYWRIGHT_BASE_URL?.trim();
-const baseURL = stagingBase || "http://localhost:5173";
+const baseURL = stagingBase || "http://127.0.0.1:4173";
 
 /*
   Signed-in workspace E2E:
@@ -29,6 +29,8 @@ export default defineConfig({
     ? {}
     : {
         webServer: {
+          // Preview serves existing `dist/`. GitHub Actions builds with `VITE_E2E_AUTH_BYPASS=1` before
+          // `npm run test:e2e`. Locally run `npm run test:e2e:ci` or build with that env first.
           command: process.env.CI
             ? "npx vite preview --host 127.0.0.1 --strictPort --port 4173"
             : "npm run dev -- --host 127.0.0.1 --port 4173",

@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 export interface ScheduledReport {
   id: string;
@@ -21,10 +21,15 @@ export function loadScheduledReports(): ScheduledReport[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch (e) {
+    warnOptionalError("scheduled-reports.localStorage", e);
+    return [];
+  }
 }
 
-export function saveScheduledReport(report: Omit<ScheduledReport, "id" | "created_at" | "last_sent_at">): ScheduledReport {
+export function saveScheduledReport(
+  report: Omit<ScheduledReport, "id" | "created_at" | "last_sent_at">,
+): ScheduledReport {
   const reports = loadScheduledReports();
   const newReport: ScheduledReport = {
     ...report,
@@ -38,13 +43,13 @@ export function saveScheduledReport(report: Omit<ScheduledReport, "id" | "create
 }
 
 export function deleteScheduledReport(id: string): void {
-  const reports = loadScheduledReports().filter(r => r.id !== id);
+  const reports = loadScheduledReports().filter((r) => r.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
 }
 
 export function toggleScheduledReport(id: string): void {
   const reports = loadScheduledReports();
-  const idx = reports.findIndex(r => r.id === id);
+  const idx = reports.findIndex((r) => r.id === id);
   if (idx >= 0) reports[idx].enabled = !reports[idx].enabled;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
 }

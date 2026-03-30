@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 export interface ReportUpsellStripProps {
   fileCount: number;
@@ -20,7 +21,8 @@ function dismissKey(ruleId: RuleId): string {
 function readDismissed(ruleId: RuleId): boolean {
   try {
     return localStorage.getItem(dismissKey(ruleId)) === "1";
-  } catch {
+  } catch (e) {
+    warnOptionalError("ReportUpsellStrip.readDismissed", e);
     return false;
   }
 }
@@ -28,8 +30,8 @@ function readDismissed(ruleId: RuleId): boolean {
 function writeDismissed(ruleId: RuleId): void {
   try {
     localStorage.setItem(dismissKey(ruleId), "1");
-  } catch {
-    /* ignore */
+  } catch (e) {
+    warnOptionalError("ReportUpsellStrip.writeDismissed", e);
   }
 }
 

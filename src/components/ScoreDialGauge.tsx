@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, memo } from "react";
 import { AlertTriangle, Eye, Layers, FileSearch, BarChart3 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
@@ -252,7 +252,7 @@ function GaugeSvg({
   );
 }
 
-export function ScoreDialGauge({ analysisResults, trendSnapshot }: ScoreDialGaugeProps) {
+function ScoreDialGaugeComponent({ analysisResults, trendSnapshot }: ScoreDialGaugeProps) {
   const scores = useMemo(() => {
     const entries = Object.entries(analysisResults);
     if (entries.length === 0) return { aggregate: null, perFirewall: [] };
@@ -730,3 +730,5 @@ function StatStrip({ analysisResults }: { analysisResults: Record<string, Analys
     </div>
   );
 }
+
+export const ScoreDialGauge = memo(ScoreDialGaugeComponent);

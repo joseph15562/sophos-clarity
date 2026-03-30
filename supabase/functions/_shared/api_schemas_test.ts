@@ -30,13 +30,19 @@ Deno.test("agentRegisterBodySchema rejects empty name", () => {
 Deno.test("agentVerifyIdentityBodySchema requires email and totpCode", () => {
   assertEquals(agentVerifyIdentityBodySchema.safeParse({}).success, false);
   assertEquals(
-    agentVerifyIdentityBodySchema.safeParse({ email: "a@b.co", totpCode: "123456" }).success,
+    agentVerifyIdentityBodySchema.safeParse({
+      email: "a@b.co",
+      totpCode: "123456",
+    }).success,
     true,
   );
 });
 
 Deno.test("adminResetMfaBodySchema requires uuid targetUserId", () => {
-  assertEquals(adminResetMfaBodySchema.safeParse({ targetUserId: "not-uuid" }).success, false);
+  assertEquals(
+    adminResetMfaBodySchema.safeParse({ targetUserId: "not-uuid" }).success,
+    false,
+  );
   assertEquals(
     adminResetMfaBodySchema.safeParse({
       targetUserId: "550e8400-e29b-41d4-a716-446655440000",
@@ -46,8 +52,15 @@ Deno.test("adminResetMfaBodySchema requires uuid targetUserId", () => {
 });
 
 Deno.test("authMfaRecoveryBodySchema requires email", () => {
-  assertEquals(authMfaRecoveryBodySchema.safeParse({ targetEmail: "bad" }).success, false);
-  assertEquals(authMfaRecoveryBodySchema.safeParse({ targetEmail: "u@example.com" }).success, true);
+  assertEquals(
+    authMfaRecoveryBodySchema.safeParse({ targetEmail: "bad" }).success,
+    false,
+  );
+  assertEquals(
+    authMfaRecoveryBodySchema.safeParse({ targetEmail: "u@example.com" })
+      .success,
+    true,
+  );
 });
 
 Deno.test("assessmentsListQuerySchema defaults and clamps", () => {
@@ -63,12 +76,24 @@ Deno.test("assessmentsListQuerySchema defaults and clamps", () => {
     assertEquals(b.data.page, 2);
     assertEquals(b.data.pageSize, 10);
   }
-  assertEquals(assessmentsListQuerySchema.safeParse({ page: "0" }).success, false);
-  assertEquals(assessmentsListQuerySchema.safeParse({ pageSize: "101" }).success, false);
+  assertEquals(
+    assessmentsListQuerySchema.safeParse({ page: "0" }).success,
+    false,
+  );
+  assertEquals(
+    assessmentsListQuerySchema.safeParse({ pageSize: "101" }).success,
+    false,
+  );
 });
 
 Deno.test("healthCheckBulkTeamBodySchema requires uuid ids", () => {
-  assertEquals(healthCheckBulkTeamBodySchema.safeParse({ ids: ["not-uuid"], team_id: null }).success, false);
+  assertEquals(
+    healthCheckBulkTeamBodySchema.safeParse({
+      ids: ["not-uuid"],
+      team_id: null,
+    }).success,
+    false,
+  );
   assertEquals(
     healthCheckBulkTeamBodySchema.safeParse({
       ids: ["550e8400-e29b-41d4-a716-446655440000"],
@@ -80,7 +105,10 @@ Deno.test("healthCheckBulkTeamBodySchema requires uuid ids", () => {
 
 Deno.test("seTeamCreateBodySchema requires non-empty name", () => {
   assertEquals(seTeamCreateBodySchema.safeParse({ name: "" }).success, false);
-  assertEquals(seTeamCreateBodySchema.safeParse({ name: "Alpha" }).success, true);
+  assertEquals(
+    seTeamCreateBodySchema.safeParse({ name: "Alpha" }).success,
+    true,
+  );
 });
 
 Deno.test("connectwiseCredentialsPostSchema requires ids and keys", () => {
@@ -97,7 +125,8 @@ Deno.test("connectwiseCredentialsPostSchema requires ids and keys", () => {
 Deno.test("psaCompanyMappingPutSchema requires customerKey and companyId", () => {
   assertEquals(psaCompanyMappingPutSchema.safeParse({}).success, false);
   assertEquals(
-    psaCompanyMappingPutSchema.safeParse({ customerKey: "acme", companyId: 1 }).success,
+    psaCompanyMappingPutSchema.safeParse({ customerKey: "acme", companyId: 1 })
+      .success,
     true,
   );
 });

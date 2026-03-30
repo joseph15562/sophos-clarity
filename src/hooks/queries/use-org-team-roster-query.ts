@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseWithAbort } from "@/lib/supabase-with-abort";
 import { queryKeys } from "./keys";
 
 export interface OrgTeamInviteRow {
@@ -18,21 +19,30 @@ export interface OrgTeamMemberRow {
   isYou?: boolean;
 }
 
-export async function fetchOrgTeamRoster(orgId: string): Promise<{
+export async function fetchOrgTeamRoster(
+  orgId: string,
+  signal?: AbortSignal,
+): Promise<{
   invites: OrgTeamInviteRow[];
   members: OrgTeamMemberRow[];
 }> {
   const [inviteRes, memberRes, sessionRes] = await Promise.all([
-    supabase
-      .from("org_invites")
-      .select("id, email, role, created_at")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("org_members")
-      .select("id, user_id, role, joined_at")
-      .eq("org_id", orgId)
-      .order("joined_at", { ascending: true }),
+    supabaseWithAbort(
+      supabase
+        .from("org_invites")
+        .select("id, email, role, created_at")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false }),
+      signal,
+    ),
+    supabaseWithAbort(
+      supabase
+        .from("org_members")
+        .select("id, user_id, role, joined_at")
+        .eq("org_id", orgId)
+        .order("joined_at", { ascending: true }),
+      signal,
+    ),
     supabase.auth.getUser(),
   ]);
 
@@ -61,7 +71,7 @@ export async function fetchOrgTeamRoster(orgId: string): Promise<{
 export function useOrgTeamRosterQuery(orgId: string | undefined) {
   return useQuery({
     queryKey: orgId ? queryKeys.org.teamRoster(orgId) : ["org", "none", "team_roster"],
-    queryFn: () => fetchOrgTeamRoster(orgId!),
+    queryFn: ({ signal }) => fetchOrgTeamRoster(orgId!, signal),
     enabled: Boolean(orgId),
   });
 }

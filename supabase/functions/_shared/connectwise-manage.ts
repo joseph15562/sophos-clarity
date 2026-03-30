@@ -44,23 +44,31 @@ export async function connectWiseManageListCompanies(
   try {
     parsed = text ? JSON.parse(text) : [];
   } catch {
-    throw new Error(`ConnectWise Manage companies returned HTTP ${res.status} (non-JSON)`);
+    throw new Error(
+      `ConnectWise Manage companies returned HTTP ${res.status} (non-JSON)`,
+    );
   }
   if (!res.ok) {
     const err = parsed as { message?: string; code?: string };
     throw new Error(String(err.message ?? err.code ?? `HTTP ${res.status}`));
   }
-  const raw = Array.isArray(parsed) ? parsed : (parsed as { items?: unknown[] }).items;
+  const raw = Array.isArray(parsed)
+    ? parsed
+    : (parsed as { items?: unknown[] }).items;
   const rows = Array.isArray(raw) ? raw : [];
   const out: { id: number; name: string; identifier: string }[] = [];
   for (const row of rows) {
     const o = row as { id?: number; name?: string; identifier?: string };
     if (typeof o.id !== "number" || !Number.isFinite(o.id)) continue;
-    const name = typeof o.name === "string" && o.name.trim() ? o.name.trim() : `Company ${o.id}`;
+    const name = typeof o.name === "string" && o.name.trim()
+      ? o.name.trim()
+      : `Company ${o.id}`;
     const identifier = typeof o.identifier === "string" ? o.identifier : "";
     out.push({ id: o.id, name, identifier });
   }
-  out.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  out.sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  );
   return out;
 }
 
@@ -102,14 +110,15 @@ export async function connectWiseManageCreateServiceTicket(
   try {
     data = text ? (JSON.parse(text) as typeof data) : {};
   } catch {
-    throw new Error(`ConnectWise Manage returned HTTP ${res.status} (non-JSON)`);
+    throw new Error(
+      `ConnectWise Manage returned HTTP ${res.status} (non-JSON)`,
+    );
   }
   if (!res.ok || data.id == null) {
-    const msg =
-      (data.message ??
-        data.code ??
-        (typeof data.errors === "string" ? data.errors : null) ??
-        text.slice(0, 240)) || `HTTP ${res.status}`;
+    const msg = (data.message ??
+      data.code ??
+      (typeof data.errors === "string" ? data.errors : null) ??
+      text.slice(0, 240)) || `HTTP ${res.status}`;
     throw new Error(String(msg));
   }
   return { id: data.id };

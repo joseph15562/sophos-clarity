@@ -1,10 +1,19 @@
 import { passkeyRegisterVerifyBodySchema } from "../../_shared/api-schemas.ts";
-import { adminClient, json as jsonResponse, safeDbError, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+  userClient,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 
-function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
+function json(
+  body: unknown,
+  status = 200,
+  corsHeaders: Record<string, string> = {},
+) {
   return jsonResponse(body, status, corsHeaders);
 }
 
@@ -32,10 +41,14 @@ export async function handlePasskeyRoutes(
       .limit(50);
 
     const origin = req.headers.get("origin") ?? "";
-    const rpId = origin ? new URL(origin).hostname : new URL(SUPABASE_URL).hostname;
+    const rpId = origin
+      ? new URL(origin).hostname
+      : new URL(SUPABASE_URL).hostname;
 
     const options = {
-      challenge: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
+      challenge: btoa(
+        String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))),
+      ),
       rp: { name: "Sophos FireComply", id: rpId },
       user: {
         id: btoa(user.id),
@@ -70,7 +83,9 @@ export async function handlePasskeyRoutes(
     const raw = await req.json().catch(() => ({}));
     const parsed = passkeyRegisterVerifyBodySchema.safeParse(raw);
     if (!parsed.success) {
-      logJson("warn", "passkey_register_verify_invalid_body", { issues: parsed.error.issues.length });
+      logJson("warn", "passkey_register_verify_invalid_body", {
+        issues: parsed.error.issues.length,
+      });
       return json({ error: "Invalid request body" }, 400, corsHeaders);
     }
     const { credential, name } = parsed.data;

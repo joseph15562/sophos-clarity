@@ -1,10 +1,18 @@
 import { assessmentsListQuerySchema } from "../../_shared/api-schemas.ts";
 import { getOrgMembership } from "../../_shared/auth.ts";
-import { adminClient, json as jsonResponse, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  userClient,
+} from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
 import { getServiceKeyContext } from "../../_shared/service-key.ts";
 
-function json(body: unknown, status = 200, corsHeaders: Record<string, string> = {}) {
+function json(
+  body: unknown,
+  status = 200,
+  corsHeaders: Record<string, string> = {},
+) {
   return jsonResponse(body, status, corsHeaders);
 }
 
@@ -44,7 +52,9 @@ export async function handleAssessmentRoutes(
     };
     const qParsed = assessmentsListQuerySchema.safeParse(qRaw);
     if (!qParsed.success) {
-      logJson("warn", "assessments_list_invalid_query", { issues: qParsed.error.issues.length });
+      logJson("warn", "assessments_list_invalid_query", {
+        issues: qParsed.error.issues.length,
+      });
       return json({ error: "Invalid query parameters" }, 400, corsHeaders);
     }
     const { page, pageSize } = qParsed.data;
@@ -53,7 +63,10 @@ export async function handleAssessmentRoutes(
 
     const { data, count } = await db
       .from("assessments")
-      .select("id, org_id, customer_name, environment, overall_score, overall_grade, created_at", { count: "exact" })
+      .select(
+        "id, org_id, customer_name, environment, overall_score, overall_grade, created_at",
+        { count: "exact" },
+      )
       .eq("org_id", orgId)
       .order("created_at", { ascending: false })
       .range(from, to);
@@ -61,13 +74,17 @@ export async function handleAssessmentRoutes(
     const total = count ?? 0;
     const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
 
-    return json({
-      data: data ?? [],
-      total,
-      page,
-      pageSize,
-      totalPages,
-    }, 200, corsHeaders);
+    return json(
+      {
+        data: data ?? [],
+        total,
+        page,
+        pageSize,
+        totalPages,
+      },
+      200,
+      corsHeaders,
+    );
   }
 
   // GET /api/assessments/:id — single assessment with scores, findings, full details
@@ -80,16 +97,22 @@ export async function handleAssessmentRoutes(
       .eq("org_id", orgId)
       .single();
 
-    if (assErr || !assessment) return json({ error: "Assessment not found" }, 404, corsHeaders);
+    if (assErr || !assessment) {
+      return json({ error: "Assessment not found" }, 404, corsHeaders);
+    }
 
     // Try to find matching agent_submission for findings/full_analysis (created within 5s)
     const createdAt = assessment.created_at as string;
-    const windowStart = new Date(new Date(createdAt).getTime() - 5000).toISOString();
-    const windowEnd = new Date(new Date(createdAt).getTime() + 5000).toISOString();
+    const windowStart = new Date(new Date(createdAt).getTime() - 5000)
+      .toISOString();
+    const windowEnd = new Date(new Date(createdAt).getTime() + 5000)
+      .toISOString();
 
     const { data: submissions } = await db
       .from("agent_submissions")
-      .select("id, findings_summary, full_analysis, overall_score, overall_grade, created_at")
+      .select(
+        "id, findings_summary, full_analysis, overall_score, overall_grade, created_at",
+      )
       .eq("org_id", orgId)
       .gte("created_at", windowStart)
       .lte("created_at", windowEnd)

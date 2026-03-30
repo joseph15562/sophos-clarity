@@ -2,25 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { safeError } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
-
-const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://localhost:8080",
-  "https://sophos-firecomply.vercel.app",
-  Deno.env.get("ALLOWED_ORIGIN") ?? "",
-].filter(Boolean);
-
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") ?? "";
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "";
-  return {
-    "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-    "Vary": "Origin",
-  };
-}
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { parseConfigEarlyResponse } from "./auth_gate.ts";
 
 let corsHeaders: Record<string, string> = {};
 
@@ -28,7 +11,10 @@ const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
 const RATE_WINDOW_MS = 60_000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 6;
 
-async function isRateLimited(userId: string, db: ReturnType<typeof createClient>): Promise<boolean> {
+async function isRateLimited(
+  userId: string,
+  db: ReturnType<typeof createClient>,
+): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
   const { count } = await db
     .from("gemini_usage")
@@ -62,7 +48,10 @@ function pruneEmpty(value: unknown): unknown {
       if (v === null || v === undefined) return false;
       if (typeof v === "string" && v.trim() === "") return false;
       if (Array.isArray(v) && v.length === 0) return false;
-      if (typeof v === "object" && !Array.isArray(v) && Object.keys(v as Record<string, unknown>).length === 0) return false;
+      if (
+        typeof v === "object" && !Array.isArray(v) &&
+        Object.keys(v as Record<string, unknown>).length === 0
+      ) return false;
       return true;
     });
     return arr;
@@ -75,19 +64,20 @@ function pruneEmpty(value: unknown): unknown {
           if (v === null || v === undefined) return false;
           if (typeof v === "string" && v.trim() === "") return false;
           if (Array.isArray(v) && v.length === 0) return false;
-          if (typeof v === "object" && !Array.isArray(v) && Object.keys(v as Record<string, unknown>).length === 0) return false;
+          if (
+            typeof v === "object" && !Array.isArray(v) &&
+            Object.keys(v as Record<string, unknown>).length === 0
+          ) return false;
           return true;
-        })
+        }),
     );
     return obj;
   }
   return value;
 }
 
-
-
-
-const SYSTEM_PROMPT = `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover. The level of detail must be suitable for compliance and audit: document all relevant settings, and pull every column and detail from the data — do not omit or summarise away important fields.
+const SYSTEM_PROMPT =
+  `You are a senior network security engineer writing professional firewall configuration documentation for an MSP client handover. The level of detail must be suitable for compliance and audit: document all relevant settings, and pull every column and detail from the data — do not omit or summarise away important fields.
 
 You receive structured JSON data extracted from a Sophos XGS firewall configuration export. Each section may contain:
 - **tables**: array of { headers, rows } — use every column in the headers and every row; do not drop columns.
@@ -145,7 +135,8 @@ Rules
 
 **API / Monitoring Service Accounts**: If the configuration shows admin accounts with "Read-Only Administrator" profile or named for API/monitoring use, document them in "## API & Service Accounts". Include account name, profile/role, OTP status, note that service accounts cannot use interactive MFA, and recommended compensating controls (IP restriction, read-only profile, strong password, audit logging). If full admin privileges, flag as 🟡 Medium.`;
 
-const EXECUTIVE_SYSTEM_PROMPT = `You are a senior network security engineer writing an executive summary report for an MSP. Include best-practice recommendations and a compliance-suitable level of detail.
+const EXECUTIVE_SYSTEM_PROMPT =
+  `You are a senior network security engineer writing an executive summary report for an MSP. Include best-practice recommendations and a compliance-suitable level of detail.
 
 You receive structured JSON data where each top-level key is a firewall name/label, and its value contains the extracted configuration sections for that firewall. There may be one or multiple firewalls.
 
@@ -172,7 +163,8 @@ Rules
 - Level of detail must support compliance and audit
 - End every report with a "Limitations" section that states: this assessment covers firewall configuration only. It does not assess endpoint security, email security, identity management, cloud infrastructure, or physical security controls. Results are point-in-time and should be validated by a qualified security professional.`;
 
-const COMPLIANCE_SYSTEM_PROMPT = `You are a senior cybersecurity analyst producing a Compliance Readiness Report from firewall configuration data. This document provides an indicative assessment of firewall configuration controls against compliance frameworks. It should be used as supporting material alongside a full compliance audit — not as a substitute for one.
+const COMPLIANCE_SYSTEM_PROMPT =
+  `You are a senior cybersecurity analyst producing a Compliance Readiness Report from firewall configuration data. This document provides an indicative assessment of firewall configuration controls against compliance frameworks. It should be used as supporting material alongside a full compliance audit — not as a substitute for one.
 
 When multiple firewalls are assessed, **security features (e.g. MFA, OTP, 2FA) must be enabled across all firewalls and in all relevant areas**. If any single firewall lacks a required security feature in any area, the report must show **⚠️ Partial** for that control and clearly state **which firewall** is lacking it and **what** is missing (e.g. "Firewall A — MFA not enabled for SSL-VPN"; "Firewall B — OTP disabled for Web Admin").
 
@@ -226,7 +218,8 @@ Rules
 - **Evidence format**: In configuration excerpts and evidence, never output raw JSON. Use Markdown tables (with columns such as Name, Port, VLAN, Zone, IP/Network, Status for interface/VLAN data) and short prose so auditors see clear, readable evidence. Include **Port** and **VLAN** (or VLAN ID) in interface/VLAN tables when the payload contains that data.
 - **No placeholders**: Never write "Still generating...", "Loading...", "Generating...", or any placeholder in the report. Every section (including **Security Feature Gaps by Firewall**) must contain actual content: complete table header and data rows, or state "No gaps identified" or "—" if there are none. Do not leave tables empty or with loading text. Output the full report in one pass.`;
 
-const CHAT_SYSTEM_PROMPT = `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
+const CHAT_SYSTEM_PROMPT =
+  `You are a senior Sophos firewall security expert embedded in the FireComply assessment tool. The user has uploaded firewall configuration(s) and you have access to analysis results, findings, and stats.
 
 Your role:
 - Answer questions about the assessment concisely and accurately
@@ -243,18 +236,10 @@ Important assessment rules:
 - Sophos Central counts as external log forwarding. Central-managed firewalls satisfy the syslog/external logging requirement.`;
 
 serve(async (req) => {
+  const early = parseConfigEarlyResponse(req);
+  if (early) return early;
   corsHeaders = getCorsHeaders(req);
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+  const authHeader = req.headers.get("Authorization")!;
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -262,10 +247,15 @@ serve(async (req) => {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
-  const adminClient = SUPABASE_SERVICE_KEY ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY) : null;
+  const adminClient = SUPABASE_SERVICE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    : null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
@@ -274,16 +264,27 @@ serve(async (req) => {
   if (error || !user) {
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 
   // Per-user rate limit (DB-backed via gemini_usage table)
   if (adminClient && await isRateLimited(user.id, adminClient)) {
-    logJson("warn", "parse_config_rate_limited", { userPrefix: user.id.slice(0, 8) });
+    logJson("warn", "parse_config_rate_limited", {
+      userPrefix: user.id.slice(0, 8),
+    });
     return new Response(
-      JSON.stringify({ error: "Too many requests. Please wait a moment before generating another report." }),
-      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error:
+          "Too many requests. Please wait a moment before generating another report.",
+      }),
+      {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 
@@ -291,8 +292,15 @@ serve(async (req) => {
   const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10);
   if (contentLength > MAX_BODY_BYTES) {
     return new Response(
-      JSON.stringify({ error: `Request body too large (${Math.round(contentLength / 1024)} KB). Maximum is ${MAX_BODY_BYTES / 1024 / 1024} MB.` }),
-      { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: `Request body too large (${
+          Math.round(contentLength / 1024)
+        } KB). Maximum is ${MAX_BODY_BYTES / 1024 / 1024} MB.`,
+      }),
+      {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 
@@ -308,32 +316,54 @@ serve(async (req) => {
     const compliance: boolean = body?.compliance === true;
     const firewallLabels: string[] | undefined = body?.firewallLabels;
     const selectedFrameworks: string[] | undefined = body?.selectedFrameworks;
-    const centralEnrichment: Record<string, unknown> | undefined = body?.centralEnrichment;
+    const centralEnrichment: Record<string, unknown> | undefined = body
+      ?.centralEnrichment;
     const webFilterComplianceMode: string | undefined =
-      typeof body?.webFilterComplianceMode === "string" ? body.webFilterComplianceMode : undefined;
+      typeof body?.webFilterComplianceMode === "string"
+        ? body.webFilterComplianceMode
+        : undefined;
 
     if (chat) {
       if (!chatContext || typeof chatContext !== "string") {
         return new Response(
           JSON.stringify({ error: "Missing chatContext for chat mode." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
       if (chatContext.length > 100_000) {
         return new Response(
           JSON.stringify({ error: "Chat context too large." }),
-          { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 413,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
-    } else if (!sections || typeof sections !== "object" || Array.isArray(sections)) {
+    } else if (
+      !sections || typeof sections !== "object" || Array.isArray(sections)
+    ) {
       return new Response(
-        JSON.stringify({ error: "Missing sections field. Expected pre-extracted JSON object." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Missing sections field. Expected pre-extracted JSON object.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     } else if (Object.keys(sections).length === 0) {
       return new Response(
-        JSON.stringify({ error: "Sections object is empty. Upload a Sophos config export first." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error:
+            "Sections object is empty. Upload a Sophos config export first.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -355,55 +385,96 @@ serve(async (req) => {
       // Build compliance context
       let complianceContext = "";
       const isIndividualReport = !chat && !executive && !compliance;
-      const singleFirewallName = isIndividualReport && firewallLabels && firewallLabels.length === 1 ? firewallLabels[0] : null;
-      const reportDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+      const singleFirewallName =
+        isIndividualReport && firewallLabels && firewallLabels.length === 1
+          ? firewallLabels[0]
+          : null;
+      const reportDate = new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
       if (singleFirewallName) {
-        complianceContext += `\n\n## Individual report: required opening layout (output exactly in this order)\nThe cover block (title, date, prepared by, disclaimer) is prepended by the system. You output the report body only. Start your response with the following lines exactly:\n\nSophos XGS Firewall Configuration Report for ${singleFirewallName}\nAssessment Date: ${reportDate}\n\nScope: This report documents the Sophos XGS firewall configuration for ${singleFirewallName}.\n\nCompliance Context:\n`;
-        if (environment && environment.trim()) complianceContext += `Environment type: ${environment.trim()}\n`;
-        if (country && country.trim()) complianceContext += `Country: ${country.trim()}\n`;
+        complianceContext +=
+          `\n\n## Individual report: required opening layout (output exactly in this order)\nThe cover block (title, date, prepared by, disclaimer) is prepended by the system. You output the report body only. Start your response with the following lines exactly:\n\nSophos XGS Firewall Configuration Report for ${singleFirewallName}\nAssessment Date: ${reportDate}\n\nScope: This report documents the Sophos XGS firewall configuration for ${singleFirewallName}.\n\nCompliance Context:\n`;
+        if (environment && environment.trim()) {
+          complianceContext += `Environment type: ${environment.trim()}\n`;
+        }
+        if (country && country.trim()) {
+          complianceContext += `Country: ${country.trim()}\n`;
+        }
         if (selectedFrameworks && selectedFrameworks.length > 0) {
           complianceContext += `Selected Compliance Frameworks:\n`;
-          selectedFrameworks.forEach((fw) => { complianceContext += `${fw}\n`; });
+          selectedFrameworks.forEach((fw) => {
+            complianceContext += `${fw}\n`;
+          });
         }
         complianceContext += `\nExecutive Summary\n`;
-        complianceContext += `(Then write your Executive Summary paragraph. Then output these sections in this order, each with section heading, intro, table if applicable, "Summary of [Section Name]", Findings, Best Practice Recommendations: Firewall Rules; Interfaces, Ports & VLANs; Zones; Interface Aliases; NAT Rules; Authentication Servers; Azure AD SSO; Authentication & OTP Settings; Advanced Threat Protection; Intrusion Prevention; IPS Engine Settings; Hotfix Settings; RED Devices; XFRM Interfaces; Wireless Networks; Wireless Access Points; Wireless Settings; Content Condition List; SSL/TLS Inspection Rules; SSL/TLS Settings; Admin Settings; Backup & Restore. End with ## Overall Security Recommendations for ${singleFirewallName}.)\n`;
-      } else if (customerName && customerName.trim() && !/^\(this tenant\)$/i.test(customerName.trim())) {
-        complianceContext += `\n\n## Client Context\nThis report is for **${customerName}**. Use this exact customer name throughout the document (Scope, Executive Summary, Overall Security Recommendations, Frameworks to Assess). Do not use "(This tenant)" or any placeholder — use **${customerName}** only.\n`;
+        complianceContext +=
+          `(Then write your Executive Summary paragraph. Then output these sections in this order, each with section heading, intro, table if applicable, "Summary of [Section Name]", Findings, Best Practice Recommendations: Firewall Rules; Interfaces, Ports & VLANs; Zones; Interface Aliases; NAT Rules; Authentication Servers; Azure AD SSO; Authentication & OTP Settings; Advanced Threat Protection; Intrusion Prevention; IPS Engine Settings; Hotfix Settings; RED Devices; XFRM Interfaces; Wireless Networks; Wireless Access Points; Wireless Settings; Content Condition List; SSL/TLS Inspection Rules; SSL/TLS Settings; Admin Settings; Backup & Restore. End with ## Overall Security Recommendations for ${singleFirewallName}.)\n`;
+      } else if (
+        customerName && customerName.trim() &&
+        !/^\(this tenant\)$/i.test(customerName.trim())
+      ) {
+        complianceContext +=
+          `\n\n## Client Context\nThis report is for **${customerName}**. Use this exact customer name throughout the document (Scope, Executive Summary, Overall Security Recommendations, Frameworks to Assess). Do not use "(This tenant)" or any placeholder — use **${customerName}** only.\n`;
       } else {
-        complianceContext += `\n\n## Client Context\nDo not use "(This tenant)" or a placeholder in the report. Use "the assessed organisation" or the firewall name(s) from the data in Scope and body text.\n`;
+        complianceContext +=
+          `\n\n## Client Context\nDo not use "(This tenant)" or a placeholder in the report. Use "the assessed organisation" or the firewall name(s) from the data in Scope and body text.\n`;
       }
 
       if (!singleFirewallName) {
-        complianceContext += `\n\n## Report date\nUse **${reportDate}** as the assessment date in the document header and in the Scope line.\n`;
-        const scopeFirewalls = firewallLabels && firewallLabels.length > 0 ? firewallLabels.join(", ") : "firewall(s)";
-        const scopeTenant = (customerName && customerName.trim() && !/^\(this tenant\)$/i.test(customerName.trim())) ? customerName.trim() : "(This tenant)";
-        const scopeEnv = environment && environment.trim() ? `${environment.trim()} Environment` : "";
+        complianceContext +=
+          `\n\n## Report date\nUse **${reportDate}** as the assessment date in the document header and in the Scope line.\n`;
+        const scopeFirewalls = firewallLabels && firewallLabels.length > 0
+          ? firewallLabels.join(", ")
+          : "firewall(s)";
+        const scopeTenant = (customerName && customerName.trim() &&
+            !/^\(this tenant\)$/i.test(customerName.trim()))
+          ? customerName.trim()
+          : "(This tenant)";
+        const scopeEnv = environment && environment.trim()
+          ? `${environment.trim()} Environment`
+          : "";
         const scopeCountry = country && country.trim() ? country.trim() : "";
         const scopeRest = [scopeEnv, scopeCountry].filter(Boolean).join(", ");
-        complianceContext += `\n\n## Scope line (output exactly)\nAfter the title "Compliance Readiness Report — Firewall Configuration Assessment", output this exact line (one line):\nDate: ${reportDate} Scope: ${scopeFirewalls} (${scopeTenant})${scopeRest ? ", " + scopeRest : ""}\n`;
+        complianceContext +=
+          `\n\n## Scope line (output exactly)\nAfter the title "Compliance Readiness Report — Firewall Configuration Assessment", output this exact line (one line):\nDate: ${reportDate} Scope: ${scopeFirewalls} (${scopeTenant})${
+            scopeRest ? ", " + scopeRest : ""
+          }\n`;
 
         if (environment || country) {
           complianceContext += "\n\n## Compliance Context\n";
-          if (environment) complianceContext += `- **Environment type**: ${environment}\n`;
+          if (environment) {
+            complianceContext += `- **Environment type**: ${environment}\n`;
+          }
           if (country) complianceContext += `- **Country**: ${country}\n`;
         }
 
         if (selectedFrameworks && selectedFrameworks.length > 0) {
-          complianceContext += `\n\n## Selected Compliance Frameworks\nThe following frameworks have been selected for this assessment. You MUST assess against ALL of these and ONLY these frameworks:\n`;
+          complianceContext +=
+            `\n\n## Selected Compliance Frameworks\nThe following frameworks have been selected for this assessment. You MUST assess against ALL of these and ONLY these frameworks:\n`;
           selectedFrameworks.forEach((fw) => {
             complianceContext += `- **${fw}**\n`;
           });
-          complianceContext += `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
+          complianceContext +=
+            `\nFor each framework, provide specific control references, cite actual requirements, and flag any configuration gaps. Tailor all "Best Practice Recommendations" and "Overall Security Recommendations" to these frameworks.\n`;
         } else if (environment || country) {
-          complianceContext += `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
+          complianceContext +=
+            `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
         }
       } else if (selectedFrameworks && selectedFrameworks.length > 0) {
-        complianceContext += `\n\n## Frameworks for individual report\nTailor "Best Practice Recommendations" and "Overall Security Recommendations for ${singleFirewallName}" to the selected frameworks: ${selectedFrameworks.join(", ")}.\n`;
+        complianceContext +=
+          `\n\n## Frameworks for individual report\nTailor "Best Practice Recommendations" and "Overall Security Recommendations for ${singleFirewallName}" to the selected frameworks: ${
+            selectedFrameworks.join(", ")
+          }.\n`;
       }
 
       if (centralEnrichment && Object.keys(centralEnrichment).length > 0) {
-        complianceContext += "\n\n## Sophos Central Live Data\nThe following live data was retrieved from Sophos Central API. Include a brief **Sophos Central Status** (firmware, connected state; omit HA). Mention the alert count in one sentence only (e.g. \"Central reports N open alerts; see Sophos Central for details\"). Do **not** list individual alerts. Do **not** create any Finding (Critical/High/Medium/Low) based on alert count; do not cite NCSC/Cyber Essentials/KCSIE for alert count. Alert count is informational only.\n";
-        complianceContext += "```json\n" + JSON.stringify(centralEnrichment) + "\n```\n";
+        complianceContext +=
+          '\n\n## Sophos Central Live Data\nThe following live data was retrieved from Sophos Central API. Include a brief **Sophos Central Status** (firmware, connected state; omit HA). Mention the alert count in one sentence only (e.g. "Central reports N open alerts; see Sophos Central for details"). Do **not** list individual alerts. Do **not** create any Finding (Critical/High/Medium/Low) based on alert count; do not cite NCSC/Cyber Essentials/KCSIE for alert count. Alert count is informational only.\n';
+        complianceContext += "```json\n" + JSON.stringify(centralEnrichment) +
+          "\n```\n";
       }
 
       if (compliance && webFilterComplianceMode === "informational") {
@@ -422,24 +493,44 @@ serve(async (req) => {
       systemPrompt = basePrompt + SHARED_RULES + complianceContext;
 
       if (compliance && firewallLabels && firewallLabels.length > 1) {
-        userMessage = `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a comprehensive Compliance Readiness Report covering all firewalls:\n\n${payload}`;
+        userMessage =
+          `Here are the extracted configurations for ${firewallLabels.length} firewalls (${
+            firewallLabels.join(", ")
+          }). Produce a comprehensive Compliance Readiness Report covering all firewalls:\n\n${payload}`;
       } else if (compliance) {
-        userMessage = `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Readiness Report:\n\n${payload}`;
+        userMessage =
+          `Here is the extracted Sophos firewall configuration data. Produce a comprehensive Compliance Readiness Report:\n\n${payload}`;
       } else if (executive && firewallLabels) {
         userMessage = firewallLabels.length === 1
-          ? `Here is the extracted configuration for firewall "${firewallLabels[0]}". Produce an executive summary report:\n\n${payload}`
-          : `Here are the extracted configurations for ${firewallLabels.length} firewalls (${firewallLabels.join(", ")}). Produce a consolidated executive summary report:\n\n${payload}`;
+          ? `Here is the extracted configuration for firewall "${
+            firewallLabels[0]
+          }". Produce an executive summary report:\n\n${payload}`
+          : `Here are the extracted configurations for ${firewallLabels.length} firewalls (${
+            firewallLabels.join(", ")
+          }). Produce a consolidated executive summary report:\n\n${payload}`;
       } else {
-        userMessage = "Here is the extracted Sophos firewall configuration data. Document every section completely. Use every column from each table except do not include Security Features in the firewall rules table; if a section has a 'details' or 'detail blocks' array, merge Web Filter and Logging into your rule table only.\n\n" + payload;
+        userMessage =
+          "Here is the extracted Sophos firewall configuration data. Document every section completely. Use every column from each table except do not include Security Features in the firewall rules table; if a section has a 'details' or 'detail blocks' array, merge Web Filter and Logging into your rule table only.\n\n" +
+          payload;
       }
     }
 
     // Debug mode (body.debug === true): return what the backend received and will send to the AI, without calling Gemini
     if (body?.debug === true) {
-      const sectionKeys = sections && typeof sections === "object" ? Object.keys(sections) : [];
-      const payloadForSize = typeof sections === "object" ? JSON.stringify(pruneEmpty(sections)) : "";
+      const sectionKeys = sections && typeof sections === "object"
+        ? Object.keys(sections)
+        : [];
+      const payloadForSize = typeof sections === "object"
+        ? JSON.stringify(pruneEmpty(sections))
+        : "";
       const debugPayload = {
-        reportType: chat ? "chat" : compliance ? "compliance" : executive ? "executive" : "technical",
+        reportType: chat
+          ? "chat"
+          : compliance
+          ? "compliance"
+          : executive
+          ? "executive"
+          : "technical",
         sectionCount: sectionKeys.length,
         sectionKeys,
         payloadSizeBytes: payloadForSize.length,
@@ -447,7 +538,8 @@ serve(async (req) => {
         systemPromptLength: systemPrompt.length,
         userMessageLength: userMessage.length,
         firewallLabels: firewallLabels ?? null,
-        hasCentralEnrichment: centralEnrichment != null && Object.keys(centralEnrichment).length > 0,
+        hasCentralEnrichment: centralEnrichment != null &&
+          Object.keys(centralEnrichment).length > 0,
         environment: environment ?? null,
         country: country ?? null,
         selectedFrameworksCount: selectedFrameworks?.length ?? 0,
@@ -458,46 +550,63 @@ serve(async (req) => {
       });
     }
 
-    const reportModel = Deno.env.get("GEMINI_REPORT_MODEL") || "gemini-2.5-flash";
-    const chatModel = Deno.env.get("GEMINI_CHAT_MODEL") || "gemini-2.5-flash-lite";
-    const fallbackModel = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-2.0-flash";
+    const reportModel = Deno.env.get("GEMINI_REPORT_MODEL") ||
+      "gemini-2.5-flash";
+    const chatModel = Deno.env.get("GEMINI_CHAT_MODEL") ||
+      "gemini-2.5-flash-lite";
+    const fallbackModel = Deno.env.get("GEMINI_FALLBACK_MODEL") ||
+      "gemini-2.0-flash";
     const primaryModel = chat ? chatModel : reportModel;
 
     const reasoningOverride = Deno.env.get("GEMINI_REASONING_EFFORT");
-    const reasoningEffort = reasoningOverride
-      || (chat ? "none" : compliance ? "medium" : "low");
+    const reasoningEffort = reasoningOverride ||
+      (chat ? "none" : compliance ? "medium" : "low");
 
     const doRequest = (selectedModel: string) =>
-      fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${GEMINI_API_KEY}`,
-          "Content-Type": "application/json",
+      fetch(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${GEMINI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: selectedModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            stream: true,
+            temperature: 0.1,
+            reasoning_effort: reasoningEffort,
+            stream_options: { include_usage: true },
+          }),
         },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
-          stream: true,
-          temperature: 0.1,
-          reasoning_effort: reasoningEffort,
-          stream_options: { include_usage: true },
-        }),
-      });
+      );
 
     let usedModel = primaryModel;
     let response = await doRequest(primaryModel);
     const max429Retries = 2;
-    for (let retries = 0; response.status === 429 && retries < max429Retries; retries++) {
+    for (
+      let retries = 0;
+      response.status === 429 && retries < max429Retries;
+      retries++
+    ) {
       const retrySec = 15 + retries * 15;
-      logJson("info", "parse_config_429_retry", { retrySec, attempt: retries + 1, max429Retries });
+      logJson("info", "parse_config_429_retry", {
+        retrySec,
+        attempt: retries + 1,
+        max429Retries,
+      });
       await new Promise((r) => setTimeout(r, retrySec * 1000));
       response = await doRequest(primaryModel);
     }
 
-    if (!response.ok && response.status !== 429 && response.status !== 402 && fallbackModel !== primaryModel) {
+    if (
+      !response.ok && response.status !== 429 && response.status !== 402 &&
+      fallbackModel !== primaryModel
+    ) {
       logJson("info", "parse_config_model_fallback", {
         primaryModel,
         status: response.status,
@@ -518,43 +627,69 @@ serve(async (req) => {
       let message = `AI processing failed (HTTP ${response.status})`;
       try {
         const errJson = JSON.parse(text);
-        const detail = errJson.error?.message ?? errJson.message ?? errJson.error;
+        const detail = errJson.error?.message ?? errJson.message ??
+          errJson.error;
         if (typeof detail === "string") message = detail;
       } catch (parseErr) {
-        logJson("warn", "parse_config_gemini_json_parse", { error: String(parseErr) });
+        logJson("warn", "parse_config_gemini_json_parse", {
+          error: String(parseErr),
+        });
         if (text.length > 0 && text.length < 200) message = text;
       }
 
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "Rate limit exceeded. Please wait a moment and try again.",
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error:
+              "AI credits exhausted. Please add credits in Settings → Workspace → Usage.",
+          }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
-      if (response.status === 403 || /quota|resource exhausted|billing/i.test(message)) {
+      if (
+        response.status === 403 ||
+        /quota|resource exhausted|billing/i.test(message)
+      ) {
         return new Response(
           JSON.stringify({
-            error: "AI quota unavailable. The Google project used for reports has hit its limit or billing isn’t set up. In Google AI Studio or Cloud Console, check the project that owns GEMINI_API_KEY: enable billing, increase quotas, or switch to a project with available Gemini API access.",
+            error:
+              "AI quota unavailable. The Google project used for reports has hit its limit or billing isn’t set up. In Google AI Studio or Cloud Console, check the project that owns GEMINI_API_KEY: enable billing, increase quotas, or switch to a project with available Gemini API access.",
           }),
-          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          {
+            status: 503,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
       logJson("error", "parse_config_gemini_error_detail", { message });
       return new Response(
         JSON.stringify({ error: "AI processing failed. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // Send an immediate empty SSE chunk so the client gets 200 + first byte right away and can show "Generating…" instead of staying on "Sending request" for 30–90s
-    const immediateChunk = new TextEncoder().encode("data: {\"choices\":[{\"delta\":{\"content\":\"\"}}]}\n");
+    const immediateChunk = new TextEncoder().encode(
+      'data: {"choices":[{"delta":{"content":""}}]}\n',
+    );
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -572,16 +707,32 @@ serve(async (req) => {
               buffer = buffer.slice(newlineIdx + 1);
               if (line.startsWith("data: ") && line !== "data: [DONE]") {
                 try {
-                  const json = JSON.parse(line.slice(6)) as Record<string, unknown>;
+                  const json = JSON.parse(line.slice(6)) as Record<
+                    string,
+                    unknown
+                  >;
                   // OpenAI-style usage (openai/completions stream)
-                  const usage = json.usage as { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
+                  const usage = json.usage as {
+                    prompt_tokens?: number;
+                    completion_tokens?: number;
+                    total_tokens?: number;
+                  } | undefined;
                   // Gemini native style (usage_metadata in last chunk)
-                  const meta = json.usage_metadata as { prompt_token_count?: number; candidates_token_count?: number; total_token_count?: number } | undefined;
-                  const promptTokens = usage?.prompt_tokens ?? meta?.prompt_token_count;
-                  const completionTokens = usage?.completion_tokens ?? meta?.candidates_token_count;
+                  const meta = json.usage_metadata as {
+                    prompt_token_count?: number;
+                    candidates_token_count?: number;
+                    total_token_count?: number;
+                  } | undefined;
+                  const promptTokens = usage?.prompt_tokens ??
+                    meta?.prompt_token_count;
+                  const completionTokens = usage?.completion_tokens ??
+                    meta?.candidates_token_count;
                   const totalFromUsage = usage?.total_tokens;
                   const totalFromMeta = meta?.total_token_count;
-                  const total = totalFromUsage ?? totalFromMeta ?? (promptTokens != null || completionTokens != null ? (promptTokens ?? 0) + (completionTokens ?? 0) : 0);
+                  const total = totalFromUsage ?? totalFromMeta ??
+                    (promptTokens != null || completionTokens != null
+                      ? (promptTokens ?? 0) + (completionTokens ?? 0)
+                      : 0);
                   if (total > 0) {
                     logJson("info", "parse_config_token_usage", {
                       promptTokens,
@@ -600,7 +751,9 @@ serve(async (req) => {
                         user_id: user.id,
                       }).then(() => {}).catch((err) =>
                         logJson("warn", "parse_config_gemini_usage_insert", {
-                          error: err instanceof Error ? err.message : String(err),
+                          error: err instanceof Error
+                            ? err.message
+                            : String(err),
                         })
                       );
                     }
@@ -636,7 +789,10 @@ serve(async (req) => {
     });
     return new Response(
       JSON.stringify({ error: safeError(e) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });

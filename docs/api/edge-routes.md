@@ -17,4 +17,4 @@ The main REST surface for the web app is **`api`** (JWT gateway) and **`api-publ
 
 In-app REST reference (subset): **API hub** in the product (`/api` → API Explorer) and [`ApiDocumentation.tsx`](../../src/components/ApiDocumentation.tsx).
 
-**OpenAPI (partial, evolving):** [`openapi.yaml`](openapi.yaml) — JWT **`api`** routes plus selected **`api-public`** paths (`GET /shared/{token}`, `GET /shared-health-check/{token}`) with path-level server URLs. Zod-validated bodies for **`api`** live in [`supabase/functions/_shared/api-schemas.ts`](../../supabase/functions/_shared/api-schemas.ts); keep YAML aligned when routes change.
+**OpenAPI (evolving):** [`openapi.yaml`](openapi.yaml) — JWT **`api`** routes, selected **`api-public`** paths (`GET /shared/{token}`, `GET /shared-health-check/{token}`), **`portal-data`**, **`parse-config`**, and **cron/proxy** path entries (`send-scheduled-reports`, `agent-nudge`, `regulatory-scanner`, `sophos-central`) with path-level server URLs. Zod-validated bodies for **`api`** live in [`supabase/functions/_shared/api-schemas.ts`](../../supabase/functions/_shared/api-schemas.ts); keep YAML aligned when routes change.

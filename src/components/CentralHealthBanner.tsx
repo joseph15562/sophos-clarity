@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, WifiOff, Loader2 } from "lucide-react";
 import { getCentralStatus } from "@/lib/sophos-central";
 import { buildManagePanelSearch } from "@/lib/workspace-deeplink";
+import { warnOptionalError } from "@/lib/client-error-feedback";
 
 const STALE_MS = 48 * 3_600_000; // 48h without sync → stale
 
@@ -35,7 +36,8 @@ export function CentralHealthBanner({ orgId, className = "" }: Props) {
       let st: Awaited<ReturnType<typeof getCentralStatus>> | null = null;
       try {
         st = await getCentralStatus(orgId);
-      } catch {
+      } catch (e) {
+        warnOptionalError("CentralHealthBanner.getCentralStatus", e);
         err = true;
       }
       if (!cancelled) {
@@ -74,7 +76,7 @@ export function CentralHealthBanner({ orgId, className = "" }: Props) {
     <div
       className={`mb-3 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
         kind === "error"
-          ? "border-destructive/40 bg-destructive/10 text-destructive"
+          ? "border-red-200 bg-red-50 text-zinc-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-zinc-100"
           : "border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100"
       } ${className}`}
     >

@@ -1,5 +1,11 @@
 import { getOrgMembership } from "../../_shared/auth.ts";
-import { adminClient, json as jsonResponse, safeDbError, safeError, userClient } from "../../_shared/db.ts";
+import {
+  adminClient,
+  json as jsonResponse,
+  safeDbError,
+  safeError,
+  userClient,
+} from "../../_shared/db.ts";
 import { getServiceKeyContext } from "../../_shared/service-key.ts";
 
 export async function handleFirewallRoutes(
@@ -8,11 +14,18 @@ export async function handleFirewallRoutes(
   segments: string[],
   corsHeaders: Record<string, string>,
 ): Promise<Response | null> {
-  function json(body: unknown, status = 200, headers: Record<string, string> = corsHeaders) {
+  function json(
+    body: unknown,
+    status = 200,
+    headers: Record<string, string> = corsHeaders,
+  ) {
     return jsonResponse(body, status, headers);
   }
 
-  if (!(req.method === "GET" && segments[0] === "firewalls" && segments.length === 1)) {
+  if (
+    !(req.method === "GET" && segments[0] === "firewalls" &&
+      segments.length === 1)
+  ) {
     return null;
   }
 
@@ -39,7 +52,9 @@ export async function handleFirewallRoutes(
   try {
     const { data: firewalls, error: fwErr } = await db
       .from("central_firewalls")
-      .select("id, firewall_id, serial_number, hostname, name, firmware_version, model, central_tenant_id")
+      .select(
+        "id, firewall_id, serial_number, hostname, name, firmware_version, model, central_tenant_id",
+      )
       .eq("org_id", orgId)
       .limit(1000);
 
@@ -53,9 +68,13 @@ export async function handleFirewallRoutes(
       .order("created_at", { ascending: false })
       .limit(500);
 
-    const byFirewallId: Record<string, { score: number; grade: string; submitted_at: string }> = {};
+    const byFirewallId: Record<
+      string,
+      { score: number; grade: string; submitted_at: string }
+    > = {};
     for (const sub of submissions ?? []) {
-      const fwList = (sub.firewalls as Array<{ id?: string; hostname?: string }>) ?? [];
+      const fwList =
+        (sub.firewalls as Array<{ id?: string; hostname?: string }>) ?? [];
       for (const fw of fwList) {
         const fid = fw.id ?? fw.hostname;
         if (!fid || byFirewallId[fid]) continue;
@@ -67,9 +86,13 @@ export async function handleFirewallRoutes(
       }
     }
 
-    const byHostname: Record<string, { score: number; grade: string; submitted_at: string }> = {};
+    const byHostname: Record<
+      string,
+      { score: number; grade: string; submitted_at: string }
+    > = {};
     for (const sub of submissions ?? []) {
-      const fwList = (sub.firewalls as Array<{ id?: string; hostname?: string }>) ?? [];
+      const fwList =
+        (sub.firewalls as Array<{ id?: string; hostname?: string }>) ?? [];
       for (const fw of fwList) {
         const h = fw.hostname;
         if (!h || byHostname[h]) continue;
@@ -82,7 +105,8 @@ export async function handleFirewallRoutes(
     }
 
     const result = (firewalls ?? []).map((fw) => {
-      const scoreInfo = byFirewallId[fw.firewall_id] ?? byHostname[fw.hostname] ?? null;
+      const scoreInfo = byFirewallId[fw.firewall_id] ??
+        byHostname[fw.hostname] ?? null;
       return {
         id: fw.id,
         firewall_id: fw.firewall_id,

@@ -136,7 +136,13 @@ const SharedHealthCheck = () => {
       {/* Header bar */}
       <div className="sticky top-0 z-10 bg-[#001A47]/95 backdrop-blur border-b border-white/10 px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/sophos-icon-white.svg" alt="" className="h-5 w-5 opacity-70" />
+          <img
+            src="/sophos-icon-white.svg"
+            alt=""
+            className="h-5 w-5 opacity-70"
+            loading="lazy"
+            decoding="async"
+          />
           <span className="text-[11px] font-semibold text-white/60 uppercase tracking-widest hidden sm:inline">
             Sophos Firewall Health Check
           </span>

@@ -1,13 +1,20 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { SafeHtml } from "@/components/SafeHtml";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-
-type ScheduledReportInsert = Database["public"]["Tables"]["scheduled_reports"]["Insert"];
 import { useAuth } from "@/hooks/use-auth";
 import { queryKeys } from "@/hooks/queries";
+import {
+  useScheduledReportsQuery,
+  type ScheduledReportRow as ScheduledReport,
+} from "@/hooks/queries/use-scheduled-reports-query";
+import {
+  useScheduledReportCreateMutation,
+  useScheduledReportToggleMutation,
+  useScheduledReportDeleteMutation,
+} from "@/hooks/queries/use-scheduled-reports-mutations";
 import {
   Calendar,
   Mail,
@@ -38,20 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface ScheduledReport {
-  id: string;
-  org_id: string;
-  name: string;
-  schedule: "weekly" | "monthly" | "quarterly";
-  recipients: string[];
-  report_type: "one-pager" | "executive" | "compliance";
-  customer_name: string | null;
-  include_sections: Record<string, boolean>;
-  enabled: boolean;
-  last_sent_at: string | null;
-  next_due_at: string;
-  created_at: string;
-}
+type ScheduledReportInsert = Database["public"]["Tables"]["scheduled_reports"]["Insert"];
 
 const SCHEDULE_OPTIONS = [
   { value: "weekly", label: "Weekly" },
@@ -113,51 +107,14 @@ export function ScheduledReportSettings() {
   const [formCustomer, setFormCustomer] = useState("");
   const [formSections, setFormSections] = useState(DEFAULT_SECTIONS);
 
-  const { data: reports = [], isLoading: loading } = useQuery({
-    queryKey: queryKeys.org.scheduledReports(orgId),
-    enabled: Boolean(orgId),
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("scheduled_reports")
-        .select("*")
-        .eq("org_id", orgId)
-        .order("created_at", { ascending: false });
-      return (data as unknown as ScheduledReport[]) ?? [];
-    },
-  });
+  const { data: reports = [], isLoading: loading } = useScheduledReportsQuery(orgId);
 
   const invalidateScheduled = () =>
     void queryClient.invalidateQueries({ queryKey: queryKeys.org.scheduledReports(orgId) });
 
-  const createMutation = useMutation({
-    mutationFn: async (row: ScheduledReportInsert) => {
-      const { error } = await supabase.from("scheduled_reports").insert(row);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      invalidateScheduled();
-      resetForm();
-    },
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      const { error } = await supabase
-        .from("scheduled_reports")
-        .update({ enabled: !enabled })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidateScheduled(),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("scheduled_reports").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidateScheduled(),
-  });
+  const createMutation = useScheduledReportCreateMutation(orgId);
+  const toggleMutation = useScheduledReportToggleMutation(orgId);
+  const deleteMutation = useScheduledReportDeleteMutation(orgId);
 
   const resetForm = () => {
     setFormName("");
@@ -193,7 +150,7 @@ export function ScheduledReportSettings() {
       enabled: true,
       next_due_at: nextDue,
     };
-    createMutation.mutate(insert);
+    createMutation.mutate(insert, { onSuccess: resetForm });
   };
 
   const handleToggle = (id: string, enabled: boolean) => {
