@@ -349,7 +349,6 @@
   .info-pill {
     @apply relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-5 py-4 shadow-card;
     @apply transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated;
-    /* Clip blurred ::before so it cannot paint past rounded corners (Safari / compositing). */
     isolation: isolate;
     contain: paint;
     background: linear-gradient(145deg, rgba(32, 6, 247, 0.07), rgba(32, 6, 247, 0.02));
@@ -357,22 +356,19 @@
   .dark .info-pill {
     background: linear-gradient(145deg, rgba(0, 237, 255, 0.09), rgba(0, 237, 255, 0.025));
   }
+  /* No filter:blur — gradients stay inside border-radius; blur caused corner bleed in WebKit. */
   .info-pill::before {
     content: "";
     position: absolute;
-    top: -1.5rem;
-    right: -1.5rem;
-    width: 4rem;
-    height: 4rem;
-    border-radius: 9999px;
-    filter: blur(28px);
-    opacity: 0.3;
-    background: rgb(32, 6, 247);
+    inset: 0;
+    border-radius: inherit;
     pointer-events: none;
+    opacity: 0.42;
+    background: radial-gradient(130% 95% at 100% 0%, rgb(32, 6, 247), transparent 62%);
   }
   .dark .info-pill::before {
-    background: rgb(0, 237, 255);
-    opacity: 0.35;
+    background: radial-gradient(130% 95% at 100% 0%, rgb(0, 237, 255), transparent 62%);
+    opacity: 0.38;
   }
   .info-pill::after {
     content: "";

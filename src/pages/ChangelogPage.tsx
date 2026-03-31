@@ -59,7 +59,8 @@ function ChangelogPageInner() {
               <strong className="text-foreground">Polish</strong>: corner highlight glows on the
               analysis <strong className="text-foreground">outcome summary</strong> metrics and on{" "}
               <strong className="text-foreground">Best for / Scale</strong>-style info pills stay
-              inside rounded corners (no teal/cyan bleed past the card edge).
+              inside rounded corners; blurred glows were replaced with gradients so WebKit cannot
+              paint past the curve.
             </li>
             <li>
               <strong className="text-foreground">ADR 0004 wave 2</strong>: management drawer

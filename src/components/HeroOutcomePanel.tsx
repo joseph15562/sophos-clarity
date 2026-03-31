@@ -143,7 +143,7 @@ export function HeroOutcomePanel({
   const gs = GRADE_STYLE[grade] ?? GRADE_STYLE.F;
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(9,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] p-6 sm:p-7 space-y-6">
+    <div className="relative isolate contain-paint overflow-hidden rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.12),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.10),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,249,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.22),transparent_35%),radial-gradient(circle_at_top_right,rgba(0,242,179,0.12),transparent_28%),linear-gradient(135deg,rgba(9,13,26,0.98),rgba(12,18,34,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] p-6 sm:p-7 space-y-6">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -237,18 +237,12 @@ export function HeroOutcomePanel({
               return (
                 <div
                   key={`${action.title}-${i}`}
-                  className="group relative isolate overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] px-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+                  className="relative isolate overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] px-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
                   style={{
                     borderLeftColor: sevHex,
-                    background: `linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
+                    background: `radial-gradient(120% 95% at 100% 0%, ${sevHex}40, transparent 58%), linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
                   }}
                 >
-                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
-                    <div
-                      className="absolute -top-5 -right-5 h-14 w-14 rounded-full blur-[24px] opacity-20 transition-opacity duration-200 group-hover:opacity-35"
-                      style={{ backgroundColor: sevHex }}
-                    />
-                  </div>
                   <div
                     className="absolute inset-x-0 top-0 h-px pointer-events-none"
                     style={{
@@ -319,14 +313,10 @@ function ValueCard({
   return (
     <div
       className="relative isolate overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-3 contain-paint transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-      style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
+      style={{
+        background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
+      }}
     >
-      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-        <div
-          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
-          style={{ backgroundColor: hex }}
-        />
-      </div>
       <p className="relative text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/80">
         {label}
       </p>
@@ -360,14 +350,10 @@ function StatPill({
   return (
     <div
       className="relative isolate overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 contain-paint transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
-      style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
+      style={{
+        background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
+      }}
     >
-      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-        <div
-          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
-          style={{ backgroundColor: hex }}
-        />
-      </div>
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
         style={{ background: `linear-gradient(90deg, transparent, ${hex}28, transparent)` }}
