@@ -11,3 +11,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 15
+    ignore:
+      # ESLint 10 breaks typescript-eslint <8.56 and eslint-plugin-react-hooks peers (still ^9 only).
+      # Remove this block after upgrading typescript-eslint + react-hooks together.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
