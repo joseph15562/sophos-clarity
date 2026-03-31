@@ -50,7 +50,7 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 - Deno: `api-public` smoke tests (`OPTIONS` 204, unknown `GET` 404) via exported `handleApiPublicRequest`.
 - `docs/plans/tier-3-dx-backlog.md`: timeboxed Tier 3 DX/perf checklist from `docs/REVIEW.md`.
 - Root `npm run typecheck` runs `tsc` against `tsconfig.ci.json` and `tsconfig.node.json` so application source is typechecked in CI.
-- `npm run types:supabase` regenerates `src/integrations/supabase/types.ts` (requires Supabase CLI; project id embedded in script).
+- `npm run types:supabase` regenerates `src/integrations/supabase/types.ts` (requires Supabase CLI; set `SUPABASE_PROJECT_REF` or `SUPABASE_PROJECT_ID`).
 - Optional Edge secret `API_KEY_HMAC_SECRET` for HMAC of org service API keys (see `docs/SELF-HOSTED.md`).
 
 ### Changed

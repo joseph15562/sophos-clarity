@@ -776,6 +776,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      job_outbox: {
+        Row: {
+          attempts: number;
+          created_at: string;
+          id: string;
+          idempotency_key: string | null;
+          kind: string;
+          last_error: string | null;
+          next_run_at: string;
+          org_id: string;
+          payload: Json;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempts?: number;
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          kind: string;
+          last_error?: string | null;
+          next_run_at?: string;
+          org_id: string;
+          payload?: Json;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempts?: number;
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          kind?: string;
+          last_error?: string | null;
+          next_run_at?: string;
+          org_id?: string;
+          payload?: Json;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_outbox_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       org_invites: {
         Row: {
           created_at: string;
@@ -1623,6 +1673,28 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      claim_job_outbox_batch: {
+        Args: { batch_size: number };
+        Returns: {
+          attempts: number;
+          created_at: string;
+          id: string;
+          idempotency_key: string | null;
+          kind: string;
+          last_error: string | null;
+          next_run_at: string;
+          org_id: string;
+          payload: Json;
+          status: string;
+          updated_at: string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "job_outbox";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       cleanup_expired_submissions: { Args: never; Returns: number };
       create_organisation: { Args: { org_name: string }; Returns: Json };
       get_my_team_ids: { Args: never; Returns: string[] };

@@ -10,7 +10,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.ci.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "types:supabase": "supabase gen types typescript --project-id rpnvyrxorfaqabkdhctl 2>/dev/null > src/integrations/supabase/types.ts",
+    "types:supabase": "node scripts/gen-supabase-types.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
