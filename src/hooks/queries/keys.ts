@@ -21,11 +21,19 @@ export const queryKeys = {
     /** Agent submissions in last 7 days — per-agent counts (AgentFleetPanel) */
     agentSubmissionCounts7d: (orgId: string) =>
       ["org", orgId, "agent_submission_counts_7d"] as const,
+    /** Latest agent_submissions row per agent — batched load (AgentFleetPanel); fingerprint = sorted agent ids */
+    agentSubmissionsLatestBatch: (orgId: string, idsFingerprint: string) =>
+      ["org", orgId, "agent_submissions_latest_batch", idsFingerprint] as const,
+    /** Remediation playbook rows for org + customer_hash slice (prefix-invalidated with remediationStatus) */
+    remediationPlaybookIds: (orgId: string, customerHash: string) =>
+      ["org", orgId, "remediation_status", "playbook_ids", customerHash] as const,
     /** Management drawer Client View preview — assessments + score_history */
     clientPortalPreview: (orgKey: string, guest: boolean, fingerprint: string) =>
       ["org", orgKey, "client_portal_preview", guest ? "guest" : "member", fingerprint] as const,
     /** Invalidate every Client View preview variant for an org (e.g. after purge). */
     clientPortalPreviewAll: (orgId: string) => ["org", orgId, "client_portal_preview"] as const,
+    /** Report template company logo data URL (Management drawer branding) */
+    companyLogo: (orgId: string) => ["org", orgId, "company_logo"] as const,
   },
   /** Regulatory digest rows (RLS-scoped; global key — invalidate rarely) */
   regulatoryDigest: {

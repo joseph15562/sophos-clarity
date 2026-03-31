@@ -1,4 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseWithAbort } from "@/lib/supabase-with-abort";
+
+export async function fetchRemediationPlaybookIds(
+  orgId: string,
+  customerHash: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const { data, error } = await supabaseWithAbort(
+    supabase
+      .from("remediation_status")
+      .select("playbook_id")
+      .eq("org_id", orgId)
+      .eq("customer_hash", customerHash),
+    signal,
+  );
+  if (error) throw error;
+  return (data ?? []).map((r) => r.playbook_id);
+}
 
 export type RemediationDeltaPayload = {
   orgId: string;
