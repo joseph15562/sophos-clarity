@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { initSentry } from "./init-sentry";
@@ -32,4 +33,9 @@ if (!rootEl) {
   throw new Error("Missing #root element");
 }
 
-createRoot(rootEl).render(<App />);
+createRoot(rootEl).render(
+  <>
+    <App />
+    <SpeedInsights />
+  </>,
+);

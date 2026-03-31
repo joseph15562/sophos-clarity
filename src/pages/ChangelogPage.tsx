@@ -63,6 +63,12 @@ function ChangelogPageInner() {
               paint past the curve.
             </li>
             <li>
+              <strong className="text-foreground">Performance</strong>:{" "}
+              <strong className="text-foreground">Vercel Speed Insights</strong> is enabled for
+              real-user Core Web Vitals when the app runs on Vercel (no extra config in the
+              dashboard beyond enabling the product for the project).
+            </li>
+            <li>
               <strong className="text-foreground">Security &amp; governance hygiene</strong>: GitHub
               Actions pinned to commit SHAs; <strong className="text-foreground">npm</strong>{" "}
               dependencies use exact versions with{" "}
