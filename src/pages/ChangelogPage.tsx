@@ -79,8 +79,10 @@ function ChangelogPageInner() {
               <strong className="text-foreground">dependency review</strong>,{" "}
               <strong className="text-foreground">Dependabot</strong>, and blocking{" "}
               <code className="text-xs">npm audit --omit=dev</code> in CI;{" "}
-              <strong className="text-foreground">E2E auth bypass</strong> requires loopback +{" "}
-              <code className="text-xs">http(s):</code>;{" "}
+              <strong className="text-foreground">E2E auth bypass</strong> stays loopback-only with
+              explicit denial on common hosted host suffixes, and{" "}
+              <strong className="text-foreground">Vercel Production</strong> builds fail if{" "}
+              <code className="text-xs">VITE_E2E_AUTH_BYPASS</code> is set;{" "}
               <strong className="text-foreground">DATA-PRIVACY</strong> adds TIA / SCC / consent
               guidance for Gemini transfers.
             </li>

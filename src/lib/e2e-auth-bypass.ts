@@ -4,10 +4,19 @@ import type { Session, User } from "@supabase/supabase-js";
 export const E2E_BYPASS_USER_ID = "00000000-0000-4000-8000-00000000e2e1";
 export const E2E_BYPASS_ORG_ID = "00000000-0000-4000-8000-00000000e2e2";
 
+/** Known hosted / deploy host patterns — bypass is never allowed here (defense in depth vs loopback allowlist). */
+const E2E_BYPASS_DENIED_HOST_SUFFIXES = [
+  ".vercel.app",
+  ".netlify.app",
+  ".cloudflarepages.app",
+  ".github.io",
+] as const;
+
 /**
  * When `VITE_E2E_AUTH_BYPASS=1` is baked into the bundle **and** the app runs on loopback,
  * `useAuth` can synthesize a signed-in admin session without Supabase credentials.
- * The env flag alone is never sufficient: non-loopback hostnames always return false.
+ * The env flag alone is never sufficient: hosted and non-loopback hostnames are denied.
+ * Vercel Production builds with this flag set fail at build time (see `vite.config.ts`).
  */
 export function isE2EAuthBypassAllowed(): boolean {
   if (import.meta.env.VITE_E2E_AUTH_BYPASS !== "1") return false;
@@ -15,6 +24,9 @@ export function isE2EAuthBypassAllowed(): boolean {
   const { protocol, hostname } = window.location;
   if (protocol !== "http:" && protocol !== "https:") return false;
   const h = hostname.toLowerCase();
+  for (const suf of E2E_BYPASS_DENIED_HOST_SUFFIXES) {
+    if (h.endsWith(suf)) return false;
+  }
   if (h === "localhost" || h === "[::1]") return true;
   if (h === "127.0.0.1") return true;
   if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true;

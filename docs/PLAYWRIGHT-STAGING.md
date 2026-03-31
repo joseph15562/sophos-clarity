@@ -4,7 +4,7 @@ Run the existing Playwright suite against a **deployed** environment instead of 
 
 ## Prerequisites
 
-- Staging URL with the app built with **`VITE_E2E_AUTH_BYPASS=1`** if you rely on signed-in bypass specs (`e2e/tier2-flows.spec.ts`, `e2e/viewport-signed-in.spec.ts`). **Do not enable this on production.**
+- **Signed-in bypass specs** (`e2e/tier2-flows.spec.ts`, `e2e/viewport-signed-in.spec.ts`) only activate on **loopback** (`localhost` / `127.0.0.1`). Use **`npm run build`** with `VITE_E2E_AUTH_BYPASS=1` and Playwright’s local preview (e.g. `127.0.0.1:4173`), or use **`E2E_USER_EMAIL` / `E2E_USER_PASSWORD`** against a real staging URL. **Never set `VITE_E2E_AUTH_BYPASS` on Vercel Production** (the build fails if you try).
 - Optional: a dedicated test org/user if you add real-auth journeys later.
 
 ## Command
