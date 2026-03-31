@@ -7,15 +7,18 @@ export const E2E_BYPASS_ORG_ID = "00000000-0000-4000-8000-00000000e2e2";
 /**
  * When `VITE_E2E_AUTH_BYPASS=1` is baked into the bundle **and** the app runs on loopback,
  * `useAuth` can synthesize a signed-in admin session without Supabase credentials.
- * Never enable on public hostnames — production builds with this flag still require loopback.
+ * The env flag alone is never sufficient: non-loopback hostnames always return false.
  */
 export function isE2EAuthBypassAllowed(): boolean {
   if (import.meta.env.VITE_E2E_AUTH_BYPASS !== "1") return false;
   if (typeof window === "undefined") return false;
-  const h = window.location.hostname;
+  const { protocol, hostname } = window.location;
+  if (protocol !== "http:" && protocol !== "https:") return false;
+  const h = hostname.toLowerCase();
   if (h === "localhost" || h === "[::1]") return true;
   if (h === "127.0.0.1") return true;
-  return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h);
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  return false;
 }
 
 export function buildE2EAuthBypassUser(): User {

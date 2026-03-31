@@ -67,6 +67,12 @@ This section summarises **what FireComply can and cannot control** for complianc
 - **Obtain appropriate consent or other legal basis** where your regime requires it before staff or customers use AI on production configs (especially if anonymisation is off or incomplete).
 - **Treat Google as a subprocessor** (or downstream processor) in your vendor register where applicable; link staff to this document and to [Google’s terms](https://ai.google.dev/gemini-api/terms) for due-diligence questionnaires.
 
+### Transfer Impact Assessment (TIA), SCCs, and in-product controls
+
+- **TIA:** Organisations subject to **GDPR Chapter V** (or similar transfer rules) should complete a **Transfer Impact Assessment** before enabling Gemini-backed flows, documenting the nature of data, Google’s role, and residual risk. This document is **not** a TIA; it supports internal records only.
+- **Contractual mechanisms:** Put in place appropriate safeguards where required (e.g. **Standard Contractual Clauses**, UK **IDTA**, or Google Cloud / enterprise terms your counsel accepts). FireComply does not substitute for your DPA with Google or your customer.
+- **Explicit consent in the product:** FireComply provides **local mode**, **anonymisation**, and clear disclosure here and on the in-app **Trust** surface. **Jurisdiction-specific consent UI** (e.g. opt-in before first AI call, org policy gates) is the **customer’s** responsibility to implement in their MSP processes and contracts where the law requires it beyond disclosure.
+
 ### Regulatory scanner and other Google calls
 
 If you use features that call Gemini for **non-config** text (e.g. regulatory digest summarisation), the same principles apply: content is sent to Google under their terms; use local mode or disable those features if transfers are not permitted.

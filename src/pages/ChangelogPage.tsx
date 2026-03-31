@@ -63,6 +63,22 @@ function ChangelogPageInner() {
               paint past the curve.
             </li>
             <li>
+              <strong className="text-foreground">Security &amp; governance hygiene</strong>: GitHub
+              Actions pinned to commit SHAs; <strong className="text-foreground">npm</strong>{" "}
+              dependencies use exact versions with{" "}
+              <code className="text-xs">package-lock.json</code> and{" "}
+              <code className="text-xs">.npmrc</code> <code className="text-xs">save-exact</code>;{" "}
+              <strong className="text-foreground">LICENSE</strong>,{" "}
+              <code className="text-xs">.github/CODEOWNERS</code>, PR{" "}
+              <strong className="text-foreground">dependency review</strong>,{" "}
+              <strong className="text-foreground">Dependabot</strong>, and blocking{" "}
+              <code className="text-xs">npm audit --omit=dev</code> in CI;{" "}
+              <strong className="text-foreground">E2E auth bypass</strong> requires loopback +{" "}
+              <code className="text-xs">http(s):</code>;{" "}
+              <strong className="text-foreground">DATA-PRIVACY</strong> adds TIA / SCC / consent
+              guidance for Gemini transfers.
+            </li>
+            <li>
               <strong className="text-foreground">ADR 0004 wave 2</strong>: management drawer
               settings (invites, scheduled reports, portal save, passkeys, MSP checklist, fleet
               agents list, playbook remediation sync) route Supabase reads/writes through shared{" "}

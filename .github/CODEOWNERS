@@ -1,0 +1,10 @@
+# Replace @joseph15562 with your GitHub username or @org/team (must be able to receive review requests).
+# GitHub uses the *last* matching pattern per file (see GitHub CODEOWNERS docs).
+* @joseph15562
+
+/.github/ @joseph15562
+/supabase/ @joseph15562
+/firecomply-connector/ @joseph15562
+
+/src/hooks/use-auth.ts @joseph15562
+/src/lib/e2e-auth-bypass.ts @joseph15562

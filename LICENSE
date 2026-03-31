@@ -1,0 +1,15 @@
+Copyright (c) Sophos and contributors. All rights reserved.
+
+This software and associated documentation files (the "Software") are proprietary.
+Unauthorized copying, modification, distribution, or use of the Software, in whole
+or in part, is prohibited except under a separate written agreement with the rights
+holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+Third-party open-source components bundled with or required by the Software are
+subject to their respective licenses. See each package’s metadata under
+`node_modules/<package>/` (for example `LICENSE`, `README`, or `package.json` fields)
+and your organisation’s license compliance process.
+
+SPDX-License-Identifier: LicenseRef-FireComply-Proprietary

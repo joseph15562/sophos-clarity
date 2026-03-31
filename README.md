@@ -6,6 +6,10 @@ Sophos FireComply transforms raw Sophos XGS firewall HTML configuration exports 
 
 Upload a config. Get a professional assessment. Export it. Done.
 
+## License
+
+Proprietary — see [LICENSE](LICENSE). Third-party open-source components are subject to their own licenses (`node_modules/*/LICENSE`, `package.json` metadata).
+
 ---
 
 ## Problem
