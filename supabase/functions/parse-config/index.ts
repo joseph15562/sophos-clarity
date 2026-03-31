@@ -183,7 +183,7 @@ The report body must follow this layout. The cover block (title, date, prepared 
 - One data row per gap (firewall name, feature lacking, where). If no gaps: one row "| — | No gaps identified | — |". Complete the table immediately; no placeholders.
 
 **2. Control → Evidence Mapping Tables**
-- For each framework (GDPR, Cyber Essentials / CE+, NCSC Guidelines, DfE / KCSIE, etc. as selected), output the subheading "Framework: [Framework Name]" then a Markdown table with columns:
+- For each framework (GDPR, Cyber Essentials / CE+, NCSC Guidelines, CIS, SOC 2, ISO 27001, NIST 800-53, PCI DSS, DfE / KCSIE, etc. as selected), output the subheading "Framework: [Framework Name]" then a Markdown table with columns:
   | Control ID | Control Description | Status | Firewall(s) Lacking / What Is Missing | Evidence | Example of non-compliance | Notes |
 - Status values: ✅ Met | ⚠️ Partial | ❌ Not Met | N/A. Fill all columns; use "—" where not applicable.
 

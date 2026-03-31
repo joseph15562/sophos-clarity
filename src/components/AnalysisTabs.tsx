@@ -36,6 +36,7 @@ import type { InspectionPosture } from "@/lib/analyse-config";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { RiskScoreResult } from "@/lib/risk-score";
+import type { FindingsCsvReviewerSignoff } from "@/lib/findings-export";
 import { SecurityPostureScorecard } from "@/components/SecurityPostureScorecard";
 import { cn } from "@/lib/utils";
 import { ScoreDialGauge } from "@/components/ScoreDialGauge";
@@ -44,6 +45,8 @@ import { QuickActions } from "@/components/QuickActions";
 import { RiskScoreDashboard } from "@/components/RiskScoreDashboard";
 import { RemediationPlaybooks } from "@/components/RemediationPlaybooks";
 import { ComplianceHeatmap } from "@/components/ComplianceHeatmap";
+import { CertificatePostureStrip } from "@/components/CertificatePostureStrip";
+import { VpnTopologyDiagram } from "@/components/VpnTopologyDiagram";
 import { InsuranceReadiness } from "@/components/InsuranceReadiness";
 import { RuleOptimiser } from "@/components/RuleOptimiser";
 import { SophosBestPractice } from "@/components/SophosBestPractice";
@@ -293,6 +296,8 @@ export interface AnalysisTabsProps {
   trendSnapshot?: { score: number; grade: string; date: string } | null;
   /** For ConnectWise ticket creation from findings */
   firecomplyCustomerKey?: string;
+  /** Cloud reviewer sign-off for the linked assessment snapshot (Export Centre CSV). */
+  exportReviewerSignoff?: FindingsCsvReviewerSignoff | null;
 }
 
 function fileLabel(f: ParsedFile) {
@@ -334,6 +339,7 @@ export function AnalysisTabs({
   hasReports = false,
   trendSnapshot,
   firecomplyCustomerKey,
+  exportReviewerSignoff = null,
 }: AnalysisTabsProps) {
   const { resolvedTheme } = useTheme();
   const analysisTabBarDark = resolvedTheme === "dark";
@@ -990,6 +996,15 @@ export function AnalysisTabs({
                 </div>
               )}
 
+              {w("vpn-security-summary") && files[0] && (
+                <SecurityWidgetShell>
+                  <VpnTopologyDiagram
+                    extractedData={files[0].extractedData}
+                    firewallLabel={files[0].label}
+                  />
+                </SecurityWidgetShell>
+              )}
+
               {w("protocol-service-usage") && (
                 <SecurityWidgetShell>
                   <Suspense fallback={<ChartSkeleton />}>
@@ -1059,7 +1074,7 @@ export function AnalysisTabs({
                   <TourHint
                     tourId="compliance-heatmap"
                     title="Compliance Heatmap"
-                    description="View control coverage, gaps, and readiness across NIST 800-53, ISO 27001, CIS, PCI DSS, HIPAA, Essential Eight, Cyber Essentials, and more."
+                    description="View control coverage, gaps, and readiness across NIST 800-53, ISO 27001, CIS, SOC 2, PCI DSS, HIPAA, Essential Eight, Cyber Essentials, and more."
                   />
                   {branding.selectedFrameworks.length > 0 && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
@@ -1098,6 +1113,7 @@ export function AnalysisTabs({
                   analysisResults={analysisResult}
                   selectedFrameworks={branding.selectedFrameworks}
                 />
+                <CertificatePostureStrip analysisResults={analysisResult} />
               </div>
 
               <SecurityWidgetShell className="border-[#5A00FF]/10">
@@ -1271,6 +1287,7 @@ export function AnalysisTabs({
                     customerName: branding.customerName,
                     selectedFrameworks: branding.selectedFrameworks,
                   }}
+                  reviewerSignoff={exportReviewerSignoff}
                 />
               </Suspense>
             )}

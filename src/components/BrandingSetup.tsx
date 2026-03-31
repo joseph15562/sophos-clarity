@@ -138,7 +138,9 @@ export const ALL_FRAMEWORKS = [
   "NIST 800-53",
   "FedRAMP",
   "CMMC",
+  "CIS",
   "SOX",
+  "SOC 2",
   "IEC 62443",
   "NIST 800-82",
   "NIS2",
@@ -195,7 +197,7 @@ function getDefaultFrameworks(
       if (isUS) fw.push("FedRAMP", "CMMC");
       break;
     case "Financial Services":
-      fw.push("PCI DSS", "SOX");
+      fw.push("PCI DSS", "SOX", "SOC 2");
       if (isUK) fw.push("FCA", "PRA");
       break;
     case "Operational Technology":

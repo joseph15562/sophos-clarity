@@ -237,7 +237,7 @@ export function startComplianceTour(cb?: TourCallbacks) {
         popover: {
           title: "Framework Selection",
           description:
-            "Choose from NIST 800-53, ISO 27001, CIS, PCI DSS, HIPAA, HITECH, Essential Eight, Cyber Essentials, and more.",
+            "Choose from NIST 800-53, ISO 27001, CIS, SOC 2, PCI DSS, HIPAA, HITECH, Essential Eight, Cyber Essentials, and more.",
           side: "bottom",
           align: "center",
         },

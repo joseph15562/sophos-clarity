@@ -536,6 +536,26 @@ const FRAMEWORK_CONTROLS: Record<string, string[]> = {
     "externalLogging",
   ],
   SOX: ["logging", "mfa", "segmentation", "adminAccess", "externalLogging"],
+  /** SOC 2 (Trust Services — security-relevant technical controls measurable from firewall export). */
+  "SOC 2": [
+    "dpiEngine",
+    "webFilter",
+    "ips",
+    "appControl",
+    "logging",
+    "mfa",
+    "segmentation",
+    "sslInspection",
+    "ruleHygiene",
+    "adminAccess",
+    "natSecurity",
+    "antiMalware",
+    "vpnSecurity",
+    "dosProtection",
+    "externalLogging",
+    "wirelessSecurity",
+    "snmpSecurity",
+  ],
   FCA: [
     "logging",
     "mfa",
@@ -575,6 +595,25 @@ const FRAMEWORK_CONTROLS: Record<string, string[]> = {
     "antiMalware",
     "vpnSecurity",
     "externalLogging",
+  ],
+  /** CIS Controls / firewall benchmark — same technical control bundle as NIST 800-53 for measured posture. */
+  CIS: [
+    "dpiEngine",
+    "webFilter",
+    "ips",
+    "appControl",
+    "logging",
+    "mfa",
+    "segmentation",
+    "sslInspection",
+    "ruleHygiene",
+    "adminAccess",
+    "natSecurity",
+    "antiMalware",
+    "vpnSecurity",
+    "dosProtection",
+    "externalLogging",
+    "snmpSecurity",
   ],
   HITECH: ["logging", "mfa", "segmentation", "antiMalware", "externalLogging"],
   "IEC 62443": [
@@ -733,6 +772,7 @@ const FINDING_TO_CONTROL: [RegExp, string][] = [
   [/web filter policy allows|high-risk categor/i, "webFilter"],
   [/ips policy/i, "ips"],
   [/vpn.*weak encryption|without.*perfect forward|pre-shared key/i, "vpnSecurity"],
+  [/pptp|legacy.*l2tp|l2tp.*remote-access/i, "vpnSecurity"],
   [/dos|spoof|syn flood/i, "dosProtection"],
   [/external.*log.*forwarding/i, "externalLogging"],
   [/external.*log.*forwarding/i, "cfrLogRetention"],
@@ -750,4 +790,23 @@ export function findingToFrameworks(findingTitle: string, selectedFrameworks: st
     const controls = FRAMEWORK_CONTROLS[fw];
     return unique.some((key) => controls?.includes(key));
   });
+}
+
+/** Semicolon-separated mapped control IDs (e.g. ISO-042) for CSV/PDF export traceability. */
+export function controlIdsForFindingExport(findingTitle: string, frameworks: string[]): string {
+  const matchedKeys = FINDING_TO_CONTROL.filter(([re]) => re.test(findingTitle)).map(
+    ([, key]) => key,
+  );
+  const uniqueKeys = [...new Set(matchedKeys)];
+  const ids: string[] = [];
+  for (const fw of frameworks) {
+    const controls = FRAMEWORK_CONTROLS[fw];
+    if (!controls) continue;
+    for (const key of uniqueKeys) {
+      if (!controls.includes(key)) continue;
+      const def = SHARED_CONTROLS[key];
+      if (def) ids.push(`${fw.slice(0, 3).toUpperCase()}-${def.id}`);
+    }
+  }
+  return [...new Set(ids)].sort().join("; ");
 }

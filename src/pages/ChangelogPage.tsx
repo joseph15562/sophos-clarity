@@ -27,6 +27,27 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-03</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Compliance frameworks</strong>:{" "}
+              <strong className="text-foreground">CIS</strong> and{" "}
+              <strong className="text-foreground">SOC 2</strong> are available in Assessment Context
+              with the same control heatmap and export mapping as other frameworks; Financial
+              Services defaults include SOC 2 alongside PCI DSS and SOX.
+            </li>
+            <li>
+              <strong className="text-foreground">UX &amp; quality bar</strong>: consistent{" "}
+              <strong className="text-foreground">EmptyState</strong> on more analysis surfaces;
+              signed-in <strong className="text-foreground">Playwright</strong> viewports (home,
+              Fleet Command, Customers, management drawer, demo Assess on desktop) plus{" "}
+              <strong className="text-foreground">axe</strong> on key routes;{" "}
+              <strong className="text-foreground">docs/UI-NOTIFICATIONS.md</strong> explains toasts
+              vs Notification Centre; <strong className="text-foreground">Invite</strong> and{" "}
+              <strong className="text-foreground">Webhook</strong> settings use{" "}
+              <strong className="text-foreground">Zod</strong> field errors;{" "}
+              <strong className="text-foreground">Export Centre</strong> can include reviewer
+              sign-off on findings CSV when a linked cloud assessment has sign-off saved. Hub
+              workspace-settings hint text meets light-theme contrast for accessibility checks.
+            </li>
+            <li>
               <strong className="text-foreground">ADR 0004 wave 2</strong>: management drawer
               settings (invites, scheduled reports, portal save, passkeys, MSP checklist, fleet
               agents list, playbook remediation sync) route Supabase reads/writes through shared{" "}
@@ -35,10 +56,55 @@ function ChangelogPageInner() {
               invalidation.
             </li>
             <li>
+              <strong className="text-foreground">Fleet &amp; playbook data</strong>: connected
+              firewalls load latest submissions via TanStack Query; playbook library and remediation
+              panel hydrate completion from Query.{" "}
+              <strong className="text-foreground">SE Health Check</strong> findings CSV adds mapped{" "}
+              <strong className="text-foreground">control IDs</strong> and optional{" "}
+              <strong className="text-foreground">reviewer sign-off</strong>; main findings CSV/PDF
+              include a control-ID column. <strong className="text-foreground">Analysis</strong>{" "}
+              adds legacy <strong className="text-foreground">PPTP/L2TP</strong> VPN signal and
+              deeper <strong className="text-foreground">email / anti-spam</strong> checks when
+              those sections exist. Setup wizard{" "}
+              <strong className="text-foreground">Optimisation</strong> and{" "}
+              <strong className="text-foreground">Remediation</strong> guide steps live in dedicated
+              files under <code className="text-xs">setup-wizard/steps</code>. Scheduled report
+              email uses a <strong className="text-foreground">job outbox</strong>:{" "}
+              <code className="text-xs">send-scheduled-reports</code> enqueues due runs;{" "}
+              <code className="text-xs">process-job-outbox</code> claims, sends via Resend, and
+              retries or dead-letters failed jobs (see{" "}
+              <code className="text-xs">docs/job-queue-outline.md</code>).
+            </li>
+            <li>
               <strong className="text-foreground">Workspace navigation</strong>: the same primary
               tabs (Assess through Updates) appear under the header on Fleet, Customers, Reports,
               Insights, Drift, Playbooks, API, Trust, and this page when you are signed in with an
               organisation; the Reports tab stays active when viewing a saved report.
+            </li>
+            <li>
+              <strong className="text-foreground">Keyboard shortcuts</strong> (
+              <kbd className="text-xs">?</kbd>
+              ): in light theme the help panel uses a solid card background (no frosted blur) so it
+              stays readable; dark theme is unchanged.
+            </li>
+            <li>
+              <strong className="text-foreground">Tours</strong> (Compass): the guided-tour menu
+              uses a light popover in light theme so labels are readable; dark theme keeps the navy
+              gradient menu.
+            </li>
+            <li>
+              <strong className="text-foreground">Bottom bar</strong>: Tours and Shortcuts stay on
+              the left on the same full-width strip as soon as you open Assess (including before you
+              upload a config); <strong className="text-foreground">View findings</strong> /{" "}
+              <strong className="text-foreground">Generate reports</strong> appear once analysis is
+              ready. Report view keeps the same left-aligned utilities without the primary actions.
+            </li>
+            <li>
+              <strong className="text-foreground">Bottom bar (light)</strong>: the Tours/Shortcuts
+              strip uses a lighter frosted treatment (more transparent fill,{" "}
+              <code className="text-xs">backdrop-blur</code> + Safari{" "}
+              <code className="text-xs">-webkit-backdrop-filter</code>) so content behind it reads
+              like dark mode.
             </li>
             <li>
               <strong className="text-foreground">Analysis tabs</strong>: tab order is Overview →
@@ -49,12 +115,31 @@ function ChangelogPageInner() {
               deeper widgets still lazy-load and preload in the background.
             </li>
             <li>
+              <strong className="text-foreground">Compliance &amp; exports</strong>: cloud{" "}
+              <strong className="text-foreground">Assessment History</strong> supports reviewer{" "}
+              <strong className="text-foreground">sign-off</strong> (Postgres on{" "}
+              <code className="text-xs">assessments</code>);{" "}
+              <strong className="text-foreground">Export Centre</strong> shows validation reminders
+              for high/critical findings and can append a sign-off block to the findings CSV when
+              wired. <strong className="text-foreground">Certificate posture</strong> and a compact{" "}
+              <strong className="text-foreground">VPN topology</strong> summary appear on Compliance
+              / Security when data exists.
+            </li>
+            <li>
+              <strong className="text-foreground">Finding Priority Matrix</strong>: quadrant
+              highlights and labels match the impact/effort model (Quick Wins top-left, Strategic
+              top-right, Low Priority bottom-left, Reconsider bottom-right) so filter chips select
+              the correct region.
+            </li>
+            <li>
               <strong className="text-foreground">Quality &amp; platform</strong>:{" "}
-              <code className="text-xs">job_outbox</code> database table for future async jobs;{" "}
+              <code className="text-xs">job_outbox</code> +{" "}
+              <code className="text-xs">claim_job_outbox_batch</code> for scheduled email delivery;{" "}
               <code className="text-xs">portal-data</code> GET validated at the Edge (Zod + OpenAPI
-              limits); scheduled-report sender exports a testable handler with Deno coverage; main
-              score dial chart wrapped to skip unnecessary re-renders; unused-variable lint is
-              stricter in shared <code className="text-xs">src/lib</code> code.
+              limits); scheduled-report producer exports a testable{" "}
+              <code className="text-xs">handler.ts</code> with Deno coverage; main score dial chart
+              wrapped to skip unnecessary re-renders; unused-variable lint is stricter in shared{" "}
+              <code className="text-xs">src/lib</code> code.
             </li>
             <li>
               <strong className="text-foreground">Frontend data boundary (ADR 0004)</strong>: org
