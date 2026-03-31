@@ -8,7 +8,7 @@ Upload a config. Get a professional assessment. Export it. Done.
 
 ## License
 
-Proprietary — see [LICENSE](LICENSE). Third-party open-source components are subject to their own licenses (`node_modules/*/LICENSE`, `package.json` metadata).
+[MIT](LICENSE) — free to use, modify, and distribute subject to the license terms. Third-party dependencies remain under their own licenses (`node_modules/*/LICENSE`, `package.json` metadata).
 
 ---
 
@@ -312,4 +312,4 @@ Building FireComply taught me more about AI engineering than any course or tutor
 
 ## Licence
 
-Proprietary. All rights reserved.
+Released under the [MIT licence](LICENSE).

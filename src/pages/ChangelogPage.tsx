@@ -35,6 +35,12 @@ function ChangelogPageInner() {
               consent / subprocessor documentation for MSPs.
             </li>
             <li>
+              <strong className="text-foreground">License</strong>: application source is released
+              under the <strong className="text-foreground">MIT</strong> licence (repository{" "}
+              <code className="text-xs">LICENSE</code>); third-party dependencies keep their own
+              terms.
+            </li>
+            <li>
               <strong className="text-foreground">Compliance frameworks</strong>:{" "}
               <strong className="text-foreground">CIS</strong> and{" "}
               <strong className="text-foreground">SOC 2</strong> are available in Assessment Context
