@@ -237,13 +237,13 @@ export function HeroOutcomePanel({
               return (
                 <div
                   key={`${action.title}-${i}`}
-                  className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] px-4 py-4 space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+                  className="group relative isolate overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] px-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
                   style={{
                     borderLeftColor: sevHex,
                     background: `linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
                   }}
                 >
-                  <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
                     <div
                       className="absolute -top-5 -right-5 h-14 w-14 rounded-full blur-[24px] opacity-20 transition-opacity duration-200 group-hover:opacity-35"
                       style={{ backgroundColor: sevHex }}
@@ -318,10 +318,10 @@ function ValueCard({
   const hex = VALUE_HEX[accent];
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+      className="relative isolate overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-3 contain-paint transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
       style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
     >
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
         <div
           className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
           style={{ backgroundColor: hex }}
@@ -359,10 +359,10 @@ function StatPill({
   const hex = STAT_HEX[accent];
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
+      className="relative isolate overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 contain-paint transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
       style={{ background: `linear-gradient(145deg, ${hex}10, ${hex}04)` }}
     >
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
         <div
           className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
           style={{ backgroundColor: hex }}
