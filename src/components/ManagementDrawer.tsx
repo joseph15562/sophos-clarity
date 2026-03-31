@@ -43,6 +43,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import type { AssessmentSnapshot } from "@/lib/assessment-history";
+import type { FindingsCsvReviewerSignoff } from "@/lib/findings-export";
 import { settingsSectionExpandAllowed } from "@/lib/workspace-deeplink";
 import { RerunSetupButton } from "@/components/SetupWizard";
 import { trackProductEvent } from "@/lib/product-telemetry";
@@ -238,6 +240,10 @@ interface Props {
   onSelectTrendScore?: (score: number, grade: string, date: string) => void;
   /** When opening from /?panel=settings&section=…, expand matching accordion once */
   initialSettingsSection?: string;
+  /** Cloud assessment row id aligned with the current workspace export (see Index + Export Centre). */
+  linkedCloudAssessmentId?: string | null;
+  onLinkedAssessmentSignoffChange?: (signoff: FindingsCsvReviewerSignoff | null) => void;
+  onCloudAssessmentSaved?: (snap: AssessmentSnapshot) => void;
 }
 
 function Skeleton() {
@@ -632,6 +638,9 @@ export function ManagementDrawer({
   onDownloadReport,
   onSelectTrendScore,
   initialSettingsSection,
+  linkedCloudAssessmentId,
+  onLinkedAssessmentSignoffChange,
+  onCloudAssessmentSaved,
 }: Props) {
   const { org, isViewerOnly, canManageTeam } = useAuth();
   const queryClient = useQueryClient();
@@ -900,6 +909,9 @@ export function ManagementDrawer({
                     analysisResults={analysisResults}
                     customerName={customerName}
                     environment={environment}
+                    linkedCloudAssessmentId={linkedCloudAssessmentId ?? null}
+                    onLinkedAssessmentSignoffChange={onLinkedAssessmentSignoffChange}
+                    onCloudAssessmentSaved={onCloudAssessmentSaved}
                   />
                 </Suspense>
               ) : (

@@ -6,6 +6,7 @@ import type { OrgRole } from "@/hooks/use-auth";
 import { logAudit } from "@/lib/audit";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -53,6 +54,7 @@ export function InviteStaff() {
   const [email, setEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgRole>("member");
   const [error, setError] = useState<string | null>(null);
+  const [emailFieldError, setEmailFieldError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const invites = rosterQuery.data?.invites ?? [];
@@ -62,11 +64,12 @@ export function InviteStaff() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       setError(null);
+      setEmailFieldError(null);
       setSuccess(null);
 
       const parsed = teamInviteEmailSchema.safeParse(email);
       if (!parsed.success) {
-        setError("Please enter a valid email address");
+        setEmailFieldError("Please enter a valid email address");
         return;
       }
       if (!org) return;
@@ -195,14 +198,30 @@ export function InviteStaff() {
 
       {/* Invite form */}
       <form onSubmit={handleInvite} className="space-y-2">
-        <div className="flex gap-2 flex-wrap">
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="colleague@company.com"
-            className="flex-1 min-w-[220px]"
-          />
+        <div className="flex gap-2 flex-wrap items-start">
+          <div className="flex-1 min-w-[220px] space-y-1">
+            <Label htmlFor="team-invite-email" className="sr-only">
+              Colleague email
+            </Label>
+            <Input
+              id="team-invite-email"
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailFieldError(null);
+              }}
+              placeholder="colleague@company.com"
+              aria-invalid={!!emailFieldError}
+              aria-describedby={emailFieldError ? "team-invite-email-error" : undefined}
+              className="w-full"
+            />
+            {emailFieldError ? (
+              <p id="team-invite-email-error" className="text-xs text-destructive" role="alert">
+                {emailFieldError}
+              </p>
+            ) : null}
+          </div>
           <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as OrgRole)}>
             <SelectTrigger className="w-[140px] text-xs">
               <SelectValue />

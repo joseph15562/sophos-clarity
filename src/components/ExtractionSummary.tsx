@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { ExtractionMeta, SectionMeta } from "@/lib/extract-sections";
+import { cn } from "@/lib/utils";
 
 interface FileExtractionInfo {
   fileName: string;
@@ -150,14 +151,13 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
   const totalEmpty = allMetas.reduce((s, m) => s + m.totalEmpty, 0);
   const overallCoverage =
     totalDetected > 0 ? Math.round((totalExtracted / totalDetected) * 100) : 0;
+  const covHex =
+    overallCoverage === 100 ? "#00F2B3" : overallCoverage >= 70 ? "#F29400" : "#EA0022";
   const totalRows = allMetas.reduce(
     (s, m) => s + m.sections.reduce((rs, sec) => rs + sec.rowCount + sec.detailCount, 0),
     0,
   );
   const hasWarning = totalEmpty > 0;
-
-  const covHex =
-    overallCoverage === 100 ? "#00F2B3" : overallCoverage >= 70 ? "#F29400" : "#EA0022";
 
   const STAT_ITEMS = [
     { label: "Sections detected", value: totalDetected, hex: "#2006F7" },
@@ -179,8 +179,16 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
           Extraction Summary
         </h3>
         <span
-          className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border"
-          style={{ color: covHex, backgroundColor: `${covHex}14`, borderColor: `${covHex}25` }}
+          className={cn(
+            "text-[11px] font-bold px-2.5 py-0.5 rounded-full border",
+            overallCoverage === 100 &&
+              "text-emerald-900 bg-emerald-500/[0.12] border-emerald-800/35 dark:text-[#00F2B3] dark:bg-[#00F2B3]/14 dark:border-[#00F2B3]/25",
+            overallCoverage < 100 &&
+              overallCoverage >= 70 &&
+              "text-amber-950 bg-amber-500/10 border-amber-800/35 dark:text-[#F29400] dark:bg-[#F29400]/14 dark:border-[#F29400]/25",
+            overallCoverage < 70 &&
+              "text-red-950 bg-red-500/10 border-red-800/35 dark:text-[#EA0022] dark:bg-[#EA0022]/14 dark:border-[#EA0022]/25",
+          )}
         >
           {overallCoverage}% coverage
         </span>

@@ -8,12 +8,17 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Added
 
+- **UX / a11y / forms (March 2026)** — `EmptyState` on remediation progress/roadmap and geographic fleet map; **`e2e/viewport-signed-in.spec.ts`** expanded (signed-in viewports + axe; session storage cleared in E2E; Overview tab matcher + **ExtractionSummary** `covHex` for coverage bar); **`docs/UI-NOTIFICATIONS.md`** (toasts vs Notification Centre); **jest-axe** on **ExportCentre**, **EmptyState**, **UploadSection** tests; **Zod** field validation on **InviteStaff** and **WebhookSettings**; **ExportCentre** `reviewerSignoff` wired from cloud-linked assessment in **Index** / **AnalysisTabs** / **AssessmentHistory**; **WorkspaceSettingsStrip** “Opens on Assess” contrast (light theme) for axe on **/customers**.
+
+- **March 2026 compliance & Tier 3 slice** — Postgres **`assessments.reviewer_signed_*`** / **`reviewer_signoff_notes`** (migration `20260330203000_assessments_reviewer_signoff.sql`); **Assessment History** sign-off UI (cloud); **Export Centre** non-blocking validation alert (**`collectFindingExportValidationIssues`**) and compliance findings CSV (**`exportFindingsCsv`** with frameworks); optional CSV **reviewer sign-off** block via **`ExportCentre`** `reviewerSignoff` prop (wire from Assess when snapshot-linked export is desired). **CertificatePostureStrip** (Compliance) and **VpnTopologyDiagram** (Security); **Assessment History** score-trend **CSV** export. **`use-company-logo`** → TanStack Query + **`src/lib/data/company-logo.ts`** / **`queryKeys.org.companyLogo`**. **SE Health Check:** **`AbortSignal`** on **send-report** `fetch`; **`supabaseWithAbort`** on prepared-by migration. **`SEScoreTrendChart`** wrapped in **`React.memo`**; **EvidenceCollection** stable keys. **`manage_deeplink_blocked_viewer`** telemetry when viewers hit blocked workspace settings deeplinks. Docs: **`docs/OPS-SCHEDULED-REPORTS-QUEUE.md`**, **`docs/product-telemetry-events.md`**, **`docs/PLAYWRIGHT-STAGING.md`**; **`docs/plans/full-backlog-sequence.md`**; expanded **`deploy/helm/sophos-clarity/README.md`**.
+
+- **Fleet & playbook Query layer** — `agent-submissions-latest.ts`, `useAgentSubmissionsLatestBatchQuery`, `useRemediationPlaybookIdsQuery`; **PPTP/L2TP** + **email anti-spam** analysis signals; **control IDs** on findings CSV/PDF and SE Health Check CSV + optional **reviewer sign-off**; **GuideOptimisationStep** / **GuideRemediationStep**; **`report-export-validation.ts`** (see Unreleased above for Phase 4 export UI extensions).
 - **Workspace primary nav** (Assess, Fleet, Customers, Reports, …) on every signed-in hub page — Fleet, Customers, Reports (including saved report viewer), Insights, Drift, Playbooks, API, Trust, and What’s new — not only the Assess screen; Reports stays highlighted on `/reports/saved/:id`.
 
 - **ADR 0004 wave 2** — TanStack Query hooks and `src/lib/data` helpers for management-drawer settings: team invites/revokes, scheduled reports CRUD, portal bootstrap + save, passkey delete, MSP setup checklist, org agents + 7d submission counts, shared remediation mutations.
-- **`job_outbox`** Postgres migration for future async job processing ([`docs/job-queue-outline.md`](docs/job-queue-outline.md)).
+- **Scheduled report job queue** — **`job_outbox`** + **`claim_job_outbox_batch`**; **`send-scheduled-reports`** enqueues due runs; **`process-job-outbox`** claims, sends (Resend), retries with backoff, dead-letters after max attempts. Shared **`scheduled-report-email.ts`**; runbook in [`docs/SELF-HOSTED.md`](docs/SELF-HOSTED.md) and [`docs/job-queue-outline.md`](docs/job-queue-outline.md).
 - **`portal-data`** GET query schema ([`portal_data_query.ts`](supabase/functions/portal-data/portal_data_query.ts)) with Deno tests (invalid / long slug).
-- **`send-scheduled-reports`** — exported **`handleSendScheduledReports`** + Deno OPTIONS smoke test.
+- **`send-scheduled-reports`** — **`handler.ts`** exports **`handleSendScheduledReports`** (testable without `serve`) + Deno OPTIONS smoke test + **`scheduled-report-email`** unit tests.
 - Setup wizard **`GuideAiReportsStep`** extraction; optional Edge Sentry placeholder **`supabase/functions/_shared/sentry-edge.ts`**.
 - **Product route telemetry** — `spa_page_view` via `ProductRouteTelemetry` when `VITE_ANALYTICS_INGEST_URL` is set (`src/components/ProductRouteTelemetry.tsx`).
 - **Optional Upstash Redis** for **`portal-data`** GET caching (`UPSTASH_REDIS_REST_*` Edge secrets); docs in **`docs/redis-pilot.md`**.
@@ -49,6 +54,14 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 - Optional Edge secret `API_KEY_HMAC_SECRET` for HMAC of org service API keys (see `docs/SELF-HOSTED.md`).
 
 ### Changed
+
+- **Keyboard shortcuts** modal (**?**) — light mode uses an opaque **card** surface and disables the default dialog blur so the navy assess shell does not show through; shortcut keycaps use **background** in light mode for clearer contrast. Dark mode appearance unchanged.
+
+- **Tours** dropdown (Compass) — light mode uses the standard **popover** surface and **popover-foreground** for menu rows instead of a forced dark gradient with dark text. Dark mode keeps the glassy navy gradient panel.
+
+- **Assess — report view:** the same **full-width bottom bar** as the analysis dashboard shows **Tours** and **Shortcuts** (no floating corner pills). **View Findings** / **Generate Reports** stay on the analysis layout only.
+
+- **Sticky bottom bar (light theme):** translucent gradient (not near-opaque white), **backdrop-blur-2xl**, and **backdrop-saturate** so the bar reads as frosted glass like dark mode.
 
 - **Analysis tabs** — **Tab order:** Overview → Security → Compliance → **Remediation** (if findings) → Optimisation → Tools → **Insurance Readiness** → Compare. **Eager (static) imports** in **`AnalysisTabs`** for each tab’s primary surface — **`ScoreDialGauge`**, **`ScoreDeltaBanner`**, **`QuickActions`**, **`RiskScoreDashboard`**, **`ComplianceHeatmap`**, **`SophosBestPractice`**, **`RuleOptimiser`**, **`InsuranceReadiness`**, **`RemediationPlaybooks`** — so Vite dev is not blocked on **`React.lazy` / Suspense** for those; remaining widgets still lazy-load with preload + dev retry + tab-hover prefetch (Radix unmounts inactive panels). Removed unused **`FleetComparison`** lazy stub.
 - ESLint **`@typescript-eslint/no-unused-vars`**: **`error`** under **`src/lib/**`** only; **`warn`** elsewhere (with `\_`-prefix ignores).

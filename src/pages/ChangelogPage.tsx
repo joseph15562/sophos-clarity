@@ -27,6 +27,14 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-03</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Trust &amp; privacy</strong>:{" "}
+              <strong className="text-foreground">Trust</strong> page and{" "}
+              <code className="text-xs">docs/DATA-PRIVACY.md</code> now spell out{" "}
+              <strong className="text-foreground">Gemini / cross-border processing</strong> (no
+              region pinning), practical controls (local mode, anonymisation), and recommended
+              consent / subprocessor documentation for MSPs.
+            </li>
+            <li>
               <strong className="text-foreground">Compliance frameworks</strong>:{" "}
               <strong className="text-foreground">CIS</strong> and{" "}
               <strong className="text-foreground">SOC 2</strong> are available in Assessment Context

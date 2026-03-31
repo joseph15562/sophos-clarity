@@ -1,11 +1,24 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { queryKeys } from "@/hooks/queries/keys";
+import {
+  fetchOrganisationCompanyLogo,
+  updateOrganisationCompanyLogo,
+} from "@/lib/data/company-logo";
 
 const LS_KEY_PREFIX = "fc-company-logo-";
 
 function lsKey(orgId: string) {
   return `${LS_KEY_PREFIX}${orgId}`;
+}
+
+function readLs(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -16,90 +29,73 @@ function lsKey(orgId: string) {
  */
 export function useCompanyLogo() {
   const { org, isGuest, canManageTeam } = useAuth();
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const orgId = org?.id ?? "";
+  const queryClient = useQueryClient();
+  const [guestLogo, setGuestLogo] = useState<string | null>(() => readLs(lsKey("guest")));
 
   useEffect(() => {
-    let cancelled = false;
+    if (!isGuest) return;
+    setGuestLogo(readLs(lsKey("guest")));
+  }, [isGuest]);
 
-    async function load() {
-      if (isGuest || !org?.id) {
-        const cached = localStorage.getItem(lsKey("guest"));
-        if (!cancelled) {
-          setLogoUrl(cached);
-          setLoading(false);
+  const logoQuery = useQuery({
+    queryKey: queryKeys.org.companyLogo(orgId),
+    queryFn: async ({ signal }) => {
+      const cached = readLs(lsKey(orgId));
+      const dbLogo = await fetchOrganisationCompanyLogo(orgId, signal);
+      if (dbLogo) {
+        try {
+          localStorage.setItem(lsKey(orgId), dbLogo);
+        } catch {
+          /* ignore quota */
         }
-        return;
+        return dbLogo;
       }
+      return cached;
+    },
+    enabled: Boolean(!isGuest && orgId),
+    staleTime: 60_000,
+  });
 
-      const cached = localStorage.getItem(lsKey(org.id));
-      if (cached && !cancelled) setLogoUrl(cached);
+  const saveMutation = useMutation({
+    mutationFn: async (dataUrl: string | null) => {
+      const key = orgId ? lsKey(orgId) : lsKey("guest");
+      if (dataUrl) localStorage.setItem(key, dataUrl);
+      else localStorage.removeItem(key);
+      if (isGuest || !orgId) return;
+      await updateOrganisationCompanyLogo(orgId, dataUrl);
+    },
+    onSuccess: (_void, dataUrl) => {
+      if (orgId) queryClient.setQueryData(queryKeys.org.companyLogo(orgId), dataUrl);
+    },
+  });
 
-      try {
-        const { data } = await supabase
-          .from("organisations")
-          .select("report_template")
-          .eq("id", org.id)
-          .single();
-
-        if (cancelled) return;
-        const rt = (data as { report_template?: Record<string, unknown> } | null)?.report_template;
-        const dbLogo = (rt?.company_logo as string) ?? null;
-
-        setLogoUrl(dbLogo);
-        if (dbLogo) {
-          localStorage.setItem(lsKey(org.id), dbLogo);
-        } else {
-          localStorage.removeItem(lsKey(org.id));
-        }
-      } catch {
-        // keep cached value
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [org?.id, isGuest]);
-
+  const logoUrl = isGuest ? guestLogo : (logoQuery.data ?? null);
   const setLogo = useCallback(
     async (dataUrl: string | null) => {
-      setLogoUrl(dataUrl);
-
-      const key = org?.id ? lsKey(org.id) : lsKey("guest");
-      if (dataUrl) {
-        localStorage.setItem(key, dataUrl);
-      } else {
-        localStorage.removeItem(key);
+      if (isGuest) {
+        const key = lsKey("guest");
+        if (dataUrl) localStorage.setItem(key, dataUrl);
+        else localStorage.removeItem(key);
+        setGuestLogo(dataUrl);
+        return;
       }
-
-      if (isGuest || !org?.id) return;
-
-      setSaving(true);
+      if (orgId) queryClient.setQueryData(queryKeys.org.companyLogo(orgId), dataUrl);
       try {
-        const { data } = await supabase
-          .from("organisations")
-          .select("report_template")
-          .eq("id", org.id)
-          .single();
-
-        const existing = ((data as { report_template?: Record<string, unknown> } | null)?.report_template ?? {}) as Record<string, unknown>;
-        const updated = { ...existing, company_logo: dataUrl };
-
-        await supabase
-          .from("organisations")
-          .update({ report_template: updated })
-          .eq("id", org.id);
+        await saveMutation.mutateAsync(dataUrl);
       } catch (err) {
         console.warn("[useCompanyLogo] save failed", err);
-      } finally {
-        setSaving(false);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.org.companyLogo(orgId) });
       }
     },
-    [org?.id, isGuest],
+    [isGuest, orgId, queryClient, saveMutation],
   );
 
-  return { logoUrl, setLogo, loading, saving, canEdit: canManageTeam || isGuest };
+  return {
+    logoUrl,
+    setLogo,
+    loading: !isGuest && orgId ? logoQuery.isPending : false,
+    saving: saveMutation.isPending,
+    canEdit: canManageTeam || isGuest,
+  };
 }

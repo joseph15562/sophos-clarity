@@ -2,6 +2,19 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { z } from "zod";
+
+const webhookFormSchema = z.object({
+  webhookUrl: z
+    .string()
+    .trim()
+    .refine((s) => s === "" || z.string().url().safeParse(s).success, {
+      message: "Enter a valid https URL or leave blank",
+    }),
+  webhookSecret: z.string(),
+});
 
 export function WebhookSettings() {
   const { org, canManageTeam } = useAuth();
@@ -10,6 +23,7 @@ export function WebhookSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [urlFieldError, setUrlFieldError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!org?.id) return;
@@ -36,13 +50,20 @@ export function WebhookSettings() {
 
   const handleSave = async () => {
     if (!org?.id || !canManageTeam) return;
+    setUrlFieldError(null);
+    const parsed = webhookFormSchema.safeParse({ webhookUrl, webhookSecret });
+    if (!parsed.success) {
+      const urlIssue = parsed.error.flatten().fieldErrors.webhookUrl?.[0];
+      setUrlFieldError(urlIssue ?? "Check the webhook URL");
+      return;
+    }
     setSaving(true);
     setSaved(false);
     await supabase
       .from("organisations")
       .update({
-        webhook_url: webhookUrl.trim() || null,
-        webhook_secret: webhookSecret.trim() || null,
+        webhook_url: parsed.data.webhookUrl.trim() || null,
+        webhook_secret: parsed.data.webhookSecret.trim() || null,
       })
       .eq("id", org.id);
     setSaving(false);
@@ -61,28 +82,43 @@ export function WebhookSettings() {
         for PSA/RMM or ticketing). Optional secret is used to sign the request (X-Webhook-Signature:
         HMAC-SHA256).
       </p>
-      <div>
-        <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+      <div className="space-y-1.5">
+        <Label htmlFor="org-webhook-url" className="text-[10px] font-medium text-muted-foreground">
           Webhook URL
-        </label>
-        <input
+        </Label>
+        <Input
+          id="org-webhook-url"
           type="url"
           value={webhookUrl}
-          onChange={(e) => setWebhookUrl(e.target.value)}
+          onChange={(e) => {
+            setWebhookUrl(e.target.value);
+            setUrlFieldError(null);
+          }}
           placeholder="https://your-server.com/webhooks/firecomply"
-          className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs"
+          className="text-xs"
+          aria-invalid={!!urlFieldError}
+          aria-describedby={urlFieldError ? "org-webhook-url-error" : undefined}
         />
+        {urlFieldError ? (
+          <p id="org-webhook-url-error" className="text-xs text-destructive" role="alert">
+            {urlFieldError}
+          </p>
+        ) : null}
       </div>
-      <div>
-        <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="org-webhook-secret"
+          className="text-[10px] font-medium text-muted-foreground"
+        >
           Secret (optional)
-        </label>
-        <input
+        </Label>
+        <Input
+          id="org-webhook-secret"
           type="password"
           value={webhookSecret}
           onChange={(e) => setWebhookSecret(e.target.value)}
           placeholder="Leave blank to skip signing"
-          className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs"
+          className="text-xs"
           autoComplete="off"
         />
       </div>

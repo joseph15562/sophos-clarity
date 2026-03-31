@@ -215,6 +215,9 @@ export type Database = {
           org_id: string;
           overall_grade: string;
           overall_score: number;
+          reviewer_signed_at: string | null;
+          reviewer_signed_by: string | null;
+          reviewer_signoff_notes: string | null;
         };
         Insert: {
           created_at?: string;
@@ -226,6 +229,9 @@ export type Database = {
           org_id: string;
           overall_grade?: string;
           overall_score?: number;
+          reviewer_signed_at?: string | null;
+          reviewer_signed_by?: string | null;
+          reviewer_signoff_notes?: string | null;
         };
         Update: {
           created_at?: string;
@@ -237,6 +243,9 @@ export type Database = {
           org_id?: string;
           overall_grade?: string;
           overall_score?: number;
+          reviewer_signed_at?: string | null;
+          reviewer_signed_by?: string | null;
+          reviewer_signoff_notes?: string | null;
         };
         Relationships: [
           {

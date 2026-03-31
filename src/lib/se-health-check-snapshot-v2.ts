@@ -50,15 +50,20 @@ export type SeHealthCheckSnapshotV1 = {
   seCentralHaLabels: string[];
   manualBpOverrideIds: string[];
   findingNotes?: Record<string, string>;
+  /** Optional reviewer attestation for exported artefacts (CSV/PDF). */
+  reviewerSignOff?: { signedBy: string; signedAt: string };
 };
 
-const SOPHOS_BP_TEMPLATE = BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
+const SOPHOS_BP_TEMPLATE =
+  BASELINE_TEMPLATES.find((t) => t.id === "sophos-best-practice") ?? BASELINE_TEMPLATES[0];
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null;
 }
 
-export function parseSeHealthCheckSnapshotFromSummaryJson(summaryJson: unknown): SeHealthCheckSnapshotV1 | null {
+export function parseSeHealthCheckSnapshotFromSummaryJson(
+  summaryJson: unknown,
+): SeHealthCheckSnapshotV1 | null {
   if (!isRecord(summaryJson)) return null;
   const snap = summaryJson.snapshot;
   if (!isRecord(snap)) return null;
@@ -66,7 +71,11 @@ export function parseSeHealthCheckSnapshotFromSummaryJson(summaryJson: unknown):
   if (!Array.isArray(snap.files) || snap.files.length === 0) return null;
   if (!isRecord(snap.licence)) return null;
   const firstFile = snap.files[0];
-  if (!isRecord(firstFile) || firstFile.extractedData == null || typeof firstFile.extractedData !== "object") {
+  if (
+    !isRecord(firstFile) ||
+    firstFile.extractedData == null ||
+    typeof firstFile.extractedData !== "object"
+  ) {
     return null;
   }
   return snap as unknown as SeHealthCheckSnapshotV1;
@@ -86,7 +95,9 @@ export function snapshotFilesToParsedFiles(files: SeHealthCheckSnapshotV1["files
   }));
 }
 
-export function buildAnalysisResultsFromSnapshot(snapshot: SeHealthCheckSnapshotV1): Record<string, AnalysisResult> {
+export function buildAnalysisResultsFromSnapshot(
+  snapshot: SeHealthCheckSnapshotV1,
+): Record<string, AnalysisResult> {
   const out: Record<string, AnalysisResult> = {};
   const centralLinked = snapshot.replayCentralLinked;
   for (const f of snapshot.files) {
@@ -117,7 +128,11 @@ export function buildSeHealthCheckExportBundle(
   }
   const manualOverrides = new Set(snapshot.manualBpOverrideIds);
   const haLabels = new Set(snapshot.seCentralHaLabels);
-  const threatAck = buildSeThreatResponseAckSet(snapshot.seMdrThreatFeedsAck, snapshot.seNdrEssentialsAck, snapshot.seDnsProtectionAck ?? false);
+  const threatAck = buildSeThreatResponseAckSet(
+    snapshot.seMdrThreatFeedsAck,
+    snapshot.seNdrEssentialsAck,
+    snapshot.seDnsProtectionAck ?? false,
+  );
   const excluded = buildSeHeartbeatExclusionSet(snapshot.seExcludeSecurityHeartbeat);
   const bpByLabel: Record<string, SophosBPScore> = {};
   for (const label of labels) {
@@ -154,7 +169,10 @@ export function buildSeHealthCheckExportBundle(
     seExcludeSecurityHeartbeat: snapshot.seExcludeSecurityHeartbeat,
     centralValidated: snapshot.replayCentralLinked,
     generatedAt,
-    appVersion: typeof import.meta.env.VITE_APP_VERSION === "string" ? import.meta.env.VITE_APP_VERSION : undefined,
+    appVersion:
+      typeof import.meta.env.VITE_APP_VERSION === "string"
+        ? import.meta.env.VITE_APP_VERSION
+        : undefined,
   };
   const branding: BrandingData = {
     companyName: "Sophos FireComply",
@@ -187,6 +205,7 @@ export function buildSeHealthCheckSnapshotV1(args: {
   seCentralHaLabels: Set<string>;
   manualBpOverrideIds: string[];
   findingNotes?: Record<string, string>;
+  reviewerSignOff?: { signedBy: string; signedAt: string } | null;
 }): SeHealthCheckSnapshotV1 {
   return {
     version: SE_HEALTH_CHECK_SNAPSHOT_VERSION,
@@ -215,6 +234,10 @@ export function buildSeHealthCheckSnapshotV1(args: {
     replayCentralLinked: args.replayCentralLinked,
     seCentralHaLabels: [...args.seCentralHaLabels],
     manualBpOverrideIds: [...args.manualBpOverrideIds],
-    findingNotes: args.findingNotes && Object.keys(args.findingNotes).length > 0 ? { ...args.findingNotes } : undefined,
+    findingNotes:
+      args.findingNotes && Object.keys(args.findingNotes).length > 0
+        ? { ...args.findingNotes }
+        : undefined,
+    reviewerSignOff: args.reviewerSignOff ?? undefined,
   };
 }

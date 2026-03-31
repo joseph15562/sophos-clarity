@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen } from "@/test/test-utils";
+import { renderWithProviders, screen, expectNoSeriousAxeViolations } from "@/test/test-utils";
 import { UploadSection } from "@/components/UploadSection";
 import type { BrandingData } from "@/components/BrandingSetup";
 
@@ -68,5 +68,10 @@ describe("UploadSection", () => {
     renderWithProviders(<UploadSection {...minimalUploadProps()} />);
 
     expect(screen.getByText(/drop your sophos firewall export here/i)).toBeVisible();
+  });
+
+  it("has no serious axe violations (guest upload shell)", async () => {
+    const { container } = renderWithProviders(<UploadSection {...minimalUploadProps()} />);
+    await expectNoSeriousAxeViolations(container);
   });
 });

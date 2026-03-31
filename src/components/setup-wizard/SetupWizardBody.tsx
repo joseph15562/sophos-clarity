@@ -33,22 +33,15 @@ import {
   BookOpen,
   UserPlus,
   ShieldCheck,
-  Wrench,
   ListChecks,
   Compass,
   GitCompare,
   Calendar,
-  Layers,
-  Trash2,
-  Scale,
   Zap,
-  Map,
   Package,
-  ClipboardList,
   Play,
   ArrowLeftRight,
   Target,
-  TrendingUp,
   Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,6 +56,8 @@ import { ConnectorAgentStep } from "./steps/ConnectorAgentStep";
 import { GuidePreAiStep } from "./steps/GuidePreAiStep";
 import { GuideUploadStep } from "./steps/GuideUploadStep";
 import { GuideAiReportsStep } from "./steps/GuideAiReportsStep";
+import { GuideOptimisationStep } from "./steps/GuideOptimisationStep";
+import { GuideRemediationStep } from "./steps/GuideRemediationStep";
 import {
   SetupPreviewFrame,
   FeatureOverlay,
@@ -76,12 +71,6 @@ import {
   MockSecurityPanel,
   MockAlertPanel,
   MockClientPortalPanel,
-  MockRuleOptimiser,
-  MockPolicyComplexity,
-  MockUnusedObjects,
-  MockRemediationProgress,
-  MockRemediationRoadmap,
-  MockPlaybooks,
   MockScoreSimulator,
   MockAttackSurface,
   MockConfigCompare,
@@ -219,264 +208,17 @@ export function SetupWizard({
             )}
 
             {step.id === "guide-optimisation" && (
-              <div className="space-y-5 relative">
-                {activeOverlay === "rule-optimiser" && (
-                  <FeatureOverlay
-                    title="Rule Optimiser"
-                    subtitle="Identify redundant, shadowed, and overlapping rules"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockRuleOptimiser />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> FireComply
-                        analyses every rule against every other rule to find shadows (a broader rule
-                        makes a narrower one unreachable), redundancies (identical match criteria),
-                        and consolidation opportunities (adjacent rules that can merge).
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "policy-complexity" && (
-                  <FeatureOverlay
-                    title="Policy Complexity"
-                    subtitle="Measure and reduce policy complexity"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockPolicyComplexity />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Analyses rule
-                        count, average conditions per rule, object group nesting depth, and
-                        zone-pair distribution to produce a complexity score. Lower complexity means
-                        easier auditing and fewer misconfigurations.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "unused-objects" && (
-                  <FeatureOverlay
-                    title="Unused Objects"
-                    subtitle="Find orphaned hosts, services, and groups"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockUnusedObjects />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Scans all network
-                        objects, service definitions, and groups in the config and cross-references
-                        them against every rule. Objects not referenced by any active rule are
-                        flagged for cleanup.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "consistency-checker" && (
-                  <FeatureOverlay
-                    title="Consistency Checker"
-                    subtitle="Cross-firewall rule consistency analysis"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2 text-center">
-                        <div className="rounded border border-border/50 bg-card p-2">
-                          <p className="text-lg font-bold text-[#00F2B3]">87%</p>
-                          <p className="text-[8px] text-muted-foreground">Consistency Score</p>
-                        </div>
-                        <div className="rounded border border-border/50 bg-card p-2">
-                          <p className="text-lg font-bold text-[#F29400]">4</p>
-                          <p className="text-[8px] text-muted-foreground">Inconsistencies</p>
-                        </div>
-                      </div>
-                      {[
-                        {
-                          rule: "IPS Policy",
-                          fw1: "GeneralPolicy",
-                          fw2: "None",
-                          status: "mismatch",
-                        },
-                        { rule: "Web Filtering", fw1: "Enabled", fw2: "Enabled", status: "match" },
-                        {
-                          rule: "Admin HTTPS",
-                          fw1: "Disabled",
-                          fw2: "Enabled",
-                          status: "mismatch",
-                        },
-                        { rule: "SSL Inspection", fw1: "38%", fw2: "42%", status: "match" },
-                      ].map((r) => (
-                        <div
-                          key={r.rule}
-                          className="flex items-center gap-2 rounded-xl border border-border/50 bg-card p-2.5 text-[9px]"
-                        >
-                          <span
-                            className={`h-2 w-2 rounded-full shrink-0 ${r.status === "match" ? "bg-[#00F2B3]" : "bg-[#EA0022]"}`}
-                          />
-                          <span className="font-medium text-foreground flex-1">{r.rule}</span>
-                          <span className="text-muted-foreground">FW1: {r.fw1}</span>
-                          <span className="text-muted-foreground">FW2: {r.fw2}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> When multiple
-                        firewall configs are loaded, FireComply compares security feature settings,
-                        rule structures, and policy configurations across devices to identify
-                        inconsistencies that could indicate gaps in your security posture.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-
-                <div className="space-y-1">
-                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
-                    Optimisation
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    FireComply analyses your firewall rules for{" "}
-                    <strong className="text-foreground">redundancy, complexity, and hygiene</strong>{" "}
-                    — helping you clean up and streamline your policy. Click each to preview.
-                  </p>
-                </div>
-
-                <div className="space-y-2.5">
-                  <FeatureButton
-                    icon={<Wrench className="h-4 w-4" />}
-                    title="Rule Optimiser"
-                    desc="Identifies redundant, shadowed, and overlapping rules that can be consolidated"
-                    color="text-[#2006F7]"
-                    onClick={() => setActiveOverlay("rule-optimiser")}
-                  />
-                  <FeatureButton
-                    icon={<Layers className="h-4 w-4" />}
-                    title="Policy Complexity"
-                    desc="Measures rule complexity and suggests simplification opportunities"
-                    color="text-[#6B5BFF]"
-                    onClick={() => setActiveOverlay("policy-complexity")}
-                  />
-                  <FeatureButton
-                    icon={<Trash2 className="h-4 w-4" />}
-                    title="Unused Objects"
-                    desc="Finds hosts, services, and groups no longer referenced by any rule"
-                    color="text-[#F29400]"
-                    onClick={() => setActiveOverlay("unused-objects")}
-                  />
-                  <FeatureButton
-                    icon={<Scale className="h-4 w-4" />}
-                    title="Consistency Checker"
-                    desc="Cross-firewall rule consistency analysis when multiple configs are loaded"
-                    color="text-[#00F2B3]"
-                    onClick={() => setActiveOverlay("consistency-checker")}
-                  />
-                </div>
-
-                <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
-                  <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Tip:</strong> The Optimisation tab appears
-                    automatically after uploading a config. Upload multiple configs to enable
-                    cross-firewall consistency checking.
-                  </p>
-                </div>
-              </div>
+              <GuideOptimisationStep
+                activeOverlay={activeOverlay}
+                setActiveOverlay={setActiveOverlay}
+              />
             )}
 
             {step.id === "guide-remediation" && (
-              <div className="space-y-5 relative">
-                {activeOverlay === "remediation-progress" && (
-                  <FeatureOverlay
-                    title="Remediation Progress"
-                    subtitle="Track fix progress across all findings"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockRemediationProgress />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Track remediation
-                        status for every finding — mark items as fixed, in progress, or accepted
-                        risk. Progress bars show completion by severity so you can focus on what
-                        matters most.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "remediation-roadmap" && (
-                  <FeatureOverlay
-                    title="Remediation Roadmap"
-                    subtitle="Prioritised timeline with effort estimates"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockRemediationRoadmap />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Generates a
-                        prioritised remediation timeline based on finding severity and estimated
-                        effort. Critical issues first, then high, then medium — with suggested
-                        timelines for each phase.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-                {activeOverlay === "playbooks" && (
-                  <FeatureOverlay
-                    title="Remediation Playbooks"
-                    subtitle="Step-by-step guides for each finding"
-                    onClose={() => setActiveOverlay(null)}
-                  >
-                    <MockPlaybooks />
-                    <div className="mt-4 rounded-lg bg-muted/20 border border-border p-3">
-                      <p className="text-[10px] text-muted-foreground">
-                        <strong className="text-foreground">How it works:</strong> Each finding has
-                        a step-by-step playbook with exact navigation paths, CLI commands, and
-                        verification steps for the Sophos Firewall admin console. Follow along to
-                        fix issues quickly and correctly.
-                      </p>
-                    </div>
-                  </FeatureOverlay>
-                )}
-
-                <div className="space-y-1">
-                  <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
-                    Remediation
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Plan, prioritise, and track the work needed to{" "}
-                    <strong className="text-foreground">fix security findings</strong> — from
-                    individual playbooks to full remediation roadmaps. Click each to preview.
-                  </p>
-                </div>
-
-                <div className="space-y-2.5">
-                  <FeatureButton
-                    icon={<TrendingUp className="h-4 w-4" />}
-                    title="Progress Tracking"
-                    desc="Track fix progress across all findings with completion metrics by severity"
-                    color="text-[#00F2B3]"
-                    onClick={() => setActiveOverlay("remediation-progress")}
-                  />
-                  <FeatureButton
-                    icon={<Map className="h-4 w-4" />}
-                    title="Remediation Roadmap"
-                    desc="Prioritised timeline of recommended fixes with effort estimates"
-                    color="text-[#2006F7]"
-                    onClick={() => setActiveOverlay("remediation-roadmap")}
-                  />
-                  <FeatureButton
-                    icon={<ClipboardList className="h-4 w-4" />}
-                    title="Playbooks"
-                    desc="Step-by-step remediation guides with exact navigation paths and commands"
-                    color="text-[#6B5BFF]"
-                    onClick={() => setActiveOverlay("playbooks")}
-                  />
-                </div>
-
-                <div className="rounded-lg bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#00F2B3]/15 p-3">
-                  <p className="text-[10px] text-muted-foreground">
-                    <strong className="text-foreground">Tip:</strong> The Remediation tab appears
-                    when findings are detected. Use it to demonstrate ongoing security improvements
-                    to your customers.
-                  </p>
-                </div>
-              </div>
+              <GuideRemediationStep
+                activeOverlay={activeOverlay}
+                setActiveOverlay={setActiveOverlay}
+              />
             )}
 
             {step.id === "guide-tools" && (

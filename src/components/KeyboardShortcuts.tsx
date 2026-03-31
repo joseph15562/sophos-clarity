@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -32,19 +33,29 @@ const SHORTCUT_GROUPS = [
   },
   {
     label: "Reports",
-    shortcuts: [
-      { keys: ["1–9"], description: "Switch report tab" },
-    ],
+    shortcuts: [{ keys: ["1–9"], description: "Switch report tab" }],
   },
 ];
 
 export function KeyboardShortcutsModal({ open, onClose }: Props) {
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-5 py-3.5 border-b border-border space-y-0">
-          <DialogTitle className="flex items-center gap-2.5 text-sm font-semibold">
-            <Keyboard className="h-4 w-4 text-brand-accent" />
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
+      <DialogContent
+        className={cn(
+          "max-w-md gap-0 overflow-hidden border-border p-0",
+          /* Default dialog uses bg-white/88 + blur; on light theme the navy shell bleeds through. */
+          "bg-card text-card-foreground shadow-elevated backdrop-blur-none",
+          "dark:bg-background dark:text-foreground dark:backdrop-blur-2xl",
+        )}
+      >
+        <DialogHeader className="space-y-0 border-b border-border bg-card px-5 py-3.5 dark:bg-background">
+          <DialogTitle className="flex items-center gap-2.5 text-sm font-semibold text-foreground">
+            <Keyboard className="h-4 w-4 shrink-0 text-brand-accent" />
             Keyboard Shortcuts
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -52,7 +63,7 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-5 space-y-5">
+        <div className="space-y-5 bg-card p-5 dark:bg-background">
           {SHORTCUT_GROUPS.map((group) => (
             <div key={group.label}>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
@@ -66,7 +77,7 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
                       {s.keys.map((k) => (
                         <kbd
                           key={k}
-                          className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md border border-border bg-muted text-[10px] font-mono font-semibold text-foreground shadow-sm"
+                          className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-md border border-border bg-background px-1.5 font-mono text-[10px] font-semibold text-foreground shadow-sm dark:bg-muted"
                         >
                           {k}
                         </kbd>
@@ -79,9 +90,13 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
           ))}
         </div>
 
-        <div className="px-5 py-3 border-t border-border bg-muted/30">
-          <p className="text-[10px] text-muted-foreground text-center">
-            Press <kbd className="inline px-1 py-0.5 rounded border border-border bg-muted text-[9px] font-mono font-semibold">?</kbd> anywhere to toggle this panel
+        <div className="border-t border-border bg-muted/50 px-5 py-3 dark:bg-muted/30">
+          <p className="text-center text-[10px] text-muted-foreground">
+            Press{" "}
+            <kbd className="inline rounded border border-border bg-background px-1 py-0.5 font-mono text-[9px] font-semibold text-foreground dark:bg-muted">
+              ?
+            </kbd>{" "}
+            anywhere to toggle this panel
           </p>
         </div>
       </DialogContent>

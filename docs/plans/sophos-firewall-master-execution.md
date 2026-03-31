@@ -27,7 +27,7 @@ Mirrors [sophos-firewall-gaps-and-improvements-roadmap.md](./sophos-firewall-gap
 - [x] **G3.5** Runbook baseline ([SELF-HOSTED.md](../SELF-HOSTED.md)) — _Helm/container deferred_
 - [x] **G3.1 (MVP)** Partner Cloud + Manage + **Autotask PSA** tickets + **persisted customer ↔ company mapping** — _auto-ticket on assessment; further PSAs (e.g. Halo): not done_
 - [x] **G3.2 (MVP)** Service keys issue/revoke + `api:read` firewalls + `api:read:assessments` — _further scopes/routes as needed_
-- [ ] **G3.5 (XL)** Docker/Helm in-repo
+- [ ] **G3.5 (XL)** Docker/Helm in-repo — _placeholder README:_ [deploy/helm/sophos-clarity/README.md](../../deploy/helm/sophos-clarity/README.md)
 - [ ] **X1, X2, X3** cross-cutting polish (ongoing)
 
 ---
@@ -138,6 +138,14 @@ Mirrors [sophos-firewall-gaps-and-improvements-roadmap.md](./sophos-firewall-gap
 **Phase D:** X1, X2, X3 ongoing.
 
 Roadmap mermaid: [sophos-firewall-gaps-and-improvements-roadmap.md](./sophos-firewall-gaps-and-improvements-roadmap.md) (Suggested sequencing).
+
+### Execution notes (2026-03-30 — roadmap / REVIEW tranche)
+
+- **Data layer:** **AgentFleetPanel** latest submissions batch + poll helpers in **`src/lib/data/agent-submissions-latest.ts`** + **`useAgentSubmissionsLatestBatchQuery`**; **PlaybookLibrary** / **RemediationPlaybooks** use **`useRemediationPlaybookIdsQuery`** + **`fetchRemediationPlaybookIds`**.
+- **Analysis:** **PPTP/L2TP** remote-access signal in **`vpn-network.ts`**; **email / anti-spam** heuristics in **`analyseEmailSecuritySignals`** (`infra.ts`).
+- **Compliance exports:** **`controlIdsForFindingExport`** on findings CSV/PDF + SE Health Check CSV **Control IDs** column; optional **reviewer sign-off** row + snapshot field **`reviewerSignOff`**; **`report-export-validation.ts`** stub.
+- **Wizard:** **`GuideOptimisationStep`**, **`GuideRemediationStep`** under **`setup-wizard/steps/`**.
+- **Platform:** **`supabase/functions/process-job-outbox`** worker **stub**; **`initEdgeSentry`** from **`send-scheduled-reports`**.
 
 ---
 

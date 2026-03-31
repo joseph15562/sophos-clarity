@@ -5,3 +5,5 @@ export { WelcomeStep } from "./WelcomeStep";
 export { BrandingStep } from "./BrandingStep";
 export { GuideUploadStep } from "./GuideUploadStep";
 export { GuideAiReportsStep } from "./GuideAiReportsStep";
+export { GuideOptimisationStep } from "./GuideOptimisationStep";
+export { GuideRemediationStep } from "./GuideRemediationStep";

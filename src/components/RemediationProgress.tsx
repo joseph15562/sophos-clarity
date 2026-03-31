@@ -3,6 +3,8 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { generatePlaybook } from "@/lib/remediation-playbooks";
 import { supabase } from "@/integrations/supabase/client";
 import { warnOptionalError } from "@/lib/client-error-feedback";
+import { EmptyState } from "@/components/EmptyState";
+import { ClipboardList } from "lucide-react";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -137,7 +139,12 @@ export function RemediationProgress({ analysisResults }: Props) {
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">
           Remediation Progress
         </h3>
-        <p className="text-sm text-muted-foreground">No findings to remediate</p>
+        <EmptyState
+          className="!py-8"
+          icon={<ClipboardList className="h-6 w-6 text-muted-foreground/50" />}
+          title="No findings to remediate"
+          description="When analysis surfaces findings, track playbook completion here."
+        />
       </div>
     );
   }

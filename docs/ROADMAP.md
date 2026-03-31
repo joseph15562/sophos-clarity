@@ -60,6 +60,8 @@
 - **Estate Overview** — Extraction coverage stats, inspection posture bars, severity breakdown
 - **Attack Surface Map** — Per-firewall zone-to-zone traffic flow diagram with exposed services
 - **Compliance Heatmap** — Framework control coverage matrix with colour-coded status
+- **Certificate posture strip** — Compliance tab summary grouping certificate-related findings by **≤30 days**, **31–90 days**, and **other** (deterministic analysis thresholds)
+- **VPN topology summary** — Security tab diagram from parsed IPsec connection names + SSL VPN policy count (**`VpnTopologyDiagram`** / **`buildVpnTopologySummary`**)
 - **Rule Optimisation Engine** — Detects duplicate, shadowed, and mergeable firewall rules
 - **Finding Priority Matrix** — Impact vs effort quadrant chart (Quick Wins, Strategic, Low Priority, Reconsider) with interactive SVG scatter plot
 
@@ -69,7 +71,8 @@
 - **Multi-Firewall Consistency Checker** — Compares settings across firewalls and highlights discrepancies
 - **Remediation Playbooks** — Step-by-step Sophos Firewall remediation instructions for each finding
 - **Remediation status** — Cloud `remediation_status` rows with playbook completion from Assess / **Playbook library**; **Remediation progress** and velocity-style views where wired
-- **Assessment History** — IndexedDB-backed snapshot storage with drift detection, inline renaming, score trend mini-chart, and comparison vs previous snapshot
+- **Assessment History** — IndexedDB-backed snapshot storage with drift detection, inline renaming, score trend mini-chart, and comparison vs previous snapshot; **cloud** snapshots support optional **reviewer sign-off** (Postgres on **`assessments`**) with read-only display for viewers
+- **Assessment score trend CSV** — Export mini-chart history to CSV from **Assessment History** (local or cloud snapshots)
 - **Score history & trends** — **`ScoreTrendChart`** from persisted score history (workspace dashboard drawer, **Client portal**); click-to-sync dial on Assess when integrated
 - **Drift monitoring** — **Drift** route, agent submission drift payloads, alerts for agent drift
 - **Parser Diagnostics** — Section extraction stats and parseable data coverage metrics
@@ -83,6 +86,7 @@
 - **PSA** — ConnectWise Cloud (Partner API OAuth), ConnectWise Manage (REST tickets, company mapping from FireComply customers), Datto Autotask PSA (credentials, mapping, idempotent tickets from findings)
 - **Workspace settings** — Branding, Central, connector agents, team invites, client portal, security (MFA, passkeys), **activity log** (`/audit` and in-drawer), alerts, webhooks, scheduled reports, report template, API docs entry, **How we handle your data** (retention, regulatory scanner notes, delete-all-org-data for admins), PSA & API automation (modal flows)
 - **Trust & transparency** — **Trust** page (`/trust`) with “How we handle your data” summary, subprocessors baseline, links to `docs/DATA-PRIVACY.md`; main nav **Trust** link; in-app **Changelog** (`/changelog`)
+- **Export Centre (compliance)** — Findings CSV with framework **control IDs**; non-blocking **validation checklist** in UI for high/critical gaps; optional **reviewer sign-off** comment block when parent passes **`reviewerSignoff`** (snapshot-linked wiring on Assess still optional)
 - **Compliance & signals** — Regulatory digest settings; **regulatory-scanner** Edge Function and scheduled RSS ingest (Compliance / Regulatory Tracker)
 - **Client experience** — Client portal routes and portal viewer management where configured
 
@@ -127,9 +131,9 @@ The bullets below are **still open or only partially covered**. Several older ro
 
 ### Medium Effort
 
-- **Assessment trend UX** — Extend or unify line/history visuals (e.g. category breakdowns on Assess, export of trend PNG/CSV) on top of existing **`ScoreTrendChart`** / `score_history`
-- **Certificate UX** — Optional **60-day** horizon, inventory table, or expiry calendar view in the UI (findings already use 30- and 90-day thresholds)
-- **VPN Topology Diagram** — Visual map of site-to-site and remote-access VPN objects from parsed connections/profiles
+- **Assessment trend UX** — **Partial:** Assessment History **CSV** export for score trend; **ScoreTrendChart** / workspace **`score_history`** unchanged. **Still open:** category breakdowns on Assess, **PNG** export from main trend chart, deeper unification with drawer chart
+- **Certificate UX** — **Partial:** **CertificatePostureStrip** (30 / 90 / other buckets). **Still open:** explicit **60-day** horizon in analysis if product wants it; full **inventory table** or **expiry calendar** view
+- **VPN Topology Diagram** — **Partial:** hub-and-spoke **summary** from IPsec names + SSL VPN counts. **Still open:** richer graph (topology edges, remote-access detail) if exports expose enough structured fields
 
 ### Larger Features
 
@@ -151,9 +155,9 @@ The bullets below are **still open or only partially covered**. Several older ro
 
 ## Phase 4 — Compliance productization (next steps)
 
-- **Control-level evidence mapping** — Evidence Verification panel now shows "Findings map to framework controls: [frameworks]" when frameworks are selected. Next: per-finding control IDs and traceable evidence references in exports.
-- **Reviewer sign-off and annotations** — Not yet started; would allow reviewers to attest or annotate controls.
-- **Validation layer** — Compare FireComply deterministic findings with Sophos/open audit tooling where available; surface confidence and traceability in the UI.
+- **Control-level evidence mapping** — Evidence Verification panel shows framework mapping when frameworks are selected; findings CSV includes **Control IDs** column when frameworks are chosen; deeper traceability in **PDF / evidence packs** can still expand.
+- **Reviewer sign-off and annotations** — **Shipped (cloud):** **`assessments`** columns + **Assessment History** UI (members/engineers/admins; viewers read-only). **CSV:** **`ExportCentre`** accepts optional **`reviewerSignoff`** — **next:** lift selected cloud snapshot + sign-off into Assess **`AnalysisTabs`** so exports attach automatically. **Further:** org-wide policy UI, **Evidence** tab integration.
+- **Validation layer** — **`validateFindingExportMetadata`** + **`collectFindingExportValidationIssues`**; **Export Centre** shows a non-blocking checklist; high/critical **empty detail** also flagged. Broader comparison with external audit tooling remains a research item.
 
 ---
 

@@ -285,6 +285,7 @@ function CustomerManagementInner() {
           <div className="flex items-center gap-3">
             <Link
               to="/"
+              aria-label="Home"
               className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -318,7 +319,7 @@ function CustomerManagementInner() {
 
       <WorkspacePrimaryNav />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         {org?.id && !isGuest && (
           <div className="mb-4">
             <WorkspaceSettingsStrip variant="customers" />

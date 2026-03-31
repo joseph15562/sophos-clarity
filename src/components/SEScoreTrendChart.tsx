@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ function gradeColorClass(grade: string): string {
   }
 }
 
-export function SEScoreTrendChart({
+function SEScoreTrendChartInner({
   serialNumbers,
   currentScore,
   currentGrade,
@@ -367,3 +367,5 @@ export function SEScoreTrendChart({
     </div>
   );
 }
+
+export const SEScoreTrendChart = memo(SEScoreTrendChartInner);

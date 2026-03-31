@@ -1,6 +1,8 @@
 # Background jobs outline (742 — reports & email)
 
-Today, **send-scheduled-reports** and related email paths run as **synchronous Edge invocations** (cron triggers a function that loops orgs/reports). That is correct for moderate volume but becomes the first bottleneck when send volume or Resend latency grows.
+**Shipped (v1):** Due scheduled reports are **enqueued** in **`job_outbox`** by **`send-scheduled-reports`** (producer). **`process-job-outbox`** (worker) claims rows with **`claim_job_outbox_batch`** (`FOR UPDATE SKIP LOCKED`), sends via **Resend**, updates **`scheduled_reports`** on success, and retries with exponential backoff or moves rows to **`dead`**. See migrations [`20260330180000_job_outbox.sql`](../supabase/migrations/20260330180000_job_outbox.sql) and [`20260330190000_job_outbox_claim_fn.sql`](../supabase/migrations/20260330190000_job_outbox_claim_fn.sql).
+
+Earlier, **send-scheduled-reports** sent email **inline** in one invocation; that pattern hits bottlenecks when send volume or Resend latency grows.
 
 ## Target shape
 
@@ -14,10 +16,10 @@ Today, **send-scheduled-reports** and related email paths run as **synchronous E
 - Requires migration + idempotent send keys + operational runbooks.
 - **741** Redis pilot proves cache; **742** should land with schema review and a single job kind first (e.g. scheduled reports only).
 
-## Interim mitigations
+## Interim mitigations (historical)
 
-- Existing **batched** reads in **send-scheduled-reports** reduce N+1.
-- **Observability**: keep **`send_scheduled_reports_*`** `logJson` events green before adding queue complexity.
+- The worker still performs **batched** `agent_submissions` reads per claim batch (same shape as the old inline sender).
+- **Observability:** **`send_scheduled_reports_*`** and **`process_job_outbox_*`** `logJson` events — see [observability.md](observability.md).
 
 ---
 
@@ -28,9 +30,9 @@ Use this as the engineering checklist; trim if you scope smaller.
 1. **Migration:** create **`job_outbox`** (or agreed name) with columns from **Target shape** above + `created_at`, `updated_at`; RLS/service-role only. **Repo:** [`supabase/migrations/20260330180000_job_outbox.sql`](../supabase/migrations/20260330180000_job_outbox.sql) (apply before producer/worker work).
 2. **Idempotency:** add **`idempotency_key`** (hash of org + report id + window) unique partial index to avoid duplicate sends on cron retry.
 3. **Producer:** in **`send-scheduled-reports`**, replace inline Resend loop with **insert outbox rows** for due reports (transactional with “last run” marker if needed). Return **200** when enqueue completes.
-4. **Worker:** new function **`process-job-outbox`** (or second entry in same deploy) — **`SELECT … FOR UPDATE SKIP LOCKED`**, call Resend, **`logJson`** success/fail, backoff **`next_run_at`**, move to **`dead`** after **N** attempts.
-5. **Cron:** Supabase **pg_cron** + **pg_net** (or dashboard cron) — **producer** on schedule; **worker** every minute or on completion trigger.
-6. **Runbook:** document secrets, DLQ triage, and “replay dead row” SQL in [SELF-HOSTED.md](SELF-HOSTED.md) or ops doc.
-7. **Tests:** Deno test **producer** with mocked DB (or stub client) and **worker** with mocked Resend.
+4. **Worker:** **`process-job-outbox`** — RPC **`claim_job_outbox_batch`**, Resend, **`logJson`**, backoff, **`dead`** after **6** attempts. **Repo:** [`supabase/functions/process-job-outbox/index.ts`](../supabase/functions/process-job-outbox/index.ts).
+5. **Cron:** Schedule **both** invocations (e.g. Supabase **pg_cron** + **pg_net**, GitHub Actions, or external cron). **Producer** on your due cadence (e.g. hourly); **worker** more frequently (e.g. every 1–5 minutes) so the queue drains quickly. Use **`Authorization: Bearer <CRON_SECRET>`** when **`CRON_SECRET`** is set on the functions.
+6. **Runbook:** [SELF-HOSTED.md](SELF-HOSTED.md) § _Scheduled reports job queue_ — secrets, DLQ triage, replay SQL.
+7. **Tests:** Deno tests for **handler** (OPTIONS) and **scheduled-report-email** helpers; extend with mocked DB/Resend as needed.
 
 **Related plan:** [review-follow-on-from-REVIEW.md](plans/review-follow-on-from-REVIEW.md) §3.

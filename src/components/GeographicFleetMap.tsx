@@ -2,6 +2,8 @@ import { useMemo, useEffect, useState } from "react";
 import { extractExternalIps } from "@/lib/attack-surface";
 import { lookupGeoIp } from "@/lib/geo-cve";
 import type { ExtractedSections } from "@/lib/extract-sections";
+import { EmptyState } from "@/components/EmptyState";
+import { MapPinOff } from "lucide-react";
 
 interface FileEntry {
   label: string;
@@ -62,7 +64,12 @@ export function GeographicFleetMap({ files }: Props) {
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground">
           Fleet Locations
         </h3>
-        <p className="mt-3 text-sm text-muted-foreground">No external IPs detected</p>
+        <EmptyState
+          className="!py-8"
+          icon={<MapPinOff className="h-6 w-6 text-muted-foreground/50" />}
+          title="No external IPs detected"
+          description="Public or WAN-facing addresses from your configs will show on the map when available."
+        />
       </div>
     );
   }

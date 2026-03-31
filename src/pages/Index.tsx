@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, RotateCcw, Save, BarChart3, Scale, Keyboard } from "lucide-react";
+import { ArrowLeftRight, RotateCcw, Save, BarChart3, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadedFile } from "@/components/FileUpload";
 import { BrandingData } from "@/components/BrandingSetup";
@@ -40,7 +40,14 @@ import {
   type AnalysisSummary,
 } from "@/lib/saved-reports";
 import { saveAssessmentCloud } from "@/lib/assessment-cloud";
-import { saveAssessment as saveAssessmentLocal } from "@/lib/assessment-history";
+import {
+  saveAssessment as saveAssessmentLocal,
+  type AssessmentSnapshot,
+} from "@/lib/assessment-history";
+import {
+  signoffFromAssessmentSnapshot,
+  type FindingsCsvReviewerSignoff,
+} from "@/lib/findings-export";
 import type { LoadSavedReportArgs } from "@/components/SavedReportsLibrary";
 import { logAudit } from "@/lib/audit";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -170,6 +177,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [dpiExemptZones, setDpiExemptZones] = useState<string[]>([]);
   const [dpiExemptNetworks, setDpiExemptNetworks] = useState<string[]>([]);
   const [reportAttributionHydrated, setReportAttributionHydrated] = useState(false);
+  const [linkedCloudAssessmentId, setLinkedCloudAssessmentId] = useState<string | null>(null);
+  const [exportReviewerSignoff, setExportReviewerSignoff] =
+    useState<FindingsCsvReviewerSignoff | null>(null);
 
   const firewallAnalysisOpts = useMemo(
     () => ({
@@ -353,6 +363,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       !!sec &&
       !settingsSectionExpandAllowed(sec, { canManageTeam, isViewerOnly, localMode });
     if (blocked) {
+      trackProductEvent("manage_deeplink_blocked_viewer", {
+        section: sec,
+        panel: parsed.panel,
+      });
       toast.warning("Ask an org admin to open this workspace settings section.");
       setDrawerOpen(true);
       setDrawerTab("settings");
@@ -893,12 +907,16 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           );
           // Also save an assessment snapshot so the Multi-Tenant Dashboard populates
           try {
-            await saveAssessmentCloud(
+            const assessSnap = await saveAssessmentCloud(
               analysisResults,
               branding.customerName,
               branding.environment,
               org.id,
             );
+            if (assessSnap) {
+              setLinkedCloudAssessmentId(assessSnap.id);
+              setExportReviewerSignoff(signoffFromAssessmentSnapshot(assessSnap));
+            }
             trackProductEvent("assessment_saved_cloud", { orgId: org.id });
           } catch (err) {
             console.warn("[handleSaveReports] saveAssessmentCloud", err);
@@ -1009,13 +1027,31 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setFiles([]);
     setRestoredSession(false);
     setViewingReports(false);
+    setLinkedCloudAssessmentId(null);
+    setExportReviewerSignoff(null);
     clearSession();
   }, [setReports, setActiveReportId]);
 
   const handleLocalModeChange = useCallback((enabled: boolean) => {
     setLocalMode(enabled);
     setLocalModeState(enabled);
+    if (enabled) {
+      setLinkedCloudAssessmentId(null);
+      setExportReviewerSignoff(null);
+    }
   }, []);
+
+  const handleCloudAssessmentSaved = useCallback((snap: AssessmentSnapshot) => {
+    setLinkedCloudAssessmentId(snap.id);
+    setExportReviewerSignoff(signoffFromAssessmentSnapshot(snap));
+  }, []);
+
+  const handleLinkedAssessmentSignoffChange = useCallback(
+    (signoff: FindingsCsvReviewerSignoff | null) => {
+      setExportReviewerSignoff(signoff);
+    },
+    [],
+  );
 
   const fetchBackendDebug = useCallback(async () => {
     if (files.length === 0) return;
@@ -1204,7 +1240,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
       <main
         id="main-content"
-        className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"} ${hasFiles && (!viewingReports || isGuest) && !isLoading && !inDiffMode ? "pb-20" : ""}`}
+        className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"} ${!inDiffMode ? "pb-20" : ""}`}
       >
         {!isGuest && org?.id && (
           <>
@@ -1467,6 +1503,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                       ? resolveCustomerName(branding.customerName ?? "", org.name)
                       : undefined
                   }
+                  exportReviewerSignoff={exportReviewerSignoff}
                 />
               </div>
             )}
@@ -1612,9 +1649,10 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         )}
       </main>
 
-      {/* Sticky action bar — visible on dashboard when files are loaded */}
-      {(!viewingReports || isGuest) && !isLoading && !inDiffMode && (
+      {/* Sticky bottom bar: Tours + Shortcuts on the left always (except diff mode); full actions when analysis is ready */}
+      {!inDiffMode && (
         <StickyActionBar
+          variant={hasFiles && !isLoading && (!viewingReports || isGuest) ? "full" : "reports"}
           hasFiles={hasFiles}
           branding={branding}
           onScrollToFindings={() => {
@@ -1716,34 +1754,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
             if (score === -1) setTrendSnapshot(null);
             else setTrendSnapshot({ score, grade, date });
           }}
+          linkedCloudAssessmentId={linkedCloudAssessmentId}
+          onLinkedAssessmentSignoffChange={handleLinkedAssessmentSignoffChange}
+          onCloudAssessmentSaved={handleCloudAssessmentSaved}
         />
       </ErrorBoundary>
-
-      {/* Keyboard shortcut hint + Tours — only when sticky bar is NOT shown */}
-      {!(hasFiles && (!viewingReports || isGuest) && !isLoading && !inDiffMode) && (
-        <div className="fixed bottom-4 right-4 z-10 no-print flex items-center gap-2">
-          <GuidedTourButton
-            hasFiles={hasFiles}
-            hasReports={hasReports}
-            isGuest={isGuest}
-            tourCallbacks={tourCallbacks}
-          />
-          <button
-            onClick={() => setShortcutsOpen(true)}
-            className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.06] text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all duration-200 hover:border-white/[0.12] hover:shadow-elevated"
-            style={{
-              background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
-            }}
-            title="Keyboard shortcuts (?)"
-            aria-label="Keyboard shortcuts"
-            data-tour="shortcuts-button"
-          >
-            <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 pointer-events-none bg-brand-accent" />
-            <Keyboard className="h-3 w-3 text-brand-accent" />
-            Shortcuts
-          </button>
-        </div>
-      )}
 
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>

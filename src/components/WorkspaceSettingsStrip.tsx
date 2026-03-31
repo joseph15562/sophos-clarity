@@ -63,7 +63,9 @@ export function WorkspaceSettingsStrip({ variant }: { variant: StripVariant }) {
       </span>
       <span className="hidden sm:inline text-border">|</span>
       <span>{middle}</span>
-      <span className="text-[10px] opacity-80">Opens on Assess</span>
+      <span className="text-[10px] text-foreground/75 dark:text-muted-foreground">
+        Opens on Assess
+      </span>
     </div>
   );
 }

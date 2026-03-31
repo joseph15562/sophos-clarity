@@ -98,16 +98,29 @@ function TrustPageInner() {
               <p>
                 For AI-generated reports, config can be{" "}
                 <strong className="text-foreground">anonymised before transmission</strong>{" "}
-                (placeholders for IPs, hostnames, labels). Anonymised content is sent to Google
-                Gemini via a Supabase Edge Function over HTTPS. Google’s terms and processing
-                location apply; we do not control Google’s retention of API traffic — see{" "}
+                (placeholders for IPs, hostnames, labels). Payloads are sent to Google Gemini via a
+                Supabase Edge Function over HTTPS.{" "}
+                <strong className="text-foreground">Inference is not region-pinned</strong> — Google
+                may process in the US or other jurisdictions per their infrastructure. Use{" "}
+                <strong className="text-foreground">local mode</strong> to avoid AI transit;
+                organisations with cross-border rules should document consent or legal basis and
+                treat Google as a subprocessor. See{" "}
                 <a
-                  href="https://ai.google.dev/terms"
+                  href={`${DATA_PRIVACY_HREF}#data-residency-and-ai-gemini`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-foreground underline underline-offset-2 decoration-brand-accent hover:text-brand-accent"
                 >
-                  Google AI terms
+                  Data residency and AI (Gemini)
+                </a>{" "}
+                in <code className="text-[10px]">DATA-PRIVACY.md</code> and{" "}
+                <a
+                  href="https://ai.google.dev/gemini-api/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-foreground underline underline-offset-2 decoration-brand-accent hover:text-brand-accent"
+                >
+                  Gemini API terms
                 </a>
                 .
               </p>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, expectNoSeriousAxeViolations } from "@/test/test-utils";
 import { EmptyState } from "@/components/EmptyState";
 
 describe("EmptyState", () => {
@@ -32,5 +32,12 @@ describe("EmptyState", () => {
     const { container } = render(<EmptyState className="my-class" />);
     const root = container.firstElementChild;
     expect(root).toHaveClass("my-class");
+  });
+
+  it("has no serious axe violations", async () => {
+    const { container } = render(
+      <EmptyState title="No rows" description="Upload data to get started." />,
+    );
+    await expectNoSeriousAxeViolations(container);
   });
 });

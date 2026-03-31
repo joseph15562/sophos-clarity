@@ -192,7 +192,7 @@ export function EvidenceCollection({ analysisResults, selectedFrameworks }: Prop
                 <ul className="space-y-2 mb-3">
                   {items.map((item, i) => (
                     <li
-                      key={i}
+                      key={`${item.controlKey}|${item.addedAt}|${item.note}|${item.url}|${i}`}
                       className="flex items-start gap-2.5 text-[11px] rounded-lg bg-muted/15 dark:bg-muted/10 border border-border/30 px-3.5 py-2.5"
                     >
                       <div className="flex-1 min-w-0 space-y-0.5">

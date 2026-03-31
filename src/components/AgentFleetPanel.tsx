@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOrgAgentsQuery } from "@/hooks/queries/use-org-agents-query";
 import { useAgentSubmissionCounts7dQuery } from "@/hooks/queries/use-agent-submission-counts-7d-query";
+import { useAgentSubmissionsLatestBatchQuery } from "@/hooks/queries/use-agent-submissions-latest-batch-query";
 import { queryKeys } from "@/hooks/queries/keys";
+import { fetchLatestSubmissionForAgent } from "@/lib/data/agent-submissions-latest";
 import {
   ChevronDown,
   ChevronRight,
@@ -85,15 +87,6 @@ function isEffectivelyOffline(a: Agent): boolean {
 }
 
 type FleetFilter = "all" | "attention" | "error" | "offline" | "outdated";
-
-/** Supabase query builders expose `abortSignal` in the real client; tests may omit it. */
-function withQueryAbort<T extends { abortSignal?: (s: AbortSignal) => T }>(
-  q: T,
-  signal?: AbortSignal,
-): T {
-  if (signal && typeof q.abortSignal === "function") return q.abortSignal(signal);
-  return q;
-}
 
 const SEV_COLORS: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
@@ -458,18 +451,15 @@ export function AgentFleetPanel({
   const submissionCounts7d = countsQuery.data ?? {};
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
-  const [submissions, setSubmissions] = useState<Record<string, Submission | null>>({});
-  const [loadingSub, setLoadingSub] = useState<Record<string, boolean>>({});
+  const [submissionMap, setSubmissionMap] = useState<Record<string, Submission | null>>({});
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
   const [fleetFilter, setFleetFilter] = useState<FleetFilter>("all");
   const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
-  const submissionsBatchAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
       for (const iv of pollIntervalsRef.current.values()) clearInterval(iv);
       pollIntervalsRef.current.clear();
-      submissionsBatchAbortRef.current?.abort();
     };
   }, []);
 
@@ -518,71 +508,52 @@ export function AgentFleetPanel({
     }
   }, [grouped]);
 
-  const loadSubmissionsBatch = useCallback(async (agentIds: string[]) => {
-    const unique = [...new Set(agentIds)];
-    let toFetch: string[] = [];
-    setSubmissions((prev) => {
-      toFetch = unique.filter((id) => prev[id] === undefined);
-      return prev;
-    });
-    if (toFetch.length === 0) return;
-
-    submissionsBatchAbortRef.current?.abort();
-    const ac = new AbortController();
-    submissionsBatchAbortRef.current = ac;
-    const signal = ac.signal;
-
-    setLoadingSub((p) => {
-      const n = { ...p };
-      for (const id of toFetch) n[id] = true;
-      return n;
-    });
-
-    try {
-      const q = supabase
-        .from("agent_submissions")
-        .select("*")
-        .in("agent_id", toFetch)
-        .order("created_at", { ascending: false });
-      const { data } = await withQueryAbort(q, signal);
-      if (signal.aborted) return;
-
-      const latestByAgent = new Map<string, Submission>();
-      for (const row of data ?? []) {
-        if (!latestByAgent.has(row.agent_id)) latestByAgent.set(row.agent_id, row);
+  const idsToFetch = useMemo(() => {
+    const ids = new Set<string>();
+    if (expandedTenant) {
+      const tenantAgents = grouped.find(([name]) => name === expandedTenant)?.[1] ?? [];
+      for (const a of tenantAgents) {
+        if (submissionMap[a.id] === undefined) ids.add(a.id);
       }
-
-      setSubmissions((prev) => {
-        const n = { ...prev };
-        for (const id of toFetch) {
-          if (n[id] === undefined) n[id] = latestByAgent.get(id) ?? null;
-        }
-        return n;
-      });
-    } finally {
-      setLoadingSub((p) => {
-        const n = { ...p };
-        for (const id of toFetch) n[id] = false;
-        return n;
-      });
     }
-  }, []);
+    if (expandedAgent && submissionMap[expandedAgent] === undefined) {
+      ids.add(expandedAgent);
+    }
+    return [...ids].sort();
+  }, [expandedTenant, expandedAgent, grouped, submissionMap]);
+
+  const submissionsBatchQuery = useAgentSubmissionsLatestBatchQuery(org?.id ?? null, idsToFetch);
 
   useEffect(() => {
-    if (!expandedTenant) return;
-    const tenantAgents = grouped.find(([name]) => name === expandedTenant)?.[1];
-    if (!tenantAgents?.length) return;
-    const need = tenantAgents.map((a) => a.id).filter((id) => submissions[id] === undefined);
-    if (need.length === 0) return;
-    void loadSubmissionsBatch(need);
-  }, [expandedTenant, grouped, submissions, loadSubmissionsBatch]);
+    if (!submissionsBatchQuery.data) return;
+    setSubmissionMap((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [agentId, row] of Object.entries(submissionsBatchQuery.data)) {
+        if (next[agentId] === undefined) {
+          next[agentId] = row;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [submissionsBatchQuery.data]);
+
+  const loadingSub = useMemo(() => {
+    const fetching = submissionsBatchQuery.isFetching;
+    const out: Record<string, boolean> = {};
+    if (!fetching) return out;
+    for (const id of idsToFetch) {
+      if (submissionMap[id] === undefined) out[id] = true;
+    }
+    return out;
+  }, [submissionsBatchQuery.isFetching, idsToFetch, submissionMap]);
 
   const handleAgentClick = (agentId: string) => {
     if (expandedAgent === agentId) {
       setExpandedAgent(null);
     } else {
       setExpandedAgent(agentId);
-      void loadSubmissionsBatch([agentId]);
     }
   };
 
@@ -615,44 +586,52 @@ export function AgentFleetPanel({
 
       toast.success("Scan requested — waiting for agent to complete…");
 
-      const existingTs = submissions[agentId]?.created_at;
+      const existingTs = submissionMap[agentId]?.created_at;
       let attempts = 0;
       const maxAttempts = 36; // 3 minutes at 5s intervals
+      const orgId = org?.id;
+      if (!orgId) {
+        setScanRequested((p) => ({ ...p, [agentId]: false }));
+        return;
+      }
 
       const prevIv = pollIntervalsRef.current.get(agentId);
       if (prevIv) clearInterval(prevIv);
 
-      const pollInterval = setInterval(async () => {
-        attempts++;
-        const { data } = await supabase
-          .from("agent_submissions")
-          .select("*")
-          .eq("agent_id", agentId)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        const latest = data?.[0] ?? null;
-        if (latest && latest.created_at !== existingTs) {
-          clearInterval(pollInterval);
-          pollIntervalsRef.current.delete(agentId);
-          setSubmissions((p) => ({ ...p, [agentId]: latest }));
-          setScanRequested((p) => ({ ...p, [agentId]: false }));
-          toast.success(`Scan complete — Score: ${latest.overall_score}/${latest.overall_grade}`);
-          if (org?.id) {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.org.agents(org.id) });
-            void queryClient.invalidateQueries({
-              queryKey: queryKeys.org.agentSubmissionCounts7d(org.id),
-            });
+      const pollInterval = setInterval(() => {
+        void (async () => {
+          attempts++;
+          let latest: Submission | null = null;
+          try {
+            latest = await fetchLatestSubmissionForAgent(orgId, agentId);
+          } catch {
+            return;
           }
-          return;
-        }
+          if (latest && latest.created_at !== existingTs) {
+            clearInterval(pollInterval);
+            pollIntervalsRef.current.delete(agentId);
+            setSubmissionMap((p) => ({ ...p, [agentId]: latest }));
+            setScanRequested((p) => ({ ...p, [agentId]: false }));
+            toast.success(`Scan complete — Score: ${latest.overall_score}/${latest.overall_grade}`);
+            if (org?.id) {
+              void queryClient.invalidateQueries({ queryKey: queryKeys.org.agents(org.id) });
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.org.agentSubmissionCounts7d(org.id),
+              });
+              void queryClient.invalidateQueries({
+                queryKey: ["org", org.id, "agent_submissions_latest_batch"] as const,
+              });
+            }
+            return;
+          }
 
-        if (attempts >= maxAttempts) {
-          clearInterval(pollInterval);
-          pollIntervalsRef.current.delete(agentId);
-          setScanRequested((p) => ({ ...p, [agentId]: false }));
-          toast.info("Scan is taking longer than expected — refresh the page to check results");
-        }
+          if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            pollIntervalsRef.current.delete(agentId);
+            setScanRequested((p) => ({ ...p, [agentId]: false }));
+            toast.info("Scan is taking longer than expected — refresh the page to check results");
+          }
+        })();
       }, 5000);
       pollIntervalsRef.current.set(agentId, pollInterval);
     } catch (err) {
@@ -661,7 +640,7 @@ export function AgentFleetPanel({
   };
 
   const handleLoadFull = (agent: Agent) => {
-    const sub = submissions[agent.id];
+    const sub = submissionMap[agent.id];
     if (!sub || !onLoadAssessment) return;
     const fullAnalysis = sub.full_analysis as unknown as AnalysisResult | null;
     if (!fullAnalysis) return;
@@ -850,7 +829,7 @@ export function AgentFleetPanel({
                 <div className="bg-muted/10">
                   {tenantAgents.map((agent) => {
                     const isAgentOpen = expandedAgent === agent.id;
-                    const sub = submissions[agent.id];
+                    const sub = submissionMap[agent.id];
                     const recomputed = sub ? recomputeFromRaw(sub) : null;
                     const headerScore = recomputed?.score ?? agent.last_score;
                     const headerGrade = recomputed?.grade ?? agent.last_grade;
@@ -926,7 +905,7 @@ export function AgentFleetPanel({
                           <div className="px-6 pb-3 pt-1">
                             <AgentSummaryCard
                               agent={agent}
-                              submission={submissions[agent.id] ?? null}
+                              submission={submissionMap[agent.id] ?? null}
                               loadingSubmission={!!loadingSub[agent.id]}
                               onLoadFull={() => handleLoadFull(agent)}
                               onRequestScan={() => handleRequestScan(agent.id)}

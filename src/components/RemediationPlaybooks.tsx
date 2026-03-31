@@ -19,7 +19,8 @@ import { toast } from "sonner";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { generatePlaybook, type Playbook } from "@/lib/remediation-playbooks";
 import { computeRiskScore } from "@/lib/risk-score";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { useRemediationPlaybookIdsQuery } from "@/hooks/queries/use-remediation-playbook-ids-query";
 import { getFirstDetectedAtBatch } from "@/lib/finding-snapshots";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -57,20 +58,6 @@ function getCustomerHash(analysisResults: Record<string, AnalysisResult>): strin
   }
   ids.sort();
   return simpleHash(ids.join(","));
-}
-
-async function getOrgId(): Promise<string | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase
-    .from("org_members")
-    .select("org_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-  return data?.org_id ?? null;
 }
 
 function getSophosConsoleLink(findingSection: string): string {
@@ -155,6 +142,7 @@ const SEV_BADGE: Record<Severity, string> = {
 };
 
 export function RemediationPlaybooks({ analysisResults }: Props) {
+  const { org } = useAuth();
   const { mutateAsync: persistRemediationRows } = useRemediationDeltaMutation();
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -163,10 +151,11 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   const [slaConfig, setSlaConfig] = useState<SlaConfig>(() => loadSlaConfig());
   const [firstDetectedMap, setFirstDetectedMap] = useState<Map<string, string>>(new Map());
   const [acceptedList, setAcceptedList] = useState<AcceptedFinding[]>([]);
-  const orgIdRef = useRef<string | null>(null);
   const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   const customerHash = useMemo(() => getCustomerHash(analysisResults), [analysisResults]);
+
+  const remediationIdsQuery = useRemediationPlaybookIdsQuery(org?.id ?? null, customerHash);
 
   const playbooks = useMemo(() => {
     const list: (Playbook & {
@@ -208,48 +197,37 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
   const skipNextSaveRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const orgId = await getOrgId();
-      orgIdRef.current = orgId;
+    if (org?.id && remediationIdsQuery.isPending) return;
 
-      if (orgId) {
-        const { data } = await supabase
-          .from("remediation_status")
-          .select("playbook_id")
-          .eq("org_id", orgId)
-          .eq("customer_hash", customerHash);
-        if (!cancelled && data && data.length > 0) {
+    if (org?.id && remediationIdsQuery.isSuccess && remediationIdsQuery.data.length > 0) {
+      skipNextSaveRef.current = true;
+      setCompleted(new Set(remediationIdsQuery.data));
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(`${STORAGE_PREFIX}${customerHash}`);
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        if (Array.isArray(arr)) {
           skipNextSaveRef.current = true;
-          setCompleted(new Set(data.map((r) => r.playbook_id)));
-          return;
+          setCompleted(new Set(arr));
         }
       }
-
-      // localStorage fallback
-      if (!cancelled) {
-        try {
-          const raw = localStorage.getItem(`${STORAGE_PREFIX}${customerHash}`);
-          if (raw) {
-            const arr = JSON.parse(raw) as string[];
-            if (Array.isArray(arr)) {
-              skipNextSaveRef.current = true;
-              setCompleted(new Set(arr));
-            }
-          }
-        } catch (e) {
-          warnOptionalError("RemediationPlaybooks.loadCompletedLocal", e);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [customerHash]);
+    } catch (e) {
+      warnOptionalError("RemediationPlaybooks.loadCompletedLocal", e);
+    }
+  }, [
+    org?.id,
+    customerHash,
+    remediationIdsQuery.isPending,
+    remediationIdsQuery.isSuccess,
+    remediationIdsQuery.data,
+  ]);
 
   const persistCompleted = useCallback(
     async (next: Set<string>, prev: Set<string>) => {
-      const orgId = orgIdRef.current;
+      const orgId = org?.id ?? null;
       if (!orgId) {
         try {
           localStorage.setItem(`${STORAGE_PREFIX}${customerHash}`, JSON.stringify([...next]));
@@ -265,17 +243,15 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
 
       await persistRemediationRows({ orgId, customerHash, added, removed });
     },
-    [customerHash, persistRemediationRows],
+    [customerHash, persistRemediationRows, org?.id],
   );
 
   // Load first-detected timestamps for SLA tracking
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      let orgId = orgIdRef.current;
-      if (!orgId) orgId = await getOrgId();
-      if (orgId) orgIdRef.current = orgId;
-      if (cancelled || !orgId || playbooks.length === 0) return;
+    const orgId = org?.id;
+    if (!orgId || playbooks.length === 0) return;
+    void (async () => {
       const pairs = playbooks.map((p) => ({ hostname: p.hostname, findingTitle: p.findingTitle }));
       const map = await getFirstDetectedAtBatch(orgId, pairs);
       if (!cancelled) setFirstDetectedMap(map);
@@ -283,7 +259,7 @@ export function RemediationPlaybooks({ analysisResults }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [playbooks]);
+  }, [playbooks, org?.id]);
 
   const totalMinutes = playbooks
     .filter((p) => !completed.has(p.findingId))

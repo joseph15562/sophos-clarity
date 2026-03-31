@@ -35,6 +35,27 @@ This document is a **starting runbook** for teams that need dedicated infrastruc
 - **Browser (Sentry):** If you use Sentry, set **`VITE_SENTRY_DSN`** on the static build. If unset, the app skips `Sentry.init` and sends nothing. Keep **PII off** in Sentry project settings; the client uses `sendDefaultPii: false`.
 - **Edge:** Functions emit structured **`logJson`** events for many routes. Point your Supabase log drain (e.g. Logflare) at saved searches / alerts on stable `message` values. Full naming convention and catalog: [observability.md](observability.md). **Edge Sentry** (or similar) is optional and should use a **separate DSN** from the SPA after policy review (PII, retention).
 
+## Scheduled reports job queue
+
+Scheduled compliance emails use a small **outbox** so cron stays fast and sends can retry.
+
+1. **Migrations:** `job_outbox` table plus **`claim_job_outbox_batch`** — see [job-queue-outline.md](job-queue-outline.md).
+2. **Functions:** Deploy **`send-scheduled-reports`** (producer) and **`process-job-outbox`** (worker) with the rest of Edge Functions. Set secrets **`RESEND_API_KEY`**, **`REPORT_FROM_EMAIL`** (optional), and the usual **`SUPABASE_*`** keys.
+3. **Cron:** Invoke **both** URLs on a schedule (e.g. producer hourly, worker every 1–5 minutes). If **`CRON_SECRET`** is set on the functions, send **`Authorization: Bearer <CRON_SECRET>`** on each request.
+4. **DLQ / replay:** Rows in **`dead`** failed after retries. Inspect **`last_error`**, fix the underlying issue, then replay, for example:
+
+```sql
+UPDATE public.job_outbox
+SET status = 'pending',
+    attempts = 0,
+    last_error = NULL,
+    next_run_at = now(),
+    updated_at = now()
+WHERE id = '<job uuid>';
+```
+
+Stale **`processing`** rows (e.g. worker crash) are reset to **`pending`** after **15 minutes** on the next worker tick.
+
 ## Helm / Docker
 
 - **Not shipped in-repo yet** — treat container images and Helm charts as follow-on work once baseline `Dockerfile` + compose for `web` + `functions` are published.

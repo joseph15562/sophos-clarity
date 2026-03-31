@@ -28,6 +28,7 @@ export async function invalidateOrgScopedQueries(
     queryClient.invalidateQueries({ queryKey: queryKeys.org.teamRoster(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.psaIntegrationFlags(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.submissionRetention(orgId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.org.companyLogo(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.remediationStatus(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.mspSetupStatus(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.agentSubmissionCounts7d(orgId) }),

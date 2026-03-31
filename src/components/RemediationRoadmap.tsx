@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { SEVERITY_COLORS, SEVERITY_ORDER } from "@/lib/design-tokens";
 import { generatePlaybook } from "@/lib/remediation-playbooks";
+import { EmptyState } from "@/components/EmptyState";
+import { Route } from "lucide-react";
 
 const HOURS_PER_WEEK = 8;
 const MINUTES_PER_WEEK = HOURS_PER_WEEK * 60;
@@ -86,7 +88,12 @@ export function RemediationRoadmap({ analysisResults }: Props) {
         <h3 className="text-sm font-display font-semibold tracking-tight text-foreground mb-2">
           Remediation Roadmap
         </h3>
-        <p className="text-sm text-muted-foreground">No findings to remediate</p>
+        <EmptyState
+          className="!py-8"
+          icon={<Route className="h-6 w-6 text-muted-foreground/50" />}
+          title="No findings to remediate"
+          description="A week-by-week plan appears once findings drive remediation items."
+        />
       </div>
     );
   }

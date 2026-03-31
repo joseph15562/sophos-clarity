@@ -115,17 +115,20 @@ Use your host’s **Edge Function** HTTP metrics (Supabase Dashboard → Edge Fu
 
 ## Other Edge functions — `message` highlights
 
-| Function                   | `message` (examples)                                                             | Level           | Notes                                                              |
-| -------------------------- | -------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------ |
-| **parse-config**           | `parse_config_unhandled`                                                         | error           | Top-level catch (in addition to existing Gemini/rate-limit events) |
-| **parse-config**           | `parse_config_rate_limited`, `parse_config_gemini_*`, `parse_config_token_usage` | warn/info/error | See function source for full set                                   |
-| **portal-data**            | `portal_data_config_lookup`, `portal_data_unexpected`                            | error           | Config resolution vs unexpected                                    |
-| **sophos-central**         | `sophos_central_*`                                                               | warn            | Guest auth, MDR feed, etc.                                         |
-| **send-scheduled-reports** | `send_scheduled_reports_start`, `send_scheduled_reports_complete`                | info            | Cron batch: `dueCount`, `processed`, `succeeded`, `failed`         |
-| **send-scheduled-reports** | `send_scheduled_reports_resend`, `send_scheduled_reports_send_email`             | error           | Resend API / unexpected send errors                                |
-| **agent-nudge**            | `agent_nudge_start`                                                              | info            | Cron: `staleCandidates` before updates                             |
-| **agent-nudge**            | `agent_nudge_complete`, `agent_nudge_fetch`                                      | info/error      | Summary counts / DB fetch failure                                  |
-| **regulatory-scanner**     | `regulatory_*`                                                                   | warn/info       | RSS / Gemini / upsert                                              |
+| Function                   | `message` (examples)                                                                                    | Level           | Notes                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------ |
+| **parse-config**           | `parse_config_unhandled`                                                                                | error           | Top-level catch (in addition to existing Gemini/rate-limit events) |
+| **parse-config**           | `parse_config_rate_limited`, `parse_config_gemini_*`, `parse_config_token_usage`                        | warn/info/error | See function source for full set                                   |
+| **portal-data**            | `portal_data_config_lookup`, `portal_data_unexpected`                                                   | error           | Config resolution vs unexpected                                    |
+| **sophos-central**         | `sophos_central_*`                                                                                      | warn            | Guest auth, MDR feed, etc.                                         |
+| **send-scheduled-reports** | `send_scheduled_reports_start`, `send_scheduled_reports_complete`                                       | info            | Producer: `dueCount`, `enqueued`, `skippedDuplicate`, `failed`     |
+| **send-scheduled-reports** | `send_scheduled_reports_enqueue`                                                                        | error           | Failed to insert `job_outbox` row                                  |
+| **process-job-outbox**     | `process_job_outbox_claimed`, `process_job_outbox_complete`, `process_job_outbox_sent`                  | info            | Worker batch: `claimed`, `done`, `retried`, `dead`                 |
+| **process-job-outbox**     | `process_job_outbox_resend`, `process_job_outbox_dead`, `process_job_outbox_claim`                      | error           | Resend failure, DLQ, RPC/claim errors                              |
+| **process-job-outbox**     | `process_job_outbox_reap_stale`, `process_job_outbox_report_missing`, `process_job_outbox_build_failed` | warn/error      | Stale `processing` reap, bad payload / missing report              |
+| **agent-nudge**            | `agent_nudge_start`                                                                                     | info            | Cron: `staleCandidates` before updates                             |
+| **agent-nudge**            | `agent_nudge_complete`, `agent_nudge_fetch`                                                             | info/error      | Summary counts / DB fetch failure                                  |
+| **regulatory-scanner**     | `regulatory_*`                                                                                          | warn/info       | RSS / Gemini / upsert                                              |
 
 ## Parity with the repo
 
@@ -136,3 +139,7 @@ rg 'logJson\("' supabase/functions -g '*.ts'
 ```
 
 Use the output to extend this doc or your drain saved searches when adding new handlers.
+
+## SPA product events (optional ingest)
+
+Custom funnel events from `trackProductEvent` / `spa_page_view` when `VITE_ANALYTICS_INGEST_URL` is set — see [product-telemetry-events.md](product-telemetry-events.md) for a curated catalog.

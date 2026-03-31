@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
-import { supabase } from "@/integrations/supabase/client";
 import { useRemediationPlaybookToggleMutation } from "@/hooks/queries/use-remediation-status-mutations";
+import { useRemediationPlaybookIdsQuery } from "@/hooks/queries/use-remediation-playbook-ids-query";
 import { warnOptionalError } from "@/lib/client-error-feedback";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
@@ -195,33 +195,28 @@ function PlaybookLibraryInner() {
     return set;
   });
 
+  const remediationIdsQuery = useRemediationPlaybookIdsQuery(
+    org?.id ?? null,
+    org?.id ? REMEDIATION_CUSTOMER_HASH : null,
+  );
+
   useEffect(() => {
-    if (!org?.id) return;
-    let cancelled = false;
-    void supabase
-      .from("remediation_status")
-      .select("playbook_id")
-      .eq("org_id", org.id)
-      .eq("customer_hash", REMEDIATION_CUSTOMER_HASH)
-      .then(({ data, error }) => {
-        if (cancelled || error || !data?.length) return;
-        setCompleted((prev) => {
-          const next = new Set(prev);
-          for (const row of data) {
-            next.add(row.playbook_id);
-            try {
-              localStorage.setItem(`firecomply_playbook_completed_${row.playbook_id}`, "true");
-            } catch (e) {
-              warnOptionalError("PlaybookLibrary.markCompletedLocal", e);
-            }
-          }
-          return next;
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [org?.id]);
+    if (!remediationIdsQuery.isSuccess || !org?.id) return;
+    const rows = remediationIdsQuery.data;
+    if (!rows?.length) return;
+    setCompleted((prev) => {
+      const next = new Set(prev);
+      for (const playbook_id of rows) {
+        next.add(playbook_id);
+        try {
+          localStorage.setItem(`firecomply_playbook_completed_${playbook_id}`, "true");
+        } catch (e) {
+          warnOptionalError("PlaybookLibrary.markCompletedLocal", e);
+        }
+      }
+      return next;
+    });
+  }, [org?.id, remediationIdsQuery.isSuccess, remediationIdsQuery.data]);
 
   const isDark = theme === "dark";
 

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabaseWithAbort } from "@/lib/supabase-with-abort";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -112,6 +113,8 @@ import {
   snapshotFilesToParsedFiles,
   type SeHealthCheckSnapshotV1,
 } from "@/lib/se-health-check-snapshot-v2";
+import { ALL_FRAMEWORK_NAMES, controlIdsForFindingExport } from "@/lib/compliance-map";
+import { validateFindingExportMetadata } from "@/lib/report-export-validation";
 import { ActiveTeamProvider, useActiveTeam } from "@/hooks/use-active-team";
 import { TeamSwitcher } from "@/components/TeamSwitcher";
 import { startHealthCheckTour, startHealthCheckResultsTour } from "@/lib/guided-tours";
@@ -147,6 +150,8 @@ const SOPHOS_BP_TEMPLATE =
 export function useHealthCheckInnerState() {
   const seAuth = useSEAuth();
   const { activeTeam, activeTeamId, teams } = useActiveTeam();
+  const sendReportAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => sendReportAbortRef.current?.abort(), []);
 
   const [files, setFiles] = useState<ParsedFile[]>([]);
   const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisResult>>({});
@@ -184,6 +189,11 @@ export function useHealthCheckInnerState() {
   const [preparedFor, setPreparedFor] = useState("");
   const [seNotesManual, setSeNotesManual] = useState("");
   const [findingNotes, setFindingNotes] = useState<Record<string, string>>({});
+  const [reviewerSignOff, setReviewerSignOff] = useState<{
+    signedBy: string;
+    signedAt: string;
+  } | null>(null);
+  const [reviewerSignOffDraft, setReviewerSignOffDraft] = useState("");
   const [seManagementOpen, setSeManagementOpen] = useState(false);
 
   const effectivePreparedBy = useMemo(() => {
@@ -211,23 +221,24 @@ export function useHealthCheckInnerState() {
       }
       return;
     }
-    let cancelled = false;
+    const ac = new AbortController();
     void (async () => {
-      const { error } = await supabase
-        .from("se_profiles")
-        .update({ health_check_prepared_by: legacy } as Record<string, unknown>)
-        .eq("id", p.id);
-      if (cancelled || error) return;
+      const { error } = await supabaseWithAbort(
+        supabase
+          .from("se_profiles")
+          .update({ health_check_prepared_by: legacy } as Record<string, unknown>)
+          .eq("id", p.id),
+        ac.signal,
+      );
+      if (error) return;
       try {
         localStorage.removeItem(SE_HEALTH_CHECK_PREPARED_BY_KEY);
       } catch (e) {
         warnOptionalError("health-check.preparedByMigration.removeAfterSync", e);
       }
-      await seAuth.reloadSeProfile();
+      if (!ac.signal.aborted) await seAuth.reloadSeProfile();
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seAuth.seProfile, seAuth.reloadSeProfile]);
 
@@ -860,6 +871,22 @@ export function useHealthCheckInnerState() {
     setRestoredHaLabels(null);
     setCustomerName("");
     setLicence({ tier: "xstream", modules: [] });
+    setReviewerSignOff(null);
+    setReviewerSignOffDraft("");
+  }, []);
+
+  const applyReviewerSignOff = useCallback(() => {
+    const n = reviewerSignOffDraft.trim();
+    if (!n) {
+      toast.error("Enter reviewer name");
+      return;
+    }
+    setReviewerSignOff({ signedBy: n, signedAt: new Date().toISOString() });
+    toast.success("Reviewer sign-off recorded for CSV exports.");
+  }, [reviewerSignOffDraft]);
+
+  const clearReviewerSignOff = useCallback(() => {
+    setReviewerSignOff(null);
   }, []);
 
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -936,6 +963,7 @@ export function useHealthCheckInnerState() {
         seCentralHaLabels,
         manualBpOverrideIds: [...manualOverrides],
         findingNotes: Object.keys(findingNotes).length > 0 ? findingNotes : undefined,
+        reviewerSignOff,
       });
 
       const serialNumbers = files
@@ -1130,8 +1158,9 @@ export function useHealthCheckInnerState() {
 
     const manualOverrides = loadSeHealthCheckBpOverrides();
     const csvRows: string[][] = [
-      ["Finding", "Category", "Severity", "Status", "Recommendation", "SE Note"],
+      ["Finding", "Category", "Severity", "Status", "Recommendation", "SE Note", "Control IDs"],
     ];
+    const exportValidationNotes: string[] = [];
 
     for (const [label, ar] of Object.entries(analysisResults)) {
       const centralAuto = seCentralAutoForLabel(centralLinkedForAnalysis, label, seCentralHaLabels);
@@ -1165,12 +1194,41 @@ export function useHealthCheckInnerState() {
                   : "N/A",
           r.check.recommendation ?? "",
           findingNotes[r.check.id] ?? "",
+          "",
         ]);
       }
 
       for (const f of ar.findings ?? []) {
-        csvRows.push([f.title, f.section, f.severity, f.severity, f.remediation ?? "", ""]);
+        const controlIds = controlIdsForFindingExport(f.title, ALL_FRAMEWORK_NAMES);
+        for (const issue of validateFindingExportMetadata({
+          severity: f.severity,
+          controlIds,
+        })) {
+          exportValidationNotes.push(`${label}: ${f.title} — ${issue.message}`);
+        }
+        csvRows.push([
+          f.title,
+          f.section,
+          f.severity,
+          f.severity,
+          f.remediation ?? "",
+          "",
+          controlIds,
+        ]);
       }
+    }
+
+    if (reviewerSignOff) {
+      csvRows.push([]);
+      csvRows.push([
+        "Reviewer sign-off",
+        reviewerSignOff.signedBy,
+        reviewerSignOff.signedAt,
+        "",
+        "",
+        "",
+        "",
+      ]);
     }
 
     const csvContent = csvRows
@@ -1184,7 +1242,13 @@ export function useHealthCheckInnerState() {
     a.download = `sophos-health-check-findings-${customerName.trim().replace(/\s+/g, "-").toLowerCase() || "export"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Findings CSV downloaded.");
+    if (exportValidationNotes.length > 0) {
+      toast.message("CSV exported — validation hints", {
+        description: exportValidationNotes.slice(0, 3).join(" · "),
+      });
+    } else {
+      toast.success("Findings CSV downloaded.");
+    }
   }, [
     analysisResults,
     licence,
@@ -1197,6 +1261,7 @@ export function useHealthCheckInnerState() {
     preparedFor,
     saveHealthCheck,
     findingNotes,
+    reviewerSignOff,
   ]);
 
   const handleDownloadHealthCheckPdf = useCallback(async () => {
@@ -1477,8 +1542,12 @@ export function useHealthCheckInnerState() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      sendReportAbortRef.current?.abort();
+      sendReportAbortRef.current = new AbortController();
+      const sendSignal = sendReportAbortRef.current.signal;
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/send-report`, {
         method: "POST",
+        signal: sendSignal,
         headers: {
           "Content-Type": "application/json",
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -1501,6 +1570,7 @@ export function useHealthCheckInnerState() {
       }
       toast.success(`Report sent to ${customerEmail.trim()}`);
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       console.warn("[health-check] send report failed", e);
       toast.error(e instanceof Error ? e.message : "Could not send report.");
     } finally {
@@ -1560,6 +1630,7 @@ export function useHealthCheckInnerState() {
       setActiveStep("results");
       setBpOverrideRevision((n) => n + 1);
       setFindingNotes(snapshot.findingNotes ?? {});
+      setReviewerSignOff(snapshot.reviewerSignOff ?? null);
       if (meta?.checkId) {
         setSavedCheckId(meta.checkId);
         setFollowupAt(meta.followupAt ?? null);
@@ -1630,6 +1701,11 @@ export function useHealthCheckInnerState() {
     setSeNotesManual,
     findingNotes,
     setFindingNotes,
+    reviewerSignOff,
+    reviewerSignOffDraft,
+    setReviewerSignOffDraft,
+    applyReviewerSignOff,
+    clearReviewerSignOff,
     seManagementOpen,
     setSeManagementOpen,
     effectivePreparedBy,

@@ -106,6 +106,7 @@ import {
   analyseZtna,
   analyseFirmwareVersion,
   analyseLicenceUsage,
+  analyseEmailSecuritySignals,
 } from "./analysis/domains/infra";
 
 // Re-export for backward compatibility
@@ -633,6 +634,7 @@ export function analyseConfig(
   analyseZtna(sections, findings, () => ++fid);
   analyseFirmwareVersion(sections, findings, () => ++fid);
   analyseLicenceUsage(sections, findings, () => ++fid, options);
+  analyseEmailSecuritySignals(sections, findings, () => ++fid);
 
   // --- Empty sections warning ---
   const emptySections: string[] = [];

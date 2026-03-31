@@ -2,6 +2,17 @@ import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { ReactElement } from "react";
+import { expect } from "vitest";
+import { axe } from "jest-axe";
+
+/** Aligns with Playwright axe checks (critical + serious only). */
+export async function expectNoSeriousAxeViolations(container: HTMLElement) {
+  const results = await axe(container);
+  const serious = results.violations.filter(
+    (v) => v.impact === "serious" || v.impact === "critical",
+  );
+  expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+}
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -14,7 +25,7 @@ function createTestQueryClient() {
 
 export function renderWithProviders(
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper"> & { route?: string }
+  options?: Omit<RenderOptions, "wrapper"> & { route?: string },
 ) {
   if (options?.route) {
     window.history.pushState({}, "Test page", options.route);

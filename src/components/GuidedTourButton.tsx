@@ -1,5 +1,4 @@
 import {
-  HelpCircle,
   Compass,
   BarChart3,
   Shield,
@@ -17,6 +16,7 @@ import {
   Zap,
   Gauge,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import type { TourCallbacks } from "@/lib/guided-tours";
 import {
   startGettingStartedTour,
@@ -51,10 +52,15 @@ import {
 
 const LBL =
   "flex items-center gap-2 px-2.5 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-brand-accent";
+/** Light: popover text on white panel. Dark: light text on navy gradient panel (Radix uses data-highlighted). */
 const ITEM =
-  "relative rounded-xl px-2.5 py-2 text-[12px] font-medium text-foreground/90 cursor-pointer transition-all duration-150 hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] focus:bg-white/80 dark:focus:bg-white/[0.06] focus:text-foreground";
+  "relative cursor-pointer rounded-xl px-2.5 py-2 text-[12px] font-medium outline-none transition-all duration-150 " +
+  "text-popover-foreground hover:bg-muted focus:bg-muted focus:text-popover-foreground " +
+  "data-[highlighted]:bg-muted data-[highlighted]:text-popover-foreground " +
+  "dark:text-foreground/90 dark:hover:bg-white/[0.06] dark:focus:bg-white/[0.06] dark:focus:text-foreground " +
+  "dark:data-[highlighted]:bg-white/[0.06] dark:data-[highlighted]:text-foreground";
 const ICON = "h-3.5 w-3.5 mr-2.5 shrink-0";
-const SEP = "my-1.5 h-px bg-white/80 dark:bg-white/[0.06]";
+const SEP = "my-1.5 h-px bg-border dark:bg-white/[0.06]";
 
 interface Props {
   hasFiles: boolean;
@@ -63,32 +69,48 @@ interface Props {
   tourCallbacks: TourCallbacks;
 }
 
+const DARK_PANEL_BG = "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26,0.98))";
+
 export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks }: Props) {
   const cb = tourCallbacks;
+  const { resolvedTheme } = useTheme();
+  const darkPanel = resolvedTheme === "dark";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="group relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] text-[10px] font-bold text-slate-800 hover:text-slate-950 dark:text-muted-foreground dark:hover:text-foreground transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+          type="button"
+          className={cn(
+            "group relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all duration-200",
+            "border-slate-900/[0.10] dark:border-white/[0.06]",
+            "text-slate-800 hover:text-slate-950 dark:text-muted-foreground dark:hover:text-foreground",
+            "hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated",
+            "data-[state=open]:border-slate-900/[0.18] dark:data-[state=open]:border-white/[0.14] data-[state=open]:shadow-elevated",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset",
+          )}
           style={{
             background: "linear-gradient(145deg, rgba(0,242,179,0.06), rgba(0,242,179,0.02))",
           }}
           title="Guided tours"
           aria-label="Guided tours"
         >
-          <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 pointer-events-none bg-[#00F2B3]" />
-          <Compass className="h-3 w-3 text-[#00F2B3]" />
-          Tours
+          <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+            <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 group-data-[state=open]:opacity-20 bg-[#00F2B3]" />
+          </span>
+          <Compass className="relative z-[1] h-3 w-3 text-[#00F2B3]" />
+          <span className="relative z-[1]">Tours</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align="end"
+        align="start"
         side="top"
-        className="relative overflow-hidden w-64 max-h-[70vh] overflow-y-auto rounded-2xl border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-xl shadow-elevated p-2"
-        style={{
-          background: "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26,0.98))",
-        }}
+        className={cn(
+          "relative max-h-[70vh] w-64 overflow-y-auto overflow-hidden rounded-2xl p-2 shadow-elevated",
+          "border border-border bg-popover text-popover-foreground backdrop-blur-none",
+          "dark:border-white/[0.08] dark:text-foreground dark:backdrop-blur-xl",
+        )}
+        style={darkPanel ? { background: DARK_PANEL_BG } : undefined}
       >
         <div
           className="absolute inset-x-0 top-0 h-px pointer-events-none"

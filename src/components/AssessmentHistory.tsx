@@ -13,6 +13,8 @@ import {
   X,
   Cloud,
   HardDrive,
+  Download,
+  UserCheck,
 } from "lucide-react";
 import {
   loadHistory,
@@ -28,9 +30,11 @@ import {
   loadHistoryCloud,
   deleteAssessmentCloud,
   renameAssessmentCloud,
+  updateAssessmentReviewerSignoff,
 } from "@/lib/assessment-cloud";
 import { useAuth } from "@/hooks/use-auth";
 import type { AnalysisResult } from "@/lib/analyse-config";
+import type { FindingsCsvReviewerSignoff } from "@/lib/findings-export";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -38,6 +42,12 @@ interface Props {
   analysisResults: Record<string, AnalysisResult>;
   customerName: string;
   environment: string;
+  /** Latest cloud snapshot id for this workspace session — drives Export Centre CSV sign-off block. */
+  linkedCloudAssessmentId?: string | null;
+  /** When sign-off is saved/cleared on the linked snapshot, parent updates export state. */
+  onLinkedAssessmentSignoffChange?: (signoff: FindingsCsvReviewerSignoff | null) => void;
+  /** After a cloud snapshot is saved from this panel. */
+  onCloudAssessmentSaved?: (snap: AssessmentSnapshot) => void;
 }
 
 const GRADE_COLORS: Record<string, string> = {
@@ -47,6 +57,13 @@ const GRADE_COLORS: Record<string, string> = {
   D: "text-[#c47800] dark:text-[#F29400]",
   F: "text-[#EA0022]",
 };
+
+function escCsv(s: string): string {
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
 
 function ScoreTrendChart({ snapshots }: { snapshots: AssessmentSnapshot[] }) {
   if (snapshots.length < 2) return null;
@@ -68,14 +85,47 @@ function ScoreTrendChart({ snapshots }: { snapshots: AssessmentSnapshot[] }) {
   const toX = (i: number) => pad.left + (i / (scores.length - 1 || 1)) * plotW;
   const toY = (v: number) => pad.top + plotH - (v / maxV) * plotH;
 
+  const exportTrendCsv = () => {
+    const sorted = [...snapshots].sort((a, b) => a.timestamp - b.timestamp);
+    const lines = ["ISO Date,Customer,Environment,Score,Grade"];
+    for (const s of sorted) {
+      lines.push(
+        [
+          new Date(s.timestamp).toISOString(),
+          escCsv(s.customerName),
+          escCsv(s.environment),
+          String(s.overallScore),
+          s.overallGrade,
+        ].join(","),
+      );
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `assessment-score-trend-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] p-4">
-      <p className="text-[10px] font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.08em] mb-3 flex items-center gap-2">
-        <span className="h-5 w-5 rounded-md bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center">
-          <TrendingUp className="h-2.5 w-2.5 text-white" />
-        </span>
-        Score Trend
-      </p>
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <p className="text-[10px] font-display font-semibold text-muted-foreground/60 uppercase tracking-[0.08em] flex items-center gap-2">
+          <span className="h-5 w-5 rounded-md bg-gradient-to-br from-[#5A00FF] to-[#00EDFF] flex items-center justify-center">
+            <TrendingUp className="h-2.5 w-2.5 text-white" />
+          </span>
+          Score Trend
+        </p>
+        <button
+          type="button"
+          onClick={exportTrendCsv}
+          className="flex items-center gap-1 text-[9px] font-semibold text-brand-accent hover:underline"
+        >
+          <Download className="h-3 w-3" />
+          CSV
+        </button>
+      </div>
       <svg
         width="100%"
         viewBox={`0 0 ${w} ${h + 14}`}
@@ -154,8 +204,15 @@ function ScoreTrendChart({ snapshots }: { snapshots: AssessmentSnapshot[] }) {
   );
 }
 
-export function AssessmentHistory({ analysisResults, customerName, environment }: Props) {
-  const { isGuest, org } = useAuth();
+export function AssessmentHistory({
+  analysisResults,
+  customerName,
+  environment,
+  linkedCloudAssessmentId = null,
+  onLinkedAssessmentSignoffChange,
+  onCloudAssessmentSaved,
+}: Props) {
+  const { isGuest, org, user, isViewerOnly } = useAuth();
   const useCloud = !isGuest && !!org;
 
   const [history, setHistory] = useState<AssessmentSnapshot[]>([]);
@@ -165,6 +222,8 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editEnv, setEditEnv] = useState("");
+  const [signoffNotesDraft, setSignoffNotesDraft] = useState<Record<string, string>>({});
+  const [signoffBusyId, setSignoffBusyId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -184,7 +243,13 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
     setSaving(true);
     try {
       if (useCloud && org) {
-        await saveAssessmentCloud(analysisResults, customerName, environment, org.id);
+        const cloudSnap = await saveAssessmentCloud(
+          analysisResults,
+          customerName,
+          environment,
+          org.id,
+        );
+        if (cloudSnap) onCloudAssessmentSaved?.(cloudSnap);
       } else {
         await saveAssessment(analysisResults, customerName, environment);
       }
@@ -535,6 +600,128 @@ export function AssessmentHistory({ analysisResults, customerName, environment }
                             <span>{item}</span>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {useCloud && isViewerOnly && snap.reviewerSignedAt && (
+                      <div className="rounded-lg border border-[#008F69]/25 bg-[#008F69]/[0.06] dark:bg-[#00F2B3]/10 px-3 py-2 space-y-1">
+                        <p className="text-[10px] font-semibold text-[#007A5A] dark:text-[#00F2B3] flex items-center gap-1.5">
+                          <UserCheck className="h-3.5 w-3.5 shrink-0" />
+                          Reviewer sign-off
+                        </p>
+                        <p className="text-[10px] text-foreground">
+                          {snap.reviewerSignedBy ?? "—"} ·{" "}
+                          {new Date(snap.reviewerSignedAt).toLocaleString()}
+                        </p>
+                        {snap.reviewerSignoffNotes?.trim() ? (
+                          <p className="text-[9px] text-muted-foreground whitespace-pre-wrap">
+                            {snap.reviewerSignoffNotes}
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {useCloud && !isViewerOnly && (
+                      <div className="rounded-lg border border-border/40 bg-muted/10 p-3 space-y-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                          <UserCheck className="h-3.5 w-3.5" />
+                          Reviewer sign-off (cloud)
+                        </p>
+                        {snap.reviewerSignedAt ? (
+                          <p className="text-[9px] text-[#007A5A] dark:text-[#00F2B3]">
+                            Current: {snap.reviewerSignedBy} ·{" "}
+                            {new Date(snap.reviewerSignedAt).toLocaleString()}
+                          </p>
+                        ) : (
+                          <p className="text-[9px] text-muted-foreground">
+                            Attest this snapshot; signatory defaults to your account email.
+                          </p>
+                        )}
+                        <textarea
+                          value={signoffNotesDraft[snap.id] ?? snap.reviewerSignoffNotes ?? ""}
+                          onChange={(e) =>
+                            setSignoffNotesDraft((prev) => ({ ...prev, [snap.id]: e.target.value }))
+                          }
+                          placeholder="Optional notes for auditors"
+                          rows={2}
+                          className="w-full text-[10px] rounded-md border border-border bg-background px-2 py-1.5 outline-none focus:ring-1 focus:ring-[#2006F7]"
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={signoffBusyId === snap.id}
+                            onClick={async () => {
+                              const signedBy =
+                                user?.email?.trim() ||
+                                (typeof user?.user_metadata?.full_name === "string"
+                                  ? user.user_metadata.full_name.trim()
+                                  : "") ||
+                                "Reviewer";
+                              const noteVal =
+                                (
+                                  signoffNotesDraft[snap.id] ??
+                                  snap.reviewerSignoffNotes ??
+                                  ""
+                                ).trim() || null;
+                              setSignoffBusyId(snap.id);
+                              try {
+                                const signedAtIso = new Date().toISOString();
+                                await updateAssessmentReviewerSignoff(snap.id, {
+                                  signedBy,
+                                  signedAtIso,
+                                  notes: noteVal,
+                                });
+                                await refresh();
+                                if (linkedCloudAssessmentId === snap.id) {
+                                  onLinkedAssessmentSignoffChange?.({
+                                    signedBy,
+                                    signedAt: signedAtIso,
+                                    notes: noteVal,
+                                  });
+                                }
+                                toast.success("Sign-off saved.");
+                              } catch (err) {
+                                console.warn("[AssessmentHistory] sign-off", err);
+                                toast.error("Could not save sign-off.");
+                              } finally {
+                                setSignoffBusyId(null);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-accent/15 text-brand-accent text-[10px] font-semibold px-3 py-1.5 hover:bg-brand-accent/25 disabled:opacity-50"
+                          >
+                            {snap.reviewerSignedAt ? "Update sign-off" : "Sign off snapshot"}
+                          </button>
+                          {snap.reviewerSignedAt && (
+                            <button
+                              type="button"
+                              disabled={signoffBusyId === snap.id}
+                              onClick={async () => {
+                                setSignoffBusyId(snap.id);
+                                try {
+                                  await updateAssessmentReviewerSignoff(snap.id, null);
+                                  setSignoffNotesDraft((prev) => {
+                                    const next = { ...prev };
+                                    delete next[snap.id];
+                                    return next;
+                                  });
+                                  await refresh();
+                                  if (linkedCloudAssessmentId === snap.id) {
+                                    onLinkedAssessmentSignoffChange?.(null);
+                                  }
+                                  toast.success("Sign-off cleared.");
+                                } catch (err) {
+                                  console.warn("[AssessmentHistory] clear sign-off", err);
+                                  toast.error("Could not clear sign-off.");
+                                } finally {
+                                  setSignoffBusyId(null);
+                                }
+                              }}
+                              className="text-[10px] text-muted-foreground hover:text-[#EA0022] px-2 py-1.5"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

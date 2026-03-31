@@ -130,6 +130,11 @@ export function HealthCheckInnerLayout() {
     setSeNotesManual,
     findingNotes,
     setFindingNotes,
+    reviewerSignOff,
+    reviewerSignOffDraft,
+    setReviewerSignOffDraft,
+    applyReviewerSignOff,
+    clearReviewerSignOff,
     seManagementOpen,
     setSeManagementOpen,
     effectivePreparedBy,
@@ -887,6 +892,37 @@ export function HealthCheckInnerLayout() {
                   <Download className="h-4 w-4" />
                   Summary JSON
                 </Button>
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <Input
+                    placeholder="Reviewer name (CSV sign-off)"
+                    className="h-8 max-w-[200px] text-xs"
+                    value={reviewerSignOffDraft}
+                    onChange={(e) => setReviewerSignOffDraft(e.target.value)}
+                    disabled={!exportFieldsReady}
+                    aria-label="Reviewer name for CSV sign-off"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={!exportFieldsReady}
+                    onClick={applyReviewerSignOff}
+                  >
+                    Record sign-off
+                  </Button>
+                  {reviewerSignOff && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs text-muted-foreground"
+                      onClick={clearReviewerSignOff}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
                 <Button
                   type="button"
                   variant="outline"

@@ -312,9 +312,20 @@ export function PriorityMatrix({ analysisResults }: Props) {
               </feMerge>
             </filter>
           </defs>
-          {/* Quadrant backgrounds */}
+          {/* Quadrant backgrounds — must match getQuadrant: high impact = top, low effort = left */}
+          {/* Top-left: high impact, low effort → quick-win */}
           <rect
             x={PAD}
+            y={PAD}
+            width={(W - 2 * PAD) / 2}
+            height={(H - 2 * PAD) / 2}
+            fill="#00F2B3"
+            opacity={!activeQuadrant || activeQuadrant === "quick-win" ? 0.06 : 0.015}
+            rx="1"
+          />
+          {/* Top-right: high impact, high effort → strategic */}
+          <rect
+            x={PAD + (W - 2 * PAD) / 2}
             y={PAD}
             width={(W - 2 * PAD) / 2}
             height={(H - 2 * PAD) / 2}
@@ -322,31 +333,24 @@ export function PriorityMatrix({ analysisResults }: Props) {
             opacity={!activeQuadrant || activeQuadrant === "strategic" ? 0.05 : 0.015}
             rx="1"
           />
-          <rect
-            x={PAD + (W - 2 * PAD) / 2}
-            y={PAD}
-            width={(W - 2 * PAD) / 2}
-            height={(H - 2 * PAD) / 2}
-            fill="#888"
-            opacity={!activeQuadrant || activeQuadrant === "thankless" ? 0.03 : 0.01}
-            rx="1"
-          />
+          {/* Bottom-left: low impact, low effort → low-priority */}
           <rect
             x={PAD}
             y={PAD + (H - 2 * PAD) / 2}
             width={(W - 2 * PAD) / 2}
             height={(H - 2 * PAD) / 2}
-            fill="#00F2B3"
-            opacity={!activeQuadrant || activeQuadrant === "quick-win" ? 0.06 : 0.015}
+            fill="#009CFB"
+            opacity={!activeQuadrant || activeQuadrant === "low-priority" ? 0.05 : 0.015}
             rx="1"
           />
+          {/* Bottom-right: low impact, high effort → thankless / reconsider */}
           <rect
             x={PAD + (W - 2 * PAD) / 2}
             y={PAD + (H - 2 * PAD) / 2}
             width={(W - 2 * PAD) / 2}
             height={(H - 2 * PAD) / 2}
-            fill="#009CFB"
-            opacity={!activeQuadrant || activeQuadrant === "low-priority" ? 0.05 : 0.015}
+            fill="#888"
+            opacity={!activeQuadrant || activeQuadrant === "thankless" ? 0.03 : 0.01}
             rx="1"
           />
 
@@ -386,10 +390,10 @@ export function PriorityMatrix({ analysisResults }: Props) {
             strokeDasharray="2 2"
           />
 
-          {/* Quadrant labels */}
+          {/* Quadrant labels — same layout as rects: TL quick-win, TR strategic, BL low-priority, BR thankless */}
           <text
             x={PAD + 2}
-            y={H - PAD - 2}
+            y={PAD + 5}
             fontSize="3"
             fill="currentColor"
             className="text-[#00F2B3]/70 dark:text-[#00F2B3]/70"
@@ -404,18 +408,6 @@ export function PriorityMatrix({ analysisResults }: Props) {
             y={PAD + 5}
             fontSize="3"
             fill="currentColor"
-            className="text-muted-foreground/40"
-            fontWeight="700"
-            letterSpacing="0.08em"
-            style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
-          >
-            RECONSIDER
-          </text>
-          <text
-            x={PAD + 2}
-            y={PAD + 5}
-            fontSize="3"
-            fill="currentColor"
             className="text-[#F29400]/70"
             fontWeight="700"
             letterSpacing="0.08em"
@@ -424,7 +416,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             STRATEGIC
           </text>
           <text
-            x={PAD + (W - 2 * PAD) / 2 + 2}
+            x={PAD + 2}
             y={H - PAD - 2}
             fontSize="3"
             fill="currentColor"
@@ -434,6 +426,18 @@ export function PriorityMatrix({ analysisResults }: Props) {
             style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
           >
             LOW PRIORITY
+          </text>
+          <text
+            x={PAD + (W - 2 * PAD) / 2 + 2}
+            y={H - PAD - 2}
+            fontSize="3"
+            fill="currentColor"
+            className="text-muted-foreground/40"
+            fontWeight="700"
+            letterSpacing="0.08em"
+            style={{ fontFamily: "'Zalando Sans', system-ui, sans-serif" }}
+          >
+            RECONSIDER
           </text>
 
           {/* Axis labels */}

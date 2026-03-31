@@ -8,7 +8,9 @@ import { findSection, sectionToBlob } from "../helpers";
 
 /** VPN Security — check IPSec profiles for weak encryption and SSL VPN config */
 export function analyseVpnSecurity(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+  sections: ExtractedSections,
+  findings: Finding[],
+  nextId: () => number,
 ) {
   const WEAK_CIPHERS = /des(?!3)|3des|blowfish|cast|rc4|null/i;
   const WEAK_DH = /^(1|2|5|dh1|dh2|dh5|group1|group2|group5)$/i;
@@ -43,9 +45,13 @@ export function analyseVpnSecurity(
         const dh = row["Phase 1 DH Groups"] ?? row["DH Group"] ?? "";
         const pfs = row["Phase 2 PFS"] ?? row["PFS"] ?? "";
 
-        if (WEAK_CIPHERS.test(p1Enc) || WEAK_CIPHERS.test(p2Enc) ||
-            WEAK_AUTH.test(p1Auth) || WEAK_AUTH.test(p2Auth) ||
-            WEAK_DH.test(dh.trim())) {
+        if (
+          WEAK_CIPHERS.test(p1Enc) ||
+          WEAK_CIPHERS.test(p2Enc) ||
+          WEAK_AUTH.test(p1Auth) ||
+          WEAK_AUTH.test(p2Auth) ||
+          WEAK_DH.test(dh.trim())
+        ) {
           weakProfiles.push(name);
         }
         const pfsVal = pfs.toLowerCase().trim();
@@ -56,22 +62,26 @@ export function analyseVpnSecurity(
     }
     if (weakProfiles.length > 0) {
       findings.push({
-        id: `f${nextId()}`, severity: "high",
+        id: `f${nextId()}`,
+        severity: "high",
         title: `${weakProfiles.length} active VPN profile${weakProfiles.length > 1 ? "s" : ""} using weak encryption`,
         detail: `VPN profiles in use by IPSec connections with outdated cryptography (DES, 3DES, MD5, SHA-1, or weak DH groups): ${weakProfiles.slice(0, 6).join(", ")}${weakProfiles.length > 6 ? ` (+${weakProfiles.length - 6} more)` : ""}. These algorithms are vulnerable to known attacks.`,
         section: "VPN Security",
-        remediation: "Go to Configure > VPN > IPsec profiles. Update Phase 1 and Phase 2 to use AES-256 or AES-128 with SHA-256+ auth and DH Group 14 or higher. Remove DES, 3DES, MD5, and SHA-1.",
+        remediation:
+          "Go to Configure > VPN > IPsec profiles. Update Phase 1 and Phase 2 to use AES-256 or AES-128 with SHA-256+ auth and DH Group 14 or higher. Remove DES, 3DES, MD5, and SHA-1.",
         confidence: "high",
         evidence: `Active profiles: ${weakProfiles.slice(0, 3).join(", ")} use weak ciphers/auth/DH groups`,
       });
     }
     if (noPfs.length > 0) {
       findings.push({
-        id: `f${nextId()}`, severity: "medium",
+        id: `f${nextId()}`,
+        severity: "medium",
         title: `${noPfs.length} active VPN profile${noPfs.length > 1 ? "s" : ""} without Perfect Forward Secrecy`,
         detail: `VPN profiles in use by IPSec connections without PFS enabled: ${noPfs.slice(0, 6).join(", ")}${noPfs.length > 6 ? ` (+${noPfs.length - 6} more)` : ""}. Without PFS, compromising a single key may allow decryption of all past traffic.`,
         section: "VPN Security",
-        remediation: "Go to Configure > VPN > IPsec profiles. Edit Phase 2 settings and enable PFS (DH Group 14+).",
+        remediation:
+          "Go to Configure > VPN > IPsec profiles. Edit Phase 2 settings and enable PFS (DH Group 14+).",
         confidence: "high",
         evidence: `Active profiles: ${noPfs.slice(0, 3).join(", ")} have PFS=Off/Disabled`,
       });
@@ -86,20 +96,57 @@ export function analyseVpnSecurity(
       for (const row of t.rows) {
         const name = row["Name"] ?? "Unknown";
         const authType = (row["Authentication Type"] ?? row["Auth Type"] ?? "").toLowerCase();
-        if (authType.includes("preshared") || authType.includes("psk") || authType.includes("pre-shared")) {
+        if (
+          authType.includes("preshared") ||
+          authType.includes("psk") ||
+          authType.includes("pre-shared")
+        ) {
           pskConns.push(name);
         }
       }
     }
     if (pskConns.length > 0) {
       findings.push({
-        id: `f${nextId()}`, severity: "medium",
+        id: `f${nextId()}`,
+        severity: "medium",
         title: `${pskConns.length} IPSec connection${pskConns.length > 1 ? "s" : ""} using pre-shared key authentication`,
         detail: `IPSec tunnels using PSK instead of digital certificates: ${pskConns.slice(0, 6).join(", ")}${pskConns.length > 6 ? ` (+${pskConns.length - 6} more)` : ""}. Certificate-based authentication is stronger and avoids PSK reuse risks.`,
         section: "VPN Security",
-        remediation: "Consider migrating IPSec connections from PSK to digital certificate (X.509) or RSA key authentication for improved security.",
+        remediation:
+          "Consider migrating IPSec connections from PSK to digital certificate (X.509) or RSA key authentication for improved security.",
         confidence: "medium",
         evidence: `Connections: ${pskConns.slice(0, 3).join(", ")} use Authentication Type=PresharedKey`,
+      });
+    }
+  }
+
+  // Legacy PPTP / L2TP remote access — PPTP is cryptographically broken; prefer SSL VPN or modern IPsec
+  const pptpSection =
+    findSection(sections, /\bpptp\b/i) ??
+    findSection(sections, /l2tp.*remote|remote.*l2tp/i) ??
+    findSection(sections, /legacy.*remote.*access|remote.*access.*pptp/i);
+  if (pptpSection) {
+    const blob = sectionToBlob(pptpSection);
+    const lower = blob.toLowerCase();
+    const mentionsPptp = /\bpptp\b/.test(lower);
+    const looksEnabled =
+      mentionsPptp &&
+      (/\b(enable|on|yes|active|running|start)\b/i.test(blob) ||
+        /\bpptp\b.*\b(enable|on|yes)\b/i.test(lower)) &&
+      !/\bpptp\b.*\b(disable|off|no|stop)\b/i.test(lower) &&
+      !/\ball\s*disabled\b/i.test(lower);
+    if (looksEnabled || (mentionsPptp && /\bconnection\b|\btunnel\b|\bclient\b/i.test(lower))) {
+      findings.push({
+        id: `f${nextId()}`,
+        severity: "high",
+        title: "Legacy PPTP or L2TP-style remote-access VPN may be in use",
+        detail:
+          "PPTP is not considered secure for production use. L2TP without strong IPsec is also legacy. Prefer SSL VPN or IPsec remote access with modern algorithms and MFA.",
+        section: "VPN Security",
+        remediation:
+          "Go to Configure > VPN. Disable PPTP; migrate users to SSL VPN or IPsec remote access with AES and MFA.",
+        confidence: mentionsPptp ? "medium" : "low",
+        evidence: "VPN section references PPTP/L2TP remote access",
       });
     }
   }
@@ -117,7 +164,8 @@ export function analyseVpnSecurity(
     }
     if (totalPolicies > 0) {
       findings.push({
-        id: `f${nextId()}`, severity: "info",
+        id: `f${nextId()}`,
+        severity: "info",
         title: `${totalPolicies} SSL VPN polic${totalPolicies > 1 ? "ies" : "y"} configured`,
         detail: `${totalPolicies} SSL VPN remote access ${totalPolicies > 1 ? "policies are" : "policy is"} configured. Ensure MFA is enforced for all SSL VPN users and that permitted resources follow least-privilege.`,
         section: "VPN Security",
@@ -130,7 +178,9 @@ export function analyseVpnSecurity(
 
 /** DoS & Spoof Protection — flag if protection is not enabled */
 export function analyseDoSProtection(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+  sections: ExtractedSections,
+  findings: Finding[],
+  nextId: () => number,
 ) {
   const dosSection = findSection(sections, /^dos\b/i) ?? findSection(sections, /dos.*protect/i);
   const spoofSection = findSection(sections, /spoof/i);
@@ -139,11 +189,14 @@ export function analyseDoSProtection(
     const combined = findSection(sections, /dos|spoof/i);
     if (!combined) {
       findings.push({
-        id: `f${nextId()}`, severity: "medium",
+        id: `f${nextId()}`,
+        severity: "medium",
         title: "No DoS & Spoof Protection configuration found",
-        detail: "No DoS or spoof protection section was detected in the configuration export. Without DoS protection, the firewall is vulnerable to SYN flood, UDP flood, and ICMP flood attacks.",
+        detail:
+          "No DoS or spoof protection section was detected in the configuration export. Without DoS protection, the firewall is vulnerable to SYN flood, UDP flood, and ICMP flood attacks.",
         section: "DoS & Spoof Protection",
-        remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection, UDP flood protection, ICMP flood protection, and IP spoof prevention.",
+        remediation:
+          "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection, UDP flood protection, ICMP flood protection, and IP spoof prevention.",
         confidence: "medium",
         evidence: "No DoS/Spoof section found in config export",
       });
@@ -162,7 +215,10 @@ export function analyseDoSProtection(
     if (details.length > 0) {
       const fields = details[0].fields ?? {};
       const synVal = (
-        fields["SYNFloodProtection"] ?? fields["SynFlood"] ?? fields["Status"] ?? ""
+        fields["SYNFloodProtection"] ??
+        fields["SynFlood"] ??
+        fields["Status"] ??
+        ""
       ).toLowerCase();
       synDisabled = synVal === "disable" || synVal === "off" || synVal === "0";
     }
@@ -172,11 +228,14 @@ export function analyseDoSProtection(
 
     if (synDisabled) {
       findings.push({
-        id: `f${nextId()}`, severity: "high",
+        id: `f${nextId()}`,
+        severity: "high",
         title: "SYN flood protection disabled",
-        detail: "SYN flood protection is not active. SYN flood attacks can exhaust server connection tables, causing denial of service.",
+        detail:
+          "SYN flood protection is not active. SYN flood attacks can exhaust server connection tables, causing denial of service.",
         section: "DoS & Spoof Protection",
-        remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection with appropriate thresholds.",
+        remediation:
+          "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection with appropriate thresholds.",
         confidence: "high",
         evidence: "DoS section: SYN flood protection set to disabled/off",
       });
@@ -191,22 +250,24 @@ export function analyseDoSProtection(
 
     if (details.length > 0) {
       const fields = details[0].fields ?? {};
-      const spoofVal = (
-        fields["Status"] ?? fields["IPSpoofPrevention"] ?? ""
-      ).toLowerCase();
+      const spoofVal = (fields["Status"] ?? fields["IPSpoofPrevention"] ?? "").toLowerCase();
       spoofDisabled = spoofVal === "disable" || spoofVal === "off" || spoofVal === "0";
     }
     if (!spoofDisabled) {
-      spoofDisabled = /spoof.*?prevent.*?(disable|off)/i.test(blob) || /ip\s*spoof.*?(disable|off)/i.test(blob);
+      spoofDisabled =
+        /spoof.*?prevent.*?(disable|off)/i.test(blob) || /ip\s*spoof.*?(disable|off)/i.test(blob);
     }
 
     if (spoofDisabled) {
       findings.push({
-        id: `f${nextId()}`, severity: "high",
+        id: `f${nextId()}`,
+        severity: "high",
         title: "IP spoof prevention disabled",
-        detail: "IP spoof prevention is disabled. Attackers can forge source IP addresses to bypass ACLs and launch amplification attacks.",
+        detail:
+          "IP spoof prevention is disabled. Attackers can forge source IP addresses to bypass ACLs and launch amplification attacks.",
         section: "DoS & Spoof Protection",
-        remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable IP spoof prevention for all interfaces.",
+        remediation:
+          "Go to Intrusion prevention > DoS & spoof protection. Enable IP spoof prevention for all interfaces.",
         confidence: "high",
         evidence: "Spoof Prevention section: IP spoof prevention set to disabled/off",
       });
@@ -218,22 +279,28 @@ function analyseSingleDosSection(section: SectionData, findings: Finding[], next
   const blob = sectionToBlob(section);
   if (/spoof.*?prevent.*?(disable|off)/i.test(blob) || /ip\s*spoof.*?(disable|off)/i.test(blob)) {
     findings.push({
-      id: `f${nextId()}`, severity: "high",
+      id: `f${nextId()}`,
+      severity: "high",
       title: "IP spoof prevention disabled",
-      detail: "IP spoof prevention is disabled. Attackers can forge source IP addresses to bypass ACLs and launch amplification attacks.",
+      detail:
+        "IP spoof prevention is disabled. Attackers can forge source IP addresses to bypass ACLs and launch amplification attacks.",
       section: "DoS & Spoof Protection",
-      remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable IP spoof prevention for all interfaces.",
+      remediation:
+        "Go to Intrusion prevention > DoS & spoof protection. Enable IP spoof prevention for all interfaces.",
       confidence: "high",
       evidence: "DoS section: IP spoof prevention set to disabled/off",
     });
   }
   if (/syn.*?flood.*?(disable|off)/i.test(blob)) {
     findings.push({
-      id: `f${nextId()}`, severity: "high",
+      id: `f${nextId()}`,
+      severity: "high",
       title: "SYN flood protection disabled",
-      detail: "SYN flood protection is not active. SYN flood attacks can exhaust server connection tables, causing denial of service.",
+      detail:
+        "SYN flood protection is not active. SYN flood attacks can exhaust server connection tables, causing denial of service.",
       section: "DoS & Spoof Protection",
-      remediation: "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection with appropriate thresholds.",
+      remediation:
+        "Go to Intrusion prevention > DoS & spoof protection. Enable SYN flood protection with appropriate thresholds.",
       confidence: "high",
       evidence: "DoS section: SYN flood protection set to disabled/off",
     });
@@ -245,7 +312,10 @@ function isCentralManaged(sections: ExtractedSections): boolean {
   // Admin profiles contain "Central Management: Read-Write" when Central-registered
   const adminProfiles = findSection(sections, /admin.*profile|administration\s*profile/i);
   if (adminProfiles) {
-    const text = adminProfiles.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (adminProfiles.text ?? "");
+    const text =
+      adminProfiles.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") +
+      " " +
+      (adminProfiles.text ?? "");
     if (/central\s*management.*read.?write/i.test(text)) return true;
   }
   // Firewall rules created by Central prove connectivity
@@ -261,15 +331,22 @@ function isCentralManaged(sections: ExtractedSections): boolean {
   // System services may reference Central
   const sysSvc = findSection(sections, /system\s*service/i);
   if (sysSvc) {
-    const text = sysSvc.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (sysSvc.text ?? "");
-    if (/central.*management.*running/i.test(text) || /central.*management.*start/i.test(text)) return true;
+    const text =
+      sysSvc.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") +
+      " " +
+      (sysSvc.text ?? "");
+    if (/central.*management.*running/i.test(text) || /central.*management.*start/i.test(text))
+      return true;
   }
   return false;
 }
 
 /** External logging — flag if neither syslog nor Sophos Central log forwarding is configured */
 export function analyseSyslogServers(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number, options?: AnalyseOptions,
+  sections: ExtractedSections,
+  findings: Finding[],
+  nextId: () => number,
+  options?: AnalyseOptions,
 ) {
   // Sophos Central counts as external logging
   if (options?.centralLinked) return;
@@ -278,11 +355,14 @@ export function analyseSyslogServers(
   const section = findSection(sections, /syslog\s*server/i);
   if (!section) {
     findings.push({
-      id: `f${nextId()}`, severity: "medium",
+      id: `f${nextId()}`,
+      severity: "medium",
       title: "No external log forwarding configured",
-      detail: "No syslog server or Sophos Central management was detected. Without external log forwarding, firewall logs are only stored locally and could be lost during a hardware failure or attack.",
+      detail:
+        "No syslog server or Sophos Central management was detected. Without external log forwarding, firewall logs are only stored locally and could be lost during a hardware failure or attack.",
       section: "Logging & Monitoring",
-      remediation: "Register the firewall with Sophos Central for automatic log forwarding, or go to System services > Log settings > Syslog servers and add a remote syslog server (SIEM or log collector).",
+      remediation:
+        "Register the firewall with Sophos Central for automatic log forwarding, or go to System services > Log settings > Syslog servers and add a remote syslog server (SIEM or log collector).",
       confidence: "medium",
       evidence: "No Syslog Servers section found and firewall is not Central-managed",
     });
@@ -302,11 +382,14 @@ export function analyseSyslogServers(
 
   if (!hasSyslog) {
     findings.push({
-      id: `f${nextId()}`, severity: "medium",
+      id: `f${nextId()}`,
+      severity: "medium",
       title: "No external log forwarding configured",
-      detail: "The syslog server section exists but contains no active entries, and the firewall does not appear to be registered with Sophos Central. Firewall logs are only stored locally.",
+      detail:
+        "The syslog server section exists but contains no active entries, and the firewall does not appear to be registered with Sophos Central. Firewall logs are only stored locally.",
       section: "Logging & Monitoring",
-      remediation: "Register the firewall with Sophos Central for automatic log forwarding, or go to System services > Log settings > Syslog servers and add a remote syslog server.",
+      remediation:
+        "Register the firewall with Sophos Central for automatic log forwarding, or go to System services > Log settings > Syslog servers and add a remote syslog server.",
       confidence: "medium",
       evidence: "Syslog Servers section has no entries and no Central management detected",
     });
@@ -317,7 +400,9 @@ export function analyseSyslogServers(
  *  AP6 series is Central-managed only, APX is approaching EOL — so many firewalls
  *  won't have firewall-managed wireless at all and that's perfectly fine. */
 export function analyseWirelessSecurity(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+  sections: ExtractedSections,
+  findings: Finding[],
+  nextId: () => number,
 ) {
   // Check if any wireless access points are actually registered/online
   const apSection = findSection(sections, /wireless\s*access\s*point/i);
@@ -349,14 +434,26 @@ export function analyseWirelessSecurity(
       const status = (row["Status"] ?? "").toLowerCase();
       if (status.includes("disable") || status.includes("off")) continue;
 
-      const secMode = (row["Security Mode"] ?? row["Encryption"] ?? row["Authentication"] ?? "").toLowerCase();
+      const secMode = (
+        row["Security Mode"] ??
+        row["Encryption"] ??
+        row["Authentication"] ??
+        ""
+      ).toLowerCase();
       const encryption = (row["Encryption"] ?? "").toLowerCase();
 
-      if (secMode.includes("noencryption") || secMode === "none" || secMode === "open" ||
-          (secMode === "" && encryption === "-")) {
+      if (
+        secMode.includes("noencryption") ||
+        secMode === "none" ||
+        secMode === "open" ||
+        (secMode === "" && encryption === "-")
+      ) {
         openSsids.push(name);
-      } else if (secMode.includes("wep") || secMode.includes("wpa1") ||
-                 (secMode.includes("wpa") && !secMode.includes("wpa2") && !secMode.includes("wpa3"))) {
+      } else if (
+        secMode.includes("wep") ||
+        secMode.includes("wpa1") ||
+        (secMode.includes("wpa") && !secMode.includes("wpa2") && !secMode.includes("wpa3"))
+      ) {
         weakSsids.push(name);
       }
     }
@@ -364,22 +461,26 @@ export function analyseWirelessSecurity(
 
   if (openSsids.length > 0) {
     findings.push({
-      id: `f${nextId()}`, severity: "critical",
+      id: `f${nextId()}`,
+      severity: "critical",
       title: `${openSsids.length} wireless network${openSsids.length > 1 ? "s" : ""} with no encryption`,
       detail: `Open/unencrypted wireless networks: ${openSsids.join(", ")}. All traffic on these networks can be intercepted. Even guest networks should use WPA2/WPA3 with a captive portal.`,
       section: "Wireless Security",
-      remediation: "Go to Protect > Wireless > Wireless networks. Set Security Mode to WPA2/WPA3 Personal or Enterprise for every SSID. Use a captive portal for guest access instead of open encryption.",
+      remediation:
+        "Go to Protect > Wireless > Wireless networks. Set Security Mode to WPA2/WPA3 Personal or Enterprise for every SSID. Use a captive portal for guest access instead of open encryption.",
       confidence: "high",
       evidence: `SSIDs ${openSsids.join(", ")} have Security Mode=NoEncryption/Open`,
     });
   }
   if (weakSsids.length > 0) {
     findings.push({
-      id: `f${nextId()}`, severity: "high",
+      id: `f${nextId()}`,
+      severity: "high",
       title: `${weakSsids.length} wireless network${weakSsids.length > 1 ? "s" : ""} using weak encryption`,
       detail: `Wireless networks using deprecated encryption (WEP or WPA1): ${weakSsids.join(", ")}. WEP can be cracked in minutes; WPA1 has known vulnerabilities.`,
       section: "Wireless Security",
-      remediation: "Go to Protect > Wireless > Wireless networks. Upgrade Security Mode to WPA2 Personal/Enterprise at minimum, preferably WPA3.",
+      remediation:
+        "Go to Protect > Wireless > Wireless networks. Upgrade Security Mode to WPA2 Personal/Enterprise at minimum, preferably WPA3.",
       confidence: "high",
       evidence: `SSIDs ${weakSsids.join(", ")} use WEP/WPA1`,
     });
@@ -388,7 +489,9 @@ export function analyseWirelessSecurity(
 
 /** SNMP Community — flag weak/default community strings */
 export function analyseSnmpCommunity(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+  sections: ExtractedSections,
+  findings: Finding[],
+  nextId: () => number,
 ) {
   const section = findSection(sections, /snmp\s*community/i);
   if (!section) return;
@@ -407,11 +510,13 @@ export function analyseSnmpCommunity(
 
   if (weakCommunities.length > 0) {
     findings.push({
-      id: `f${nextId()}`, severity: "high",
+      id: `f${nextId()}`,
+      severity: "high",
       title: `${weakCommunities.length} SNMP communit${weakCommunities.length > 1 ? "ies" : "y"} using default/weak strings`,
       detail: `SNMP community strings with well-known defaults: ${weakCommunities.join(", ")}. Default SNMP strings are trivially guessable and expose device configuration and network topology.`,
       section: "SNMP Security",
-      remediation: "Go to Administration > SNMP. Change community strings to complex, unique values. Consider migrating to SNMPv3 which uses authentication and encryption instead of cleartext community strings.",
+      remediation:
+        "Go to Administration > SNMP. Change community strings to complex, unique values. Consider migrating to SNMPv3 which uses authentication and encryption instead of cleartext community strings.",
       confidence: "high",
       evidence: `SNMP communities: ${weakCommunities.join(", ")} are well-known defaults`,
     });
@@ -420,23 +525,32 @@ export function analyseSnmpCommunity(
 
 /** DNS Security — check for DNS configuration issues */
 export function analyseDnsSecurity(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+  sections: ExtractedSections,
+  findings: Finding[],
+  nextId: () => number,
 ) {
   const section = findSection(sections, /^dns$/i) ?? findSection(sections, /^dns\s*(?!request)/i);
   if (!section) return;
 
-  const text = section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (section.text ?? "");
+  const text =
+    section.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") +
+    " " +
+    (section.text ?? "");
 
   // Check for DNS proxy/rebinding protection
-  const rebinding = text.match(/DNSRebindingProtection[^}]*?(Enable|Disable)/i)?.[1] ??
+  const rebinding =
+    text.match(/DNSRebindingProtection[^}]*?(Enable|Disable)/i)?.[1] ??
     text.match(/Rebinding[^}]*?(Enable|Disable)/i)?.[1];
   if (rebinding && !/enable/i.test(rebinding)) {
     findings.push({
-      id: `f${nextId()}`, severity: "medium",
+      id: `f${nextId()}`,
+      severity: "medium",
       title: "DNS rebinding protection disabled",
-      detail: "DNS rebinding protection is not enabled. This attack allows malicious websites to make requests to internal network resources through the victim's browser.",
+      detail:
+        "DNS rebinding protection is not enabled. This attack allows malicious websites to make requests to internal network resources through the victim's browser.",
       section: "DNS Security",
-      remediation: "Go to Network > DNS. Enable DNS rebinding protection to prevent internal resource access via DNS rebinding attacks.",
+      remediation:
+        "Go to Network > DNS. Enable DNS rebinding protection to prevent internal resource access via DNS rebinding attacks.",
       confidence: "medium",
       evidence: "DNS section: DNSRebindingProtection set to Disable",
     });
@@ -450,7 +564,8 @@ export function analyseDnsSecurity(
         const target = (row["Target"] ?? row["DNS Server"] ?? row["Server"] ?? "").trim();
         if (/8\.8\.8\.8|8\.8\.4\.4|1\.1\.1\.1|1\.0\.0\.1|9\.9\.9\.9|208\.67/i.test(target)) {
           findings.push({
-            id: `f${nextId()}`, severity: "info",
+            id: `f${nextId()}`,
+            severity: "info",
             title: "DNS queries routed to public resolvers",
             detail: `DNS requests are being forwarded to public resolvers (${target}). While functional, consider using DNS-over-TLS or DNS-over-HTTPS for encrypted DNS resolution, or a Sophos-managed DNS service.`,
             section: "DNS Security",
@@ -466,21 +581,29 @@ export function analyseDnsSecurity(
 
 /** RED Security — check for unencrypted RED tunnels */
 export function analyseRedSecurity(
-  sections: ExtractedSections, findings: Finding[], nextId: () => number,
+  sections: ExtractedSections,
+  findings: Finding[],
+  nextId: () => number,
 ) {
   const redConfig = findSection(sections, /^red\s*config/i) ?? findSection(sections, /^red$/i);
   if (!redConfig) return;
 
-  const text = redConfig.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") + " " + (redConfig.text ?? "");
+  const text =
+    redConfig.tables.flatMap((t) => t.rows.map((r) => JSON.stringify(r))).join(" ") +
+    " " +
+    (redConfig.text ?? "");
 
   const unlockCode = text.match(/UnlockCode[^}]*?[":]?\s*([^",}]+)/i)?.[1]?.trim();
   if (unlockCode && /default|123456|000000/i.test(unlockCode)) {
     findings.push({
-      id: `f${nextId()}`, severity: "high",
+      id: `f${nextId()}`,
+      severity: "high",
       title: "RED device using default unlock code",
-      detail: "A RED device appears to be using a default or weak unlock code. This could allow unauthorised devices to connect to the tunnel.",
+      detail:
+        "A RED device appears to be using a default or weak unlock code. This could allow unauthorised devices to connect to the tunnel.",
       section: "RED Security",
-      remediation: "Go to Configure > Site-to-site VPN > RED. Change the unlock code to a strong, unique value for each RED device.",
+      remediation:
+        "Go to Configure > Site-to-site VPN > RED. Change the unlock code to a strong, unique value for each RED device.",
       confidence: "medium",
       evidence: `RED config: UnlockCode appears to be a default value`,
     });

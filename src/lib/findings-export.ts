@@ -1,4 +1,28 @@
 import type { AnalysisResult, Finding } from "./analyse-config";
+import type { AssessmentSnapshot } from "./assessment-history";
+import { ALL_FRAMEWORK_NAMES, controlIdsForFindingExport } from "./compliance-map";
+import { validateFindingExportMetadata } from "./report-export-validation";
+
+export type FindingsCsvReviewerSignoff = {
+  signedBy: string;
+  signedAt: string;
+  notes?: string | null;
+};
+
+/** Maps a cloud assessment snapshot to CSV sign-off metadata (requires both signatory and timestamp). */
+export function signoffFromAssessmentSnapshot(
+  snap: AssessmentSnapshot | null | undefined,
+): FindingsCsvReviewerSignoff | null {
+  const by = snap?.reviewerSignedBy?.trim();
+  const at = snap?.reviewerSignedAt;
+  if (!by || !at) return null;
+  const signedAt = typeof at === "string" ? at : String(at);
+  return {
+    signedBy: by,
+    signedAt,
+    notes: snap?.reviewerSignoffNotes ?? null,
+  };
+}
 
 function escCsv(s: string): string {
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
@@ -7,25 +31,55 @@ function escCsv(s: string): string {
   return s;
 }
 
-export function exportFindingsCsv(analysisResults: Record<string, AnalysisResult>): string {
-  const rows: string[] = ["Firewall,Severity,Title,Section,Detail,Remediation"];
+export function exportFindingsCsv(
+  analysisResults: Record<string, AnalysisResult>,
+  frameworks: string[] = ALL_FRAMEWORK_NAMES,
+  reviewerSignoff?: FindingsCsvReviewerSignoff | null,
+): string {
+  const rows: string[] = ["Firewall,Severity,Title,Section,Control IDs,Detail,Remediation"];
   for (const [label, result] of Object.entries(analysisResults)) {
     for (const f of result.findings) {
-      rows.push([
-        escCsv(label),
-        escCsv(f.severity),
-        escCsv(f.title),
-        escCsv(f.section),
-        escCsv(f.detail),
-        escCsv(f.remediation ?? ""),
-      ].join(","));
+      const controlIds = controlIdsForFindingExport(f.title, frameworks);
+      void validateFindingExportMetadata({
+        severity: f.severity,
+        controlIds,
+        title: f.title,
+        detail: f.detail,
+      });
+      rows.push(
+        [
+          escCsv(label),
+          escCsv(f.severity),
+          escCsv(f.title),
+          escCsv(f.section),
+          escCsv(controlIds),
+          escCsv(f.detail),
+          escCsv(f.remediation ?? ""),
+        ].join(","),
+      );
+    }
+  }
+  if (reviewerSignoff?.signedBy && reviewerSignoff.signedAt) {
+    rows.push("");
+    rows.push(`# Reviewer sign-off`);
+    rows.push(`# Signed by,${escCsv(reviewerSignoff.signedBy)}`);
+    rows.push(`# Signed at (UTC),${escCsv(reviewerSignoff.signedAt)}`);
+    if (reviewerSignoff.notes?.trim()) {
+      rows.push(`# Notes,${escCsv(reviewerSignoff.notes.trim())}`);
     }
   }
   return rows.join("\n");
 }
 
-export function downloadCsv(analysisResults: Record<string, AnalysisResult>) {
-  const csv = exportFindingsCsv(analysisResults);
+export function downloadCsv(
+  analysisResults: Record<string, AnalysisResult>,
+  opts?: {
+    frameworks?: string[];
+    reviewerSignoff?: FindingsCsvReviewerSignoff | null;
+  },
+) {
+  const fw = opts?.frameworks?.length ? opts.frameworks : ALL_FRAMEWORK_NAMES;
+  const csv = exportFindingsCsv(analysisResults, fw, opts?.reviewerSignoff);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -48,11 +102,16 @@ export function downloadFindingsPdf(analysisResults: Record<string, AnalysisResu
 
   const sevColor = (s: string) => {
     switch (s) {
-      case "critical": return "#EA0022";
-      case "high": return "#F29400";
-      case "medium": return "#F8E300";
-      case "low": return "#00F2B3";
-      default: return "#009CFB";
+      case "critical":
+        return "#EA0022";
+      case "high":
+        return "#F29400";
+      case "medium":
+        return "#F8E300";
+      case "low":
+        return "#00F2B3";
+      default:
+        return "#009CFB";
     }
   };
 
@@ -75,15 +134,21 @@ export function downloadFindingsPdf(analysisResults: Record<string, AnalysisResu
 </style></head><body>
 <h1>Sophos FireComply — Security Findings</h1>
 <p class="meta">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · ${allFindings.length} findings across ${Object.keys(analysisResults).length} firewall${Object.keys(analysisResults).length !== 1 ? "s" : ""}</p>
-<table><thead><tr><th>Severity</th><th>Finding</th><th>Section</th><th>Firewall</th><th>Detail</th><th>Remediation</th></tr></thead><tbody>
-${allFindings.map((f) => `<tr>
+<table><thead><tr><th>Severity</th><th>Finding</th><th>Section</th><th>Firewall</th><th>Control IDs</th><th>Detail</th><th>Remediation</th></tr></thead><tbody>
+${allFindings
+  .map((f) => {
+    const cids = controlIdsForFindingExport(f.title, ALL_FRAMEWORK_NAMES);
+    return `<tr>
   <td><span class="sev" style="background:${sevColor(f.severity)}">${f.severity}</span></td>
   <td style="font-weight:600">${esc(f.title)}</td>
   <td>${esc(f.section)}</td>
   <td>${esc(f.firewall)}</td>
+  <td style="font-size:9px">${esc(cids || "—")}</td>
   <td class="detail">${esc(f.detail)}</td>
   <td class="rem">${esc(f.remediation ?? "—")}</td>
-</tr>`).join("\n")}
+</tr>`;
+  })
+  .join("\n")}
 </tbody></table></body></html>`;
 
   const blob = new Blob([html], { type: "text/html;charset=utf-8;" });

@@ -15,6 +15,10 @@ export interface AssessmentSnapshot {
   }[];
   overallScore: number;
   overallGrade: string;
+  /** Cloud assessments only — reviewer attestation (Phase 4 compliance). */
+  reviewerSignedBy?: string | null;
+  reviewerSignedAt?: string | null;
+  reviewerSignoffNotes?: string | null;
 }
 
 const DB_NAME = "sophos-firecomply";
@@ -52,7 +56,15 @@ export async function saveAssessment(
   const scores = firewalls.map((f) => f.riskScore.overall);
   const overallScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   const overallGrade =
-    overallScore >= 90 ? "A" : overallScore >= 75 ? "B" : overallScore >= 60 ? "C" : overallScore >= 40 ? "D" : "F";
+    overallScore >= 90
+      ? "A"
+      : overallScore >= 75
+        ? "B"
+        : overallScore >= 60
+          ? "C"
+          : overallScore >= 40
+            ? "D"
+            : "F";
 
   const snapshot: AssessmentSnapshot = {
     id: `assess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -95,7 +107,11 @@ export async function deleteAssessment(id: string): Promise<void> {
   });
 }
 
-export async function renameAssessment(id: string, customerName: string, environment: string): Promise<void> {
+export async function renameAssessment(
+  id: string,
+  customerName: string,
+  environment: string,
+): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
