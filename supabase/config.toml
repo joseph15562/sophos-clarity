@@ -28,6 +28,10 @@ verify_jwt = false
 verify_jwt = false
 # Mixed: cron (no JWT) + manual preview (JWT validated internally).
 
+[functions.process-job-outbox]
+verify_jwt = false
+# Cron: claims job_outbox rows; authorize with CRON_SECRET Bearer when set.
+
 [functions.agent-nudge]
 verify_jwt = false
 # Cron-triggered: nudges stale agents and marks offline after 48 h.
