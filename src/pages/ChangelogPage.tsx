@@ -58,6 +58,13 @@ function ChangelogPageInner() {
               assessment-specific logo.
             </li>
             <li>
+              <strong className="text-foreground">Management</strong>: connector{" "}
+              <strong className="text-foreground">Customer (grouping)</strong> is a dropdown of
+              existing customers only (add customers via assessments or Customer Management). Saving
+              labels uses a stricter <code className="text-xs">api</code> agent route so PATCH is
+              not mistaken for a connector call (no more misleading &quot;Missing X-API-Key&quot;).
+            </li>
+            <li>
               <strong className="text-foreground">Extraction Summary</strong>: dark mode uses solid
               card-style surfaces, clearer metric labels, an amber-tinted (not beige) empty-sections
               warning, and readable file rows.

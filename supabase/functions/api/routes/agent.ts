@@ -608,6 +608,14 @@ async function handleVerifyIdentity(
 // Router
 // ════════════════════════════════════════════════════════════════════
 
+/** Agent row id in URL path (avoids treating `config` / `heartbeat` as an agent id). */
+function isAgentRowIdSegment(s: string | undefined): boolean {
+  if (!s) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    s,
+  );
+}
+
 export async function handleAgentRoutes(
   req: Request,
   _url: URL,
@@ -621,19 +629,28 @@ export async function handleAgentRoutes(
   if (req.method === "POST" && route === "register") {
     return handleRegister(req, corsHeaders);
   }
-  if (req.method === "DELETE" && route) {
-    return handleDelete(req, route, corsHeaders);
-  }
-  if (req.method === "PATCH" && route && segments.length === 2) {
-    return handlePatch(req, route, corsHeaders);
-  }
   if (
-    req.method === "POST" && segments.length === 3 && segments[2] === "run-now"
+    req.method === "POST" && segments.length === 3 && segments[2] === "run-now" &&
+    isAgentRowIdSegment(route)
   ) {
     return handleRunNow(req, route, corsHeaders);
   }
+  if (req.method === "DELETE" && isAgentRowIdSegment(route)) {
+    return handleDelete(req, route, corsHeaders);
+  }
+  if (req.method === "PATCH" && isAgentRowIdSegment(route)) {
+    return handlePatch(req, route, corsHeaders);
+  }
 
-  // Connector API-key routes
+  // Connector API-key routes (allowlist — do not fall through to "Missing X-API-Key" for web PATCH/DELETE etc.)
+  const connectorGet = req.method === "GET" &&
+    ["config", "firewalls", "commands"].includes(route ?? "");
+  const connectorPost = req.method === "POST" &&
+    ["heartbeat", "submit", "verify-identity"].includes(route ?? "");
+  if (!connectorGet && !connectorPost) {
+    return json({ error: "Not found" }, 404, corsHeaders);
+  }
+
   const apiKey = req.headers.get("X-API-Key") ?? req.headers.get("x-api-key");
   if (!apiKey) {
     return json({ error: "Missing X-API-Key header" }, 401, corsHeaders);

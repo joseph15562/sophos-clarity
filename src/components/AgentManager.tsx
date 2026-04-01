@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Plug,
   Plus,
@@ -18,6 +18,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
@@ -466,6 +473,14 @@ export function AgentManager() {
     void loadOrgResolvedCustomerNames(org.id, org.name ?? "").then(setCustomerNameOptions);
   }, [org?.id, org?.name]);
 
+  const expandedAgentRow = expanded ? (agents.find((a) => a.id === expanded) ?? null) : null;
+  const customerGroupingSelectNames = useMemo(() => {
+    const s = new Set(customerNameOptions);
+    const extra = expandedAgentRow?.assigned_customer_name?.trim();
+    if (extra) s.add(extra);
+    return [...s].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [customerNameOptions, expandedAgentRow?.assigned_customer_name]);
+
   const loadSubmissionsBatch = useCallback(async (agentIds: string[]) => {
     const unique = [...new Set(agentIds)];
     let toFetch: string[] = [];
@@ -520,6 +535,10 @@ export function AgentManager() {
       environment?: string | null;
     },
   ) => {
+    if (!agentId?.trim()) {
+      toast.error("Invalid agent");
+      return false;
+    }
     const session = (await supabase.auth.getSession()).data.session;
     if (!session) {
       toast.error("Not authenticated");
@@ -871,26 +890,42 @@ export function AgentManager() {
                             <div className="border-t border-brand-accent/10 px-4 pb-4 pt-3 space-y-3 bg-brand-accent/[0.01] dark:bg-brand-accent/[0.03]">
                               {canManageAgents && (
                                 <div className="rounded-lg border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-3 space-y-2">
-                                  <label
-                                    htmlFor={`agent-assigned-customer-${agent.id}`}
-                                    className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide"
+                                  <span
+                                    id={`agent-assigned-customer-${agent.id}`}
+                                    className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide block"
                                   >
                                     Customer (grouping)
-                                  </label>
+                                  </span>
                                   <div className="flex flex-wrap gap-2 items-end">
-                                    <Input
-                                      id={`agent-assigned-customer-${agent.id}`}
-                                      list={`agent-customer-pick-${agent.id}`}
-                                      value={assignedCustomerDraft}
-                                      onChange={(e) => setAssignedCustomerDraft(e.target.value)}
-                                      placeholder="e.g. same name on each connector for this end customer"
-                                      className="h-8 text-[11px] flex-1 min-w-[160px]"
-                                    />
-                                    <datalist id={`agent-customer-pick-${agent.id}`}>
-                                      {customerNameOptions.map((n) => (
-                                        <option key={n} value={n} />
-                                      ))}
-                                    </datalist>
+                                    <Select
+                                      value={
+                                        assignedCustomerDraft.trim()
+                                          ? assignedCustomerDraft.trim()
+                                          : "__fc_no_customer_group__"
+                                      }
+                                      onValueChange={(v) =>
+                                        setAssignedCustomerDraft(
+                                          v === "__fc_no_customer_group__" ? "" : v,
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger
+                                        aria-labelledby={`agent-assigned-customer-${agent.id}`}
+                                        className="h-8 text-[11px] flex-1 min-w-[200px] max-w-md bg-background"
+                                      >
+                                        <SelectValue placeholder="Choose customer" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="__fc_no_customer_group__">
+                                          Use Central tenant (no override)
+                                        </SelectItem>
+                                        {customerGroupingSelectNames.map((n) => (
+                                          <SelectItem key={n} value={n}>
+                                            {n}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                     <Button
                                       type="button"
                                       size="sm"
@@ -920,10 +955,10 @@ export function AgentManager() {
                                     </Button>
                                   </div>
                                   <p className="text-[9px] text-muted-foreground/70 leading-snug">
-                                    Optional. Use the same value on multiple connectors to group
-                                    them under one customer. New assessments bucket here instead of
-                                    the Sophos Central tenant. Clear the field to follow Central
-                                    again. Pick from existing customers or type a new name.
+                                    Choose an existing customer from your directory (same value on
+                                    multiple connectors groups them). New assessments bucket under
+                                    that name instead of the Sophos Central tenant. To add a
+                                    customer, use uploads or Customer Management first.
                                   </p>
                                 </div>
                               )}
