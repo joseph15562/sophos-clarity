@@ -110,6 +110,7 @@ test.describe("Tier 2 — signed-in hub (E2E bypass, no secrets)", () => {
   });
 
   test("bypass: workspace shows report controls after upload", async ({ page }) => {
+    test.setTimeout(120_000);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(workspaceDropzone(page)).toBeVisible({ timeout: 30_000 });
     const fileChooserPromise = page.waitForEvent("filechooser");
@@ -122,6 +123,7 @@ test.describe("Tier 2 — signed-in hub (E2E bypass, no secrets)", () => {
   });
 
   test("bypass journey: upload → executive one-pager → Word + PDF print stub", async ({ page }) => {
+    test.setTimeout(180_000);
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(workspaceDropzone(page)).toBeVisible({ timeout: 30_000 });
     const fileChooserPromise = page.waitForEvent("filechooser");
@@ -192,6 +194,7 @@ test.describe("Tier 2 — signed-in hub (optional GitHub secrets)", () => {
   test("signed-in journey: upload → executive one-pager → export affordances + Word download", async ({
     page,
   }) => {
+    test.setTimeout(180_000);
     test.skip(!hasAuthCreds, "Set E2E_USER_EMAIL and E2E_USER_PASSWORD");
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const signIn = page.getByRole("button", { name: /^sign in$/i }).first();

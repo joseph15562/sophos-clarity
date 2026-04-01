@@ -47,14 +47,7 @@ export async function generateExecutiveReportPdfBlob(
     defaultStyle: { font: "Roboto" },
   };
 
-  return new Promise((resolve, reject) => {
-    try {
-      const pdf = pdfMake.createPdf(docDef) as {
-        getBlob: (cb: (blob: Blob) => void) => void;
-      };
-      pdf.getBlob((blob: Blob) => resolve(blob));
-    } catch (e) {
-      reject(e);
-    }
-  });
+  // pdfmake ≥0.3: getBlob() is async (Promise<Blob>), not callback-based.
+  const pdfDoc = pdfMake.createPdf(docDef) as { getBlob: () => Promise<Blob> };
+  return pdfDoc.getBlob();
 }
