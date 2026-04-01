@@ -41,7 +41,10 @@ Deno.test("persistedAssessmentCustomerName: unlinked falls back to agent custome
 
 Deno.test("persistedAssessmentCustomerName: empty tenant string uses body", () => {
   assertEquals(
-    persistedAssessmentCustomerName({ tenant_name: "   ", customer_name: "X" }, "Y"),
+    persistedAssessmentCustomerName(
+      { tenant_name: "   ", customer_name: "X" },
+      "Y",
+    ),
     "Y",
   );
 });

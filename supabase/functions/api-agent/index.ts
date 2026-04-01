@@ -224,7 +224,10 @@ async function handleSubmit(
     drift = { new: trulyNew, fixed: fixedFindings, regressed };
   }
 
-  const customerName = persistedAssessmentCustomerName(agent, body.customer_name);
+  const customerName = persistedAssessmentCustomerName(
+    agent,
+    body.customer_name,
+  );
   const overallScore = body.overall_score ?? 0;
   const overallGrade = body.overall_grade ?? "F";
   const firewalls = body.firewalls ?? [];

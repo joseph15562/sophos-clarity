@@ -56,14 +56,16 @@ function passkeyExpectedOrigins(req: Request): string[] {
   } catch {
     /* ignore */
   }
-  for (const o of [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://localhost:4173",
-    "http://127.0.0.1:4173",
-  ]) {
+  for (
+    const o of [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:8080",
+      "http://127.0.0.1:8080",
+      "http://localhost:4173",
+      "http://127.0.0.1:4173",
+    ]
+  ) {
     out.add(o);
   }
   return [...out];
@@ -229,7 +231,11 @@ async function handlePasskeyLoginVerify(
   );
   if (!tokenPayload) {
     logJson("warn", "passkey_login_verify_bad_challenge_token", {});
-    return json({ error: "Invalid or expired login challenge" }, 401, corsHeaders);
+    return json(
+      { error: "Invalid or expired login challenge" },
+      401,
+      corsHeaders,
+    );
   }
 
   const db = adminClient();
@@ -239,7 +245,11 @@ async function handlePasskeyLoginVerify(
 
   if (targetUser.id !== tokenPayload.sub) {
     logJson("warn", "passkey_login_verify_challenge_user_mismatch", {});
-    return json({ error: "Invalid or expired login challenge" }, 401, corsHeaders);
+    return json(
+      { error: "Invalid or expired login challenge" },
+      401,
+      corsHeaders,
+    );
   }
 
   const cred = credential as {
@@ -288,7 +298,11 @@ async function handlePasskeyLoginVerify(
     const chalBytes = copyU8(stdBase64ToUint8Array(tokenPayload.chal));
     expectedChallenge = isoBase64URL.fromBuffer(chalBytes);
   } catch {
-    return json({ error: "Invalid or expired login challenge" }, 401, corsHeaders);
+    return json(
+      { error: "Invalid or expired login challenge" },
+      401,
+      corsHeaders,
+    );
   }
 
   const loginOrigin = req.headers.get("origin") ?? "";
@@ -317,7 +331,16 @@ async function handlePasskeyLoginVerify(
         publicKey: copyU8(publicKey),
         counter: Number(stored.counter ?? 0),
         transports: Array.isArray(stored.transports)
-          ? stored.transports as ("ble" | "hybrid" | "internal" | "nfc" | "smart-card" | "usb" | "cable")[]
+          ? stored
+            .transports as (
+              | "ble"
+              | "hybrid"
+              | "internal"
+              | "nfc"
+              | "smart-card"
+              | "usb"
+              | "cable"
+            )[]
           : undefined,
       },
       requireUserVerification: false,

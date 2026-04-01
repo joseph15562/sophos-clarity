@@ -37,7 +37,9 @@ type ScheduledReportRow = {
   organisations?: { name?: string; logo_url?: string };
 };
 
-export async function handleProcessJobOutboxRequest(req: Request): Promise<Response> {
+export async function handleProcessJobOutboxRequest(
+  req: Request,
+): Promise<Response> {
   initEdgeSentry({ functionName: "process-job-outbox" });
 
   const cronSecret = Deno.env.get("CRON_SECRET");

@@ -455,7 +455,10 @@ async function handleSubmit(
     drift = { new: trulyNew, fixed: fixedFindings, regressed };
   }
 
-  const customerName = persistedAssessmentCustomerName(agent, body.customer_name);
+  const customerName = persistedAssessmentCustomerName(
+    agent,
+    body.customer_name,
+  );
   const overallScore = body.overall_score ?? 0;
   const overallGrade = body.overall_grade ?? "F";
   const firewalls = body.firewalls ?? [];
@@ -611,9 +614,10 @@ async function handleVerifyIdentity(
 /** Agent row id in URL path (avoids treating `config` / `heartbeat` as an agent id). */
 function isAgentRowIdSegment(s: string | undefined): boolean {
   if (!s) return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    s,
-  );
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(
+      s,
+    );
 }
 
 export async function handleAgentRoutes(
@@ -630,7 +634,8 @@ export async function handleAgentRoutes(
     return handleRegister(req, corsHeaders);
   }
   if (
-    req.method === "POST" && segments.length === 3 && segments[2] === "run-now" &&
+    req.method === "POST" && segments.length === 3 &&
+    segments[2] === "run-now" &&
     isAgentRowIdSegment(route)
   ) {
     return handleRunNow(req, route, corsHeaders);

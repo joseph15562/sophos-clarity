@@ -11,7 +11,9 @@ Deno.test("passkey challenge token round-trip", async () => {
 
   try {
     const userId = "550e8400-e29b-41d4-a716-446655440000";
-    const chal = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+    const chal = btoa(
+      String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))),
+    );
     const tok = await signPasskeyChallengeToken(userId, chal);
     const out = await verifyPasskeyChallengeToken(tok);
     assertEquals(out?.sub, userId);
@@ -32,7 +34,9 @@ Deno.test("passkey challenge token rejects tampered payload", async () => {
       "YWJj",
     );
     const [payloadB64, sigB64] = tok.split(".");
-    const tampered = btoa(JSON.stringify({ sub: "evil", chal: "YWJj", exp: 9999999999 }));
+    const tampered = btoa(
+      JSON.stringify({ sub: "evil", chal: "YWJj", exp: 9999999999 }),
+    );
     const forged = `${tampered}.${sigB64}`;
     const out = await verifyPasskeyChallengeToken(forged);
     assertEquals(out, null);
