@@ -9,7 +9,10 @@ interface Props {
 const SEV_STYLE: Record<string, { badge: string; bar: string }> = {
   critical: { badge: "bg-[#EA0022]/10 text-[#EA0022]", bar: "bg-[#EA0022]" },
   high: { badge: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]", bar: "bg-[#F29400]" },
-  medium: { badge: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]", bar: "bg-[#F8E300]" },
+  medium: {
+    badge: "bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300]",
+    bar: "bg-[#ca8a04] dark:bg-[#F8E300]",
+  },
   info: { badge: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]", bar: "bg-[#009CFB]" },
 };
 

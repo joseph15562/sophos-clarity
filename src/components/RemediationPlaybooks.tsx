@@ -136,7 +136,8 @@ function computeSlaStatus(
 const SEV_BADGE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022] ring-[#EA0022]/20",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400] ring-[#F29400]/20",
-  medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300] ring-[#F8E300]/20",
+  medium:
+    "bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300] ring-[#ca8a04]/20 dark:ring-[#F8E300]/20",
   low: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] ring-[#00F2B3]/20",
   info: "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB] ring-[#009CFB]/20",
 };

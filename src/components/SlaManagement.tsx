@@ -17,7 +17,7 @@ const STORAGE_KEY = "firecomply-sla-tiers";
 type SlaTier = "gold" | "silver" | "bronze";
 
 const TIERS = [
-  { id: "gold" as const, label: "Gold", critical: "24hr", color: "#F8E300" },
+  { id: "gold" as const, label: "Gold", critical: "24hr", color: "#ca8a04" },
   { id: "silver" as const, label: "Silver", critical: "48hr", color: "#9CA3AF" },
   { id: "bronze" as const, label: "Bronze", critical: "7 day", color: "#92400E" },
 ];

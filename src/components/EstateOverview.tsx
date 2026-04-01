@@ -32,6 +32,7 @@ import { severityIcon } from "@/lib/analyse-config";
 import { findingToFrameworks } from "@/lib/compliance-map";
 import { downloadCsv, downloadFindingsPdf } from "@/lib/findings-export";
 import { playbookLibraryHrefForFindingTitle } from "@/lib/playbook-link";
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
 
 interface EstateOverviewProps {
   fileCount: number;
@@ -49,7 +50,7 @@ interface EstateOverviewProps {
 const SEVERITY_COLOR: Record<Severity, string> = {
   critical: "text-[#EA0022]",
   high: "text-[#c47800] dark:text-[#F29400]",
-  medium: "text-[#b8a200] dark:text-[#F8E300]",
+  medium: "text-[#92400e] dark:text-[#F8E300]",
   low: "text-[#007A5A] dark:text-[#00F2B3]",
   info: "text-[#0077cc] dark:text-[#009CFB]",
 };
@@ -57,7 +58,7 @@ const SEVERITY_COLOR: Record<Severity, string> = {
 const SEVERITY_BORDER: Record<Severity, string> = {
   critical: "border-l-[#EA0022]",
   high: "border-l-[#c47800] dark:border-l-[#F29400]",
-  medium: "border-l-[#b8a200] dark:border-l-[#F8E300]",
+  medium: "border-l-[#a16207] dark:border-l-[#F8E300]",
   low: "border-l-[#00F2B3] dark:border-l-[#00F2B3]",
   info: "border-l-[#0077cc] dark:border-l-[#009CFB]",
 };
@@ -65,7 +66,7 @@ const SEVERITY_BORDER: Record<Severity, string> = {
 const SEV_HEX: Record<Severity, string> = {
   critical: "#EA0022",
   high: "#F29400",
-  medium: "#F8E300",
+  medium: SEVERITY_COLORS.medium,
   low: "#00F2B3",
   info: "#009CFB",
 };
@@ -321,7 +322,7 @@ function ExtractionCoverage({
   totalNatRules: number;
   totalInterfaces: number;
 }) {
-  const barHex = extractionPct >= 80 ? "#00F2B3" : extractionPct >= 50 ? "#F8E300" : "#EA0022";
+  const barHex = extractionPct >= 80 ? "#00F2B3" : extractionPct >= 50 ? "#ca8a04" : "#EA0022";
 
   return (
     <div
@@ -553,7 +554,7 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 const SEV_DOT_BG: Record<Severity, string> = {
   critical: "bg-[#EA0022]",
   high: "bg-[#F29400]",
-  medium: "bg-[#F8C300]",
+  medium: "bg-[#ca8a04]",
   low: "bg-[#00F2B3]",
   info: "bg-[#009CFB]",
 };
@@ -561,7 +562,8 @@ const SEV_DOT_BG: Record<Severity, string> = {
 const SEV_BADGE_INLINE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/15 text-[#EA0022] border-[#EA0022]/20",
   high: "bg-[#F29400]/15 text-[#c47800] dark:text-[#F29400] border-[#F29400]/20",
-  medium: "bg-[#F8C300]/15 text-[#b8a200] dark:text-[#F8C300] border-[#F8C300]/20",
+  medium:
+    "bg-[#ca8a04]/15 text-[#78350f] dark:text-[#F8E300] dark:bg-[#F8E300]/12 border-[#ca8a04]/25 dark:border-[#F8E300]/25",
   low: "bg-[#00F2B3]/15 text-[#00b386] dark:text-[#00F2B3] border-[#008F69]/30 dark:border-[#00F2B3]/20",
   info: "bg-[#009CFB]/15 text-[#0077cc] dark:text-[#009CFB] border-[#009CFB]/20",
 };
@@ -792,7 +794,11 @@ const SEV_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
 const SEV_BADGE: Record<Severity, { bg: string; text: string; label: string }> = {
   critical: { bg: "bg-[#EA0022]/10", text: "text-[#EA0022]", label: "C" },
   high: { bg: "bg-[#F29400]/10", text: "text-[#c47800] dark:text-[#F29400]", label: "H" },
-  medium: { bg: "bg-[#F8E300]/10", text: "text-[#b8a200] dark:text-[#F8E300]", label: "M" },
+  medium: {
+    bg: "bg-[#ca8a04]/12 dark:bg-[#F8E300]/10",
+    text: "text-[#78350f] dark:text-[#F8E300]",
+    label: "M",
+  },
   low: {
     bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
     text: "text-[#007A5A] dark:text-[#00F2B3]",
@@ -1087,7 +1093,7 @@ function EstateRiskComparison({
               score === 0
                 ? "#00F2B3"
                 : score <= 5
-                  ? "#F8E300"
+                  ? "#ca8a04"
                   : score <= 15
                     ? "#F29400"
                     : "#EA0022";
@@ -1156,9 +1162,9 @@ function EstateRiskComparison({
                           <span
                             className="text-[10px] font-black px-2 py-0.5 rounded-md border"
                             style={{
-                              color: "#F8E300",
-                              backgroundColor: "rgba(248,227,0,0.10)",
-                              borderColor: "rgba(248,227,0,0.18)",
+                              color: SEVERITY_COLORS.medium,
+                              backgroundColor: "rgba(202,138,4,0.14)",
+                              borderColor: "rgba(202,138,4,0.28)",
                             }}
                             title={`${mediums} Medium`}
                           >
@@ -1207,7 +1213,7 @@ function EstateRiskComparison({
         <p className="relative text-[10px] text-muted-foreground">
           <span className="font-black text-[#EA0022]">C</span> = Critical &middot;{" "}
           <span className="font-black text-[#F29400]">H</span> = High &middot;{" "}
-          <span className="font-black text-[#F8E300]">M</span> = Medium &middot;{" "}
+          <span className="font-black text-[#a16207] dark:text-[#F8E300]">M</span> = Medium &middot;{" "}
           <span className="font-bold">r</span> = rules parsed
         </p>
         <p className="relative text-[10px] text-muted-foreground/60">

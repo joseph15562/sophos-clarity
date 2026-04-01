@@ -58,7 +58,7 @@ import { buildPdfHtml, generateWordBlob } from "@/lib/report-export";
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#00F2B3] dark:text-[#00F2B3]",
   B: "text-[#009CFB]",
-  C: "text-[#F8E300] dark:text-[#F8E300]",
+  C: "text-[#78350f] dark:text-[#F8E300]",
   D: "text-[#F29400]",
   F: "text-[#EA0022]",
 };
@@ -1878,7 +1878,7 @@ export default function ClientPortal() {
                         </Badge>
                         <Badge
                           variant="outline"
-                          className="rounded-md text-[#F8E300] bg-[#F8E300]/[0.08] border-[#F8E300]/20"
+                          className="rounded-md text-[#78350f] bg-[#ca8a04]/12 border-[#ca8a04]/25 dark:text-[#F8E300] dark:bg-[#F8E300]/[0.08] dark:border-[#F8E300]/20"
                         >
                           Partial: {fw.partial}
                         </Badge>

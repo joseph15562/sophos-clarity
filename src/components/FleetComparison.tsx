@@ -13,7 +13,7 @@ import {
 const SEV_BADGE: Record<string, string> = {
   critical: "bg-[#EA0022]/10 text-[#EA0022]",
   high: "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]",
-  medium: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
+  medium: "bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300]",
   low: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]",
   info: "bg-[#009CFB]/10 text-[#009CFB]",
 };

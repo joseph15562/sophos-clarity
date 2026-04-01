@@ -429,7 +429,7 @@ export function LicenceExpiryWidget() {
         onClick={() => setExpanded(!expanded)}
         className={`w-full flex items-center gap-3.5 px-5 py-4 text-left transition-colors group ${expanded ? "bg-brand-accent/[0.04] dark:bg-brand-accent/[0.08]" : "hover:bg-brand-accent/[0.02] dark:hover:bg-brand-accent/[0.04]"}`}
       >
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#F29400] to-[#F8E300] flex items-center justify-center shrink-0">
+        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#F29400] to-[#ca8a04] dark:to-[#F8E300] flex items-center justify-center shrink-0">
           <Shield className="h-4 w-4 text-white" />
         </div>
         <span className="text-[13px] font-display font-semibold tracking-tight text-foreground flex-1">
@@ -663,7 +663,7 @@ export function LicenceExpiryWidget() {
                                 <span
                                   className={`text-[9px] px-1.5 py-0.5 rounded font-medium truncate text-center ${
                                     item.subscription.type === "trial"
-                                      ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]"
+                                      ? "bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300]"
                                       : item.subscription.perpetual
                                         ? "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3]"
                                         : "bg-muted text-muted-foreground"

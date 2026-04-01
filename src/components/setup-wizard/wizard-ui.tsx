@@ -320,7 +320,7 @@ export function MockSeverityBar() {
   const items = [
     { label: "Critical", count: 3, color: "#EA0022", pct: 10 },
     { label: "High", count: 8, color: "#F29400", pct: 25 },
-    { label: "Medium", count: 14, color: "#F8E300", pct: 44 },
+    { label: "Medium", count: 14, color: "#ca8a04", pct: 44 },
     { label: "Low", count: 7, color: "#00F2B3", pct: 21 },
   ];
   return (
@@ -1087,7 +1087,7 @@ export function MockRemediationProgress() {
   const severities = [
     { label: "Critical", total: 3, fixed: 2, color: "#EA0022" },
     { label: "High", total: 8, fixed: 5, color: "#F29400" },
-    { label: "Medium", total: 14, fixed: 8, color: "#F8E300" },
+    { label: "Medium", total: 14, fixed: 8, color: "#ca8a04" },
     { label: "Low", total: 7, fixed: 6, color: "#00F2B3" },
   ];
   return (
@@ -1146,7 +1146,7 @@ export function MockRemediationRoadmap() {
       phase: "Month 2",
       items: ["Enforce TLS 1.2+", "Enable DNS rebinding protection"],
       severity: "Medium",
-      color: "#F8E300",
+      color: "#ca8a04",
     },
   ];
   return (
@@ -1216,9 +1216,9 @@ export function MockPlaybooks() {
       </div>
       <div className="rounded-xl border border-border/50 bg-card p-3">
         <div className="flex items-center gap-2">
-          <ClipboardList className="h-3.5 w-3.5 text-[#F8E300]" />
+          <ClipboardList className="h-3.5 w-3.5 text-[#ca8a04]" />
           <p className="text-[10px] font-semibold text-foreground">Enforce TLS 1.2+ on VPNs</p>
-          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#F8E300]/10 text-[#F8E300]  ml-auto">
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300] ml-auto">
             MEDIUM
           </span>
         </div>

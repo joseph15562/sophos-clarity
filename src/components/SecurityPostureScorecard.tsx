@@ -53,9 +53,9 @@ function postureStyle(p: PostureLabel): {
     case "Needs Review":
       return {
         icon: AlertTriangle,
-        color: "text-[#b8a200] dark:text-[#F8E300]",
-        bgColor: "bg-[#F8E300]/10",
-        hex: "#F8E300",
+        color: "text-[#78350f] dark:text-[#F8E300]",
+        bgColor: "bg-[#ca8a04]/12 dark:bg-[#F8E300]/10",
+        hex: "#ca8a04",
       };
     case "High Risk":
       return { icon: XCircle, color: "text-[#EA0022]", bgColor: "bg-[#EA0022]/10", hex: "#EA0022" };
@@ -140,7 +140,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
     grade === "A" || grade === "B"
       ? "#00F2B3"
       : grade === "C"
-        ? "#F8E300"
+        ? "#ca8a04"
         : grade === "D"
           ? "#F29400"
           : "#EA0022";
@@ -247,7 +247,7 @@ export function SecurityPostureScorecard({ analysisResults }: Props) {
             </span>
           )}
           {postureSummary.review > 0 && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300] font-medium">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300] font-medium">
               {postureSummary.review} Needs Review
             </span>
           )}

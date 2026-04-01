@@ -155,7 +155,7 @@ export function AssessDocumentPreviewSection({
                         : sev === "high"
                           ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]"
                           : sev === "medium"
-                            ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]"
+                            ? "bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300]"
                             : sev === "low"
                               ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
                               : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"

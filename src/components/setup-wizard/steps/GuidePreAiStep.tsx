@@ -70,7 +70,7 @@ export function GuidePreAiStep({ activeOverlay, setActiveOverlay }: GuidePreAiSt
               {
                 severity: "MEDIUM",
                 title: "DNS rebinding protection disabled",
-                color: "#F8E300",
+                color: "#ca8a04",
               },
               {
                 severity: "LOW",

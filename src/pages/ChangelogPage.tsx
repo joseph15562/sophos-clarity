@@ -31,7 +31,16 @@ function ChangelogPageInner() {
               popovers (configuration stats, feature coverage, charts, compliance heatmap, priority
               matrix) use the same readable surface as other popovers instead of dark glass with
               theme text; report/QBR/deterministic-finding shells paint their top accent as part of
-              the rounded background so corners stay consistent.
+              the rounded background so corners stay consistent. Customer Management uses the same
+              light header bar as Trust/Updates (card surface + border) in light mode; the navy
+              gradient header remains for dark mode.
+            </li>
+            <li>
+              <strong className="text-foreground">Readability</strong>: medium severity and grade C
+              use dark amber on light backgrounds (charts, badges, posture scorecard) instead of
+              neon yellow; dark mode keeps brighter yellow where it helps. Compliance heatmap hover
+              popovers render outside the clipped card; heatmap cells gain spacing so rounded
+              corners read clearly; the heatmap header accent follows the card radius.
             </li>
             <li>
               <strong className="text-foreground">Accessibility</strong>: dashboard stat card

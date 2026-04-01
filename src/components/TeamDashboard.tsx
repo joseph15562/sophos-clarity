@@ -54,7 +54,7 @@ function gradeColor(grade: string | null): string {
 const GRADE_BAR_COLORS: Record<string, string> = {
   A: "#00F2B3",
   B: "#2006F7",
-  C: "#F8E300",
+  C: "#ca8a04",
   D: "#F29400",
   F: "#EA0022",
 };

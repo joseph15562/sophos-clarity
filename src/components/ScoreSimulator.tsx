@@ -169,7 +169,7 @@ function sevColor(s: Severity): string {
     case "high":
       return "text-[#F29400]";
     case "medium":
-      return "text-[#b8a200] dark:text-[#F8E300]";
+      return "text-[#92400e] dark:text-[#F8E300]";
     case "low":
       return "text-[#00b8d4] dark:text-[#00EDFF]";
     default:
@@ -183,7 +183,7 @@ function gradeColor(grade: string): string {
     case "B":
       return "text-[#00F2B3]";
     case "C":
-      return "text-[#b8a200] dark:text-[#F8E300]";
+      return "text-[#92400e] dark:text-[#F8E300]";
     case "D":
       return "text-[#c47800] dark:text-[#F29400]";
     default:
@@ -197,7 +197,7 @@ function gradeBg(grade: string): string {
     case "B":
       return "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 border-[#008F69]/35 dark:border-[#00F2B3]/30";
     case "C":
-      return "bg-[#F8E300]/10 border-[#F8E300]/30";
+      return "bg-[#ca8a04]/12 border-[#ca8a04]/30 dark:bg-[#F8E300]/10 dark:border-[#F8E300]/30";
     case "D":
       return "bg-[#F29400]/10 border-[#F29400]/30";
     default:

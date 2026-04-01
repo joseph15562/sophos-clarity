@@ -17,7 +17,10 @@ const SEVERITY_ORDER: Record<Severity, number> = {
 const SEVERITY_STYLE: Record<Severity, { bg: string; text: string }> = {
   critical: { bg: "bg-[#EA0022]/10", text: "text-[#EA0022]" },
   high: { bg: "bg-[#F29400]/10", text: "text-[#c47800] dark:text-[#F29400]" },
-  medium: { bg: "bg-[#F8E300]/10", text: "text-[#b8a200] dark:text-[#F8E300]" },
+  medium: {
+    bg: "bg-[#ca8a04]/12 dark:bg-[#F8E300]/10",
+    text: "text-[#78350f] dark:text-[#F8E300]",
+  },
   low: {
     bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
     text: "text-[#007A5A] dark:text-[#00F2B3]",

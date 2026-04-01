@@ -44,6 +44,7 @@ import {
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { cn } from "@/lib/utils";
 
 type DemoCustomer = CustomerDirectoryEntry;
 
@@ -275,33 +276,58 @@ function CustomerManagementInner() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
+      {/* Header — light mode matches Trust/Changelog (card surface + border); dark keeps branded gradient */}
       <header
-        className="sticky top-0 z-40 border-b border-white/[0.06]"
-        style={{
-          background:
-            "radial-gradient(circle at top left, rgba(0,237,255,0.10), transparent 18%), radial-gradient(circle at top right, rgba(32,6,247,0.20), transparent 24%), linear-gradient(90deg, #00163d 0%, #001A47 42%, #10037C 100%)",
-        }}
+        className={cn(
+          "sticky top-0 z-40 border-b",
+          isDark ? "border-white/[0.06]" : "border-border/60 bg-card/50",
+        )}
+        style={
+          isDark
+            ? {
+                background:
+                  "radial-gradient(circle at top left, rgba(0,237,255,0.10), transparent 18%), radial-gradient(circle at top right, rgba(32,6,247,0.20), transparent 24%), linear-gradient(90deg, #00163d 0%, #001A47 42%, #10037C 100%)",
+              }
+            : undefined
+        }
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+        <div className="mx-auto flex min-h-14 max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <Link
               to="/"
               aria-label="Home"
-              className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
+              className={cn(
+                "flex items-center gap-1.5 text-sm transition-colors",
+                isDark
+                  ? "text-white/60 hover:text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Home</span>
             </Link>
-            <span className="text-white/30">/</span>
-            <h1 className="text-lg font-bold tracking-tight text-white sm:text-xl">
+            <span className={isDark ? "text-white/30" : "text-border"} aria-hidden>
+              /
+            </span>
+            <h1
+              className={cn(
+                "text-base font-semibold tracking-tight sm:text-lg",
+                isDark ? "text-white" : "text-foreground",
+              )}
+            >
               Customer Management
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setTheme(isDark ? "light" : "dark")}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-xl border transition-colors",
+                isDark
+                  ? "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                  : "border-border bg-muted/60 text-foreground hover:bg-muted",
+              )}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

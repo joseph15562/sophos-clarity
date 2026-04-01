@@ -241,11 +241,11 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
         <DropdownMenuSeparator className={SEP} />
         <DropdownMenuGroup>
           <DropdownMenuLabel className={LBL}>
-            <Zap className="h-3 w-3 text-[#F8C300]" />
+            <Zap className="h-3 w-3 text-[#ca8a04]" />
             Tips
           </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => startPowerUserTour()} className={ITEM}>
-            <Zap className={ICON} style={{ color: "#F8C300" }} /> Power User Tips
+            <Zap className={ICON} style={{ color: "#ca8a04" }} /> Power User Tips
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

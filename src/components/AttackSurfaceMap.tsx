@@ -25,10 +25,10 @@ const RISK_COLORS: Record<string, { bg: string; border: string; text: string; fi
     fill: "#F29400",
   },
   medium: {
-    bg: "bg-[#F8E300]/10",
-    border: "border-[#b8a200]/30",
-    text: "text-[#b8a200] dark:text-[#F8E300]",
-    fill: "#F8E300",
+    bg: "bg-[#ca8a04]/12 dark:bg-[#F8E300]/10",
+    border: "border-[#ca8a04]/35 dark:border-[#F8E300]/30",
+    text: "text-[#78350f] dark:text-[#F8E300]",
+    fill: "#a16207",
   },
   low: {
     bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
@@ -130,7 +130,7 @@ export function AttackSurfaceMap({ files }: Props) {
             </span>
           )}
           {counts.medium > 0 && (
-            <span className="text-[10px] font-bold text-[#b8a200] dark:text-[#F8E300] bg-[#F8E300]/10 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-[#78350f] dark:text-[#F8E300] bg-[#ca8a04]/12 dark:bg-[#F8E300]/10 px-1.5 py-0.5 rounded">
               {counts.medium}M
             </span>
           )}

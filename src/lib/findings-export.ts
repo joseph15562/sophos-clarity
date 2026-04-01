@@ -107,7 +107,7 @@ export function downloadFindingsPdf(analysisResults: Record<string, AnalysisResu
       case "high":
         return "#F29400";
       case "medium":
-        return "#F8E300";
+        return "#a16207";
       case "low":
         return "#00F2B3";
       default:

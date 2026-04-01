@@ -61,14 +61,18 @@ function sumSeverityCounts(
   };
 }
 
-function firewallRiskScore(result: AnalysisResult): { score: number; grade: "A" | "B" | "C" | "D" | "F" } {
+function firewallRiskScore(result: AnalysisResult): {
+  score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+} {
   const { overall, grade } = computeRiskScore(result);
   return { score: overall, grade };
 }
 
-function aggregateScoreAndGrade(
-  analysisResults: Record<string, AnalysisResult>,
-): { overall: number; grade: "A" | "B" | "C" | "D" | "F" } {
+function aggregateScoreAndGrade(analysisResults: Record<string, AnalysisResult>): {
+  overall: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+} {
   const list = Object.values(analysisResults);
   if (list.length === 0) {
     return { overall: 100, grade: "A" };
@@ -128,11 +132,7 @@ function renderFindingRow(f: Finding, fwIndex: number, fIndex: number): string {
     </div>`;
 }
 
-function renderFirewallSection(
-  firewallKey: string,
-  result: AnalysisResult,
-  index: number,
-): string {
+function renderFirewallSection(firewallKey: string, result: AnalysisResult, index: number): string {
   const displayName = result.hostname?.trim() || firewallKey;
   const slug = `${index}-${slugifyFirewallId(firewallKey)}`;
   const sorted = sortFindings(result.findings);
@@ -181,8 +181,7 @@ export function buildInteractiveAnalysisHtml(
   for (const k of fwKeys) {
     totals = sumSeverityCounts(totals, countBySeverity(analysisResults[k].findings));
   }
-  const totalFindings =
-    totals.critical + totals.high + totals.medium + totals.low + totals.info;
+  const totalFindings = totals.critical + totals.high + totals.medium + totals.low + totals.info;
 
   const { overall, grade } = aggregateScoreAndGrade(analysisResults);
   const generated = new Date().toLocaleDateString(undefined, {
@@ -192,7 +191,9 @@ export function buildInteractiveAnalysisHtml(
     day: "numeric",
   });
 
-  const docTitle = customer ? `${customer} - Firewall Security Analysis` : "Firewall Security Analysis";
+  const docTitle = customer
+    ? `${customer} - Firewall Security Analysis`
+    : "Firewall Security Analysis";
 
   const tocItems = fwKeys
     .map((k, i) => {
@@ -203,9 +204,7 @@ export function buildInteractiveAnalysisHtml(
     })
     .join("\n");
 
-  const sections = fwKeys
-    .map((k, i) => renderFirewallSection(k, analysisResults[k], i))
-    .join("\n");
+  const sections = fwKeys.map((k, i) => renderFirewallSection(k, analysisResults[k], i)).join("\n");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -221,7 +220,7 @@ export function buildInteractiveAnalysisHtml(
       --sophos-blue: #2006F7;
       --critical: #EA0022;
       --high: #F29400;
-      --medium: #F8E300;
+      --medium: #a16207;
       --low: #009CFB;
       --info: #888888;
       --bg: #f4f6fb;
@@ -739,7 +738,11 @@ export function downloadInteractiveHtml(
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  const safeCustomer = branding?.customerName?.trim().replace(/[^a-z0-9-_]+/gi, "-").replace(/^-|-$/g, "") || "";
+  const safeCustomer =
+    branding?.customerName
+      ?.trim()
+      .replace(/[^a-z0-9-_]+/gi, "-")
+      .replace(/^-|-$/g, "") || "";
   const defaultName = safeCustomer
     ? `firewall-analysis-${safeCustomer}-${new Date().toISOString().slice(0, 10)}.html`
     : `firewall-analysis-${new Date().toISOString().slice(0, 10)}.html`;

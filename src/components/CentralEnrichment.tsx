@@ -496,7 +496,7 @@ export function CentralEnrichment({
                             ? "#EA0022"
                             : a.severity === "medium"
                               ? "#F29400"
-                              : "#F8E300";
+                              : "#ca8a04";
                         return (
                           <div
                             key={a.id}

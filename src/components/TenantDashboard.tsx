@@ -34,7 +34,7 @@ const STALE_ASSESSMENT_MS = 60 * 24 * 60 * 60 * 1000;
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#007A5A] dark:text-[#00F2B3] bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 dark:bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
   B: "text-[#009CFB] bg-[#009CFB]/10",
-  C: "text-[#F8E300] bg-[#F8E300]/10",
+  C: "text-[#78350f] bg-[#ca8a04]/12 dark:text-[#F8E300] dark:bg-[#F8E300]/10",
   D: "text-[#F29400] bg-[#F29400]/10",
   F: "text-[#EA0022] bg-[#EA0022]/10",
 };
@@ -779,7 +779,7 @@ export function TenantDashboard() {
               g === "A" || g === "B"
                 ? "bg-gradient-to-br from-[#00F2B3] to-[#009CFB] shadow-[0_4px_16px_rgba(0,242,179,0.3)]"
                 : g === "C"
-                  ? "bg-gradient-to-br from-[#F8E300] to-[#E8C600] shadow-[0_4px_16px_rgba(248,227,0,0.25)]"
+                  ? "bg-gradient-to-br from-[#ca8a04] to-[#a16207] shadow-[0_4px_16px_rgba(202,138,4,0.22)] dark:from-[#F8E300] dark:to-[#E8C600] dark:shadow-[0_4px_16px_rgba(248,227,0,0.25)]"
                   : g === "D"
                     ? "bg-gradient-to-br from-[#F29400] to-[#D97800] shadow-[0_4px_16px_rgba(242,148,0,0.3)]"
                     : "bg-gradient-to-br from-[#EA0022] to-[#C80020] shadow-[0_4px_16px_rgba(234,0,34,0.3)]";
@@ -832,7 +832,7 @@ export function TenantDashboard() {
                       dGrade === "A" || dGrade === "B"
                         ? "#00F2B3"
                         : dGrade === "C"
-                          ? "#F8E300"
+                          ? "#ca8a04"
                           : dGrade === "D"
                             ? "#F29400"
                             : "#EA0022";

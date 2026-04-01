@@ -23,9 +23,9 @@ const SEV_COLORS: Record<Severity, { badge: string; border: string; hex: string 
     hex: "#F29400",
   },
   medium: {
-    badge: "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]",
-    border: "border-l-[#F8E300]",
-    hex: "#F8E300",
+    badge: "bg-[#ca8a04]/12 text-[#78350f] dark:bg-[#F8E300]/10 dark:text-[#F8E300]",
+    border: "border-l-[#ca8a04] dark:border-l-[#F8E300]",
+    hex: "#ca8a04",
   },
   low: {
     badge: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#00F2B3]",

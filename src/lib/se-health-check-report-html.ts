@@ -85,7 +85,7 @@ const TIER_CARD_COPY: Record<LicenceSelection["tier"], { title: string; blurb: s
 const BP_GRADE_HEX: Record<string, string> = {
   A: "#00F2B3",
   B: "#00F2B3",
-  C: "#F8E300",
+  C: "#ca8a04",
   D: "#F29400",
   F: "#EA0022",
 };
@@ -94,7 +94,11 @@ function slugForHtmlId(s: string): string {
   return s.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "fw";
 }
 
-function buildBrowserReportLeadHtml(customerName: string, preparedBy: string, dateLocal: string): string {
+function buildBrowserReportLeadHtml(
+  customerName: string,
+  preparedBy: string,
+  dateLocal: string,
+): string {
   return `<div class="se-hc-browser-hero">
   <h1 class="se-hc-browser-h1">Sophos Firewall Health Check</h1>
   <p class="se-hc-browser-meta">${escapeHtml(customerName.trim() || "—")} · ${escapeHtml(dateLocal)} · Prepared by ${escapeHtml(preparedBy.trim() || "—")}</p>
@@ -258,96 +262,98 @@ export function buildSEHealthCheckReportHtml(
   const parts: string[] = [];
 
   if (variant === "pdf") {
-  /* Page 1 — Sophos Central Security Checkup–style cover (wordmark, 4-line meta, shield, centred footer) */
-  parts.push(`<div class="se-hc-cover-fullpage">`);
-  parts.push(`<div class="se-hc-cover-brand">`);
-  parts.push(
-    `<img src="${SE_HEALTH_CHECK_WORDMARK_SRC}" alt="" class="se-hc-cover-wordmark" width="280" height="32" />`,
-  );
-  parts.push(`</div>`);
-  parts.push(`<div class="se-hc-cover-body">`);
-  parts.push(`<div class="se-hc-cover-text">`);
-  parts.push(`<h1 id="cover-title">Sophos Firewall Health Check</h1>`);
-  parts.push(
-    `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Customer Name:</span> ${escapeHtml(coverCustomer)}</p>`,
-  );
-  parts.push(
-    `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Prepared For:</span> ${escapeHtml(coverPreparedFor)}</p>`,
-  );
-  parts.push(
-    `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Prepared By:</span> ${escapeHtml(coverPrepared)}</p>`,
-  );
-  parts.push(
-    `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Date:</span> ${escapeHtml(dateLocal)}</p>`,
-  );
-  parts.push(`</div>`);
-  parts.push(
-    `<div class="se-hc-cover-mark-wrap"><img src="${SE_HEALTH_CHECK_COVER_MARK_SRC}" alt="" class="se-hc-cover-mark-img" width="200" height="200" /></div>`,
-  );
-  parts.push(`</div>`);
-  parts.push(`<div class="se-hc-cover-bottom">`);
-  parts.push(
-    `<p class="se-hc-cover-copy">© Copyright ${escapeHtml(copyYear)}, Sophos Ltd. All Rights Reserved</p>`,
-  );
-  parts.push(`<p class="se-hc-cover-confidential">CONFIDENTIAL</p>`);
-  parts.push(`</div>`);
-  parts.push(`</div>`);
+    /* Page 1 — Sophos Central Security Checkup–style cover (wordmark, 4-line meta, shield, centred footer) */
+    parts.push(`<div class="se-hc-cover-fullpage">`);
+    parts.push(`<div class="se-hc-cover-brand">`);
+    parts.push(
+      `<img src="${SE_HEALTH_CHECK_WORDMARK_SRC}" alt="" class="se-hc-cover-wordmark" width="280" height="32" />`,
+    );
+    parts.push(`</div>`);
+    parts.push(`<div class="se-hc-cover-body">`);
+    parts.push(`<div class="se-hc-cover-text">`);
+    parts.push(`<h1 id="cover-title">Sophos Firewall Health Check</h1>`);
+    parts.push(
+      `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Customer Name:</span> ${escapeHtml(coverCustomer)}</p>`,
+    );
+    parts.push(
+      `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Prepared For:</span> ${escapeHtml(coverPreparedFor)}</p>`,
+    );
+    parts.push(
+      `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Prepared By:</span> ${escapeHtml(coverPrepared)}</p>`,
+    );
+    parts.push(
+      `<p class="se-hc-cover-meta-line"><span class="se-hc-cover-label">Date:</span> ${escapeHtml(dateLocal)}</p>`,
+    );
+    parts.push(`</div>`);
+    parts.push(
+      `<div class="se-hc-cover-mark-wrap"><img src="${SE_HEALTH_CHECK_COVER_MARK_SRC}" alt="" class="se-hc-cover-mark-img" width="200" height="200" /></div>`,
+    );
+    parts.push(`</div>`);
+    parts.push(`<div class="se-hc-cover-bottom">`);
+    parts.push(
+      `<p class="se-hc-cover-copy">© Copyright ${escapeHtml(copyYear)}, Sophos Ltd. All Rights Reserved</p>`,
+    );
+    parts.push(`<p class="se-hc-cover-confidential">CONFIDENTIAL</p>`);
+    parts.push(`</div>`);
+    parts.push(`</div>`);
 
-  /* Page 2 — navy header band + teal title + white body (sans), like Central “Security Checkup Overview” */
-  parts.push(`<div class="se-hc-overview-sheet">`);
-  parts.push(`<div class="se-hc-overview-header-navy">`);
-  parts.push(
-    `<img src="${SE_HEALTH_CHECK_WORDMARK_SRC}" alt="" class="se-hc-overview-wordmark" width="280" height="32" />`,
-  );
-  parts.push(
-    `<h2 id="firewall-health-check-overview" class="se-hc-overview-title">Firewall health check overview</h2>`,
-  );
-  parts.push(`</div>`);
-  parts.push(`<div class="se-hc-overview-body">`);
-  parts.push(
-    `<p>The <strong>Sophos Firewall Health Check</strong> in <strong>Sophos FireComply</strong> provides a structured, repeatable review of uploaded Sophos XGS / SFOS configuration exports (HTML or entities XML). The tool parses exported objects and rules, runs deterministic checks aligned with Sophos hardening guidance, and scores posture against a selectable licence tier. Outputs are designed for Sales Engineers and customers to prioritise remediation conversations — not as a pass/fail certification.</p>`,
-  );
-  parts.push(
-    `<p><strong>How analysis works.</strong> Each file is normalised into structured sections (firewall rules, NAT, interfaces, security features, and related objects). Findings are produced by rule-based logic with explicit evidence references into the export. <strong>Sophos best practice</strong> scoring weights official guidance categories; <strong>baseline</strong> alignment reflects your chosen template (e.g. Sophos best-practice checklist). Where the export omits or obscures data, the tool may under-report — always corroborate on the live appliance.</p>`,
-  );
-  parts.push(
-    `<p><strong>What this report is not.</strong> This is <strong>not</strong> a Sophos Central Security Checkup, a formal compliance audit, or traffic/log-driven validation. It does not observe live sessions, threat telemetry, or Central policy sync state. It is <strong>not</strong> a substitute for reviewing configuration in the live Sophos XGS / SFOS console, change windows, or your organisation&apos;s own risk acceptance process.</p>`,
-  );
-  parts.push(
-    `<p><strong>How to read the following pages.</strong> The sections below mirror how the PDF is organised after this overview. You can skim the <strong>Executive summary</strong> first for scores and top actions, then use <strong>Provenance and limitations</strong> and <strong>Assessment scope and exclusions</strong> to qualify the results. The <strong>Configuration file manifest</strong> ties each finding set to source files and optional Central serial linkage. <strong>Baseline and findings</strong> contain the detailed checklist and full finding list per firewall.</p>`,
-  );
-  parts.push(`<p><strong>Section guide</strong> — each part of the report contains the following:</p>`);
-  parts.push(
-    `<p><strong>Executive Summary:</strong> For every analysed firewall, you will see the Sophos best-practice score and letter grade, baseline template score, counts of findings by severity (critical through info), and a short list of priority next steps derived from the highest-severity items. Use this view for stakeholder conversations and workshop planning.</p>`,
-  );
-  parts.push(
-    `<p><strong>Provenance and limitations:</strong> Timestamps, tool identity, and explicit limits of offline file analysis. This grounds the report in time and reminds readers that exports may be incomplete, redacted, or from non-production appliances.</p>`,
-  );
-  parts.push(
-    `<p><strong>Assessment scope and exclusions:</strong> Documents which zones or networks were excluded from DPI (SSL/TLS) gap checks, the web-filter compliance mode (informational vs strict), rule names excluded from missing-web-filter detection, SE acknowledgements for MDR threat feeds or NDR Essentials when those sections are missing from the export, and whether the Security Heartbeat best-practice check was excluded when the customer has no Sophos endpoint estate. These choices materially affect findings — keep them aligned with how the customer actually enforces policy.</p>`,
-  );
-  parts.push(
-    `<p><strong>Configuration file manifest:</strong> Lists each source file, its display label, export type (HTML vs entities XML), and Sophos Central serial number when you linked discovery to an upload. This supports audit trails and multi-firewall estates.</p>`,
-  );
-  parts.push(
-    `<p><strong>Baseline and findings:</strong> Per-device baseline requirements with pass/fail detail, followed by the complete findings table (severity, title, configuration section, and truncated detail with remediation hints where available). This is the working depth behind the executive summary.</p>`,
-  );
-  parts.push(
-    `<p><strong>Licence assumption for scoring:</strong> ${escapeHtml(licenceAssumptionLabel(licence))}. Module-level scoring uses this assumption; if the customer&apos;s entitlement differs, reinterpret scores accordingly. <strong>Sophos Central data in this report:</strong> ${centralValidated ? "The Central API was used only for optional firewall discovery in this session. All findings are derived from uploaded configuration exports — not from Central Security Checkup or live telemetry." : "Not used. All content is derived from configuration exports only."}</p>`,
-  );
-  parts.push(
-    `<p><strong>Severity labels.</strong> <strong>Critical</strong> and <strong>high</strong> items typically indicate exposure or misconfiguration that should be addressed urgently. <strong>Medium</strong> and <strong>low</strong> reflect hardening gaps or policy drift. <strong>Info</strong> highlights context or verification steps. Titles and remediation text are indicative — validate impact for the customer&apos;s topology and change controls.</p>`,
-  );
-  parts.push(
-    `<p>Use this report together with operational review in <strong>Sophos Central</strong> and on-appliance consoles, release notes, and Sophos documentation. Treat it as a structured starting point for posture improvement, not an exhaustive security assessment of the environment.</p>`,
-  );
-  parts.push(
-    `<p class="se-hc-overview-copy-footer">Copyright © ${escapeHtml(copyYear)}, Sophos Ltd. | CONFIDENTIAL</p>`,
-  );
-  parts.push(`</div>`);
-  parts.push(`</div>`);
+    /* Page 2 — navy header band + teal title + white body (sans), like Central “Security Checkup Overview” */
+    parts.push(`<div class="se-hc-overview-sheet">`);
+    parts.push(`<div class="se-hc-overview-header-navy">`);
+    parts.push(
+      `<img src="${SE_HEALTH_CHECK_WORDMARK_SRC}" alt="" class="se-hc-overview-wordmark" width="280" height="32" />`,
+    );
+    parts.push(
+      `<h2 id="firewall-health-check-overview" class="se-hc-overview-title">Firewall health check overview</h2>`,
+    );
+    parts.push(`</div>`);
+    parts.push(`<div class="se-hc-overview-body">`);
+    parts.push(
+      `<p>The <strong>Sophos Firewall Health Check</strong> in <strong>Sophos FireComply</strong> provides a structured, repeatable review of uploaded Sophos XGS / SFOS configuration exports (HTML or entities XML). The tool parses exported objects and rules, runs deterministic checks aligned with Sophos hardening guidance, and scores posture against a selectable licence tier. Outputs are designed for Sales Engineers and customers to prioritise remediation conversations — not as a pass/fail certification.</p>`,
+    );
+    parts.push(
+      `<p><strong>How analysis works.</strong> Each file is normalised into structured sections (firewall rules, NAT, interfaces, security features, and related objects). Findings are produced by rule-based logic with explicit evidence references into the export. <strong>Sophos best practice</strong> scoring weights official guidance categories; <strong>baseline</strong> alignment reflects your chosen template (e.g. Sophos best-practice checklist). Where the export omits or obscures data, the tool may under-report — always corroborate on the live appliance.</p>`,
+    );
+    parts.push(
+      `<p><strong>What this report is not.</strong> This is <strong>not</strong> a Sophos Central Security Checkup, a formal compliance audit, or traffic/log-driven validation. It does not observe live sessions, threat telemetry, or Central policy sync state. It is <strong>not</strong> a substitute for reviewing configuration in the live Sophos XGS / SFOS console, change windows, or your organisation&apos;s own risk acceptance process.</p>`,
+    );
+    parts.push(
+      `<p><strong>How to read the following pages.</strong> The sections below mirror how the PDF is organised after this overview. You can skim the <strong>Executive summary</strong> first for scores and top actions, then use <strong>Provenance and limitations</strong> and <strong>Assessment scope and exclusions</strong> to qualify the results. The <strong>Configuration file manifest</strong> ties each finding set to source files and optional Central serial linkage. <strong>Baseline and findings</strong> contain the detailed checklist and full finding list per firewall.</p>`,
+    );
+    parts.push(
+      `<p><strong>Section guide</strong> — each part of the report contains the following:</p>`,
+    );
+    parts.push(
+      `<p><strong>Executive Summary:</strong> For every analysed firewall, you will see the Sophos best-practice score and letter grade, baseline template score, counts of findings by severity (critical through info), and a short list of priority next steps derived from the highest-severity items. Use this view for stakeholder conversations and workshop planning.</p>`,
+    );
+    parts.push(
+      `<p><strong>Provenance and limitations:</strong> Timestamps, tool identity, and explicit limits of offline file analysis. This grounds the report in time and reminds readers that exports may be incomplete, redacted, or from non-production appliances.</p>`,
+    );
+    parts.push(
+      `<p><strong>Assessment scope and exclusions:</strong> Documents which zones or networks were excluded from DPI (SSL/TLS) gap checks, the web-filter compliance mode (informational vs strict), rule names excluded from missing-web-filter detection, SE acknowledgements for MDR threat feeds or NDR Essentials when those sections are missing from the export, and whether the Security Heartbeat best-practice check was excluded when the customer has no Sophos endpoint estate. These choices materially affect findings — keep them aligned with how the customer actually enforces policy.</p>`,
+    );
+    parts.push(
+      `<p><strong>Configuration file manifest:</strong> Lists each source file, its display label, export type (HTML vs entities XML), and Sophos Central serial number when you linked discovery to an upload. This supports audit trails and multi-firewall estates.</p>`,
+    );
+    parts.push(
+      `<p><strong>Baseline and findings:</strong> Per-device baseline requirements with pass/fail detail, followed by the complete findings table (severity, title, configuration section, and truncated detail with remediation hints where available). This is the working depth behind the executive summary.</p>`,
+    );
+    parts.push(
+      `<p><strong>Licence assumption for scoring:</strong> ${escapeHtml(licenceAssumptionLabel(licence))}. Module-level scoring uses this assumption; if the customer&apos;s entitlement differs, reinterpret scores accordingly. <strong>Sophos Central data in this report:</strong> ${centralValidated ? "The Central API was used only for optional firewall discovery in this session. All findings are derived from uploaded configuration exports — not from Central Security Checkup or live telemetry." : "Not used. All content is derived from configuration exports only."}</p>`,
+    );
+    parts.push(
+      `<p><strong>Severity labels.</strong> <strong>Critical</strong> and <strong>high</strong> items typically indicate exposure or misconfiguration that should be addressed urgently. <strong>Medium</strong> and <strong>low</strong> reflect hardening gaps or policy drift. <strong>Info</strong> highlights context or verification steps. Titles and remediation text are indicative — validate impact for the customer&apos;s topology and change controls.</p>`,
+    );
+    parts.push(
+      `<p>Use this report together with operational review in <strong>Sophos Central</strong> and on-appliance consoles, release notes, and Sophos documentation. Treat it as a structured starting point for posture improvement, not an exhaustive security assessment of the environment.</p>`,
+    );
+    parts.push(
+      `<p class="se-hc-overview-copy-footer">Copyright © ${escapeHtml(copyYear)}, Sophos Ltd. | CONFIDENTIAL</p>`,
+    );
+    parts.push(`</div>`);
+    parts.push(`</div>`);
 
-  parts.push(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);
+    parts.push(SE_HEALTH_CHECK_PDF_TOC_AFTER_MARKER);
   }
 
   parts.push(`<div class="se-hc-report-body-pages">`);
@@ -362,7 +368,9 @@ export function buildSEHealthCheckReportHtml(
   }
 
   parts.push(`<h2 id="provenance-and-limitations">Provenance and limitations</h2>`);
-  parts.push(`<p><strong>Generated:</strong> ${escapeHtml(dateUtc)} (UTC) / ${escapeHtml(dateLocal)} (local)</p>`);
+  parts.push(
+    `<p><strong>Generated:</strong> ${escapeHtml(dateUtc)} (UTC) / ${escapeHtml(dateLocal)} (local)</p>`,
+  );
   parts.push(
     `<p><strong>Tool:</strong> Sophos FireComply — SE Firewall Health Check${appVersion ? ` (${escapeHtml(appVersion)})` : ""}.</p>`,
   );
@@ -379,7 +387,9 @@ export function buildSEHealthCheckReportHtml(
       parts.push(`<p><strong>Zones:</strong> ${escapeHtml(dpiExemptZones.join(", "))}</p>`);
     }
     if (dpiExemptNetworks.length > 0) {
-      parts.push(`<p><strong>Source networks:</strong> ${escapeHtml(dpiExemptNetworks.join(", "))}</p>`);
+      parts.push(
+        `<p><strong>Source networks:</strong> ${escapeHtml(dpiExemptNetworks.join(", "))}</p>`,
+      );
     }
   }
   parts.push(`<h3>Active threat response (SE acknowledgement)</h3>`);
@@ -396,7 +406,9 @@ export function buildSEHealthCheckReportHtml(
   );
 
   parts.push(`<h3>Web filter compliance</h3>`);
-  parts.push(`<p><strong>Mode:</strong> ${escapeHtml(webFilterComplianceMode === "informational" ? "Informational" : "Strict")}</p>`);
+  parts.push(
+    `<p><strong>Mode:</strong> ${escapeHtml(webFilterComplianceMode === "informational" ? "Informational" : "Strict")}</p>`,
+  );
   if (webFilterExemptRuleNames.length === 0) {
     parts.push(`<p><strong>Rule names excluded from missing-web-filter check:</strong> None.</p>`);
   } else {
@@ -406,7 +418,9 @@ export function buildSEHealthCheckReportHtml(
   }
 
   parts.push(`<h2 id="file-manifest">Configuration file manifest</h2>`);
-  parts.push(`<div class="table-wrapper"><table><thead><tr><th>File name</th><th>Display label</th><th>Export type</th><th>Serial (if linked)</th></tr></thead><tbody>`);
+  parts.push(
+    `<div class="table-wrapper"><table><thead><tr><th>File name</th><th>Display label</th><th>Export type</th><th>Serial (if linked)</th></tr></thead><tbody>`,
+  );
   for (const f of files) {
     const lbl = f.label || f.fileName.replace(/\.(html|htm|xml)$/i, "");
     parts.push(
@@ -427,7 +441,9 @@ export function buildSEHealthCheckReportHtml(
     parts.push(
       `<p><strong>Sophos best practices:</strong> score ${bp.overall}/100, grade ${bp.grade}. ${bp.passed} pass · ${bp.failed} fail · ${bp.warnings} verify.</p>`,
     );
-    parts.push(`<p><strong>Baseline alignment (${escapeHtml(bl.template.name)}):</strong> ${bl.score}%</p>`);
+    parts.push(
+      `<p><strong>Baseline alignment (${escapeHtml(bl.template.name)}):</strong> ${bl.score}%</p>`,
+    );
 
     const counts = countBySeverity(ar.findings);
     parts.push(`<h4 style="font-size:10.5pt;margin-top:10px;">Finding counts by severity</h4>`);
@@ -441,7 +457,9 @@ export function buildSEHealthCheckReportHtml(
     }
     parts.push(`</tr></tbody></table></div>`);
 
-    const top = sortedFindings(ar).filter((f) => f.severity === "critical" || f.severity === "high").slice(0, 5);
+    const top = sortedFindings(ar)
+      .filter((f) => f.severity === "critical" || f.severity === "high")
+      .slice(0, 5);
     if (top.length > 0) {
       parts.push(
         `<p><strong>Priority next steps (top ${top.length} critical/high):</strong></p><ul class="se-hc-priority-steps">`,
@@ -470,7 +488,9 @@ export function buildSEHealthCheckReportHtml(
     );
 
     parts.push(`<h3>Baseline checklist</h3>`);
-    parts.push(`<div class="table-wrapper"><table><thead><tr><th>Met</th><th>Requirement</th><th>Detail</th></tr></thead><tbody>`);
+    parts.push(
+      `<div class="table-wrapper"><table><thead><tr><th>Met</th><th>Requirement</th><th>Detail</th></tr></thead><tbody>`,
+    );
     for (const req of bl.requirements) {
       parts.push(
         `<tr><td>${req.met ? "Yes" : "No"}</td><td>${escapeHtml(req.label)}</td><td>${escapeHtml(req.detail)}</td></tr>`,
@@ -482,7 +502,9 @@ export function buildSEHealthCheckReportHtml(
     if (ar.findings.length === 0) {
       parts.push(`<p>No findings recorded.</p>`);
     } else {
-      parts.push(`<div class="table-wrapper"><table><thead><tr><th>Severity</th><th>Title</th><th>Section</th><th>Detail</th></tr></thead><tbody>`);
+      parts.push(
+        `<div class="table-wrapper"><table><thead><tr><th>Severity</th><th>Title</th><th>Section</th><th>Detail</th></tr></thead><tbody>`,
+      );
       for (const f of sortedFindings(ar)) {
         parts.push(
           `<tr><td>${escapeHtml(f.severity)}</td><td>${escapeHtml(f.title)}</td><td>${escapeHtml(f.section)}</td><td>${escapeHtml(f.detail)}</td></tr>`,

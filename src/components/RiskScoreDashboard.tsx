@@ -31,9 +31,9 @@ const GRADE_COLORS: Record<string, { ring: string; text: string; bg: string }> =
     bg: "bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 dark:bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5",
   },
   C: {
-    ring: "ring-[#F8E300]/30",
-    text: "text-[#b8a200] dark:text-[#F8E300]",
-    bg: "bg-[#F8E300]/10",
+    ring: "ring-[#ca8a04]/35 dark:ring-[#F8E300]/30",
+    text: "text-[#92400e] dark:text-[#F8E300]",
+    bg: "bg-[#ca8a04]/12 dark:bg-[#F8E300]/10",
   },
   D: {
     ring: "ring-[#F29400]/30",
@@ -64,7 +64,7 @@ function GaugeRing({
     grade === "A" || grade === "B"
       ? "#00F2B3"
       : grade === "C"
-        ? "#F8E300"
+        ? "#ca8a04"
         : grade === "D"
           ? "#F29400"
           : "#EA0022";
@@ -445,7 +445,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
         {aggregated.categories.map((c) => {
           const projCat = projected?.categories.find((p) => p.label === c.label);
           const delta = projCat ? projCat.pct - c.pct : 0;
-          const catColor = c.pct >= 80 ? "#00F2B3" : c.pct >= 50 ? "#F8E300" : "#EA0022";
+          const catColor = c.pct >= 80 ? "#00F2B3" : c.pct >= 50 ? "#ca8a04" : "#EA0022";
           return (
             <div
               key={c.label}

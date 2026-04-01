@@ -54,7 +54,7 @@
     /* Severity scale — used for findings, badges, charts */
     --severity-critical: 352 100% 46%; /* #EA0022 */
     --severity-high: 33 100% 48%; /* #F29400 */
-    --severity-medium: 52 100% 49%; /* #F8E300 */
+    --severity-medium: 32 95% 34%; /* dark amber — readable on light surfaces */
     --severity-low: 158 73% 36%; /* stronger light-mode green for readability */
 
     --severity-info: 206 100% 49%; /* #009CFB */
@@ -75,7 +75,7 @@
     /* Grade / severity text on light backgrounds */
     --grade-a: 158 73% 33%; /* accessible light-mode green */
     --grade-b: 243 95% 50%; /* #2006F7 light / #00EDFF dark */
-    --grade-c: 52 100% 49%; /* #F8E300 */
+    --grade-c: 32 95% 44%; /* grade C text/accents on light backgrounds */
     --grade-d: 33 100% 48%; /* #F29400 */
     --grade-f: 352 100% 46%; /* #EA0022 */
 

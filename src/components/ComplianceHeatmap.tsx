@@ -8,7 +8,7 @@ import {
   type ControlMapping,
   type ControlStatus,
 } from "@/lib/compliance-map";
-import { DASHBOARD_HOVER_TOOLTIP_CLASS } from "@/lib/design-tokens";
+import { DASHBOARD_HOVER_TOOLTIP_CLASS, SEVERITY_COLORS } from "@/lib/design-tokens";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -211,279 +211,490 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
   const detailMapping = selectedFw ? mappings.find((m) => m.framework === selectedFw) : null;
 
   return (
-    <section
-      ref={cardRef}
-      className="rounded-[28px] border border-[#5A00FF]/15 bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,246,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(12,15,30,0.98),rgba(18,14,34,0.98))] p-5 sm:p-6 space-y-5 relative shadow-[0_20px_55px_rgba(90,0,255,0.10)] overflow-hidden"
-    >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00EDFF]" />
-      <div>
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#5A00FF]/15 bg-[#5A00FF]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#5A00FF] dark:text-[#B47AFF]">
-              Framework coverage view
+    <div ref={cardRef} className="relative">
+      <section className="rounded-[28px] border border-[#5A00FF]/15 bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,246,255,0.98))] dark:bg-[radial-gradient(circle_at_top_left,rgba(90,0,255,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(0,237,255,0.08),transparent_24%),linear-gradient(135deg,rgba(12,15,30,0.98),rgba(18,14,34,0.98))] p-5 sm:p-6 space-y-5 relative shadow-[0_20px_55px_rgba(90,0,255,0.10)] overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-1 rounded-t-[28px] bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00EDFF]" />
+        <div>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#5A00FF]/15 bg-[#5A00FF]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#5A00FF] dark:text-[#B47AFF]">
+                Framework coverage view
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Scale className="h-5 w-5 text-brand-accent" />
+                <h3 className="text-lg font-display font-black text-foreground tracking-tight">
+                  Compliance Heatmap
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
+                  {mappings.length} framework{mappings.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
+                Visualize where controls are covered, partially met, or missing so audit
+                conversations and remediation priorities are immediately clearer.
+              </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Scale className="h-5 w-5 text-brand-accent" />
-              <h3 className="text-lg font-display font-black text-foreground tracking-tight">
-                Compliance Heatmap
-              </h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
-                {mappings.length} framework{mappings.length !== 1 ? "s" : ""}
-              </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowGapsOnly((v) => !v)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border transition-all duration-200 ${
+                  showGapsOnly
+                    ? "border-[#F29400]/30 text-[#F29400] shadow-[0_0_10px_rgba(242,148,0,0.15)]"
+                    : "border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15]"
+                }`}
+                style={{
+                  background: showGapsOnly
+                    ? "linear-gradient(135deg, rgba(242,148,0,0.12), rgba(242,148,0,0.04))"
+                    : "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
+                }}
+              >
+                Show gaps only
+              </button>
+              <button
+                onClick={handleExportCsv}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] transition-all duration-200"
+                style={{
+                  background: "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
+                }}
+              >
+                <Download className="h-3 w-3 text-brand-accent" /> Export CSV
+              </button>
             </div>
-            <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
-              Visualize where controls are covered, partially met, or missing so audit conversations
-              and remediation priorities are immediately clearer.
-            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowGapsOnly((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border transition-all duration-200 ${
-                showGapsOnly
-                  ? "border-[#F29400]/30 text-[#F29400] shadow-[0_0_10px_rgba(242,148,0,0.15)]"
-                  : "border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15]"
-              }`}
-              style={{
-                background: showGapsOnly
-                  ? "linear-gradient(135deg, rgba(242,148,0,0.12), rgba(242,148,0,0.04))"
-                  : "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
-              }}
-            >
-              Show gaps only
-            </button>
-            <button
-              onClick={handleExportCsv}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] text-muted-foreground hover:text-foreground hover:border-slate-900/[0.18] dark:hover:border-white/[0.15] transition-all duration-200"
-              style={{
-                background: "linear-gradient(135deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
-              }}
-            >
-              <Download className="h-3 w-3 text-brand-accent" /> Export CSV
-            </button>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
+                Pass
+              </p>
+              <p className="text-sm font-semibold text-foreground mt-1">
+                Controls appear aligned in the current firewall posture
+              </p>
+            </div>
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
+                Partial
+              </p>
+              <p className="text-sm font-semibold text-foreground mt-1">
+                Controls need stronger evidence or fuller implementation
+              </p>
+            </div>
+            <div className="info-pill">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
+                Fail
+              </p>
+              <p className="text-sm font-semibold text-foreground mt-1">
+                Controls show material compliance gaps or missing safeguards
+              </p>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Indicative mapping based on firewall configuration controls. A full compliance audit
+            requires additional evidence beyond firewall configuration.
+          </p>
+          {mappings.length > 0 && (
+            <div className="mt-2 space-y-0.5">
+              {mappings.map((m) => {
+                const scorable = m.summary.pass + m.summary.partial + m.summary.fail;
+                const total = scorable + m.summary.na;
+                return (
+                  <p key={m.framework} className="text-[9px] text-muted-foreground">
+                    <span className="font-medium text-foreground">{m.framework}</span>: Covers{" "}
+                    {scorable} of {total} mapped controls. A full {m.framework} audit requires
+                    evidence beyond firewall configuration.
+                  </p>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Legend */}
+        <div
+          className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-4 space-y-3"
+          style={{
+            background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))",
+          }}
+        >
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-6 -left-6 h-14 w-14 rounded-full blur-[24px] opacity-15 bg-[#5A00FF]" />
+          </div>
+          <div
+            className="absolute inset-x-0 top-0 h-px pointer-events-none"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.22), transparent)",
+            }}
+          />
+          <div className="relative flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-accent">
+                Status legend
+              </p>
+              <p className="text-[11px] text-muted-foreground/80 mt-1">
+                Use this to read control alignment at a glance across every mapped framework.
+              </p>
+            </div>
+          </div>
+          <div className="relative grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 text-[10px]">
+            {(Object.entries(STATUS_STYLES) as [ControlStatus, typeof STATUS_STYLES.pass][]).map(
+              ([status, s]) => (
+                <div
+                  key={status}
+                  className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-3 flex items-center gap-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
+                  style={{ background: `linear-gradient(145deg, ${s.hex}10, ${s.hex}04)` }}
+                >
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div
+                      className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15 transition-opacity duration-200 group-hover:opacity-30"
+                      style={{ backgroundColor: s.hex }}
+                    />
+                  </div>
+                  <span
+                    className="relative inline-flex items-center justify-center h-9 w-9 rounded-xl text-[13px] font-black shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
+                    style={{ backgroundColor: `${s.hex}18`, color: s.hex }}
+                  >
+                    {s.icon}
+                  </span>
+                  <div className="relative min-w-0">
+                    <p className="font-bold text-foreground">{s.label}</p>
+                    <p className="text-muted-foreground/80 leading-relaxed">
+                      {status === "pass"
+                        ? "Control appears aligned in the current firewall posture."
+                        : status === "partial"
+                          ? "Control is only partly evidenced or needs strengthening."
+                          : status === "fail"
+                            ? "Control gap is visible and likely needs remediation."
+                            : "Control is not applicable or not assessable from this config."}
+                    </p>
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div className="info-pill">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
-              Pass
-            </p>
-            <p className="text-sm font-semibold text-foreground mt-1">
-              Controls appear aligned in the current firewall posture
-            </p>
-          </div>
-          <div className="info-pill">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
-              Partial
-            </p>
-            <p className="text-sm font-semibold text-foreground mt-1">
-              Controls need stronger evidence or fuller implementation
-            </p>
-          </div>
-          <div className="info-pill">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-accent">
-              Fail
-            </p>
-            <p className="text-sm font-semibold text-foreground mt-1">
-              Controls show material compliance gaps or missing safeguards
-            </p>
+
+        {/* Heatmap grid */}
+        <div
+          className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] shadow-card"
+          style={{
+            background: "linear-gradient(145deg, rgba(90,0,255,0.04), rgba(0,237,255,0.02))",
+          }}
+          onMouseLeave={hideTooltip}
+        >
+          <div
+            className="absolute inset-x-0 top-0 h-px pointer-events-none"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.18), transparent)",
+            }}
+          />
+          <div className="overflow-x-auto p-2">
+            <table className="w-full min-w-max border-separate border-spacing-1.5 text-[11px]">
+              <thead>
+                <tr>
+                  <th className="text-left p-2.5 text-[10px] font-black uppercase tracking-[0.18em] sticky left-0 z-10 min-w-[130px] rounded-tl-xl border-r border-border bg-card text-foreground shadow-[2px_0_8px_-4px_rgba(15,23,42,0.12)] dark:border-white/[0.06] dark:bg-[rgba(12,18,34,0.95)] dark:text-foreground/80 dark:shadow-[2px_0_12px_-4px_rgba(0,0,0,0.45)]">
+                    Control
+                  </th>
+                  {mappings.map((m) => {
+                    const scorable = m.summary.pass + m.summary.partial + m.summary.fail;
+                    const pct = scorable > 0 ? Math.round((m.summary.pass / scorable) * 100) : 0;
+                    const pctHex = pct >= 80 ? "#00F2B3" : pct >= 50 ? "#F29400" : "#EA0022";
+                    return (
+                      <th
+                        key={m.framework}
+                        className="p-2.5 text-center text-foreground/75 font-bold cursor-pointer hover:text-foreground transition-colors min-w-[100px]"
+                        onClick={() =>
+                          setSelectedFw(selectedFw === m.framework ? null : m.framework)
+                        }
+                      >
+                        <span
+                          className={
+                            selectedFw === m.framework
+                              ? "text-brand-accent underline underline-offset-2 font-black"
+                              : ""
+                          }
+                        >
+                          {m.framework.length > 20 ? m.framework.slice(0, 18) + "…" : m.framework}
+                        </span>
+                        {scorable > 0 && (
+                          <span
+                            className="block text-[10px] font-black tabular-nums mt-0.5"
+                            style={{ color: pctHex }}
+                          >
+                            {pct}%
+                          </span>
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {allControls.map((controlName) => (
+                  <tr
+                    key={controlName}
+                    className="hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
+                  >
+                    <td className="p-2.5 font-bold sticky left-0 z-10 border-t border-slate-900/[0.08] border-r border-border bg-card text-foreground shadow-[2px_0_8px_-4px_rgba(15,23,42,0.08)] dark:border-white/[0.04] dark:bg-[rgba(12,18,34,0.95)] dark:text-foreground dark:shadow-[2px_0_12px_-4px_rgba(0,0,0,0.4)]">
+                      {controlName}
+                    </td>
+                    {mappings.map((m) => {
+                      const ctrl = m.controls.find((c) => c.controlName === controlName);
+                      const status: ControlStatus = ctrl?.status ?? "na";
+                      const s = STATUS_STYLES[status];
+                      const cellKey = `${m.framework}-${controlName}`;
+
+                      const hasFindings = ctrl && ctrl.relatedFindings.length > 0;
+                      const isSelected =
+                        selectedCell?.framework === m.framework &&
+                        selectedCell?.control.controlId === ctrl?.controlId;
+                      return (
+                        <td
+                          key={cellKey}
+                          className={`p-2 text-center border-t border-slate-900/[0.08] dark:border-white/[0.04] rounded-xl transition-all duration-150 select-none ${s.cell} ${hasFindings ? "cursor-pointer" : ""} ${isSelected ? "ring-2 ring-brand-accent/60 shadow-[0_0_12px_rgba(32,6,247,0.2)]" : ""}`}
+                          onClick={
+                            ctrl && hasFindings
+                              ? () => handleCellClick(m.framework, ctrl)
+                              : undefined
+                          }
+                          onMouseEnter={
+                            ctrl
+                              ? (e) =>
+                                  showTooltipDebounced(e, {
+                                    controlName: ctrl.controlName,
+                                    evidence: ctrl.evidence,
+                                    status,
+                                  })
+                              : undefined
+                          }
+                          onMouseLeave={hideTooltip}
+                        >
+                          <span
+                            className="inline-flex items-center justify-center h-6 w-6 rounded-md text-[13px] font-black"
+                            style={{ color: STATUS_HEX[status] }}
+                          >
+                            {s.icon}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Indicative mapping based on firewall configuration controls. A full compliance audit
-          requires additional evidence beyond firewall configuration.
-        </p>
-        {mappings.length > 0 && (
-          <div className="mt-2 space-y-0.5">
-            {mappings.map((m) => {
-              const scorable = m.summary.pass + m.summary.partial + m.summary.fail;
-              const total = scorable + m.summary.na;
+
+        {/* Selected cell findings panel */}
+        {selectedCell && selectedCell.findings.length > 0 && (
+          <div
+            className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-2.5"
+            style={{
+              background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
+            }}
+          >
+            <div
+              className="absolute inset-x-0 top-0 h-px pointer-events-none"
+              style={{
+                background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
+              }}
+            />
+            <div className="relative flex items-center justify-between">
+              <p className="text-xs font-bold text-foreground">
+                {selectedCell.control.controlName} — {selectedCell.framework}
+              </p>
+              <button
+                onClick={() => setSelectedCell(null)}
+                className="text-muted-foreground hover:text-foreground text-xs px-1.5 py-0.5 rounded-md hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] transition-colors"
+                aria-label="Close details"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="relative text-[10px] text-muted-foreground/80">
+              {selectedCell.findings.length} related finding
+              {selectedCell.findings.length !== 1 ? "s" : ""}
+            </p>
+            {selectedCell.findings.map((f) => {
+              const fHex =
+                f.severity === "critical"
+                  ? "#EA0022"
+                  : f.severity === "high"
+                    ? "#F29400"
+                    : f.severity === "medium"
+                      ? SEVERITY_COLORS.medium
+                      : "#009CFB";
               return (
-                <p key={m.framework} className="text-[9px] text-muted-foreground">
-                  <span className="font-medium text-foreground">{m.framework}</span>: Covers{" "}
-                  {scorable} of {total} mapped controls. A full {m.framework} audit requires
-                  evidence beyond firewall configuration.
-                </p>
+                <div
+                  key={f.id}
+                  className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5"
+                  style={{ background: `linear-gradient(135deg, ${fHex}08, ${fHex}02)` }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md border"
+                      style={{
+                        color: fHex,
+                        backgroundColor: `${fHex}14`,
+                        borderColor: `${fHex}22`,
+                      }}
+                    >
+                      {f.severity}
+                    </span>
+                    <span className="text-xs font-bold text-foreground">{f.title}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/80 mt-1.5 leading-relaxed">
+                    {f.detail}
+                  </p>
+                </div>
               );
             })}
           </div>
         )}
-      </div>
 
-      {/* Legend */}
-      <div
-        className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-4 space-y-3"
-        style={{ background: "linear-gradient(145deg, rgba(90,0,255,0.06), rgba(90,0,255,0.02))" }}
-      >
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-6 -left-6 h-14 w-14 rounded-full blur-[24px] opacity-15 bg-[#5A00FF]" />
-        </div>
-        <div
-          className="absolute inset-x-0 top-0 h-px pointer-events-none"
-          style={{
-            background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.22), transparent)",
-          }}
-        />
-        <div className="relative flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-accent">
-              Status legend
-            </p>
-            <p className="text-[11px] text-muted-foreground/80 mt-1">
-              Use this to read control alignment at a glance across every mapped framework.
-            </p>
-          </div>
-        </div>
-        <div className="relative grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 text-[10px]">
-          {(Object.entries(STATUS_STYLES) as [ControlStatus, typeof STATUS_STYLES.pass][]).map(
-            ([status, s]) => (
-              <div
-                key={status}
-                className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-3 flex items-center gap-3 transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-                style={{ background: `linear-gradient(145deg, ${s.hex}10, ${s.hex}04)` }}
+        {/* Framework summary bars */}
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
+          {mappings.map((m) => {
+            const total = m.summary.pass + m.summary.partial + m.summary.fail;
+            const passPct = total > 0 ? Math.round((m.summary.pass / total) * 100) : 0;
+            const pctHex = passPct >= 80 ? "#00F2B3" : passPct >= 50 ? "#F29400" : "#EA0022";
+            const isActive = selectedFw === m.framework;
+            return (
+              <button
+                key={m.framework}
+                onClick={() => setSelectedFw(isActive ? null : m.framework)}
+                className={`group relative overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 hover:shadow-elevated ${
+                  isActive
+                    ? "border-brand-accent/25 shadow-[0_0_12px_rgba(32,6,247,0.15)]"
+                    : "border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
+                }`}
+                style={{
+                  background: isActive
+                    ? "linear-gradient(145deg, rgba(32,6,247,0.10), rgba(32,6,247,0.04))"
+                    : "linear-gradient(145deg, rgba(90,0,255,0.05), rgba(90,0,255,0.015))",
+                }}
               >
                 <div className="absolute inset-0 pointer-events-none">
                   <div
-                    className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15 transition-opacity duration-200 group-hover:opacity-30"
-                    style={{ backgroundColor: s.hex }}
+                    className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-10 transition-opacity duration-200 group-hover:opacity-25"
+                    style={{ backgroundColor: pctHex }}
                   />
                 </div>
-                <span
-                  className="relative inline-flex items-center justify-center h-9 w-9 rounded-xl text-[13px] font-black shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
-                  style={{ backgroundColor: `${s.hex}18`, color: s.hex }}
-                >
-                  {s.icon}
-                </span>
-                <div className="relative min-w-0">
-                  <p className="font-bold text-foreground">{s.label}</p>
-                  <p className="text-muted-foreground/80 leading-relaxed">
-                    {status === "pass"
-                      ? "Control appears aligned in the current firewall posture."
-                      : status === "partial"
-                        ? "Control is only partly evidenced or needs strengthening."
-                        : status === "fail"
-                          ? "Control gap is visible and likely needs remediation."
-                          : "Control is not applicable or not assessable from this config."}
-                  </p>
+                <p className="relative text-[10px] font-bold text-foreground truncate">
+                  {m.framework}
+                </p>
+                <div className="relative flex items-center gap-2 mt-1.5">
+                  <div className="flex-1 h-2 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden flex">
+                    {m.summary.pass > 0 && (
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${(m.summary.pass / total) * 100}%`,
+                          background: "linear-gradient(90deg, #00F2B3, #00D4A0)",
+                          boxShadow: "0 0 6px rgba(0,242,179,0.3)",
+                        }}
+                      />
+                    )}
+                    {m.summary.partial > 0 && (
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${(m.summary.partial / total) * 100}%`,
+                          background: "linear-gradient(90deg, #F29400, #E08600)",
+                          boxShadow: "0 0 6px rgba(242,148,0,0.3)",
+                        }}
+                      />
+                    )}
+                    {m.summary.fail > 0 && (
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${(m.summary.fail / total) * 100}%`,
+                          background: "linear-gradient(90deg, #EA0022, #D0001E)",
+                          boxShadow: "0 0 6px rgba(234,0,34,0.3)",
+                        }}
+                      />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-black tabular-nums" style={{ color: pctHex }}>
+                    {passPct}%
+                  </span>
                 </div>
-              </div>
-            ),
-          )}
+                <div className="relative flex gap-3 mt-1.5 text-[9px] text-muted-foreground/80 font-medium">
+                  <span>
+                    <span style={{ color: "#00F2B3" }}>{m.summary.pass}</span> pass
+                  </span>
+                  <span>
+                    <span style={{ color: "#F29400" }}>{m.summary.partial}</span> partial
+                  </span>
+                  <span>
+                    <span style={{ color: "#EA0022" }}>{m.summary.fail}</span> fail
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Heatmap grid */}
-      <div
-        className="relative overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] shadow-card"
-        style={{ background: "linear-gradient(145deg, rgba(90,0,255,0.04), rgba(0,237,255,0.02))" }}
-        onMouseLeave={hideTooltip}
-      >
-        <div
-          className="absolute inset-x-0 top-0 h-px pointer-events-none"
-          style={{
-            background: "linear-gradient(90deg, transparent, rgba(90,0,255,0.18), transparent)",
-          }}
-        />
-        <div className="overflow-x-auto p-2">
-          <table className="w-full min-w-max border-separate border-spacing-0 text-[11px]">
-            <thead>
-              <tr>
-                <th className="text-left p-2.5 text-[10px] font-black uppercase tracking-[0.18em] sticky left-0 z-10 min-w-[130px] rounded-tl-xl border-r border-border bg-card text-foreground shadow-[2px_0_8px_-4px_rgba(15,23,42,0.12)] dark:border-white/[0.06] dark:bg-[rgba(12,18,34,0.95)] dark:text-foreground/80 dark:shadow-[2px_0_12px_-4px_rgba(0,0,0,0.45)]">
-                  Control
-                </th>
-                {mappings.map((m) => {
-                  const scorable = m.summary.pass + m.summary.partial + m.summary.fail;
-                  const pct = scorable > 0 ? Math.round((m.summary.pass / scorable) * 100) : 0;
-                  const pctHex = pct >= 80 ? "#00F2B3" : pct >= 50 ? "#F29400" : "#EA0022";
-                  return (
-                    <th
-                      key={m.framework}
-                      className="p-2.5 text-center text-foreground/75 font-bold cursor-pointer hover:text-foreground transition-colors min-w-[100px]"
-                      onClick={() => setSelectedFw(selectedFw === m.framework ? null : m.framework)}
-                    >
-                      <span
-                        className={
-                          selectedFw === m.framework
-                            ? "text-brand-accent underline underline-offset-2 font-black"
-                            : ""
-                        }
-                      >
-                        {m.framework.length > 20 ? m.framework.slice(0, 18) + "…" : m.framework}
-                      </span>
-                      {scorable > 0 && (
-                        <span
-                          className="block text-[10px] font-black tabular-nums mt-0.5"
-                          style={{ color: pctHex }}
-                        >
-                          {pct}%
-                        </span>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {allControls.map((controlName) => (
-                <tr
-                  key={controlName}
-                  className="hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
-                >
-                  <td className="p-2.5 font-bold sticky left-0 z-10 border-t border-slate-900/[0.08] border-r border-border bg-card text-foreground shadow-[2px_0_8px_-4px_rgba(15,23,42,0.08)] dark:border-white/[0.04] dark:bg-[rgba(12,18,34,0.95)] dark:text-foreground dark:shadow-[2px_0_12px_-4px_rgba(0,0,0,0.4)]">
-                    {controlName}
-                  </td>
-                  {mappings.map((m) => {
-                    const ctrl = m.controls.find((c) => c.controlName === controlName);
-                    const status: ControlStatus = ctrl?.status ?? "na";
-                    const s = STATUS_STYLES[status];
-                    const cellKey = `${m.framework}-${controlName}`;
-
-                    const hasFindings = ctrl && ctrl.relatedFindings.length > 0;
-                    const isSelected =
-                      selectedCell?.framework === m.framework &&
-                      selectedCell?.control.controlId === ctrl?.controlId;
+        {/* Detailed view for selected framework */}
+        {detailMapping && (
+          <div className="pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06] space-y-3">
+            <p className="text-xs font-black text-foreground tracking-tight">
+              {detailMapping.framework} — Control Detail
+            </p>
+            {CONTROL_CATEGORIES.map((cat) => {
+              const catControls = detailMapping.controls.filter((c) => c.category === cat);
+              if (catControls.length === 0) return null;
+              return (
+                <div key={cat} className="space-y-1.5">
+                  <p className="text-[10px] font-black text-brand-accent uppercase tracking-[0.18em]">
+                    {cat}
+                  </p>
+                  {catControls.map((c) => {
+                    const s = STATUS_STYLES[c.status];
                     return (
-                      <td
-                        key={cellKey}
-                        className={`p-2 text-center border-t border-slate-900/[0.08] dark:border-white/[0.04] rounded-lg transition-all duration-150 select-none ${s.cell} ${hasFindings ? "cursor-pointer" : ""} ${isSelected ? "ring-2 ring-brand-accent/60 shadow-[0_0_12px_rgba(32,6,247,0.2)]" : ""}`}
-                        onClick={
-                          ctrl && hasFindings ? () => handleCellClick(m.framework, ctrl) : undefined
-                        }
-                        onMouseEnter={
-                          ctrl
-                            ? (e) =>
-                                showTooltipDebounced(e, {
-                                  controlName: ctrl.controlName,
-                                  evidence: ctrl.evidence,
-                                  status,
-                                })
-                            : undefined
-                        }
-                        onMouseLeave={hideTooltip}
+                      <div
+                        key={c.controlId}
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-150 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
+                        style={{ background: `linear-gradient(135deg, ${s.hex}06, transparent)` }}
                       >
                         <span
-                          className="inline-flex items-center justify-center h-6 w-6 rounded-md text-[13px] font-black"
-                          style={{ color: STATUS_HEX[status] }}
+                          className="inline-flex items-center justify-center h-6 w-6 rounded-lg text-[11px] font-black shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
+                          style={{ backgroundColor: `${s.hex}18`, color: s.hex }}
                         >
                           {s.icon}
                         </span>
-                      </td>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-bold text-foreground">{c.controlName}</span>
+                          <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                            {c.evidence}
+                          </p>
+                        </div>
+                        <span
+                          className="text-[9px] font-black shrink-0 px-2 py-0.5 rounded-md border"
+                          style={{
+                            color: s.hex,
+                            backgroundColor: `${s.hex}10`,
+                            borderColor: `${s.hex}20`,
+                          }}
+                        >
+                          {s.label.toUpperCase()}
+                        </span>
+                      </div>
                     );
                   })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
-      {/* Floating tooltip */}
+      {/* Outside overflow-hidden so hover card is not clipped */}
       {tooltip &&
         (() => {
           const ttHex = STATUS_HEX[tooltip.status];
           return (
             <div
-              className="absolute z-30 pointer-events-none transition-opacity duration-100"
+              className="absolute z-[80] pointer-events-none transition-opacity duration-100"
               style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}
             >
               <div
@@ -518,204 +729,6 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
             </div>
           );
         })()}
-
-      {/* Selected cell findings panel */}
-      {selectedCell && selectedCell.findings.length > 0 && (
-        <div
-          className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 space-y-2.5"
-          style={{
-            background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
-          }}
-        >
-          <div
-            className="absolute inset-x-0 top-0 h-px pointer-events-none"
-            style={{
-              background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
-            }}
-          />
-          <div className="relative flex items-center justify-between">
-            <p className="text-xs font-bold text-foreground">
-              {selectedCell.control.controlName} — {selectedCell.framework}
-            </p>
-            <button
-              onClick={() => setSelectedCell(null)}
-              className="text-muted-foreground hover:text-foreground text-xs px-1.5 py-0.5 rounded-md hover:bg-slate-950/[0.06] dark:hover:bg-white/[0.06] transition-colors"
-              aria-label="Close details"
-            >
-              ✕
-            </button>
-          </div>
-          <p className="relative text-[10px] text-muted-foreground/80">
-            {selectedCell.findings.length} related finding
-            {selectedCell.findings.length !== 1 ? "s" : ""}
-          </p>
-          {selectedCell.findings.map((f) => {
-            const fHex =
-              f.severity === "critical"
-                ? "#EA0022"
-                : f.severity === "high"
-                  ? "#F29400"
-                  : f.severity === "medium"
-                    ? "#F8C300"
-                    : "#009CFB";
-            return (
-              <div
-                key={f.id}
-                className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5"
-                style={{ background: `linear-gradient(135deg, ${fHex}08, ${fHex}02)` }}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md border"
-                    style={{ color: fHex, backgroundColor: `${fHex}14`, borderColor: `${fHex}22` }}
-                  >
-                    {f.severity}
-                  </span>
-                  <span className="text-xs font-bold text-foreground">{f.title}</span>
-                </div>
-                <p className="text-[10px] text-muted-foreground/80 mt-1.5 leading-relaxed">
-                  {f.detail}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Framework summary bars */}
-      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06]">
-        {mappings.map((m) => {
-          const total = m.summary.pass + m.summary.partial + m.summary.fail;
-          const passPct = total > 0 ? Math.round((m.summary.pass / total) * 100) : 0;
-          const pctHex = passPct >= 80 ? "#00F2B3" : passPct >= 50 ? "#F29400" : "#EA0022";
-          const isActive = selectedFw === m.framework;
-          return (
-            <button
-              key={m.framework}
-              onClick={() => setSelectedFw(isActive ? null : m.framework)}
-              className={`group relative overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 hover:shadow-elevated ${
-                isActive
-                  ? "border-brand-accent/25 shadow-[0_0_12px_rgba(32,6,247,0.15)]"
-                  : "border-slate-900/[0.10] dark:border-white/[0.06] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
-              }`}
-              style={{
-                background: isActive
-                  ? "linear-gradient(145deg, rgba(32,6,247,0.10), rgba(32,6,247,0.04))"
-                  : "linear-gradient(145deg, rgba(90,0,255,0.05), rgba(90,0,255,0.015))",
-              }}
-            >
-              <div className="absolute inset-0 pointer-events-none">
-                <div
-                  className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-10 transition-opacity duration-200 group-hover:opacity-25"
-                  style={{ backgroundColor: pctHex }}
-                />
-              </div>
-              <p className="relative text-[10px] font-bold text-foreground truncate">
-                {m.framework}
-              </p>
-              <div className="relative flex items-center gap-2 mt-1.5">
-                <div className="flex-1 h-2 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden flex">
-                  {m.summary.pass > 0 && (
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${(m.summary.pass / total) * 100}%`,
-                        background: "linear-gradient(90deg, #00F2B3, #00D4A0)",
-                        boxShadow: "0 0 6px rgba(0,242,179,0.3)",
-                      }}
-                    />
-                  )}
-                  {m.summary.partial > 0 && (
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${(m.summary.partial / total) * 100}%`,
-                        background: "linear-gradient(90deg, #F29400, #E08600)",
-                        boxShadow: "0 0 6px rgba(242,148,0,0.3)",
-                      }}
-                    />
-                  )}
-                  {m.summary.fail > 0 && (
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${(m.summary.fail / total) * 100}%`,
-                        background: "linear-gradient(90deg, #EA0022, #D0001E)",
-                        boxShadow: "0 0 6px rgba(234,0,34,0.3)",
-                      }}
-                    />
-                  )}
-                </div>
-                <span className="text-[10px] font-black tabular-nums" style={{ color: pctHex }}>
-                  {passPct}%
-                </span>
-              </div>
-              <div className="relative flex gap-3 mt-1.5 text-[9px] text-muted-foreground/80 font-medium">
-                <span>
-                  <span style={{ color: "#00F2B3" }}>{m.summary.pass}</span> pass
-                </span>
-                <span>
-                  <span style={{ color: "#F29400" }}>{m.summary.partial}</span> partial
-                </span>
-                <span>
-                  <span style={{ color: "#EA0022" }}>{m.summary.fail}</span> fail
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Detailed view for selected framework */}
-      {detailMapping && (
-        <div className="pt-3 border-t border-slate-900/[0.10] dark:border-white/[0.06] space-y-3">
-          <p className="text-xs font-black text-foreground tracking-tight">
-            {detailMapping.framework} — Control Detail
-          </p>
-          {CONTROL_CATEGORIES.map((cat) => {
-            const catControls = detailMapping.controls.filter((c) => c.category === cat);
-            if (catControls.length === 0) return null;
-            return (
-              <div key={cat} className="space-y-1.5">
-                <p className="text-[10px] font-black text-brand-accent uppercase tracking-[0.18em]">
-                  {cat}
-                </p>
-                {catControls.map((c) => {
-                  const s = STATUS_STYLES[c.status];
-                  return (
-                    <div
-                      key={c.controlId}
-                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-900/[0.08] dark:border-white/[0.04] transition-all duration-150 hover:border-slate-900/[0.12] dark:hover:border-white/[0.08]"
-                      style={{ background: `linear-gradient(135deg, ${s.hex}06, transparent)` }}
-                    >
-                      <span
-                        className="inline-flex items-center justify-center h-6 w-6 rounded-lg text-[11px] font-black shrink-0 border border-slate-900/[0.12] dark:border-white/[0.08]"
-                        style={{ backgroundColor: `${s.hex}18`, color: s.hex }}
-                      >
-                        {s.icon}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs font-bold text-foreground">{c.controlName}</span>
-                        <p className="text-[10px] text-muted-foreground/80 mt-0.5">{c.evidence}</p>
-                      </div>
-                      <span
-                        className="text-[9px] font-black shrink-0 px-2 py-0.5 rounded-md border"
-                        style={{
-                          color: s.hex,
-                          backgroundColor: `${s.hex}10`,
-                          borderColor: `${s.hex}20`,
-                        }}
-                      >
-                        {s.label.toUpperCase()}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }

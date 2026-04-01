@@ -27,7 +27,7 @@ interface ClientPortalViewProps {
 const GRADE_COLORS: Record<string, string> = {
   A: "text-[#007A5A] dark:text-[#00F2B3]",
   B: "text-[#009CFB]",
-  C: "text-[#F8E300] dark:text-[#F8E300]",
+  C: "text-[#78350f] dark:text-[#F8E300]",
   D: "text-[#F29400]",
   F: "text-[#EA0022]",
 };
