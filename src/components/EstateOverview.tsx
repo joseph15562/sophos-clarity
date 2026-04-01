@@ -49,23 +49,23 @@ interface EstateOverviewProps {
 
 const SEVERITY_COLOR: Record<Severity, string> = {
   critical: "text-[#EA0022]",
-  high: "text-[#c47800] dark:text-[#F29400]",
-  medium: "text-[#92400e] dark:text-[#F8E300]",
+  high: "text-[#b91c72] dark:text-[#F472B6]",
+  medium: "text-[#c47800] dark:text-[#F29400]",
   low: "text-[#007A5A] dark:text-[#00F2B3]",
   info: "text-[#0077cc] dark:text-[#009CFB]",
 };
 
 const SEVERITY_BORDER: Record<Severity, string> = {
   critical: "border-l-[#EA0022]",
-  high: "border-l-[#c47800] dark:border-l-[#F29400]",
-  medium: "border-l-[#a16207] dark:border-l-[#F8E300]",
+  high: "border-l-[#DB2777] dark:border-l-[#F472B6]",
+  medium: "border-l-[#c47800] dark:border-l-[#F29400]",
   low: "border-l-[#00F2B3] dark:border-l-[#00F2B3]",
   info: "border-l-[#0077cc] dark:border-l-[#009CFB]",
 };
 
 const SEV_HEX: Record<Severity, string> = {
   critical: "#EA0022",
-  high: "#F29400",
+  high: SEVERITY_COLORS.high,
   medium: SEVERITY_COLORS.medium,
   low: "#00F2B3",
   info: "#009CFB",
@@ -553,17 +553,16 @@ function InspectionPostureDashboard({ posture }: { posture: InspectionPosture })
 
 const SEV_DOT_BG: Record<Severity, string> = {
   critical: "bg-[#EA0022]",
-  high: "bg-[#F29400]",
-  medium: "bg-[#ca8a04]",
+  high: "bg-[#DB2777]",
+  medium: "bg-[#F29400]",
   low: "bg-[#00F2B3]",
   info: "bg-[#009CFB]",
 };
 
 const SEV_BADGE_INLINE: Record<Severity, string> = {
   critical: "bg-[#EA0022]/15 text-[#EA0022] border-[#EA0022]/20",
-  high: "bg-[#F29400]/15 text-[#c47800] dark:text-[#F29400] border-[#F29400]/20",
-  medium:
-    "bg-[#ca8a04]/15 text-[#78350f] dark:text-[#F8E300] dark:bg-[#F8E300]/12 border-[#ca8a04]/25 dark:border-[#F8E300]/25",
+  high: "bg-[#DB2777]/15 text-[#b91c72] dark:text-[#F472B6] border-[#DB2777]/25",
+  medium: "bg-[#F29400]/15 text-[#c47800] dark:text-[#F29400] border-[#F29400]/25",
   low: "bg-[#00F2B3]/15 text-[#00b386] dark:text-[#00F2B3] border-[#008F69]/30 dark:border-[#00F2B3]/20",
   info: "bg-[#009CFB]/15 text-[#0077cc] dark:text-[#009CFB] border-[#009CFB]/20",
 };
@@ -793,10 +792,10 @@ const SEV_ORDER: Severity[] = ["critical", "high", "medium", "low", "info"];
 
 const SEV_BADGE: Record<Severity, { bg: string; text: string; label: string }> = {
   critical: { bg: "bg-[#EA0022]/10", text: "text-[#EA0022]", label: "C" },
-  high: { bg: "bg-[#F29400]/10", text: "text-[#c47800] dark:text-[#F29400]", label: "H" },
+  high: { bg: "bg-[#DB2777]/10", text: "text-[#b91c72] dark:text-[#F472B6]", label: "H" },
   medium: {
-    bg: "bg-[#ca8a04]/12 dark:bg-[#F8E300]/10",
-    text: "text-[#78350f] dark:text-[#F8E300]",
+    bg: "bg-[#F29400]/10",
+    text: "text-[#c47800] dark:text-[#F29400]",
     label: "M",
   },
   low: {
@@ -1212,8 +1211,8 @@ function EstateRiskComparison({
         />
         <p className="relative text-[10px] text-muted-foreground">
           <span className="font-black text-[#EA0022]">C</span> = Critical &middot;{" "}
-          <span className="font-black text-[#F29400]">H</span> = High &middot;{" "}
-          <span className="font-black text-[#a16207] dark:text-[#F8E300]">M</span> = Medium &middot;{" "}
+          <span className="font-black text-[#DB2777] dark:text-[#F472B6]">H</span> = High &middot;{" "}
+          <span className="font-black text-[#c47800] dark:text-[#F29400]">M</span> = Medium &middot;{" "}
           <span className="font-bold">r</span> = rules parsed
         </p>
         <p className="relative text-[10px] text-muted-foreground/60">

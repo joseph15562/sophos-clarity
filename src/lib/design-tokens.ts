@@ -15,12 +15,12 @@ export const BRAND = {
   navy: "#001A47",
 } as const;
 
-/** Medium / grade C on white or pale washes — dark amber (neon #F8E300 fails WCAG on light UI). */
-export const SEVERITY_MEDIUM_ON_LIGHT_HEX = "#a16207";
+/** Medium on light UI — former “high” orange for bar/cards (readable on pale surfaces). */
+export const SEVERITY_MEDIUM_ON_LIGHT_HEX = "#F29400";
 
 export const SEVERITY_COLORS: Record<Severity, string> = {
   critical: "#EA0022",
-  high: "#F29400",
+  high: "#DB2777",
   medium: SEVERITY_MEDIUM_ON_LIGHT_HEX,
   low: "#00F2B3",
   info: "#009CFB",
@@ -28,8 +28,8 @@ export const SEVERITY_COLORS: Record<Severity, string> = {
 
 export const SEVERITY_COLORS_DARK: Record<Severity, string> = {
   critical: "#FF3352",
-  high: "#FFB040",
-  medium: "#FFE94D",
+  high: "#F472B6",
+  medium: "#FFB040",
   low: "#00F2B3",
   info: "#40B8FF",
 };

@@ -219,8 +219,8 @@ export function buildInteractiveAnalysisHtml(
     :root {
       --sophos-blue: #2006F7;
       --critical: #EA0022;
-      --high: #F29400;
-      --medium: #a16207;
+      --high: #DB2777;
+      --medium: #F29400;
       --low: #009CFB;
       --info: #888888;
       --bg: #f4f6fb;

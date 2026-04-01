@@ -6,15 +6,10 @@ import {
   loadSnapshotBeforePrevious,
   diffFindings,
 } from "@/lib/finding-snapshots";
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
 
 const SEV_ORDER = ["critical", "high", "medium", "low", "info"] as const;
-const SEV_COLORS: Record<string, string> = {
-  critical: "#EA0022",
-  high: "#F29400",
-  medium: "#a16207",
-  low: "#00F2B3",
-  info: "#009CFB",
-};
+const SEV_COLORS: Record<string, string> = SEVERITY_COLORS;
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;

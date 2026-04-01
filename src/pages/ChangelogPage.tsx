@@ -43,6 +43,11 @@ function ChangelogPageInner() {
               corners read clearly; the heatmap header accent follows the card radius.
             </li>
             <li>
+              <strong className="text-foreground">Severity colours</strong>: High findings use pink;
+              Medium uses the orange previously used for High, so the stacked bar and badges read as
+              Critical → High → Medium → Low more distinctly.
+            </li>
+            <li>
               <strong className="text-foreground">Accessibility</strong>: dashboard stat card
               captions (for example &quot;Issues&quot;) use full-opacity muted text so small labels
               meet contrast checks in light mode.

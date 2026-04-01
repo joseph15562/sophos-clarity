@@ -53,8 +53,8 @@
 
     /* Severity scale — used for findings, badges, charts */
     --severity-critical: 352 100% 46%; /* #EA0022 */
-    --severity-high: 33 100% 48%; /* #F29400 */
-    --severity-medium: 32 95% 34%; /* dark amber — readable on light surfaces */
+    --severity-high: 328 73% 51%; /* pink — #DB2777 */
+    --severity-medium: 33 100% 48%; /* orange — former high / #F29400 */
     --severity-low: 158 73% 36%; /* stronger light-mode green for readability */
 
     --severity-info: 206 100% 49%; /* #009CFB */
@@ -137,8 +137,8 @@
     --warning-foreground: 0 0% 100%;
 
     --severity-critical: 352 90% 50%;
-    --severity-high: 33 100% 52%;
-    --severity-medium: 52 100% 52%;
+    --severity-high: 326 91% 69%; /* pink — #F472B6 */
+    --severity-medium: 33 100% 62%; /* orange — former high / #FFB040 */
     --severity-low: 159 100% 47%;
 
     --severity-info: 210 100% 62%;

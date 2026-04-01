@@ -2,6 +2,7 @@ import type { AnalysisResult, Finding } from "./analyse-config";
 import type { AssessmentSnapshot } from "./assessment-history";
 import { ALL_FRAMEWORK_NAMES, controlIdsForFindingExport } from "./compliance-map";
 import { validateFindingExportMetadata } from "./report-export-validation";
+import { SEVERITY_COLORS, type Severity } from "./design-tokens";
 
 export type FindingsCsvReviewerSignoff = {
   signedBy: string;
@@ -100,20 +101,7 @@ export function downloadFindingsPdf(analysisResults: Record<string, AnalysisResu
   }
   allFindings.sort((a, b) => (SEV_ORDER[a.severity] ?? 5) - (SEV_ORDER[b.severity] ?? 5));
 
-  const sevColor = (s: string) => {
-    switch (s) {
-      case "critical":
-        return "#EA0022";
-      case "high":
-        return "#F29400";
-      case "medium":
-        return "#a16207";
-      case "low":
-        return "#00F2B3";
-      default:
-        return "#009CFB";
-    }
-  };
+  const sevColor = (s: string) => SEVERITY_COLORS[s as Severity] ?? SEVERITY_COLORS.info;
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com" />
