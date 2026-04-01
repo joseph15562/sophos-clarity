@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { type Severity, SEVERITY_COLORS, SEVERITY_ORDER } from "@/lib/design-tokens";
+import {
+  type Severity,
+  DASHBOARD_HOVER_TOOLTIP_CLASS,
+  SEVERITY_COLORS,
+  SEVERITY_ORDER,
+} from "@/lib/design-tokens";
 
 const SEV_ORDER = (Object.keys(SEVERITY_ORDER) as Severity[]).sort(
   (a, b) => SEVERITY_ORDER[a] - SEVERITY_ORDER[b],
@@ -195,20 +200,14 @@ export function SeverityBreakdown({
                     />
                     <div className="opacity-0 group-hover/seg:opacity-100 absolute z-30 bottom-full left-1/2 -translate-x-1/2 mb-3 pointer-events-none transition-opacity duration-150">
                       <div
-                        className="rounded-xl px-3 py-2 whitespace-nowrap"
-                        style={{
-                          background:
-                            "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          boxShadow:
-                            "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
-                          backdropFilter: "blur(16px)",
-                        }}
+                        className={`${DASHBOARD_HOVER_TOOLTIP_CLASS} px-3 py-2 whitespace-nowrap`}
                       >
                         <p className="text-[11px] font-bold" style={{ color: d.color }}>
                           {d.value} {d.name}
                         </p>
-                        <p className="text-[9px] text-foreground/50">{pct}% of all findings</p>
+                        <p className="text-[9px] text-muted-foreground dark:text-zinc-400">
+                          {pct}% of all findings
+                        </p>
                       </div>
                     </div>
                   </button>

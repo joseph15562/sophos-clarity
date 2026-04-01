@@ -22,6 +22,7 @@ const SHORTCUT_GROUPS = [
     shortcuts: [
       { keys: ["Escape"], description: "Go back / close modal" },
       { keys: ["?"], description: "Show keyboard shortcuts" },
+      { keys: [MOD, "K"], description: "Open command palette (jump to hub routes)" },
     ],
   },
   {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowLeftRight, RotateCcw, Save, BarChart3, Scale } from "lucide-react";
+import { RotateCcw, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadedFile } from "@/components/FileUpload";
 import { BrandingData } from "@/components/BrandingSetup";
@@ -77,9 +77,6 @@ import { MspSetupChecklist } from "@/components/MspSetupChecklist";
 import { getDemoConfigHtml, DEMO_FILE_NAME, DEMO_LABEL } from "@/lib/demo-mode";
 import { trackProductEvent } from "@/lib/product-telemetry";
 
-const DocumentPreview = lazy(() =>
-  import("@/components/DocumentPreview").then((m) => ({ default: m.DocumentPreview })),
-);
 const ConfigDiff = lazy(() =>
   import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })),
 );
@@ -97,6 +94,9 @@ import { ProgressNarrative } from "@/components/ProgressNarrative";
 import { QbrPackChecklist } from "@/components/QbrPackChecklist";
 import { ExtractionSummary } from "@/components/ExtractionSummary";
 import { StickyActionBar } from "@/components/StickyActionBar";
+import { AssessDocumentPreviewSection } from "@/components/assess/AssessDocumentPreviewSection";
+import { AssessWorkflowStepper } from "@/components/AssessWorkflowStepper";
+import { OPEN_MANAGEMENT_EVENT } from "@/components/WorkspaceCommandPalette";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -185,6 +185,16 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [linkedCloudAssessmentId, setLinkedCloudAssessmentId] = useState<string | null>(null);
   const [exportReviewerSignoff, setExportReviewerSignoff] =
     useState<FindingsCsvReviewerSignoff | null>(null);
+
+  useEffect(() => {
+    const onOpenManagement = () => {
+      setDrawerOpen(true);
+      setDrawerTab(undefined);
+      setDrawerSection(undefined);
+    };
+    window.addEventListener(OPEN_MANAGEMENT_EVENT, onOpenManagement);
+    return () => window.removeEventListener(OPEN_MANAGEMENT_EVENT, onOpenManagement);
+  }, []);
 
   const firewallAnalysisOpts = useMemo(
     () => ({
@@ -1290,6 +1300,20 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         id="main-content"
         className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"} ${!inDiffMode ? "pb-20" : ""}`}
       >
+        {!inDiffMode && (
+          <AssessWorkflowStepper
+            hasFiles={hasFiles}
+            hasContext={Boolean(
+              branding.customerName?.trim() ||
+              branding.environment?.trim() ||
+              branding.country?.trim() ||
+              branding.selectedFrameworks.length > 0,
+            )}
+            hasAnalysis={totalFindings > 0}
+            viewingReports={viewingReports}
+            className="mb-3"
+          />
+        )}
         {!isGuest && org?.id && (
           <>
             <CentralHealthBanner orgId={org.id} />
@@ -1560,140 +1584,36 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
         {/* Report view (authenticated only) */}
         {!isGuest && (viewingReports || isLoading) && (
-          <>
-            {/* Top bar: Back to Dashboard + actions */}
-            {hasReports && !isLoading && (
-              <div className="no-print flex flex-wrap items-center gap-3 mb-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setViewingReports(false)}
-                  className="gap-2"
-                >
-                  <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
-                  Back to Dashboard
-                </Button>
-                <div className="flex-1" />
-                {!localMode && !isViewerOnly && (
-                  <div className="flex flex-wrap gap-2">
-                    {files.length >= 2 && !reports.find((r) => r.id === "report-executive") && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => generateExecutive()}
-                        className="gap-1.5 text-xs"
-                      >
-                        <BarChart3 className="h-3.5 w-3.5 text-brand-accent" /> Add Executive Brief
-                      </Button>
-                    )}
-                    {!reports.find((r) => r.id === "report-compliance") && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={generateCompliance}
-                        className="gap-1.5 text-xs"
-                      >
-                        <Scale className="h-3.5 w-3.5 text-brand-accent" /> Add Compliance Report
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Stats bar */}
-            {hasReports && !isLoading && (
-              <div
-                className="no-print flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-[11px]"
-                data-tour="stats-bar"
-              >
-                <span className="font-semibold text-foreground mr-1">
-                  {reports.length} report{reports.length !== 1 ? "s" : ""}
-                </span>
-                <span className="w-px h-3 bg-border" />
-                <span className="text-muted-foreground">
-                  {files.length} firewall{files.length !== 1 ? "s" : ""}
-                </span>
-                <span className="w-px h-3 bg-border" />
-                <span className="text-muted-foreground">{totalRules} rules</span>
-                {totalFindings > 0 && (
-                  <>
-                    <span className="w-px h-3 bg-border" />
-                    {(() => {
-                      const counts: Record<string, number> = {};
-                      Object.values(analysisResults).forEach((r) =>
-                        r.findings.forEach((f) => {
-                          counts[f.severity] = (counts[f.severity] || 0) + 1;
-                        }),
-                      );
-                      return Object.entries(counts).map(([sev, count]) => (
-                        <span
-                          key={sev}
-                          className={`px-1.5 py-0.5 rounded font-medium ${sev === "critical" ? "bg-[#EA0022]/10 text-[#EA0022]" : sev === "high" ? "bg-[#F29400]/10 text-[#c47800] dark:text-[#F29400]" : sev === "medium" ? "bg-[#F8E300]/10 text-[#b8a200] dark:text-[#F8E300]" : sev === "low" ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]" : "bg-[#009CFB]/10 text-[#0077cc] dark:text-[#009CFB]"}`}
-                        >
-                          {count} {sev}
-                        </span>
-                      ));
-                    })()}
-                  </>
-                )}
-              </div>
-            )}
-
-            <Suspense fallback={null}>
-              <DocumentPreview
-                reports={reports}
-                activeReportId={activeReportId}
-                onActiveChange={setActiveReportId}
-                isLoading={isLoading}
-                loadingReportIds={loadingReportIds}
-                failedReportIds={failedReportIds}
-                onRetry={handleRetry}
-                branding={branding}
-                analysisResults={analysisResults}
-                selectedFrameworks={branding.selectedFrameworks}
-                backendDebugInfo={backendDebugInfo}
-                onFetchBackendDebug={localMode ? undefined : fetchBackendDebug}
-              />
-            </Suspense>
-
-            {/* Bottom actions */}
-            {hasReports && !isLoading && (
-              <div className="no-print flex flex-wrap items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setViewingReports(false)}
-                  className="gap-2"
-                >
-                  <ArrowLeftRight className="h-3.5 w-3.5 rotate-180" />
-                  Back to Dashboard
-                </Button>
-                {!isViewerOnly && (
-                  <button
-                    onClick={() => handleSaveReports(true)}
-                    disabled={savingReports}
-                    className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors ${
-                      reportsSaved
-                        ? "bg-[#00F2B3]/10 text-[#00F2B3] dark:text-[#00F2B3]"
-                        : "bg-[#2006F7] text-white hover:bg-[#10037C]"
-                    }`}
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    {reportsSaved ? "Reports Saved!" : savingReports ? "Saving…" : "Save Reports"}
-                  </button>
-                )}
-                <div className="flex-1" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleStartOver}
-                  className="text-muted-foreground hover:text-foreground text-xs"
-                >
-                  Start Over
-                </Button>
-                {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
-              </div>
-            )}
-          </>
+          <AssessDocumentPreviewSection
+            hasReports={hasReports}
+            isLoading={isLoading}
+            viewingReports={viewingReports}
+            onBackToDashboard={() => setViewingReports(false)}
+            filesLength={files.length}
+            reports={reports}
+            findExecutiveReport={Boolean(reports.find((r) => r.id === "report-executive"))}
+            findComplianceReport={Boolean(reports.find((r) => r.id === "report-compliance"))}
+            onGenerateExecutive={() => generateExecutive()}
+            onGenerateCompliance={generateCompliance}
+            localMode={localMode}
+            isViewerOnly={isViewerOnly}
+            totalRules={totalRules}
+            analysisResults={analysisResults}
+            activeReportId={activeReportId}
+            onActiveReportChange={setActiveReportId}
+            loadingReportIds={loadingReportIds}
+            failedReportIds={failedReportIds}
+            onRetryReport={handleRetry}
+            branding={branding}
+            backendDebugInfo={backendDebugInfo}
+            onFetchBackendDebug={localMode ? undefined : fetchBackendDebug}
+            savingReports={savingReports}
+            reportsSaved={reportsSaved}
+            onSaveReports={handleSaveReports}
+            onStartOver={handleStartOver}
+            saveError={saveError}
+            onRetrySave={() => handleSaveReports(true)}
+          />
         )}
       </main>
 

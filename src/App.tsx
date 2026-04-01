@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PageSkeleton } from "@/components/PageSkeleton";
 import NotFound from "./pages/NotFound";
+import { WorkspaceCommandPalette } from "@/components/WorkspaceCommandPalette";
 
 const Index = lazy(() => import("./pages/Index"));
 const SharedReport = lazy(() => import("./pages/SharedReport"));
@@ -74,6 +75,7 @@ const App = () => (
           <BrowserRouter>
             <FocusReset />
             <ProductRouteTelemetry />
+            <WorkspaceCommandPalette />
             <Suspense fallback={<PageSkeleton />}>
               <Routes>
                 <Route path="/" element={<Index />} />

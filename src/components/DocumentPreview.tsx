@@ -54,6 +54,7 @@ import {
 } from "@/lib/report-export";
 import JSZip from "jszip";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
+import { FlowStatusCard } from "@/components/FlowStatusCard";
 
 export type ReportEntry = {
   id: string;
@@ -1014,22 +1015,15 @@ function ReportContent({
           )}
 
           {isFailed && !markdown && (
-            <div className="flex flex-col items-center justify-center py-16 text-destructive">
-              <p className="text-lg font-medium mb-2">Generation failed</p>
-              {errorMessage && (
-                <p className="text-sm text-left max-w-xl mb-4 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30 break-words">
-                  {errorMessage}
-                </p>
-              )}
-              <p className="text-sm text-muted-foreground mb-4">
-                Click retry to try again. If it keeps timing out, the report may be too large for
-                the server — try generating{" "}
-                <strong className="text-foreground">individual reports</strong> first, or use fewer
-                configs.
-              </p>
-              <Button variant="destructive" onClick={onRetry} className="gap-2">
-                <RefreshCw className="h-4 w-4" /> Retry Generation
-              </Button>
+            <div className="py-10 px-4 md:px-8">
+              <FlowStatusCard
+                variant="error"
+                title="Report generation failed"
+                description="The AI or edge service could not finish this report. Try again, or generate individual firewall reports first if the estate is large."
+                errorDetail={errorMessage}
+                onRetry={onRetry}
+                retryLabel="Retry generation"
+              />
             </div>
           )}
 

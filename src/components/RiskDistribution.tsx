@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
+import { DASHBOARD_HOVER_TOOLTIP_CLASS } from "@/lib/design-tokens";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -96,14 +97,7 @@ export function RiskDistribution({ analysisResults }: Props) {
                   const d = payload[0].payload;
                   return (
                     <div
-                      className="rounded-xl px-3 py-2 text-xs font-medium"
-                      style={{
-                        background:
-                          "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                        backdropFilter: "blur(16px)",
-                      }}
+                      className={`${DASHBOARD_HOVER_TOOLTIP_CLASS} px-3 py-2 text-xs font-medium`}
                     >
                       <span className="font-bold">{d.range}</span>: {d.count} firewall
                       {d.count !== 1 ? "s" : ""}

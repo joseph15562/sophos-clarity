@@ -233,7 +233,9 @@ export function ReportCards({
                       ? "opacity-50 pointer-events-none"
                       : "hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-pointer group"
                   }`}
-                  style={{ background: `linear-gradient(145deg, ${card.hex}12, ${card.hex}04)` }}
+                  style={{
+                    background: `linear-gradient(90deg, ${card.hex}, ${card.hexEnd}) 0 0 / 100% 2px no-repeat, linear-gradient(145deg, ${card.hex}12, ${card.hex}04) 0 0 / 100% 100% no-repeat`,
+                  }}
                   onClick={card.onClick}
                 >
                   <div className="absolute inset-0 pointer-events-none">
@@ -242,10 +244,6 @@ export function ReportCards({
                       style={{ backgroundColor: card.hex }}
                     />
                   </div>
-                  <div
-                    className="absolute inset-x-0 top-0 h-[2px]"
-                    style={{ background: `linear-gradient(90deg, ${card.hex}, ${card.hexEnd})` }}
-                  />
                   <div className="relative p-5 flex flex-col h-full">
                     <div className="flex items-center gap-3">
                       <div

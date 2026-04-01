@@ -27,9 +27,28 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Light mode polish</strong>: dashboard hover
+              popovers (configuration stats, feature coverage, charts, compliance heatmap, priority
+              matrix) use the same readable surface as other popovers instead of dark glass with
+              theme text; report/QBR/deterministic-finding shells paint their top accent as part of
+              the rounded background so corners stay consistent.
+            </li>
+            <li>
               <strong className="text-foreground">Accessibility</strong>: dashboard stat card
               captions (for example &quot;Issues&quot;) use full-opacity muted text so small labels
               meet contrast checks in light mode.
+            </li>
+            <li>
+              <strong className="text-foreground">Workspace UX</strong>:{" "}
+              <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px]">
+                ⌘K
+              </kbd>{" "}
+              / Ctrl+K opens a command palette to jump to hubs, SE Health Check, or workspace
+              settings; Assess shows a compact workflow stepper; Overview analysis adds a
+              collapsible &quot;Extended overview&quot; block; Insights shows a portfolio risk
+              strip; upload, save, failed report generation, Sophos Central status on Assess, and
+              Export Centre pre-flight checks use a shared status card (retry, settings link, or
+              Trust where relevant).
             </li>
             <li>
               <strong className="text-foreground">Theme</strong>: reduced light/dark flicker on load

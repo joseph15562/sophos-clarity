@@ -8,6 +8,7 @@ import {
   type ControlMapping,
   type ControlStatus,
 } from "@/lib/compliance-map";
+import { DASHBOARD_HOVER_TOOLTIP_CLASS } from "@/lib/design-tokens";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -486,10 +487,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
               style={{ left: tooltip.x, top: tooltip.y, transform: "translate(-50%, -100%)" }}
             >
               <div
-                className="relative overflow-hidden mb-2 p-3 rounded-xl border border-slate-900/[0.12] dark:border-white/[0.08] backdrop-blur-xl shadow-elevated text-left min-w-[200px] max-w-[280px]"
-                style={{
-                  background: "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26,0.98))",
-                }}
+                className={`relative overflow-hidden mb-2 p-3 text-left min-w-[200px] max-w-[280px] ${DASHBOARD_HOVER_TOOLTIP_CLASS}`}
               >
                 <div
                   className="absolute inset-x-0 top-0 h-px pointer-events-none"
@@ -497,8 +495,10 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                     background: `linear-gradient(90deg, transparent, ${ttHex}30, transparent)`,
                   }}
                 />
-                <p className="font-bold text-foreground text-[11px]">{tooltip.controlName}</p>
-                <p className="text-muted-foreground/80 mt-0.5 text-[10px]">
+                <p className="font-bold text-[11px] text-foreground dark:text-zinc-100">
+                  {tooltip.controlName}
+                </p>
+                <p className="text-muted-foreground dark:text-zinc-400 mt-0.5 text-[10px]">
                   {tooltip.evidence || "No evidence gathered"}
                 </p>
                 <p className="mt-1.5">
@@ -514,10 +514,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   </span>
                 </p>
               </div>
-              <div
-                className="w-2 h-2 rotate-45 border-b border-r border-slate-900/[0.12] dark:border-white/[0.08] mx-auto -mt-3"
-                style={{ background: "rgba(12,18,34,0.96)" }}
-              />
+              <div className="w-2 h-2 rotate-45 border-b border-r border-border bg-popover mx-auto -mt-3 dark:border-white/[0.08] dark:bg-[#0c1222]" />
             </div>
           );
         })()}

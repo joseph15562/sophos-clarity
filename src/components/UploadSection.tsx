@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
 import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
 import { ReportCards } from "@/components/ReportCards";
@@ -25,6 +24,7 @@ import { Suspense } from "react";
 import { FirewallLinker } from "@/components/FirewallLinker";
 import { WelcomeBackCard } from "@/components/WelcomeBackCard";
 import { TrustStrip } from "@/components/TrustStrip";
+import { FlowStatusCard } from "@/components/FlowStatusCard";
 
 export interface ParsingProgress {
   current: number;
@@ -345,21 +345,25 @@ export function UploadSection({
           )}
         </div>
         {parsingProgress && (
-          <div className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(247,249,255,0.96))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(12,18,34,0.92))] px-4 py-3 space-y-2 shadow-sm">
-            <p className="text-xs font-semibold text-foreground">
-              {parsingProgress.phase === "parsing"
-                ? `Parsing file ${parsingProgress.current} of ${parsingProgress.total}...`
-                : "Analysing configuration..."}
-            </p>
-            <Progress
-              value={
-                parsingProgress.phase === "parsing"
-                  ? (parsingProgress.current / parsingProgress.total) * 100
-                  : 90
-              }
-              className="h-1.5"
-            />
-          </div>
+          <FlowStatusCard
+            variant="loading"
+            title={
+              parsingProgress.phase === "parsing"
+                ? "Parsing firewall exports"
+                : "Analysing configuration"
+            }
+            description="Keep this tab open. Large estates can take a little longer."
+            progressLabel={
+              parsingProgress.phase === "parsing"
+                ? `File ${parsingProgress.current} of ${parsingProgress.total}`
+                : "Running deterministic checks…"
+            }
+            progressValue={
+              parsingProgress.phase === "parsing"
+                ? (parsingProgress.current / parsingProgress.total) * 100
+                : 90
+            }
+          />
         )}
         <FileUpload
           files={files}
@@ -713,8 +717,18 @@ export function UploadSection({
 
       {/* Save Assessment (pre-AI) — authenticated only */}
       {hasFiles && totalFindings > 0 && !hasReports && !isViewerOnly && !isGuest && (
-        <div className="flex items-center justify-end gap-3">
-          {saveError && <span className="text-[10px] text-[#EA0022]">{saveError}</span>}
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+          {saveError && (
+            <FlowStatusCard
+              variant="error"
+              title="Could not save assessment"
+              description="Your analysis is still in this browser session."
+              errorDetail={saveError}
+              onRetry={() => onSaveReports(false)}
+              retryLabel="Retry save"
+              className="sm:max-w-md sm:ml-auto"
+            />
+          )}
           <button
             onClick={() => onSaveReports(false)}
             disabled={savingReports}

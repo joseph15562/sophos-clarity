@@ -66,17 +66,14 @@ export function QbrPackChecklist({
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 shadow-card no-print transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-      style={{ background: "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.03))" }}
+      style={{
+        background:
+          "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent) 0 0 / 100% 1px no-repeat, linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.03)) 0 0 / 100% 100% no-repeat",
+      }}
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-6 -right-6 h-16 w-16 rounded-full blur-[28px] opacity-20 bg-brand-accent" />
       </div>
-      <div
-        className="absolute inset-x-0 top-0 h-px pointer-events-none"
-        style={{
-          background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
-        }}
-      />
 
       <div className="relative mb-3 space-y-1">
         <h3 className="text-lg font-display font-black tracking-tight text-foreground">QBR Pack</h3>

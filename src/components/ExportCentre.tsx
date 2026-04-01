@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { FileText, FileSpreadsheet, Download, FileJson, Table, AlertTriangle } from "lucide-react";
+import { FileText, FileSpreadsheet, Download, FileJson, Table } from "lucide-react";
 import { downloadRiskRegisterCSV, downloadRiskRegisterExcel } from "@/lib/risk-register";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { ComplianceFramework } from "@/components/BrandingSetup";
 import { ALL_FRAMEWORK_NAMES } from "@/lib/compliance-map";
 import { exportFindingsCsv, type FindingsCsvReviewerSignoff } from "@/lib/findings-export";
 import { collectFindingExportValidationIssues } from "@/lib/report-export-validation";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FlowStatusCard } from "@/components/FlowStatusCard";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -86,12 +86,11 @@ export function ExportCentre({ analysisResults, branding, reviewerSignoff }: Pro
         Export Centre
       </h3>
       {validationIssues.length > 0 && (
-        <Alert className="border-amber-500/40 bg-amber-500/[0.06]">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          <AlertTitle className="text-amber-800 dark:text-amber-200 text-sm">
-            Export checklist ({validationIssues.length})
-          </AlertTitle>
-          <AlertDescription>
+        <FlowStatusCard
+          variant="error"
+          tone="warning"
+          title={`Export checklist (${validationIssues.length})`}
+          description={
             <ul className="list-disc pl-4 mt-1 space-y-0.5 text-xs text-muted-foreground">
               {validationIssues.slice(0, 6).map((iss, i) => (
                 <li key={`${iss.message}-${i}`}>
@@ -107,8 +106,9 @@ export function ExportCentre({ analysisResults, branding, reviewerSignoff }: Pro
                 </li>
               )}
             </ul>
-          </AlertDescription>
-        </Alert>
+          }
+          showTrustLink={false}
+        />
       )}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {exportCards.map((card) => (

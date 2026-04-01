@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Target } from "lucide-react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { loadAcceptedFindings, isAccepted, type AcceptedFinding } from "@/lib/accepted-findings";
-import { SEVERITY_COLORS } from "@/lib/design-tokens";
+import { DASHBOARD_HOVER_TOOLTIP_CLASS, SEVERITY_COLORS } from "@/lib/design-tokens";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -532,13 +532,7 @@ export function PriorityMatrix({ analysisResults }: Props) {
             }}
           >
             <div
-              className="rounded-xl px-3.5 py-2.5 text-[11px] max-w-[220px]"
-              style={{
-                background: "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
-                border: "1px solid rgba(255,255,255,0.1)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
-                backdropFilter: "blur(16px)",
-              }}
+              className={`${DASHBOARD_HOVER_TOOLTIP_CLASS} px-3.5 py-2.5 text-[11px] max-w-[220px]`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <span
@@ -555,10 +549,10 @@ export function PriorityMatrix({ analysisResults }: Props) {
                   {hoveredDot.p.finding.severity}
                 </span>
               </div>
-              <p className="text-foreground font-display font-bold line-clamp-2 leading-snug">
+              <p className="font-display font-bold line-clamp-2 leading-snug text-foreground dark:text-zinc-100">
                 {hoveredDot.p.finding.title}
               </p>
-              <p className="text-foreground/40 mt-1 text-[10px] font-medium">
+              <p className="text-muted-foreground dark:text-zinc-400 mt-1 text-[10px] font-medium">
                 Impact {hoveredDot.p.impact}/5 · Effort {hoveredDot.p.effort}/4
               </p>
             </div>

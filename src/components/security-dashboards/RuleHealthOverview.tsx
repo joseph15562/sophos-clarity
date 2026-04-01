@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { AnalysisResult } from "@/lib/analyse-config";
-import { BRAND, SEVERITY_COLORS } from "@/lib/design-tokens";
+import { BRAND, DASHBOARD_HOVER_TOOLTIP_CLASS, SEVERITY_COLORS } from "@/lib/design-tokens";
 
 export function RuleHealthOverview({
   analysisResults,
@@ -162,15 +162,7 @@ export function RuleHealthOverview({
               </button>
               {/* Glass tooltip */}
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 w-52">
-                <div
-                  className="rounded-xl p-3 text-[11px] text-foreground/90 leading-relaxed"
-                  style={{
-                    background: "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
-                    backdropFilter: "blur(16px)",
-                  }}
-                >
+                <div className={`${DASHBOARD_HOVER_TOOLTIP_CLASS} p-3 text-[11px] leading-relaxed`}>
                   {c.tooltip}
                 </div>
               </div>

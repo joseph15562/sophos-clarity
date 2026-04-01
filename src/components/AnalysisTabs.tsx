@@ -11,8 +11,10 @@ import {
   SlidersHorizontal,
   Scale,
   Shield,
+  ChevronDown,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { EstateOverview } from "@/components/EstateOverview";
@@ -694,80 +696,88 @@ export function AnalysisTabs({
                   />
                 </SecurityWidgetShell>
               )}
-              <SecurityWidgetShell>
-                <FindingsChanges analysisResults={analysisResult} />
-              </SecurityWidgetShell>
+              <Collapsible defaultOpen={false} className="space-y-4">
+                <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/40 transition-colors [&[data-state=open]_svg]:rotate-180">
+                  <span>Extended overview, estate &amp; enrichment</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4">
+                  <SecurityWidgetShell>
+                    <FindingsChanges analysisResults={analysisResult} />
+                  </SecurityWidgetShell>
 
-              {totalFindings > 0 &&
-                (w("findings-by-age") ||
-                  w("sla-compliance-gauge") ||
-                  w("remediation-velocity") ||
-                  w("alert-feed")) && (
-                  <div className="grid gap-4 lg:grid-cols-2 items-start">
-                    {w("findings-by-age") && (
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <FindingsByAge analysisResults={analysisResult} />
-                      </Suspense>
+                  {totalFindings > 0 &&
+                    (w("findings-by-age") ||
+                      w("sla-compliance-gauge") ||
+                      w("remediation-velocity") ||
+                      w("alert-feed")) && (
+                      <div className="grid gap-4 lg:grid-cols-2 items-start">
+                        {w("findings-by-age") && (
+                          <Suspense fallback={<ChartSkeleton />}>
+                            <FindingsByAge analysisResults={analysisResult} />
+                          </Suspense>
+                        )}
+                        {w("sla-compliance-gauge") && (
+                          <Suspense fallback={<ChartSkeleton />}>
+                            <SlaComplianceGauge analysisResults={analysisResult} />
+                          </Suspense>
+                        )}
+                        {w("remediation-velocity") && (
+                          <Suspense fallback={<ChartSkeleton />}>
+                            <RemediationVelocity analysisResults={analysisResult} />
+                          </Suspense>
+                        )}
+                        {w("alert-feed") && (
+                          <Suspense fallback={<CardSkeleton />}>
+                            <AlertFeedWidget analysisResults={analysisResult} />
+                          </Suspense>
+                        )}
+                      </div>
                     )}
-                    {w("sla-compliance-gauge") && (
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <SlaComplianceGauge analysisResults={analysisResult} />
-                      </Suspense>
-                    )}
-                    {w("remediation-velocity") && (
-                      <Suspense fallback={<ChartSkeleton />}>
-                        <RemediationVelocity analysisResults={analysisResult} />
-                      </Suspense>
-                    )}
-                    {w("alert-feed") && (
-                      <Suspense fallback={<CardSkeleton />}>
-                        <AlertFeedWidget analysisResults={analysisResult} />
-                      </Suspense>
-                    )}
-                  </div>
-                )}
 
-              <SecurityWidgetShell>
-                <EstateOverview
-                  fileCount={files.length}
-                  analysisResults={analysisResult}
-                  totalFindings={totalFindings}
-                  totalRules={totalRules}
-                  totalSections={totalSections}
-                  totalPopulated={totalPopulated}
-                  extractionPct={extractionPct}
-                  aggregatedPosture={aggregatedPosture}
-                  selectedFrameworks={branding.selectedFrameworks}
-                  onExplainFinding={onExplainFinding}
-                />
-              </SecurityWidgetShell>
-              {!isGuest && !localMode && configMetas.length > 0 && (
-                <Suspense fallback={null}>
-                  <CentralEnrichment
-                    configMetas={configMetas}
-                    customerName={branding.customerName}
-                  />
-                </Suspense>
-              )}
-
-              {(w("mdr-status") || w("firmware-tracker")) && (
-                <div className="grid gap-6 lg:grid-cols-2">
-                  {w("mdr-status") && (
-                    <SecurityWidgetShell>
-                      <Suspense fallback={<CardSkeleton />}>
-                        <MdrStatus analysisResults={analysisResult} files={files} />
-                      </Suspense>
-                    </SecurityWidgetShell>
+                  <SecurityWidgetShell>
+                    <EstateOverview
+                      fileCount={files.length}
+                      analysisResults={analysisResult}
+                      totalFindings={totalFindings}
+                      totalRules={totalRules}
+                      totalSections={totalSections}
+                      totalPopulated={totalPopulated}
+                      extractionPct={extractionPct}
+                      aggregatedPosture={aggregatedPosture}
+                      selectedFrameworks={branding.selectedFrameworks}
+                      onExplainFinding={onExplainFinding}
+                    />
+                  </SecurityWidgetShell>
+                  {!isGuest && !localMode && configMetas.length > 0 && (
+                    <Suspense fallback={null}>
+                      <CentralEnrichment
+                        configMetas={configMetas}
+                        customerName={branding.customerName}
+                      />
+                    </Suspense>
                   )}
-                  {w("firmware-tracker") && (
-                    <SecurityWidgetShell>
-                      <Suspense fallback={<CardSkeleton />}>
-                        <FirmwareTracker files={files} />
-                      </Suspense>
-                    </SecurityWidgetShell>
+
+                  {(w("mdr-status") || w("firmware-tracker")) && (
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      {w("mdr-status") && (
+                        <SecurityWidgetShell>
+                          <Suspense fallback={<CardSkeleton />}>
+                            <MdrStatus analysisResults={analysisResult} files={files} />
+                          </Suspense>
+                        </SecurityWidgetShell>
+                      )}
+                      {w("firmware-tracker") && (
+                        <SecurityWidgetShell>
+                          <Suspense fallback={<CardSkeleton />}>
+                            <FirmwareTracker files={files} />
+                          </Suspense>
+                        </SecurityWidgetShell>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           </ErrorBoundary>
         </TabsContent>

@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import type { AnalysisResult, Finding } from "@/lib/analyse-config";
-import { type Severity, SEVERITY_COLORS, SEVERITY_ORDER } from "@/lib/design-tokens";
+import {
+  type Severity,
+  DASHBOARD_HOVER_TOOLTIP_CLASS,
+  SEVERITY_COLORS,
+  SEVERITY_ORDER,
+} from "@/lib/design-tokens";
 
 const SEVERITY_KEYS: Severity[] = ["critical", "high", "medium", "low", "info"];
 
@@ -128,14 +133,7 @@ export function FindingsBySection({
                     >
                       <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 opacity-0 group-hover/seg:opacity-100 pointer-events-none transition-opacity z-30">
                         <div
-                          className="rounded-lg px-2 py-1 text-[9px] text-foreground whitespace-nowrap"
-                          style={{
-                            background:
-                              "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-                            backdropFilter: "blur(12px)",
-                          }}
+                          className={`${DASHBOARD_HOVER_TOOLTIP_CLASS} px-2 py-1 text-[9px] whitespace-nowrap`}
                         >
                           {s.count} {s.key}
                         </div>

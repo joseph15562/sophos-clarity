@@ -10,6 +10,7 @@ import { gradeForScore, GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 import { resolveCustomerName } from "@/lib/customer-name";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { PortfolioRiskStrip } from "@/components/PortfolioRiskStrip";
 import { EmptyState } from "@/components/EmptyState";
 import {
   BarChart3,
@@ -633,6 +634,12 @@ function PortfolioInsightsInner() {
         .sort((a, b) => b.daysSinceAssessment - a.daysSinceAssessment),
     [portfolio],
   );
+  const belowTargetCount = useMemo(() => portfolio.filter((c) => c.score < 60).length, [portfolio]);
+  const portfolioLowest = useMemo(() => {
+    if (portfolio.length === 0) return { name: null as string | null, score: 0 };
+    const sorted = [...portfolio].sort((a, b) => a.score - b.score);
+    return { name: sorted[0].name, score: sorted[0].score };
+  }, [portfolio]);
   const sectorAverages = useMemo(() => {
     const map: Record<string, number[]> = {};
     portfolio.forEach((c) => {
@@ -693,6 +700,13 @@ function PortfolioInsightsInner() {
       )}
 
       <main className={`mx-auto max-w-7xl space-y-8 px-6 py-8 ${loading ? "hidden" : ""}`}>
+        <PortfolioRiskStrip
+          customerCount={totalCustomers}
+          belowTargetCount={belowTargetCount}
+          staleCount={staleCustomers.length}
+          lowestScore={portfolioLowest.score}
+          lowestName={portfolioLowest.name}
+        />
         {org?.id && !isGuest && <WorkspaceSettingsStrip variant="insights" />}
         {/* ---- Executive KPIs ---- */}
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

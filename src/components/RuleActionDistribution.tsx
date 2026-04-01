@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { DASHBOARD_HOVER_TOOLTIP_CLASS } from "@/lib/design-tokens";
 
 type ExtractedSection = {
   tables: Array<{ headers: string[]; rows: Record<string, string>[] }>;
@@ -147,14 +148,7 @@ export function RuleActionDistribution({ files }: Props) {
                   const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
                   return (
                     <div
-                      className="rounded-xl px-3 py-2 text-xs font-medium"
-                      style={{
-                        background:
-                          "linear-gradient(145deg, rgba(14,18,34,0.95), rgba(10,14,28,0.98))",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                        backdropFilter: "blur(16px)",
-                      }}
+                      className={`${DASHBOARD_HOVER_TOOLTIP_CLASS} px-3 py-2 text-xs font-medium`}
                     >
                       {d.name}: {d.value} ({pct}%)
                     </div>

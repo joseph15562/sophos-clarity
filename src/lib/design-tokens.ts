@@ -62,3 +62,12 @@ export const SEVERITY_ORDER: Record<string, number> = {
   low: 3,
   info: 4,
 };
+
+/**
+ * Floating hover cards (stats, charts, matrices): dark navy glass in dark mode, popover surface in
+ * light mode so text always contrasts (avoids dark-on-dark when `text-foreground` followed light theme).
+ */
+export const DASHBOARD_HOVER_TOOLTIP_CLASS =
+  "rounded-xl border shadow-elevated backdrop-blur-xl bg-popover text-popover-foreground border-border " +
+  "dark:bg-[linear-gradient(145deg,rgba(14,18,34,0.95),rgba(10,14,28,0.98))] dark:text-zinc-100 " +
+  "dark:border-white/10 dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)]";

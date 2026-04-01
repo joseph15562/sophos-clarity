@@ -873,17 +873,14 @@ function FindingsPanel({
   return (
     <section
       className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-5 sm:p-6 space-y-4 shadow-card"
-      style={{ background: "linear-gradient(145deg, rgba(234,0,34,0.05), rgba(234,0,34,0.012))" }}
+      style={{
+        background:
+          "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), transparent) 0 0 / 100% 1px no-repeat, linear-gradient(145deg, rgba(234,0,34,0.05), rgba(234,0,34,0.012)) 0 0 / 100% 100% no-repeat",
+      }}
     >
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full blur-[32px] opacity-12 bg-[#EA0022]" />
       </div>
-      <div
-        className="absolute inset-x-0 top-0 h-px pointer-events-none"
-        style={{
-          background: "linear-gradient(90deg, transparent, rgba(234,0,34,0.18), transparent)",
-        }}
-      />
 
       <div className="relative flex items-center gap-3 flex-wrap">
         <div
