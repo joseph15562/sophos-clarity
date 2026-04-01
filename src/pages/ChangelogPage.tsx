@@ -27,9 +27,14 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
-              <strong className="text-foreground">Extraction Summary</strong>: in dark mode the
-              summary panel and per-metric tiles use solid card surfaces and clearer label/value
-              colours instead of washed glass, so section counts and file rows stay readable.
+              <strong className="text-foreground">Extraction Summary</strong>: dark mode uses solid
+              card-style surfaces, clearer metric labels, an amber-tinted (not beige) empty-sections
+              warning, and readable file rows.
+            </li>
+            <li>
+              <strong className="text-foreground">Outcome summary</strong>: &quot;Top actions&quot;
+              panel and cards use dark surfaces; evidence blocks use slate backgrounds and zinc text
+              with readable rose/amber labels.
             </li>
             <li>
               <strong className="text-foreground">Header / theme</strong>: full refresh now keeps{" "}

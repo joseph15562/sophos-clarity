@@ -284,16 +284,16 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
         </div>
 
         {hasWarning && (
-          <div className="relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-amber-200/80 bg-amber-50/60 px-3.5 py-2.5 dark:border-[#F29400]/20 dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.1),rgba(242,148,0,0.02))]">
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 hidden h-px dark:block"
-              style={{
-                background: "linear-gradient(90deg, rgba(242,148,0,0.25), transparent 60%)",
-              }}
-            />
-            <AlertTriangle className="relative mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-800 dark:text-[#F29400]" />
-            <p className="relative text-[11px] leading-relaxed text-muted-foreground/90">
-              <strong className="font-bold text-amber-950 dark:text-[#F29400]">
+          <div
+            className={cn(
+              "relative flex items-start gap-2.5 overflow-hidden rounded-xl border px-3.5 py-2.5",
+              "border-amber-200/80 bg-amber-50/60",
+              "dark:border-amber-500/35 dark:bg-amber-950/50 dark:shadow-[inset_0_1px_0_rgba(251,191,36,0.08)]",
+            )}
+          >
+            <AlertTriangle className="relative mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-800 dark:text-amber-400" />
+            <p className="relative text-[11px] leading-relaxed text-amber-950/90 dark:text-zinc-200">
+              <strong className="font-bold text-amber-900 dark:text-amber-300">
                 {totalEmpty} section{totalEmpty !== 1 ? "s" : ""}
               </strong>{" "}
               detected in the config export but contained no parseable data. These may be empty in

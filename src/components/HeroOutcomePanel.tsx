@@ -228,12 +228,18 @@ export function HeroOutcomePanel({
       </div>
 
       {topActions.length > 0 && (
-        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/45 dark:border-[#F29400]/20 dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.08),rgba(234,0,34,0.04),transparent_60%)] backdrop-blur-sm p-4 sm:p-5 space-y-4 shadow-card">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-100/60 dark:border-[#F29400]/20 dark:bg-[#F29400]/[0.12] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-950 dark:text-[#F29400]">
+        <div
+          className={cn(
+            "space-y-4 rounded-2xl border p-4 shadow-card backdrop-blur-sm sm:p-5",
+            "border-amber-200/70 bg-amber-50/45",
+            "dark:border-amber-500/25 dark:bg-white/[0.04] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+          )}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-100/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/55 dark:text-amber-300">
               <Zap className="h-3 w-3" /> Top Actions to Improve Score
             </p>
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground dark:text-zinc-400">
               <Clock3 className="h-3.5 w-3.5" /> Deterministic findings before AI reporting
             </p>
           </div>
@@ -247,21 +253,22 @@ export function HeroOutcomePanel({
                   key={`${action.title}-${i}`}
                   className={cn(
                     "relative isolate overflow-hidden rounded-xl border border-l-[3px] px-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated",
-                    "border-slate-200/90 bg-card dark:border-white/[0.06] dark:bg-transparent",
-                    "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+                    "border-slate-200/90 bg-card",
+                    "dark:border-white/[0.10] dark:bg-white/[0.05]",
+                    "hover:border-slate-300/90 dark:hover:border-white/[0.14]",
                   )}
                   style={{ borderLeftColor: sevHex }}
                 >
                   <div
-                    className="pointer-events-none absolute inset-0 hidden dark:block"
+                    className="pointer-events-none absolute inset-0 hidden dark:block opacity-50"
                     style={{
-                      background: `radial-gradient(120% 95% at 100% 0%, ${sevHex}40, transparent 58%), linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
+                      background: `radial-gradient(120% 95% at 100% 0%, ${sevHex}35, transparent 58%), linear-gradient(145deg, ${sevHex}12, transparent)`,
                     }}
                   />
                   <div
-                    className="absolute inset-x-0 top-0 h-px pointer-events-none hidden dark:block"
+                    className="pointer-events-none absolute inset-x-0 top-0 hidden h-px dark:block"
                     style={{
-                      background: `linear-gradient(90deg, transparent, ${sevHex}30, transparent)`,
+                      background: `linear-gradient(90deg, transparent, ${sevHex}35, transparent)`,
                     }}
                   />
 
@@ -270,8 +277,8 @@ export function HeroOutcomePanel({
                       className={cn(
                         "text-[9px] font-black uppercase px-2.5 py-0.5 rounded-lg tracking-wider border",
                         sevKind === "red"
-                          ? "border-rose-300/70 bg-rose-100/80 text-rose-900 dark:border-[#EA0022]/40 dark:bg-[#EA0022]/14 dark:text-[#EA0022]"
-                          : "border-amber-300/70 bg-amber-100/80 text-amber-950 dark:border-[#F29400]/40 dark:bg-[#F29400]/14 dark:text-[#F29400]",
+                          ? "border-rose-300/70 bg-rose-100/80 text-rose-900 dark:border-rose-500/45 dark:bg-rose-950/60 dark:text-rose-300"
+                          : "border-amber-300/70 bg-amber-100/80 text-amber-950 dark:border-amber-500/45 dark:bg-amber-950/55 dark:text-amber-300",
                       )}
                     >
                       {action.severity}
@@ -288,19 +295,17 @@ export function HeroOutcomePanel({
                   <div
                     className={cn(
                       "relative rounded-lg border px-3 py-2",
-                      "border-slate-200/80 bg-slate-50/80 dark:border-white/[0.06]",
-                      sevKind === "red"
-                        ? "dark:bg-[linear-gradient(135deg,rgba(234,0,34,0.06),transparent)]"
-                        : "dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.06),transparent)]",
+                      "border-slate-200/80 bg-slate-50/90",
+                      "dark:border-white/10 dark:bg-slate-950/85",
                     )}
                   >
-                    <p className="text-[10px] text-muted-foreground/90">
+                    <p className="text-[10px] text-slate-700 dark:text-zinc-300">
                       <span
                         className={cn(
                           "font-bold",
                           sevKind === "red"
-                            ? "text-rose-800 dark:text-[#EA0022]"
-                            : "text-amber-950 dark:text-[#F29400]",
+                            ? "text-rose-800 dark:text-rose-300"
+                            : "text-amber-950 dark:text-amber-300",
                         )}
                       >
                         Evidence source:
