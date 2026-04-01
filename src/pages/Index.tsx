@@ -97,6 +97,7 @@ import { StickyActionBar } from "@/components/StickyActionBar";
 import { AssessDocumentPreviewSection } from "@/components/assess/AssessDocumentPreviewSection";
 import { AssessWorkflowStepper } from "@/components/AssessWorkflowStepper";
 import { OPEN_MANAGEMENT_EVENT } from "@/components/WorkspaceCommandPalette";
+import type { ReportEntry } from "@/components/DocumentPreview";
 
 type DiffSelection = { beforeIdx: number; afterIdx: number } | null;
 
@@ -136,7 +137,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     webFilterExemptRuleNames: [],
   });
   const [diffSelection, setDiffSelection] = useState<DiffSelection>(null);
-  const [restoredSession, setRestoredSession] = useState(false);
+  const [pendingSessionRecovery, setPendingSessionRecovery] = useState<{
+    branding: BrandingData;
+    reports: ReportEntry[];
+    activeReportId: string;
+    linkedCloudAssessmentId: string | null;
+  } | null>(null);
   const [savingReports, setSavingReports] = useState(false);
   const [reportsSaved, setReportsSaved] = useState(false);
   const [savedReportsTrigger, setSavedReportsTrigger] = useState(0);
@@ -641,62 +647,20 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     prevResultCountRef.current = count;
   }, [analysisResults]);
 
-  // Restore session on mount (authenticated users only — guests get a clean slate).
-  // Restores reports + branding but stays on the dashboard so the user can
-  // click "View Reports" when ready.
+  // Offer saved session recovery (auth only): keep disk data until the user taps Resume.
+  // Avoids showing report counts, branding, Context step complete, or linked assessment until then.
   useEffect(() => {
     if (isGuest) return;
     const session = loadSession();
     if (session && session.reports.length > 0) {
-      setBranding(session.branding);
-      setReports(session.reports);
-      setActiveReportId(session.activeReportId);
-      setRestoredSession(true);
+      setPendingSessionRecovery({
+        branding: session.branding,
+        reports: session.reports,
+        activeReportId: session.activeReportId,
+        linkedCloudAssessmentId: session.linkedCloudAssessmentId ?? null,
+      });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // After org is available, rehydrate linked cloud assessment + Export Centre CSV sign-off from session + Supabase.
-  useEffect(() => {
-    if (isGuest || !org?.id) return;
-    const session = loadSession();
-    const linkedId = session?.linkedCloudAssessmentId;
-    if (!linkedId) return;
-
-    const ac = new AbortController();
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const snap = await fetchAssessmentSnapshotById(linkedId, ac.signal);
-        if (cancelled) return;
-        if (snap) {
-          setLinkedCloudAssessmentId(snap.id);
-          setExportReviewerSignoff(signoffFromAssessmentSnapshot(snap));
-        } else {
-          setLinkedCloudAssessmentId(null);
-          setExportReviewerSignoff(null);
-          const s = loadSession();
-          if (s?.reports.length) {
-            saveSession(s.branding, s.reports, s.activeReportId, null);
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          setLinkedCloudAssessmentId(null);
-          setExportReviewerSignoff(null);
-          const s = loadSession();
-          if (s?.reports.length) {
-            saveSession(s.branding, s.reports, s.activeReportId, null);
-          }
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
-  }, [isGuest, org?.id]);
+  }, [isGuest]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
@@ -1079,11 +1043,54 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     [setReports, setActiveReportId],
   );
 
+  const handleResumePendingSession = useCallback(() => {
+    if (!pendingSessionRecovery) return;
+    const {
+      branding: b,
+      reports: r,
+      activeReportId: rid,
+      linkedCloudAssessmentId,
+    } = pendingSessionRecovery;
+    setBranding(b);
+    setReports(r);
+    setActiveReportId(rid);
+    setPendingSessionRecovery(null);
+    toast.success(`Restored ${r.length} saved report${r.length !== 1 ? "s" : ""}.`);
+
+    if (linkedCloudAssessmentId && org?.id) {
+      const ac = new AbortController();
+      void (async () => {
+        try {
+          const snap = await fetchAssessmentSnapshotById(linkedCloudAssessmentId, ac.signal);
+          if (snap) {
+            setLinkedCloudAssessmentId(snap.id);
+            setExportReviewerSignoff(signoffFromAssessmentSnapshot(snap));
+          } else {
+            setLinkedCloudAssessmentId(null);
+            setExportReviewerSignoff(null);
+            saveSession(b, r, rid, null);
+          }
+        } catch {
+          setLinkedCloudAssessmentId(null);
+          setExportReviewerSignoff(null);
+          saveSession(b, r, rid, null);
+        }
+      })();
+    }
+  }, [pendingSessionRecovery, org?.id, setReports, setActiveReportId]);
+
+  const handleDiscardPendingSession = useCallback(() => {
+    setPendingSessionRecovery(null);
+    setLinkedCloudAssessmentId(null);
+    setExportReviewerSignoff(null);
+    clearSession();
+  }, []);
+
   const handleStartOver = useCallback(() => {
     setReports([]);
     setActiveReportId("");
     setFiles([]);
-    setRestoredSession(false);
+    setPendingSessionRecovery(null);
     setViewingReports(false);
     setLinkedCloudAssessmentId(null);
     setExportReviewerSignoff(null);
@@ -1183,6 +1190,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
   const hasReports = reports.length > 0;
   const hasFiles = files.length > 0;
+  const hasAgentOnlyConfigs = hasFiles && files.every((f) => f.source === "agent");
+  const workflowHasContext = useMemo(() => {
+    if (hasAgentOnlyConfigs) {
+      return Boolean(
+        branding.customerName?.trim() || branding.environment?.trim() || branding.country?.trim(),
+      );
+    }
+    return Boolean(branding.customerName?.trim());
+  }, [hasAgentOnlyConfigs, branding.customerName, branding.environment, branding.country]);
   const inDiffMode = diffSelection !== null;
 
   useEffect(() => {
@@ -1303,12 +1319,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         {!inDiffMode && (
           <AssessWorkflowStepper
             hasFiles={hasFiles}
-            hasContext={Boolean(
-              branding.customerName?.trim() ||
-              branding.environment?.trim() ||
-              branding.country?.trim() ||
-              branding.selectedFrameworks.length > 0,
-            )}
+            hasContext={workflowHasContext}
             hasAnalysis={totalFindings > 0}
             viewingReports={viewingReports}
             className="mb-3"
@@ -1322,23 +1333,26 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           </>
         )}
 
-        {/* Restored session banner */}
-        {restoredSession && !viewingReports && hasReports && !isLoading && (
-          <div className="no-print animate-in fade-in slide-in-from-top-2 duration-500 rounded-xl border border-brand-accent/30 bg-gradient-to-r from-brand-accent/10 via-brand-accent/[0.06] to-transparent dark:from-brand-accent/15 dark:via-brand-accent/[0.08] dark:to-transparent px-5 py-3 flex items-center gap-3 text-sm shadow-[0_0_20px_-4px] shadow-brand-accent/20 dark:shadow-brand-accent/25 backdrop-blur-sm">
-            <div className="relative flex items-center justify-center">
-              <div
-                className="absolute h-7 w-7 rounded-full bg-brand-accent/15 animate-ping"
-                style={{ animationDuration: "2.5s", animationIterationCount: "3" }}
-              />
-              <RotateCcw className="h-4.5 w-4.5 text-brand-accent shrink-0 relative" />
+        {/* Saved session — resume or start fresh (no header/report chrome until Resume) */}
+        {pendingSessionRecovery && !viewingReports && !isLoading && (
+          <div className="no-print rounded-xl border border-brand-accent/30 bg-gradient-to-r from-brand-accent/10 via-brand-accent/[0.06] to-transparent dark:from-brand-accent/15 dark:via-brand-accent/[0.08] dark:to-transparent px-5 py-3 flex flex-wrap items-center gap-3 text-sm shadow-[0_0_20px_-4px] shadow-brand-accent/20 dark:shadow-brand-accent/25 backdrop-blur-sm">
+            <RotateCcw className="h-4 w-4 text-brand-accent shrink-0" aria-hidden />
+            <div className="flex-1 min-w-[200px] space-y-0.5">
+              <p className="font-medium text-foreground">Saved session available</p>
+              <p className="text-xs text-muted-foreground">
+                {pendingSessionRecovery.reports.length} report
+                {pendingSessionRecovery.reports.length !== 1 ? "s" : ""} from the last 24 hours.
+                Resume to continue, or start fresh.
+              </p>
             </div>
-            <span className="font-medium text-foreground">
-              Previous session restored — {reports.length} report{reports.length !== 1 ? "s" : ""}{" "}
-              recovered.
-            </span>
-            <span className="text-muted-foreground/80 text-xs tracking-wide">
-              Reports are saved locally for 24 hours.
-            </span>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button size="sm" onClick={handleResumePendingSession}>
+                Resume session
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleDiscardPendingSession}>
+                Start fresh
+              </Button>
+            </div>
           </div>
         )}
 

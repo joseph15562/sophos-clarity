@@ -22,6 +22,8 @@ export interface CustomerDirectoryEntry {
   portalSlug: string;
   tenantNameRaw: string | null;
   originalNames?: string[];
+  /** True when this customer matches a Sophos Central tenant that is in use (firewalls, portal, or agent). */
+  centralLinked?: boolean;
 }
 
 type AssessmentRow = {
@@ -169,10 +171,27 @@ export async function fetchCustomerDirectory(
 
   const customerMap = new Map<string, CustomerDirectoryEntry>();
 
+  /** Only surface a Central tenant row when something ties it to your workspace (avoids N empty MSP child tenants). */
+  const tenantHasSignal = (resolvedTenantName: string, centralTenantId: string) => {
+    const tFws = firewalls.filter((fw) => fw.central_tenant_id === centralTenantId);
+    if (tFws.length > 0) return true;
+    const hasPortal = portalRows.some(
+      (p) =>
+        resolveCustomerName(String(p.tenant_name ?? ""), orgDisplayName) === resolvedTenantName,
+    );
+    if (hasPortal) return true;
+    return agents.some((ag) => {
+      const agTn = String(ag.tenant_name ?? "").trim();
+      if (!agTn) return false;
+      return resolveCustomerName(agTn, orgDisplayName) === resolvedTenantName;
+    });
+  };
+
   for (const t of tenants) {
     const tName = resolveCustomerName(t.name || "", orgDisplayName);
     if (!tName || customerMap.has(tName)) continue;
     const tFws = firewalls.filter((fw) => fw.central_tenant_id === t.central_tenant_id);
+    if (!tenantHasSignal(tName, t.central_tenant_id)) continue;
     customerMap.set(tName, {
       id: t.central_tenant_id,
       name: tName,
@@ -309,6 +328,13 @@ export async function fetchCustomerDirectory(
     const info = slugByResolvedName.get(c.name);
     if (info?.slug) c.portalSlug = info.slug;
     if (info?.rawTenantName) c.tenantNameRaw = info.rawTenantName;
+  }
+
+  for (const c of customerMap.values()) {
+    c.centralLinked = tenants.some((t) => {
+      const rn = resolveCustomerName(t.name || "", orgDisplayName);
+      return rn === c.name && tenantHasSignal(rn, t.central_tenant_id);
+    });
   }
 
   return customerMap.size > 0 ? Array.from(customerMap.values()) : [];

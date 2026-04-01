@@ -782,9 +782,9 @@ export default function ClientPortal() {
       .catch(() => setAuthChecked(true));
   }, []);
 
-  // Verify portal access — allow org members (MSP staff) OR invited portal viewers
+  // Verify portal access — allow org members (MSP staff) OR invited portal viewers for this slug
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser?.email) return;
     (async () => {
       // Check if user is an org member (MSP staff) — always allowed for any portal
       const {
@@ -803,17 +803,24 @@ export default function ClientPortal() {
           return;
         }
       }
-      // Not an MSP user — check portal_viewers (need orgId from data load)
+      // Not an MSP user — must have an invite for this specific portal (vanity slug or legacy org URL)
       if (!orgId) return;
-      const { data: viewer } = await supabase
+      const emailNorm = authUser.email.trim().toLowerCase();
+      const slugKey = isSlug && identifier.trim() ? identifier.trim().toLowerCase() : "";
+      let q = supabase
         .from("portal_viewers")
         .select("id")
         .eq("org_id", orgId)
-        .eq("email", authUser.email)
-        .maybeSingle();
+        .eq("email", emailNorm);
+      if (slugKey) {
+        q = q.eq("portal_slug", slugKey);
+      } else {
+        q = q.eq("portal_slug", "");
+      }
+      const { data: viewer } = await q.maybeSingle();
       setAccessDenied(!viewer);
     })();
-  }, [authUser, orgId]);
+  }, [authUser, orgId, isSlug, identifier]);
 
   useEffect(
     () => () => {

@@ -10,6 +10,11 @@ import { queryKeys } from "@/hooks/queries/keys";
 import { invalidateOrgScopedQueries } from "@/lib/invalidate-org-queries";
 import { toast } from "sonner";
 import type { CustomerDirectoryEntry, HealthStatus } from "@/lib/customer-directory";
+import {
+  customerNameVariantsForDelete,
+  dedupeNameVariantsCaseInsensitive,
+  escapeForExactIlike,
+} from "@/lib/customer-data-delete";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -40,6 +45,7 @@ import {
   X,
   UserCog,
   Settings,
+  Cloud,
 } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
@@ -186,6 +192,24 @@ const SECTOR_BADGE_STYLE: Record<string, string> = {
   Retail: "bg-pink-500/15 text-pink-400 border-pink-500/20",
 };
 
+const SECTOR_FALLBACK_BADGE_STYLE =
+  "bg-muted/45 text-muted-foreground border-border/55 dark:bg-white/[0.05] dark:border-white/10";
+
+function sectorBadgeText(raw: string): string {
+  const s = String(raw ?? "").trim();
+  if (!s || /^unknown$/i.test(s)) return "Environment not set";
+  return s;
+}
+
+function sectorBadgeClass(raw: string): string {
+  const s = String(raw ?? "").trim();
+  if (!s || /^unknown$/i.test(s)) return SECTOR_FALLBACK_BADGE_STYLE;
+  return (
+    SECTOR_BADGE_STYLE[s] ??
+    "bg-slate-500/12 text-slate-500 border-slate-500/18 dark:text-slate-400"
+  );
+}
+
 function CustomerManagementInner() {
   const { org, isGuest } = useAuth();
   const queryClient = useQueryClient();
@@ -205,7 +229,7 @@ function CustomerManagementInner() {
 
   const customers = useMemo(() => {
     if (!org?.id) return isGuest ? DEMO_CUSTOMERS : [];
-    if (customerDirectoryQuery.isError) return DEMO_CUSTOMERS;
+    if (customerDirectoryQuery.isError) return [];
     return customerDirectoryQuery.data ?? [];
   }, [org?.id, isGuest, customerDirectoryQuery.isError, customerDirectoryQuery.data]);
 
@@ -215,20 +239,37 @@ function CustomerManagementInner() {
 
   const deleteCustomerMutation = useMutation({
     mutationFn: async (payload: { orgId: string; customer: DemoCustomer }) => {
-      const names = payload.customer.originalNames ?? [payload.customer.name];
-      for (const n of names) {
+      const variants = dedupeNameVariantsCaseInsensitive(
+        customerNameVariantsForDelete(payload.customer),
+      );
+      for (const n of variants) {
+        const pattern = escapeForExactIlike(n);
         const { error: aErr } = await supabase
           .from("assessments")
           .delete()
           .eq("org_id", payload.orgId)
-          .eq("customer_name", n);
+          .ilike("customer_name", pattern);
         if (aErr) throw aErr;
         const { error: sErr } = await supabase
           .from("saved_reports")
           .delete()
           .eq("org_id", payload.orgId)
-          .eq("customer_name", n);
+          .ilike("customer_name", pattern);
         if (sErr) throw sErr;
+        const { error: pErr } = await supabase
+          .from("portal_config")
+          .delete()
+          .eq("org_id", payload.orgId)
+          .ilike("tenant_name", pattern);
+        if (pErr) {
+          console.warn("[CustomerManagement] portal_config delete skipped or failed", pErr.message);
+        }
+        const { error: schErr } = await supabase
+          .from("scheduled_reports")
+          .delete()
+          .eq("org_id", payload.orgId)
+          .ilike("customer_name", pattern);
+        if (schErr) throw schErr;
       }
     },
     onSuccess: async (_data, { orgId }) => {
@@ -349,6 +390,30 @@ function CustomerManagementInner() {
             <WorkspaceSettingsStrip variant="customers" />
           </div>
         )}
+        {org?.id && !isGuest && customerDirectoryQuery.isError && (
+          <div
+            className="mb-4 flex flex-col gap-2 rounded-xl border border-destructive/25 bg-destructive/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            role="alert"
+          >
+            <p className="text-sm text-foreground">
+              Couldn&apos;t load your customer directory. Check your connection and try again — we
+              no longer show sample data when the request fails.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() =>
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.org.customerDirectory(org.id),
+                })
+              }
+            >
+              Retry
+            </Button>
+          </div>
+        )}
         {/* Summary strip */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryCard
@@ -452,16 +517,66 @@ function CustomerManagementInner() {
 
         {/* Customer cards grid */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((customer) => (
-              <CustomerCard
-                key={customer.id}
-                customer={customer}
-                onDelete={setDeleteTarget}
-                onManageAccess={setAccessTarget}
-                onConfigurePortal={setPortalConfigTarget}
-              />
-            ))}
+          <div className="space-y-2">
+            {debouncedSearch || sectorFilter || healthFilter ? (
+              <p className="text-xs text-muted-foreground">
+                Showing {filtered.length} of {customers.length} customer
+                {customers.length === 1 ? "" : "s"}
+                {debouncedSearch ? ` matching “${debouncedSearch}”` : ""}
+              </p>
+            ) : null}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((customer) => (
+                <CustomerCard
+                  key={customer.id}
+                  customer={customer}
+                  onDelete={setDeleteTarget}
+                  onManageAccess={setAccessTarget}
+                  onConfigurePortal={setPortalConfigTarget}
+                />
+              ))}
+            </div>
+          </div>
+        ) : customers.length > 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-900/[0.10] bg-white/40 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.02]">
+            <EmptyState
+              className="py-16 px-6"
+              icon={<Search className="h-8 w-8 text-[#2006F7]" />}
+              title="No matching customers"
+              description="Try a different search or clear filters to see all customers in your directory."
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSectorFilter("");
+                    setHealthFilter("");
+                  }}
+                >
+                  Clear search &amp; filters
+                </Button>
+              }
+            />
+          </div>
+        ) : org?.id && !isGuest && customerDirectoryQuery.isError ? (
+          <div className="rounded-2xl border border-dashed border-slate-900/[0.10] bg-white/40 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.02]">
+            <EmptyState
+              className="py-16 px-6"
+              icon={<Users className="h-8 w-8 text-muted-foreground" />}
+              title="Directory unavailable"
+              description="We could not load customers from the server. Use Retry above or check your session."
+              action={
+                <Button
+                  onClick={() =>
+                    queryClient.invalidateQueries({
+                      queryKey: queryKeys.org.customerDirectory(org.id),
+                    })
+                  }
+                >
+                  Retry
+                </Button>
+              }
+            />
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-900/[0.10] bg-white/40 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.02]">
@@ -584,7 +699,10 @@ function CustomerManagementInner() {
                   </div>
                 }
               >
-                <PortalViewerManager orgId={org.id} />
+                <PortalViewerManager
+                  orgId={org.id}
+                  portalSlug={accessTarget.portalSlug?.trim() ?? ""}
+                />
               </Suspense>
             </div>
           </div>
@@ -615,19 +733,22 @@ function CustomerManagementInner() {
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Delete <strong className="text-foreground">{deleteTarget.name}</strong>? This will
-              remove all assessment records
+              remove assessment and saved-report rows (any matching spelling), scheduled email
+              reports for this customer, and their client portal link if you have admin access.
               {deleteTarget.originalNames && deleteTarget.originalNames.length > 1 && (
                 <span>
                   {" "}
-                  (including assessments saved as{" "}
+                  Includes data saved under{" "}
                   {deleteTarget.originalNames
                     .filter((n) => n !== deleteTarget.name)
                     .map((n) => `"${n}"`)
                     .join(", ")}
-                  )
+                  .
                 </span>
               )}{" "}
-              and saved reports for this customer. This cannot be undone.
+              If this name still appears afterward, Sophos Central may still be syncing firewalls or
+              agents for that tenant — adjust or remove them under Agent Management. This cannot be
+              undone.
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <Button
@@ -730,13 +851,22 @@ function CustomerCard({
         <h3 className="pr-6 text-base font-bold leading-snug">{customer.name}</h3>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${SECTOR_BADGE_STYLE[customer.sector] ?? "bg-gray-500/15 text-gray-400 border-gray-500/20"}`}
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${sectorBadgeClass(customer.sector)}`}
           >
-            <Building2 className="h-3 w-3" />
-            {customer.sector}
+            <Building2 className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+            {sectorBadgeText(customer.sector)}
           </span>
+          {customer.centralLinked ? (
+            <span
+              className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-tight bg-[#2006F7]/[0.09] text-[#2006F7] border-[#2006F7]/22 dark:bg-[#009CFB]/[0.12] dark:text-[#7ae8ff] dark:border-[#00EDFF]/28"
+              title="Sophos Central tenant — firewalls and connectors are tied to this customer in Central."
+            >
+              <Cloud className="h-3 w-3 shrink-0 opacity-95" aria-hidden />
+              Sophos Central
+            </span>
+          ) : null}
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <Globe className="h-3 w-3" />
+            <Globe className="h-3 w-3 shrink-0" aria-hidden />
             {customer.countryFlag} {customer.country}
           </span>
         </div>

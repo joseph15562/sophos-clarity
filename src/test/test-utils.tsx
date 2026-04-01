@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { ReactElement } from "react";
 import { expect } from "vitest";
 import { axe } from "jest-axe";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 /** Aligns with Playwright axe checks (critical + serious only). */
 export async function expectNoSeriousAxeViolations(container: HTMLElement) {
@@ -34,7 +35,9 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>{children}</BrowserRouter>
+        <BrowserRouter>
+          <TooltipProvider>{children}</TooltipProvider>
+        </BrowserRouter>
       </QueryClientProvider>
     );
   }

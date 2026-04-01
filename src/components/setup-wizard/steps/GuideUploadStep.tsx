@@ -45,11 +45,16 @@ export function GuideUploadStep() {
         />
       </div>
 
-      <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3">
+      <div className="rounded-lg bg-brand-accent/5 border border-brand-accent/15 p-3 space-y-2">
         <p className="text-[10px] text-muted-foreground">
           <strong className="text-foreground">Tip:</strong> Set the customer name and compliance
           frameworks in the <strong className="text-foreground">Assessment Context</strong> section
           before generating reports — this tailors the AI analysis.
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          <strong className="text-foreground">While you work:</strong> the stepper at the top of
+          Assess shows upload → context → analysis → reports. If parsing or saving stalls, the
+          status card includes <strong>Try again</strong> and a link to how we handle data.
         </p>
       </div>
     </div>

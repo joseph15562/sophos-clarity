@@ -35,6 +35,8 @@ import {
   displayCustomerNameForUi,
   type CentralTenant,
 } from "@/lib/sophos-central";
+import { resolveCustomerName } from "@/lib/customer-name";
+import { fetchCustomerDirectory } from "@/lib/customer-directory";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 
 export const ENVIRONMENT_TYPES = [
@@ -311,22 +313,45 @@ export function BrandingSetup({ branding, onChange }: Props) {
           useCloud ? loadHistoryCloud() : loadHistory(),
           useCloud ? loadSavedReportsCloud() : loadSavedReportsLocal(),
         ]);
-        const allNames = new Set<string>();
+        const orgDisplay = String(org?.name ?? "").trim();
+        const allRaw = new Set<string>();
         history.forEach((h) => {
-          if (h.customerName && h.customerName !== "Unnamed") allNames.add(h.customerName);
+          if (h.customerName && h.customerName !== "Unnamed") allRaw.add(h.customerName);
         });
         savedReports.forEach((r) => {
-          if (r.customerName && r.customerName !== "Unnamed") allNames.add(r.customerName);
+          if (r.customerName && r.customerName !== "Unnamed") allRaw.add(r.customerName);
         });
-        const names = [...allNames].sort((a, b) => a.localeCompare(b));
-        setKnownCustomers(names);
 
         const counts: Record<string, number> = {};
         for (const r of savedReports) {
           const n = r.customerName;
-          if (n && n !== "Unnamed") counts[n] = (counts[n] || 0) + 1;
+          if (!n || n === "Unnamed") continue;
+          const key = resolveCustomerName(n, orgDisplay);
+          counts[key] = (counts[key] || 0) + 1;
         }
         setCustomerReportCounts(counts);
+
+        let names: string[];
+        if (useCloud && org) {
+          try {
+            const directory = await fetchCustomerDirectory(org.id, org.name);
+            names = directory.map((d) => d.name).sort((a, b) => a.localeCompare(b));
+          } catch (dirErr) {
+            console.warn("[BrandingSetup] fetchCustomerDirectory", dirErr);
+            const resolvedUnique = new Set<string>();
+            for (const raw of allRaw) {
+              resolvedUnique.add(resolveCustomerName(raw, orgDisplay));
+            }
+            names = [...resolvedUnique].sort((a, b) => a.localeCompare(b));
+          }
+        } else {
+          const resolvedUnique = new Set<string>();
+          for (const raw of allRaw) {
+            resolvedUnique.add(resolveCustomerName(raw, orgDisplay));
+          }
+          names = [...resolvedUnique].sort((a, b) => a.localeCompare(b));
+        }
+        setKnownCustomers(names);
 
         if (useCloud && org) {
           try {

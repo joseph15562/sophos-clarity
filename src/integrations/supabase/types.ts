@@ -1086,6 +1086,7 @@ export type Database = {
           last_login_at: string | null;
           name: string | null;
           org_id: string;
+          portal_slug: string;
           status: string;
           user_id: string | null;
         };
@@ -1097,6 +1098,7 @@ export type Database = {
           last_login_at?: string | null;
           name?: string | null;
           org_id: string;
+          portal_slug?: string;
           status?: string;
           user_id?: string | null;
         };
@@ -1108,6 +1110,7 @@ export type Database = {
           last_login_at?: string | null;
           name?: string | null;
           org_id?: string;
+          portal_slug?: string;
           status?: string;
           user_id?: string | null;
         };

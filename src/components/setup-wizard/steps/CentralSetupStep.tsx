@@ -18,7 +18,12 @@ export function CentralSetupStep() {
           </h3>
           <p className="text-sm font-medium text-foreground/80 dark:text-white/75 leading-relaxed">
             Link your Sophos Central Partner or Tenant account to enrich reports with live firewall
-            data, licence info, and alerts. You can skip this and connect later.
+            data, licence info, and alerts. You can skip this and connect later from Management →
+            Central.
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            On Assess, a status card shows connection health; use <strong>Check again</strong> or{" "}
+            <strong>Open Central settings</strong> if verification fails.
           </p>
           <SetupPreviewFrame
             title="Managed estate visibility"

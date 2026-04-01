@@ -24,6 +24,8 @@ import { EmptyState } from "@/components/EmptyState";
 
 interface PortalViewerManagerProps {
   orgId: string;
+  /** Vanity slug from portal_config — invites and the list are scoped to this portal only */
+  portalSlug: string;
 }
 
 interface PortalViewer {
@@ -58,7 +60,7 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
+export function PortalViewerManager({ orgId, portalSlug }: PortalViewerManagerProps) {
   const queryClient = useQueryClient();
   const nextFetchSignal = useAbortableInFlight();
   const [inviteEmail, setInviteEmail] = useState("");
@@ -66,19 +68,23 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
   const [submitting, setSubmitting] = useState(false);
   const [actionInFlight, setActionInFlight] = useState<string | null>(null);
 
+  const slugKey = portalSlug.trim().toLowerCase();
+  const slugReady = Boolean(orgId && slugKey);
+
   const {
     data: viewers = [],
     isLoading: loading,
     error: viewersError,
   } = useQuery({
-    queryKey: queryKeys.portal.viewers(orgId),
-    enabled: Boolean(orgId),
+    queryKey: queryKeys.portal.viewers(orgId, slugKey || "__none__"),
+    enabled: slugReady,
     queryFn: async ({ signal }) => {
       const { data, error } = await supabaseWithAbort(
         supabase
           .from("portal_viewers")
           .select("id, email, name, status, invited_at, last_login_at")
           .eq("org_id", orgId)
+          .eq("portal_slug", slugKey)
           .order("invited_at", { ascending: false }),
         signal,
       );
@@ -104,7 +110,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
     const email = inviteEmail.trim().toLowerCase();
-    if (!email) return;
+    if (!email || !slugKey) return;
 
     setSubmitting(true);
     try {
@@ -127,7 +133,11 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ email, name: inviteName.trim() || undefined }),
+          body: JSON.stringify({
+            email,
+            name: inviteName.trim() || undefined,
+            portal_slug: slugKey,
+          }),
         },
       );
 
@@ -139,7 +149,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
       toast.success(`Invitation sent to ${email}. They'll receive an email to set their password.`);
       setInviteEmail("");
       setInviteName("");
-      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId, slugKey) });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -173,7 +183,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
         .eq("org_id", orgId);
       if (error) throw new Error(error.message);
       toast.success(`Access revoked for ${viewer.email}`);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId, slugKey) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
@@ -192,7 +202,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
         .eq("org_id", orgId);
       if (error) throw new Error(error.message);
       toast.success(`${viewer.email} removed`);
-      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId, slugKey) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
@@ -223,7 +233,11 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ email: viewer.email, name: viewer.name }),
+          body: JSON.stringify({
+            email: viewer.email,
+            name: viewer.name,
+            portal_slug: slugKey,
+          }),
         },
       );
       if (!res.ok) {
@@ -238,7 +252,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
       } else {
         toast.success(`Invite re-sent to ${viewer.email}`);
       }
-      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId, slugKey) });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -249,6 +263,19 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
   }
 
   const activeCount = viewers.filter((v) => v.status !== "revoked").length;
+
+  if (!slugReady) {
+    return (
+      <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-6 space-y-4">
+        <EmptyState
+          icon={<Shield className="h-6 w-6 text-muted-foreground/50" />}
+          title="Portal link not set yet"
+          description="Save a client portal slug in Configure Portal for this customer first. Then you can invite viewers and open the customer-only portal URL."
+          className="py-10"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl p-6 space-y-6">

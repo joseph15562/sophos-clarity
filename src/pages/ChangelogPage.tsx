@@ -27,6 +27,18 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">New assessment flow</strong>: saved local sessions
+              offer Resume session or Start fresh instead of auto-restoring reports, branding, and
+              the header report count. For manual config uploads, the Context step stays incomplete
+              until you enter a customer; agent-sourced configs can still advance from tenant
+              context alone.
+            </li>
+            <li>
+              <strong className="text-foreground">Compliance heatmap</strong>: hovering a cell opens
+              a tooltip above it (framework, control, evidence, status) using a portaled layer so it
+              is not clipped by the card.
+            </li>
+            <li>
               <strong className="text-foreground">Light mode polish</strong>: dashboard hover
               popovers (configuration stats, feature coverage, charts, compliance heatmap, priority
               matrix) use the same readable surface as other popovers instead of dark glass with
@@ -43,9 +55,46 @@ function ChangelogPageInner() {
               corners read clearly; the heatmap header accent follows the card radius.
             </li>
             <li>
+              <strong className="text-foreground">Customers</strong>: the directory only lists
+              Sophos Central tenants that have firewalls, a linked agent, or portal mapping — empty
+              partner child tenants no longer inflate the count. If loading fails, the page shows an
+              error and retry instead of five demo customers; search and filters show &quot;X of
+              Y&quot; when the list is narrowed. Fleet Command customer counts group assessments the
+              same way as the directory (resolved customer name, not raw name × environment). For
+              cloud workspaces, the Assess customer list is built from that directory so it matches
+              the Customers page; Central-only and connector labels still appear when needed.
+              Customer delete clears assessments and saved reports with case-insensitive name
+              matching, removes matching scheduled reports, and drops the portal row when your role
+              allows; Sophos Central tenants with live firewalls or agents may still appear until
+              adjusted in Agent Management.
+            </li>
+            <li>
+              <strong className="text-foreground">Customer cards</strong>: rows tied to a Sophos
+              Central tenant show a clear &quot;Sophos Central&quot; pill (cloud icon, brand-tinted)
+              next to environment; vague assessment environments like &quot;Unknown&quot; read as
+              &quot;Environment not set&quot; with a neutral badge.
+            </li>
+            <li>
+              <strong className="text-foreground">Client portal access</strong>: portal viewer
+              invites and the Customer Management &quot;Portal Access&quot; list are scoped to each
+              customer&apos;s portal slug (not the whole organisation). External viewers only pass
+              the access check for the slug they were invited to. Configure Portal must be saved
+              with a slug before inviting viewers for that customer. Apply the database migration
+              for <code className="text-xs">portal_viewers.portal_slug</code> on self-hosted
+              Supabase.
+            </li>
+            <li>
               <strong className="text-foreground">Severity colours</strong>: High findings use pink;
               Medium uses the orange previously used for High, so the stacked bar and badges read as
               Critical → High → Medium → Low more distinctly.
+            </li>
+            <li>
+              <strong className="text-foreground">First-time setup</strong>: Welcome and completion
+              steps mention the Assess workflow stepper, command palette (⌘K / Ctrl+K), Insights,
+              status cards for parse/Central, Trust, team invites, and scheduled reports; wizard
+              previews use the same severity palette as the product. The MSP checklist explains
+              upload-only vs full stack and adds optional links (Trust, team, branding, scheduled
+              reports).
             </li>
             <li>
               <strong className="text-foreground">Accessibility</strong>: dashboard stat card

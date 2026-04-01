@@ -53,6 +53,8 @@ import {
   TrendingUp,
   Clock,
 } from "lucide-react";
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
+
 export function GuideStep({
   number,
   title,
@@ -318,10 +320,10 @@ export function MockRadar() {
 
 export function MockSeverityBar() {
   const items = [
-    { label: "Critical", count: 3, color: "#EA0022", pct: 10 },
-    { label: "High", count: 8, color: "#F29400", pct: 25 },
-    { label: "Medium", count: 14, color: "#ca8a04", pct: 44 },
-    { label: "Low", count: 7, color: "#00F2B3", pct: 21 },
+    { label: "Critical", count: 3, color: SEVERITY_COLORS.critical, pct: 10 },
+    { label: "High", count: 8, color: SEVERITY_COLORS.high, pct: 25 },
+    { label: "Medium", count: 14, color: SEVERITY_COLORS.medium, pct: 44 },
+    { label: "Low", count: 7, color: SEVERITY_COLORS.low, pct: 21 },
   ];
   return (
     <div className="space-y-2">

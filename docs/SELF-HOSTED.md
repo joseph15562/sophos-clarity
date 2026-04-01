@@ -27,6 +27,20 @@ This document is a **starting runbook** for teams that need dedicated infrastruc
 
 - **Upstash Redis** (REST): set Edge secrets **`UPSTASH_REDIS_REST_URL`** and **`UPSTASH_REDIS_REST_TOKEN`** to enable a short-TTL cache on **`portal-data`** GET responses. Omit both to disable. See [redis-pilot.md](redis-pilot.md).
 
+## Customer portal viewers (vanity slugs)
+
+Migration **`20260331193000_portal_viewers_portal_slug`** adds **`portal_viewers.portal_slug`**, scoped per client portal (matches **`portal_config.slug`**). The unique key is **`(org_id, email, portal_slug)`**.
+
+- **Legacy rows** created before this migration keep **`portal_slug = ''`**. They align with the **legacy** portal URL **`/portal/<org_uuid>`**, not **`/portal/<vanity-slug>`**. Password reset for those rows still uses the org-UUID path (see **`api`** route **`portal-viewers`**).
+- **After migrating**, re-invite (or revoke/remove and invite again) **once per customer portal** from the app so each viewer row stores the correct slug and invite/reset emails point at **`/portal/<slug>`**.
+
+**Invite email base URL:** set an Edge secret on the **`api`** function (Supabase Dashboard → Edge Functions → **api** → Secrets, or `supabase secrets set`):
+
+- **`PORTAL_PUBLIC_URL`** — preferred; public origin of the SPA (no trailing slash), e.g. `https://app.example.com`.
+- Alternatively **`SITE_URL`** — same shape if you already use it elsewhere.
+
+If both are unset, the code falls back to the default production host in **`portal-viewers.ts`** (may not match your deployment).
+
 ## Feature flags (optional build)
 
 - Use **`VITE_FEATURE_<NAME>=1`** (or `true`) and [`src/lib/feature-flags.ts`](../src/lib/feature-flags.ts) — call `isFeatureEnabled("my-feature")` (normalized to `VITE_FEATURE_MY_FEATURE`). Useful for staging rollouts alongside telemetry.

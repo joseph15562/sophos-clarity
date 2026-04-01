@@ -24,6 +24,7 @@ import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadScoreHistoryForFleet, type ScoreHistoryEntry } from "@/lib/score-history";
 import { useAuth } from "@/hooks/use-auth";
+import { resolveCustomerName } from "@/lib/customer-name";
 import { EmptyState } from "@/components/EmptyState";
 
 type SortField = "customer" | "score" | "findings" | "date";
@@ -246,6 +247,7 @@ export function TenantDashboard() {
   }, [useCloud, org?.id]);
 
   const customers = useMemo(() => {
+    const orgDisplay = String(org?.name ?? "").trim();
     const agentTenantNames = new Set(
       agentList.map((a) => a.customer_name).filter((n) => n && n !== "Unnamed"),
     );
@@ -256,20 +258,21 @@ export function TenantDashboard() {
       return { ...snap, customerName: bestName };
     });
 
+    /** Match Customer Management directory: one row per resolved customer (not per raw name × environment). */
     const byCustomer = new Map<string, AssessmentSnapshot[]>();
     for (const snap of resolvedHistory) {
-      const key = `${snap.customerName}||${snap.environment}`;
+      const key = resolveCustomerName(snap.customerName, orgDisplay);
       if (!byCustomer.has(key)) byCustomer.set(key, []);
       byCustomer.get(key)!.push(snap);
     }
 
     const summaries: CustomerSummary[] = [];
-    for (const [, snaps] of byCustomer) {
+    for (const [resolvedName, snaps] of byCustomer) {
       const sorted = [...snaps].sort((a, b) => b.timestamp - a.timestamp);
       const latest = sorted[0];
       const prev = sorted.length > 1 ? sorted[1] : null;
       summaries.push({
-        name: latest.customerName,
+        name: resolvedName,
         environment: latest.environment,
         latestSnapshot: latest,
         previousSnapshot: prev,
@@ -283,7 +286,7 @@ export function TenantDashboard() {
       });
     }
     return summaries;
-  }, [history, agentList]);
+  }, [history, agentList, org?.name]);
 
   const filtered = useMemo(() => {
     let list = customers;

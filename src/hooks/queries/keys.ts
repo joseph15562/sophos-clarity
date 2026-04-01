@@ -58,7 +58,9 @@ export const queryKeys = {
   portal: {
     all: ["portal"] as const,
     configs: (orgId: string) => ["portal", "configs", orgId] as const,
-    viewers: (orgId: string) => ["portal", "viewers", orgId] as const,
+    /** Portal viewer invites — scoped by vanity slug (matches portal_config.slug) */
+    viewers: (orgId: string, portalSlug: string) =>
+      ["portal", "viewers", orgId, portalSlug] as const,
     /** Agents' tenant_name values + portal_config rows for PortalConfigurator */
     tenantBootstrap: (orgId: string) => ["portal", "tenant-bootstrap", orgId] as const,
   },

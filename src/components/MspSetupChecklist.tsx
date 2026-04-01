@@ -63,6 +63,12 @@ export function MspSetupChecklist({ orgId, canManage }: Props) {
   const centralSearch = buildManagePanelSearch({ panel: "settings", section: "central" });
   const agentsSearch = buildManagePanelSearch({ panel: "settings", section: "agents" });
   const portalSearch = buildManagePanelSearch({ panel: "settings", section: "portal" });
+  const teamSearch = buildManagePanelSearch({ panel: "settings", section: "team" });
+  const brandingSearch = buildManagePanelSearch({ panel: "settings", section: "branding" });
+  const scheduledSearch = buildManagePanelSearch({
+    panel: "settings",
+    section: "scheduled-reports",
+  });
 
   const Row = ({ done, label, cta }: { done: boolean; label: string; cta: ReactNode }) => (
     <li className="flex flex-wrap items-start gap-2 py-1.5 text-sm">
@@ -98,7 +104,17 @@ export function MspSetupChecklist({ orgId, canManage }: Props) {
         </Button>
       </div>
       <p className="mb-2 text-xs text-muted-foreground">
-        Complete these once so assessments, agents, and the client portal work end-to-end.
+        These four steps wire up{" "}
+        <strong className="text-foreground">
+          live data, Fleet, saved assessments, and the client portal
+        </strong>
+        . You can still run upload-only assessments on Assess without Central or an agent — come
+        back here when you want enrichment and portal delivery. Press{" "}
+        <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px]">⌘K</kbd> /{" "}
+        <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px]">
+          Ctrl+K
+        </kbd>{" "}
+        for the command palette (hubs and workspace settings).
       </p>
       <ul className="divide-y divide-border/50">
         <Row
@@ -147,6 +163,49 @@ export function MspSetupChecklist({ orgId, canManage }: Props) {
           }
         />
       </ul>
+      <div className="mt-3 border-t border-border/60 pt-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+          Also useful (not required to dismiss)
+        </p>
+        <ul className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+          <li>
+            <Link
+              to="/trust"
+              className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+            >
+              Trust &amp; data handling
+            </Link>
+            <span className="text-muted-foreground"> — for security reviewers</span>
+          </li>
+          <li>
+            <Link
+              to={{ pathname: "/", search: teamSearch }}
+              className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+            >
+              Invite staff
+            </Link>
+            <span className="text-muted-foreground"> — Management → Team</span>
+          </li>
+          <li>
+            <Link
+              to={{ pathname: "/", search: brandingSearch }}
+              className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+            >
+              Report branding
+            </Link>
+            <span className="text-muted-foreground"> — defaults on PDFs and packs</span>
+          </li>
+          <li>
+            <Link
+              to={{ pathname: "/", search: scheduledSearch }}
+              className="font-medium text-[#2006F7] hover:underline dark:text-[#00EDFF]"
+            >
+              Scheduled reports
+            </Link>
+            <span className="text-muted-foreground"> — optional email rhythm</span>
+          </li>
+        </ul>
+      </div>
     </div>
   );
 }

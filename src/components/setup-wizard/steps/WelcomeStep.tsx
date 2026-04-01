@@ -16,8 +16,26 @@ export function WelcomeStep({ orgName }: { orgName?: string }) {
           {orgName ? <span className="text-brand-accent">, {orgName}</span> : null}
         </h2>
         <p className="text-sm font-medium text-foreground/75 dark:text-white/70 max-w-md mx-auto leading-relaxed">
-          Get your workspace ready in about 3 minutes. We&apos;ll configure branding, connect Sophos
-          Central, and prepare you to assess, report, and remediate.
+          Get your workspace ready in a few minutes. We&apos;ll configure branding, optionally
+          connect Sophos Central or the connector agent, then walk through upload → analysis →
+          reports and delivery.
+        </p>
+        <p className="text-[11px] text-muted-foreground max-w-lg mx-auto leading-relaxed">
+          <strong className="text-foreground">Note:</strong> Sophos Central and the connector agent
+          add live enrichment and Fleet; HTML uploads on Assess work without them — connect when you
+          want tenancy sync and agents.
+        </p>
+        <p className="text-xs text-muted-foreground max-w-lg mx-auto leading-relaxed">
+          <strong className="text-foreground">Tip:</strong> After setup, use{" "}
+          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+            ⌘K
+          </kbd>{" "}
+          or{" "}
+          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+            Ctrl+K
+          </kbd>{" "}
+          to jump between hubs (Assess, Fleet, Customers, Insights, and more). On Assess, the
+          workflow stepper at the top tracks where you are from upload through reports.
         </p>
       </div>
 
@@ -33,7 +51,7 @@ export function WelcomeStep({ orgName }: { orgName?: string }) {
           <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">Posture & reports</p>
         </div>
         <div className="rounded-xl border border-border bg-card/70 p-2.5 text-center">
-          <ListChecks className="h-5 w-5 text-[#F29400] mx-auto mb-1" />
+          <ListChecks className="h-5 w-5 text-[#DB2777] dark:text-[#F472B6] mx-auto mb-1" />
           <p className="text-[11px] font-semibold text-foreground leading-tight">Remediation</p>
           <p className="text-[9px] text-muted-foreground leading-tight mt-0.5">
             Priorities & roadmap

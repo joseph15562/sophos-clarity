@@ -212,7 +212,7 @@ const ENDPOINTS = [
     method: "POST",
     path: "/api/portal-viewers/invite",
     description:
-      "Invite a client portal viewer. JSON body must pass server-side validation: email (required, valid email), optional name (max 200 chars).",
+      "Invite a client portal viewer for a specific portal. Body: email (required), portal_slug (required — must match portal_config.slug for your org), optional name (max 200 chars).",
     queryParams: [],
     responseShape: `{ message?: string; id?: string; error?: string }`,
     exampleResponse: `{

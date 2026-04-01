@@ -1,4 +1,5 @@
 import { BarChart3, Eye, FileText, Shield } from "lucide-react";
+import { SEVERITY_COLORS } from "@/lib/design-tokens";
 import {
   FeatureButton,
   FeatureOverlay,
@@ -55,7 +56,7 @@ export function GuidePreAiStep({ activeOverlay, setActiveOverlay }: GuidePreAiSt
       {activeOverlay === "findings" && (
         <FeatureOverlay
           title="Findings & Severity"
-          subtitle="Critical, high, medium, low categorised issues"
+          subtitle="Critical through low, color-coded in the dashboard"
           onClose={() => setActiveOverlay(null)}
         >
           <MockSeverityBar />
@@ -64,18 +65,22 @@ export function GuidePreAiStep({ activeOverlay, setActiveOverlay }: GuidePreAiSt
               {
                 severity: "CRITICAL",
                 title: "Default admin password unchanged",
-                color: "#EA0022",
+                color: SEVERITY_COLORS.critical,
               },
-              { severity: "HIGH", title: "WAN admin services exposed", color: "#F29400" },
+              {
+                severity: "HIGH",
+                title: "WAN admin services exposed",
+                color: SEVERITY_COLORS.high,
+              },
               {
                 severity: "MEDIUM",
                 title: "DNS rebinding protection disabled",
-                color: "#ca8a04",
+                color: SEVERITY_COLORS.medium,
               },
               {
                 severity: "LOW",
                 title: "SNMP community string is 'public'",
-                color: "#00F2B3",
+                color: SEVERITY_COLORS.low,
               },
             ].map((f) => (
               <div

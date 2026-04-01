@@ -10,6 +10,12 @@ import { logJson } from "../../_shared/logger.ts";
 export const inviteBodySchema = z.object({
   email: z.string().email().max(320),
   name: z.string().max(200).optional().nullable(),
+  /** Vanity slug — must match portal_config.slug for this org */
+  portal_slug: z
+    .string()
+    .min(3)
+    .max(48)
+    .regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Invalid portal slug"),
 });
 
 function json(
@@ -68,14 +74,33 @@ export async function handlePortalViewerRoutes(
       });
       return json({ error: "Invalid request body" }, 400, corsHeaders);
     }
-    const { email, name } = parsed.data;
+    const { email, name, portal_slug: portalSlugRaw } = parsed.data;
+    const portalSlug = portalSlugRaw.trim().toLowerCase();
 
-    // Check if already invited
+    const { data: portalRow, error: portalErr } = await db
+      .from("portal_config")
+      .select("id, slug")
+      .eq("org_id", orgId)
+      .eq("slug", portalSlug)
+      .maybeSingle();
+    if (portalErr) {
+      return json({ error: portalErr.message }, 500, corsHeaders);
+    }
+    if (!portalRow) {
+      return json(
+        { error: "Unknown portal slug for this organisation — save portal settings first" },
+        400,
+        corsHeaders,
+      );
+    }
+
+    // Check if already invited for this portal
     const { data: existing } = await db
       .from("portal_viewers")
       .select("id, status")
       .eq("org_id", orgId)
       .eq("email", email.toLowerCase())
+      .eq("portal_slug", portalSlug)
       .maybeSingle();
 
     if (existing) {
@@ -94,8 +119,11 @@ export async function handlePortalViewerRoutes(
       return json({ error: "Already invited" }, 409, corsHeaders);
     }
 
-    // Create Supabase auth user with invite (sends set-password email)
-    const portalUrl = `https://sophos-firecomply.vercel.app/portal/${orgId}`;
+    const portalPublicBase =
+      Deno.env.get("PORTAL_PUBLIC_URL")?.replace(/\/$/, "") ??
+        Deno.env.get("SITE_URL")?.replace(/\/$/, "") ??
+        "https://sophos-firecomply.vercel.app";
+    const portalUrl = `${portalPublicBase}/portal/${encodeURIComponent(portalSlug)}`;
     let userId: string | null = null;
     try {
       // Check if user already exists in auth
@@ -134,6 +162,7 @@ export async function handlePortalViewerRoutes(
         name: name || null,
         invited_by: user.id,
         status: "pending",
+        portal_slug: portalSlug,
       })
       .select("id")
       .single();
@@ -149,20 +178,44 @@ export async function handlePortalViewerRoutes(
   // POST /api/portal-viewers/reset-password — send password reset
   if (req.method === "POST" && segments[1] === "reset-password") {
     const body = await req.json();
-    const { email } = body as { email?: string };
+    const { email, portal_slug: slugOpt } = body as {
+      email?: string;
+      portal_slug?: string;
+    };
     if (!email) return json({ error: "email required" }, 400, corsHeaders);
 
-    // Verify viewer belongs to this org
-    const { data: viewer } = await db
+    let vq = db
       .from("portal_viewers")
-      .select("id")
+      .select("id, portal_slug")
       .eq("org_id", orgId)
-      .eq("email", email.toLowerCase())
-      .maybeSingle();
-    if (!viewer) return json({ error: "Viewer not found" }, 404, corsHeaders);
+      .eq("email", email.toLowerCase());
+    if (slugOpt?.trim()) {
+      vq = vq.eq("portal_slug", slugOpt.trim().toLowerCase());
+    }
+    const { data: matches, error: vMatchErr } = await vq.limit(5);
+    if (vMatchErr) return json({ error: vMatchErr.message }, 500, corsHeaders);
+    if (!matches?.length) return json({ error: "Viewer not found" }, 404, corsHeaders);
+    if (matches.length > 1) {
+      return json(
+        {
+          error:
+            "Multiple portal invites for this email — include portal_slug in the request body",
+        },
+        400,
+        corsHeaders,
+      );
+    }
+    const viewer = matches[0];
 
+    const portalPublicBase =
+      Deno.env.get("PORTAL_PUBLIC_URL")?.replace(/\/$/, "") ??
+        Deno.env.get("SITE_URL")?.replace(/\/$/, "") ??
+        "https://sophos-firecomply.vercel.app";
+    const slugForReset = String(viewer.portal_slug ?? "").trim();
     const portalResetUrl =
-      `https://sophos-firecomply.vercel.app/portal/${orgId}`;
+      slugForReset.length > 0
+        ? `${portalPublicBase}/portal/${encodeURIComponent(slugForReset)}`
+        : `${portalPublicBase}/portal/${orgId}`;
     const { error: resetErr } = await db.auth.admin.generateLink({
       type: "recovery",
       email: email.toLowerCase(),

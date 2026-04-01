@@ -32,7 +32,10 @@ export async function invalidateOrgScopedQueries(
     queryClient.invalidateQueries({ queryKey: queryKeys.org.remediationStatus(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.mspSetupStatus(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.agentSubmissionCounts7d(orgId) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) }),
+    queryClient.invalidateQueries({
+      queryKey: ["portal", "viewers", orgId],
+      exact: false,
+    }),
     queryClient.invalidateQueries({ queryKey: queryKeys.portal.tenantBootstrap(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.portal.configs(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.central.status(orgId) }),
