@@ -16,7 +16,7 @@ describe("SEAuthGate", () => {
     onSignIn.mockReset();
     onSignUp.mockReset();
     onSignIn.mockResolvedValue({ error: null });
-    onSignUp.mockResolvedValue({ error: null });
+    onSignUp.mockResolvedValue({ error: null, needsEmailConfirmation: true });
   });
 
   it("renders sign-in form", () => {

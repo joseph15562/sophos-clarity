@@ -16,6 +16,13 @@ export interface OrgInfo {
 
 export type OrgRole = "admin" | "member" | "engineer" | "viewer";
 
+/** Result of email/password sign-up (Supabase may return no session until email is confirmed). */
+export interface AuthSignUpResult {
+  error: string | null;
+  /** When `error` is null: false if Supabase returned a session (signed in). */
+  needsEmailConfirmation?: boolean;
+}
+
 export interface AuthState {
   user: User | null;
   session: Session | null;
@@ -34,7 +41,7 @@ export interface AuthState {
   /** Viewer role — read-only access to reports */
   isViewerOnly: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string) => Promise<AuthSignUpResult>;
   signOut: () => Promise<void>;
   createOrg: (name: string) => Promise<{ error: string | null }>;
   refreshOrg: () => Promise<void>;
@@ -183,13 +190,25 @@ export function useAuthProvider(): AuthState {
     setNeedsMfa(false);
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+  const signUp = useCallback(async (email: string, password: string): Promise<AuthSignUpResult> => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: window.location.origin },
     });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+
+    const hasSession = !!data.session;
+    // Confirm-email projects: no session yet — clear transient client state so we stay on the
+    // auth gate and show "confirm your email" instead of org setup while unverified.
+    if (!hasSession) {
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    }
+
+    return {
+      error: null,
+      needsEmailConfirmation: !hasSession,
+    };
   }, []);
 
   const signOut = useCallback(async () => {

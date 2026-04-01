@@ -141,13 +141,13 @@ function IssueCard({ issue }: { issue: RuleIssue }) {
                     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
                   }}
                 >
-                  <p className="text-[9px] font-bold text-foreground/45 uppercase tracking-wider mb-1">
+                  <p className="text-[9px] font-bold text-slate-600 dark:text-foreground/45 uppercase tracking-wider mb-1">
                     Blocking Rule (Higher)
                   </p>
                   <p className="text-xs font-semibold text-foreground">
                     #{issue.shadowedBy.index + 1} {issue.shadowedBy.name}
                   </p>
-                  <p className="text-[11px] text-foreground/55 font-mono mt-1">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-300 font-mono mt-1">
                     {issue.shadowedBy.srcZone || "any"}→{issue.shadowedBy.dstZone || "any"} |{" "}
                     {issue.shadowedBy.service || "any"}
                   </p>
@@ -165,7 +165,7 @@ function IssueCard({ issue }: { issue: RuleIssue }) {
                   <p className="text-xs font-semibold text-foreground">
                     #{issue.shadowedRule.index + 1} {issue.shadowedRule.name}
                   </p>
-                  <p className="text-[11px] text-foreground/55 font-mono mt-1">
+                  <p className="text-[11px] text-slate-800 dark:text-slate-200 font-mono mt-1">
                     {issue.shadowedRule.srcZone || "any"}→{issue.shadowedRule.dstZone || "any"} |{" "}
                     {issue.shadowedRule.service || "any"}
                   </p>

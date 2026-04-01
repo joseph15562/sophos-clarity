@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { AlertTriangle, CheckCircle2, Info, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { GuestFirewallRow } from "@/lib/guest-central-ha-groups";
@@ -73,7 +73,7 @@ interface Props {
   firewalls: GuestFirewallRow[];
 }
 
-export function FirmwareEolWarnings({ firewalls }: Props) {
+function FirmwareEolWarningsInner({ firewalls }: Props) {
   const infos = useMemo<FirmwareInfo[]>(() => {
     return firewalls
       .filter((fw) => fw.firmwareVersion || fw.model)
@@ -195,6 +195,8 @@ export function FirmwareEolWarnings({ firewalls }: Props) {
     </div>
   );
 }
+
+export const FirmwareEolWarnings = memo(FirmwareEolWarningsInner);
 
 function StatusBadge({ status }: { status: LifecycleStatus }) {
   switch (status) {

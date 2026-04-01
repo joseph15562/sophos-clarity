@@ -27,6 +27,28 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Rule optimiser</strong>: shadowed-rule hints now
+              respect <strong className="text-foreground">user identity</strong>,{" "}
+              <strong className="text-foreground">Match known users</strong>, and{" "}
+              <strong className="text-foreground">schedule</strong> when those columns appear in the
+              export, so a broader rule for one user group no longer implies a later rule
+              &quot;never&quot; matches. Shadowing card detail text is easier to read in light mode.
+            </li>
+            <li>
+              <strong className="text-foreground">Compliance tab</strong>: the sticky{" "}
+              <strong className="text-foreground">Control</strong> column on the framework heatmap
+              uses a light card background in light mode so control names stay readable (no more
+              dark column with low-contrast text).
+            </li>
+            <li>
+              <strong className="text-foreground">Sign up / sign in</strong>: clearer feedback when
+              creating an account — Sonner toasts on failure, a persistent &quot;confirm your
+              email&quot; screen when verification is required (and local session cleared so you
+              aren&apos;t dropped into setup while still a guest), plus guidance when email
+              confirmation isn&apos;t needed. Guest upsell copy mentions confirming email after
+              register.
+            </li>
+            <li>
               <strong className="text-foreground">Security</strong>:{" "}
               <strong className="text-foreground">Passkey sign-in</strong> now verifies the full
               WebAuthn assertion (challenge, signature, origin, RP ID, counter) on{" "}
@@ -47,10 +69,14 @@ function ChangelogPageInner() {
             <li>
               <strong className="text-foreground">SE Health Check</strong>: the{" "}
               <strong className="text-foreground">results</strong> step is a dedicated module for
-              easier maintenance; leaving the page during{" "}
+              easier maintenance; the <strong className="text-foreground">landing</strong> /
+              analysing step is extracted in the same way.{" "}
+              <strong className="text-foreground">Sophos Central</strong> discovery (connect +
+              licence load) cancels in-flight requests when credentials or tenant change, or when
+              you start a new connect while one is still running. Leaving the page during{" "}
               <strong className="text-foreground">AI report generation</strong> cancels the
               in-flight stream; PSA settings, the public config-upload page, client portal load, and
-              fleet scan/delete actions now use the same cancellation pattern where it matters.
+              fleet scan/delete actions use the same cancellation pattern where it matters.
             </li>
           </ul>
         </section>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, createContext, useContext } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import type { AuthSignUpResult } from "./use-auth";
 
 export interface SEProfile {
   id: string;
@@ -21,7 +22,7 @@ export interface SEAuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<AuthSignUpResult>;
   signOut: () => Promise<void>;
   /** Re-fetch `se_profiles` row for the signed-in user (e.g. after updating preferences). */
   reloadSeProfile: () => Promise<void>;
@@ -183,12 +184,18 @@ export function useSEAuthProvider(): SEAuthState {
     if (fullName?.trim()) {
       opts.data = { full_name: fullName.trim() };
     }
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { ...opts, emailRedirectTo: `${window.location.origin}/health-check` },
     });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+
+    const hasSession = !!data.session;
+    if (!hasSession) {
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    }
+    return { error: null, needsEmailConfirmation: !hasSession };
   }, []);
 
   const signOut = useCallback(async () => {

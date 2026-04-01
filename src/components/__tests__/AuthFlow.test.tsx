@@ -29,7 +29,7 @@ function buildAuth(overrides: Partial<AuthState> = {}): AuthState {
     canRunAssessments: true,
     isViewerOnly: false,
     signIn: vi.fn().mockResolvedValue({ error: null }),
-    signUp: vi.fn().mockResolvedValue({ error: null }),
+    signUp: vi.fn().mockResolvedValue({ error: null, needsEmailConfirmation: true }),
     signOut: vi.fn().mockResolvedValue(),
     createOrg: vi.fn().mockResolvedValue({ error: null }),
     refreshOrg: vi.fn().mockResolvedValue(),

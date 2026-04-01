@@ -18,7 +18,7 @@ describe("AuthGate", () => {
     onSignUp.mockReset();
     onSkip.mockReset();
     onSignIn.mockResolvedValue({ error: null });
-    onSignUp.mockResolvedValue({ error: null });
+    onSignUp.mockResolvedValue({ error: null, needsEmailConfirmation: true });
   });
 
   it("renders sign-in form", () => {
@@ -63,5 +63,25 @@ describe("AuthGate", () => {
     renderWithProviders(<AuthGate onSignIn={onSignIn} onSignUp={onSignUp} onSkip={onSkip} />);
 
     expect(screen.getByRole("button", { name: /sign in with passkey/i })).toBeVisible();
+  });
+
+  it("shows confirm-email step after sign-up when email confirmation is required", async () => {
+    const user = userEvent.setup();
+    onSignUp.mockResolvedValue({ error: null, needsEmailConfirmation: true });
+
+    renderWithProviders(<AuthGate onSignIn={onSignIn} onSignUp={onSignUp} onSkip={onSkip} />);
+
+    await user.click(screen.getByRole("button", { name: /create account/i }));
+    await user.type(screen.getByPlaceholderText("you@company.com"), "new@company.com");
+    const pw = screen.getAllByPlaceholderText("••••••••");
+    await user.type(pw[0], "password123");
+    await user.type(pw[1], "password123");
+    const form = screen.getByPlaceholderText("you@company.com").closest("form");
+    await user.click(
+      within(form as HTMLElement).getByRole("button", { name: /^create account$/i }),
+    );
+
+    expect(await screen.findByRole("heading", { name: /confirm your email/i })).toBeVisible();
+    expect(onSignUp).toHaveBeenCalledWith("new@company.com", "password123");
   });
 });

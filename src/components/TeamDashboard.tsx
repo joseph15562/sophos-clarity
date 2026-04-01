@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   BarChart3,
   ChevronDown,
@@ -59,7 +59,7 @@ const GRADE_BAR_COLORS: Record<string, string> = {
   F: "#EA0022",
 };
 
-export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
+function TeamDashboardInner({ activeTeamId, seProfileId }: Props) {
   const queryClient = useQueryClient();
   const { data: rows = [], isLoading: loading } = useHealthChecksQuery(activeTeamId);
   const [open, setOpen] = useState(false);
@@ -329,6 +329,8 @@ export function TeamDashboard({ activeTeamId, seProfileId }: Props) {
     </section>
   );
 }
+
+export const TeamDashboard = memo(TeamDashboardInner);
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (

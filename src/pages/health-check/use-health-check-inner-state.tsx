@@ -153,6 +153,10 @@ export function useHealthCheckInnerState() {
   const sendReportAbortRef = useRef<AbortController | null>(null);
   useEffect(() => () => sendReportAbortRef.current?.abort(), []);
 
+  const guestCentralChainAbortRef = useRef<AbortController | null>(null);
+  const guestCentralConnectGenRef = useRef(0);
+  useEffect(() => () => guestCentralChainAbortRef.current?.abort(), []);
+
   const [files, setFiles] = useState<ParsedFile[]>([]);
   const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisResult>>({});
   const [activeStep, setActiveStep] = useState<ActiveStep>("landing");
@@ -305,23 +309,24 @@ export function useHealthCheckInnerState() {
       if (!centralFromUploadRef.current) setGuestFirewallLicenseItems([]);
       return;
     }
-    let cancelled = false;
+    const ac = new AbortController();
     (async () => {
       try {
-        const res = await callGuestCentral<{ items: GuestFirewallLicenseApiRow[] }>({
-          mode: "guest_health_firewall_licenses",
-          clientId: centralCreds.clientId,
-          clientSecret: centralCreds.clientSecret,
-          tenantId: centralCreds.tenantId,
-        });
-        if (!cancelled) setGuestFirewallLicenseItems(res.items ?? []);
+        const res = await callGuestCentral<{ items: GuestFirewallLicenseApiRow[] }>(
+          {
+            mode: "guest_health_firewall_licenses",
+            clientId: centralCreds.clientId,
+            clientSecret: centralCreds.clientSecret,
+            tenantId: centralCreds.tenantId,
+          },
+          { signal: ac.signal },
+        );
+        if (!ac.signal.aborted) setGuestFirewallLicenseItems(res.items ?? []);
       } catch {
-        if (!cancelled) setGuestFirewallLicenseItems([]);
+        if (!ac.signal.aborted) setGuestFirewallLicenseItems([]);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
   }, [centralValidated, centralCreds.tenantId, centralCreds.clientId, centralCreds.clientSecret]);
 
   const baselineResults = useMemo(() => {
@@ -708,34 +713,48 @@ export function useHealthCheckInnerState() {
   });
 
   const connectCentral = useCallback(async () => {
+    guestCentralChainAbortRef.current?.abort();
+    const gen = (guestCentralConnectGenRef.current += 1);
+    const ac = new AbortController();
+    guestCentralChainAbortRef.current = ac;
+    const signal = ac.signal;
     setCentralBusy(true);
     try {
-      await callGuestCentral({
-        mode: "guest_health_ping",
-        clientId: centralCreds.clientId,
-        clientSecret: centralCreds.clientSecret,
-      });
+      await callGuestCentral(
+        {
+          mode: "guest_health_ping",
+          clientId: centralCreds.clientId,
+          clientSecret: centralCreds.clientSecret,
+        },
+        { signal },
+      );
       setCentralValidated(true);
       setReplayCentralLinked(false);
       setRestoredHaLabels(null);
 
-      const tenantsRes = await callGuestCentral<{ items: GuestTenantRow[] }>({
-        mode: "guest_health_tenants",
-        clientId: centralCreds.clientId,
-        clientSecret: centralCreds.clientSecret,
-      });
+      const tenantsRes = await callGuestCentral<{ items: GuestTenantRow[] }>(
+        {
+          mode: "guest_health_tenants",
+          clientId: centralCreds.clientId,
+          clientSecret: centralCreds.clientSecret,
+        },
+        { signal },
+      );
       const tenants = tenantsRes.items ?? [];
       setTenantOptions(tenants);
 
       if (tenants.length > 0) {
         const tenantId = tenants[0].id;
         setCentralCreds((c) => ({ ...c, tenantId }));
-        const fwRes = await callGuestCentral<{ items: GuestFirewallRow[] }>({
-          mode: "guest_health_firewalls",
-          clientId: centralCreds.clientId,
-          clientSecret: centralCreds.clientSecret,
-          tenantId,
-        });
+        const fwRes = await callGuestCentral<{ items: GuestFirewallRow[] }>(
+          {
+            mode: "guest_health_firewalls",
+            clientId: centralCreds.clientId,
+            clientSecret: centralCreds.clientSecret,
+            tenantId,
+          },
+          { signal },
+        );
         const items = fwRes.items ?? [];
         setFirewallOptions(items);
         const groups = buildGuestCentralHaGroups(items);
@@ -748,10 +767,15 @@ export function useHealthCheckInnerState() {
         toast.success("Credentials validated but no tenants found.");
       }
     } catch (e) {
+      const aborted =
+        signal.aborted ||
+        (e instanceof DOMException && e.name === "AbortError") ||
+        (e instanceof Error && e.name === "AbortError");
+      if (aborted) return;
       setCentralValidated(false);
       toast.error(e instanceof Error ? e.message : "Could not connect to Sophos Central");
     } finally {
-      setCentralBusy(false);
+      if (gen === guestCentralConnectGenRef.current) setCentralBusy(false);
     }
   }, [centralCreds.clientId, centralCreds.clientSecret]);
 

@@ -387,10 +387,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
           <table className="w-full min-w-max border-separate border-spacing-0 text-[11px]">
             <thead>
               <tr>
-                <th
-                  className="text-left p-2.5 text-[10px] text-foreground/80 font-black uppercase tracking-[0.18em] sticky left-0 z-10 min-w-[130px] rounded-tl-xl"
-                  style={{ background: "rgba(12,18,34,0.9)" }}
-                >
+                <th className="text-left p-2.5 text-[10px] font-black uppercase tracking-[0.18em] sticky left-0 z-10 min-w-[130px] rounded-tl-xl border-r border-border bg-card text-foreground shadow-[2px_0_8px_-4px_rgba(15,23,42,0.12)] dark:border-white/[0.06] dark:bg-[rgba(12,18,34,0.95)] dark:text-foreground/80 dark:shadow-[2px_0_12px_-4px_rgba(0,0,0,0.45)]">
                   Control
                 </th>
                 {mappings.map((m) => {
@@ -431,10 +428,7 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
                   key={controlName}
                   className="hover:bg-slate-950/[0.03] dark:hover:bg-white/[0.02] transition-colors"
                 >
-                  <td
-                    className="p-2.5 text-foreground font-bold sticky left-0 z-10 border-t border-slate-900/[0.08] dark:border-white/[0.04]"
-                    style={{ background: "rgba(12,18,34,0.9)" }}
-                  >
+                  <td className="p-2.5 font-bold sticky left-0 z-10 border-t border-slate-900/[0.08] border-r border-border bg-card text-foreground shadow-[2px_0_8px_-4px_rgba(15,23,42,0.08)] dark:border-white/[0.04] dark:bg-[rgba(12,18,34,0.95)] dark:text-foreground dark:shadow-[2px_0_12px_-4px_rgba(0,0,0,0.4)]">
                     {controlName}
                   </td>
                   {mappings.map((m) => {

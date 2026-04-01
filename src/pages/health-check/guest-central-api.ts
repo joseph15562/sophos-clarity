@@ -37,7 +37,14 @@ export function guestFirewallMatchValueForFile(file: ParsedFile, groups: GuestHa
   return CENTRAL_MATCH_NONE;
 }
 
-export async function callGuestCentral<T extends Record<string, unknown>>(body: Record<string, unknown>): Promise<T> {
+export type CallGuestCentralOptions = {
+  signal?: AbortSignal;
+};
+
+export async function callGuestCentral<T extends Record<string, unknown>>(
+  body: Record<string, unknown>,
+  options?: CallGuestCentralOptions,
+): Promise<T> {
   const resolved = getSupabasePublicEdgeAuth();
   const url = `${resolved.url.replace(/\/$/, "")}/functions/v1/sophos-central`;
   const key = resolved.anonKey.trim();
@@ -55,6 +62,7 @@ export async function callGuestCentral<T extends Record<string, unknown>>(body: 
       apikey: key,
     },
     body: JSON.stringify(body),
+    signal: options?.signal,
   });
   const data = (await res.json()) as { error?: string } & T;
   if (!res.ok || data.error) {

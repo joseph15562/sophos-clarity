@@ -50,7 +50,8 @@ export function ReportUpsellStrip({
       if (!isRuleDismissed("guest")) {
         return {
           id: "guest",
-          message: "Sign in or create an account to save reports and unlock the Executive Summary.",
+          message:
+            "Sign in (after confirming your email if you just registered) to save reports to the cloud and unlock the Executive Summary.",
         };
       }
       return null;

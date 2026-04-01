@@ -43,7 +43,7 @@
 - **ATP / Sophos X-Ops Analysis** — Checks Advanced Threat Protection status and policy action
 - **High Availability Analysis** — Detects HA mode (Active-Passive/Active-Active), node name, cluster status
 - **DoS & Spoof Protection** — Finds missing DoS/spoof sections in the export, disabled SYN flood protection, and disabled IP spoof prevention (`analyseDoSProtection` in `src/lib/analysis/domains/vpn-network.ts`, invoked from `analyse-config.ts`). Section matching uses parsed headings (e.g. DoS / spoof-related blocks), not a single fixed `DoSSettings` key name across all export shapes
-- **VPN Security** — For **IPsec** profiles in use: weak Phase 1/2 encryption or authentication, weak DH groups, Perfect Forward Secrecy off, and PSK vs certificate authentication. **SSL VPN**: policy count / presence informational finding. Wired as `analyseVpnSecurity` in the same module
+- **VPN Security** — For **IPsec** profiles in use: weak Phase 1/2 encryption or authentication, weak DH groups, Perfect Forward Secrecy off, and PSK vs certificate authentication. **SSL VPN**: policy count / presence informational finding. **Legacy PPTP / L2TP-style remote access** — dedicated finding when the export indicates PPTP or legacy L2TP/PPTP remote access (`analyseVpnSecurity` in `src/lib/analysis/domains/vpn-network.ts`).
 - **Certificate management** — Weak key sizes, SHA-1 signatures, **expiry within 30 days** (high) and **30–90 days** (medium), self-signed / untrusted issuer (`analyseCertificates` in `src/lib/analysis/domains/infra.ts`)
 - **WAF (Web Application Firewall)** — Monitor-only policies; **published web servers without WAF** when DNAT suggests exposure (`analyseWafPolicies` in `src/lib/analysis/domains/rules-waf.ts`). Deeper OWASP-oriented rule/template coverage can still expand
 - **Licensed-feature gaps** — When the export shows **Web Protection** licensed but no web filter/WAF policies; **Email Protection** licensed but no relay/SMTP/DKIM-style configuration detected (`infra.ts` licensing helpers)
@@ -91,8 +91,8 @@
 - **Client experience** — Client portal routes and portal viewer management where configured
 - **Shared report viewer (security)** — Token-based **shared health-check** HTML loads in a **sandboxed iframe** (`sandbox="allow-same-origin"`: scripts blocked; same-origin needed for parent **contentDocument** auto-height)
 - **Report export shell (security)** — PDF/HTML document shell from **`buildPdfHtml`** **HTML-escapes** branding fields (**title**, org/customer names, prepared-by, footer); **logo URL** allowlist (**https** or **data:image/…;base64** for selected image types)
-- **Client fetch cancellation (product UI)** — User-initiated **`fetch`** in **`src/components`** / **`src/pages`** passes **`AbortSignal`** (TanStack **`queryFn`**, **`useAbortableInFlight`**, effect **`AbortController`s**, per-agent run-now/delete on fleet surfaces, **`ClientPortal`** stale-load guard on **`portal-data`**). Policy and inventory: **[client-data-layer.md](api/client-data-layer.md)**. Residual: **`callGuestCentral`** and some **`src/lib`** helpers — optional **`signal`** when refactored.
-- **SE Health Check layout slice** — Results step lives in **`HealthCheckResultsSection.tsx`**; **`HealthCheckInnerLayout`** stays the orchestrator (thinner file, same behaviour).
+- **Client fetch cancellation (product UI)** — User-initiated **`fetch`** in **`src/components`** / **`src/pages`** passes **`AbortSignal`** (TanStack **`queryFn`**, **`useAbortableInFlight`**, effect **`AbortController`s**, per-agent run-now/delete on fleet surfaces, **`ClientPortal`** stale-load guard on **`portal-data`**). Policy and inventory: **[client-data-layer.md](api/client-data-layer.md)**. **SE Health Check guest Central** (**`callGuestCentral`**) threads **`AbortSignal`** for licence load and connect chains; residual optional **`signal`** on other **`src/lib`** **`fetch`** helpers (pdfmake assets, **`geo-cve`**, etc.).
+- **SE Health Check layout slice** — Results step in **`HealthCheckResultsSection.tsx`**; landing / analysing step in **`HealthCheckLandingSection.tsx`**; **`HealthCheckInnerLayout`** keeps dialogs and orchestration only.
 - **CI JS bundle budget** — Optional post-build check via **`scripts/assert-bundle-budget.mjs`** (see deploy/staging workflows when enabled).
 - **Job outbox worker (testability)** — **`process-job-outbox`** exposes a handler for HTTP/cron and ships Deno contract tests (see **[job-queue-outline.md](job-queue-outline.md)**).
 
@@ -132,7 +132,6 @@ The bullets below are **still open or only partially covered**. Several older ro
 
 ### Quick Wins
 
-- **PPTP / legacy remote-access VPN** — Dedicated finding when PPTP (or obsolete L2TP/PPTP remote access) is clearly enabled in the export; **IPsec/SSL VPN** analysis already exists
 - **Email security (deeper)** — Anti-spam rule posture, SPF/DMARC-style signals if present in export, richer **DKIM** policy review beyond the licenced-feature “no DKIM section” check; **virus scanning** already flags disabled mail-protocol malware scanning when those rows exist
 
 ### Medium Effort
@@ -151,7 +150,7 @@ The bullets below are **still open or only partially covered**. Several older ro
 ### Operations and governance
 
 - **Data retention and erasure (follow-ups)** — Counsel-approved DPA wording, export-before-delete UX, customer-facing procurement pack
-- **Operational visibility** — Structured logging and diagnostics for Edge Functions and Connector; documented retry and rate-limit behaviour (Central, Gemini) for support runbooks
+- **Operational visibility** — **Partial:** **[observability.md](observability.md)** catalogs **`logJson`** messages, latency boards, and saved-search examples (including **`process_job_outbox_*`** / **`send_scheduled_reports_*`**). **Still open:** connector diagnostics depth, Central/Gemini rate-limit runbooks beyond inline docs
 
 ### Skipped
 

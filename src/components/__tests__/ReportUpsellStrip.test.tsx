@@ -13,13 +13,7 @@ describe("ReportUpsellStrip", () => {
   });
 
   it("renders without crashing", () => {
-    render(
-      <ReportUpsellStrip
-        fileCount={1}
-        hasComplianceFrameworks={false}
-        isGuest={false}
-      />,
-    );
+    render(<ReportUpsellStrip fileCount={1} hasComplianceFrameworks={false} isGuest={false} />);
     expect(
       screen.getByText("Add a second firewall to unlock the Executive Summary."),
     ).toBeVisible();
@@ -27,27 +21,16 @@ describe("ReportUpsellStrip", () => {
 
   it("shows nothing when conditions not met", () => {
     const { container } = render(
-      <ReportUpsellStrip
-        fileCount={2}
-        hasComplianceFrameworks
-        averageScore={80}
-        isGuest={false}
-      />,
+      <ReportUpsellStrip fileCount={2} hasComplianceFrameworks averageScore={80} isGuest={false} />,
     );
     expect(container.firstChild).toBeNull();
   });
 
   it("shows strip for guest users", () => {
-    render(
-      <ReportUpsellStrip
-        fileCount={3}
-        hasComplianceFrameworks={false}
-        isGuest
-      />,
-    );
+    render(<ReportUpsellStrip fileCount={3} hasComplianceFrameworks={false} isGuest />);
     expect(
       screen.getByText(
-        "Sign in or create an account to save reports and unlock the Executive Summary.",
+        "Sign in (after confirming your email if you just registered) to save reports to the cloud and unlock the Executive Summary.",
       ),
     ).toBeVisible();
   });

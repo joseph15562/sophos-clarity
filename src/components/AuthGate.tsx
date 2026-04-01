@@ -1,13 +1,15 @@
 import { useState, useCallback } from "react";
 import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { LogIn, UserPlus, ArrowRight, AlertCircle, Fingerprint } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { AuthSignUpResult } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  onSignUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  onSignUp: (email: string, password: string) => Promise<AuthSignUpResult>;
   onSkip: () => void;
 }
 
@@ -150,14 +152,32 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
       }
 
       setLoading(true);
-      const fn = mode === "signin" ? onSignIn : onSignUp;
-      const result = await fn(email.trim(), password);
-      setLoading(false);
-
-      if (result.error) {
-        setError(result.error);
-      } else if (mode === "signup") {
-        setSignupSuccess(true);
+      try {
+        if (mode === "signin") {
+          const result = await onSignIn(email.trim(), password);
+          if (result.error) {
+            setError(result.error);
+            toast.error(result.error);
+          }
+        } else {
+          const result = await onSignUp(email.trim(), password);
+          if (result.error) {
+            setError(result.error);
+            toast.error(result.error);
+          } else if (result.needsEmailConfirmation) {
+            setSignupSuccess(true);
+            toast.success("Account created — confirm your email, then sign in.", {
+              duration: 12_000,
+            });
+          } else {
+            toast.success(
+              "You're signed in. Complete organisation setup next — then you can save reports to the cloud.",
+              { duration: 10_000 },
+            );
+          }
+        }
+      } finally {
+        setLoading(false);
       }
     },
     [email, password, confirmPassword, mode, onSignIn, onSignUp],
@@ -173,12 +193,13 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
           <UserPlus className="h-7 w-7 text-[#007A5A] dark:text-[#00F2B3]" />
         </div>
         <h2 className="text-2xl font-display font-black text-foreground tracking-tight">
-          Check your email
+          Confirm your email
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          We've sent a confirmation link to{" "}
-          <span className="font-medium text-foreground">{email}</span>. Activate your account, then
-          return to sign in and access your workspace.
+          We&apos;ve sent a link to <span className="font-medium text-foreground">{email}</span>.
+          Until you confirm, you stay signed out — saved reports and cloud features need a verified
+          sign-in. Open the email, confirm, then use{" "}
+          <span className="font-medium text-foreground">Sign In</span> below.
         </p>
         <button
           onClick={() => {

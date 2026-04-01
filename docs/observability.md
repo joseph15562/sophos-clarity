@@ -24,12 +24,14 @@ Supabase Edge Functions log to the platform logger. The `api` function uses `log
 
 Use your provider’s query language; examples assume one JSON object per log line with a **`message`** field.
 
-| Intent                 | Example filter                                                                |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| Router crashes         | `message = "api_unhandled"` or `api_public_unhandled` / `api_agent_unhandled` |
-| Any Zod body rejection | `message ~ "*_invalid_body"` or regex `invalid_body`                          |
-| Autotask PSA only      | `message ~ "autotask_psa_*_invalid_body"`                                     |
-| Email send failures    | `message = "send_report_email_provider_failed"`                               |
+| Intent                             | Example filter                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| Router crashes                     | `message = "api_unhandled"` or `api_public_unhandled` / `api_agent_unhandled` |
+| Any Zod body rejection             | `message ~ "*_invalid_body"` or regex `invalid_body`                          |
+| Autotask PSA only                  | `message ~ "autotask_psa_*_invalid_body"`                                     |
+| Email send failures                | `message = "send_report_email_provider_failed"`                               |
+| Scheduled report pipeline (worker) | `message ~ "^process_job_outbox_"` (batch claim, send, reap, dead-letter)     |
+| Scheduled report producer          | `message ~ "^send_scheduled_reports_"` (enqueue / skip / complete)            |
 
 **Spike alert (warn):** count events in a 5-minute window where `message` ends with `_invalid_body`; alert if count &gt; **K** (choose K from your baseline after a week of data).
 

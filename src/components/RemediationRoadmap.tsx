@@ -134,9 +134,9 @@ export function RemediationRoadmap({ analysisResults }: Props) {
       <div className="rounded-2xl border border-border/50 bg-card/70 p-4 sm:p-5 overflow-x-auto">
         <div className="min-w-[400px]">
           <div className="flex gap-1 mb-2">
-            {weeks.map((label, i) => (
+            {weeks.map((label) => (
               <div
-                key={i}
+                key={label}
                 className="flex-1 min-w-[80px] text-center text-[10px] font-medium text-muted-foreground"
               >
                 {label}

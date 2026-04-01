@@ -1,15 +1,13 @@
 import { useState, useCallback } from "react";
 import { LogIn, UserPlus, ArrowRight, AlertCircle, Shield } from "lucide-react";
+import { toast } from "sonner";
+import type { AuthSignUpResult } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  onSignUp: (
-    email: string,
-    password: string,
-    fullName?: string,
-  ) => Promise<{ error: string | null }>;
+  onSignUp: (email: string, password: string, fullName?: string) => Promise<AuthSignUpResult>;
 }
 
 const SOPHOS_DOMAIN_RE = /@sophos\.com$/i;
@@ -59,16 +57,31 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
       }
 
       setLoading(true);
-      const result =
-        mode === "signin"
-          ? await onSignIn(trimmedEmail, password)
-          : await onSignUp(trimmedEmail, password, fullName.trim());
-      setLoading(false);
-
-      if (result.error) {
-        setError(result.error);
-      } else if (mode === "signup") {
-        setSignupSuccess(true);
+      try {
+        if (mode === "signin") {
+          const result = await onSignIn(trimmedEmail, password);
+          if (result.error) {
+            setError(result.error);
+            toast.error(result.error);
+          }
+        } else {
+          const result = await onSignUp(trimmedEmail, password, fullName.trim());
+          if (result.error) {
+            setError(result.error);
+            toast.error(result.error);
+          } else if (result.needsEmailConfirmation) {
+            setSignupSuccess(true);
+            toast.success("Account created — confirm your email, then sign in.", {
+              duration: 12_000,
+            });
+          } else {
+            toast.success("You're signed in. Complete your SE profile if prompted.", {
+              duration: 10_000,
+            });
+          }
+        }
+      } finally {
+        setLoading(false);
       }
     },
     [email, fullName, password, confirmPassword, mode, onSignIn, onSignUp],
@@ -81,11 +94,11 @@ export function SEAuthGate({ onSignIn, onSignUp }: Props) {
           <div className="h-12 w-12 rounded-full bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 flex items-center justify-center mx-auto">
             <UserPlus className="h-6 w-6 text-[#007A5A] dark:text-[#00F2B3]" />
           </div>
-          <h2 className="text-lg font-display font-bold text-foreground">Check your email</h2>
+          <h2 className="text-lg font-display font-bold text-foreground">Confirm your email</h2>
           <p className="text-sm text-muted-foreground">
-            We've sent a confirmation link to{" "}
-            <span className="font-medium text-foreground">{email}</span>. Click the link to activate
-            your account, then sign in.
+            We&apos;ve sent a link to <span className="font-medium text-foreground">{email}</span>.
+            Until you confirm, you stay signed out. Open the email, activate your account, then use
+            Sign In.
           </p>
           <button
             onClick={() => {
