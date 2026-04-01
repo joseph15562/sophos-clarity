@@ -24,8 +24,30 @@ function ChangelogPageInner() {
           (Keep a Changelog).
         </p>
         <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>
+              <strong className="text-foreground">Security</strong>:{" "}
+              <strong className="text-foreground">Passkey sign-in</strong> now verifies the full
+              WebAuthn assertion (challenge, signature, origin, RP ID, counter) on{" "}
+              <code className="text-xs">api-public</code>; login uses a short-lived signed challenge
+              token. Deploy the matching frontend; optional secret{" "}
+              <code className="text-xs">PASSKEY_CHALLENGE_SECRET</code> is documented in{" "}
+              <code className="text-xs">docs/SELF-HOSTED.md</code>.
+            </li>
+          </ul>
+        </section>
+        <section className="space-y-4">
           <h2 className="text-sm font-semibold text-foreground">2026-03</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>
+              <strong className="text-foreground">Security</strong>:{" "}
+              <strong className="text-foreground">Shared health-check</strong> report HTML loads in
+              a sandboxed iframe (embedded scripts do not run);{" "}
+              <strong className="text-foreground">PDF / HTML export</strong> escapes branding text
+              in the document shell and only allows <code className="text-xs">https://</code> or{" "}
+              <code className="text-xs">data:image/…;base64</code> logos.
+            </li>
             <li>
               <strong className="text-foreground">Trust &amp; privacy</strong>:{" "}
               <strong className="text-foreground">Trust</strong> page and{" "}

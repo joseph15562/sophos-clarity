@@ -181,9 +181,17 @@ const SharedHealthCheck = () => {
       {/* Report content */}
       <div className="max-w-[1100px] mx-auto px-4 py-8">
         <div className="rounded-xl border border-white/10 overflow-hidden shadow-2xl">
+          {/*
+           * Sandbox: default flags block script, form submit, top navigation, etc. (mitigates XSS in
+           * shared HTML). allow-same-origin is required so the parent can read contentDocument.body
+           * for auto-height. We intentionally do NOT set allow-scripts: if a future report needs JS,
+           * prefer a versioned viewer or strip/whitelist scripts server-side—allow-scripts would
+           * let embedded HTML run code in the iframe (still same-site, but dangerous).
+           */}
           <iframe
             srcDoc={data.html}
             title="Health Check Report"
+            sandbox="allow-same-origin"
             className="w-full border-0 bg-white"
             style={{ minHeight: "90vh" }}
             onLoad={(e) => {

@@ -50,10 +50,19 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
       }
 
       const options = await optionsRes.json();
+      const { challengeToken, ...webauthnOptions } = options as {
+        challengeToken?: string;
+        challenge?: string;
+        allowCredentials?: Array<Record<string, string>>;
+        [key: string]: unknown;
+      };
+      if (!challengeToken || typeof challengeToken !== "string") {
+        throw new Error("Login options missing challenge token — update the app or edge function.");
+      }
 
       const assertion = await navigator.credentials.get({
         publicKey: {
-          ...options,
+          ...webauthnOptions,
           challenge: Uint8Array.from(atob(options.challenge), (c) => c.charCodeAt(0)),
           allowCredentials: (options.allowCredentials ?? []).map((c: Record<string, string>) => ({
             ...c,
@@ -74,6 +83,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
           headers: fnHeaders,
           body: JSON.stringify({
             email: email.trim(),
+            challengeToken,
             credential: {
               id: pkc.id,
               rawId: btoa(String.fromCharCode(...new Uint8Array(pkc.rawId))),

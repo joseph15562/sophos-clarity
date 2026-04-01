@@ -29,10 +29,45 @@ import {
 } from "../_shared/sophos-central-api.ts";
 import { centralDecrypt, centralEncrypt } from "../_shared/crypto.ts";
 import { logJson } from "../_shared/logger.ts";
+import {
+  signPasskeyChallengeToken,
+  verifyPasskeyChallengeToken,
+} from "../_shared/passkey-challenge-token.ts";
+import {
+  copyU8,
+  credentialIdMatchesStored,
+  extractCredentialPublicKeyFromAttestationBase64,
+  stdBase64ToUint8Array,
+  toAuthenticationResponseJSON,
+} from "../_shared/passkey-webauthn-login.ts";
+import { verifyAuthenticationResponse } from "npm:@simplewebauthn/server@13.2.2";
+import { isoBase64URL } from "npm:@simplewebauthn/server@13.2.2/helpers";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const APP_URL = Deno.env.get("ALLOWED_ORIGIN") ??
   "https://sophos-firecomply.vercel.app";
+
+function passkeyExpectedOrigins(req: Request): string[] {
+  const out = new Set<string>();
+  const h = req.headers.get("origin");
+  if (h) out.add(h);
+  try {
+    out.add(new URL(APP_URL).origin);
+  } catch {
+    /* ignore */
+  }
+  for (const o of [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+  ]) {
+    out.add(o);
+  }
+  return [...out];
+}
 
 function json(
   body: unknown,
@@ -148,10 +183,16 @@ async function handlePasskeyLoginOptions(
     ? new URL(loginOrigin).hostname
     : new URL(SUPABASE_URL).hostname;
 
+  const challengeBytes = crypto.getRandomValues(new Uint8Array(32));
+  const challengeStdB64 = btoa(String.fromCharCode(...challengeBytes));
+  const challengeToken = await signPasskeyChallengeToken(
+    targetUser.id,
+    challengeStdB64,
+  );
+
   const options = {
-    challenge: btoa(
-      String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))),
-    ),
+    challenge: challengeStdB64,
+    challengeToken,
     timeout: 60000,
     rpId: loginRpId,
     allowCredentials: (creds ?? []).map((c: any) => ({
@@ -169,10 +210,26 @@ async function handlePasskeyLoginVerify(
   req: Request,
   corsHeaders: Record<string, string>,
 ) {
-  const body = await req.json();
-  const { email, credential } = body;
-  if (!email || !credential) {
-    return json({ error: "email and credential required" }, 400, corsHeaders);
+  const body = await req.json().catch(() => ({}));
+  const { email, credential, challengeToken } = body as {
+    email?: string;
+    credential?: Record<string, unknown>;
+    challengeToken?: string;
+  };
+  if (!email || !credential || !challengeToken) {
+    return json(
+      { error: "email, credential, and challengeToken required" },
+      400,
+      corsHeaders,
+    );
+  }
+
+  const tokenPayload = await verifyPasskeyChallengeToken(
+    String(challengeToken),
+  );
+  if (!tokenPayload) {
+    logJson("warn", "passkey_login_verify_bad_challenge_token", {});
+    return json({ error: "Invalid or expired login challenge" }, 401, corsHeaders);
   }
 
   const db = adminClient();
@@ -180,18 +237,105 @@ async function handlePasskeyLoginVerify(
   const targetUser = users?.users?.find((u: any) => u.email === email);
   if (!targetUser) return json({ error: "User not found" }, 404, corsHeaders);
 
-  const { data: stored } = await db
+  if (targetUser.id !== tokenPayload.sub) {
+    logJson("warn", "passkey_login_verify_challenge_user_mismatch", {});
+    return json({ error: "Invalid or expired login challenge" }, 401, corsHeaders);
+  }
+
+  const cred = credential as {
+    id: string;
+    rawId: string;
+    type?: string;
+    response?: {
+      authenticatorData?: string;
+      clientDataJSON?: string;
+      signature?: string;
+    };
+  };
+  if (
+    !cred.rawId || !cred.response?.authenticatorData ||
+    !cred.response?.clientDataJSON || !cred.response?.signature
+  ) {
+    return json({ error: "Invalid credential payload" }, 400, corsHeaders);
+  }
+
+  const rawIdBytes = stdBase64ToUint8Array(cred.rawId);
+
+  const { data: rows } = await db
     .from("passkey_credentials")
     .select("*")
-    .eq("user_id", targetUser.id)
-    .eq("credential_id", credential.id)
-    .maybeSingle();
+    .eq("user_id", targetUser.id);
 
-  if (!stored) return json({ error: "Passkey not found" }, 404, corsHeaders);
+  const stored = (rows ?? []).find((r: { credential_id: string }) =>
+    credentialIdMatchesStored(r.credential_id, rawIdBytes)
+  );
+  if (!stored) {
+    return json({ error: "Passkey not found" }, 404, corsHeaders);
+  }
+
+  const publicKey = extractCredentialPublicKeyFromAttestationBase64(
+    stored.public_key as string,
+  );
+  if (!publicKey) {
+    logJson("error", "passkey_login_verify_no_public_key", {
+      credentialRowId: stored.id,
+    });
+    return json({ error: "Passkey misconfigured" }, 500, corsHeaders);
+  }
+
+  let expectedChallenge: string;
+  try {
+    const chalBytes = copyU8(stdBase64ToUint8Array(tokenPayload.chal));
+    expectedChallenge = isoBase64URL.fromBuffer(chalBytes);
+  } catch {
+    return json({ error: "Invalid or expired login challenge" }, 401, corsHeaders);
+  }
+
+  const loginOrigin = req.headers.get("origin") ?? "";
+  const loginRpId = loginOrigin
+    ? new URL(loginOrigin).hostname
+    : new URL(SUPABASE_URL).hostname;
+
+  let verification: Awaited<ReturnType<typeof verifyAuthenticationResponse>>;
+  try {
+    verification = await verifyAuthenticationResponse({
+      response: toAuthenticationResponseJSON({
+        id: cred.id,
+        rawId: cred.rawId,
+        type: cred.type,
+        response: {
+          authenticatorData: cred.response.authenticatorData,
+          clientDataJSON: cred.response.clientDataJSON,
+          signature: cred.response.signature,
+        },
+      }),
+      expectedChallenge,
+      expectedOrigin: passkeyExpectedOrigins(req),
+      expectedRPID: loginRpId,
+      credential: {
+        id: isoBase64URL.fromBuffer(copyU8(rawIdBytes)),
+        publicKey: copyU8(publicKey),
+        counter: Number(stored.counter ?? 0),
+        transports: Array.isArray(stored.transports)
+          ? stored.transports as ("ble" | "hybrid" | "internal" | "nfc" | "smart-card" | "usb" | "cable")[]
+          : undefined,
+      },
+      requireUserVerification: false,
+    });
+  } catch (e) {
+    logJson("warn", "passkey_login_verify_webauthn_failed", {
+      detail: e instanceof Error ? e.message : String(e),
+    });
+    return json({ error: "Passkey verification failed" }, 401, corsHeaders);
+  }
+
+  if (!verification.verified) {
+    return json({ error: "Passkey verification failed" }, 401, corsHeaders);
+  }
 
   await db
     .from("passkey_credentials")
-    .update({ counter: (stored.counter as number) + 1 })
+    .update({ counter: verification.authenticationInfo.newCounter })
     .eq("id", stored.id);
 
   const { data: linkData, error: linkError } = await db.auth.admin.generateLink(

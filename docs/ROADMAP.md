@@ -84,11 +84,13 @@
 - **Commercial hub** — Customer management, report centre, portfolio insights, drift monitor, playbook library
 - **API & Integrations** — API Hub (`/api`): REST surface documentation, webhooks UI, agent fleet summary; Edge Function `api` routes (e.g. firewalls, assessments, service-key issue/revoke/ping); **scoped org service keys** with hashed storage
 - **PSA** — ConnectWise Cloud (Partner API OAuth), ConnectWise Manage (REST tickets, company mapping from FireComply customers), Datto Autotask PSA (credentials, mapping, idempotent tickets from findings)
-- **Workspace settings** — Branding, Central, connector agents, team invites, client portal, security (MFA, passkeys), **activity log** (`/audit` and in-drawer), alerts, webhooks, scheduled reports, report template, API docs entry, **How we handle your data** (retention, regulatory scanner notes, delete-all-org-data for admins), PSA & API automation (modal flows)
+- **Workspace settings** — Branding, Central, connector agents, team invites, client portal, security (MFA, **passkeys** — WebAuthn **login-options / login-verify** on **`api-public`** with **HMAC-signed challenge tokens** and **`verifyAuthenticationResponse`**; optional **`PASSKEY_CHALLENGE_SECRET`** for self-hosted — see **SELF-HOSTED**), **activity log** (`/audit` and in-drawer), alerts, webhooks, scheduled reports, report template, API docs entry, **How we handle your data** (retention, regulatory scanner notes, delete-all-org-data for admins), PSA & API automation (modal flows)
 - **Trust & transparency** — **Trust** page (`/trust`) with “How we handle your data” summary, subprocessors baseline, links to `docs/DATA-PRIVACY.md`; main nav **Trust** link; in-app **Changelog** (`/changelog`)
 - **Export Centre (compliance)** — Findings CSV with framework **control IDs**; non-blocking **validation checklist** in UI for high/critical gaps; optional **reviewer sign-off** rows on CSV when a linked cloud assessment has sign-off (persists across **browser session** refresh when signed in)
 - **Compliance & signals** — Regulatory digest settings; **regulatory-scanner** Edge Function and scheduled RSS ingest (Compliance / Regulatory Tracker)
 - **Client experience** — Client portal routes and portal viewer management where configured
+- **Shared report viewer (security)** — Token-based **shared health-check** HTML loads in a **sandboxed iframe** (`sandbox="allow-same-origin"`: scripts blocked; same-origin needed for parent **contentDocument** auto-height)
+- **Report export shell (security)** — PDF/HTML document shell from **`buildPdfHtml`** **HTML-escapes** branding fields (**title**, org/customer names, prepared-by, footer); **logo URL** allowlist (**https** or **data:image/…;base64** for selected image types)
 
 ### UI/UX
 

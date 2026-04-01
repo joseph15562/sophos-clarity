@@ -7,7 +7,8 @@ This document is a **starting runbook** for teams that need dedicated infrastruc
 1. **Supabase-compatible stack** (or managed Supabase dedicated project): Postgres, Auth, Storage (if used), Edge Functions runtime.
 2. **Secrets**: AI provider keys (if AI reports enabled), email, Sophos Central proxy secrets — injected as function secrets, not in the repo.
 3. **`API_KEY_HMAC_SECRET`** (recommended): 32+ byte random string used to HMAC org service API keys. If unset, Edge Functions fall back to `SUPABASE_SERVICE_ROLE_KEY` so existing deployments keep working. **Rotation:** set the new secret, redeploy functions, then **re-issue** service keys from workspace settings (old signatures will no longer verify). Clear the old secret only after all keys are rotated.
-4. **Connector releases**: Host GitHub Release binaries or an internal artefact registry; set `VITE_CONNECTOR_VERSION_LATEST` to match the bundle you distribute.
+4. **`PASSKEY_CHALLENGE_SECRET`** (recommended for production): random string used to HMAC-sign WebAuthn login challenges in **`api-public`** (`/passkey/login-options` → `/passkey/login-verify`). If unset, the function derives a key from **`SUPABASE_SERVICE_ROLE_KEY`** so existing deployments keep working; set a dedicated secret so challenge tokens are independent of service-role rotation.
+5. **Connector releases**: Host GitHub Release binaries or an internal artefact registry; set `VITE_CONNECTOR_VERSION_LATEST` to match the bundle you distribute.
 
 ## High-level steps
 
