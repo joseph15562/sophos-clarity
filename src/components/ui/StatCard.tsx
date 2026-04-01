@@ -76,7 +76,7 @@ export function StatCard({
         >
           {value}
         </p>
-        <p className="text-[9px] font-bold text-muted-foreground/80 uppercase tracking-[0.18em] mt-1">
+        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.18em] mt-1">
           {label}
         </p>
       </div>

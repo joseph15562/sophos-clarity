@@ -27,6 +27,11 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Accessibility</strong>: dashboard stat card
+              captions (for example &quot;Issues&quot;) use full-opacity muted text so small labels
+              meet contrast checks in light mode.
+            </li>
+            <li>
               <strong className="text-foreground">Theme</strong>: reduced light/dark flicker on load
               and on the main dashboard by syncing <code className="text-xs">color-scheme</code>{" "}
               with the early theme script, disabling transitions during theme class updates,
