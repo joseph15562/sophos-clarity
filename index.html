@@ -36,8 +36,10 @@
             useDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
           }
           el.classList.add(useDark ? "dark" : "light");
+          el.style.colorScheme = useDark ? "dark" : "light";
         } catch (e) {
           el.classList.add("light");
+          el.style.colorScheme = "light";
         }
       })();
     </script>

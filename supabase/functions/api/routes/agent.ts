@@ -3,6 +3,7 @@ import {
   agentHeartbeatBodySchema,
   agentRegisterBodySchema,
   agentSubmitBodySchema,
+  agentUpdateBodySchema,
   agentVerifyIdentityBodySchema,
 } from "../../_shared/api-schemas.ts";
 import { generateApiKey, hmacHash } from "../../_shared/crypto.ts";
@@ -135,6 +136,75 @@ async function handleDelete(
   await db.from("agents").delete().eq("id", agentId);
 
   return json({ ok: true }, 200, corsHeaders);
+}
+
+async function handlePatch(
+  req: Request,
+  agentId: string,
+  corsHeaders: Record<string, string>,
+) {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return json({ error: "Unauthorized" }, 401, corsHeaders);
+
+  const uc = userClient(authHeader);
+  const {
+    data: { user },
+  } = await uc.auth.getUser();
+  if (!user) return json({ error: "Invalid session" }, 401, corsHeaders);
+
+  const membership = await getOrgMembership(user.id);
+  if (!membership || !["admin", "engineer"].includes(membership.role)) {
+    return json(
+      { error: "Admin or engineer access required" },
+      403,
+      corsHeaders,
+    );
+  }
+
+  const raw = await req.json().catch(() => ({}));
+  const parsed = agentUpdateBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    logJson("warn", "agent_patch_invalid_body", {
+      issues: parsed.error.issues.length,
+    });
+    return json({ error: "Invalid request body" }, 400, corsHeaders);
+  }
+  const body = parsed.data;
+
+  const db = adminClient();
+  const { data: agent } = await db
+    .from("agents")
+    .select("id, org_id")
+    .eq("id", agentId)
+    .single();
+
+  if (!agent || agent.org_id !== membership.org_id) {
+    return json({ error: "Agent not found" }, 404, corsHeaders);
+  }
+
+  const update: Record<string, unknown> = {};
+  if (body.name !== undefined) update.name = body.name;
+  if (body.customer_name !== undefined) {
+    const trimmed = (body.customer_name ?? "").trim();
+    update.customer_name = trimmed.length > 0 ? trimmed : "Unnamed";
+  }
+  if (body.environment !== undefined) {
+    const ev = (body.environment ?? "").trim();
+    update.environment = ev.length > 0 ? ev : "Unknown";
+  }
+
+  const { data: updated, error } = await db
+    .from("agents")
+    .update(update)
+    .eq("id", agentId)
+    .select(
+      "id, name, customer_name, environment, tenant_name, firewall_host, firewall_port, status, last_seen_at",
+    )
+    .single();
+
+  if (error) return json({ error: safeDbError(error) }, 500, corsHeaders);
+
+  return json({ agent: updated }, 200, corsHeaders);
 }
 
 async function handleRunNow(
@@ -551,6 +621,9 @@ export async function handleAgentRoutes(
   }
   if (req.method === "DELETE" && route) {
     return handleDelete(req, route, corsHeaders);
+  }
+  if (req.method === "PATCH" && route && segments.length === 2) {
+    return handlePatch(req, route, corsHeaders);
   }
   if (
     req.method === "POST" && segments.length === 3 && segments[2] === "run-now"

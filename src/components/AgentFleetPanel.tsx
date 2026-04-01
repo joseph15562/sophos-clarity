@@ -29,6 +29,7 @@ import { computeRiskScore } from "@/lib/risk-score";
 import { getLatestConnectorVersion, isConnectorVersionOutdated } from "@/lib/connector-version";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { resolveAgentCustomerDisplayName } from "@/lib/agent-site-label";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -668,8 +669,7 @@ export function AgentFleetPanel({
     const fullAnalysis = sub.full_analysis as unknown as AnalysisResult | null;
     if (!fullAnalysis) return;
     const rawConfig = sub.raw_config as unknown as Record<string, unknown> | null;
-    const displayName =
-      sub.customer_name === "Unnamed" && agent.tenant_name ? agent.tenant_name : sub.customer_name;
+    const displayName = resolveAgentCustomerDisplayName(agent, sub.customer_name);
     onLoadAssessment(
       agent.name || agent.firewall_host,
       fullAnalysis,

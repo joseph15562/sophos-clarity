@@ -26,6 +26,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { queryKeys } from "@/hooks/queries";
 import { EmptyState } from "@/components/EmptyState";
+import { agentSiteLabelForList } from "@/lib/agent-site-label";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -277,7 +278,7 @@ function RegisterDialog({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-medium text-foreground block mb-1">
-                    Customer Name
+                    Customer site label
                   </label>
                   <Input
                     value={customerName}
@@ -285,6 +286,10 @@ function RegisterDialog({
                     placeholder="Acme Corp"
                     className="h-8 text-[11px]"
                   />
+                  <p className="text-[9px] text-muted-foreground/80 mt-1 leading-snug">
+                    Shown in fleet and reports. Optional — Central tenant or connector name is used
+                    if blank. You can change it anytime under the agent.
+                  </p>
                 </div>
                 <div>
                   <label className="text-[10px] font-medium text-foreground block mb-1">
@@ -412,6 +417,8 @@ export function AgentManager() {
   const [submissions, setSubmissions] = useState<Record<string, Submission[]>>({});
   const [retention, setRetention] = useState(90);
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
+  const [siteLabelDraft, setSiteLabelDraft] = useState("");
+  const [siteLabelSaving, setSiteLabelSaving] = useState(false);
 
   const loadAgents = useCallback(async () => {
     if (!org) return;
@@ -477,8 +484,51 @@ export function AgentManager() {
       setExpanded(null);
     } else {
       setExpanded(agentId);
+      const ag = agents.find((a) => a.id === agentId);
+      setSiteLabelDraft(ag && ag.customer_name !== "Unnamed" ? ag.customer_name : "");
       if (submissions[agentId] === undefined) void loadSubmissionsBatch([agentId]);
     }
+  };
+
+  const handlePatchAgent = async (
+    agentId: string,
+    body: { customer_name?: string | null; name?: string; environment?: string | null },
+  ) => {
+    const session = (await supabase.auth.getSession()).data.session;
+    if (!session) {
+      toast.error("Not authenticated");
+      return false;
+    }
+
+    agentOpAbortByAgentRef.current.get(agentId)?.abort();
+    const ac = new AbortController();
+    agentOpAbortByAgentRef.current.set(agentId, ac);
+
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}`,
+      {
+        method: "PATCH",
+        signal: ac.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Update failed" }));
+      toast.error(err.error ?? `HTTP ${res.status}`);
+      agentOpAbortByAgentRef.current.delete(agentId);
+      return false;
+    }
+
+    agentOpAbortByAgentRef.current.delete(agentId);
+    toast.success("Agent updated");
+    loadAgents();
+    return true;
   };
 
   const handleDelete = async (agentId: string) => {
@@ -733,6 +783,7 @@ export function AgentManager() {
                     {tenantAgents.map((agent) => {
                       const isExp = expanded === agent.id;
                       const subs = submissions[agent.id] ?? [];
+                      const listSiteLabel = agentSiteLabelForList(agent);
                       return (
                         <div key={agent.id}>
                           <button
@@ -760,10 +811,14 @@ export function AgentManager() {
                               />
                             </div>
                             <div className="flex items-center gap-1.5 pl-[18px] flex-wrap">
-                              <span className="text-[9px] text-muted-foreground/70">
-                                {agent.customer_name}
-                              </span>
-                              <span className="text-[9px] text-muted-foreground/40">·</span>
+                              {listSiteLabel ? (
+                                <>
+                                  <span className="text-[9px] text-muted-foreground/70">
+                                    {listSiteLabel}
+                                  </span>
+                                  <span className="text-[9px] text-muted-foreground/40">·</span>
+                                </>
+                              ) : null}
                               <span className="text-[9px] text-muted-foreground/70 font-mono">
                                 {agent.firewall_host}:{agent.firewall_port}
                               </span>
@@ -783,6 +838,57 @@ export function AgentManager() {
 
                           {isExp && (
                             <div className="border-t border-brand-accent/10 px-4 pb-4 pt-3 space-y-3 bg-brand-accent/[0.01] dark:bg-brand-accent/[0.03]">
+                              {canManageAgents && (
+                                <div className="rounded-lg border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-3 space-y-2">
+                                  <label
+                                    htmlFor={`agent-site-label-${agent.id}`}
+                                    className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide"
+                                  >
+                                    Customer site label
+                                  </label>
+                                  <div className="flex flex-wrap gap-2 items-end">
+                                    <Input
+                                      id={`agent-site-label-${agent.id}`}
+                                      value={siteLabelDraft}
+                                      onChange={(e) => setSiteLabelDraft(e.target.value)}
+                                      placeholder="e.g. Acme Corp"
+                                      className="h-8 text-[11px] flex-1 min-w-[160px]"
+                                    />
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="secondary"
+                                      className="h-8 text-[10px] gap-1.5"
+                                      disabled={
+                                        siteLabelSaving ||
+                                        siteLabelDraft.trim() ===
+                                          (agent.customer_name === "Unnamed"
+                                            ? ""
+                                            : agent.customer_name)
+                                      }
+                                      onClick={async () => {
+                                        setSiteLabelSaving(true);
+                                        try {
+                                          await handlePatchAgent(agent.id, {
+                                            customer_name: siteLabelDraft.trim() || null,
+                                          });
+                                        } finally {
+                                          setSiteLabelSaving(false);
+                                        }
+                                      }}
+                                    >
+                                      {siteLabelSaving ? (
+                                        <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                                      ) : null}
+                                      Save label
+                                    </Button>
+                                  </div>
+                                  <p className="text-[9px] text-muted-foreground/70 leading-snug">
+                                    Leave blank to clear the label (shows as unnamed; Central tenant
+                                    name still appears when linked).
+                                  </p>
+                                </div>
+                              )}
                               {/* Agent details */}
                               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
                                 <div>

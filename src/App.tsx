@@ -60,6 +60,7 @@ const App = () => (
       defaultTheme="system"
       enableSystem
       storageKey="sophos-firecomply-theme"
+      disableTransitionOnChange
     >
       <TooltipProvider>
         <Sonner />

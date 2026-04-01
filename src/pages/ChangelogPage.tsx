@@ -27,6 +27,18 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Theme</strong>: reduced light/dark flicker on load
+              and route changes by syncing <code className="text-xs">color-scheme</code> with the
+              early theme script, disabling transitions during theme class updates, and aligning
+              toasts with the document until next-themes resolves.
+            </li>
+            <li>
+              <strong className="text-foreground">Connectors</strong>: customer site labels can be
+              set when registering an agent and edited anytime from Management (expand the agent);
+              the fleet list no longer shows a bare &quot;Unnamed&quot; when Central tenant or other
+              context applies.
+            </li>
+            <li>
               <strong className="text-foreground">Extraction Summary</strong>: dark mode uses solid
               card-style surfaces, clearer metric labels, an amber-tinted (not beige) empty-sections
               warning, and readable file rows.

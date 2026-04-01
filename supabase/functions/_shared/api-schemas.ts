@@ -18,6 +18,23 @@ export const agentRegisterBodySchema = z.object({
 
 export type AgentRegisterBody = z.infer<typeof agentRegisterBodySchema>;
 
+/** PATCH /api/agent/:id (JWT) — org admin/engineer */
+export const agentUpdateBodySchema = z
+  .object({
+    name: z.string().min(1).max(500).optional(),
+    customer_name: z.string().max(500).optional().nullable(),
+    environment: z.string().max(200).optional().nullable(),
+  })
+  .refine(
+    (d) =>
+      d.name !== undefined ||
+      d.customer_name !== undefined ||
+      d.environment !== undefined,
+    { message: "At least one field is required" },
+  );
+
+export type AgentUpdateBody = z.infer<typeof agentUpdateBodySchema>;
+
 /** POST /api/agent/heartbeat (X-API-Key) — passthrough allows forward-compatible connector fields */
 export const agentHeartbeatBodySchema = z
   .object({

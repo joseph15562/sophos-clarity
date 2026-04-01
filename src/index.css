@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     /* Sophos Brand — Light Mode */
     --background: 218 38% 96%; /* refined cool-neutral canvas for glass surfaces */
     --foreground: 215 52% 14%; /* #001A47 Dark Blue */
@@ -90,6 +91,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     /* Sophos Brand — Dark Mode (high contrast) */
     --background: 216 100% 8%; /* Deep navy — darker than #001A47 */
     --foreground: 0 0% 96%; /* Near-white for max readability */
