@@ -27,6 +27,11 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Extraction Summary</strong>: in dark mode the
+              summary panel and per-metric tiles use solid card surfaces and clearer label/value
+              colours instead of washed glass, so section counts and file rows stay readable.
+            </li>
+            <li>
               <strong className="text-foreground">Header / theme</strong>: full refresh now keeps{" "}
               <strong className="text-foreground">light</strong> vs{" "}
               <strong className="text-foreground">dark</strong> in sync with next-themes (including

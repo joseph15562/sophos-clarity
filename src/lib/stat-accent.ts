@@ -29,13 +29,13 @@ export function statValueTextClass(accent: StatAccent): string {
     case "red":
       return "text-rose-800 dark:text-[#EA0022]";
     case "cyan":
-      return "text-cyan-900 dark:text-[#00EDFF]";
+      return "text-cyan-900 dark:text-[#5CEFFF]";
     case "violet":
-      return "text-violet-900 dark:text-[#A78BFA]";
+      return "text-violet-900 dark:text-[#C4B5FD]";
     case "purple":
-      return "text-purple-900 dark:text-[#B47AFF]";
+      return "text-purple-900 dark:text-[#D8B4FE]";
     default:
-      return "text-slate-800 dark:text-slate-100";
+      return "text-slate-800 dark:text-zinc-200";
   }
 }
 
@@ -49,13 +49,13 @@ export function statIconTextClass(accent: StatAccent): string {
     case "red":
       return "text-rose-700 dark:text-[#EA0022]";
     case "cyan":
-      return "text-cyan-800 dark:text-[#00EDFF]";
+      return "text-cyan-800 dark:text-[#5CEFFF]";
     case "violet":
-      return "text-violet-800 dark:text-[#A78BFA]";
+      return "text-violet-800 dark:text-[#C4B5FD]";
     case "purple":
-      return "text-purple-800 dark:text-[#B47AFF]";
+      return "text-purple-800 dark:text-[#D8B4FE]";
     default:
-      return "text-slate-700 dark:text-slate-300";
+      return "text-slate-700 dark:text-zinc-300";
   }
 }
 

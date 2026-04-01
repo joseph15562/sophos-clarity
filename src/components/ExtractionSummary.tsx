@@ -7,7 +7,6 @@ import {
   Table2,
   FileText,
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import type { ExtractionMeta, SectionMeta } from "@/lib/extract-sections";
 import { cn } from "@/lib/utils";
 import {
@@ -59,7 +58,7 @@ function SectionRow({ section }: { section: SectionMeta }) {
         </span>
       )}
       {isDiscovered && (
-        <span className="text-[9px] px-1 py-0.5 rounded bg-[#009CFB]/10 text-[#009CFB] font-medium">
+        <span className="rounded bg-[#009CFB]/10 px-1 py-0.5 text-[9px] font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
           {methodLabel}
         </span>
       )}
@@ -102,17 +101,17 @@ function FileBlock({
       className={cn(
         "relative overflow-hidden rounded-xl border transition-all duration-200 hover:shadow-elevated",
         "border-slate-200/90 bg-card shadow-sm",
-        "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
-        "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+        "dark:border-white/[0.10] dark:bg-white/[0.04] dark:shadow-none",
+        "hover:border-slate-300/90 dark:hover:border-white/[0.14]",
       )}
     >
       <div
-        className="pointer-events-none absolute inset-0 hidden dark:block"
+        className="pointer-events-none absolute inset-0 hidden dark:block opacity-60"
         style={statDarkGradientOverlayStyle(covHex)}
       />
-      <div className="absolute inset-0 pointer-events-none hidden dark:block">
+      <div className="pointer-events-none absolute inset-0 hidden dark:block">
         <div
-          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[16px] opacity-20"
+          className="absolute -right-3 -top-3 h-8 w-8 rounded-full blur-[16px] opacity-30"
           style={{ backgroundColor: covHex }}
         />
       </div>
@@ -218,16 +217,14 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
         className={cn(
           "relative space-y-3 overflow-hidden rounded-xl border px-4 py-4 shadow-card",
           "border-slate-200/90 bg-slate-50/70",
-          "dark:border-white/[0.06] dark:bg-[linear-gradient(145deg,rgba(32,6,247,0.12),rgba(0,242,179,0.05))]",
+          "dark:border-white/[0.10] dark:bg-card dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
         )}
       >
-        <div className="pointer-events-none absolute inset-0 hidden dark:block">
-          <div className="absolute -left-6 -top-6 h-16 w-16 rounded-full bg-brand-accent opacity-20 blur-[28px]" />
-        </div>
+        <div className="pointer-events-none absolute inset-0 hidden dark:block bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(32,6,247,0.14),transparent_55%)]" />
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 hidden h-px dark:block"
+          className="pointer-events-none absolute inset-x-0 top-0 hidden h-px dark:block opacity-80"
           style={{
-            background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
+            background: "linear-gradient(90deg, transparent, rgba(0,237,255,0.25), transparent)",
           }}
         />
 
@@ -240,21 +237,21 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
                 className={cn(
                   "relative overflow-hidden rounded-xl border px-3.5 py-2.5 text-xs transition-all duration-200",
                   "border-slate-200/90 bg-card shadow-sm",
-                  "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
-                  "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+                  "dark:border-white/[0.10] dark:bg-white/[0.05] dark:shadow-none",
+                  "hover:border-slate-300/90 dark:hover:border-white/[0.14]",
                 )}
               >
                 <div
-                  className="pointer-events-none absolute inset-0 hidden dark:block"
+                  className="pointer-events-none absolute inset-0 hidden dark:block opacity-70"
                   style={statDarkGradientOverlayStyle(item.hex)}
                 />
-                <div className="absolute inset-0 pointer-events-none hidden dark:block">
+                <div className="pointer-events-none absolute inset-0 hidden dark:block">
                   <div
-                    className="absolute -right-3 -top-3 h-8 w-8 rounded-full blur-[14px] opacity-20"
+                    className="absolute -right-3 -top-3 h-8 w-8 rounded-full blur-[14px] opacity-25"
                     style={{ backgroundColor: item.hex }}
                   />
                 </div>
-                <p className="relative text-[10px] font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-muted-foreground/80">
+                <p className="relative text-[10px] font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-zinc-400">
                   {item.label}
                 </p>
                 <p
