@@ -17,11 +17,12 @@ interface HealthCheckRow {
 }
 
 async function fetchHealthChecks(teamId: string, signal?: AbortSignal): Promise<HealthCheckRow[]> {
+  /** Only `topFindings` is read from summary on Team Dashboard — omit full snapshot to cut egress/DB time. */
   const { data, error } = await supabaseWithAbort(
     supabase
       .from("se_health_checks")
       .select(
-        "id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, summary_json, se_user_id, se_profiles(display_name)",
+        "id, customer_name, overall_score, overall_grade, findings_count, firewall_count, checked_at, se_user_id, se_profiles(display_name), top_findings:summary_json->topFindings",
       )
       .eq("team_id", teamId)
       .order("checked_at", { ascending: false })
@@ -30,7 +31,14 @@ async function fetchHealthChecks(teamId: string, signal?: AbortSignal): Promise<
   );
 
   if (error) throw error;
-  return (data ?? []) as unknown as HealthCheckRow[];
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const { top_findings: topFindingsRaw, ...rest } = row;
+    const topFindings = Array.isArray(topFindingsRaw) ? (topFindingsRaw as string[]) : [];
+    return {
+      ...rest,
+      summary_json: topFindings.length > 0 ? { topFindings } : null,
+    } as HealthCheckRow;
+  });
 }
 
 export function useHealthChecksQuery(teamId: string | null) {
@@ -38,7 +46,7 @@ export function useHealthChecksQuery(teamId: string | null) {
     queryKey: queryKeys.healthChecks.list(teamId ?? ""),
     queryFn: ({ signal }) => fetchHealthChecks(teamId!, signal),
     enabled: !!teamId,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
+    staleTime: 120_000,
+    refetchOnWindowFocus: false,
   });
 }

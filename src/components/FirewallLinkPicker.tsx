@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link2, Search, Server, ChevronDown, CheckCircle2 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
@@ -110,6 +110,10 @@ export function FirewallLinkPicker({
   const [open, setOpen] = useState(false);
   const [linked, setLinked] = useState<FirewallLink | null>(null);
 
+  /** Parent often passes an inline `onLinked` — keep a ref so effects do not re-run every render. */
+  const onLinkedRef = useRef(onLinked);
+  onLinkedRef.current = onLinked;
+
   useEffect(() => {
     if (!orgId || isGuest) return;
     getCachedTenants(orgId)
@@ -146,12 +150,12 @@ export function FirewallLinkPicker({
                 firmwareVersion: fw.firmwareVersion,
               };
               setLinked(l);
-              onLinked?.(l);
+              onLinkedRef.current?.(l);
             }
           });
         }
       });
-  }, [orgId, configHash, configId, onLinked]);
+  }, [orgId, configHash, configId]);
 
   // Auto-link helper: persists the link and updates state
   const autoLink = useCallback(
@@ -175,10 +179,16 @@ export function FirewallLinkPicker({
       };
       setLinked(l);
       setOpen(false);
-      onLinked?.(l);
+      onLinkedRef.current?.(l);
     },
-    [orgId, configId, configHostname, configHash, onLinked, linkUpsertMutation],
+    [orgId, configId, configHostname, configHash, linkUpsertMutation],
   );
+
+  const autoLinkRef = useRef(autoLink);
+  autoLinkRef.current = autoLink;
+
+  /** Prevents duplicate upserts if the firewalls effect re-runs (e.g. after query invalidation). */
+  const serialAutoPersistKeyRef = useRef<string | null>(null);
 
   // Load firewalls when tenant changes
   useEffect(() => {
@@ -195,7 +205,11 @@ export function FirewallLinkPicker({
             (f) => f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase(),
           );
           if (match) {
-            autoLink(match);
+            const dedupeKey = `${orgId}:${configHash}:${match.firewallId}`;
+            if (serialAutoPersistKeyRef.current !== dedupeKey) {
+              serialAutoPersistKeyRef.current = dedupeKey;
+              void autoLinkRef.current(match);
+            }
             return;
           }
         }
@@ -211,7 +225,11 @@ export function FirewallLinkPicker({
         }
       })
       .catch(() => {});
-  }, [orgId, selectedTenantId, configHostname, configSerialNumber, disableAutoLink, autoLink]);
+  }, [orgId, selectedTenantId, configHostname, configSerialNumber, disableAutoLink, configHash]);
+
+  useEffect(() => {
+    serialAutoPersistKeyRef.current = null;
+  }, [configHash, orgId]);
 
   const groups = useMemo(() => {
     const seen = new Map<string, string>();
@@ -304,7 +322,7 @@ export function FirewallLinkPicker({
     };
     setLinked(l);
     setOpen(false);
-    onLinked?.(l);
+    onLinkedRef.current?.(l);
   };
 
   const handleUnlink = async () => {
@@ -312,7 +330,7 @@ export function FirewallLinkPicker({
     await linkDeleteMutation.mutateAsync({ orgId, configHash });
     setLinked(null);
     setSelectedFwId("");
-    onLinked?.(null);
+    onLinkedRef.current?.(null);
   };
 
   if (isGuest || !orgId || tenants.length === 0) return null;

@@ -21,9 +21,10 @@ import { scoreToColor } from "@/lib/design-tokens";
 import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { loadHistory, type AssessmentSnapshot } from "@/lib/assessment-history";
-import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadScoreHistoryForFleet, type ScoreHistoryEntry } from "@/lib/score-history";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrgAssessmentSnapshotsQuery } from "@/hooks/queries/use-org-assessment-snapshots-query";
+import { useCustomerDirectoryQuery } from "@/hooks/queries/use-customer-directory-query";
 import { resolveCustomerName } from "@/lib/customer-name";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -114,7 +115,13 @@ export function TenantDashboard() {
   const { isGuest, org } = useAuth();
   const useCloud = !isGuest && !!org;
 
-  const [history, setHistory] = useState<AssessmentSnapshot[]>([]);
+  const [localHistory, setLocalHistory] = useState<AssessmentSnapshot[]>([]);
+  const cloudHistoryQuery = useOrgAssessmentSnapshotsQuery(org?.id, useCloud);
+  const history = useCloud ? (cloudHistoryQuery.data ?? []) : localHistory;
+  const customerDirectoryQuery = useCustomerDirectoryQuery(
+    useCloud ? org?.id : undefined,
+    org?.name,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>("score");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -138,6 +145,9 @@ export function TenantDashboard() {
       id: string;
       name: string;
       customer_name: string;
+      /** Connector site label before display enrichment — used to fold assessments into Central tenant names like Customer Management. */
+      customer_name_raw?: string;
+      tenant_name?: string;
       last_seen_at: string | null;
       status: string;
     }[]
@@ -154,7 +164,8 @@ export function TenantDashboard() {
   const { setTheme, theme: themePreference } = useTheme();
 
   useEffect(() => {
-    (useCloud ? loadHistoryCloud() : loadHistory()).then(setHistory);
+    if (useCloud) return;
+    loadHistory().then(setLocalHistory);
   }, [useCloud]);
 
   useEffect(() => {
@@ -179,7 +190,11 @@ export function TenantDashboard() {
             a.tenant_name ||
             (a.customer_name !== "Unnamed" ? a.customer_name : a.name) ||
             a.customer_name;
-          return { ...a, customer_name: displayName };
+          return {
+            ...a,
+            customer_name_raw: a.customer_name,
+            customer_name: displayName,
+          };
         });
         for (const a of enriched) {
           map.set(a.customer_name, { lastSeen: a.last_seen_at, status: a.status });
@@ -246,8 +261,16 @@ export function TenantDashboard() {
       });
   }, [useCloud, org?.id]);
 
-  const customers = useMemo(() => {
+  /** Group assessments like Customer Management, then intersect with directory names so orphan snapshot labels (e.g. old Central tenant strings) do not appear on the fleet map. */
+  const customersFromHistory = useMemo(() => {
     const orgDisplay = String(org?.name ?? "").trim();
+    const agentSiteLabelToTenant = new Map<string, string>();
+    for (const ag of agentList) {
+      const t = String(ag.tenant_name ?? "").trim();
+      const site = String(ag.customer_name_raw ?? "").trim();
+      if (!t || !site || site === "Unnamed") continue;
+      if (!agentSiteLabelToTenant.has(site)) agentSiteLabelToTenant.set(site, t);
+    }
     const agentTenantNames = new Set(
       agentList.map((a) => a.customer_name).filter((n) => n && n !== "Unnamed"),
     );
@@ -258,10 +281,12 @@ export function TenantDashboard() {
       return { ...snap, customerName: bestName };
     });
 
-    /** Match Customer Management directory: one row per resolved customer (not per raw name × environment). */
+    /** Match Customer Management directory: site labels → tenant name, then one row per resolved customer. */
     const byCustomer = new Map<string, AssessmentSnapshot[]>();
     for (const snap of resolvedHistory) {
-      const key = resolveCustomerName(snap.customerName, orgDisplay);
+      const rawStored = String(snap.customerName ?? "").trim();
+      const rawForResolve = agentSiteLabelToTenant.get(rawStored) ?? snap.customerName;
+      const key = resolveCustomerName(rawForResolve, orgDisplay);
       if (!byCustomer.has(key)) byCustomer.set(key, []);
       byCustomer.get(key)!.push(snap);
     }
@@ -287,6 +312,22 @@ export function TenantDashboard() {
     }
     return summaries;
   }, [history, agentList, org?.name]);
+
+  const customers = useMemo(() => {
+    if (!useCloud || !org?.id) return customersFromHistory;
+    if (customerDirectoryQuery.isPending || customerDirectoryQuery.isError) {
+      return customersFromHistory;
+    }
+    const allowed = new Set((customerDirectoryQuery.data ?? []).map((c) => c.name));
+    return customersFromHistory.filter((c) => allowed.has(c.name));
+  }, [
+    customersFromHistory,
+    useCloud,
+    org?.id,
+    customerDirectoryQuery.isPending,
+    customerDirectoryQuery.isError,
+    customerDirectoryQuery.data,
+  ]);
 
   const filtered = useMemo(() => {
     let list = customers;

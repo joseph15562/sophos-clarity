@@ -103,8 +103,9 @@ export function FlowStatusCard({
           {errorDetail && (
             <p
               className={cn(
-                "text-[11px] font-mono break-words rounded-md bg-background/60 px-2 py-1.5 border border-border/60",
-                isWarning ? "text-amber-900/90 dark:text-amber-100" : "text-destructive/90",
+                "text-[11px] font-mono break-words rounded-md bg-muted/80 px-2 py-1.5 border border-border/60",
+                /* WCAG AA: avoid text-destructive/90 on translucent light bg (axe color-contrast in E2E). */
+                isWarning ? "text-amber-950 dark:text-amber-100" : "text-red-950 dark:text-red-200",
               )}
             >
               {errorDetail}

@@ -1,29 +1,21 @@
-import { Link } from "react-router-dom";
-import { Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { FileQuestion, GitBranch, Layers, Shield } from "lucide-react";
 import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
 import { useAuthProvider, AuthProvider } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { WorkspaceSubpageHeader } from "@/components/WorkspaceSubpageHeader";
 
 const DATA_PRIVACY_HREF =
   "https://github.com/joseph15562/sophos-firecomply/blob/main/docs/DATA-PRIVACY.md";
 
 /**
- * Trust centre: how we handle data, subprocessors, retention pointers, legal placeholders.
- * Replace highlighted copy with counsel-approved text before procurement.
+ * Trust centre: data handling, subprocessors, retention pointers, legal & questionnaire skeleton.
+ * Legal & questionnaires: stub tables and checklists for SOC2/ISO mappings, diagrams, RFP coverage —
+ * replace with counsel-approved content before customer procurement.
  */
 function TrustPageInner() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/60 bg-card/50">
-        <div className="mx-auto flex h-14 max-w-3xl items-center gap-3 px-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/">Home</Link>
-          </Button>
-          <Shield className="h-5 w-5 text-brand-accent" />
-          <h1 className="text-base font-semibold">Trust</h1>
-        </div>
-      </header>
+      <WorkspaceSubpageHeader title="Trust" titleIcon={<Shield />} container="docs" />
       <WorkspacePrimaryNav />
       <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
         <section className="space-y-2">
@@ -181,7 +173,7 @@ function TrustPageInner() {
           </p>
         </section>
 
-        <section className="space-y-3">
+        <section id="trust-subprocessors" className="space-y-3 scroll-mt-20">
           <h2 className="text-sm font-semibold tracking-tight">Subprocessors (baseline)</h2>
           <p className="text-xs text-muted-foreground">
             Confirm regions and DPAs with your legal team. This table is a starting inventory, not a
@@ -222,15 +214,253 @@ function TrustPageInner() {
           </div>
         </section>
 
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-tight">Legal &amp; questionnaires</h2>
-          <p className="text-sm text-muted-foreground">
-            Use this page as a skeleton for security reviews. Attach your SOC2/ISO mappings,
-            subprocessors list, and data-flow diagrams as your compliance program matures.
-          </p>
-          <p className="text-xs text-amber-800 dark:text-amber-200/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-            Replace stub copy with legal-reviewed content before customer-facing procurement.
-          </p>
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold tracking-tight">Legal &amp; questionnaires</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Use this area as a{" "}
+              <strong className="text-foreground">skeleton for security reviews</strong> and vendor
+              diligence. As your compliance program matures, attach or link SOC2/ISO control
+              mappings, an authoritative subprocessors register, and data-flow diagrams. Nothing
+              here is a commitment until your counsel replaces stubs with approved language.
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-200/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 leading-relaxed">
+              <strong className="text-foreground">Procurement readiness:</strong> replace all stub
+              copy, placeholder links, and TBD cells with{" "}
+              <strong className="text-foreground">legal-reviewed</strong> content before sharing
+              this page with customers or answering formal RFPs/security questionnaires.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/15 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <FileQuestion className="h-4 w-4 text-brand-accent shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-1 min-w-0">
+                <h3 className="text-xs font-semibold text-foreground tracking-tight">
+                  Security review pack (checklist)
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Typical buyer requests — tick off as you publish artefacts (internal or
+                  customer-facing).
+                </p>
+                <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1.5 mt-2">
+                  <li>
+                    Product overview, trust page URL, and supported deployment models (cloud vs
+                    local).
+                  </li>
+                  <li>
+                    Data inventory: categories processed, retention, encryption in transit/at rest,
+                    admin roles.
+                  </li>
+                  <li>
+                    Incident response and subprocessors: see{" "}
+                    <a
+                      href="#trust-subprocessors"
+                      className="text-foreground font-medium underline underline-offset-2 decoration-brand-accent hover:text-brand-accent"
+                    >
+                      Subprocessors (baseline)
+                    </a>{" "}
+                    — expand with regions, DPAs, and sub-subprocessors as required.
+                  </li>
+                  <li>Penetration test summary or attestation letter (when available).</li>
+                  <li>
+                    Completed SIG Lite, CAIQ, or custom questionnaire (attach PDF or link to secure
+                    vault).
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/15 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <Layers className="h-4 w-4 text-brand-accent shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-2 min-w-0 w-full">
+                <h3 className="text-xs font-semibold text-foreground tracking-tight">
+                  Framework mappings (SOC 2 / ISO 27001)
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Map product and operational controls to framework criteria. Replace example rows
+                  with your control matrix (spreadsheet or GRC export).
+                </p>
+                <div className="overflow-x-auto rounded-lg border border-border/60 mt-2">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-muted/40 text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Framework ref.</th>
+                        <th className="px-3 py-2 font-medium">Theme</th>
+                        <th className="px-3 py-2 font-medium">
+                          FireComply control / evidence (stub)
+                        </th>
+                        <th className="px-3 py-2 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60 text-muted-foreground">
+                      <tr>
+                        <td className="px-3 py-2 font-mono text-[10px]">SOC 2 CC6.x / ISO A.8.x</td>
+                        <td className="px-3 py-2">Access &amp; authentication</td>
+                        <td className="px-3 py-2">
+                          Supabase Auth, RLS, org-scoped roles — document in SSP.
+                        </td>
+                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 font-mono text-[10px]">
+                          SOC 2 CC7.x / ISO A.12.x
+                        </td>
+                        <td className="px-3 py-2">Logging &amp; monitoring</td>
+                        <td className="px-3 py-2">
+                          Edge <code className="text-[10px]">logJson</code>, audit trails — link
+                          runbooks.
+                        </td>
+                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 font-mono text-[10px]">SOC 2 CC8.x</td>
+                        <td className="px-3 py-2">Change management</td>
+                        <td className="px-3 py-2">
+                          CI/CD, preview deploys, change records — attach policy.
+                        </td>
+                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 font-mono text-[10px]">ISO A.18 / privacy</td>
+                        <td className="px-3 py-2">Subprocessors &amp; transfers</td>
+                        <td className="px-3 py-2">
+                          Cross-reference subprocessors table; AI/Gemini transfer — see
+                          DATA-PRIVACY.
+                        </td>
+                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/15 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <GitBranch className="h-4 w-4 text-brand-accent shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-2 min-w-0 w-full">
+                <h3 className="text-xs font-semibold text-foreground tracking-tight">
+                  Data-flow diagrams
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Procurement teams expect diagrams for assessment data, auth, optional AI, and
+                  Central connectivity. Drop images or links below when design assets exist.
+                </p>
+                <ul className="space-y-2 text-xs text-muted-foreground">
+                  <li className="rounded-lg border border-dashed border-border/80 bg-background/50 px-3 py-3">
+                    <span className="font-medium text-foreground">High-level logical flow</span> —
+                    browser, optional local mode, Supabase, Edge Functions, external APIs (Gemini,
+                    Geo-IP, NVD).{" "}
+                    <span className="text-muted-foreground/80">[Attach PNG/SVG or link]</span>
+                  </li>
+                  <li className="rounded-lg border border-dashed border-border/80 bg-background/50 px-3 py-3">
+                    <span className="font-medium text-foreground">
+                      AI report path (when enabled)
+                    </span>{" "}
+                    — anonymisation step, HTTPS to Edge Function, Gemini.{" "}
+                    <span className="text-muted-foreground/80">[Attach PNG/SVG or link]</span>
+                  </li>
+                  <li className="rounded-lg border border-dashed border-border/80 bg-background/50 px-3 py-3">
+                    <span className="font-medium text-foreground">
+                      Sophos Central (when connected)
+                    </span>{" "}
+                    — credential storage, server-side proxy.{" "}
+                    <span className="text-muted-foreground/80">[Attach PNG/SVG or link]</span>
+                  </li>
+                </ul>
+                <p className="text-[11px] text-muted-foreground">
+                  Source narrative for flows:{" "}
+                  <a
+                    href={DATA_PRIVACY_HREF}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground font-medium underline underline-offset-2 decoration-brand-accent hover:text-brand-accent"
+                  >
+                    DATA-PRIVACY.md
+                  </a>
+                  .
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/15 p-4 space-y-3">
+            <h3 className="text-xs font-semibold text-foreground tracking-tight">
+              Questionnaire coverage (stub)
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Map common vendor questions to where answers will live. Replace &quot;TBD&quot; with
+              paragraph references, policy names, or ticket IDs.
+            </p>
+            <div className="overflow-x-auto rounded-lg border border-border/60">
+              <table className="w-full text-left text-[11px]">
+                <thead className="bg-muted/40 text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Topic</th>
+                    <th className="px-3 py-2 font-medium">Typical question</th>
+                    <th className="px-3 py-2 font-medium">Where to answer (stub)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60 text-muted-foreground">
+                  <tr>
+                    <td className="px-3 py-2 text-foreground font-medium">Encryption</td>
+                    <td className="px-3 py-2">TLS version, data at rest, key management</td>
+                    <td className="px-3 py-2">TBD — link architecture doc</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 text-foreground font-medium">Access control</td>
+                    <td className="px-3 py-2">MFA, RBAC, least privilege</td>
+                    <td className="px-3 py-2">TBD — link access policy</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 text-foreground font-medium">Availability</td>
+                    <td className="px-3 py-2">Uptime targets, DR, backups</td>
+                    <td className="px-3 py-2">TBD — link SLA / BCP</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 text-foreground font-medium">
+                      AI &amp; subprocessors
+                    </td>
+                    <td className="px-3 py-2">Model provider, data retention, opt-out</td>
+                    <td className="px-3 py-2">
+                      Trust page + DATA-PRIVACY AI section (expand for legal)
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/15 p-4 space-y-2">
+            <h3 className="text-xs font-semibold text-foreground tracking-tight">
+              Legal documents
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Add links to executed or template agreements. Do not paste confidential contract text
+              into the app.
+            </p>
+            <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-4">
+              <li>
+                <span className="text-foreground font-medium">Data Processing Agreement (DPA)</span>{" "}
+                —{" "}
+                <span className="text-muted-foreground/80">
+                  [Link to template or customer-specific file]
+                </span>
+              </li>
+              <li>
+                <span className="text-foreground font-medium">Terms of service</span> —{" "}
+                <span className="text-muted-foreground/80">[Link]</span>
+              </li>
+              <li>
+                <span className="text-foreground font-medium">Privacy notice</span> —{" "}
+                <span className="text-muted-foreground/80">[Link]</span>
+              </li>
+            </ul>
+          </div>
         </section>
       </main>
     </div>

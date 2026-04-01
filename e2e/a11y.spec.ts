@@ -1,13 +1,9 @@
-import { test, expect } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { test } from "@playwright/test";
+import { expectNoCriticalOrSeriousAxeViolations } from "./axe-assert";
 
 async function expectNoSeriousViolations(pagePath: string, page: import("@playwright/test").Page) {
   await page.goto(pagePath, { waitUntil: "domcontentloaded" });
-  const results = await new AxeBuilder({ page }).analyze();
-  const serious = results.violations.filter(
-    (v) => v.impact === "serious" || v.impact === "critical",
-  );
-  expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+  await expectNoCriticalOrSeriousAxeViolations(page, pagePath);
 }
 
 test.describe("Accessibility (axe)", () => {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   History,
   Trash2,
@@ -33,6 +34,7 @@ import {
   updateAssessmentReviewerSignoff,
 } from "@/lib/assessment-cloud";
 import { useAuth } from "@/hooks/use-auth";
+import { invalidateOrgAssessmentSnapshots } from "@/lib/invalidate-org-queries";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { FindingsCsvReviewerSignoff } from "@/lib/findings-export";
 import { toast } from "sonner";
@@ -214,6 +216,7 @@ export function AssessmentHistory({
 }: Props) {
   const { isGuest, org, user, isViewerOnly } = useAuth();
   const useCloud = !isGuest && !!org;
+  const queryClient = useQueryClient();
 
   const [history, setHistory] = useState<AssessmentSnapshot[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -250,6 +253,7 @@ export function AssessmentHistory({
           org.id,
         );
         if (cloudSnap) onCloudAssessmentSaved?.(cloudSnap);
+        await invalidateOrgAssessmentSnapshots(queryClient, org.id);
       } else {
         await saveAssessment(analysisResults, customerName, environment);
       }
@@ -264,14 +268,17 @@ export function AssessmentHistory({
   };
 
   const handleDelete = async (id: string) => {
-    if (useCloud) await deleteAssessmentCloud(id);
-    else await deleteAssessment(id);
+    if (useCloud) {
+      await deleteAssessmentCloud(id);
+      if (org?.id) await invalidateOrgAssessmentSnapshots(queryClient, org.id);
+    } else await deleteAssessment(id);
     await refresh();
   };
 
   const handleClearAll = async () => {
     if (useCloud) {
       for (const snap of history) await deleteAssessmentCloud(snap.id);
+      if (org?.id) await invalidateOrgAssessmentSnapshots(queryClient, org.id);
     } else {
       await clearHistory();
     }
@@ -292,9 +299,10 @@ export function AssessmentHistory({
 
   const confirmRename = async () => {
     if (!editingId || !editName.trim()) return;
-    if (useCloud)
+    if (useCloud) {
       await renameAssessmentCloud(editingId, editName.trim(), editEnv.trim() || "Unknown");
-    else await renameAssessment(editingId, editName.trim(), editEnv.trim() || "Unknown");
+      if (org?.id) await invalidateOrgAssessmentSnapshots(queryClient, org.id);
+    } else await renameAssessment(editingId, editName.trim(), editEnv.trim() || "Unknown");
     setEditingId(null);
     await refresh();
   };

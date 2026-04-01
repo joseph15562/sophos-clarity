@@ -19,7 +19,11 @@ import {
   CheckCircle2,
   Moon,
   Gauge,
+  Plus,
+  ScrollText,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { WorkspaceSubpageHeader } from "@/components/WorkspaceSubpageHeader";
 
 const BRAND = {
   dark: "#001A47",
@@ -65,6 +69,47 @@ export default function ThemePreview() {
       </header>
 
       <main id="main-content" className="max-w-6xl mx-auto px-6 py-8 space-y-10">
+        {/* ── Section: Live workspace header (same as /customers, /trust, /changelog) ── */}
+        <SectionLabel>Live components — workspace subpage header</SectionLabel>
+        <p className="text-xs text-white/45 -mt-6 mb-2 max-w-2xl leading-relaxed">
+          Renders real <code className="text-[#00EDFF]/90">WorkspaceSubpageHeader</code> and{" "}
+          <code className="text-[#00EDFF]/90">Button</code> on a normal app background. Use your
+          theme toggle in the header below (or system theme) to compare light vs dark; hard-refresh{" "}
+          <code className="text-[#00EDFF]/90">/preview</code> to confirm the primary blue stays
+          solid after reload.
+        </p>
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-white/[0.12] overflow-hidden bg-background text-foreground shadow-[0_24px_70px_rgba(0,0,0,0.4)]">
+            <WorkspaceSubpageHeader
+              title="Customer Management"
+              actions={
+                <Button type="button" variant="default" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Onboard Customer</span>
+                  <span className="sm:hidden">Add</span>
+                </Button>
+              }
+            />
+            <div className="px-4 py-3 text-sm text-muted-foreground border-t border-border/60 bg-background">
+              Wide bar — same as <code className="text-xs">/customers</code> (
+              <code className="text-xs">max-w-7xl</code>).
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/[0.12] overflow-hidden bg-background text-foreground shadow-[0_24px_70px_rgba(0,0,0,0.4)]">
+            <WorkspaceSubpageHeader
+              title="What's new"
+              titleIcon={<ScrollText />}
+              container="docs"
+            />
+            <div className="px-4 py-3 text-sm text-muted-foreground border-t border-border/60 bg-background">
+              Docs bar — same as <code className="text-xs">/trust</code> and{" "}
+              <code className="text-xs">/changelog</code> (
+              <code className="text-xs">max-w-3xl</code>
+              ).
+            </div>
+          </div>
+        </div>
+
         {/* ── Section: Landing Hero + Trust Strip ── */}
         <SectionLabel>Landing Page — First Impression</SectionLabel>
         <section className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(0,237,255,0.10),transparent_35%),linear-gradient(135deg,rgba(0,16,46,0.98),rgba(0,24,64,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] relative overflow-hidden">

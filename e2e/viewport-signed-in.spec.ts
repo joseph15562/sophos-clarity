@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import AxeBuilder from "@axe-core/playwright";
+import { expectNoCriticalOrSeriousAxeViolations } from "./axe-assert";
 
 /** Healthy Central status so {@link CentralHealthBanner} stays hidden (avoids contrast noise in axe). */
 async function dismissSetupWizardIfPresent(page: Page) {
@@ -128,11 +128,7 @@ test.describe("Signed-in axe (E2E bypass)", () => {
   test("workspace home has no critical/serious axe violations", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page.locator("#main-content")).toBeVisible({ timeout: 60_000 });
-    const results = await new AxeBuilder({ page }).analyze();
-    const serious = results.violations.filter(
-      (v) => v.impact === "serious" || v.impact === "critical",
-    );
-    expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+    await expectNoCriticalOrSeriousAxeViolations(page, "workspace home");
   });
 
   test("assess view (demo config) has no critical/serious axe violations", async ({ page }) => {
@@ -147,11 +143,7 @@ test.describe("Signed-in axe (E2E bypass)", () => {
     await expect(page.getByRole("tab", { name: /^overview\b/i })).toBeVisible({
       timeout: 120_000,
     });
-    const results = await new AxeBuilder({ page }).analyze();
-    const serious = results.violations.filter(
-      (v) => v.impact === "serious" || v.impact === "critical",
-    );
-    expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+    await expectNoCriticalOrSeriousAxeViolations(page, "assess view demo config");
   });
 });
 
@@ -169,10 +161,6 @@ test.describe("Signed-in axe — mobile hub (E2E bypass)", () => {
   test("customers hub at 375px has no critical/serious axe violations", async ({ page }) => {
     await page.goto("/customers", { waitUntil: "domcontentloaded" });
     await expect(page.locator("#main-content")).toBeVisible({ timeout: 60_000 });
-    const results = await new AxeBuilder({ page }).analyze();
-    const serious = results.violations.filter(
-      (v) => v.impact === "serious" || v.impact === "critical",
-    );
-    expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+    await expectNoCriticalOrSeriousAxeViolations(page, "customers hub 375px");
   });
 });

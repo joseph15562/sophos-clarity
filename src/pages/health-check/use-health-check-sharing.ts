@@ -59,7 +59,9 @@ export function useHealthCheckSharing(options: {
           const profileId = seProfile.id;
           let q = supabase
             .from("se_health_checks")
-            .select("id, customer_name, overall_score, overall_grade, checked_at, summary_json")
+            .select(
+              "id, customer_name, overall_score, overall_grade, checked_at, snap_files:summary_json->snapshot->files, customer_email:summary_json->snapshot->customerEmail",
+            )
             .ilike("customer_name", `%${query.trim()}%`)
             .order("checked_at", { ascending: false })
             .limit(10);
@@ -73,9 +75,7 @@ export function useHealthCheckSharing(options: {
             return;
           }
           const allRows = (data ?? []).map((row: Record<string, unknown>) => {
-            const sj = row.summary_json as Record<string, unknown> | null;
-            const snap = sj?.snapshot as Record<string, unknown> | undefined;
-            const snapFiles = (snap?.files as Array<{ serialNumber?: string }>) ?? [];
+            const snapFiles = (row.snap_files as Array<{ serialNumber?: string }>) ?? [];
             const serialNumbers = snapFiles.map((f) => f.serialNumber).filter(Boolean) as string[];
             return {
               id: row.id as string,
@@ -83,9 +83,7 @@ export function useHealthCheckSharing(options: {
               overall_score: (row.overall_score as number | null) ?? null,
               overall_grade: (row.overall_grade as string | null) ?? null,
               checked_at: row.checked_at as string,
-              customer_email: (snap as Record<string, unknown>)?.customerEmail as
-                | string
-                | undefined,
+              customer_email: row.customer_email as string | undefined,
               serialNumbers,
             };
           });

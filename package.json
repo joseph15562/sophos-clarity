@@ -19,6 +19,7 @@
     "test:e2e:ci": "VITE_E2E_AUTH_BYPASS=1 VITE_E2E_PDF_DOWNLOAD=1 npm run build && CI=1 playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "npx playwright install",
+    "test:e2e:a11y": "CI=1 playwright test e2e/a11y.spec.ts e2e/viewport-signed-in.spec.ts --grep \"no critical/serious axe\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "format:deno": "cd supabase/functions && deno fmt",

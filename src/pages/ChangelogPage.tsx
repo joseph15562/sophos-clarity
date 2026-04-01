@@ -1,22 +1,13 @@
-import { Link } from "react-router-dom";
 import { ScrollText } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useAuthProvider, AuthProvider } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { WorkspaceSubpageHeader } from "@/components/WorkspaceSubpageHeader";
 
 /** In-app “What’s new” page (curate releases here). */
 function ChangelogPageInner() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border/60 bg-card/50">
-        <div className="mx-auto flex h-14 max-w-3xl items-center gap-3 px-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/">Home</Link>
-          </Button>
-          <ScrollText className="h-5 w-5 text-brand-accent" />
-          <h1 className="text-base font-semibold">What&apos;s new</h1>
-        </div>
-      </header>
+      <WorkspaceSubpageHeader title="What's new" titleIcon={<ScrollText />} container="docs" />
       <WorkspacePrimaryNav />
       <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
         <p className="text-xs text-muted-foreground">
@@ -55,6 +46,25 @@ function ChangelogPageInner() {
               corners read clearly; the heatmap header accent follows the card radius.
             </li>
             <li>
+              <strong className="text-foreground">Central linking</strong>: auto-linking a file to a
+              Sophos Central firewall by serial no longer re-saves the link on every UI refresh — a
+              stable callback and one-time persist guard prevent accidental repeat database writes
+              (which could overwhelm small Supabase plans).
+            </li>
+            <li>
+              <strong className="text-foreground">SE team dashboard</strong>: the team health-check
+              list loads only the small &quot;top findings&quot; slice from each row&apos;s summary
+              JSON (not the full saved snapshot), and refetches less aggressively — lowering
+              PostgREST payload size and database time on busy projects.
+            </li>
+            <li>
+              <strong className="text-foreground">Accessibility</strong>: flow error detail text
+              (upload, save, export) uses higher-contrast colours in light mode so it meets WCAG AA
+              and passes automated axe checks in CI. Run{" "}
+              <code className="text-xs">npm run test:e2e:a11y</code> for a fast Playwright axe slice
+              before pushing signed-in UI changes.
+            </li>
+            <li>
               <strong className="text-foreground">Customers</strong>: the directory only lists
               Sophos Central tenants that have firewalls, a linked agent, or portal mapping — empty
               partner child tenants no longer inflate the count. If loading fails, the page shows an
@@ -67,6 +77,14 @@ function ChangelogPageInner() {
               matching, removes matching scheduled reports, and drops the portal row when your role
               allows; Sophos Central tenants with live firewalls or agents may still appear until
               adjusted in Agent Management.
+            </li>
+            <li>
+              <strong className="text-foreground">Assess overview</strong>: the Tenant Overview and
+              Fleet Health Map reload cloud assessments when you delete a customer or change
+              assessment history. The customer list and fleet tiles are limited to names on the
+              Customers page, and assessment grouping uses the same agent site-label → Central
+              tenant folding as Customer Management so legacy labels (for example an old tenant
+              title) do not show as a second row.
             </li>
             <li>
               <strong className="text-foreground">Customer cards</strong>: rows tied to a Sophos
@@ -234,6 +252,12 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-03</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Workspace headers</strong>: Customer Management,
+              Trust, and What&apos;s new share the same sticky bar (Home crumb, theme toggle, navy
+              gradient in dark mode). Primary buttons no longer use backdrop blur on the solid brand
+              fill so the blue stays correct after a full page refresh.
+            </li>
+            <li>
               <strong className="text-foreground">Security</strong>:{" "}
               <strong className="text-foreground">Shared health-check</strong> report HTML loads in
               a sandboxed iframe (embedded scripts do not run);{" "}
@@ -248,6 +272,12 @@ function ChangelogPageInner() {
               <strong className="text-foreground">Gemini / cross-border processing</strong> (no
               region pinning), practical controls (local mode, anonymisation), and recommended
               consent / subprocessor documentation for MSPs.
+            </li>
+            <li>
+              <strong className="text-foreground">Trust — Legal &amp; questionnaires</strong>:
+              expanded skeleton for security reviews — checklist, SOC2/ISO mapping table (stubs),
+              data-flow diagram placeholders, questionnaire topic matrix, legal doc links, and
+              procurement callout; subprocessors section has an in-page anchor.
             </li>
             <li>
               <strong className="text-foreground">License</strong>: application source is released

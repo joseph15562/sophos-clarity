@@ -1,6 +1,14 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/hooks/queries/keys";
 
+/** After assessment save/delete/rename from Assess — refreshes TenantDashboard / fleet map. */
+export async function invalidateOrgAssessmentSnapshots(
+  queryClient: QueryClient,
+  orgId: string,
+): Promise<void> {
+  await queryClient.invalidateQueries({ queryKey: queryKeys.org.assessmentSnapshots(orgId) });
+}
+
 /** After firewall_config_links changes — fleet aggregate + agents + Central status. */
 export async function invalidateFleetRelatedQueries(
   queryClient: QueryClient,
@@ -23,6 +31,7 @@ export async function invalidateOrgScopedQueries(
     queryClient.invalidateQueries({ queryKey: queryKeys.org.agents(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.submissions(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.customerDirectory(orgId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.org.assessmentSnapshots(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.fleetBundle(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.scheduledReports(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.teamRoster(orgId) }),

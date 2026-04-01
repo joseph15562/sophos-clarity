@@ -12,6 +12,8 @@ export const queryKeys = {
     submissionRetention: (orgId: string) => ["org", orgId, "submission_retention"] as const,
     /** Customer Management directory (tenants + assessments + agents + portal_config) */
     customerDirectory: (orgId: string) => ["org", orgId, "customer_directory"] as const,
+    /** Cloud assessment rows for org — TenantDashboard / fleet map; invalidate after customer delete or assessment mutations */
+    assessmentSnapshots: (orgId: string) => ["org", orgId, "assessment_snapshots"] as const,
     /** Fleet Command — central_firewalls + assessments + agents + links + tenants + reports */
     fleetBundle: (orgId: string) => ["org", orgId, "fleet_bundle"] as const,
     /** Playbook / remediation panel — remediation_status rows (invalidate after upsert/delete) */
