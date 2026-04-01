@@ -36,7 +36,9 @@ function ChangelogPageInner() {
               theme text; report/QBR/deterministic-finding shells paint their top accent as part of
               the rounded background so corners stay consistent. Customer Management uses the same
               light header bar as Trust/Updates (card surface + border) in light mode; the navy
-              gradient header remains for dark mode.
+              gradient header remains for dark mode. On those subpages, the Home link and title icon
+              use the same Sophos blue as the Drift hub in light mode; the title icon stays cyan in
+              dark mode.
             </li>
             <li>
               <strong className="text-foreground">Readability</strong>: medium severity and grade C

@@ -54,9 +54,7 @@ export function WorkspaceSubpageHeader({
             aria-label="Home"
             className={cn(
               "flex shrink-0 items-center gap-1.5 text-sm transition-colors",
-              isDark
-                ? "text-white/60 hover:text-white"
-                : "text-muted-foreground hover:text-foreground",
+              isDark ? "text-white/60 hover:text-white" : "text-[#2006F7] hover:text-[#10037C]",
             )}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -67,7 +65,12 @@ export function WorkspaceSubpageHeader({
           </span>
           <div className="flex min-w-0 items-center gap-2">
             {titleIcon ? (
-              <span className="flex shrink-0 text-brand-accent [&_svg]:h-5 [&_svg]:w-5">
+              <span
+                className={cn(
+                  "flex shrink-0 [&_svg]:h-5 [&_svg]:w-5",
+                  isDark ? "text-[#00EDFF]" : "text-[#2006F7]",
+                )}
+              >
                 {titleIcon}
               </span>
             ) : null}
