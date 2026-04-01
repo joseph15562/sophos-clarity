@@ -88,7 +88,10 @@ export async function handlePortalViewerRoutes(
     }
     if (!portalRow) {
       return json(
-        { error: "Unknown portal slug for this organisation — save portal settings first" },
+        {
+          error:
+            "Unknown portal slug for this organisation — save portal settings first",
+        },
         400,
         corsHeaders,
       );
@@ -123,7 +126,9 @@ export async function handlePortalViewerRoutes(
       Deno.env.get("PORTAL_PUBLIC_URL")?.replace(/\/$/, "") ??
         Deno.env.get("SITE_URL")?.replace(/\/$/, "") ??
         "https://sophos-firecomply.vercel.app";
-    const portalUrl = `${portalPublicBase}/portal/${encodeURIComponent(portalSlug)}`;
+    const portalUrl = `${portalPublicBase}/portal/${
+      encodeURIComponent(portalSlug)
+    }`;
     let userId: string | null = null;
     try {
       // Check if user already exists in auth
@@ -194,7 +199,9 @@ export async function handlePortalViewerRoutes(
     }
     const { data: matches, error: vMatchErr } = await vq.limit(5);
     if (vMatchErr) return json({ error: vMatchErr.message }, 500, corsHeaders);
-    if (!matches?.length) return json({ error: "Viewer not found" }, 404, corsHeaders);
+    if (!matches?.length) {
+      return json({ error: "Viewer not found" }, 404, corsHeaders);
+    }
     if (matches.length > 1) {
       return json(
         {
@@ -212,10 +219,9 @@ export async function handlePortalViewerRoutes(
         Deno.env.get("SITE_URL")?.replace(/\/$/, "") ??
         "https://sophos-firecomply.vercel.app";
     const slugForReset = String(viewer.portal_slug ?? "").trim();
-    const portalResetUrl =
-      slugForReset.length > 0
-        ? `${portalPublicBase}/portal/${encodeURIComponent(slugForReset)}`
-        : `${portalPublicBase}/portal/${orgId}`;
+    const portalResetUrl = slugForReset.length > 0
+      ? `${portalPublicBase}/portal/${encodeURIComponent(slugForReset)}`
+      : `${portalPublicBase}/portal/${orgId}`;
     const { error: resetErr } = await db.auth.admin.generateLink({
       type: "recovery",
       email: email.toLowerCase(),
