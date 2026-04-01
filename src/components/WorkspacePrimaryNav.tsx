@@ -46,7 +46,8 @@ export function WorkspacePrimaryNav() {
 
   return (
     <nav
-      className="border-b border-[#10037C]/15 bg-[linear-gradient(90deg,#001030_0%,#001440_42%,#0D0268_100%)] no-print"
+      className="workspace-nav-bar border-b border-[#10037C]/15 bg-[linear-gradient(90deg,#001030_0%,#001440_42%,#0D0268_100%)] no-print"
+      style={{ backgroundColor: "#001030" }}
       aria-label="Workspace"
     >
       <div className="max-w-[1320px] mx-auto px-4 md:px-6 flex items-center gap-1 overflow-x-auto scrollbar-hide">
@@ -59,7 +60,7 @@ export function WorkspacePrimaryNav() {
               className={`flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium transition-colors whitespace-nowrap ${
                 active
                   ? "text-white border-b-2 border-[#00EDFF]"
-                  : "text-[#6A889B] hover:text-white border-b-2 border-transparent"
+                  : "text-[#9BB0D3] hover:text-white border-b-2 border-transparent"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />

@@ -140,7 +140,7 @@ function CentralStatusDot({ orgId }: { orgId: string }) {
     <div className="relative shrink-0">
       <button
         onClick={() => setShowPopover(!showPopover)}
-        className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+        className="flex items-center gap-1.5 text-[10px] text-[#9BB0D3] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
         title={label}
         aria-label={label}
       >
@@ -241,7 +241,7 @@ function ConnectorStatus({ orgId, onOpenSetup }: { orgId: string; onOpenSetup?: 
         <button
           type="button"
           onClick={onOpenSetup}
-          className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+          className="flex items-center gap-1.5 text-[10px] text-[#9BB0D3] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
           title="No connector agents — click to set up"
           aria-label="Connector: none configured"
         >
@@ -266,7 +266,7 @@ function ConnectorStatus({ orgId, onOpenSetup }: { orgId: string; onOpenSetup?: 
     <button
       type="button"
       onClick={onOpenSetup}
-      className="flex items-center gap-1.5 text-[10px] text-[#6A889B] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
+      className="flex items-center gap-1.5 text-[10px] text-[#9BB0D3] hover:text-white transition-colors px-1.5 py-1 rounded hover:bg-[#10037C]/40"
       title={`Connector: ${agentCount} agent(s), last run ${timeAgo(lastRunAt)}`}
       aria-label={`Connector: ${agentCount} agents, last run ${timeAgo(lastRunAt)}`}
     >
@@ -299,7 +299,10 @@ export function AppHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm">
+      <header
+        className="app-header-bar sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm"
+        style={{ backgroundColor: "#00163d" }}
+      >
         <div className="max-w-[1320px] mx-auto px-4 md:px-6 py-3 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/25 bg-white/10 backdrop-blur-md shadow-elevated shrink-0 dark:border-white/10 dark:bg-white/5 dark:backdrop-blur-none">
             <img src="/sophos-icon-white.svg" alt="Sophos" className="h-7 w-7" />
@@ -312,11 +315,11 @@ export function AppHeader({
                 ${isLoginShell ? "dark:shadow-[0_8px_24px_rgba(0,0,0,0.18)]" : ""}`}
             >
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] dark:bg-[#00F2B3] dark:shadow-none" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-white dark:text-[#B6C4FF]">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.22em] !text-white dark:!text-[#B6C4FF]">
                 {isLoginShell ? "Firewall Compliance Workspace" : "Enterprise Firewall Compliance"}
               </span>
             </div>
-            <h1 className="text-lg font-display font-black text-white leading-tight tracking-tight">
+            <h1 className="text-lg font-display font-black !text-white leading-tight tracking-tight">
               Sophos FireComply
             </h1>
             <p className="text-[11px] text-[#9BB0D3] hidden sm:block">
@@ -349,7 +352,7 @@ export function AppHeader({
               <Button
                 variant="ghost"
                 size="sm"
-                className="inline-flex h-8 px-2.5 text-[10px] text-white gap-1.5 shrink-0 max-sm:px-1.5 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08]"
+                className="inline-flex h-8 px-2.5 text-[10px] !text-white gap-1.5 shrink-0 max-sm:px-1.5 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:!text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:!text-[#B6C4FF] dark:hover:!text-white dark:hover:bg-white/[0.08]"
                 asChild
               >
                 <Link to="/health-check" data-tour="health-check-nav" title="SE Health Check">
@@ -368,7 +371,7 @@ export function AppHeader({
                 variant="ghost"
                 size="icon"
                 onClick={signOut}
-                className="shrink-0 h-8 w-8 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08]"
+                className="shrink-0 h-8 w-8 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:!text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:!text-[#B6C4FF] dark:hover:!text-white dark:hover:bg-white/[0.08]"
                 aria-label="Sign out"
                 title="Sign out"
               >
@@ -404,7 +407,7 @@ export function AppHeader({
             variant="ghost"
             size="icon"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className={`shrink-0 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:text-[#B6C4FF] dark:hover:text-white dark:hover:bg-white/[0.08] ${isLoginShell ? "dark:shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : ""}`}
+            className={`shrink-0 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:!text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:!text-[#B6C4FF] dark:hover:!text-white dark:hover:bg-white/[0.08] ${isLoginShell ? "dark:shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : ""}`}
             aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             data-tour="theme-toggle"
           >

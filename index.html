@@ -22,14 +22,23 @@
     <meta name="twitter:card" content="summary" />
 
     <script>
-      // Prevent FOUC: apply saved theme class before first paint
-      (function() {
-        var stored = null;
-        try { stored = localStorage.getItem('sophos-firecomply-theme'); } catch(e) {}
-        var dark = stored === 'dark' ||
-          (!stored || stored === 'system') &&
-          window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (dark) document.documentElement.classList.add('dark');
+      // Prevent FOUC: match next-themes (ThemeProvider storageKey + defaultTheme system)
+      (function () {
+        var key = "sophos-firecomply-theme";
+        var el = document.documentElement;
+        try {
+          el.classList.remove("light", "dark");
+          var stored = localStorage.getItem(key);
+          var useDark;
+          if (stored === "dark") useDark = true;
+          else if (stored === "light") useDark = false;
+          else {
+            useDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          }
+          el.classList.add(useDark ? "dark" : "light");
+        } catch (e) {
+          el.classList.add("light");
+        }
       })();
     </script>
   </head>

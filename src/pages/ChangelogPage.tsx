@@ -27,6 +27,13 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Header / theme</strong>: full refresh now keeps{" "}
+              <strong className="text-foreground">light</strong> vs{" "}
+              <strong className="text-foreground">dark</strong> in sync with next-themes (including
+              explicit light mode), and the app header / workspace nav use an opaque navy fallback
+              plus forced light text on ghost buttons so connector and toolbar labels stay readable.
+            </li>
+            <li>
               <strong className="text-foreground">Light mode polish</strong>: dashboard stat tiles
               (outcome summary, security analysis strip, extraction summary, estate overview, score
               dial) use neutral card surfaces with readable{" "}
