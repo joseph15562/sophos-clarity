@@ -86,7 +86,7 @@
 - **PSA** — ConnectWise Cloud (Partner API OAuth), ConnectWise Manage (REST tickets, company mapping from FireComply customers), Datto Autotask PSA (credentials, mapping, idempotent tickets from findings)
 - **Workspace settings** — Branding, Central, connector agents, team invites, client portal, security (MFA, passkeys), **activity log** (`/audit` and in-drawer), alerts, webhooks, scheduled reports, report template, API docs entry, **How we handle your data** (retention, regulatory scanner notes, delete-all-org-data for admins), PSA & API automation (modal flows)
 - **Trust & transparency** — **Trust** page (`/trust`) with “How we handle your data” summary, subprocessors baseline, links to `docs/DATA-PRIVACY.md`; main nav **Trust** link; in-app **Changelog** (`/changelog`)
-- **Export Centre (compliance)** — Findings CSV with framework **control IDs**; non-blocking **validation checklist** in UI for high/critical gaps; optional **reviewer sign-off** comment block when parent passes **`reviewerSignoff`** (snapshot-linked wiring on Assess still optional)
+- **Export Centre (compliance)** — Findings CSV with framework **control IDs**; non-blocking **validation checklist** in UI for high/critical gaps; optional **reviewer sign-off** rows on CSV when a linked cloud assessment has sign-off (persists across **browser session** refresh when signed in)
 - **Compliance & signals** — Regulatory digest settings; **regulatory-scanner** Edge Function and scheduled RSS ingest (Compliance / Regulatory Tracker)
 - **Client experience** — Client portal routes and portal viewer management where configured
 
@@ -156,7 +156,7 @@ The bullets below are **still open or only partially covered**. Several older ro
 ## Phase 4 — Compliance productization (next steps)
 
 - **Control-level evidence mapping** — Evidence Verification panel shows framework mapping when frameworks are selected; findings CSV includes **Control IDs** column when frameworks are chosen; deeper traceability in **PDF / evidence packs** can still expand.
-- **Reviewer sign-off and annotations** — **Shipped (cloud):** **`assessments`** columns + **Assessment History** UI (members/engineers/admins; viewers read-only). **CSV:** **`ExportCentre`** accepts optional **`reviewerSignoff`** — **next:** lift selected cloud snapshot + sign-off into Assess **`AnalysisTabs`** so exports attach automatically. **Further:** org-wide policy UI, **Evidence** tab integration.
+- **Reviewer sign-off and annotations** — **Shipped (cloud):** **`assessments`** columns + **Assessment History** UI (members/engineers/admins; viewers read-only). **CSV:** **`ExportCentre`** receives **`reviewerSignoff`** from **`Index`** / **`AnalysisTabs`** when a cloud assessment is linked; **browser session** persists **`linkedCloudAssessmentId`** and rehydrates sign-off from Supabase after refresh (signed-in). **Further:** org-wide policy UI, **Evidence** tab integration.
 - **Validation layer** — **`validateFindingExportMetadata`** + **`collectFindingExportValidationIssues`**; **Export Centre** shows a non-blocking checklist; high/critical **empty detail** also flagged. Broader comparison with external audit tooling remains a research item.
 
 ---

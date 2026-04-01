@@ -10,12 +10,15 @@ interface PersistedSession {
   reports: ReportEntry[];
   activeReportId: string;
   savedAt: number;
+  /** Cloud `assessments.id` aligned with Export Centre CSV sign-off; omitted in older stored sessions. */
+  linkedCloudAssessmentId?: string | null;
 }
 
 export function saveSession(
   branding: BrandingData,
   reports: ReportEntry[],
   activeReportId: string,
+  linkedCloudAssessmentId: string | null = null,
 ) {
   const { logoUrl: _logo, ...brandingWithoutLogo } = branding;
   const data: PersistedSession = {
@@ -27,6 +30,7 @@ export function saveSession(
     })),
     activeReportId,
     savedAt: Date.now(),
+    linkedCloudAssessmentId: linkedCloudAssessmentId ?? null,
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -39,6 +43,7 @@ export function loadSession(): {
   branding: BrandingData;
   reports: ReportEntry[];
   activeReportId: string;
+  linkedCloudAssessmentId: string | null;
 } | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -57,6 +62,8 @@ export function loadSession(): {
       branding: { ...data.branding, logoUrl: null },
       reports: data.reports,
       activeReportId: data.activeReportId || data.reports[0]?.id || "",
+      linkedCloudAssessmentId:
+        typeof data.linkedCloudAssessmentId === "string" ? data.linkedCloudAssessmentId : null,
     };
   } catch (err) {
     console.warn("[loadSession]", err);
@@ -72,6 +79,7 @@ export function useAutoSave(
   branding: BrandingData,
   reports: ReportEntry[],
   activeReportId: string,
+  linkedCloudAssessmentId: string | null,
   enabled = true,
 ) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
@@ -83,9 +91,9 @@ export function useAutoSave(
 
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      saveSession(branding, reports, activeReportId);
+      saveSession(branding, reports, activeReportId, linkedCloudAssessmentId);
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer.current);
-  }, [branding, reports, activeReportId, enabled]);
+  }, [branding, reports, activeReportId, linkedCloudAssessmentId, enabled]);
 }

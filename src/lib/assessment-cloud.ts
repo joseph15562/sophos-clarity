@@ -63,6 +63,36 @@ export async function saveAssessmentCloud(
   };
 }
 
+/** Single row by id; RLS restricts to the caller's org. Returns null if missing or denied. */
+export async function fetchAssessmentSnapshotById(
+  id: string,
+  signal?: AbortSignal,
+): Promise<AssessmentSnapshot | null> {
+  let q = supabase
+    .from("assessments")
+    .select(
+      "id, customer_name, environment, firewalls, overall_score, overall_grade, created_at, reviewer_signed_by, reviewer_signed_at, reviewer_signoff_notes",
+    )
+    .eq("id", id);
+  if (signal) q = q.abortSignal(signal);
+  const { data, error } = await q.maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    timestamp: new Date(data.created_at).getTime(),
+    customerName: data.customer_name,
+    environment: data.environment,
+    firewalls: data.firewalls as unknown as AssessmentSnapshot["firewalls"],
+    overallScore: data.overall_score,
+    overallGrade: data.overall_grade,
+    reviewerSignedBy: data.reviewer_signed_by,
+    reviewerSignedAt: data.reviewer_signed_at,
+    reviewerSignoffNotes: data.reviewer_signoff_notes,
+  };
+}
+
 export async function loadHistoryCloud(signal?: AbortSignal): Promise<AssessmentSnapshot[]> {
   let q = supabase
     .from("assessments")

@@ -41,6 +41,13 @@ function ChangelogPageInner() {
               terms.
             </li>
             <li>
+              <strong className="text-foreground">Export Centre</strong>: when you are signed in,
+              the linked cloud assessment id is saved with your session so after a page refresh{" "}
+              <strong className="text-foreground">findings CSV</strong> can still include{" "}
+              <strong className="text-foreground">reviewer sign-off</strong> (reloaded from the
+              server).
+            </li>
+            <li>
               <strong className="text-foreground">Compliance frameworks</strong>:{" "}
               <strong className="text-foreground">CIS</strong> and{" "}
               <strong className="text-foreground">SOC 2</strong> are available in Assessment Context

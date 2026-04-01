@@ -22,7 +22,12 @@ import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { useReportGeneration, ParsedFile } from "@/hooks/use-report-generation";
 import { useFirewallAnalysis } from "@/hooks/use-firewall-analysis";
 import type { AnalysisResult } from "@/lib/analyse-config";
-import { useAutoSave, loadSession, clearSession } from "@/hooks/use-session-persistence";
+import {
+  useAutoSave,
+  loadSession,
+  saveSession,
+  clearSession,
+} from "@/hooks/use-session-persistence";
 import { useAuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -39,7 +44,7 @@ import {
   type SavedReportEntry,
   type AnalysisSummary,
 } from "@/lib/saved-reports";
-import { saveAssessmentCloud } from "@/lib/assessment-cloud";
+import { fetchAssessmentSnapshotById, saveAssessmentCloud } from "@/lib/assessment-cloud";
 import {
   saveAssessment as saveAssessmentLocal,
   type AssessmentSnapshot,
@@ -554,7 +559,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     return { score: avgScore, grade, criticalHigh, coverage, totalRules };
   }, [analysisResults, aggregatedPosture, totalRules]);
 
-  useAutoSave(branding, reports, activeReportId, !isGuest);
+  useAutoSave(branding, reports, activeReportId, linkedCloudAssessmentId, !isGuest);
 
   // Save finding snapshots when analysis completes (for regression detection)
   useEffect(() => {
@@ -639,6 +644,49 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setRestoredSession(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // After org is available, rehydrate linked cloud assessment + Export Centre CSV sign-off from session + Supabase.
+  useEffect(() => {
+    if (isGuest || !org?.id) return;
+    const session = loadSession();
+    const linkedId = session?.linkedCloudAssessmentId;
+    if (!linkedId) return;
+
+    const ac = new AbortController();
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const snap = await fetchAssessmentSnapshotById(linkedId, ac.signal);
+        if (cancelled) return;
+        if (snap) {
+          setLinkedCloudAssessmentId(snap.id);
+          setExportReviewerSignoff(signoffFromAssessmentSnapshot(snap));
+        } else {
+          setLinkedCloudAssessmentId(null);
+          setExportReviewerSignoff(null);
+          const s = loadSession();
+          if (s?.reports.length) {
+            saveSession(s.branding, s.reports, s.activeReportId, null);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setLinkedCloudAssessmentId(null);
+          setExportReviewerSignoff(null);
+          const s = loadSession();
+          if (s?.reports.length) {
+            saveSession(s.branding, s.reports, s.activeReportId, null);
+          }
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [isGuest, org?.id]);
 
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {

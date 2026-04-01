@@ -67,6 +67,35 @@ describe("use-session-persistence", () => {
     expect(loaded!.reports).toEqual(reports);
     expect(loaded!.branding.logoUrl).toBeNull();
     expect(loaded!.branding.customerName).toBe(baseBranding.customerName);
+    expect(loaded!.linkedCloudAssessmentId).toBeNull();
+  });
+
+  it("round-trips linkedCloudAssessmentId", () => {
+    saveSession(baseBranding, reports, "r1", "assess-uuid-1");
+    const loaded = loadSession();
+    expect(loaded?.linkedCloudAssessmentId).toBe("assess-uuid-1");
+  });
+
+  it("loadSession treats missing linkedCloudAssessmentId as null (backward compatible)", () => {
+    const savedAt = Date.now();
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        branding: {
+          companyName: "Co",
+          customerName: "Customer",
+          environment: "prod",
+          country: "GB",
+          selectedFrameworks: [],
+        },
+        reports: [{ id: "r1", label: "R", markdown: "x" }],
+        activeReportId: "r1",
+        savedAt,
+      }),
+    );
+    const loaded = loadSession();
+    expect(loaded).not.toBeNull();
+    expect(loaded!.linkedCloudAssessmentId).toBeNull();
   });
 
   it("returns null for expired sessions", () => {
