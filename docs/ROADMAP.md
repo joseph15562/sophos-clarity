@@ -1,6 +1,6 @@
 # Sophos FireComply — Roadmap & Feature Log
 
-> Last updated: 31 March 2026
+> Last updated: 1 April 2026
 
 ---
 
@@ -91,6 +91,10 @@
 - **Client experience** — Client portal routes and portal viewer management where configured
 - **Shared report viewer (security)** — Token-based **shared health-check** HTML loads in a **sandboxed iframe** (`sandbox="allow-same-origin"`: scripts blocked; same-origin needed for parent **contentDocument** auto-height)
 - **Report export shell (security)** — PDF/HTML document shell from **`buildPdfHtml`** **HTML-escapes** branding fields (**title**, org/customer names, prepared-by, footer); **logo URL** allowlist (**https** or **data:image/…;base64** for selected image types)
+- **Client fetch cancellation (product UI)** — User-initiated **`fetch`** in **`src/components`** / **`src/pages`** passes **`AbortSignal`** (TanStack **`queryFn`**, **`useAbortableInFlight`**, effect **`AbortController`s**, per-agent run-now/delete on fleet surfaces, **`ClientPortal`** stale-load guard on **`portal-data`**). Policy and inventory: **[client-data-layer.md](api/client-data-layer.md)**. Residual: **`callGuestCentral`** and some **`src/lib`** helpers — optional **`signal`** when refactored.
+- **SE Health Check layout slice** — Results step lives in **`HealthCheckResultsSection.tsx`**; **`HealthCheckInnerLayout`** stays the orchestrator (thinner file, same behaviour).
+- **CI JS bundle budget** — Optional post-build check via **`scripts/assert-bundle-budget.mjs`** (see deploy/staging workflows when enabled).
+- **Job outbox worker (testability)** — **`process-job-outbox`** exposes a handler for HTTP/cron and ships Deno contract tests (see **[job-queue-outline.md](job-queue-outline.md)**).
 
 ### UI/UX
 
@@ -165,6 +169,8 @@ The bullets below are **still open or only partially covered**. Several older ro
 
 ## See also
 
+- [docs/REVIEW.md](REVIEW.md) — War-room audit scorecard, Tier 3 checklist, and evidence links (vs this **product** roadmap)
+- [docs/plans/review-100-program-evidence.md](plans/review-100-program-evidence.md) — REVIEW “100%” program implementation evidence (abort sweep, architecture checks, CI)
 - [docs/plans/sophos-firewall-gaps-and-improvements-roadmap.md](plans/sophos-firewall-gaps-and-improvements-roadmap.md) — Deeper gap analysis and execution targets
 - [docs/plans/sophos-firewall-master-execution.md](plans/sophos-firewall-master-execution.md) — Master execution checklist
 - [docs/DATA-PRIVACY.md](DATA-PRIVACY.md) — Data flows, modes, retention summary

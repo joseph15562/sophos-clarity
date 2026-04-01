@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { ExternalLink, Loader2, Plug, RefreshCw, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,6 +22,7 @@ type StatusRow = {
 /** ConnectWise Cloud Services API credentials (client credentials + subscription key). */
 export function ConnectWiseCloudSettings() {
   const { org } = useAuth();
+  const nextMutationSignal = useAbortableInFlight();
   const [status, setStatus] = useState<StatusRow | null>(null);
   const [publicMemberId, setPublicMemberId] = useState("");
   const [subscriptionKey, setSubscriptionKey] = useState("");
@@ -60,6 +62,7 @@ export function ConnectWiseCloudSettings() {
     const method = init?.method ?? "GET";
     const res = await fetch(`${base}${path}`, {
       ...init,
+      signal: init?.signal,
       headers: {
         ...(method !== "GET" && method !== "HEAD" ? { "Content-Type": "application/json" } : {}),
         Authorization: `Bearer ${session.access_token}`,
@@ -90,6 +93,7 @@ export function ConnectWiseCloudSettings() {
       await apiFetch("/connectwise/credentials", {
         method: "POST",
         body: JSON.stringify({ publicMemberId: pid, subscriptionKey: key, scope }),
+        signal: nextMutationSignal(),
       });
       setPublicMemberId("");
       setSubscriptionKey("");
@@ -108,7 +112,10 @@ export function ConnectWiseCloudSettings() {
     setBusy(true);
     setMessage("");
     try {
-      const data = await apiFetch("/connectwise/test", { method: "POST" });
+      const data = await apiFetch("/connectwise/test", {
+        method: "POST",
+        signal: nextMutationSignal(),
+      });
       const exp = typeof data.expires_in === "number" ? data.expires_in : null;
       await loadStatus();
       setMessage(exp != null ? `Token OK (expires in ${exp}s).` : "Token OK.");
@@ -127,7 +134,7 @@ export function ConnectWiseCloudSettings() {
     setMessage("");
     setWhoamiJson(null);
     try {
-      const data = await apiFetch("/connectwise/whoami");
+      const data = await apiFetch("/connectwise/whoami", { signal: nextMutationSignal() });
       if (data && typeof data === "object" && "whoami" in data) {
         setWhoamiJson(JSON.stringify((data as { whoami: unknown }).whoami, null, 2));
         setMessage("Partner Cloud profile loaded.");
@@ -147,7 +154,10 @@ export function ConnectWiseCloudSettings() {
     setBusy(true);
     setMessage("");
     try {
-      await apiFetch("/connectwise/credentials", { method: "DELETE" });
+      await apiFetch("/connectwise/credentials", {
+        method: "DELETE",
+        signal: nextMutationSignal(),
+      });
       await loadStatus();
       setMessage("Disconnected.");
       void logAudit(org.id, "connectwise.disconnected", "connectwise", "");

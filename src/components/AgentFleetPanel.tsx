@@ -455,11 +455,18 @@ export function AgentFleetPanel({
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
   const [fleetFilter, setFleetFilter] = useState<FleetFilter>("all");
   const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const runNowAbortByAgentRef = useRef<Map<string, AbortController>>(new Map());
+  const pollUnmountAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    pollUnmountAbortRef.current = new AbortController();
     return () => {
       for (const iv of pollIntervalsRef.current.values()) clearInterval(iv);
       pollIntervalsRef.current.clear();
+      pollUnmountAbortRef.current?.abort();
+      pollUnmountAbortRef.current = null;
+      for (const ac of runNowAbortByAgentRef.current.values()) ac.abort();
+      runNowAbortByAgentRef.current.clear();
     };
   }, []);
 
@@ -567,10 +574,15 @@ export function AgentFleetPanel({
 
       setScanRequested((p) => ({ ...p, [agentId]: true }));
 
+      runNowAbortByAgentRef.current.get(agentId)?.abort();
+      const runAc = new AbortController();
+      runNowAbortByAgentRef.current.set(agentId, runAc);
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}/run-now`,
         {
           method: "POST",
+          signal: runAc.signal,
           headers: {
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -603,7 +615,11 @@ export function AgentFleetPanel({
           attempts++;
           let latest: Submission | null = null;
           try {
-            latest = await fetchLatestSubmissionForAgent(orgId, agentId);
+            latest = await fetchLatestSubmissionForAgent(
+              orgId,
+              agentId,
+              pollUnmountAbortRef.current?.signal,
+            );
           } catch {
             return;
           }
@@ -635,6 +651,13 @@ export function AgentFleetPanel({
       }, 5000);
       pollIntervalsRef.current.set(agentId, pollInterval);
     } catch (err) {
+      const aborted =
+        (err instanceof DOMException && err.name === "AbortError") ||
+        (err instanceof Error && err.name === "AbortError");
+      if (aborted) {
+        setScanRequested((p) => ({ ...p, [agentId]: false }));
+        return;
+      }
       toast.error(err instanceof Error ? err.message : "Request failed");
     }
   };

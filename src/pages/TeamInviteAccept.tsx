@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { CheckCircle2, AlertTriangle, Loader2, Users, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,59 +9,81 @@ import { cn } from "@/lib/utils";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
-type PageState = "loading" | "accepting" | "success" | "wrong-user" | "already-member" | "expired" | "invalid" | "needs-auth" | "error";
+type PageState =
+  | "loading"
+  | "accepting"
+  | "success"
+  | "wrong-user"
+  | "already-member"
+  | "expired"
+  | "invalid"
+  | "needs-auth"
+  | "error";
 
 export default function TeamInviteAccept() {
   const { token } = useParams<{ token: string }>();
+  const nextMutationSignal = useAbortableInFlight();
   const navigate = useNavigate();
   const [pageState, setPageState] = useState<PageState>("loading");
   const [teamName, setTeamName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const acceptInvite = useCallback(async (accessToken: string) => {
-    if (!token) return;
-    setPageState("accepting");
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/api/se-teams/accept-invite/${token}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          apikey: SUPABASE_KEY,
-        },
-      });
-      const data = await res.json();
+  const acceptInvite = useCallback(
+    async (accessToken: string) => {
+      if (!token) return;
+      setPageState("accepting");
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/api/se-teams/accept-invite/${token}`,
+          {
+            method: "POST",
+            signal: nextMutationSignal(),
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              apikey: SUPABASE_KEY,
+            },
+          },
+        );
+        const data = await res.json();
 
-      if (res.ok) {
-        setTeamName(data.team_name ?? "");
-        setPageState("success");
-        return;
-      }
+        if (res.ok) {
+          setTeamName(data.team_name ?? "");
+          setPageState("success");
+          return;
+        }
 
-      if (res.status === 403 && data.error?.startsWith("This invite is for")) {
-        setInviteEmail(data.error.replace("This invite is for ", ""));
-        setPageState("wrong-user");
-      } else if (res.status === 409) {
-        setPageState("already-member");
-      } else if (res.status === 410) {
-        setPageState("expired");
-      } else if (res.status === 404) {
-        setPageState("invalid");
-      } else {
-        setErrorMsg(data.error || "Something went wrong");
+        if (res.status === 403 && data.error?.startsWith("This invite is for")) {
+          setInviteEmail(data.error.replace("This invite is for ", ""));
+          setPageState("wrong-user");
+        } else if (res.status === 409) {
+          setPageState("already-member");
+        } else if (res.status === 410) {
+          setPageState("expired");
+        } else if (res.status === 404) {
+          setPageState("invalid");
+        } else {
+          setErrorMsg(data.error || "Something went wrong");
+          setPageState("error");
+        }
+      } catch {
+        setErrorMsg("Network error — please try again.");
         setPageState("error");
       }
-    } catch {
-      setErrorMsg("Network error — please try again.");
-      setPageState("error");
-    }
-  }, [token]);
+    },
+    [token, nextMutationSignal],
+  );
 
   useEffect(() => {
-    if (!token) { setPageState("invalid"); return; }
+    if (!token) {
+      setPageState("invalid");
+      return;
+    }
 
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) {
         await acceptInvite(session.access_token);
       } else {
@@ -69,7 +92,9 @@ export default function TeamInviteAccept() {
     };
     void init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         await acceptInvite(session.access_token);
       }
@@ -88,7 +113,10 @@ export default function TeamInviteAccept() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
+    <main
+      id="main-content"
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4"
+    >
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-[#2006F7] to-[#4A20F7] shadow-lg mb-4">
@@ -162,9 +190,7 @@ export default function TeamInviteAccept() {
                 <Users className="h-8 w-8 text-[#2006F7]" />
               </div>
               <h2 className="text-lg font-semibold">Already a member</h2>
-              <p className="text-sm text-muted-foreground">
-                You're already a member of this team.
-              </p>
+              <p className="text-sm text-muted-foreground">You're already a member of this team.</p>
               <Button
                 variant="outline"
                 className="mt-4"

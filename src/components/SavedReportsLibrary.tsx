@@ -72,7 +72,8 @@ export function SavedReportsLibrary({ onLoadReports, refreshTrigger = 0 }: Props
     error,
   } = useQuery({
     queryKey: queryKeys.savedReports.packages(scope, refreshTrigger),
-    queryFn: async () => (useCloud ? loadSavedReportsCloud() : loadSavedReportsLocal()),
+    queryFn: async ({ signal }) =>
+      useCloud ? loadSavedReportsCloud(signal) : loadSavedReportsLocal(),
   });
 
   useEffect(() => {

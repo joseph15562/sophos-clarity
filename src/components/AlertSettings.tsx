@@ -10,6 +10,7 @@ import {
   type AlertRule,
   type AlertEventType,
 } from "@/lib/alert-rules";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 
 const TEST_WEBHOOK_PAYLOAD = {
   event: "test",
@@ -36,6 +37,7 @@ function generateId(): string {
 type TabId = "all" | "webhook";
 
 export function AlertSettings() {
+  const nextFetchSignal = useAbortableInFlight();
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>("all");
 
@@ -86,26 +88,32 @@ export function AlertSettings() {
     [rules, persist],
   );
 
-  const testWebhook = useCallback(async (url: string) => {
-    if (!url?.trim()) {
-      toast.error("Enter a webhook URL first");
-      return;
-    }
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(TEST_WEBHOOK_PAYLOAD),
-      });
-      if (res.ok) {
-        toast.success("Webhook test successful — endpoint responded");
-      } else {
-        toast.error(`Webhook returned ${res.status} — check your endpoint`);
+  const testWebhook = useCallback(
+    async (url: string) => {
+      if (!url?.trim()) {
+        toast.error("Enter a webhook URL first");
+        return;
       }
-    } catch (err) {
-      toast.error("Webhook test failed — check URL and network");
-    }
-  }, []);
+      const signal = nextFetchSignal();
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(TEST_WEBHOOK_PAYLOAD),
+        });
+        if (res.ok) {
+          toast.success("Webhook test successful — endpoint responded");
+        } else {
+          toast.error(`Webhook returned ${res.status} — check your endpoint`);
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        toast.error("Webhook test failed — check URL and network");
+      }
+    },
+    [nextFetchSignal],
+  );
 
   return (
     <div className="space-y-4 text-xs">

@@ -7,7 +7,8 @@
       "api/routes/",
       "parse-config/",
       "portal-data/",
-      "send-scheduled-reports/"
+      "send-scheduled-reports/",
+      "process-job-outbox/"
     ]
   },
   "imports": {

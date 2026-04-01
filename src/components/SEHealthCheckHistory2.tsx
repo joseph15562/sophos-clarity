@@ -20,6 +20,7 @@ import {
   type SeHealthCheckSnapshotV1,
 } from "@/lib/se-health-check-snapshot-v2";
 import { toast } from "sonner";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { EmptyState } from "@/components/EmptyState";
 import type { SETeam } from "@/hooks/use-active-team";
 
@@ -75,6 +76,7 @@ export function SEHealthCheckHistory({
   activeTeamId,
   teams,
 }: Props) {
+  const nextMutationSignal = useAbortableInFlight();
   const [rows, setRows] = useState<HealthCheckRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -195,6 +197,7 @@ export function SEHealthCheckHistory({
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/${checkId}/team`,
           {
             method: "PATCH",
+            signal: nextMutationSignal(),
             headers: {
               Authorization: `Bearer ${session.access_token}`,
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -213,7 +216,7 @@ export function SEHealthCheckHistory({
         toast.error(e instanceof Error ? e.message : "Could not move health check.");
       }
     },
-    [load],
+    [load, nextMutationSignal],
   );
 
   const handleBulkMove = useCallback(
@@ -229,6 +232,7 @@ export function SEHealthCheckHistory({
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/bulk-team`,
           {
             method: "PATCH",
+            signal: nextMutationSignal(),
             headers: {
               Authorization: `Bearer ${session.access_token}`,
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -250,7 +254,7 @@ export function SEHealthCheckHistory({
         setMovingBulk(false);
       }
     },
-    [selectedIds, load],
+    [selectedIds, load, nextMutationSignal],
   );
 
   const toggleSelect = useCallback((id: string) => {

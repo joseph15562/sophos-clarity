@@ -7,7 +7,7 @@
  *  - Optional viewer-role authentication for richer data access
  */
 
-import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -761,6 +761,9 @@ export default function ClientPortal() {
   const isSlug = rawParam ? !UUID_RE.test(rawParam) : false;
   const identifier = rawParam ?? "";
 
+  const loadDataGenerationRef = useRef(0);
+  const portalDataFetchAbortRef = useRef<AbortController | null>(null);
+
   const accentColor = branding?.accentColor ?? "#2006F7";
 
   // Check if user is already authenticated
@@ -809,12 +812,25 @@ export default function ClientPortal() {
     })();
   }, [authUser, orgId]);
 
+  useEffect(
+    () => () => {
+      loadDataGenerationRef.current += 1;
+      portalDataFetchAbortRef.current?.abort();
+    },
+    [],
+  );
+
   const loadData = useCallback(async () => {
     if (!identifier) {
       setError("Missing portal identifier");
       setLoading(false);
       return;
     }
+
+    const gen = ++loadDataGenerationRef.current;
+    portalDataFetchAbortRef.current?.abort();
+    const fetchAc = new AbortController();
+    portalDataFetchAbortRef.current = fetchAc;
 
     setLoading(true);
     setError(null);
@@ -828,11 +844,14 @@ export default function ClientPortal() {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-data?${paramKey}=${encodeURIComponent(identifier)}`;
         const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
         const resp = await fetch(url, {
+          signal: fetchAc.signal,
           headers: {
             apikey: anonKey,
             Authorization: `Bearer ${anonKey}`,
           },
         });
+
+        if (gen !== loadDataGenerationRef.current) return;
 
         if (!resp.ok) {
           const body = await resp.json().catch(() => ({}));
@@ -868,12 +887,14 @@ export default function ClientPortal() {
         );
         setPortalSavedReports(normalizePortalSavedReports(data.savedReports));
       } else {
+        if (gen !== loadDataGenerationRef.current) return;
         // Authenticated path: use Supabase RLS directly
         const resolvedOrgId = identifier;
         setOrgId(resolvedOrgId);
         setPortalAggregate({ score: null, grade: null, latestAt: null });
 
         const history = await loadScoreHistory(resolvedOrgId, undefined, 30);
+        if (gen !== loadDataGenerationRef.current) return;
         setScoreHistory(history);
 
         const name =
@@ -945,16 +966,19 @@ export default function ClientPortal() {
             })),
           ),
         );
+        if (gen !== loadDataGenerationRef.current) return;
       }
 
       if (scoreHistory.length === 0 && findings.length === 0 && frameworks.length === 0) {
         // Will be re-evaluated after state updates
       }
     } catch (err) {
+      if (gen !== loadDataGenerationRef.current) return;
+      if (err instanceof DOMException && err.name === "AbortError") return;
       console.warn("[ClientPortal] load failed", err);
       setError(err instanceof Error ? err.message : "Failed to load portal data.");
     } finally {
-      setLoading(false);
+      if (gen === loadDataGenerationRef.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identifier, isSlug, authUser]);

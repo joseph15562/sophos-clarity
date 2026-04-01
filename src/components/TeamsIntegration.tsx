@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { Users, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ function saveConfig(config: TeamsConfig): void {
 }
 
 export function TeamsIntegration() {
+  const nextMutationSignal = useAbortableInFlight();
   const [config, setConfig] = useState<TeamsConfig>(loadConfig());
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export function TeamsIntegration() {
     try {
       const res = await fetch(config.webhookUrl, {
         method: "POST",
+        signal: nextMutationSignal(),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           "@type": "MessageCard",
@@ -74,7 +77,7 @@ export function TeamsIntegration() {
     } catch {
       toast.error("Teams test failed — check URL and network");
     }
-  }, [config.webhookUrl]);
+  }, [config.webhookUrl, nextMutationSignal]);
 
   return (
     <div className={CARD_CLASS}>

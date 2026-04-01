@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { useQueryClient } from "@tanstack/react-query";
 import { SafeHtml } from "@/components/SafeHtml";
 import { EmptyState } from "@/components/EmptyState";
@@ -89,6 +90,7 @@ function relativeDate(iso: string): string {
 type EmailPreview = { subject: string; markdown: string; html: string; recipients: string[] };
 
 export function ScheduledReportSettings() {
+  const nextFetchSignal = useAbortableInFlight();
   const { org } = useAuth();
   const queryClient = useQueryClient();
   const orgId = org?.id ?? "";
@@ -163,6 +165,7 @@ export function ScheduledReportSettings() {
 
   const handleSendNow = async (report: ScheduledReport) => {
     setSending(report.id);
+    const signal = nextFetchSignal();
     try {
       const {
         data: { session },
@@ -172,6 +175,7 @@ export function ScheduledReportSettings() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-scheduled-reports`,
         {
           method: "POST",
+          signal,
           headers: {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
@@ -193,6 +197,7 @@ export function ScheduledReportSettings() {
     setPreviewData(null);
     setPreviewOpen(true);
     setPreviewLoading(true);
+    const signal = nextFetchSignal();
     try {
       const {
         data: { session },
@@ -202,6 +207,7 @@ export function ScheduledReportSettings() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-scheduled-reports`,
         {
           method: "POST",
+          signal,
           headers: {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",

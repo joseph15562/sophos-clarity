@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SEProfile } from "@/hooks/use-se-auth";
 import { queryKeys } from "@/hooks/queries/keys";
 import { warnOptionalError } from "@/lib/client-error-feedback";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 
 export type ConfigUploadRequestRow = {
   id: string;
@@ -48,6 +49,7 @@ export type UseConfigUploadOptions = {
 
 export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseConfigUploadOptions) {
   const queryClient = useQueryClient();
+  const nextMutationSignal = useAbortableInFlight();
   const [configUploadDialogOpen, setConfigUploadDialogOpen] = useState(false);
   const [configUploadCustomerName, setConfigUploadCustomerName] = useState("");
   const [configUploadContactName, setConfigUploadContactName] = useState("");
@@ -101,6 +103,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
   const handleCreateConfigUploadRequest = useCallback(async () => {
     if (!seProfile) return;
     setConfigUploadCreating(true);
+    const signal = nextMutationSignal();
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload-request`;
       const {
@@ -108,6 +111,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
       } = await supabase.auth.getSession();
       const res = await fetch(url, {
         method: "POST",
+        signal,
         headers: {
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           authorization: `Bearer ${session?.access_token}`,
@@ -144,11 +148,13 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
 
       invalidateConfigUploadList();
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       toast.error(err instanceof Error ? err.message : "Could not create upload request.");
     } finally {
       setConfigUploadCreating(false);
     }
   }, [
+    nextMutationSignal,
     seProfile,
     configUploadCustomerName,
     configUploadContactName,
@@ -161,6 +167,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
   const handleResendConfigUploadEmail = useCallback(async () => {
     if (!configUploadToken) return;
     setConfigUploadResending(true);
+    const signal = nextMutationSignal();
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${configUploadToken}/resend`;
       const {
@@ -168,6 +175,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
       } = await supabase.auth.getSession();
       const res = await fetch(url, {
         method: "POST",
+        signal,
         headers: {
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           authorization: `Bearer ${session?.access_token}`,
@@ -179,49 +187,58 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
       } else {
         toast.error(json.error || "Could not resend email.");
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return;
       toast.error("Could not resend email.");
     } finally {
       setConfigUploadResending(false);
     }
-  }, [configUploadToken]);
+  }, [configUploadToken, nextMutationSignal]);
 
-  const handleResendUploadEmail = useCallback(async (token: string) => {
-    setResendingUploadToken(token);
-    try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/resend`;
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-      const json = (await res.json()) as { email_sent?: boolean; error?: string };
-      if (json.email_sent) {
-        toast.success("Email resent to customer.");
-      } else {
-        toast.error(json.error || "Could not resend email.");
+  const handleResendUploadEmail = useCallback(
+    async (token: string) => {
+      setResendingUploadToken(token);
+      const signal = nextMutationSignal();
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/resend`;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const res = await fetch(url, {
+          method: "POST",
+          signal,
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            authorization: `Bearer ${session?.access_token}`,
+          },
+        });
+        const json = (await res.json()) as { email_sent?: boolean; error?: string };
+        if (json.email_sent) {
+          toast.success("Email resent to customer.");
+        } else {
+          toast.error(json.error || "Could not resend email.");
+        }
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
+        toast.error("Could not resend email.");
+      } finally {
+        setResendingUploadToken(null);
       }
-    } catch {
-      toast.error("Could not resend email.");
-    } finally {
-      setResendingUploadToken(null);
-    }
-  }, []);
+    },
+    [nextMutationSignal],
+  );
 
   const handleLoadConfigFromUpload = useCallback(
     async (token: string) => {
       setConfigUploadLoading(true);
+      const signal = nextMutationSignal();
       try {
         const downloadUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/download`;
         const {
           data: { session },
         } = await supabase.auth.getSession();
         const res = await fetch(downloadUrl, {
+          signal,
           headers: {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             authorization: `Bearer ${session?.access_token}`,
@@ -246,6 +263,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
         try {
           const centralUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/central-data`;
           const centralRes = await fetch(centralUrl, {
+            signal,
             headers: {
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
               authorization: `Bearer ${session?.access_token}`,
@@ -270,16 +288,18 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
         setConfigUploadRequestsOpen(false);
         invalidateConfigUploadList();
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
         toast.error(err instanceof Error ? err.message : "Could not load config.");
       } finally {
         setConfigUploadLoading(false);
       }
     },
-    [configUploadRequests, invalidateConfigUploadList, onLoadConfig],
+    [configUploadRequests, invalidateConfigUploadList, nextMutationSignal, onLoadConfig],
   );
 
   const handleRevokeConfigUpload = useCallback(
     async (token: string) => {
+      const signal = nextMutationSignal();
       try {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}`;
         const {
@@ -287,6 +307,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
         } = await supabase.auth.getSession();
         await fetch(url, {
           method: "DELETE",
+          signal,
           headers: {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             authorization: `Bearer ${session?.access_token}`,
@@ -299,15 +320,17 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
           setConfigUploadStatus(null);
         }
         invalidateConfigUploadList();
-      } catch {
+      } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
         toast.error("Could not revoke upload request.");
       }
     },
-    [configUploadToken, invalidateConfigUploadList],
+    [configUploadToken, invalidateConfigUploadList, nextMutationSignal],
   );
 
   const handleClaimConfigUpload = useCallback(
     async (token: string) => {
+      const signal = nextMutationSignal();
       try {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/config-upload/${token}/claim`;
         const {
@@ -315,6 +338,7 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
         } = await supabase.auth.getSession();
         const res = await fetch(url, {
           method: "POST",
+          signal,
           headers: {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             authorization: `Bearer ${session?.access_token}`,
@@ -327,10 +351,11 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
         toast.success("Upload request claimed — it's now yours.");
         invalidateConfigUploadList();
       } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
         toast.error(e instanceof Error ? e.message : "Could not claim upload request.");
       }
     },
-    [invalidateConfigUploadList],
+    [invalidateConfigUploadList, nextMutationSignal],
   );
 
   useEffect(() => {
@@ -338,10 +363,12 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
       if (configUploadPollRef.current) clearInterval(configUploadPollRef.current);
       return;
     }
+    const ac = new AbortController();
     const poll = async () => {
       try {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-public/config-upload/${configUploadToken}`;
         const res = await fetch(url, {
+          signal: ac.signal,
           headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
         });
         if (res.ok) {
@@ -353,11 +380,14 @@ export function useConfigUpload({ seProfile, activeTeamId, onLoadConfig }: UseCo
           }
         }
       } catch (e) {
+        if (e instanceof Error && e.name === "AbortError") return;
         warnOptionalError("use-config-upload.poll", e);
       }
     };
     configUploadPollRef.current = setInterval(poll, 10_000);
+    void poll();
     return () => {
+      ac.abort();
       if (configUploadPollRef.current) clearInterval(configUploadPollRef.current);
     };
   }, [configUploadToken, configUploadStatus, invalidateConfigUploadList]);

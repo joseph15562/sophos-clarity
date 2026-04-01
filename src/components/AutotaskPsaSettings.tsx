@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { Check, ChevronsUpDown, ExternalLink, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -25,6 +26,7 @@ type AtCompanyRow = { id: number; name: string };
 /** Datto Autotask PSA REST — credentials, ticket defaults, customer ↔ company mapping. */
 export function AutotaskPsaSettings() {
   const { org } = useAuth();
+  const nextMutationSignal = useAbortableInFlight();
   const [linked, setLinked] = useState<boolean | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -106,7 +108,7 @@ export function AutotaskPsaSettings() {
     void loadMappings();
   }, [loadMappings]);
 
-  async function apiGet(path: string): Promise<Record<string, unknown>> {
+  async function apiGet(path: string, signal?: AbortSignal): Promise<Record<string, unknown>> {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -114,6 +116,7 @@ export function AutotaskPsaSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "GET",
+      signal,
       headers: {
         Authorization: `Bearer ${session.access_token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -133,7 +136,7 @@ export function AutotaskPsaSettings() {
     setCompaniesLoading(true);
     setCompaniesError("");
     try {
-      const data = await apiGet("/autotask-psa/companies");
+      const data = await apiGet("/autotask-psa/companies", nextMutationSignal());
       const list = data.companies;
       setAtCompanies(Array.isArray(list) ? (list as AtCompanyRow[]) : []);
     } catch (err) {
@@ -144,7 +147,7 @@ export function AutotaskPsaSettings() {
     }
   }
 
-  async function apiPost(path: string, body: unknown) {
+  async function apiPost(path: string, body: unknown, signal?: AbortSignal) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -152,6 +155,7 @@ export function AutotaskPsaSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
@@ -168,7 +172,7 @@ export function AutotaskPsaSettings() {
     return resBody;
   }
 
-  async function apiDelete(path: string) {
+  async function apiDelete(path: string, signal?: AbortSignal) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -176,6 +180,7 @@ export function AutotaskPsaSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "DELETE",
+      signal,
       headers: {
         Authorization: `Bearer ${session.access_token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -190,7 +195,7 @@ export function AutotaskPsaSettings() {
     return resBody;
   }
 
-  async function apiPut(path: string, body: unknown) {
+  async function apiPut(path: string, body: unknown, signal?: AbortSignal) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -198,6 +203,7 @@ export function AutotaskPsaSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "PUT",
+      signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
@@ -252,7 +258,7 @@ export function AutotaskPsaSettings() {
         payload.secret = secret.trim();
         payload.integrationCode = integrationCode.trim();
       }
-      await apiPost("/autotask-psa/credentials", payload);
+      await apiPost("/autotask-psa/credentials", payload, nextMutationSignal());
       setSecret("");
       setIntegrationCode("");
       setMessage("Saved.");
@@ -282,10 +288,14 @@ export function AutotaskPsaSettings() {
     setMapBusy(true);
     setMessage("");
     try {
-      await apiPut("/autotask-psa/company-mappings", {
-        customerKey: ck,
-        companyId: cid,
-      });
+      await apiPut(
+        "/autotask-psa/company-mappings",
+        {
+          customerKey: ck,
+          companyId: cid,
+        },
+        nextMutationSignal(),
+      );
       setMapCustomerKey("");
       setMapCompanyId("");
       setCompanyManualMode(false);
@@ -310,6 +320,7 @@ export function AutotaskPsaSettings() {
       const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
       const res = await fetch(`${base}/autotask-psa/company-mappings`, {
         method: "DELETE",
+        signal: nextMutationSignal(),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
@@ -337,7 +348,7 @@ export function AutotaskPsaSettings() {
     setBusy(true);
     setMessage("");
     try {
-      await apiDelete("/autotask-psa/credentials");
+      await apiDelete("/autotask-psa/credentials", nextMutationSignal());
       setLinked(false);
       setApiZoneBaseUrl("");
       setUsername("");

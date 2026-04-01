@@ -13,8 +13,20 @@ function assertE2eBypassNotOnVercelProduction(): void {
   }
 }
 
+/** PDF download test mode must not ship to Vercel Production (extra pdfmake path). */
+function assertE2ePdfDownloadNotOnVercelProduction(): void {
+  if (process.env.VITE_E2E_PDF_DOWNLOAD !== "1") return;
+  if (process.env.VERCEL !== "1") return;
+  if (process.env.VERCEL_ENV === "production") {
+    throw new Error(
+      "[security] VITE_E2E_PDF_DOWNLOAD must not be set for Vercel Production. Use only in CI / local E2E builds.",
+    );
+  }
+}
+
 export default defineConfig(() => {
   assertE2eBypassNotOnVercelProduction();
+  assertE2ePdfDownloadNotOnVercelProduction();
   return {
     server: {
       host: "::",

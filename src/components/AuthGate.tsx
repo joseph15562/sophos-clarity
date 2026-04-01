@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { LogIn, UserPlus, ArrowRight, AlertCircle, Fingerprint } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
+  const nextFetchSignal = useAbortableInFlight();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,6 +30,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
     }
     setError(null);
     setPasskeyLoading(true);
+    const signal = nextFetchSignal();
 
     try {
       const fnHeaders = {
@@ -39,6 +42,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-public/passkey/login-options`,
         {
           method: "POST",
+          signal,
           headers: fnHeaders,
           body: JSON.stringify({ email: email.trim() }),
         },
@@ -80,6 +84,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-public/passkey/login-verify`,
         {
           method: "POST",
+          signal,
           headers: fnHeaders,
           body: JSON.stringify({
             email: email.trim(),
@@ -116,12 +121,13 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
         );
       }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       if (err instanceof Error && err.name !== "NotAllowedError") {
         setError(err.message);
       }
     }
     setPasskeyLoading(false);
-  }, [email]);
+  }, [email, nextFetchSignal]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {

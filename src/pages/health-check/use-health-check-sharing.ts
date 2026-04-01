@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { SEProfile } from "@/hooks/use-se-auth";
@@ -23,6 +24,7 @@ export function useHealthCheckSharing(options: {
 }) {
   const { seProfile, savedCheckId, buildSharedHtml, onRecheckSelected } = options;
   const { activeTeamId } = useActiveTeam();
+  const nextMutationSignal = useAbortableInFlight();
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(null);
@@ -81,7 +83,9 @@ export function useHealthCheckSharing(options: {
               overall_score: (row.overall_score as number | null) ?? null,
               overall_grade: (row.overall_grade as string | null) ?? null,
               checked_at: row.checked_at as string,
-              customer_email: (snap as Record<string, unknown>)?.customerEmail as string | undefined,
+              customer_email: (snap as Record<string, unknown>)?.customerEmail as
+                | string
+                | undefined,
               serialNumbers,
             };
           });
@@ -112,46 +116,52 @@ export function useHealthCheckSharing(options: {
     [onRecheckSelected],
   );
 
-  const handleSetFollowup = useCallback(async (months: number | null) => {
-    if (!savedCheckId) {
-      toast.error("Save the health check first.");
-      return;
-    }
-    setSettingFollowup(true);
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
-      let followupDate: string | null = null;
-      if (months) {
-        const d = new Date();
-        d.setMonth(d.getMonth() + months);
-        followupDate = d.toISOString();
+  const handleSetFollowup = useCallback(
+    async (months: number | null) => {
+      if (!savedCheckId) {
+        toast.error("Save the health check first.");
+        return;
       }
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/${savedCheckId}/followup`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Content-Type": "application/json",
+      setSettingFollowup(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) throw new Error("Not authenticated");
+        let followupDate: string | null = null;
+        if (months) {
+          const d = new Date();
+          d.setMonth(d.getMonth() + months);
+          followupDate = d.toISOString();
+        }
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/health-checks/${savedCheckId}/followup`,
+          {
+            method: "PATCH",
+            signal: nextMutationSignal(),
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ followup_at: followupDate }),
           },
-          body: JSON.stringify({ followup_at: followupDate }),
-        },
-      );
-      if (!res.ok) throw new Error((await res.json()).error || "Failed");
-      setFollowupAt(followupDate);
-      toast.success(
-        months ? `Follow-up reminder set for ${months} months from now.` : "Follow-up reminder cancelled.",
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not set follow-up.");
-    } finally {
-      setSettingFollowup(false);
-    }
-  }, [savedCheckId]);
+        );
+        if (!res.ok) throw new Error((await res.json()).error || "Failed");
+        setFollowupAt(followupDate);
+        toast.success(
+          months
+            ? `Follow-up reminder set for ${months} months from now.`
+            : "Follow-up reminder cancelled.",
+        );
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not set follow-up.");
+      } finally {
+        setSettingFollowup(false);
+      }
+    },
+    [savedCheckId, nextMutationSignal],
+  );
 
   const handleShareHealthCheck = useCallback(async () => {
     if (!savedCheckId) {

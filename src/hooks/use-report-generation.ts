@@ -1,11 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { ReportEntry } from "@/components/DocumentPreview";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
 import { toast } from "sonner";
 import { analyseConfig, type AnalysisResult, type Finding } from "@/lib/analyse-config";
-import type { InspectionPosture } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
 
 const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
@@ -117,6 +116,14 @@ export function useReportGeneration(
   const [isLoading, setIsLoading] = useState(false);
   const [loadingReportIds, setLoadingReportIds] = useState<Set<string>>(new Set());
   const [failedReportIds, setFailedReportIds] = useState<Set<string>>(new Set());
+  const parseAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      parseAbortRef.current?.abort();
+      parseAbortRef.current = null;
+    };
+  }, []);
 
   const generateSingleReport = useCallback(
     async (
@@ -159,9 +166,14 @@ export function useReportGeneration(
           );
         }
 
+        parseAbortRef.current?.abort();
+        parseAbortRef.current = new AbortController();
+        const streamSignal = parseAbortRef.current.signal;
+
         succeeded = await new Promise<boolean>((resolve) => {
           streamConfigParse({
             sections,
+            signal: streamSignal,
             environment: branding.environment || undefined,
             country: branding.country || undefined,
             customerName: branding.customerName || undefined,
@@ -204,13 +216,14 @@ export function useReportGeneration(
                 ),
               );
               console.error(`Report ${reportId} attempt ${attempt + 1} failed:`, err);
-              if (attempt >= MAX_RETRIES) {
-                const isExecutive = reportId === "report-executive";
-                const description = isExecutive
-                  ? `Executive summary uses data from all firewalls and often hits API limits. ${err} Try again in a few minutes, use fewer firewalls, or use the Retry analysis control on the report.`
-                  : `${err} Use Retry analysis on the report panel to run generation again.`;
-                toast.error("Analysis did not finish", { description });
-              }
+              const isExecutive = reportId === "report-executive";
+              const description = isExecutive
+                ? `Executive summary uses data from all firewalls and often hits API limits. ${err} Try again in a few minutes, use fewer firewalls, or use Retry on the report.`
+                : `${err} Use Retry on the report panel to run generation again.`;
+              toast.error("Analysis did not finish", {
+                id: `analysis-fail-${reportId}`,
+                description,
+              });
               resolve(false);
             },
             onStatus: (status) =>

@@ -41,6 +41,8 @@ export default defineConfig({
             ...process.env,
             /** Loopback-only auth bypass for signed-in E2E without E2E_USER_* secrets (see use-auth + e2e/tier2-flows). */
             VITE_E2E_AUTH_BYPASS: "1",
+            /** Real .pdf download in DocumentPreview for Tier 2 export assertion (matches CI Vite build). */
+            VITE_E2E_PDF_DOWNLOAD: "1",
           },
         },
       }),

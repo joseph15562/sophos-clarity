@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { Check, ChevronsUpDown, ExternalLink, Loader2, Ticket, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,6 +25,7 @@ type ManageCompanyRow = { id: number; name: string; identifier: string };
 /** ConnectWise Manage REST credentials and defaults for service ticket creation (separate from Partner Cloud). */
 export function ConnectWiseManageSettings() {
   const { org } = useAuth();
+  const nextMutationSignal = useAbortableInFlight();
   const [linked, setLinked] = useState<boolean | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -97,7 +99,7 @@ export function ConnectWiseManageSettings() {
     void loadMappings();
   }, [loadMappings]);
 
-  async function apiGet(path: string): Promise<Record<string, unknown>> {
+  async function apiGet(path: string, signal?: AbortSignal): Promise<Record<string, unknown>> {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -105,6 +107,7 @@ export function ConnectWiseManageSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "GET",
+      signal,
       headers: {
         Authorization: `Bearer ${session.access_token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -124,7 +127,7 @@ export function ConnectWiseManageSettings() {
     setCompaniesLoading(true);
     setCompaniesError("");
     try {
-      const data = await apiGet("/connectwise-manage/companies");
+      const data = await apiGet("/connectwise-manage/companies", nextMutationSignal());
       const list = data.companies;
       setManageCompanies(Array.isArray(list) ? (list as ManageCompanyRow[]) : []);
     } catch (err) {
@@ -135,7 +138,7 @@ export function ConnectWiseManageSettings() {
     }
   }
 
-  async function apiPost(path: string, body: unknown) {
+  async function apiPost(path: string, body: unknown, signal?: AbortSignal) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -143,6 +146,7 @@ export function ConnectWiseManageSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
@@ -159,7 +163,7 @@ export function ConnectWiseManageSettings() {
     return resBody;
   }
 
-  async function apiDelete(path: string) {
+  async function apiDelete(path: string, signal?: AbortSignal) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -167,6 +171,7 @@ export function ConnectWiseManageSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "DELETE",
+      signal,
       headers: {
         Authorization: `Bearer ${session.access_token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -181,7 +186,7 @@ export function ConnectWiseManageSettings() {
     return resBody;
   }
 
-  async function apiPut(path: string, body: unknown) {
+  async function apiPut(path: string, body: unknown, signal?: AbortSignal) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -189,6 +194,7 @@ export function ConnectWiseManageSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "PUT",
+      signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
@@ -235,7 +241,7 @@ export function ConnectWiseManageSettings() {
         payload.publicKey = publicKey.trim();
         payload.privateKey = privateKey.trim();
       }
-      await apiPost("/connectwise-manage/credentials", payload);
+      await apiPost("/connectwise-manage/credentials", payload, nextMutationSignal());
       setPrivateKey("");
       setMessage("Saved.");
       await loadStatus();
@@ -264,10 +270,14 @@ export function ConnectWiseManageSettings() {
     setMapBusy(true);
     setMessage("");
     try {
-      await apiPut("/connectwise-manage/company-mappings", {
-        customerKey: ck,
-        companyId: cid,
-      });
+      await apiPut(
+        "/connectwise-manage/company-mappings",
+        {
+          customerKey: ck,
+          companyId: cid,
+        },
+        nextMutationSignal(),
+      );
       setMapCustomerKey("");
       setMapCompanyId("");
       setCompanyManualMode(false);
@@ -292,6 +302,7 @@ export function ConnectWiseManageSettings() {
       const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
       const res = await fetch(`${base}/connectwise-manage/company-mappings`, {
         method: "DELETE",
+        signal: nextMutationSignal(),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
@@ -319,7 +330,7 @@ export function ConnectWiseManageSettings() {
     setBusy(true);
     setMessage("");
     try {
-      await apiDelete("/connectwise-manage/credentials");
+      await apiDelete("/connectwise-manage/credentials", nextMutationSignal());
       setLinked(false);
       setApiBaseUrl("");
       setIntegratorCompanyId("");

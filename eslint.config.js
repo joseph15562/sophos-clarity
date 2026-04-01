@@ -54,6 +54,19 @@ export default tseslint.config(
     },
   },
   {
+    files: ["src/hooks/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+  {
     files: [
       "src/components/ui/**/*.tsx",
       "src/components/BrandingSetup.tsx",

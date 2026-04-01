@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/use-auth";
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { queryKeys } from "@/hooks/queries";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -108,6 +109,7 @@ function RegisterDialog({
   const [loading, setLoading] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const nextMutationSignal = useAbortableInFlight();
 
   const handleSubmit = async () => {
     if (!name.trim() || !firewallHost.trim()) return;
@@ -120,6 +122,7 @@ function RegisterDialog({
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/register`,
         {
           method: "POST",
+          signal: nextMutationSignal(),
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
@@ -384,11 +387,21 @@ export function AgentManager() {
   const { org, canManageAgents, canManageTeam } = useAuth();
   const queryClient = useQueryClient();
   const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const runNowAbortByAgentRef = useRef<Map<string, AbortController>>(new Map());
+  const agentOpAbortByAgentRef = useRef<Map<string, AbortController>>(new Map());
+  const pollUnmountAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    pollUnmountAbortRef.current = new AbortController();
     return () => {
       for (const iv of pollIntervalsRef.current.values()) clearInterval(iv);
       pollIntervalsRef.current.clear();
+      pollUnmountAbortRef.current?.abort();
+      pollUnmountAbortRef.current = null;
+      for (const ac of runNowAbortByAgentRef.current.values()) ac.abort();
+      runNowAbortByAgentRef.current.clear();
+      for (const ac of agentOpAbortByAgentRef.current.values()) ac.abort();
+      agentOpAbortByAgentRef.current.clear();
     };
   }, []);
 
@@ -477,10 +490,15 @@ export function AgentManager() {
         return;
       }
 
+      agentOpAbortByAgentRef.current.get(agentId)?.abort();
+      const delAc = new AbortController();
+      agentOpAbortByAgentRef.current.set(agentId, delAc);
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}`,
         {
           method: "DELETE",
+          signal: delAc.signal,
           headers: {
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -511,10 +529,15 @@ export function AgentManager() {
 
       setScanRequested((p) => ({ ...p, [agentId]: true }));
 
+      runNowAbortByAgentRef.current.get(agentId)?.abort();
+      const runAc = new AbortController();
+      runNowAbortByAgentRef.current.set(agentId, runAc);
+
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/agent/${agentId}/run-now`,
         {
           method: "POST",
+          signal: runAc.signal,
           headers: {
             Authorization: `Bearer ${session.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,

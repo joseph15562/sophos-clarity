@@ -79,7 +79,7 @@ test.describe("Tier 2 — SE health check shell", () => {
   });
 });
 
-/** Print stub shared by signed-in describes (secrets and bypass). */
+/** Legacy print stub (optional); PDF export now uses real download when `VITE_E2E_PDF_DOWNLOAD=1`. */
 async function addPrintStub(context: import("@playwright/test").BrowserContext) {
   await context.addInitScript(() => {
     const origOpen = window.open.bind(window);
@@ -139,12 +139,10 @@ test.describe("Tier 2 — signed-in hub (E2E bypass, no secrets)", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename().toLowerCase()).toMatch(/\.docx$/i);
 
+    const pdfDownloadPromise = page.waitForEvent("download", { timeout: 60_000 });
     await page.getByTestId("export-download-pdf").click();
-    await page.waitForTimeout(800);
-    const pdfPrintSignaled = await page.evaluate(
-      () => (window as Window & { __E2E_PDF_PRINT__?: boolean }).__E2E_PDF_PRINT__ === true,
-    );
-    expect(pdfPrintSignaled).toBe(true);
+    const pdfDl = await pdfDownloadPromise;
+    expect(pdfDl.suggestedFilename().toLowerCase()).toMatch(/\.pdf$/i);
   });
 });
 
@@ -229,12 +227,10 @@ test.describe("Tier 2 — signed-in hub (optional GitHub secrets)", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename().toLowerCase()).toMatch(/\.docx$/i);
 
+    const pdfDownloadPromise = page.waitForEvent("download", { timeout: 60_000 });
     await page.getByTestId("export-download-pdf").click();
-    await page.waitForTimeout(800);
-    const pdfPrintSignaled = await page.evaluate(
-      () => (window as Window & { __E2E_PDF_PRINT__?: boolean }).__E2E_PDF_PRINT__ === true,
-    );
-    expect(pdfPrintSignaled).toBe(true);
+    const pdfDl = await pdfDownloadPromise;
+    expect(pdfDl.suggestedFilename().toLowerCase()).toMatch(/\.pdf$/i);
   });
 });
 

@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 
 interface Props {
   open: boolean;
@@ -32,6 +33,7 @@ export function AutotaskTicketFromFindingDialog({
   firecomplyCustomerKey,
 }: Props) {
   const { org } = useAuth();
+  const nextMutationSignal = useAbortableInFlight();
   const [companyId, setCompanyId] = useState("");
   const [queueId, setQueueId] = useState("");
   const [priority, setPriority] = useState("");
@@ -116,6 +118,7 @@ export function AutotaskTicketFromFindingDialog({
 
       const res = await fetch(`${base}/autotask-psa/tickets`, {
         method: "POST",
+        signal: nextMutationSignal(),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,

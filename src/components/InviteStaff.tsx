@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { UserPlus, Trash2, AlertCircle, CheckCircle2, Shield, Users, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -45,6 +46,7 @@ const ROLE_OPTIONS: { value: OrgRole; label: string; description: string }[] = [
 ];
 
 export function InviteStaff() {
+  const nextFetchSignal = useAbortableInFlight();
   const { org, role } = useAuth();
   const rosterQuery = useOrgTeamRosterQuery(org?.id);
   const inviteMutation = useOrgInviteMutation();
@@ -128,50 +130,56 @@ export function InviteStaff() {
 
   const [resettingMfa, setResettingMfa] = useState<string | null>(null);
 
-  const resetMfa = useCallback(async (targetUserId: string, memberEmail?: string) => {
-    if (
-      !confirm(
-        `Reset MFA for ${memberEmail ?? "this user"}? They will need to re-enroll their authenticator on next login.`,
+  const resetMfa = useCallback(
+    async (targetUserId: string, memberEmail?: string) => {
+      if (
+        !confirm(
+          `Reset MFA for ${memberEmail ?? "this user"}? They will need to re-enroll their authenticator on next login.`,
+        )
       )
-    )
-      return;
+        return;
 
-    setResettingMfa(targetUserId);
-    try {
-      const session = (await supabase.auth.getSession()).data.session;
-      if (!session) throw new Error("Not authenticated");
+      setResettingMfa(targetUserId);
+      const signal = nextFetchSignal();
+      try {
+        const session = (await supabase.auth.getSession()).data.session;
+        if (!session) throw new Error("Not authenticated");
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/admin/reset-mfa`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/admin/reset-mfa`,
+          {
+            method: "POST",
+            signal,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ targetUserId }),
           },
-          body: JSON.stringify({ targetUserId }),
-        },
-      );
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Failed to reset MFA");
-      }
-
-      const data = await res.json();
-      if (data.factorsRemoved > 0) {
-        toast.success(
-          `MFA reset for ${memberEmail ?? "user"} — ${data.factorsRemoved} factor(s) removed`,
         );
-      } else {
-        toast.info(`${memberEmail ?? "User"} has no MFA factors enrolled`);
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error ?? "Failed to reset MFA");
+        }
+
+        const data = await res.json();
+        if (data.factorsRemoved > 0) {
+          toast.success(
+            `MFA reset for ${memberEmail ?? "user"} — ${data.factorsRemoved} factor(s) removed`,
+          );
+        } else {
+          toast.info(`${memberEmail ?? "User"} has no MFA factors enrolled`);
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        toast.error(err instanceof Error ? err.message : "Failed to reset MFA");
       }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reset MFA");
-    }
-    setResettingMfa(null);
-  }, []);
+      setResettingMfa(null);
+    },
+    [nextFetchSignal],
+  );
 
   if (role !== "admin") {
     return (

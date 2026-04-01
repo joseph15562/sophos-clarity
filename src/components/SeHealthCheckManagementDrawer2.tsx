@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSEAuth, type SEProfile } from "@/hooks/use-se-auth";
 import { useActiveTeam, type SETeam } from "@/hooks/use-active-team";
 import { toast } from "sonner";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 
 type Props = {
   open: boolean;
@@ -55,13 +56,14 @@ interface PendingInvite {
   expires_at: string;
 }
 
-async function apiCall(path: string, method: string, body?: unknown) {
+async function apiCall(path: string, method: string, body?: unknown, signal?: AbortSignal) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) throw new Error("Not authenticated");
   const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/${path}`, {
     method,
+    signal,
     headers: {
       Authorization: `Bearer ${session.access_token}`,
       apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -83,6 +85,7 @@ const SE_TITLE_PRESETS = [
 ];
 
 export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
+  const nextMutationSignal = useAbortableInFlight();
   const { seProfile, reloadSeProfile } = useSEAuth();
   const { teams, reload: reloadTeams } = useActiveTeam();
   const [draft, setDraft] = useState("");
@@ -147,7 +150,12 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     if (!newTeamName.trim()) return;
     setCreatingTeam(true);
     try {
-      const result = await apiCall("se-teams", "POST", { name: newTeamName.trim() });
+      const result = await apiCall(
+        "se-teams",
+        "POST",
+        { name: newTeamName.trim() },
+        nextMutationSignal(),
+      );
       toast.success(`Team "${result.name}" created.`);
       setNewTeamName("");
       await reloadTeams();
@@ -156,31 +164,47 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     } finally {
       setCreatingTeam(false);
     }
-  }, [newTeamName, reloadTeams]);
+  }, [newTeamName, reloadTeams, nextMutationSignal]);
 
-  const fetchMembers = useCallback(async (teamId: string) => {
-    setLoadingMembers(true);
-    try {
-      const result = await apiCall(`se-teams/${teamId}/members`, "GET");
-      setTeamMembers(result.data ?? []);
-    } catch {
-      setTeamMembers([]);
-    } finally {
-      setLoadingMembers(false);
-    }
-  }, []);
+  const fetchMembers = useCallback(
+    async (teamId: string) => {
+      setLoadingMembers(true);
+      try {
+        const result = await apiCall(
+          `se-teams/${teamId}/members`,
+          "GET",
+          undefined,
+          nextMutationSignal(),
+        );
+        setTeamMembers(result.data ?? []);
+      } catch {
+        setTeamMembers([]);
+      } finally {
+        setLoadingMembers(false);
+      }
+    },
+    [nextMutationSignal],
+  );
 
-  const fetchPendingInvites = useCallback(async (teamId: string) => {
-    setLoadingInvites(true);
-    try {
-      const result = await apiCall(`se-teams/${teamId}/invites`, "GET");
-      setPendingInvites(result.data ?? []);
-    } catch {
-      setPendingInvites([]);
-    } finally {
-      setLoadingInvites(false);
-    }
-  }, []);
+  const fetchPendingInvites = useCallback(
+    async (teamId: string) => {
+      setLoadingInvites(true);
+      try {
+        const result = await apiCall(
+          `se-teams/${teamId}/invites`,
+          "GET",
+          undefined,
+          nextMutationSignal(),
+        );
+        setPendingInvites(result.data ?? []);
+      } catch {
+        setPendingInvites([]);
+      } finally {
+        setLoadingInvites(false);
+      }
+    },
+    [nextMutationSignal],
+  );
 
   const toggleExpand = useCallback(
     (team: SETeam) => {
@@ -201,7 +225,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     async (teamId: string) => {
       setBusy(true);
       try {
-        await apiCall(`se-teams/${teamId}/set-primary`, "POST");
+        await apiCall(`se-teams/${teamId}/set-primary`, "POST", undefined, nextMutationSignal());
         toast.success("Primary team updated.");
         await reloadTeams();
       } catch (e) {
@@ -210,14 +234,14 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setBusy(false);
       }
     },
-    [reloadTeams],
+    [reloadTeams, nextMutationSignal],
   );
 
   const handleLeaveTeam = useCallback(
     async (teamId: string) => {
       setBusy(true);
       try {
-        await apiCall(`se-teams/${teamId}/leave`, "POST");
+        await apiCall(`se-teams/${teamId}/leave`, "POST", undefined, nextMutationSignal());
         toast.success("Left team.");
         setExpandedTeamId(null);
         await reloadTeams();
@@ -227,7 +251,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setBusy(false);
       }
     },
-    [reloadTeams],
+    [reloadTeams, nextMutationSignal],
   );
 
   const handleRenameTeam = useCallback(
@@ -235,7 +259,12 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
       if (!renameDraft.trim()) return;
       setRenaming(true);
       try {
-        await apiCall(`se-teams/${teamId}`, "PATCH", { name: renameDraft.trim() });
+        await apiCall(
+          `se-teams/${teamId}`,
+          "PATCH",
+          { name: renameDraft.trim() },
+          nextMutationSignal(),
+        );
         toast.success("Team renamed.");
         await reloadTeams();
       } catch (e) {
@@ -244,7 +273,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setRenaming(false);
       }
     },
-    [renameDraft, reloadTeams],
+    [renameDraft, reloadTeams, nextMutationSignal],
   );
 
   const handleSendInvite = useCallback(
@@ -252,7 +281,12 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
       if (!inviteEmail.trim()) return;
       setSendingInvite(true);
       try {
-        await apiCall(`se-teams/${teamId}/invite`, "POST", { email: inviteEmail.trim() });
+        await apiCall(
+          `se-teams/${teamId}/invite`,
+          "POST",
+          { email: inviteEmail.trim() },
+          nextMutationSignal(),
+        );
         toast.success(`Invite sent to ${inviteEmail.trim()}`);
         setInviteEmail("");
         void fetchPendingInvites(teamId);
@@ -262,14 +296,19 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setSendingInvite(false);
       }
     },
-    [inviteEmail, fetchPendingInvites],
+    [inviteEmail, fetchPendingInvites, nextMutationSignal],
   );
 
   const handleRevokeInvite = useCallback(
     async (teamId: string, inviteId: string) => {
       setBusy(true);
       try {
-        await apiCall(`se-teams/${teamId}/invites/${inviteId}`, "DELETE");
+        await apiCall(
+          `se-teams/${teamId}/invites/${inviteId}`,
+          "DELETE",
+          undefined,
+          nextMutationSignal(),
+        );
         toast.success("Invite revoked.");
         void fetchPendingInvites(teamId);
       } catch (e) {
@@ -278,16 +317,21 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setBusy(false);
       }
     },
-    [fetchPendingInvites],
+    [fetchPendingInvites, nextMutationSignal],
   );
 
   const handleTransferAdmin = useCallback(
     async (teamId: string, targetProfileId: string) => {
       setBusy(true);
       try {
-        await apiCall(`se-teams/${teamId}/transfer-admin`, "POST", {
-          target_se_profile_id: targetProfileId,
-        });
+        await apiCall(
+          `se-teams/${teamId}/transfer-admin`,
+          "POST",
+          {
+            target_se_profile_id: targetProfileId,
+          },
+          nextMutationSignal(),
+        );
         toast.success("Admin role transferred.");
         await reloadTeams();
         void fetchMembers(teamId);
@@ -297,14 +341,19 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setBusy(false);
       }
     },
-    [reloadTeams, fetchMembers],
+    [reloadTeams, fetchMembers, nextMutationSignal],
   );
 
   const handleRemoveMember = useCallback(
     async (teamId: string, memberId: string) => {
       setBusy(true);
       try {
-        await apiCall(`se-teams/${teamId}/members/${memberId}`, "DELETE");
+        await apiCall(
+          `se-teams/${teamId}/members/${memberId}`,
+          "DELETE",
+          undefined,
+          nextMutationSignal(),
+        );
         toast.success("Member removed.");
         void fetchMembers(teamId);
         await reloadTeams();
@@ -314,7 +363,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setBusy(false);
       }
     },
-    [fetchMembers, reloadTeams],
+    [fetchMembers, reloadTeams, nextMutationSignal],
   );
 
   const handleDeleteTeam = useCallback(
@@ -322,7 +371,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
       if (!confirm("Delete this team? This cannot be undone.")) return;
       setBusy(true);
       try {
-        await apiCall(`se-teams/${teamId}`, "DELETE");
+        await apiCall(`se-teams/${teamId}`, "DELETE", undefined, nextMutationSignal());
         toast.success("Team deleted.");
         setExpandedTeamId(null);
         await reloadTeams();
@@ -332,7 +381,7 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
         setBusy(false);
       }
     },
-    [reloadTeams],
+    [reloadTeams, nextMutationSignal],
   );
 
   if (!open) return null;

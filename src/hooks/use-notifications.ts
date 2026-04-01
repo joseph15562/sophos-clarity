@@ -30,7 +30,7 @@ function loadFromStorage(): AppNotification[] {
 
 function saveToStorage(notifications: AppNotification[]): void {
   try {
-    const serializable = notifications.map(({ action, ...rest }) => rest);
+    const serializable = notifications.map(({ action: _action, ...rest }) => rest);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable.slice(0, MAX_NOTIFICATIONS)));
   } catch (err) {
     console.warn("[saveToStorage]", err);
@@ -40,28 +40,33 @@ function saveToStorage(notifications: AppNotification[]): void {
 export function useNotifications() {
   const [notifications, setNotifications] = useState<AppNotification[]>(() => loadFromStorage());
 
-  useEffect(() => { saveToStorage(notifications); }, [notifications]);
+  useEffect(() => {
+    saveToStorage(notifications);
+  }, [notifications]);
 
-  const addNotification = useCallback((
-    type: NotificationType,
-    title: string,
-    message: string,
-    action?: { label: string; onClick: () => void },
-  ) => {
-    const notif: AppNotification = {
-      id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      type,
-      title,
-      message,
-      timestamp: Date.now(),
-      read: false,
-      action,
-    };
-    setNotifications((prev) => [notif, ...prev].slice(0, MAX_NOTIFICATIONS));
-  }, []);
+  const addNotification = useCallback(
+    (
+      type: NotificationType,
+      title: string,
+      message: string,
+      action?: { label: string; onClick: () => void },
+    ) => {
+      const notif: AppNotification = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type,
+        title,
+        message,
+        timestamp: Date.now(),
+        read: false,
+        action,
+      };
+      setNotifications((prev) => [notif, ...prev].slice(0, MAX_NOTIFICATIONS));
+    },
+    [],
+  );
 
   const markRead = useCallback((id: string) => {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   }, []);
 
   const markAllRead = useCallback(() => {

@@ -1,4 +1,5 @@
 import type { ExtractedSections } from "./extract-sections";
+import { mergeAbortSignals } from "./merge-abort-signals";
 import {
   buildAnonymisationMap,
   anonymiseData,
@@ -237,6 +238,8 @@ type StreamOptions = {
   /** When informational, compliance narrative should not over-state regulatory failure for web-filter gaps */
   webFilterComplianceMode?: "strict" | "informational";
   centralEnrichment?: CentralEnrichment;
+  /** When set (e.g. unmount), aborts fetch and SSE consumption */
+  signal?: AbortSignal;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
@@ -245,6 +248,7 @@ type StreamOptions = {
 
 type ChatStreamOptions = {
   chatContext: string;
+  signal?: AbortSignal;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
@@ -293,6 +297,7 @@ export type ParseConfigDebugPayload = Pick<
 
 export async function fetchParseConfigDebug(
   payload: ParseConfigDebugPayload,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const {
     sections,
@@ -315,6 +320,7 @@ export async function fetchParseConfigDebug(
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
   const resp = await fetch(url, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
@@ -342,6 +348,7 @@ export async function fetchParseConfigDebug(
 
 export async function streamChat({
   chatContext,
+  signal: externalSignal,
   onDelta,
   onDone,
   onError,
@@ -350,8 +357,11 @@ export async function streamChat({
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-config`;
 
   const timeoutMs = 60_000;
-  const ac = new AbortController();
-  const timeoutId = setTimeout(() => ac.abort(), timeoutMs);
+  const timeoutAc = new AbortController();
+  const timeoutId = setTimeout(() => timeoutAc.abort(), timeoutMs);
+  const fetchSignal = externalSignal
+    ? mergeAbortSignals(timeoutAc.signal, externalSignal)
+    : timeoutAc.signal;
 
   onStatus?.("Sending request…");
   let resp: Response;
@@ -359,7 +369,7 @@ export async function streamChat({
     const token = await getAuthBearer();
     resp = await fetch(url, {
       method: "POST",
-      signal: ac.signal,
+      signal: fetchSignal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -371,7 +381,9 @@ export async function streamChat({
     onStatus?.("");
     const msg =
       e instanceof Error && e.name === "AbortError"
-        ? "Request timed out — try again in a moment."
+        ? externalSignal?.aborted
+          ? "Cancelled."
+          : "Request timed out — try again in a moment."
         : e instanceof Error
           ? e.message
           : "Request failed";
@@ -394,7 +406,7 @@ export async function streamChat({
   }
 
   onStatus?.("Thinking…");
-  await consumeSSEStream(resp.body, onDelta, onDone, onStatus);
+  await consumeSSEStream(resp.body, onDelta, onDone, onStatus, onError, externalSignal);
 }
 
 export async function streamConfigParse({
@@ -408,6 +420,7 @@ export async function streamConfigParse({
   compliance,
   webFilterComplianceMode,
   centralEnrichment,
+  signal: externalSignal,
   onDelta,
   onDone,
   onError,
@@ -426,8 +439,18 @@ export async function streamConfigParse({
 
   // 8 minutes for large executive/compliance reports; Supabase may enforce a lower function limit
   const timeoutMs = 8 * 60 * 1000;
-  const ac = new AbortController();
-  const timeoutId = setTimeout(() => ac.abort(), timeoutMs);
+  const timeoutAc = new AbortController();
+  const timeoutId = setTimeout(() => timeoutAc.abort(), timeoutMs);
+  const fetchSignal = externalSignal
+    ? mergeAbortSignals(timeoutAc.signal, externalSignal)
+    : timeoutAc.signal;
+
+  if (externalSignal?.aborted) {
+    clearTimeout(timeoutId);
+    onStatus?.("");
+    onError("Cancelled.");
+    return;
+  }
 
   onStatus?.("Sending request…");
   const bodyJson = JSON.stringify({
@@ -457,7 +480,7 @@ export async function streamConfigParse({
       const token = await getAuthBearer();
       resp = await fetch(url, {
         method: "POST",
-        signal: ac.signal,
+        signal: fetchSignal,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -469,7 +492,9 @@ export async function streamConfigParse({
       onStatus?.("");
       const msg =
         e instanceof Error && e.name === "AbortError"
-          ? `Request timed out after ${timeoutMs / 60_000} minutes. Large or multi-firewall reports can take a long time. Try generating individual reports first, or use fewer configs and retry.`
+          ? externalSignal?.aborted
+            ? "Cancelled."
+            : `Request timed out after ${timeoutMs / 60_000} minutes. Large or multi-firewall reports can take a long time. Try generating individual reports first, or use fewer configs and retry.`
           : e instanceof Error
             ? e.message
             : "Request failed";
@@ -516,6 +541,7 @@ export async function streamConfigParse({
     },
     onStatus,
     onError,
+    externalSignal,
   );
 }
 
@@ -530,6 +556,7 @@ async function consumeSSEStream(
   onDone: () => void,
   onStatus?: (status: string) => void,
   onError?: (error: string) => void,
+  externalSignal?: AbortSignal,
 ) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -537,6 +564,25 @@ async function consumeSSEStream(
   let hasReceivedContent = false;
   let inactivityDone = false;
   let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+  let userAbortDone = false;
+
+  const onUserAbort = () => {
+    if (inactivityDone || userAbortDone) return;
+    userAbortDone = true;
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    void reader.cancel();
+    onStatus?.("");
+    onError?.("Cancelled.");
+    onDone();
+  };
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      onUserAbort();
+      return;
+    }
+    externalSignal.addEventListener("abort", onUserAbort, { once: true });
+  }
 
   function scheduleInactivityTimeout() {
     if (inactivityTimer) clearTimeout(inactivityTimer);
@@ -608,13 +654,14 @@ async function consumeSSEStream(
       }
     }
   } catch (e) {
-    if (!inactivityDone) {
+    if (!inactivityDone && !userAbortDone) {
       console.warn("[consumeSSEStream] stream read error", e);
       const msg = e instanceof Error ? e.message : "Stream read failed";
       onError?.(`Connection error: ${msg}. You can retry or export any partial report below.`);
     }
   } finally {
+    if (externalSignal) externalSignal.removeEventListener("abort", onUserAbort);
     if (inactivityTimer) clearTimeout(inactivityTimer);
-    if (!inactivityDone) onDone();
+    if (!inactivityDone && !userAbortDone) onDone();
   }
 }

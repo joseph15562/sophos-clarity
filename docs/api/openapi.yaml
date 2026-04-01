@@ -618,6 +618,7 @@ paths:
       summary: Claim job_outbox batch and send scheduled report emails (worker)
       description: >
         Intended for cron; optional Authorization Bearer CRON_SECRET when CRON_SECRET is set on the function.
+        Exportable handler `handleProcessJobOutboxRequest` is covered by Deno tests (wrong bearer → 401).
       responses:
         "200":
           description: Claim/send cycle finished

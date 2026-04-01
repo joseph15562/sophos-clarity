@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { useQueryClient } from "@tanstack/react-query";
 import { Fingerprint, Plus, Trash2, Smartphone, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { usePasskeyDeleteMutation } from "@/hooks/queries/use-passkey-delete-mut
 
 export function PasskeyManager() {
   const queryClient = useQueryClient();
+  const nextFetchSignal = useAbortableInFlight();
   const { data: passkeys = [], isPending: passkeysLoading } = usePasskeysQuery();
   const deletePasskeyMutation = usePasskeyDeleteMutation();
   const [registering, setRegistering] = useState(false);
@@ -18,6 +20,7 @@ export function PasskeyManager() {
 
   const registerPasskey = async () => {
     setRegistering(true);
+    const signal = nextFetchSignal();
     try {
       const session = (await supabase.auth.getSession()).data.session;
       if (!session) throw new Error("Not authenticated");
@@ -30,7 +33,7 @@ export function PasskeyManager() {
 
       const optionsRes = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/register-options`,
-        { method: "POST", headers: fnHeaders },
+        { method: "POST", signal, headers: fnHeaders },
       );
 
       if (!optionsRes.ok) {
@@ -67,6 +70,7 @@ export function PasskeyManager() {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/passkey/register-verify`,
         {
           method: "POST",
+          signal,
           headers: fnHeaders,
           body: JSON.stringify({
             credential: {
@@ -98,6 +102,7 @@ export function PasskeyManager() {
       setNewName("");
       void queryClient.invalidateQueries({ queryKey: queryKeys.passkeys.list() });
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       if (err instanceof Error && err.name !== "NotAllowedError") {
         toast.error(err.message);
       }

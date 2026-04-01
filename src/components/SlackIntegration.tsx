@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { MessageSquare, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ function saveConfig(config: SlackConfig): void {
 }
 
 export function SlackIntegration() {
+  const nextMutationSignal = useAbortableInFlight();
   const [config, setConfig] = useState<SlackConfig>(loadConfig());
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function SlackIntegration() {
     try {
       const res = await fetch(config.webhookUrl, {
         method: "POST",
+        signal: nextMutationSignal(),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: "Test notification from Sophos FireComply — integration working.",
@@ -71,7 +74,7 @@ export function SlackIntegration() {
     } catch {
       toast.error("Slack test failed — check URL and network");
     }
-  }, [config.webhookUrl]);
+  }, [config.webhookUrl, nextMutationSignal]);
 
   return (
     <div className={CARD_CLASS}>

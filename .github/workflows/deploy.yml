@@ -42,7 +42,11 @@ jobs:
       - name: Build
         env:
           VITE_E2E_AUTH_BYPASS: "1"
+          VITE_E2E_PDF_DOWNLOAD: "1"
         run: npm run build
+
+      - name: Bundle size budget
+        run: node scripts/assert-bundle-budget.mjs
 
       - name: Audit production dependencies
         # Fails the job on moderate+ issues in production dependencies (dev deps omitted).

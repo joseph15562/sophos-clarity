@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { KeyRound, Loader2, Copy, Trash2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -31,6 +32,7 @@ function formatServiceKeyClientError(err: unknown): string {
 /** List and manage org service API keys; Edge validates via `_shared/service-key.ts`. */
 export function OrgServiceKeysSettings() {
   const { org } = useAuth();
+  const nextMutationSignal = useAbortableInFlight();
   const [rows, setRows] = useState<KeyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -74,7 +76,7 @@ export function OrgServiceKeysSettings() {
     void loadRows();
   }, [loadRows]);
 
-  async function apiPost(path: string, body: unknown) {
+  async function apiPost(path: string, body: unknown, signal?: AbortSignal) {
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -82,6 +84,7 @@ export function OrgServiceKeysSettings() {
     const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
     const res = await fetch(`${base}${path}`, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
@@ -116,10 +119,14 @@ export function OrgServiceKeysSettings() {
     setBusy(true);
     setMessage("");
     try {
-      const data = await apiPost("/service-key/issue", {
-        label: trimmed,
-        scopes,
-      });
+      const data = await apiPost(
+        "/service-key/issue",
+        {
+          label: trimmed,
+          scopes,
+        },
+        nextMutationSignal(),
+      );
       const secret = typeof data.secret === "string" ? data.secret : "";
       if (!secret) throw new Error("No secret returned");
       setNewSecret(secret);
@@ -141,7 +148,7 @@ export function OrgServiceKeysSettings() {
     setRevokingId(id);
     setMessage("");
     try {
-      await apiPost("/service-key/revoke", { id });
+      await apiPost("/service-key/revoke", { id }, nextMutationSignal());
       await loadRows();
       void logAudit(org.id, "service_key.revoked", "service_key", id, {});
     } catch (err) {

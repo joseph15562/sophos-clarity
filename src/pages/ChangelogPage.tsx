@@ -35,6 +35,23 @@ function ChangelogPageInner() {
               <code className="text-xs">PASSKEY_CHALLENGE_SECRET</code> is documented in{" "}
               <code className="text-xs">docs/SELF-HOSTED.md</code>.
             </li>
+            <li>
+              <strong className="text-foreground">Quality &amp; exports</strong>: CI enforces a{" "}
+              <strong className="text-foreground">JS bundle budget</strong>; E2E can assert a real{" "}
+              <strong className="text-foreground">PDF download</strong> for the executive one-pager
+              when the preview build sets the PDF test flag; shared health-check{" "}
+              <strong className="text-foreground">Print</strong> uses the same sandboxed-iframe idea
+              as the in-page preview. Analysis failures surface a clearer{" "}
+              <strong className="text-foreground">toast</strong> with Retry guidance.
+            </li>
+            <li>
+              <strong className="text-foreground">SE Health Check</strong>: the{" "}
+              <strong className="text-foreground">results</strong> step is a dedicated module for
+              easier maintenance; leaving the page during{" "}
+              <strong className="text-foreground">AI report generation</strong> cancels the
+              in-flight stream; PSA settings, the public config-upload page, client portal load, and
+              fleet scan/delete actions now use the same cancellation pattern where it matters.
+            </li>
           </ul>
         </section>
         <section className="space-y-4">

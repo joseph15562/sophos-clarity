@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 
 interface Props {
   open: boolean;
@@ -34,6 +35,7 @@ export function ConnectWiseTicketFromFindingDialog({
   firecomplyCustomerKey,
 }: Props) {
   const { org } = useAuth();
+  const nextMutationSignal = useAbortableInFlight();
   const [customerCompanyId, setCustomerCompanyId] = useState("");
   const [boardId, setBoardId] = useState("");
   const [statusId, setStatusId] = useState("");
@@ -103,6 +105,7 @@ export function ConnectWiseTicketFromFindingDialog({
 
       const res = await fetch(`${base}/connectwise-manage/tickets`, {
         method: "POST",
+        signal: nextMutationSignal(),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,

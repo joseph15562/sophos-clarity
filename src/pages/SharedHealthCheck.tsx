@@ -13,10 +13,14 @@ interface SharedHealthCheckData {
 
 type LoadState = "loading" | "loaded" | "expired" | "not-found" | "error";
 
-async function fetchSharedHealthCheck(token: string): Promise<SharedHealthCheckData | null> {
+async function fetchSharedHealthCheck(
+  token: string,
+  signal?: AbortSignal,
+): Promise<SharedHealthCheckData | null> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-public/shared-health-check/${token}`;
   const res = await fetch(url, {
     headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+    signal,
   });
   if (res.status === 410) return null; // expired
   if (!res.ok) throw new Error(res.status === 404 ? "not-found" : "error");
@@ -33,10 +37,11 @@ const SharedHealthCheck = () => {
       setState("not-found");
       return;
     }
+    const ac = new AbortController();
     let cancelled = false;
-    fetchSharedHealthCheck(token)
+    fetchSharedHealthCheck(token, ac.signal)
       .then((d) => {
-        if (cancelled) return;
+        if (cancelled || ac.signal.aborted) return;
         if (!d) {
           setState("expired");
         } else {
@@ -45,11 +50,12 @@ const SharedHealthCheck = () => {
         }
       })
       .catch((e) => {
-        if (cancelled) return;
+        if (cancelled || ac.signal.aborted) return;
         setState(e instanceof Error && e.message === "not-found" ? "not-found" : "error");
       });
     return () => {
       cancelled = true;
+      ac.abort();
     };
   }, [token]);
 
@@ -125,10 +131,20 @@ const SharedHealthCheck = () => {
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    printWindow.document.write(data.html);
-    printWindow.document.close();
+    /** Match preview iframe: sandbox blocks embedded scripts; blob + inner iframe avoids document.write(raw HTML). */
+    const blob = new Blob([data.html], { type: "text/html;charset=utf-8" });
+    const blobUrl = URL.createObjectURL(blob);
+    const doc = printWindow.document;
+    doc.open();
+    doc.write(
+      `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print</title>` +
+        `<style>html,body{margin:0;height:100%;}iframe{border:0;width:100%;height:100vh;}</style></head><body>` +
+        `<iframe id="hc-print" sandbox="allow-same-origin allow-modals" src="${blobUrl}"></iframe>` +
+        `<script>document.getElementById("hc-print").addEventListener("load",function(){this.contentWindow.print();});</script></body></html>`,
+    );
+    doc.close();
     printWindow.focus();
-    setTimeout(() => printWindow.print(), 400);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
   };
 
   return (

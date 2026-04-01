@@ -778,12 +778,20 @@ function ReportContent({
 
   const handlePdf = async () => {
     const el = docRef.current;
-    if (!el) return;
+    if (!el || !markdown) return;
+
+    const title = pdfFilename.replace(/\.pdf$/i, "");
+    /** CI / Playwright: real .pdf bytes so E2E can assert download (see VITE_E2E_PDF_DOWNLOAD). */
+    if (import.meta.env.VITE_E2E_PDF_DOWNLOAD === "1") {
+      const { generateExecutiveReportPdfBlob } = await import("@/lib/executive-report-pdfmake");
+      const blob = await generateExecutiveReportPdfBlob(markdown, title);
+      saveAs(blob, pdfFilename);
+      return;
+    }
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    const title = pdfFilename.replace(/\.pdf$/i, "");
     printWindow.document.write(buildPdfHtml(el.innerHTML, title, branding, { theme: exportTheme }));
     printWindow.document.close();
     printWindow.focus();

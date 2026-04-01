@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseWithAbort } from "@/lib/supabase-with-abort";
 import type { Json } from "@/integrations/supabase/types";
 import type { AnalysisResult } from "./analyse-config";
 import { computeRiskScore } from "./risk-score";
@@ -286,13 +287,16 @@ export async function saveReportCloud(
   return result;
 }
 
-export async function loadSavedReportsCloud(): Promise<SavedReportPackage[]> {
-  const { data, error } = await supabase
-    .from("saved_reports")
-    .select(
-      "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by",
-    )
-    .order("created_at", { ascending: false });
+export async function loadSavedReportsCloud(signal?: AbortSignal): Promise<SavedReportPackage[]> {
+  const { data, error } = await supabaseWithAbort(
+    supabase
+      .from("saved_reports")
+      .select(
+        "id, customer_name, environment, report_type, reports, analysis_summary, created_at, created_by",
+      )
+      .order("created_at", { ascending: false }),
+    signal,
+  );
 
   if (error || !data) return [];
 

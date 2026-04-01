@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { supabaseWithAbort } from "@/lib/supabase-with-abort";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { queryKeys } from "@/hooks/queries/keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +60,7 @@ function formatDate(iso: string | null): string {
 
 export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
   const queryClient = useQueryClient();
+  const nextFetchSignal = useAbortableInFlight();
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -70,12 +73,15 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
   } = useQuery({
     queryKey: queryKeys.portal.viewers(orgId),
     enabled: Boolean(orgId),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("portal_viewers")
-        .select("id, email, name, status, invited_at, last_login_at")
-        .eq("org_id", orgId)
-        .order("invited_at", { ascending: false });
+    queryFn: async ({ signal }) => {
+      const { data, error } = await supabaseWithAbort(
+        supabase
+          .from("portal_viewers")
+          .select("id, email, name, status, invited_at, last_login_at")
+          .eq("org_id", orgId)
+          .order("invited_at", { ascending: false }),
+        signal,
+      );
       if (error) throw new Error(error.message);
       return (data ?? []).map((v) => ({
         id: v.id,
@@ -115,6 +121,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/portal-viewers/invite`,
         {
           method: "POST",
+          signal: nextFetchSignal(),
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
@@ -134,6 +141,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
       setInviteName("");
       await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
     } finally {
@@ -209,6 +217,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/portal-viewers/invite`,
         {
           method: "POST",
+          signal: nextFetchSignal(),
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.access_token}`,
@@ -231,6 +240,7 @@ export function PortalViewerManager({ orgId }: PortalViewerManagerProps) {
       }
       await queryClient.invalidateQueries({ queryKey: queryKeys.portal.viewers(orgId) });
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : "Unknown error";
       toast.error(msg);
     } finally {

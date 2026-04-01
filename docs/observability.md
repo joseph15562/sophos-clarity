@@ -140,6 +140,12 @@ rg 'logJson\("' supabase/functions -g '*.ts'
 
 Use the output to extend this doc or your drain saved searches when adding new handlers.
 
+## Log drains — operational checklist (REVIEW scalability)
+
+1. **Boards:** p95 Edge invocation latency (platform metrics) + error rate by `message` for `api_*`, `api_public_*`, `process_job_outbox_*`, `send_scheduled_reports_*`.
+2. **Alerts:** `api_unhandled` / `api_public_unhandled` any in prod; sustained `*_invalid_body` spike; `process_job_outbox_dead` or DLQ-style `dead` rows (see [job-queue-outline.md](job-queue-outline.md)).
+3. **Job queue:** [OPS-SCHEDULED-REPORTS-QUEUE.md](OPS-SCHEDULED-REPORTS-QUEUE.md) — dual cron + worker health; optional **Edge Sentry** rules on uncaught errors ([SELF-HOSTED.md](SELF-HOSTED.md)).
+
 ## SPA product events (optional ingest)
 
 Custom funnel events from `trackProductEvent` / `spa_page_view` when `VITE_ANALYTICS_INGEST_URL` is set — see [product-telemetry-events.md](product-telemetry-events.md) for a curated catalog.

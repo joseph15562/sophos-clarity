@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import {
   Upload,
   CheckCircle2,
@@ -99,22 +100,31 @@ type CentralState = "idle" | "connecting" | "connected" | "error";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
-async function fetchUploadStatus(token: string): Promise<UploadStatus | null> {
+async function fetchUploadStatus(
+  token: string,
+  signal?: AbortSignal,
+): Promise<UploadStatus | null> {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}`, {
     headers: { apikey: SUPABASE_KEY },
+    signal,
   });
   if (res.status === 410) return null;
   if (!res.ok) throw new Error(res.status === 404 ? "not-found" : "error");
   return res.json();
 }
 
-async function uploadFile(token: string, file: File): Promise<{ ok?: boolean; error?: string }> {
+async function uploadFile(
+  token: string,
+  file: File,
+  signal?: AbortSignal,
+): Promise<{ ok?: boolean; error?: string }> {
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch(`${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}`, {
     method: "POST",
     headers: { apikey: SUPABASE_KEY },
     body: formData,
+    signal,
   });
   const data = await res.json();
   if (!res.ok) return { error: data.error || "Upload failed" };
@@ -123,6 +133,7 @@ async function uploadFile(token: string, file: File): Promise<{ ok?: boolean; er
 
 const ConfigUpload = () => {
   const { token } = useParams<{ token: string }>();
+  const nextMutationSignal = useAbortableInFlight();
   const [pageState, setPageState] = useState<PageState>("loading");
   const [statusData, setStatusData] = useState<UploadStatus | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -153,10 +164,11 @@ const ConfigUpload = () => {
       setPageState("not-found");
       return;
     }
+    const ac = new AbortController();
     let cancelled = false;
-    fetchUploadStatus(token)
+    fetchUploadStatus(token, ac.signal)
       .then((d) => {
-        if (cancelled) return;
+        if (cancelled || ac.signal.aborted) return;
         if (!d) {
           setPageState("expired");
           return;
@@ -179,11 +191,12 @@ const ConfigUpload = () => {
         }
       })
       .catch((e) => {
-        if (cancelled) return;
+        if (cancelled || ac.signal.aborted) return;
         setPageState(e instanceof Error && e.message === "not-found" ? "not-found" : "error");
       });
     return () => {
       cancelled = true;
+      ac.abort();
     };
   }, [token]);
 
@@ -209,7 +222,7 @@ const ConfigUpload = () => {
       }, 300);
 
       try {
-        const result = await uploadFile(token, file);
+        const result = await uploadFile(token, file, nextMutationSignal());
         clearInterval(progressInterval);
         if (result.error) {
           setUploadError(result.error);
@@ -266,6 +279,7 @@ const ConfigUpload = () => {
         `${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}/central-connect`,
         {
           method: "POST",
+          signal: nextMutationSignal(),
           headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
           body: JSON.stringify({ client_id: clientId.trim(), client_secret: clientSecret.trim() }),
         },
@@ -299,6 +313,7 @@ const ConfigUpload = () => {
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}/central-link`, {
           method: "POST",
+          signal: nextMutationSignal(),
           headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
           body: JSON.stringify({ firewall_id: firewallId, firewall_name: firewallName }),
         });
@@ -321,6 +336,7 @@ const ConfigUpload = () => {
           `${SUPABASE_URL}/functions/v1/api-public/config-upload/${token}/central-firewalls`,
           {
             method: "POST",
+            signal: nextMutationSignal(),
             headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
             body: JSON.stringify({ tenant_id: tenantId }),
           },
