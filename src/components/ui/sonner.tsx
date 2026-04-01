@@ -1,17 +1,10 @@
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
+import { useResolvedThemeClass } from "@/hooks/use-resolved-appearance";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-/** Before next-themes hydrates, match the blocking script on <html> (see index.html). */
-function themeClassFromDocument(): "light" | "dark" {
-  if (typeof document === "undefined") return "light";
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
-}
-
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { resolvedTheme } = useTheme();
-  const sonnerTheme = (resolvedTheme ?? themeClassFromDocument()) as ToasterProps["theme"];
+  const sonnerTheme = useResolvedThemeClass() as ToasterProps["theme"];
 
   return (
     <Sonner

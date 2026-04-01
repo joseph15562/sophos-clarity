@@ -1,5 +1,5 @@
 import { lazy, Suspense, useRef, useEffect, useState, useCallback } from "react";
-import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import {
   ArrowLeftRight,
   Download,
@@ -346,8 +346,7 @@ export function AnalysisTabs({
   firecomplyCustomerKey,
   exportReviewerSignoff = null,
 }: AnalysisTabsProps) {
-  const { resolvedTheme } = useTheme();
-  const analysisTabBarDark = resolvedTheme === "dark";
+  const analysisTabBarDark = useResolvedIsDark();
   const panelRef = useRef<HTMLDivElement>(null);
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
   const w = (id: string) => isWidgetVisible(widgetPrefs, id);

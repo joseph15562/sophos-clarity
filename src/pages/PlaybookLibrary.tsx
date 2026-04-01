@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import {
   BookOpen,
   Search,
@@ -173,7 +174,7 @@ function deriveSteps(recommendation: string): string[] {
 /* ------------------------------------------------------------------ */
 
 function PlaybookLibraryInner() {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
   const { org } = useAuth();
   const { mutate: syncPlaybookRemediation } = useRemediationPlaybookToggleMutation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -218,7 +219,7 @@ function PlaybookLibraryInner() {
     });
   }, [org?.id, remediationIdsQuery.isSuccess, remediationIdsQuery.data]);
 
-  const isDark = theme === "dark";
+  const isDark = useResolvedIsDark();
 
   useEffect(() => {
     if (appliedHighlightRef.current) return;

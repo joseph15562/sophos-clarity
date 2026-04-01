@@ -28,9 +28,12 @@ function ChangelogPageInner() {
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
               <strong className="text-foreground">Theme</strong>: reduced light/dark flicker on load
-              and route changes by syncing <code className="text-xs">color-scheme</code> with the
-              early theme script, disabling transitions during theme class updates, and aligning
-              toasts with the document until next-themes resolves.
+              and on the main dashboard by syncing <code className="text-xs">color-scheme</code>{" "}
+              with the early theme script, disabling transitions during theme class updates,
+              aligning toasts with the document, and using the same resolved dark/light signal as{" "}
+              <code className="text-xs">&lt;html class&gt;</code> for tab bars, tours, charts, and
+              theme toggles when the stored preference is &quot;system&quot; (next-themes used to
+              leave <code className="text-xs">resolvedTheme</code> briefly undefined).
             </li>
             <li>
               <strong className="text-foreground">Connectors</strong>: customer site labels can be

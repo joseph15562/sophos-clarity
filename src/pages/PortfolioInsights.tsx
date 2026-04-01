@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { loadScoreHistoryForFleet } from "@/lib/score-history";
@@ -515,7 +516,8 @@ const glassCard =
 
 function PortfolioInsightsInner() {
   const { user, org, isGuest } = useAuth();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
   void user;
 
   const [portfolio, setPortfolio] = useState<Customer[]>(DEMO_PORTFOLIO);
@@ -671,15 +673,11 @@ function PortfolioInsightsInner() {
               </div>
             </div>
             <button
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
               className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {resolvedTheme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
           </div>
         </div>

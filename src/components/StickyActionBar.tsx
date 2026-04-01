@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { Eye, FileText, AlertTriangle, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,8 +48,7 @@ export function StickyActionBar({
   onOpenShortcuts,
   variant = "full",
 }: StickyActionBarProps) {
-  const { resolvedTheme } = useTheme();
-  const barDark = resolvedTheme === "dark";
+  const barDark = useResolvedIsDark();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [missingFields, setMissingFields] = useState<string[]>([]);
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -276,7 +277,7 @@ function severityBorder(s: ConfigChange["severity"]) {
 
 function DriftMonitorInner() {
   const { user, org } = useAuth();
-  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
 
   const [selectedFirewall, setSelectedFirewall] = useState(FIREWALLS[0].id);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
@@ -540,11 +541,7 @@ function DriftMonitorInner() {
                       <span
                         className="text-[10px] font-bold"
                         style={{
-                          color: isSelected
-                            ? resolvedTheme === "dark"
-                              ? "#0a0a0a"
-                              : "#fff"
-                            : fill,
+                          color: isSelected ? (isDark ? "#0a0a0a" : "#fff") : fill,
                         }}
                       >
                         {snap.scoreAfter}
@@ -689,7 +686,8 @@ function DriftMonitorInner() {
 }
 
 function Header() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
   return (
     <header
       className="border-b border-white/[0.06] sticky top-0 z-40"
@@ -722,11 +720,11 @@ function Header() {
           </div>
         </div>
         <button
-          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(isDark ? "light" : "dark")}
           className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-          aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         >
-          {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
       </div>
     </header>

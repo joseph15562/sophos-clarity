@@ -15,6 +15,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -290,7 +291,8 @@ export function AppHeader({
   onOrgClick,
   localMode,
 }: AppHeaderProps) {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
   const { user, org, isGuest, signOut } = useAuth();
 
   const showContext = hasFiles || customerName || selectedFrameworks.length > 0;
@@ -406,12 +408,12 @@ export function AppHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            onClick={() => setTheme(isDark ? "light" : "dark")}
             className={`shrink-0 rounded-xl border border-white/25 bg-white/10 backdrop-blur-md !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 hover:!text-white dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none dark:backdrop-blur-none dark:!text-[#B6C4FF] dark:hover:!text-white dark:hover:bg-white/[0.08] ${isLoginShell ? "dark:shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : ""}`}
-            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             data-tour="theme-toggle"
           >
-            {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         </div>
       </header>

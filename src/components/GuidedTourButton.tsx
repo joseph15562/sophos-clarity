@@ -16,7 +16,7 @@ import {
   Zap,
   Gauge,
 } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,8 +73,7 @@ const DARK_PANEL_BG = "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26
 
 export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks }: Props) {
   const cb = tourCallbacks;
-  const { resolvedTheme } = useTheme();
-  const darkPanel = resolvedTheme === "dark";
+  const darkPanel = useResolvedIsDark();
 
   return (
     <DropdownMenu>

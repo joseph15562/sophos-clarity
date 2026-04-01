@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
-import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { TrendingUp, Download } from "lucide-react";
 import { toPng } from "html-to-image";
 import { loadScoreHistory, type ScoreHistoryEntry } from "@/lib/score-history";
@@ -29,8 +29,7 @@ function ScoreTrendChartInner({
   const [selectedCategory, setSelectedCategory] = useState<string>(CATEGORY_OVERALL);
   const [exporting, setExporting] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const isDark = useResolvedIsDark();
   const gridLineStroke = isDark ? "rgba(255,255,255,0.16)" : "rgba(51, 65, 85, 0.30)";
   const axisLabelFill = isDark ? "rgba(226, 232, 240, 0.88)" : "rgba(30, 41, 59, 0.82)";
   const dotOutlineStroke = isDark ? "rgba(241, 245, 249, 0.9)" : "rgba(15, 23, 42, 0.85)";

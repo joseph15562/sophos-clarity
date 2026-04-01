@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -709,8 +710,8 @@ function TenantHeader({
 
 function FleetCommandInner() {
   const { org, isGuest } = useAuth();
-  const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
 
   const fleetQuery = useFleetCommandQuery(org?.id, org?.name);
   const baseFleet = useMemo(() => {
@@ -929,15 +930,11 @@ function FleetCommandInner() {
               <HelpCircle className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
               className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {resolvedTheme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
           </div>
         </div>

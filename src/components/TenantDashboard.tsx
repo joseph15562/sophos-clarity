@@ -150,7 +150,7 @@ export function TenantDashboard() {
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
   const nocRotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevThemeRef = useRef<string | undefined>(undefined);
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme, theme: themePreference } = useTheme();
 
   useEffect(() => {
     (useCloud ? loadHistoryCloud() : loadHistory()).then(setHistory);
@@ -502,14 +502,14 @@ export function TenantDashboard() {
 
   useEffect(() => {
     if (!nocMode) return;
-    prevThemeRef.current = resolvedTheme;
+    prevThemeRef.current = themePreference;
     setTheme("dark");
     const el = document.documentElement;
     el.requestFullscreen?.().catch(() => {});
     nocRotateRef.current = setInterval(() => setNocSlide((s) => (s + 1) % 2), 30_000);
     return () => {
       if (nocRotateRef.current) clearInterval(nocRotateRef.current);
-      if (prevThemeRef.current) setTheme(prevThemeRef.current);
+      if (prevThemeRef.current != null) setTheme(prevThemeRef.current);
       document.exitFullscreen?.().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

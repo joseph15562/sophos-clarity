@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import {
   Code2,
   Plug,
@@ -1368,7 +1369,8 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 
 function ApiHubInner() {
   const [activeTab, setActiveTab] = useState<TabId>("integrations");
-  const { resolvedTheme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
   const auth = useAuth();
 
   return (
@@ -1388,15 +1390,11 @@ function ApiHubInner() {
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold tracking-tight">API &amp; Integrations</h1>
             <button
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
               className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {resolvedTheme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
           </div>
           <p className="mt-2 text-base text-white/70 max-w-lg">

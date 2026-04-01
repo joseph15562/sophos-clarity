@@ -53,7 +53,7 @@ import {
   type ReportExportTheme,
 } from "@/lib/report-export";
 import JSZip from "jszip";
-import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 
 export type ReportEntry = {
   id: string;
@@ -756,13 +756,13 @@ function ReportContent({
   analysisResults?: Record<string, AnalysisResult>;
 }) {
   const docRef = useRef<HTMLDivElement>(null);
-  const { resolvedTheme } = useTheme();
+  const isDark = useResolvedIsDark();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareExpiresAt, setShareExpiresAt] = useState("");
   const [shareError, setShareError] = useState("");
   const [extractedOpen, setExtractedOpen] = useState(false);
-  const exportTheme: ReportExportTheme = resolvedTheme === "dark" ? "dark" : "light";
+  const exportTheme: ReportExportTheme = isDark ? "dark" : "light";
 
   const activeResult = reportLabel && analysisResults ? analysisResults[reportLabel] : undefined;
   const html = useMemo(() => {
@@ -1318,8 +1318,7 @@ export function DocumentPreview({
   backendDebugInfo,
   onFetchBackendDebug,
 }: Props) {
-  const { resolvedTheme } = useTheme();
-  const exportTheme: ReportExportTheme = resolvedTheme === "dark" ? "dark" : "light";
+  const exportTheme: ReportExportTheme = useResolvedIsDark() ? "dark" : "light";
   const [severityFilter, setSeverityFilter] = useState<SeverityFilterValue>("all");
 
   if (reports.length === 0 && !isLoading) return null;

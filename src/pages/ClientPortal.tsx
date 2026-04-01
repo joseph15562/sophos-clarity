@@ -30,6 +30,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -507,7 +508,8 @@ function PortalLoginForm({
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -551,10 +553,10 @@ function PortalLoginForm({
           variant="ghost"
           size="icon"
           className="rounded-xl text-muted-foreground hover:text-foreground"
-          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(isDark ? "light" : "dark")}
           aria-label="Toggle theme"
         >
-          {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
       </div>
 
@@ -709,7 +711,8 @@ function PortalLoginForm({
 
 export default function ClientPortal() {
   const { tenantId: rawParam } = useParams<{ tenantId: string }>();
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1286,14 +1289,10 @@ export default function ClientPortal() {
               variant="ghost"
               size="icon"
               className="rounded-xl text-[#B6C4FF] hover:text-white hover:bg-white/[0.08] border border-white/10 bg-white/[0.04]"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
               aria-label="Toggle theme"
             >
-              {resolvedTheme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
           </div>
         </div>

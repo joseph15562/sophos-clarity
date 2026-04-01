@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -224,8 +225,8 @@ const SAVED_REPORT_ROW_ID_RE =
 
 function ReportCentreInner() {
   const { user, org } = useAuth();
-  const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const { setTheme } = useTheme();
+  const isDark = useResolvedIsDark();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState(DEMO_REPORTS);
@@ -342,15 +343,11 @@ function ReportCentreInner() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
               className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {resolvedTheme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             <Button size="sm" className="gap-1.5">
               <Plus className="h-3.5 w-3.5" />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useTheme } from "next-themes";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { HelpCircle, ShieldCheck } from "lucide-react";
 import {
   RadarChart,
@@ -255,8 +255,7 @@ export function RiskScoreDashboard({ analysisResults, projected }: Props) {
   });
 
   const [showHelp, setShowHelp] = useState(false);
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const isDark = useResolvedIsDark();
   const polarGridStroke = isDark ? "rgba(255,255,255,0.16)" : "rgba(51, 65, 85, 0.32)";
   const polarTickFill = isDark ? "rgba(226, 232, 240, 0.92)" : "rgba(30, 41, 59, 0.88)";
 
