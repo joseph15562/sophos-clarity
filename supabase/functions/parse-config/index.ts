@@ -322,14 +322,20 @@ serve(async (req) => {
       typeof body?.webFilterComplianceMode === "string"
         ? body.webFilterComplianceMode
         : undefined;
-    const perFirewallComplianceContext: Record<string, Record<string, unknown>> | undefined =
-      body?.perFirewallComplianceContext &&
-        typeof body.perFirewallComplianceContext === "object" &&
-        !Array.isArray(body.perFirewallComplianceContext)
-        ? body.perFirewallComplianceContext as Record<string, Record<string, unknown>>
+    const perFirewallComplianceContext:
+      | Record<string, Record<string, unknown>>
+      | undefined = body?.perFirewallComplianceContext &&
+          typeof body.perFirewallComplianceContext === "object" &&
+          !Array.isArray(body.perFirewallComplianceContext)
+        ? body.perFirewallComplianceContext as Record<
+          string,
+          Record<string, unknown>
+        >
         : undefined;
     const jurisdictionSummary: string | undefined =
-      typeof body?.jurisdictionSummary === "string" ? body.jurisdictionSummary : undefined;
+      typeof body?.jurisdictionSummary === "string"
+        ? body.jurisdictionSummary
+        : undefined;
 
     if (chat) {
       if (!chatContext || typeof chatContext !== "string") {
@@ -446,8 +452,7 @@ serve(async (req) => {
           : "";
         const scopeCountry = country && country.trim() ? country.trim() : "";
         const scopeRest = [scopeEnv, scopeCountry].filter(Boolean).join(", ");
-        const hasPerFwScope =
-          compliance &&
+        const hasPerFwScope = compliance &&
           firewallLabels &&
           firewallLabels.length > 1 &&
           perFirewallComplianceContext;
@@ -531,7 +536,8 @@ serve(async (req) => {
       }
 
       if (jurisdictionSummary?.trim()) {
-        complianceContext += `\n\n## Jurisdictional note\n${jurisdictionSummary.trim()}\n`;
+        complianceContext +=
+          `\n\n## Jurisdictional note\n${jurisdictionSummary.trim()}\n`;
       }
 
       let basePrompt: string;
