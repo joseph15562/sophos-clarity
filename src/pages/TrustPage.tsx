@@ -302,7 +302,7 @@ function TrustPageInner() {
                         <td className="px-3 py-2">
                           Supabase Auth, RLS, org-scoped roles — document in SSP.
                         </td>
-                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                        <td className="px-3 py-2 text-muted-foreground">TBD</td>
                       </tr>
                       <tr>
                         <td className="px-3 py-2 font-mono text-[10px]">
@@ -313,7 +313,7 @@ function TrustPageInner() {
                           Edge <code className="text-[10px]">logJson</code>, audit trails — link
                           runbooks.
                         </td>
-                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                        <td className="px-3 py-2 text-muted-foreground">TBD</td>
                       </tr>
                       <tr>
                         <td className="px-3 py-2 font-mono text-[10px]">SOC 2 CC8.x</td>
@@ -321,7 +321,7 @@ function TrustPageInner() {
                         <td className="px-3 py-2">
                           CI/CD, preview deploys, change records — attach policy.
                         </td>
-                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                        <td className="px-3 py-2 text-muted-foreground">TBD</td>
                       </tr>
                       <tr>
                         <td className="px-3 py-2 font-mono text-[10px]">ISO A.18 / privacy</td>
@@ -330,7 +330,7 @@ function TrustPageInner() {
                           Cross-reference subprocessors table; AI/Gemini transfer — see
                           DATA-PRIVACY.
                         </td>
-                        <td className="px-3 py-2 text-foreground/80">TBD</td>
+                        <td className="px-3 py-2 text-muted-foreground">TBD</td>
                       </tr>
                     </tbody>
                   </table>
@@ -355,21 +355,21 @@ function TrustPageInner() {
                     <span className="font-medium text-foreground">High-level logical flow</span> —
                     browser, optional local mode, Supabase, Edge Functions, external APIs (Gemini,
                     Geo-IP, NVD).{" "}
-                    <span className="text-muted-foreground/80">[Attach PNG/SVG or link]</span>
+                    <span className="text-muted-foreground">[Attach PNG/SVG or link]</span>
                   </li>
                   <li className="rounded-lg border border-dashed border-border/80 bg-background/50 px-3 py-3">
                     <span className="font-medium text-foreground">
                       AI report path (when enabled)
                     </span>{" "}
                     — anonymisation step, HTTPS to Edge Function, Gemini.{" "}
-                    <span className="text-muted-foreground/80">[Attach PNG/SVG or link]</span>
+                    <span className="text-muted-foreground">[Attach PNG/SVG or link]</span>
                   </li>
                   <li className="rounded-lg border border-dashed border-border/80 bg-background/50 px-3 py-3">
                     <span className="font-medium text-foreground">
                       Sophos Central (when connected)
                     </span>{" "}
                     — credential storage, server-side proxy.{" "}
-                    <span className="text-muted-foreground/80">[Attach PNG/SVG or link]</span>
+                    <span className="text-muted-foreground">[Attach PNG/SVG or link]</span>
                   </li>
                 </ul>
                 <p className="text-[11px] text-muted-foreground">
@@ -447,17 +447,17 @@ function TrustPageInner() {
               <li>
                 <span className="text-foreground font-medium">Data Processing Agreement (DPA)</span>{" "}
                 —{" "}
-                <span className="text-muted-foreground/80">
+                <span className="text-muted-foreground">
                   [Link to template or customer-specific file]
                 </span>
               </li>
               <li>
                 <span className="text-foreground font-medium">Terms of service</span> —{" "}
-                <span className="text-muted-foreground/80">[Link]</span>
+                <span className="text-muted-foreground">[Link]</span>
               </li>
               <li>
                 <span className="text-foreground font-medium">Privacy notice</span> —{" "}
-                <span className="text-muted-foreground/80">[Link]</span>
+                <span className="text-muted-foreground">[Link]</span>
               </li>
             </ul>
           </div>

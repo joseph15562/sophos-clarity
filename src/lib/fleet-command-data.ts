@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
-import { agentFleetCustomerLabel } from "@/lib/agent-customer-bucket";
+import { agentCustomerGroupingKey, agentFleetCustomerLabel } from "@/lib/agent-customer-bucket";
+
+/** Country shown in chips / Assess when the firewall row has no override. */
+export function fleetEffectiveComplianceCountry(fw: FleetFirewall): string {
+  return (fw.complianceCountry || fw.customerComplianceCountry || "").trim();
+}
 
 /** Fleet row shape used by Fleet Command (central + agent merged view). */
 export interface FleetFirewall {
@@ -23,6 +28,26 @@ export interface FleetFirewall {
   configLinked: boolean;
   latestReportId?: string;
   latestReportDate?: string;
+  /** MSP compliance context (persisted on central_firewalls or agents). */
+  complianceCountry: string;
+  complianceState: string;
+  /**
+   * Default country for this customer (Sophos tenant or agent bucket). Firewalls may leave
+   * `complianceCountry` empty to inherit.
+   */
+  customerComplianceCountry: string;
+  /**
+   * Sector for framework defaults — stored per Sophos tenant or agent customer bucket,
+   * surfaced on each row for that customer.
+   */
+  complianceEnvironment: string;
+  /** Agent-only: key for customer-scoped environment (`agent_customer_compliance_environment`). */
+  agentCustomerBucketKey?: string;
+}
+
+/** `id` refers to `agents.id` when agent-only; otherwise `central_firewalls.id`. */
+export function fleetPersistenceTarget(fw: FleetFirewall): "central" | "agent" {
+  return fw.source === "agent" ? "agent" : "central";
 }
 
 export function gradeFromScore(score: number): string {
@@ -45,6 +70,9 @@ type CentralFwRow = {
   cluster_json?: { id?: string; mode?: string; status?: string } | null;
   status_json?: { connected?: boolean; suspended?: boolean } | null;
   central_tenant_id?: string | null;
+  compliance_country?: string | null;
+  compliance_state?: string | null;
+  compliance_environment?: string | null;
 };
 
 type AgentRow = {
@@ -61,7 +89,26 @@ type AgentRow = {
   firmware_version?: string | null;
   hardware_model?: string | null;
   serial_number?: string | null;
+  compliance_country?: string | null;
+  compliance_state?: string | null;
+  compliance_environment?: string | null;
 };
+
+function complianceFromCentral(fw: CentralFwRow) {
+  return {
+    complianceCountry: (fw.compliance_country ?? "").trim(),
+    complianceState: (fw.compliance_state ?? "").trim(),
+    complianceEnvironment: (fw.compliance_environment ?? "").trim(),
+  };
+}
+
+function complianceFromAgent(ag: AgentRow) {
+  return {
+    complianceCountry: (ag.compliance_country ?? "").trim(),
+    complianceState: (ag.compliance_state ?? "").trim(),
+    complianceEnvironment: (ag.compliance_environment ?? "").trim(),
+  };
+}
 
 /**
  * Loads central firewalls, assessments, agents, links, tenants, and saved_reports;
@@ -83,20 +130,26 @@ export async function fetchFleetBundle(
   const agentQ = supabase.from("agents").select("*").eq("org_id", orgId);
   const linksQ = supabase.from("firewall_config_links").select("*").eq("org_id", orgId);
   const tenantQ = supabase.from("central_tenants").select("*").eq("org_id", orgId);
+  const agentCustEnvQ = supabase
+    .from("agent_customer_compliance_environment")
+    .select("customer_bucket_key, compliance_environment, compliance_country")
+    .eq("org_id", orgId);
   const reportsQ = supabase
     .from("saved_reports")
     .select("id, customer_name, created_at")
     .eq("org_id", orgId)
     .order("created_at", { ascending: false });
 
-  const [fwRes, assessRes, agentRes, linksRes, tenantRes, reportsRes] = await Promise.all([
-    signal ? fwQ.abortSignal(signal) : fwQ,
-    signal ? assessQ.abortSignal(signal) : assessQ,
-    signal ? agentQ.abortSignal(signal) : agentQ,
-    signal ? linksQ.abortSignal(signal) : linksQ,
-    signal ? tenantQ.abortSignal(signal) : tenantQ,
-    signal ? reportsQ.abortSignal(signal) : reportsQ,
-  ]);
+  const [fwRes, assessRes, agentRes, linksRes, tenantRes, reportsRes, agentCustEnvRes] =
+    await Promise.all([
+      signal ? fwQ.abortSignal(signal) : fwQ,
+      signal ? assessQ.abortSignal(signal) : assessQ,
+      signal ? agentQ.abortSignal(signal) : agentQ,
+      signal ? linksQ.abortSignal(signal) : linksQ,
+      signal ? tenantQ.abortSignal(signal) : tenantQ,
+      signal ? reportsQ.abortSignal(signal) : reportsQ,
+      signal ? agentCustEnvQ.abortSignal(signal) : agentCustEnvQ,
+    ]);
 
   if (fwRes.error) throw fwRes.error;
   if (assessRes.error) throw assessRes.error;
@@ -104,6 +157,7 @@ export async function fetchFleetBundle(
   if (linksRes.error) throw linksRes.error;
   if (tenantRes.error) throw tenantRes.error;
   if (reportsRes.error) throw reportsRes.error;
+  if (agentCustEnvRes.error) throw agentCustEnvRes.error;
 
   const firewalls = (fwRes.data ?? []) as CentralFwRow[];
   const assessments = assessRes.data ?? [];
@@ -160,10 +214,60 @@ export async function fetchFleetBundle(
   }
 
   const tenantMap = new Map<string, string>();
+  const tenantEnvMap = new Map<string, string>();
+  const tenantCountryMap = new Map<string, string>();
   for (const t of tenants) {
     const tid = (t as Record<string, unknown>).central_tenant_id as string;
     const name = (t as Record<string, unknown>).name as string;
+    const env = ((t as Record<string, unknown>).compliance_environment as string | undefined) ?? "";
+    const ctry = ((t as Record<string, unknown>).compliance_country as string | undefined) ?? "";
     if (tid && name) tenantMap.set(tid, name);
+    if (tid && env.trim()) tenantEnvMap.set(tid, env.trim());
+    if (tid && ctry.trim()) tenantCountryMap.set(tid, ctry.trim());
+  }
+
+  const agentBucketEnvMap = new Map<string, string>();
+  const agentBucketCountryMap = new Map<string, string>();
+  for (const row of agentCustEnvRes.data ?? []) {
+    const k = (row as { customer_bucket_key?: string }).customer_bucket_key;
+    const e = (row as { compliance_environment?: string }).compliance_environment;
+    const c = (row as { compliance_country?: string }).compliance_country;
+    if (k && (e ?? "").trim()) agentBucketEnvMap.set(k, (e ?? "").trim());
+    if (k && (c ?? "").trim()) agentBucketCountryMap.set(k, (c ?? "").trim());
+  }
+
+  function effectiveSectorEnvironment(
+    tenantId: string | undefined,
+    source: FleetFirewall["source"],
+    agentBucketKey: string | undefined,
+    legacyRowEnv: string,
+  ): string {
+    const legacy = (legacyRowEnv ?? "").trim();
+    if (tenantId) {
+      const fromTenant = tenantEnvMap.get(tenantId);
+      if (fromTenant) return fromTenant;
+    }
+    if (source === "agent" && agentBucketKey) {
+      const fromBucket = agentBucketEnvMap.get(agentBucketKey);
+      if (fromBucket) return fromBucket;
+    }
+    return legacy;
+  }
+
+  function customerDefaultCountry(
+    tenantId: string | undefined,
+    source: FleetFirewall["source"],
+    agentBucketKey: string | undefined,
+  ): string {
+    if (tenantId) {
+      const c = tenantCountryMap.get(tenantId);
+      if (c) return c;
+    }
+    if (source === "agent" && agentBucketKey) {
+      const c = agentBucketCountryMap.get(agentBucketKey);
+      if (c) return c;
+    }
+    return "";
   }
 
   const agentScoreMap = new Map<
@@ -254,6 +358,18 @@ export async function fetchFleetBundle(
       const hasAgent = peerNames.some((n) => agentHostnames.has(n.toLowerCase()));
       const report = latestReportMap.get(peerNames.join(" + ")) ?? latestReportMap.get(primaryHn);
 
+      const comp = complianceFromCentral(primary);
+      const sectorEnv = effectiveSectorEnvironment(
+        fwTenantId,
+        hasAgent ? "both" : "central",
+        undefined,
+        comp.complianceEnvironment,
+      );
+      const custCountry = customerDefaultCountry(
+        fwTenantId,
+        hasAgent ? "both" : "central",
+        undefined,
+      );
       mapped.push({
         id: primary.id,
         hostname: `${primaryHn} (HA ${peers.length}-node)`,
@@ -275,6 +391,9 @@ export async function fetchFleetBundle(
         configLinked: isLinked,
         latestReportId: report?.id,
         latestReportDate: report?.date,
+        ...comp,
+        customerComplianceCountry: custCountry,
+        complianceEnvironment: sectorEnv,
       });
       continue;
     }
@@ -298,6 +417,18 @@ export async function fetchFleetBundle(
     const hasAgent = agentHostnames.has(hn.toLowerCase());
     const report = latestReportMap.get(fw.name || hn) ?? latestReportMap.get(hn);
 
+    const compSingle = complianceFromCentral(fw);
+    const sectorEnvSingle = effectiveSectorEnvironment(
+      fwTenantId,
+      hasAgent ? "both" : "central",
+      undefined,
+      compSingle.complianceEnvironment,
+    );
+    const custCountrySingle = customerDefaultCountry(
+      fwTenantId,
+      hasAgent ? "both" : "central",
+      undefined,
+    );
     mapped.push({
       id: fw.id,
       hostname: hn,
@@ -317,6 +448,9 @@ export async function fetchFleetBundle(
       configLinked: configLinkedIds.has(fw.firewall_id),
       latestReportId: report?.id,
       latestReportDate: report?.date,
+      ...compSingle,
+      customerComplianceCountry: custCountrySingle,
+      complianceEnvironment: sectorEnvSingle,
     });
   }
 
@@ -333,6 +467,15 @@ export async function fetchFleetBundle(
     const custLabel = agentFleetCustomerLabel(ag, orgDisplayName);
     const report =
       latestReportMap.get(custLabel) ?? latestReportMap.get(ag.customer_name || ag.name || hn);
+    const compAg = complianceFromAgent(ag);
+    const bucketKey = agentCustomerGroupingKey(ag);
+    const sectorEnvAgent = effectiveSectorEnvironment(
+      undefined,
+      "agent",
+      bucketKey,
+      compAg.complianceEnvironment,
+    );
+    const custCountryAgent = customerDefaultCountry(undefined, "agent", bucketKey);
     mapped.push({
       id: ag.id,
       hostname: hn,
@@ -350,6 +493,10 @@ export async function fetchFleetBundle(
       configLinked: false,
       latestReportId: report?.id,
       latestReportDate: report?.date,
+      ...compAg,
+      customerComplianceCountry: custCountryAgent,
+      complianceEnvironment: sectorEnvAgent,
+      agentCustomerBucketKey: bucketKey,
     });
   }
 

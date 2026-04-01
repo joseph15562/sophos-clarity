@@ -38,192 +38,23 @@ import {
 import { resolveCustomerName } from "@/lib/customer-name";
 import { fetchCustomerDirectory } from "@/lib/customer-directory";
 import type { WebFilterComplianceMode } from "@/lib/analysis/types";
+import {
+  ALL_FRAMEWORKS,
+  COUNTRIES,
+  ENVIRONMENT_TYPES,
+  US_STATES,
+  getDefaultFrameworks,
+  type ComplianceFramework,
+} from "@/lib/compliance-context-options";
 
-export const ENVIRONMENT_TYPES = [
-  "Education",
-  "Government",
-  "Healthcare",
-  "Housing",
-  "Operational Technology",
-  "Private Sector",
-  "Financial Services",
-  "Retail & Hospitality",
-  "Critical Infrastructure",
-  "Non-Profit / Charity",
-  "Legal",
-  "Defence",
-] as const;
-
-export const COUNTRIES = [
-  "United Kingdom",
-  "United States",
-  "Australia",
-  "Canada",
-  "Germany",
-  "France",
-  "Netherlands",
-  "Ireland",
-  "New Zealand",
-  "South Africa",
-  "United Arab Emirates",
-  "Singapore",
-  "India",
-  "Japan",
-] as const;
-
-export const US_STATES = [
-  "Alabama",
-  "Alaska",
-  "Arizona",
-  "Arkansas",
-  "California",
-  "Colorado",
-  "Connecticut",
-  "Delaware",
-  "District of Columbia",
-  "Florida",
-  "Georgia",
-  "Hawaii",
-  "Idaho",
-  "Illinois",
-  "Indiana",
-  "Iowa",
-  "Kansas",
-  "Kentucky",
-  "Louisiana",
-  "Maine",
-  "Maryland",
-  "Massachusetts",
-  "Michigan",
-  "Minnesota",
-  "Mississippi",
-  "Missouri",
-  "Montana",
-  "Nebraska",
-  "Nevada",
-  "New Hampshire",
-  "New Jersey",
-  "New Mexico",
-  "New York",
-  "North Carolina",
-  "North Dakota",
-  "Ohio",
-  "Oklahoma",
-  "Oregon",
-  "Pennsylvania",
-  "Rhode Island",
-  "South Carolina",
-  "South Dakota",
-  "Tennessee",
-  "Texas",
-  "Utah",
-  "Vermont",
-  "Virginia",
-  "Washington",
-  "West Virginia",
-  "Wisconsin",
-  "Wyoming",
-] as const;
-
-export const ALL_FRAMEWORKS = [
-  "GDPR",
-  "Cyber Essentials / CE+",
-  "NCSC Guidelines",
-  "NCSC CAF",
-  "PSN",
-  "DfE / KCSIE",
-  "ISO 27001",
-  "PCI DSS",
-  "FCA",
-  "PRA",
-  "HIPAA",
-  "HITECH",
-  "NIST 800-53",
-  "FedRAMP",
-  "CMMC",
-  "CIS",
-  "SOX",
-  "SOC 2",
-  "IEC 62443",
-  "NIST 800-82",
-  "NIS2",
-  "NERC CIP",
-  "MOD Cyber / ITAR",
-  "CIPA",
-  "Ohio DPA",
-] as const;
-
-export type ComplianceFramework = (typeof ALL_FRAMEWORKS)[number];
-
-/** Returns default frameworks for a given environment + country + state combo */
-function getDefaultFrameworks(
-  environment: string,
-  country: string,
-  state?: string,
-): ComplianceFramework[] {
-  const fw: ComplianceFramework[] = [];
-  const isUK = country === "United Kingdom";
-  const isUS = country === "United States";
-  const isEU = ["Germany", "France", "Netherlands", "Ireland"].includes(country);
-
-  // Country-level defaults
-  if (isUK) {
-    fw.push("GDPR", "Cyber Essentials / CE+", "NCSC Guidelines");
-  }
-  if (isUS) {
-    fw.push("NIST 800-53");
-  }
-  if (isEU) {
-    fw.push("GDPR", "NIS2");
-  }
-  if (["Australia", "Canada", "New Zealand"].includes(country)) {
-    fw.push("ISO 27001");
-  }
-
-  // State-level defaults (US only)
-  if (isUS && state === "Ohio") {
-    fw.push("Ohio DPA");
-  }
-
-  // Environment-level defaults
-  switch (environment) {
-    case "Education":
-      if (isUK) fw.push("DfE / KCSIE");
-      if (isUS) fw.push("CIPA");
-      break;
-    case "Healthcare":
-      if (isUK) fw.push("NCSC CAF");
-      if (isUS) fw.push("HIPAA", "HITECH");
-      break;
-    case "Government":
-      if (isUK) fw.push("NCSC CAF", "PSN");
-      if (isUS) fw.push("FedRAMP", "CMMC");
-      break;
-    case "Financial Services":
-      fw.push("PCI DSS", "SOX", "SOC 2");
-      if (isUK) fw.push("FCA", "PRA");
-      break;
-    case "Operational Technology":
-      fw.push("IEC 62443", "NIST 800-82");
-      if (isUK) fw.push("NCSC CAF");
-      break;
-    case "Critical Infrastructure":
-      if (isUK) fw.push("NCSC CAF");
-      if (isEU) fw.push("NIS2");
-      if (isUS) fw.push("NERC CIP");
-      break;
-    case "Defence":
-      fw.push("MOD Cyber / ITAR", "CMMC");
-      if (isUK) fw.push("NCSC CAF");
-      break;
-    case "Retail & Hospitality":
-      fw.push("PCI DSS");
-      break;
-  }
-
-  // Deduplicate
-  return [...new Set(fw)];
-}
+export {
+  ALL_FRAMEWORKS,
+  COUNTRIES,
+  ENVIRONMENT_TYPES,
+  US_STATES,
+  getDefaultFrameworks,
+  type ComplianceFramework,
+};
 
 export type BrandingData = {
   companyName: string;
@@ -247,9 +78,11 @@ export type BrandingData = {
 type Props = {
   branding: BrandingData;
   onChange: React.Dispatch<React.SetStateAction<BrandingData>>;
+  /** When multiple configs are open, linked firewalls may override geography per file. */
+  multiConfig?: boolean;
 };
 
-export function BrandingSetup({ branding, onChange }: Props) {
+export function BrandingSetup({ branding, onChange, multiConfig }: Props) {
   const { isGuest, org } = useAuth();
   const { logoUrl: orgWorkspaceLogoUrl } = useCompanyLogo();
   /** When non-null, report logo was last set from workspace logo (so we can follow workspace updates). */
@@ -545,6 +378,15 @@ export function BrandingSetup({ branding, onChange }: Props) {
               Customer, geography, and sector settings influence defaults and how findings are
               framed.
             </p>
+            {multiConfig ? (
+              <p className="text-[11px] text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                Multiple firewall configs: each file can use a{" "}
+                <strong className="text-foreground/90">Central link</strong> or{" "}
+                <strong className="text-foreground/90">additional frameworks</strong> on that row.
+                This panel stays the <strong className="text-foreground/90">session default</strong>{" "}
+                for unlinked uploads.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2 rounded-xl border border-border/50 bg-card/80 p-4">
@@ -696,7 +538,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
                 <Landmark className="h-4 w-4" /> Environment Type
               </Label>
               <Select
-                value={branding.environment}
+                value={branding.environment || undefined}
                 onValueChange={(v) => {
                   userTouchedFrameworks.current = false;
                   const defaults = getDefaultFrameworks(v, branding.country, branding.state);
@@ -727,7 +569,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
                 <Globe className="h-4 w-4" /> Country
               </Label>
               <Select
-                value={branding.country}
+                value={branding.country || undefined}
                 onValueChange={(v) => {
                   userTouchedFrameworks.current = false;
                   const newState = v === "United States" ? branding.state : undefined;

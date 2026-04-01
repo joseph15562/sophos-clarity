@@ -1,9 +1,13 @@
 import { useEffect, useRef } from "react";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ReportEntry } from "@/components/DocumentPreview";
+import type { SerializableConfigComplianceScope } from "@/lib/config-compliance-scope";
 
 const STORAGE_KEY = "sophos-firecomply-session";
 const DEBOUNCE_MS = 500;
+
+/** Bumped when PersistedSession shape changes (optional map ignored if missing on load). */
+export const SESSION_FORMAT_VERSION = 2;
 
 interface PersistedSession {
   branding: Omit<BrandingData, "logoUrl">;
@@ -12,6 +16,9 @@ interface PersistedSession {
   savedAt: number;
   /** Cloud `assessments.id` aligned with Export Centre CSV sign-off; omitted in older stored sessions. */
   linkedCloudAssessmentId?: string | null;
+  sessionFormatVersion?: number;
+  /** Per config hash (`ParsedFile.id`) compliance scope for multi-firewall assessments. */
+  configComplianceScopes?: Record<string, SerializableConfigComplianceScope>;
 }
 
 export function saveSession(
@@ -19,6 +26,7 @@ export function saveSession(
   reports: ReportEntry[],
   activeReportId: string,
   linkedCloudAssessmentId: string | null = null,
+  configComplianceScopes?: Record<string, SerializableConfigComplianceScope> | null,
 ) {
   const { logoUrl: _logo, ...brandingWithoutLogo } = branding;
   const data: PersistedSession = {
@@ -31,6 +39,10 @@ export function saveSession(
     activeReportId,
     savedAt: Date.now(),
     linkedCloudAssessmentId: linkedCloudAssessmentId ?? null,
+    sessionFormatVersion: SESSION_FORMAT_VERSION,
+    ...(configComplianceScopes && Object.keys(configComplianceScopes).length > 0
+      ? { configComplianceScopes }
+      : {}),
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -44,6 +56,7 @@ export function loadSession(): {
   reports: ReportEntry[];
   activeReportId: string;
   linkedCloudAssessmentId: string | null;
+  configComplianceScopes: Record<string, SerializableConfigComplianceScope>;
 } | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -64,6 +77,10 @@ export function loadSession(): {
       activeReportId: data.activeReportId || data.reports[0]?.id || "",
       linkedCloudAssessmentId:
         typeof data.linkedCloudAssessmentId === "string" ? data.linkedCloudAssessmentId : null,
+      configComplianceScopes:
+        data.configComplianceScopes && typeof data.configComplianceScopes === "object"
+          ? data.configComplianceScopes
+          : {},
     };
   } catch (err) {
     console.warn("[loadSession]", err);
@@ -81,6 +98,7 @@ export function useAutoSave(
   activeReportId: string,
   linkedCloudAssessmentId: string | null,
   enabled = true,
+  configComplianceScopes: Record<string, SerializableConfigComplianceScope> | null = null,
 ) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -91,9 +109,15 @@ export function useAutoSave(
 
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      saveSession(branding, reports, activeReportId, linkedCloudAssessmentId);
+      saveSession(
+        branding,
+        reports,
+        activeReportId,
+        linkedCloudAssessmentId,
+        configComplianceScopes ?? undefined,
+      );
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer.current);
-  }, [branding, reports, activeReportId, linkedCloudAssessmentId, enabled]);
+  }, [branding, reports, activeReportId, linkedCloudAssessmentId, enabled, configComplianceScopes]);
 }

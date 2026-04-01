@@ -30,6 +30,27 @@ function ChangelogPageInner() {
               is not clipped by the card.
             </li>
             <li>
+              <strong className="text-foreground">Fleet Command load errors</strong>: if the fleet
+              API fails while you are signed into an organisation, the page no longer shows the
+              guest sample fleet (placeholder customer names). You get a clear error and{" "}
+              <strong className="text-foreground">Try again</strong> instead — often fixed by
+              applying pending Supabase migrations.
+            </li>
+            <li>
+              <strong className="text-foreground">Fleet compliance context</strong>: each customer
+              row (Sophos tenant or agent bucket) has{" "}
+              <strong className="text-foreground">Customer defaults</strong> — default country and
+              sector — with <strong className="text-foreground">Save customer</strong>. Expand a
+              firewall to set <strong className="text-foreground">country</strong> (and US state)
+              for that site only; the panel shows{" "}
+              <strong className="text-foreground">Selected</strong>,{" "}
+              <strong className="text-foreground">Not selected</strong> (with customer default), or
+              prompts to set defaults. Row chips use effective country. Grid view uses the same
+              customer grouping. Migration{" "}
+              <code className="text-xs">customer_compliance_country</code> adds default country
+              columns.
+            </li>
+            <li>
               <strong className="text-foreground">Light mode polish</strong>: dashboard hover
               popovers (configuration stats, feature coverage, charts, compliance heatmap, priority
               matrix) use the same readable surface as other popovers instead of dark glass with
@@ -49,7 +70,31 @@ function ChangelogPageInner() {
               <strong className="text-foreground">Central linking</strong>: auto-linking a file to a
               Sophos Central firewall by serial no longer re-saves the link on every UI refresh — a
               stable callback and one-time persist guard prevent accidental repeat database writes
-              (which could overwhelm small Supabase plans).
+              (which could overwhelm small Supabase plans). Manual HTML/XML uploads no longer
+              auto-match or auto-link Central by serial or hostname — only configs pulled via the{" "}
+              <strong className="text-foreground">connected agents</strong> path do. Central links
+              are keyed per uploaded config row (not by file contents), so removing a file clears
+              its link and re-adding the same export starts unlinked. When you link (or reload with
+              an existing link), the green link row shows that firewall&apos;s fleet{" "}
+              <strong className="text-foreground">sector</strong> and{" "}
+              <strong className="text-foreground">country</strong> (same rules as Fleet Command),
+              and <strong className="text-foreground">Customer Context</strong> picks up customer
+              name (Sophos tenant), environment type, country, US state when applicable, and default
+              frameworks aligned to that scope. The Central firewall picker shows each row&apos;s{" "}
+              <strong className="text-foreground">sector</strong> and{" "}
+              <strong className="text-foreground">country</strong> (and US state when applicable)
+              before you select.
+            </li>
+            <li>
+              <strong className="text-foreground">Per-config compliance scope</strong>: with
+              multiple firewall exports in one session, each file keeps its own Central link context
+              (country, sector, frameworks) instead of the last link overwriting Customer Context.
+              Each row shows effective scope; you can add{" "}
+              <strong className="text-foreground">additional frameworks</strong> per config.
+              Individual and compliance reports use the matching scope per firewall; combined
+              compliance and executive summaries include per-firewall jurisdiction details (and a
+              jurisdictional note when sites differ). Saved browser sessions restore the per-config
+              map.
             </li>
             <li>
               <strong className="text-foreground">SE team dashboard</strong>: the team health-check
@@ -256,6 +301,12 @@ function ChangelogPageInner() {
               Trust, and What&apos;s new share the same sticky bar (Home crumb, theme toggle, navy
               gradient in dark mode). Primary buttons no longer use backdrop blur on the solid brand
               fill so the blue stays correct after a full page refresh.
+            </li>
+            <li>
+              <strong className="text-foreground">Trust centre</strong>: procurement stub copy
+              (placeholders such as attach diagram / link) uses standard muted body colour instead
+              of extra transparency so small text passes WCAG AA contrast on light panels and E2E
+              axe checks stay green.
             </li>
             <li>
               <strong className="text-foreground">Security</strong>:{" "}

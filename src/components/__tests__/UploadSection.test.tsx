@@ -53,6 +53,9 @@ function minimalUploadProps() {
     reportsSaved: false,
     onSaveReports: vi.fn(),
     totalFindings: 0,
+    configComplianceScopes: {},
+    onFirewallScopeChange: vi.fn(),
+    onConfigAdditionalFrameworksChange: vi.fn(),
   };
 }
 

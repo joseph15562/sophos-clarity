@@ -6,6 +6,16 @@ import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
 import { toast } from "sonner";
 import { analyseConfig, type AnalysisResult, type Finding } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
+import type {
+  ConfigComplianceScope,
+  PerFirewallComplianceContextEntry,
+  ResolvedStreamComplianceFields,
+} from "@/lib/config-compliance-scope";
+import {
+  buildExecutiveJurisdictionSummary,
+  filesHaveDifferingGeo,
+  resolveStreamFieldsForConfig,
+} from "@/lib/config-compliance-scope";
 
 const COVER_DISCLAIMER = "Results should be validated by a qualified security professional.";
 
@@ -106,10 +116,91 @@ function displayLabelForFile(
   return hostname && hostname.trim() ? hostname.trim() : lookupKey;
 }
 
+function buildParseStreamOptions(
+  reportId: string,
+  files: ParsedFile[],
+  branding: BrandingData,
+  scopeMap: Record<string, ConfigComplianceScope>,
+  analysisResults: Record<string, AnalysisResult> | undefined,
+  opts?: { executive?: boolean; compliance?: boolean; firewallLabels?: string[] },
+): {
+  streamFields: ResolvedStreamComplianceFields;
+  perFirewallComplianceContext?: Record<string, PerFirewallComplianceContextEntry>;
+  jurisdictionSummary?: string;
+} {
+  const multi = (opts?.firewallLabels?.length ?? 0) > 1;
+
+  if (
+    reportId.startsWith("report-") &&
+    reportId !== "report-executive" &&
+    reportId !== "report-compliance" &&
+    reportId !== "report-executive-one-pager"
+  ) {
+    const fileId = reportId.slice("report-".length);
+    const f = files.find((x) => x.id === fileId);
+    return {
+      streamFields: resolveStreamFieldsForConfig(branding, f ? scopeMap[f.id] : undefined),
+    };
+  }
+
+  if (reportId === "report-executive") {
+    const summary = buildExecutiveJurisdictionSummary(files, scopeMap, branding);
+    const differing = filesHaveDifferingGeo(files, scopeMap, branding);
+    const base = files[0]
+      ? resolveStreamFieldsForConfig(branding, scopeMap[files[0].id])
+      : resolveStreamFieldsForConfig(branding, undefined);
+    const streamFields: ResolvedStreamComplianceFields = differing
+      ? {
+          customerName: (base.customerName ?? branding.customerName?.trim()) || undefined,
+          environment: undefined,
+          country: undefined,
+          selectedFrameworks: undefined,
+        }
+      : base;
+    return { streamFields, jurisdictionSummary: summary };
+  }
+
+  if (reportId === "report-compliance") {
+    if (!multi) {
+      const f = files[0];
+      return {
+        streamFields: resolveStreamFieldsForConfig(branding, f ? scopeMap[f.id] : undefined),
+      };
+    }
+    const per: Record<string, PerFirewallComplianceContextEntry> = {};
+    for (const f of files) {
+      const lookupKey = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const displayLabel = displayLabelForFile(f, lookupKey, analysisResults);
+      const sf = resolveStreamFieldsForConfig(branding, scopeMap[f.id]);
+      per[displayLabel] = {
+        environment: sf.environment,
+        country: sf.country,
+        selectedFrameworks: sf.selectedFrameworks,
+      };
+    }
+    const differing = filesHaveDifferingGeo(files, scopeMap, branding);
+    const first = files[0]
+      ? resolveStreamFieldsForConfig(branding, scopeMap[files[0].id])
+      : resolveStreamFieldsForConfig(branding, undefined);
+    const streamFields: ResolvedStreamComplianceFields = differing
+      ? {
+          customerName: (first.customerName ?? branding.customerName?.trim()) || undefined,
+          environment: undefined,
+          country: undefined,
+          selectedFrameworks: undefined,
+        }
+      : first;
+    return { streamFields, perFirewallComplianceContext: per };
+  }
+
+  return { streamFields: resolveStreamFieldsForConfig(branding, undefined) };
+}
+
 export function useReportGeneration(
   files: ParsedFile[],
   branding: BrandingData,
-  analysisResults?: Record<string, AnalysisResult>,
+  analysisResults: Record<string, AnalysisResult> | undefined,
+  configComplianceScopes: Record<string, ConfigComplianceScope>,
 ) {
   const [reports, setReports] = useState<ReportEntry[]>([]);
   const [activeReportId, setActiveReportId] = useState("");
@@ -170,20 +261,35 @@ export function useReportGeneration(
         parseAbortRef.current = new AbortController();
         const streamSignal = parseAbortRef.current.signal;
 
+        const { streamFields, perFirewallComplianceContext, jurisdictionSummary } =
+          buildParseStreamOptions(
+            reportId,
+            files,
+            branding,
+            configComplianceScopes,
+            analysisResults,
+            {
+              executive: opts?.executive,
+              compliance: opts?.compliance,
+              firewallLabels: opts?.firewallLabels,
+            },
+          );
+
         succeeded = await new Promise<boolean>((resolve) => {
           streamConfigParse({
             sections,
             signal: streamSignal,
-            environment: branding.environment || undefined,
-            country: branding.country || undefined,
-            customerName: branding.customerName || undefined,
-            selectedFrameworks:
-              branding.selectedFrameworks.length > 0 ? branding.selectedFrameworks : undefined,
+            environment: streamFields.environment,
+            country: streamFields.country,
+            customerName: streamFields.customerName,
+            selectedFrameworks: streamFields.selectedFrameworks,
             executive: opts?.executive,
             firewallLabels: opts?.firewallLabels,
             compliance: opts?.compliance,
             webFilterComplianceMode: branding.webFilterComplianceMode,
             centralEnrichment: opts?.centralEnrichment,
+            perFirewallComplianceContext,
+            jurisdictionSummary,
             onDelta: (text) =>
               setReports((prev) =>
                 prev.map((r) => {
@@ -245,7 +351,7 @@ export function useReportGeneration(
       });
       return succeeded;
     },
-    [branding],
+    [branding, files, configComplianceScopes, analysisResults],
   );
 
   const generateIndividual = async (keepLoading = false) => {

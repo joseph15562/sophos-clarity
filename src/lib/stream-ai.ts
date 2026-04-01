@@ -1,4 +1,5 @@
 import type { ExtractedSections } from "./extract-sections";
+import type { PerFirewallComplianceContextEntry } from "@/lib/config-compliance-scope";
 import { mergeAbortSignals } from "./merge-abort-signals";
 import {
   buildAnonymisationMap,
@@ -238,6 +239,10 @@ type StreamOptions = {
   /** When informational, compliance narrative should not over-state regulatory failure for web-filter gaps */
   webFilterComplianceMode?: "strict" | "informational";
   centralEnrichment?: CentralEnrichment;
+  /** Multi-firewall compliance: per display label, scope + frameworks for parse-config prompt */
+  perFirewallComplianceContext?: Record<string, PerFirewallComplianceContextEntry>;
+  /** Appended to compliance/executive context when estate spans jurisdictions */
+  jurisdictionSummary?: string;
   /** When set (e.g. unmount), aborts fetch and SSE consumption */
   signal?: AbortSignal;
   onDelta: (text: string) => void;
@@ -420,6 +425,8 @@ export async function streamConfigParse({
   compliance,
   webFilterComplianceMode,
   centralEnrichment,
+  perFirewallComplianceContext,
+  jurisdictionSummary,
   signal: externalSignal,
   onDelta,
   onDone,
@@ -465,6 +472,10 @@ export async function streamConfigParse({
     webFilterComplianceMode,
     centralEnrichment,
     reportType,
+    ...(perFirewallComplianceContext && Object.keys(perFirewallComplianceContext).length > 0
+      ? { perFirewallComplianceContext }
+      : {}),
+    ...(jurisdictionSummary?.trim() ? { jurisdictionSummary: jurisdictionSummary.trim() } : {}),
   });
 
   const RETRYABLE = new Set([429, 502, 503, 504]);

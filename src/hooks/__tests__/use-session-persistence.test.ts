@@ -68,12 +68,28 @@ describe("use-session-persistence", () => {
     expect(loaded!.branding.logoUrl).toBeNull();
     expect(loaded!.branding.customerName).toBe(baseBranding.customerName);
     expect(loaded!.linkedCloudAssessmentId).toBeNull();
+    expect(loaded!.configComplianceScopes).toEqual({});
   });
 
   it("round-trips linkedCloudAssessmentId", () => {
     saveSession(baseBranding, reports, "r1", "assess-uuid-1");
     const loaded = loadSession();
     expect(loaded?.linkedCloudAssessmentId).toBe("assess-uuid-1");
+    expect(loaded?.configComplianceScopes).toEqual({});
+  });
+
+  it("round-trips configComplianceScopes", () => {
+    const scopes = {
+      "file-1": {
+        country: "United Kingdom",
+        state: "",
+        environment: "Government",
+        additionalFrameworks: ["PCI DSS"],
+      },
+    };
+    saveSession(baseBranding, reports, "r1", null, scopes);
+    const loaded = loadSession();
+    expect(loaded?.configComplianceScopes).toEqual(scopes);
   });
 
   it("loadSession treats missing linkedCloudAssessmentId as null (backward compatible)", () => {

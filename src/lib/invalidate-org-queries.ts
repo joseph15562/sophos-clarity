@@ -19,6 +19,7 @@ export async function invalidateFleetRelatedQueries(
     queryClient.invalidateQueries({ queryKey: queryKeys.org.agents(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.agentSubmissionCounts7d(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.central.status(orgId) }),
+    queryClient.invalidateQueries({ queryKey: ["linkedFwCompliance", orgId], exact: false }),
   ]);
 }
 

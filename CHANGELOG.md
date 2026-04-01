@@ -8,6 +8,8 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Added
 
+- **Assess — per-config compliance scope:** `configComplianceScopes` keyed by upload id; Central link updates one config only; optional per-file additional frameworks; `parse-config` accepts `perFirewallComplianceContext` and `jurisdictionSummary` for multi-jurisdiction compliance/executive reports; session persistence includes the map.
+
 - **Trust page — Legal & questionnaires:** security-review checklist, SOC2/ISO control mapping stub table, data-flow diagram placeholders (with DATA-PRIVACY link), questionnaire topic matrix, legal document link stubs, procurement callout; **Subprocessors** section id **`#trust-subprocessors`** for in-page links.
 
 - **UX / a11y / forms (March 2026)** — `EmptyState` on remediation progress/roadmap and geographic fleet map; **`e2e/viewport-signed-in.spec.ts`** expanded (signed-in viewports + axe; session storage cleared in E2E; Overview tab matcher + **ExtractionSummary** `covHex` for coverage bar); **`docs/UI-NOTIFICATIONS.md`** (toasts vs Notification Centre); **jest-axe** on **ExportCentre**, **EmptyState**, **UploadSection** tests; **Zod** field validation on **InviteStaff** and **WebhookSettings**; **ExportCentre** `reviewerSignoff` wired from cloud-linked assessment in **Index** / **AnalysisTabs** / **AssessmentHistory**; **WorkspaceSettingsStrip** “Opens on Assess” contrast (light theme) for axe on **/customers**.

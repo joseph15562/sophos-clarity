@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
 import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
+import type { ConfigComplianceScope } from "@/lib/config-compliance-scope";
+import type { ComplianceFramework } from "@/lib/compliance-context-options";
+import type { FirewallLink } from "@/components/FirewallLinkPicker";
 import { ReportCards } from "@/components/ReportCards";
 import { AgentFleetPanel } from "@/components/AgentFleetPanel";
 import type { AnalysisResult } from "@/lib/analyse-config";
@@ -83,6 +86,9 @@ export interface UploadSectionProps {
   reportsRef?: React.RefObject<HTMLDivElement | null>;
   /** Step 1 upload area — always mounted so deep links can scroll before configs exist */
   workbenchRef?: React.RefObject<HTMLDivElement | null>;
+  configComplianceScopes: Record<string, ConfigComplianceScope>;
+  onFirewallScopeChange: (configId: string, link: FirewallLink | null) => void;
+  onConfigAdditionalFrameworksChange: (configId: string, frameworks: ComplianceFramework[]) => void;
 }
 
 export function UploadSection({
@@ -121,6 +127,9 @@ export function UploadSection({
   contextRef,
   reportsRef,
   workbenchRef,
+  configComplianceScopes,
+  onFirewallScopeChange,
+  onConfigAdditionalFrameworksChange,
 }: UploadSectionProps) {
   return (
     <>
@@ -368,7 +377,13 @@ export function UploadSection({
         <FileUpload
           files={files}
           onFilesChange={onFilesChange}
-          onFirewallLinked={() => setCentralEnriched(false)}
+          onFirewallLinked={(configId, link) => {
+            setCentralEnriched(false);
+            onFirewallScopeChange(configId, link);
+          }}
+          branding={branding}
+          configComplianceScopes={configComplianceScopes}
+          onConfigAdditionalFrameworksChange={onConfigAdditionalFrameworksChange}
         />
 
         {/* Connected firewalls — add from agent fleet (authenticated only) */}
@@ -594,7 +609,11 @@ export function UploadSection({
 
               <Card className="border-border/50 bg-card/80 shadow-card">
                 <CardContent className="pt-6">
-                  <BrandingSetup branding={branding} onChange={setBranding} />
+                  <BrandingSetup
+                    branding={branding}
+                    onChange={setBranding}
+                    multiConfig={files.length > 1}
+                  />
                 </CardContent>
               </Card>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link2, Search, Server, ChevronDown, CheckCircle2 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,16 @@ import {
 } from "@/lib/sophos-central";
 import { supabase } from "@/integrations/supabase/client";
 import { invalidateFleetRelatedQueries } from "@/lib/invalidate-org-queries";
+import {
+  fetchLinkedCentralFirewallCompliance,
+  fetchTenantFirewallFleetContextMap,
+  mergeLinkedCentralCustomerContext,
+  resolveLinkedTenantCustomerName,
+} from "@/lib/linked-firewall-compliance";
+import { countryFlagEmoji } from "@/lib/compliance-context-options";
+
+const linkedFwComplianceKey = (orgId: string, fwId: string, tenantId: string, orgName: string) =>
+  ["linkedFwCompliance", orgId, fwId, tenantId, orgName] as const;
 
 interface CachedFw {
   firewallId: string;
@@ -42,6 +52,14 @@ export interface FirewallLink {
   serialNumber: string;
   model: string;
   firmwareVersion: string;
+  /** Fleet Customer Context (tenant + device overrides), after link resolves. */
+  complianceContext?: {
+    country: string;
+    state: string;
+    environment: string;
+  };
+  /** Sophos tenant label for Customer Name (matches Fleet / connector naming). */
+  tenantCustomerDisplayName?: string;
 }
 
 interface Props {
@@ -49,9 +67,70 @@ interface Props {
   configHostname: string;
   configHash: string;
   configSerialNumber?: string;
-  /** When true, do not auto-persist a link when serial/hostname matches (e.g. manual XML/HTML upload). */
+  /** When true, skip serial auto-link and hostname pre-selection (manual uploads). Only agent/connector configs should leave this false. */
   disableAutoLink?: boolean;
   onLinked?: (link: FirewallLink | null) => void;
+}
+
+function PickerRowFleetLine({
+  fwId,
+  fleetByFw,
+  listFleetReady,
+}: {
+  fwId: string;
+  fleetByFw: Record<string, { country: string; state: string; environment: string }>;
+  listFleetReady: boolean;
+}) {
+  if (!listFleetReady) {
+    return (
+      <span className="text-[8px] text-muted-foreground/55 mt-0.5 tabular-nums" aria-hidden>
+        …
+      </span>
+    );
+  }
+  const row = fleetByFw[fwId];
+  const env = (row?.environment ?? "").trim() || "—";
+  const country = (row?.country ?? "").trim();
+  const usState = country === "United States" ? (row?.state ?? "").trim() : "";
+  const flag = country ? countryFlagEmoji(country) : "";
+  return (
+    <span className="text-[8px] text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
+      <span className="rounded border border-[#008F69]/20 dark:border-[#00F2B3]/15 bg-[#008F69]/[0.06] dark:bg-[#00F2B3]/5 px-1 py-px font-medium text-foreground/80">
+        {env}
+      </span>
+      <span className="text-muted-foreground/60">·</span>
+      {country ? (
+        <span className="inline-flex items-center gap-0.5 text-foreground/75">
+          <span aria-hidden>{flag}</span>
+          <span>
+            {country}
+            {usState ? ` · ${usState}` : ""}
+          </span>
+        </span>
+      ) : (
+        <span>—</span>
+      )}
+    </span>
+  );
+}
+
+async function enrichFirewallLinkWithCompliance(
+  orgId: string,
+  orgDisplayName: string | undefined,
+  base: Omit<FirewallLink, "complianceContext" | "tenantCustomerDisplayName">,
+): Promise<FirewallLink> {
+  try {
+    const raw = await fetchLinkedCentralFirewallCompliance(orgId, base.tenantId, base.firewallId);
+    const complianceContext = mergeLinkedCentralCustomerContext(raw);
+    const tenantCustomerDisplayName = resolveLinkedTenantCustomerName(raw, orgDisplayName).trim();
+    return {
+      ...base,
+      complianceContext,
+      ...(tenantCustomerDisplayName ? { tenantCustomerDisplayName } : {}),
+    };
+  } catch {
+    return { ...base };
+  }
 }
 
 export function FirewallLinkPicker({
@@ -109,10 +188,102 @@ export function FirewallLinkPicker({
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [linked, setLinked] = useState<FirewallLink | null>(null);
+  const [selectedFleetContext, setSelectedFleetContext] = useState<{
+    country: string;
+    state: string;
+    environment: string;
+  } | null>(null);
+  const [fleetByFw, setFleetByFw] = useState<
+    Record<string, { country: string; state: string; environment: string }>
+  >({});
+  const [listFleetReady, setListFleetReady] = useState(false);
+
+  const firewallsFingerprint = useMemo(
+    () =>
+      firewalls
+        .map((f) => f.firewallId)
+        .sort()
+        .join(","),
+    [firewalls],
+  );
+
+  useEffect(() => {
+    if (!orgId || !selectedTenantId) {
+      setFleetByFw({});
+      setListFleetReady(false);
+      return;
+    }
+    let cancelled = false;
+    setListFleetReady(false);
+    void fetchTenantFirewallFleetContextMap(orgId, selectedTenantId)
+      .then((map) => {
+        if (cancelled) return;
+        const rec: Record<string, { country: string; state: string; environment: string }> = {};
+        for (const [k, v] of map) rec[k] = v;
+        setFleetByFw(rec);
+        setListFleetReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFleetByFw({});
+          setListFleetReady(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, selectedTenantId, firewallsFingerprint]);
+
+  const linkedFwId = linked?.firewallId ?? "";
+  const linkedTenantId = linked?.tenantId ?? "";
+  const orgNameKey = org?.name?.trim() ?? "";
+
+  const linkedComplianceQuery = useQuery({
+    queryKey: linkedFwComplianceKey(orgId, linkedFwId, linkedTenantId, orgNameKey),
+    queryFn: async () => {
+      const raw = await fetchLinkedCentralFirewallCompliance(orgId, linkedTenantId, linkedFwId);
+      return {
+        complianceContext: mergeLinkedCentralCustomerContext(raw),
+        tenantCustomerDisplayName: resolveLinkedTenantCustomerName(raw, org?.name).trim(),
+      };
+    },
+    enabled: Boolean(orgId && linkedFwId && linkedTenantId && !isGuest),
+    staleTime: 20_000,
+  });
 
   /** Parent often passes an inline `onLinked` — keep a ref so effects do not re-run every render. */
   const onLinkedRef = useRef(onLinked);
   onLinkedRef.current = onLinked;
+
+  const linkedSnapshotRef = useRef(linked);
+  linkedSnapshotRef.current = linked;
+
+  const lastComplianceNotifySig = useRef<string>("");
+
+  useEffect(() => {
+    if (!linkedFwId || !linkedTenantId) {
+      lastComplianceNotifySig.current = "";
+      return;
+    }
+    if (!linkedComplianceQuery.isSuccess || !linkedComplianceQuery.data) return;
+    const snap = linkedSnapshotRef.current;
+    if (!snap || snap.firewallId !== linkedFwId || snap.tenantId !== linkedTenantId) return;
+
+    const { complianceContext, tenantCustomerDisplayName } = linkedComplianceQuery.data;
+    const hasScope =
+      !!complianceContext.country || !!complianceContext.environment || !!tenantCustomerDisplayName;
+    if (!hasScope) return;
+
+    const sig = `${linkedFwId}\0${linkedTenantId}\0${complianceContext.country}\0${complianceContext.environment}\0${tenantCustomerDisplayName}\0${tenantCustomerDisplayName}`;
+    if (lastComplianceNotifySig.current === sig) return;
+    lastComplianceNotifySig.current = sig;
+
+    onLinkedRef.current?.({
+      ...snap,
+      complianceContext,
+      ...(tenantCustomerDisplayName ? { tenantCustomerDisplayName } : {}),
+    });
+  }, [linkedComplianceQuery.isSuccess, linkedComplianceQuery.data, linkedFwId, linkedTenantId]);
 
   useEffect(() => {
     if (!orgId || isGuest) return;
@@ -137,10 +308,10 @@ export function FirewallLinkPicker({
       .single()
       .then(({ data }) => {
         if (data) {
-          getCachedFirewalls(orgId, data.central_tenant_id).then((fws) => {
+          void getCachedFirewalls(orgId, data.central_tenant_id).then(async (fws) => {
             const fw = fws.find((f) => f.firewallId === data.central_firewall_id);
             if (fw) {
-              const l: FirewallLink = {
+              const base: Omit<FirewallLink, "complianceContext" | "tenantCustomerDisplayName"> = {
                 configId,
                 firewallId: fw.firewallId,
                 tenantId: data.central_tenant_id,
@@ -149,13 +320,14 @@ export function FirewallLinkPicker({
                 model: fw.model,
                 firmwareVersion: fw.firmwareVersion,
               };
-              setLinked(l);
-              onLinkedRef.current?.(l);
+              const enriched = await enrichFirewallLinkWithCompliance(orgId, org?.name, base);
+              setLinked(enriched);
+              onLinkedRef.current?.(enriched);
             }
           });
         }
       });
-  }, [orgId, configHash, configId]);
+  }, [orgId, configHash, configId, org?.name]);
 
   // Auto-link helper: persists the link and updates state
   const autoLink = useCallback(
@@ -168,7 +340,7 @@ export function FirewallLinkPicker({
         central_firewall_id: fw.firewallId,
         central_tenant_id: fw.centralTenantId,
       });
-      const l: FirewallLink = {
+      const base: Omit<FirewallLink, "complianceContext" | "tenantCustomerDisplayName"> = {
         configId,
         firewallId: fw.firewallId,
         tenantId: fw.centralTenantId,
@@ -177,11 +349,12 @@ export function FirewallLinkPicker({
         model: fw.model,
         firmwareVersion: fw.firmwareVersion,
       };
-      setLinked(l);
+      const enriched = await enrichFirewallLinkWithCompliance(orgId, org?.name, base);
+      setLinked(enriched);
       setOpen(false);
-      onLinkedRef.current?.(l);
+      onLinkedRef.current?.(enriched);
     },
-    [orgId, configId, configHostname, configHash, linkUpsertMutation],
+    [orgId, configId, configHostname, configHash, linkUpsertMutation, org?.name],
   );
 
   const autoLinkRef = useRef(autoLink);
@@ -199,7 +372,7 @@ export function FirewallLinkPicker({
     getCachedFirewalls(orgId, selectedTenantId)
       .then((fws) => {
         setFirewalls(fws);
-        // Auto-link by serial number only when not from manual upload (disableAutoLink)
+        // Auto-link by serial: Sophos connector (agent) only — never for manual HTML/XML uploads.
         if (configSerialNumber && !disableAutoLink) {
           const match = fws.find(
             (f) => f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase(),
@@ -213,7 +386,8 @@ export function FirewallLinkPicker({
             return;
           }
         }
-        if (configHostname) {
+        // Hostname pre-select: same rule — manual exports can match the wrong tenant or fuzzy hostname.
+        if (configHostname && !disableAutoLink) {
           const match = fws.find(
             (f) =>
               f.hostname.toLowerCase() === configHostname.toLowerCase() ||
@@ -226,6 +400,34 @@ export function FirewallLinkPicker({
       })
       .catch(() => {});
   }, [orgId, selectedTenantId, configHostname, configSerialNumber, disableAutoLink, configHash]);
+
+  useEffect(() => {
+    if (!orgId || !selectedFwId) {
+      setSelectedFleetContext(null);
+      return;
+    }
+    const fw = firewalls.find((f) => f.firewallId === selectedFwId);
+    if (!fw) {
+      setSelectedFleetContext(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const raw = await fetchLinkedCentralFirewallCompliance(
+          orgId,
+          fw.centralTenantId,
+          fw.firewallId,
+        );
+        if (!cancelled) setSelectedFleetContext(mergeLinkedCentralCustomerContext(raw));
+      } catch {
+        if (!cancelled) setSelectedFleetContext(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, selectedFwId, firewalls]);
 
   useEffect(() => {
     serialAutoPersistKeyRef.current = null;
@@ -311,7 +513,7 @@ export function FirewallLinkPicker({
       central_tenant_id: fw.centralTenantId,
     });
 
-    const l: FirewallLink = {
+    const base: Omit<FirewallLink, "complianceContext" | "tenantCustomerDisplayName"> = {
       configId,
       firewallId: fw.firewallId,
       tenantId: fw.centralTenantId,
@@ -320,9 +522,10 @@ export function FirewallLinkPicker({
       model: fw.model,
       firmwareVersion: fw.firmwareVersion,
     };
-    setLinked(l);
+    const enriched = await enrichFirewallLinkWithCompliance(orgId, org?.name, base);
+    setLinked(enriched);
     setOpen(false);
-    onLinkedRef.current?.(l);
+    onLinkedRef.current?.(enriched);
   };
 
   const handleUnlink = async () => {
@@ -336,21 +539,64 @@ export function FirewallLinkPicker({
   if (isGuest || !orgId || tenants.length === 0) return null;
 
   if (linked) {
+    const cc = linkedComplianceQuery.data?.complianceContext ?? linked.complianceContext;
+    const envLabel = (cc?.environment ?? "").trim() || "—";
+    const country = (cc?.country ?? "").trim();
+    const usState = country === "United States" ? (cc?.state ?? "").trim() : "";
+    const flag = country ? countryFlagEmoji(country) : "";
+    const fleetRowLoading = linkedComplianceQuery.isPending;
+    const fleetMissingDefaults = !fleetRowLoading && !country && !(cc?.environment ?? "").trim();
+
     return (
-      <div className="flex items-center gap-2 mt-1 py-1 px-2 rounded bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 dark:bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#008F69]/30 dark:border-[#00F2B3]/20 dark:border-[#008F69]/30 dark:border-[#00F2B3]/20">
-        <CheckCircle2 className="h-3 w-3 text-[#007A5A] dark:text-[#00F2B3] shrink-0" />
-        <span className="text-[10px] text-foreground font-medium truncate">
-          {linked.hostname || linked.serialNumber}
-        </span>
-        <span className="text-[9px] text-muted-foreground">
+      <div className="mt-1 py-1.5 px-2 rounded bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 dark:bg-[#008F69]/[0.08] dark:bg-[#00F2B3]/5 border border-[#008F69]/30 dark:border-[#00F2B3]/20 dark:border-[#008F69]/30 dark:border-[#00F2B3]/20 space-y-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <CheckCircle2 className="h-3 w-3 text-[#007A5A] dark:text-[#00F2B3] shrink-0" />
+          <span className="text-[10px] text-foreground font-medium truncate min-w-0">
+            {linked.hostname || linked.serialNumber}
+          </span>
+          <span className="text-[9px] text-muted-foreground shrink-0 hidden sm:inline">
+            {linked.model} · {linked.firmwareVersion}
+          </span>
+          <button
+            type="button"
+            onClick={handleUnlink}
+            className="ml-auto text-[9px] text-muted-foreground hover:text-[#EA0022] transition-colors shrink-0"
+          >
+            Unlink
+          </button>
+        </div>
+        <div className="text-[9px] text-muted-foreground pl-5 pr-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="font-semibold text-[#007A5A]/90 dark:text-[#00F2B3]/90">Fleet</span>
+          <span className="rounded-md border border-[#008F69]/25 dark:border-[#00F2B3]/25 bg-white/50 dark:bg-black/20 px-1.5 py-0.5 text-foreground/90">
+            {envLabel}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            {country ? (
+              <>
+                <span aria-hidden>{flag}</span>
+                <span>
+                  {country}
+                  {usState ? ` · ${usState}` : ""}
+                </span>
+              </>
+            ) : (
+              <span>—</span>
+            )}
+          </span>
+        </div>
+        <p className="text-[9px] text-muted-foreground pl-5 sm:hidden">
           {linked.model} · {linked.firmwareVersion}
-        </span>
-        <button
-          onClick={handleUnlink}
-          className="ml-auto text-[9px] text-muted-foreground hover:text-[#EA0022] transition-colors"
-        >
-          Unlink
-        </button>
+        </p>
+        {fleetRowLoading && (
+          <p className="text-[9px] text-muted-foreground pl-5">Loading fleet context…</p>
+        )}
+        {fleetMissingDefaults && (
+          <p className="text-[9px] text-muted-foreground pl-5 leading-snug">
+            No country or sector saved for this customer in Fleet Command yet — set{" "}
+            <span className="font-medium text-foreground/80">customer defaults</span> there to see
+            them here and in reports.
+          </p>
+        )}
       </div>
     );
   }
@@ -450,6 +696,7 @@ export function FirewallLinkPicker({
                   const allFws = [haGroup.primary, ...haGroup.peers];
                   const isSelected = allFws.some((f) => f.firewallId === selectedFwId);
                   const autoMatch =
+                    !disableAutoLink &&
                     configHostname &&
                     haGroup.primary.hostname
                       .toLowerCase()
@@ -486,6 +733,11 @@ export function FirewallLinkPicker({
                           {haGroup.primary.model} · {haGroup.primary.firmwareVersion} ·{" "}
                           {allFws.map((f) => f.serialNumber).join(" / ")}
                         </span>
+                        <PickerRowFleetLine
+                          fwId={haGroup.primary.firewallId}
+                          fleetByFw={fleetByFw}
+                          listFleetReady={listFleetReady}
+                        />
                       </div>
                       {isSelected && (
                         <CheckCircle2 className="h-3.5 w-3.5 text-brand-accent shrink-0" />
@@ -507,6 +759,29 @@ export function FirewallLinkPicker({
                   />
                 )}
               </div>
+
+              {selectedFwId && selectedFleetContext && (
+                <p className="text-[9px] text-muted-foreground leading-snug px-0.5">
+                  <span className="font-semibold text-foreground/80">Fleet context</span>
+                  {" · "}
+                  <span className="rounded border border-border/60 px-1 py-px">
+                    {(selectedFleetContext.environment || "—").trim()}
+                  </span>
+                  {" · "}
+                  {selectedFleetContext.country ? (
+                    <span className="inline-flex items-center gap-0.5">
+                      <span aria-hidden>{countryFlagEmoji(selectedFleetContext.country)}</span>
+                      {selectedFleetContext.country}
+                      {selectedFleetContext.country === "United States" &&
+                      selectedFleetContext.state
+                        ? ` · ${selectedFleetContext.state}`
+                        : ""}
+                    </span>
+                  ) : (
+                    <span>—</span>
+                  )}
+                </p>
+              )}
 
               {/* Confirm */}
               <Button

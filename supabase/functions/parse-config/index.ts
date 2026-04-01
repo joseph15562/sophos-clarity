@@ -322,6 +322,14 @@ serve(async (req) => {
       typeof body?.webFilterComplianceMode === "string"
         ? body.webFilterComplianceMode
         : undefined;
+    const perFirewallComplianceContext: Record<string, Record<string, unknown>> | undefined =
+      body?.perFirewallComplianceContext &&
+        typeof body.perFirewallComplianceContext === "object" &&
+        !Array.isArray(body.perFirewallComplianceContext)
+        ? body.perFirewallComplianceContext as Record<string, Record<string, unknown>>
+        : undefined;
+    const jurisdictionSummary: string | undefined =
+      typeof body?.jurisdictionSummary === "string" ? body.jurisdictionSummary : undefined;
 
     if (chat) {
       if (!chatContext || typeof chatContext !== "string") {
@@ -438,10 +446,19 @@ serve(async (req) => {
           : "";
         const scopeCountry = country && country.trim() ? country.trim() : "";
         const scopeRest = [scopeEnv, scopeCountry].filter(Boolean).join(", ");
+        const hasPerFwScope =
+          compliance &&
+          firewallLabels &&
+          firewallLabels.length > 1 &&
+          perFirewallComplianceContext;
         complianceContext +=
           `\n\n## Scope line (output exactly)\nAfter the title "Compliance Readiness Report — Firewall Configuration Assessment", output this exact line (one line):\nDate: ${reportDate} Scope: ${scopeFirewalls} (${scopeTenant})${
-            scopeRest ? ", " + scopeRest : ""
+            scopeRest && !hasPerFwScope ? ", " + scopeRest : ""
           }\n`;
+        if (hasPerFwScope) {
+          complianceContext +=
+            "\nMulti-jurisdiction estate: per-firewall environment, country, and frameworks are listed under **Per-firewall compliance scope** below. Do **not** claim one country or one framework set applies to every firewall. In narrative and control mapping, treat each firewall under its own row.\n";
+        }
 
         if (environment || country) {
           complianceContext += "\n\n## Compliance Context\n";
@@ -463,6 +480,37 @@ serve(async (req) => {
           complianceContext +=
             `\nIMPORTANT: Tailor ALL "Best Practice Recommendations" and the "Overall Security Recommendations" section to focus on compliance frameworks and regulatory requirements relevant to this environment and country.\n`;
         }
+
+        if (hasPerFwScope) {
+          complianceContext +=
+            "\n\n## Per-firewall compliance scope\nAssess **each** firewall only against the frameworks listed for that firewall. Do not apply one firewall's framework list to another.\n\n";
+          for (const label of firewallLabels!) {
+            const row = perFirewallComplianceContext![label];
+            if (!row || typeof row !== "object") continue;
+            complianceContext += `### ${label}\n`;
+            const env = row.environment;
+            const ctry = row.country;
+            if (typeof env === "string" && env.trim()) {
+              complianceContext += `- **Environment type**: ${env.trim()}\n`;
+            }
+            if (typeof ctry === "string" && ctry.trim()) {
+              complianceContext += `- **Country**: ${ctry.trim()}\n`;
+            }
+            const fws = row.selectedFrameworks;
+            if (Array.isArray(fws) && fws.length > 0) {
+              complianceContext += "- **Frameworks for this firewall**:\n";
+              for (const fw of fws) {
+                if (typeof fw === "string" && fw.trim()) {
+                  complianceContext += `  - ${fw.trim()}\n`;
+                }
+              }
+            }
+            complianceContext += "\n";
+          }
+        } else if (compliance && firewallLabels && firewallLabels.length > 1) {
+          complianceContext +=
+            "\n\n## Multi-firewall note\nMultiple firewalls are included but per-device compliance scope was not supplied. Global context above may not match every site; map controls carefully.\n";
+        }
       } else if (selectedFrameworks && selectedFrameworks.length > 0) {
         complianceContext +=
           `\n\n## Frameworks for individual report\nTailor "Best Practice Recommendations" and "Overall Security Recommendations for ${singleFirewallName}" to the selected frameworks: ${
@@ -480,6 +528,10 @@ serve(async (req) => {
       if (compliance && webFilterComplianceMode === "informational") {
         complianceContext +=
           "\n\n## Assessment scope (from UI)\n**Web filter compliance mode is Informational.** The MSP selected a scoped assessment. When discussing missing or weak web filtering on WAN rules, frame gaps as observations for customer discussion — do not assert definitive regulatory or KCSIE failures unless a selected framework explicitly maps to that control. Still describe factual configuration gaps accurately.\n";
+      }
+
+      if (jurisdictionSummary?.trim()) {
+        complianceContext += `\n\n## Jurisdictional note\n${jurisdictionSummary.trim()}\n`;
       }
 
       let basePrompt: string;

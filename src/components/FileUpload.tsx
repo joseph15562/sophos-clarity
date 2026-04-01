@@ -3,6 +3,11 @@ import { X, Plus, FileText, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FirewallLinkPicker, type FirewallLink } from "@/components/FirewallLinkPicker";
+import type { BrandingData } from "@/components/BrandingSetup";
+import type { ConfigComplianceScope } from "@/lib/config-compliance-scope";
+import type { ComplianceFramework } from "@/lib/compliance-context-options";
+import { ConfigFileScopeLine } from "@/components/ConfigFileScopeLine";
+import { ConfigFileAdditionalFrameworks } from "@/components/ConfigFileAdditionalFrameworks";
 
 export type UploadedFile = {
   id: string;
@@ -12,7 +17,7 @@ export type UploadedFile = {
   serialNumber?: string;
   agentHostname?: string;
   hardwareModel?: string;
-  /** When "upload", do not auto-link to Central (manual upload may be a different firewall). */
+  /** `"upload"` = browser file picker; only `"agent"` may auto-match Central (Sophos connector). */
   source?: "upload" | "agent";
 };
 
@@ -20,11 +25,24 @@ type Props = {
   files: UploadedFile[];
   onFilesChange: (files: UploadedFile[]) => void;
   onFirewallLinked?: (configId: string, link: FirewallLink | null) => void;
+  branding?: BrandingData;
+  configComplianceScopes?: Record<string, ConfigComplianceScope>;
+  onConfigAdditionalFrameworksChange?: (
+    configId: string,
+    frameworks: ComplianceFramework[],
+  ) => void;
 };
 
 let fileIdCounter = 0;
 
-export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
+export function FileUpload({
+  files,
+  onFilesChange,
+  onFirewallLinked,
+  branding,
+  configComplianceScopes,
+  onConfigAdditionalFrameworksChange,
+}: Props) {
   const [dragActive, setDragActive] = useState(false);
 
   const handleFiles = useCallback(
@@ -36,8 +54,9 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
             resolve({
               id: `file-${++fileIdCounter}`,
               fileName: file.name,
-              label: file.name.replace(/\.(html|htm)$/i, ""),
+              label: file.name.replace(/\.(html|htm|xml)$/i, ""),
               content: e.target?.result as string,
+              source: "upload",
             });
           reader.onerror = () => reject(reader.error);
           reader.readAsText(file);
@@ -88,23 +107,6 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
     return map;
   }, [files]);
 
-  const fileHashes = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const f of files) {
-      if (!f.content) {
-        map[f.id] = f.id;
-        continue;
-      }
-      let hash = 0;
-      const str = f.fileName + (f.content.length > 200 ? f.content.slice(0, 200) : f.content);
-      for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-      }
-      map[f.id] = Math.abs(hash).toString(36);
-    }
-    return map;
-  }, [files]);
-
   return (
     <div className="space-y-3">
       {/* File list */}
@@ -135,14 +137,28 @@ export function FileUpload({ files, onFilesChange, onFirewallLinked }: Props) {
                 ? [f.hardwareModel, `S/N: ${f.serialNumber}`].filter(Boolean).join(" · ")
                 : f.fileName}
             </p>
+            {branding && (
+              <ConfigFileScopeLine
+                branding={branding}
+                scope={configComplianceScopes?.[f.id]}
+                hasScopeEntry={!!configComplianceScopes?.[f.id]}
+              />
+            )}
             <FirewallLinkPicker
               configId={f.id}
               configHostname={fileHostnames[f.id] || f.agentHostname || ""}
-              configHash={fileHashes[f.id] ?? ""}
+              configHash={f.id}
               configSerialNumber={f.serialNumber}
-              disableAutoLink={f.source === "upload"}
+              disableAutoLink={f.source !== "agent"}
               onLinked={(link) => onFirewallLinked?.(f.id, link)}
             />
+            {onConfigAdditionalFrameworksChange && (
+              <ConfigFileAdditionalFrameworks
+                configId={f.id}
+                additionalFrameworks={configComplianceScopes?.[f.id]?.additionalFrameworks ?? []}
+                onAdditionalChange={onConfigAdditionalFrameworksChange}
+              />
+            )}
           </div>
           <Button
             variant="ghost"

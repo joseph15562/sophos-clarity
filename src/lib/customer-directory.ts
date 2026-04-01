@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { resolveCustomerName } from "@/lib/customer-name";
 import { supabaseWithAbort } from "@/lib/supabase-with-abort";
+import { countryFlagEmoji } from "@/lib/compliance-context-options";
 
 export type HealthStatus = "Healthy" | "At Risk" | "Critical" | "Overdue";
 
@@ -78,6 +79,13 @@ function daysAgoLabel(daysSince: number) {
   return `${daysSince} days ago`;
 }
 
+function bumpCountry(map: Map<string, Set<string>>, customerName: string, country: unknown) {
+  const c = String(country ?? "").trim();
+  if (!c || !customerName) return;
+  if (!map.has(customerName)) map.set(customerName, new Set());
+  map.get(customerName)!.add(c);
+}
+
 /**
  * Loads tenant / assessment / agent / portal rows and builds customer cards for Customer Management.
  */
@@ -102,7 +110,7 @@ export async function fetchCustomerDirectory(
       supabase
         .from("agents")
         .select(
-          "id, name, firewall_host, customer_name, assigned_customer_name, tenant_name, last_score, last_grade, last_seen_at, status, hardware_model",
+          "id, name, firewall_host, customer_name, assigned_customer_name, tenant_name, last_score, last_grade, last_seen_at, status, hardware_model, compliance_country",
         )
         .eq("org_id", orgId),
       s,
@@ -110,7 +118,9 @@ export async function fetchCustomerDirectory(
     supabaseWithAbort(
       supabase
         .from("central_firewalls")
-        .select("central_tenant_id, hostname, name, firmware_version, model, status_json")
+        .select(
+          "central_tenant_id, hostname, name, firmware_version, model, status_json, compliance_country",
+        )
         .eq("org_id", orgId),
       s,
     ),
@@ -170,6 +180,7 @@ export async function fetchCustomerDirectory(
   }
 
   const customerMap = new Map<string, CustomerDirectoryEntry>();
+  const countryByCustomer = new Map<string, Set<string>>();
 
   /** Only surface a Central tenant row when something ties it to your workspace (avoids N empty MSP child tenants). */
   const tenantHasSignal = (resolvedTenantName: string, centralTenantId: string) => {
@@ -196,8 +207,8 @@ export async function fetchCustomerDirectory(
       id: t.central_tenant_id,
       name: tName,
       sector: "Private Sector",
-      country: "United Kingdom",
-      countryFlag: "🇬🇧",
+      country: "",
+      countryFlag: "",
       score: 0,
       grade: "F",
       firewallCount: tFws.length,
@@ -244,8 +255,8 @@ export async function fetchCustomerDirectory(
         id: latest.id,
         name: resolvedName,
         sector: latest.environment || "Private Sector",
-        country: "United Kingdom",
-        countryFlag: "🇬🇧",
+        country: "",
+        countryFlag: "",
         score: m.score,
         grade: m.grade,
         firewallCount: totalFw,
@@ -270,6 +281,11 @@ export async function fetchCustomerDirectory(
         ? tenant
         : String(ag.customer_name ?? "").trim() || String(ag.name ?? "").trim();
     const resolvedName = resolveCustomerName(rawAgName, orgDisplayName);
+    bumpCountry(
+      countryByCustomer,
+      resolvedName,
+      (ag as { compliance_country?: string | null }).compliance_country,
+    );
     const existing = customerMap.get(resolvedName);
     if (existing) {
       if (existing.score === 0 && ag.last_score != null && ag.last_score > 0) {
@@ -301,8 +317,8 @@ export async function fetchCustomerDirectory(
         id: ag.id,
         name: resolvedName,
         sector: "Private Sector",
-        country: "United Kingdom",
-        countryFlag: "🇬🇧",
+        country: "",
+        countryFlag: "",
         score: ag.last_score ?? 0,
         grade: ag.last_grade || gradeFor(ag.last_score ?? 0),
         firewallCount: 1,
@@ -321,6 +337,31 @@ export async function fetchCustomerDirectory(
         portalSlug: "",
         tenantNameRaw: rawAgName,
       });
+    }
+  }
+
+  type FwCountryRow = { central_tenant_id?: string | null; compliance_country?: string | null };
+  for (const fw of firewalls as FwCountryRow[]) {
+    const tid = String(fw.central_tenant_id ?? "");
+    const tenantRow = tenants.find((t) => String(t.central_tenant_id) === tid);
+    if (!tenantRow) continue;
+    const tName = resolveCustomerName(String(tenantRow.name ?? ""), orgDisplayName);
+    bumpCountry(countryByCustomer, tName, fw.compliance_country);
+  }
+
+  for (const c of customerMap.values()) {
+    const set = countryByCustomer.get(c.name);
+    if (!set || set.size === 0) {
+      c.country = "—";
+      c.countryFlag = "";
+    } else if (set.size === 1) {
+      const [only] = [...set];
+      c.country = only;
+      c.countryFlag = countryFlagEmoji(only);
+    } else {
+      const sorted = [...set].sort((a, b) => a.localeCompare(b));
+      c.country = `Multiple (${sorted.join(", ")})`;
+      c.countryFlag = "🌐";
     }
   }
 

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { RotateCcw, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { UploadSection } from "@/components/UploadSection";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { resolveCustomerName } from "@/lib/customer-name";
+import { agentCustomerGroupingKey } from "@/lib/agent-customer-bucket";
 
 import { AuthFlow } from "@/components/AuthFlow";
 import {
@@ -28,8 +30,20 @@ import {
   saveSession,
   clearSession,
 } from "@/hooks/use-session-persistence";
+import type {
+  ConfigComplianceScope,
+  SerializableConfigComplianceScope,
+} from "@/lib/config-compliance-scope";
+import {
+  deserializeScope,
+  scopeFromFirewallLink,
+  serializeScope,
+} from "@/lib/config-compliance-scope";
+import type { FirewallLink } from "@/components/FirewallLinkPicker";
+import type { ComplianceFramework } from "@/lib/compliance-context-options";
 import { useAuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateFleetRelatedQueries } from "@/lib/invalidate-org-queries";
 import {
   getCentralStatus,
   getCachedFirewalls,
@@ -116,6 +130,7 @@ function scrollPageToTop() {
 
 function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const { isGuest, org, isViewerOnly, canManageTeam } = useAuth();
+  const queryClient = useQueryClient();
   const {
     notifications,
     unreadCount,
@@ -142,7 +157,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     reports: ReportEntry[];
     activeReportId: string;
     linkedCloudAssessmentId: string | null;
+    configComplianceScopes: Record<string, SerializableConfigComplianceScope>;
   } | null>(null);
+  const [configComplianceScopes, setConfigComplianceScopes] = useState<
+    Record<string, ConfigComplianceScope>
+  >({});
   const [savingReports, setSavingReports] = useState(false);
   const [reportsSaved, setReportsSaved] = useState(false);
   const [savedReportsTrigger, setSavedReportsTrigger] = useState(0);
@@ -243,7 +262,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     generateCompliance,
     generateAll,
     handleRetry,
-  } = useReportGeneration(files, branding, analysisResults);
+  } = useReportGeneration(files, branding, analysisResults, configComplianceScopes);
+
+  const serializedConfigScopesForSession = useMemo(() => {
+    const o: Record<string, SerializableConfigComplianceScope> = {};
+    for (const [k, v] of Object.entries(configComplianceScopes)) {
+      o[k] = serializeScope(v);
+    }
+    return o;
+  }, [configComplianceScopes]);
 
   useEffect(() => {
     const raw = searchParams.get("reportTemplate")?.trim().toLowerCase();
@@ -352,26 +379,158 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   useEffect(() => {
     const customer = searchParams.get("customer")?.trim();
     const openUpload = searchParams.get("openUpload") === "1";
-    if (!customer && !openUpload) return;
+    const fleetContext = searchParams.get("fleetContext")?.trim();
+    if (!customer && !openUpload && !fleetContext) return;
 
-    if (customer) {
-      setBranding((prev) =>
-        prev.customerName === customer ? prev : { ...prev, customerName: customer },
-      );
-    }
+    let cancelled = false;
 
-    const next = new URLSearchParams(searchParams);
-    next.delete("customer");
-    next.delete("openUpload");
-    if (searchParams.has("customer") || searchParams.has("openUpload")) {
-      setSearchParams(next, { replace: true });
-    }
+    void (async () => {
+      if (fleetContext && org?.id && !isGuest) {
+        try {
+          const { data: cw } = await supabase
+            .from("central_firewalls")
+            .select(
+              "compliance_country, compliance_state, central_tenant_id, compliance_environment",
+            )
+            .eq("org_id", org.id)
+            .eq("id", fleetContext)
+            .maybeSingle();
 
-    setCustomerDeepLink({
-      customer: customer || undefined,
-      openUpload,
-    });
-  }, [searchParams, setSearchParams]);
+          if (cancelled) return;
+
+          type CentralComp = {
+            compliance_country?: string | null;
+            compliance_state?: string | null;
+            central_tenant_id?: string | null;
+            compliance_environment?: string | null;
+          };
+
+          const applyBrandingPatch = (patch: {
+            country?: string;
+            state?: string;
+            environment?: string;
+          }) => {
+            setBranding((prev) => ({
+              ...prev,
+              ...(patch.country ? { country: patch.country } : {}),
+              ...(patch.state ? { state: patch.state } : {}),
+              ...(patch.environment ? { environment: patch.environment } : {}),
+            }));
+          };
+
+          if (cw && typeof cw === "object") {
+            const row = cw as CentralComp;
+            const country = (row.compliance_country ?? "").trim();
+            const state = (row.compliance_state ?? "").trim();
+            const tid = (row.central_tenant_id ?? "").trim();
+            let environment = "";
+            let tenantCountry = "";
+            if (tid) {
+              const { data: ten } = await supabase
+                .from("central_tenants")
+                .select("compliance_environment, compliance_country")
+                .eq("org_id", org.id)
+                .eq("central_tenant_id", tid)
+                .maybeSingle();
+              if (!cancelled && ten && typeof ten === "object") {
+                const t = ten as {
+                  compliance_environment?: string | null;
+                  compliance_country?: string | null;
+                };
+                environment = (t.compliance_environment ?? "").trim();
+                tenantCountry = (t.compliance_country ?? "").trim();
+              }
+            }
+            if (!environment) {
+              environment = (row.compliance_environment ?? "").trim();
+            }
+            const brandingCountry = country || tenantCountry;
+            applyBrandingPatch({
+              ...(brandingCountry ? { country: brandingCountry } : {}),
+              ...(state ? { state } : {}),
+              ...(environment ? { environment } : {}),
+            });
+          } else {
+            const { data: ag } = await supabase
+              .from("agents")
+              .select(
+                "compliance_country, compliance_state, compliance_environment, assigned_customer_name, tenant_name, customer_name, name, firewall_host",
+              )
+              .eq("org_id", org.id)
+              .eq("id", fleetContext)
+              .maybeSingle();
+            if (cancelled || !ag || typeof ag !== "object") {
+              /* no row */
+            } else {
+              const a = ag as Record<string, string | null | undefined>;
+              const country = (a.compliance_country ?? "").trim();
+              const state = (a.compliance_state ?? "").trim();
+              const bucketKey = agentCustomerGroupingKey({
+                assigned_customer_name: a.assigned_customer_name,
+                tenant_name: a.tenant_name,
+              });
+              let environment = "";
+              let bucketCountry = "";
+              const { data: bucketRow } = await supabase
+                .from("agent_customer_compliance_environment")
+                .select("compliance_environment, compliance_country")
+                .eq("org_id", org.id)
+                .eq("customer_bucket_key", bucketKey)
+                .maybeSingle();
+              if (!cancelled && bucketRow && typeof bucketRow === "object") {
+                const br = bucketRow as {
+                  compliance_environment?: string | null;
+                  compliance_country?: string | null;
+                };
+                environment = (br.compliance_environment ?? "").trim();
+                bucketCountry = (br.compliance_country ?? "").trim();
+              }
+              if (!environment) {
+                environment = (a.compliance_environment ?? "").trim();
+              }
+              const brandingCountryAgent = country || bucketCountry;
+              applyBrandingPatch({
+                ...(brandingCountryAgent ? { country: brandingCountryAgent } : {}),
+                ...(state ? { state } : {}),
+                ...(environment ? { environment } : {}),
+              });
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+
+      if (cancelled) return;
+
+      if (customer) {
+        setBranding((prev) =>
+          prev.customerName === customer ? prev : { ...prev, customerName: customer },
+        );
+      }
+
+      const next = new URLSearchParams(searchParams);
+      next.delete("customer");
+      next.delete("openUpload");
+      next.delete("fleetContext");
+      if (
+        searchParams.has("customer") ||
+        searchParams.has("openUpload") ||
+        searchParams.has("fleetContext")
+      ) {
+        setSearchParams(next, { replace: true });
+      }
+
+      setCustomerDeepLink({
+        customer: customer || undefined,
+        openUpload,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, setSearchParams, org?.id, isGuest]);
 
   /** Deep-link: /?panel=dashboard|reports|history|settings&section=… (settings only) — opens management drawer then strips params. */
   useEffect(() => {
@@ -575,7 +734,14 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     return { score: avgScore, grade, criticalHigh, coverage, totalRules };
   }, [analysisResults, aggregatedPosture, totalRules]);
 
-  useAutoSave(branding, reports, activeReportId, linkedCloudAssessmentId, !isGuest);
+  useAutoSave(
+    branding,
+    reports,
+    activeReportId,
+    linkedCloudAssessmentId,
+    !isGuest,
+    serializedConfigScopesForSession,
+  );
 
   // Save finding snapshots when analysis completes (for regression detection)
   useEffect(() => {
@@ -658,12 +824,85 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         reports: session.reports,
         activeReportId: session.activeReportId,
         linkedCloudAssessmentId: session.linkedCloudAssessmentId ?? null,
+        configComplianceScopes: session.configComplianceScopes ?? {},
       });
     }
   }, [isGuest]);
 
+  const handleFirewallScopeChange = useCallback(
+    (configId: string, link: FirewallLink | null) => {
+      setConfigComplianceScopes((prev) => {
+        const next = { ...prev };
+        if (!link) {
+          delete next[configId];
+          return next;
+        }
+        const preserved = prev[configId]?.additionalFrameworks;
+        const built = scopeFromFirewallLink(link, preserved);
+        if (!built) {
+          delete next[configId];
+          return next;
+        }
+        next[configId] = built;
+        return next;
+      });
+      if (link) {
+        const tenantLabel = link.tenantCustomerDisplayName?.trim() ?? "";
+        if (tenantLabel) {
+          setBranding((b) => {
+            if (files.length <= 1 || !b.customerName?.trim()) {
+              return { ...b, customerName: tenantLabel };
+            }
+            return b;
+          });
+        }
+      }
+    },
+    [files.length],
+  );
+
+  const handleConfigAdditionalFrameworksChange = useCallback(
+    (configId: string, frameworks: ComplianceFramework[]) => {
+      setConfigComplianceScopes((prev) => {
+        const existing = prev[configId];
+        const base: ConfigComplianceScope = existing ?? {
+          country: "",
+          state: "",
+          environment: "",
+          additionalFrameworks: [],
+        };
+        return { ...prev, [configId]: { ...base, additionalFrameworks: frameworks } };
+      });
+    },
+    [],
+  );
+
   const handleFilesChange = useCallback(
     async (uploaded: UploadedFile[]) => {
+      const nextIds = new Set(uploaded.map((u) => u.id));
+      setConfigComplianceScopes((prev) => {
+        const next = { ...prev };
+        for (const k of Object.keys(next)) {
+          if (!nextIds.has(k)) delete next[k];
+        }
+        return next;
+      });
+      if (org?.id && !isGuest) {
+        const removed = files.filter((pf) => !nextIds.has(pf.id));
+        if (removed.length > 0) {
+          await Promise.all(
+            removed.map((pf) =>
+              supabase
+                .from("firewall_config_links")
+                .delete()
+                .eq("org_id", org.id)
+                .eq("config_hash", pf.id),
+            ),
+          );
+          void invalidateFleetRelatedQueries(queryClient, org.id);
+        }
+      }
+
       const existingParsed: ParsedFile[] = [];
       const toProcess: UploadedFile[] = [];
       for (const f of uploaded) {
@@ -729,7 +968,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         logAudit(org.id, "config.uploaded", "config", "", { count: toProcess.length });
       }
     },
-    [files, reports.length, setReports, setActiveReportId, org?.id],
+    [files, reports.length, setReports, setActiveReportId, org?.id, isGuest, queryClient],
   );
 
   const handleLoadAgentAssessment = useCallback(
@@ -1050,7 +1289,13 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       reports: r,
       activeReportId: rid,
       linkedCloudAssessmentId,
+      configComplianceScopes: persistedScopes,
     } = pendingSessionRecovery;
+    const scopes: Record<string, ConfigComplianceScope> = {};
+    for (const [k, v] of Object.entries(persistedScopes ?? {})) {
+      scopes[k] = deserializeScope(v);
+    }
+    setConfigComplianceScopes(scopes);
     setBranding(b);
     setReports(r);
     setActiveReportId(rid);
@@ -1068,12 +1313,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           } else {
             setLinkedCloudAssessmentId(null);
             setExportReviewerSignoff(null);
-            saveSession(b, r, rid, null);
+            saveSession(b, r, rid, null, persistedScopes);
           }
         } catch {
           setLinkedCloudAssessmentId(null);
           setExportReviewerSignoff(null);
-          saveSession(b, r, rid, null);
+          saveSession(b, r, rid, null, persistedScopes);
         }
       })();
     }
@@ -1090,6 +1335,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     setReports([]);
     setActiveReportId("");
     setFiles([]);
+    setConfigComplianceScopes({});
     setPendingSessionRecovery(null);
     setViewingReports(false);
     setLinkedCloudAssessmentId(null);
@@ -1448,6 +1694,9 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               parsingProgress={parsingProgress}
               branding={branding}
               setBranding={setBranding}
+              configComplianceScopes={configComplianceScopes}
+              onFirewallScopeChange={handleFirewallScopeChange}
+              onConfigAdditionalFrameworksChange={handleConfigAdditionalFrameworksChange}
               analysisResult={analysisResults}
               configMetas={configMetas}
               hasFiles={hasFiles}

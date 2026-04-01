@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFleetCommandQuery } from "@/hooks/queries/use-fleet-command-query";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Link } from "react-router-dom";
@@ -26,12 +27,36 @@ import {
   Upload,
   HelpCircle,
   X,
+  AlertCircle,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
+import { queryKeys } from "@/hooks/queries/keys";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
+  COUNTRIES,
+  countryFlagEmoji,
+  ENVIRONMENT_TYPES,
+  US_STATES,
+} from "@/lib/compliance-context-options";
+import {
+  fleetCustomerComplianceScope,
+  persistFleetCustomerCompliance,
+  persistFleetFirewallCompliance,
+} from "@/lib/fleet-firewall-compliance";
+import { UNASSIGNED_AGENT_GROUP, agentCustomerGroupTitle } from "@/lib/agent-customer-bucket";
+import { toast } from "sonner";
 import { extractSections } from "@/lib/extract-sections";
 import { analyseConfig } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
@@ -41,25 +66,85 @@ import { saveScoreSnapshot } from "@/lib/score-history";
 import { CentralHealthBanner } from "@/components/CentralHealthBanner";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
-import { type FleetFirewall, gradeFromScore } from "@/lib/fleet-command-data";
+import {
+  fleetEffectiveComplianceCountry,
+  type FleetFirewall,
+  gradeFromScore,
+} from "@/lib/fleet-command-data";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
 
-/** Main app dashboard with customer context (same query as Customer Management cards). */
-function assessmentDashboardHref(fw: Pick<FleetFirewall, "customer" | "tenantName">): string {
+/** Main app dashboard with customer + fleet row context for compliance defaults. */
+function assessmentDashboardHref(fw: FleetFirewall): string {
   const name = (fw.tenantName || fw.customer || "").trim();
-  if (!name) return "/";
-  return `/?${new URLSearchParams({ customer: name }).toString()}`;
+  const params = new URLSearchParams();
+  if (name) params.set("customer", name);
+  params.set("fleetContext", fw.id);
+  return `/?${params.toString()}`;
+}
+
+/** Stable group key: Sophos tenant id, agent bucket, or tenant display name (demo / edge). */
+function fleetCommandGroupKey(fw: FleetFirewall): string {
+  if (fw.tenantId) return `tid:${fw.tenantId}`;
+  if (fw.source === "agent") return `a:${fw.agentCustomerBucketKey ?? UNASSIGNED_AGENT_GROUP}`;
+  return `tname:${(fw.tenantName ?? fw.customer ?? "unknown").trim()}`;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Demo data                                                         */
 /* ------------------------------------------------------------------ */
 
+const demoCompliance = {
+  complianceCountry: "",
+  complianceState: "",
+  customerComplianceCountry: "",
+  complianceEnvironment: "",
+} as const;
+
+const COMPLIANCE_NONE = "__none__";
+
+/** Compact country / sector hints on each fleet row when compliance context is set. */
+function ComplianceContextChips({ fw }: { fw: FleetFirewall }) {
+  const country = fleetEffectiveComplianceCountry(fw);
+  const state = (fw.complianceState ?? "").trim();
+  const env = (fw.complianceEnvironment ?? "").trim();
+  const showState = country === "United States" && Boolean(state);
+  const showCountry = Boolean(country);
+  if (!showCountry && !env) return null;
+
+  const flag = showCountry ? countryFlagEmoji(country) : "";
+  const locationTitle = [country, showState ? state : null].filter(Boolean).join(", ");
+
+  return (
+    <span className="flex flex-wrap items-center justify-end gap-1 shrink-0 max-w-[min(100%,220px)]">
+      {showCountry ? (
+        <span
+          className="inline-flex max-w-[120px] items-center gap-0.5 truncate rounded px-1 py-0.5 text-[9px] font-semibold bg-slate-900/[0.06] text-foreground dark:bg-white/[0.08]"
+          title={locationTitle}
+        >
+          <span className="shrink-0" aria-hidden>
+            {flag}
+          </span>
+          <span className="truncate">{showState ? state : country}</span>
+        </span>
+      ) : null}
+      {env ? (
+        <span
+          className="max-w-[100px] truncate rounded px-1 py-0.5 text-[8px] font-bold bg-[#2006F7]/10 text-[#2006F7] dark:text-[#009CFB]"
+          title={`Sector: ${env}`}
+        >
+          {env}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 const DEMO_FLEET: FleetFirewall[] = [
   {
+    ...demoCompliance,
     id: "d1",
     hostname: "fw-london-hq",
     customer: "Vertex Partners",
@@ -77,6 +162,7 @@ const DEMO_FLEET: FleetFirewall[] = [
     tenantName: "Vertex Partners",
   },
   {
+    ...demoCompliance,
     id: "d2",
     hostname: "fw-manchester-br",
     customer: "Vertex Partners",
@@ -94,6 +180,7 @@ const DEMO_FLEET: FleetFirewall[] = [
     tenantName: "Vertex Partners",
   },
   {
+    ...demoCompliance,
     id: "d3",
     hostname: "fw-edge-primary",
     customer: "Cobalt Healthcare",
@@ -111,6 +198,7 @@ const DEMO_FLEET: FleetFirewall[] = [
     tenantName: "Cobalt Healthcare",
   },
   {
+    ...demoCompliance,
     id: "d4",
     hostname: "fw-dc-north",
     customer: "Meridian Logistics",
@@ -128,6 +216,7 @@ const DEMO_FLEET: FleetFirewall[] = [
     tenantName: "Meridian Logistics",
   },
   {
+    ...demoCompliance,
     id: "d5",
     hostname: "fw-retail-pos",
     customer: "Apex Retail Group",
@@ -142,8 +231,10 @@ const DEMO_FLEET: FleetFirewall[] = [
     serialNumber: "C2101Q5R6S7T",
     source: "agent",
     configLinked: false,
+    agentCustomerBucketKey: "Apex Retail Group",
   },
   {
+    ...demoCompliance,
     id: "d6",
     hostname: "fw-campus-main",
     customer: "Northfield Academy",
@@ -161,6 +252,7 @@ const DEMO_FLEET: FleetFirewall[] = [
     tenantName: "Northfield Academy",
   },
   {
+    ...demoCompliance,
     id: "d7",
     hostname: "fw-warehouse-gw",
     customer: "Meridian Logistics",
@@ -178,6 +270,7 @@ const DEMO_FLEET: FleetFirewall[] = [
     tenantName: "Meridian Logistics",
   },
   {
+    ...demoCompliance,
     id: "d8",
     hostname: "fw-branch-tokyo",
     customer: "Cobalt Healthcare",
@@ -343,7 +436,7 @@ function ScoreRing({ score, grade, size = 56 }: { score: number; grade: string; 
 
 function SourceBadges({ fw }: { fw: FleetFirewall }) {
   return (
-    <>
+    <span className="inline-flex flex-wrap items-center gap-1">
       {(fw.source === "central" || fw.source === "both") && (
         <span
           className="rounded px-1 py-0.5 text-[8px] font-bold bg-[#2006F7]/10 text-[#2006F7] dark:text-[#009CFB]"
@@ -368,7 +461,8 @@ function SourceBadges({ fw }: { fw: FleetFirewall }) {
           Linked
         </span>
       )}
-    </>
+      <ComplianceContextChips fw={fw} />
+    </span>
   );
 }
 
@@ -408,12 +502,308 @@ function GridUploadButton({
   );
 }
 
-function DetailPanel({ fw, isDark }: { fw: FleetFirewall; isDark: boolean }) {
+function CustomerGroupComplianceBar({
+  orgId,
+  readOnly,
+  sampleFw,
+}: {
+  orgId: string;
+  readOnly: boolean;
+  sampleFw: FleetFirewall;
+}) {
+  const queryClient = useQueryClient();
+  const scope = fleetCustomerComplianceScope(sampleFw);
+  const [country, setCountry] = useState(sampleFw.customerComplianceCountry);
+  const [environment, setEnvironment] = useState(sampleFw.complianceEnvironment);
+
+  useEffect(() => {
+    setCountry(sampleFw.customerComplianceCountry);
+    setEnvironment(sampleFw.complianceEnvironment);
+  }, [
+    sampleFw.customerComplianceCountry,
+    sampleFw.complianceEnvironment,
+    sampleFw.tenantId,
+    sampleFw.agentCustomerBucketKey,
+  ]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!scope) throw new Error("No customer scope");
+      await persistFleetCustomerCompliance(orgId, scope, { country, environment });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.org.fleetBundle(orgId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.org.customerDirectory(orgId) });
+      toast.success("Customer defaults saved");
+    },
+    onError: () => toast.error("Could not save customer defaults"),
+  });
+
+  if (!scope) return null;
+
   return (
     <div
-      className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm ml-8 p-5 space-y-4 animate-in slide-in-from-top-2 duration-200"
+      className="flex flex-wrap items-end gap-2 sm:gap-3 border-t border-slate-900/[0.06] dark:border-white/[0.04] px-3 sm:px-4 py-2.5 bg-muted/[0.15]"
+      onClick={(e) => e.stopPropagation()}
+      role="presentation"
+    >
+      <span className="w-full text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:w-auto sm:mr-1">
+        Customer defaults
+      </span>
+      <div className="space-y-1 min-w-[160px] flex-1 sm:flex-initial">
+        <Label className="text-[10px] text-muted-foreground">Default country</Label>
+        <Select
+          value={country || COMPLIANCE_NONE}
+          onValueChange={(v) => setCountry(v === COMPLIANCE_NONE ? "" : v)}
+          disabled={readOnly}
+        >
+          <SelectTrigger className="h-8 text-xs bg-background/80">
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={COMPLIANCE_NONE}>Not set</SelectItem>
+            {COUNTRIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1 min-w-[180px] flex-1 sm:flex-initial sm:max-w-[240px]">
+        <Label className="text-[10px] text-muted-foreground">Sector</Label>
+        <Select
+          value={environment || COMPLIANCE_NONE}
+          onValueChange={(v) => setEnvironment(v === COMPLIANCE_NONE ? "" : v)}
+          disabled={readOnly}
+        >
+          <SelectTrigger className="h-8 text-xs bg-background/80">
+            <SelectValue placeholder="Not set" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={COMPLIANCE_NONE}>Not set</SelectItem>
+            {ENVIRONMENT_TYPES.map((e) => (
+              <SelectItem key={e} value={e}>
+                {e}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {!readOnly ? (
+        <Button
+          type="button"
+          size="sm"
+          className="text-xs h-8 shrink-0"
+          disabled={saveMutation.isPending}
+          onClick={() => saveMutation.mutate()}
+        >
+          {saveMutation.isPending ? "Saving…" : "Save customer"}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function FleetCustomerGroupHeader({
+  name,
+  count,
+  avgScore,
+  collapsed,
+  onToggle,
+  isDark,
+  orgId,
+  readOnly,
+  sampleFw,
+}: {
+  name: string;
+  count: number;
+  avgScore: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  isDark: boolean;
+  orgId: string | undefined;
+  readOnly: boolean;
+  sampleFw: FleetFirewall;
+}) {
+  const grade = gradeFromScore(avgScore);
+  return (
+    <div
+      className="rounded-xl border border-slate-900/[0.06] dark:border-white/[0.04] backdrop-blur-sm overflow-hidden"
       style={glassCard(isDark)}
     >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full px-4 py-2.5 flex items-center gap-3 transition-colors hover:bg-muted/20 text-left"
+      >
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform shrink-0 ${collapsed ? "-rotate-90" : ""}`}
+        />
+        <span className="text-sm font-display font-bold text-foreground truncate">{name}</span>
+        <span className="text-[11px] text-muted-foreground shrink-0">
+          {count} firewall{count !== 1 ? "s" : ""}
+        </span>
+        <span
+          className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold shrink-0"
+          style={{ background: `${gradeColor(grade)}18`, color: gradeColor(grade) }}
+        >
+          avg {avgScore}
+        </span>
+      </button>
+      {orgId ? (
+        <CustomerGroupComplianceBar orgId={orgId} readOnly={readOnly} sampleFw={sampleFw} />
+      ) : null}
+    </div>
+  );
+}
+
+function DetailPanel({
+  fw,
+  isDark,
+  orgId,
+  isGuest,
+  isViewerOnly,
+  variant = "list",
+}: {
+  fw: FleetFirewall;
+  isDark: boolean;
+  orgId: string | undefined;
+  isGuest: boolean;
+  isViewerOnly: boolean;
+  /** `list`: indented under row. `embedded`: full width in grid card. */
+  variant?: "list" | "embedded";
+}) {
+  const queryClient = useQueryClient();
+  const readOnly = isGuest || isViewerOnly || !orgId;
+  const [country, setCountry] = useState(fw.complianceCountry);
+  const [usState, setUsState] = useState(fw.complianceState);
+
+  useEffect(() => {
+    setCountry(fw.complianceCountry);
+    setUsState(fw.complianceState);
+  }, [fw.id, fw.complianceCountry, fw.complianceState]);
+
+  const deviceCountry = (fw.complianceCountry ?? "").trim();
+  const customerDef = (fw.customerComplianceCountry ?? "").trim();
+  const countryForState = (country || customerDef).trim();
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!orgId) throw new Error("No org");
+      await persistFleetFirewallCompliance(orgId, fw, {
+        country,
+        state: usState,
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.org.fleetBundle(orgId!) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.org.customerDirectory(orgId!) });
+      toast.success("Firewall location saved");
+    },
+    onError: () => toast.error("Could not save firewall location"),
+  });
+
+  return (
+    <div
+      className={`rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-5 space-y-4 animate-in slide-in-from-top-2 duration-200 ${variant === "list" ? "ml-8" : ""}`}
+      style={glassCard(isDark)}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="rounded-xl border border-slate-900/[0.08] dark:border-white/[0.08] bg-background/40 p-4 space-y-3">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Firewall location
+        </p>
+        <div className="rounded-lg border border-dashed border-slate-900/[0.12] dark:border-white/[0.10] bg-background/50 px-3 py-2.5">
+          {deviceCountry ? (
+            <p className="text-sm text-foreground">
+              <span className="mr-1" aria-hidden>
+                {countryFlagEmoji(deviceCountry)}
+              </span>
+              <span className="font-medium">Selected:</span> {deviceCountry}
+              {deviceCountry === "United States" && (usState || "").trim() ? (
+                <span className="text-muted-foreground"> — {(usState ?? "").trim()}</span>
+              ) : null}
+            </p>
+          ) : customerDef ? (
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              <span className="font-medium text-foreground">Not selected</span> for this firewall —
+              using customer default{" "}
+              <span className="text-foreground">
+                {countryFlagEmoji(customerDef)} {customerDef}
+              </span>
+              . Use the dropdown below to set a site-specific country.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              <span className="font-medium text-foreground">Not selected</span> — set a default on
+              the customer row above, or choose a country below.
+            </p>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Default <strong className="font-medium text-foreground">country</strong> and{" "}
+          <strong className="font-medium text-foreground">sector</strong> are on the customer
+          header. Here you override <strong className="font-medium text-foreground">country</strong>{" "}
+          (and US state) for this firewall only. HA peers stay in sync.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Country (this firewall)</Label>
+            <Select
+              value={country || COMPLIANCE_NONE}
+              onValueChange={(v) => setCountry(v === COMPLIANCE_NONE ? "" : v)}
+              disabled={readOnly}
+            >
+              <SelectTrigger className="h-9 text-xs bg-background/80">
+                <SelectValue placeholder="Not selected" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={COMPLIANCE_NONE}>Not selected</SelectItem>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {countryForState === "United States" ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs">State</Label>
+              <Select
+                value={usState || COMPLIANCE_NONE}
+                onValueChange={(v) => setUsState(v === COMPLIANCE_NONE ? "" : v)}
+                disabled={readOnly}
+              >
+                <SelectTrigger className="h-9 text-xs bg-background/80">
+                  <SelectValue placeholder="Not selected" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={COMPLIANCE_NONE}>Not selected</SelectItem>
+                  {US_STATES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+        </div>
+        {!readOnly ? (
+          <Button
+            type="button"
+            size="sm"
+            className="text-xs"
+            disabled={saveMutation.isPending}
+            onClick={() => saveMutation.mutate()}
+          >
+            {saveMutation.isPending ? "Saving…" : "Save firewall location"}
+          </Button>
+        ) : null}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Score ring */}
         <div className="flex items-center gap-4">
@@ -661,47 +1051,13 @@ function FleetCard({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Tenant group header                                               */
-/* ------------------------------------------------------------------ */
-
-function TenantHeader({
-  name,
-  count,
-  avgScore,
-  collapsed,
-  onToggle,
-  isDark,
-}: {
-  name: string;
-  count: number;
-  avgScore: number;
-  collapsed: boolean;
-  onToggle: () => void;
-  isDark: boolean;
-}) {
-  const grade = gradeFromScore(avgScore);
-  return (
-    <button
-      onClick={onToggle}
-      className="w-full rounded-xl border border-slate-900/[0.06] dark:border-white/[0.04] backdrop-blur-sm px-4 py-2.5 flex items-center gap-3 transition-colors hover:bg-muted/20"
-      style={glassCard(isDark)}
-    >
-      <ChevronDown
-        className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`}
-      />
-      <span className="text-sm font-display font-bold text-foreground">{name}</span>
-      <span className="text-[11px] text-muted-foreground">
-        {count} firewall{count !== 1 ? "s" : ""}
-      </span>
-      <span
-        className="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold"
-        style={{ background: `${gradeColor(grade)}18`, color: gradeColor(grade) }}
-      >
-        avg {avgScore}
-      </span>
-    </button>
-  );
+/** Demo fleet is only for unauthenticated guest preview — never substitute for a failed org query. */
+function fleetBundleErrorMessage(err: unknown): string {
+  if (err && typeof err === "object" && "message" in err) {
+    const m = (err as { message?: unknown }).message;
+    if (typeof m === "string" && m.trim()) return m.trim();
+  }
+  return "Could not load fleet data from the server.";
 }
 
 /* ------------------------------------------------------------------ */
@@ -709,16 +1065,18 @@ function TenantHeader({
 /* ------------------------------------------------------------------ */
 
 function FleetCommandInner() {
-  const { org, isGuest } = useAuth();
+  const { org, isGuest, isViewerOnly } = useAuth();
   const { setTheme } = useTheme();
   const isDark = useResolvedIsDark();
 
   const fleetQuery = useFleetCommandQuery(org?.id, org?.name);
   const baseFleet = useMemo(() => {
     if (!org?.id) return isGuest ? DEMO_FLEET : [];
-    if (fleetQuery.isError) return DEMO_FLEET;
+    if (fleetQuery.isError) return [];
     return fleetQuery.data ?? [];
   }, [org?.id, isGuest, fleetQuery.isError, fleetQuery.data]);
+
+  const fleetLoadFailed = Boolean(org?.id && fleetQuery.isError);
 
   const [fleet, setFleet] = useState<FleetFirewall[]>([]);
   useEffect(() => {
@@ -843,21 +1201,31 @@ function FleetCommandInner() {
 
   const tenantGroups = useMemo(() => {
     const groups = new Map<string, FleetFirewall[]>();
+    const orgName = org?.name ?? "";
     for (const fw of filtered) {
-      const key = fw.tenantName ?? "__agent__";
-      const arr = groups.get(key) ?? [];
+      const gkey = fleetCommandGroupKey(fw);
+      const arr = groups.get(gkey) ?? [];
       arr.push(fw);
-      groups.set(key, arr);
+      groups.set(gkey, arr);
     }
-    const sorted: Array<{ name: string; firewalls: FleetFirewall[] }> = [];
-    for (const [name, firewalls] of groups) {
-      if (name !== "__agent__") sorted.push({ name, firewalls });
+    function titleFor(first: FleetFirewall): string {
+      if (first.tenantId && first.tenantName) return first.tenantName;
+      if (first.source === "agent") {
+        const b = first.agentCustomerBucketKey ?? UNASSIGNED_AGENT_GROUP;
+        return b === UNASSIGNED_AGENT_GROUP
+          ? "Unassigned agents"
+          : agentCustomerGroupTitle(b, orgName);
+      }
+      return first.tenantName ?? first.customer ?? "Unknown";
     }
-    sorted.sort((a, b) => a.name.localeCompare(b.name));
-    const agentGroup = groups.get("__agent__");
-    if (agentGroup?.length) sorted.push({ name: "Unlinked / Agent", firewalls: agentGroup });
-    return sorted;
-  }, [filtered]);
+    return [...groups.entries()]
+      .map(([key, firewalls]) => ({
+        key,
+        name: titleFor(firewalls[0]),
+        firewalls,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [filtered, org?.name]);
 
   const totalFirewalls = fleet.length;
   const avgScore = fleet.length
@@ -1072,9 +1440,10 @@ function FleetCommandInner() {
               <div className="border-t border-border/50 pt-4">
                 <h4 className="font-display font-bold text-foreground mb-2">Tenant Grouping</h4>
                 <p className="text-muted-foreground leading-relaxed">
-                  Firewalls are grouped by their Sophos Central tenant. Click a tenant header to
-                  collapse or expand the group. Firewalls from the connector agent that aren&apos;t
-                  linked to a Central tenant appear under &quot;Unlinked / Agent&quot;.
+                  Firewalls are grouped by Sophos Central tenant, or by agent customer bucket when
+                  there is no tenant link. Click a header to collapse or expand. Use{" "}
+                  <strong className="text-foreground">Customer defaults</strong> on that row for
+                  default country and sector; expand a firewall to override country per site.
                 </p>
               </div>
             </div>
@@ -1214,6 +1583,31 @@ function FleetCommandInner() {
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
           </div>
+        ) : fleetLoadFailed ? (
+          <Alert variant="destructive" className="border-destructive/40">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Could not load your fleet</AlertTitle>
+            <AlertDescription className="space-y-3">
+              <p className="text-sm opacity-90">
+                {fleetQuery.error ? fleetBundleErrorMessage(fleetQuery.error) : null} This is not
+                sample data — the request failed. Common causes: network issues, or the database is
+                missing a recent migration (run{" "}
+                <code className="rounded bg-background/80 px-1 py-0.5 text-xs">
+                  supabase db push
+                </code>{" "}
+                for self-hosted schema).
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-destructive/40"
+                onClick={() => void fleetQuery.refetch()}
+              >
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
         ) : filtered.length === 0 && fleet.length === 0 ? (
           <div
             className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm"
@@ -1284,17 +1678,21 @@ function FleetCommandInner() {
                     group.firewalls.reduce((s, f) => s + f.score, 0) / group.firewalls.length,
                   )
                 : 0;
-              const isCollapsed = !expandedTenants.has(group.name);
+              const isCollapsed = !expandedTenants.has(group.key);
+              const readOnlyFleet = isGuest || isViewerOnly || !org?.id;
 
               return (
-                <div key={group.name} className="space-y-2">
-                  <TenantHeader
+                <div key={group.key} className="space-y-2">
+                  <FleetCustomerGroupHeader
                     name={group.name}
                     count={group.firewalls.length}
                     avgScore={avg}
                     collapsed={isCollapsed}
-                    onToggle={() => toggleTenant(group.name)}
+                    onToggle={() => toggleTenant(group.key)}
                     isDark={isDark}
+                    orgId={org?.id}
+                    readOnly={readOnlyFleet}
+                    sampleFw={group.firewalls[0]}
                   />
                   {!isCollapsed &&
                     group.firewalls.map((fw) => (
@@ -1311,7 +1709,15 @@ function FleetCommandInner() {
                           onDrop={handleDrop}
                           onFileUpload={handleFileUpload}
                         />
-                        {selectedId === fw.id && <DetailPanel fw={fw} isDark={isDark} />}
+                        {selectedId === fw.id && (
+                          <DetailPanel
+                            fw={fw}
+                            isDark={isDark}
+                            orgId={org?.id}
+                            isGuest={isGuest}
+                            isViewerOnly={isViewerOnly}
+                          />
+                        )}
                       </div>
                     ))}
                 </div>
@@ -1319,151 +1725,134 @@ function FleetCommandInner() {
             })}
           </div>
         ) : (
-          /* Grid view */
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map((fw) => (
-              <div
-                key={fw.id}
-                className={`group rounded-2xl backdrop-blur-sm p-5 transition-all hover:scale-[1.01] hover:shadow-lg hover:shadow-brand-accent/5 cursor-pointer relative ${
-                  dragOverId === fw.id
-                    ? "border-[#2006F7] border-dashed border-2"
-                    : "border border-slate-900/[0.10] dark:border-white/[0.06]"
-                }`}
-                style={glassCard(isDark)}
-                onClick={() => toggleSelected(fw.id)}
-                onDragOver={(e) => handleDragOver(e, fw.id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, fw.id)}
-              >
-                {analyzingId === fw.id && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-sm">
-                    <Loader2 className="h-5 w-5 animate-spin text-[#2006F7]" />
-                  </div>
-                )}
-
-                {/* Top: hostname + status */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-accent/[0.08]">
-                      <Server className="h-4 w-4 text-brand-accent" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {fw.hostname}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground truncate">{fw.customer}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                    <span
-                      className={`inline-block h-2 w-2 rounded-full ${statusDotColor(fw.status)}`}
-                    />
-                    <span className="text-[10px] text-muted-foreground">
-                      {statusLabel(fw.status)}
-                    </span>
-                    <SourceBadges fw={fw} />
-                  </div>
-                </div>
-
-                {/* Score ring */}
-                <div className="flex items-center gap-4 mb-4">
-                  {fw.grade === "—" ? (
-                    <div className="text-sm text-muted-foreground py-3">
-                      Not assessed — drop a config to score
-                    </div>
-                  ) : (
-                    <>
-                      <ScoreRing score={fw.score} grade={fw.grade} />
-                      <div>
-                        <p className="text-2xl font-display font-black text-foreground leading-none">
-                          {fw.score}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {fw.findings} findings
-                          {fw.criticalFindings > 0 && (
-                            <span className="text-[#EA0022] font-semibold">
-                              {" "}
-                              · {fw.criticalFindings} critical
-                            </span>
+          <div className="space-y-8">
+            {tenantGroups.map((group) => {
+              const avg = group.firewalls.length
+                ? Math.round(
+                    group.firewalls.reduce((s, f) => s + f.score, 0) / group.firewalls.length,
+                  )
+                : 0;
+              const isCollapsed = !expandedTenants.has(group.key);
+              const readOnlyFleet = isGuest || isViewerOnly || !org?.id;
+              return (
+                <div key={group.key} className="space-y-4">
+                  <FleetCustomerGroupHeader
+                    name={group.name}
+                    count={group.firewalls.length}
+                    avgScore={avg}
+                    collapsed={isCollapsed}
+                    onToggle={() => toggleTenant(group.key)}
+                    isDark={isDark}
+                    orgId={org?.id}
+                    readOnly={readOnlyFleet}
+                    sampleFw={group.firewalls[0]}
+                  />
+                  {!isCollapsed && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {group.firewalls.map((fw) => (
+                        <div
+                          key={fw.id}
+                          className={`group rounded-2xl backdrop-blur-sm p-5 transition-all hover:scale-[1.01] hover:shadow-lg hover:shadow-brand-accent/5 cursor-pointer relative ${
+                            dragOverId === fw.id
+                              ? "border-[#2006F7] border-dashed border-2"
+                              : "border border-slate-900/[0.10] dark:border-white/[0.06]"
+                          }`}
+                          style={glassCard(isDark)}
+                          onClick={() => toggleSelected(fw.id)}
+                          onDragOver={(e) => handleDragOver(e, fw.id)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, fw.id)}
+                        >
+                          {analyzingId === fw.id && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-sm">
+                              <Loader2 className="h-5 w-5 animate-spin text-[#2006F7]" />
+                            </div>
                           )}
-                        </p>
-                      </div>
-                    </>
+
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-accent/[0.08]">
+                                <Server className="h-4 w-4 text-brand-accent" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-foreground truncate">
+                                  {fw.hostname}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground truncate">
+                                  {fw.customer}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                              <span
+                                className={`inline-block h-2 w-2 rounded-full ${statusDotColor(fw.status)}`}
+                              />
+                              <span className="text-[10px] text-muted-foreground">
+                                {statusLabel(fw.status)}
+                              </span>
+                              <SourceBadges fw={fw} />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 mb-4">
+                            {fw.grade === "—" ? (
+                              <div className="text-sm text-muted-foreground py-3">
+                                Not assessed — drop a config to score
+                              </div>
+                            ) : (
+                              <>
+                                <ScoreRing score={fw.score} grade={fw.grade} />
+                                <div>
+                                  <p className="text-2xl font-display font-black text-foreground leading-none">
+                                    {fw.score}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    {fw.findings} findings
+                                    {fw.criticalFindings > 0 && (
+                                      <span className="text-[#EA0022] font-semibold">
+                                        {" "}
+                                        · {fw.criticalFindings} critical
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-slate-900/[0.06] dark:border-white/[0.04] pt-3">
+                            <span className="truncate">{fw.model}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <GridUploadButton fwId={fw.id} onFileUpload={handleFileUpload} />
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {timeAgo(fw.lastAssessed)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {selectedId === fw.id && (
+                            <div
+                              className="mt-4 pt-2 border-t border-slate-900/[0.06] dark:border-white/[0.04]"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DetailPanel
+                                fw={fw}
+                                isDark={isDark}
+                                orgId={org?.id}
+                                isGuest={isGuest}
+                                isViewerOnly={isViewerOnly}
+                                variant="embedded"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-
-                {/* Meta row + upload */}
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-slate-900/[0.06] dark:border-white/[0.04] pt-3">
-                  <span className="truncate">{fw.model}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <GridUploadButton fwId={fw.id} onFileUpload={handleFileUpload} />
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {timeAgo(fw.lastAssessed)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Detail panel (grid view) */}
-                {selectedId === fw.id && (
-                  <div className="mt-4 pt-4 border-t border-slate-900/[0.06] dark:border-white/[0.04] space-y-3">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
-                      <div>
-                        <p className="text-muted-foreground">Firmware</p>
-                        <p className="text-foreground font-medium truncate">{fw.firmware}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Serial</p>
-                        <p className="text-foreground font-medium truncate">
-                          {fw.serialNumber || "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">HA Role</p>
-                        <p className="text-foreground font-medium">{fw.haRole ?? "None"}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Tenant</p>
-                        <p className="text-foreground font-medium truncate">
-                          {fw.tenantName ?? "—"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start gap-2 text-[11px] h-7"
-                        asChild
-                      >
-                        <Link
-                          to={assessmentDashboardHref(fw)}
-                          title="Open main dashboard for this customer"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Shield className="h-3 w-3" /> View Assessment
-                        </Link>
-                      </Button>
-                      {fw.latestReportId && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start gap-2 text-[11px] h-7"
-                          asChild
-                        >
-                          <Link
-                            to={`/shared/${fw.latestReportId}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <FileText className="h-3 w-3" /> Latest Report
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

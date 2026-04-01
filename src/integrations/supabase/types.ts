@@ -74,12 +74,44 @@ export type Database = {
           },
         ];
       };
+      agent_customer_compliance_environment: {
+        Row: {
+          compliance_country: string;
+          compliance_environment: string;
+          customer_bucket_key: string;
+          org_id: string;
+        };
+        Insert: {
+          compliance_country?: string;
+          compliance_environment?: string;
+          customer_bucket_key: string;
+          org_id: string;
+        };
+        Update: {
+          compliance_country?: string;
+          compliance_environment?: string;
+          customer_bucket_key?: string;
+          org_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "agent_customer_compliance_environment_org_id_fkey";
+            columns: ["org_id"];
+            isOneToOne: false;
+            referencedRelation: "organisations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       agents: {
         Row: {
           api_key_hash: string;
           api_key_prefix: string;
           assigned_customer_name: string | null;
           central_firewall_id: string | null;
+          compliance_country: string;
+          compliance_environment: string;
+          compliance_state: string;
           connector_version: string | null;
           created_at: string;
           customer_name: string;
@@ -108,6 +140,9 @@ export type Database = {
           api_key_prefix: string;
           assigned_customer_name?: string | null;
           central_firewall_id?: string | null;
+          compliance_country?: string;
+          compliance_environment?: string;
+          compliance_state?: string;
           connector_version?: string | null;
           created_at?: string;
           customer_name?: string;
@@ -136,6 +171,9 @@ export type Database = {
           api_key_prefix?: string;
           assigned_customer_name?: string | null;
           central_firewall_id?: string | null;
+          compliance_country?: string;
+          compliance_environment?: string;
+          compliance_state?: string;
           connector_version?: string | null;
           created_at?: string;
           customer_name?: string;
@@ -396,6 +434,9 @@ export type Database = {
         Row: {
           central_tenant_id: string;
           cluster_json: Json | null;
+          compliance_country: string;
+          compliance_environment: string;
+          compliance_state: string;
           external_ips: Json;
           firewall_id: string;
           firmware_version: string;
@@ -413,6 +454,9 @@ export type Database = {
         Insert: {
           central_tenant_id: string;
           cluster_json?: Json | null;
+          compliance_country?: string;
+          compliance_environment?: string;
+          compliance_state?: string;
           external_ips?: Json;
           firewall_id: string;
           firmware_version?: string;
@@ -430,6 +474,9 @@ export type Database = {
         Update: {
           central_tenant_id?: string;
           cluster_json?: Json | null;
+          compliance_country?: string;
+          compliance_environment?: string;
+          compliance_state?: string;
           external_ips?: Json;
           firewall_id?: string;
           firmware_version?: string;
@@ -459,6 +506,8 @@ export type Database = {
           api_host: string;
           billing_type: string;
           central_tenant_id: string;
+          compliance_country: string;
+          compliance_environment: string;
           data_region: string;
           id: string;
           name: string;
@@ -469,6 +518,8 @@ export type Database = {
           api_host?: string;
           billing_type?: string;
           central_tenant_id: string;
+          compliance_country?: string;
+          compliance_environment?: string;
           data_region?: string;
           id?: string;
           name?: string;
@@ -479,6 +530,8 @@ export type Database = {
           api_host?: string;
           billing_type?: string;
           central_tenant_id?: string;
+          compliance_country?: string;
+          compliance_environment?: string;
           data_region?: string;
           id?: string;
           name?: string;
@@ -1703,6 +1756,14 @@ export type Database = {
       };
       cleanup_expired_submissions: { Args: never; Returns: number };
       create_organisation: { Args: { org_name: string }; Returns: Json };
+      update_agent_compliance_context: {
+        Args: {
+          p_agent_id: string;
+          p_country: string;
+          p_state: string;
+        };
+        Returns: undefined;
+      };
       get_my_team_ids: { Args: never; Returns: string[] };
       is_team_admin: { Args: { p_team_id: string }; Returns: boolean };
       user_org_id: { Args: never; Returns: string };
