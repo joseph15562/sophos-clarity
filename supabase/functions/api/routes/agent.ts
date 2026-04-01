@@ -14,6 +14,7 @@ import {
   userClient,
 } from "../../_shared/db.ts";
 import { logJson } from "../../_shared/logger.ts";
+import { persistedAssessmentCustomerName } from "../../_shared/agent-assessment-customer.ts";
 
 function json(
   body: unknown,
@@ -192,13 +193,17 @@ async function handlePatch(
     const ev = (body.environment ?? "").trim();
     update.environment = ev.length > 0 ? ev : "Unknown";
   }
+  if (body.assigned_customer_name !== undefined) {
+    const ac = (body.assigned_customer_name ?? "").trim();
+    update.assigned_customer_name = ac.length > 0 ? ac : null;
+  }
 
   const { data: updated, error } = await db
     .from("agents")
     .update(update)
     .eq("id", agentId)
     .select(
-      "id, name, customer_name, environment, tenant_name, firewall_host, firewall_port, status, last_seen_at",
+      "id, name, customer_name, environment, assigned_customer_name, tenant_name, firewall_host, firewall_port, status, last_seen_at",
     )
     .single();
 
@@ -450,10 +455,7 @@ async function handleSubmit(
     drift = { new: trulyNew, fixed: fixedFindings, regressed };
   }
 
-  const rawName = body.customer_name ?? (agent.customer_name as string);
-  const customerName = (rawName === "Unnamed" && agent.tenant_name)
-    ? (agent.tenant_name as string)
-    : rawName;
+  const customerName = persistedAssessmentCustomerName(agent, body.customer_name);
   const overallScore = body.overall_score ?? 0;
   const overallGrade = body.overall_grade ?? "F";
   const firewalls = body.firewalls ?? [];

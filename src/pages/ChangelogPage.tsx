@@ -39,7 +39,23 @@ function ChangelogPageInner() {
               <strong className="text-foreground">Connectors</strong>: customer site labels can be
               set when registering an agent and edited anytime from Management (expand the agent);
               the fleet list no longer shows a bare &quot;Unnamed&quot; when Central tenant or other
-              context applies.
+              context applies. When Sophos Central is linked, that label is only the site or
+              location — new assessments bucket under the Central tenant (not a second customer),
+              Management shows your org name instead of &quot;(This tenant)&quot; for single-tenant
+              accounts, and existing mis-keyed rows fold into the right customer in the directory
+              where possible. <strong className="text-foreground">Connected Firewalls</strong> waits
+              until the connector reports firewall serial or firmware so partial wizard /
+              API-key-only check-ins do not show as an extra row. You can set{" "}
+              <strong className="text-foreground">Customer (grouping)</strong> on each connector in
+              Management so multiple agents share one customer (same name = same group and
+              assessment bucket; optional pick list from existing customers).
+            </li>
+            <li>
+              <strong className="text-foreground">Report identity</strong>: the workspace{" "}
+              <strong className="text-foreground">Company logo</strong> (Settings) is applied
+              automatically to <strong className="text-foreground">Report identity</strong> when you
+              have not chosen a different file there; it stays in sync until you upload an
+              assessment-specific logo.
             </li>
             <li>
               <strong className="text-foreground">Extraction Summary</strong>: dark mode uses solid

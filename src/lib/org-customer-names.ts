@@ -30,8 +30,18 @@ export async function loadOrgResolvedCustomerNames(
     if (r) resolved.add(r);
   }
   for (const row of agentRes.data ?? []) {
-    const ag = row as { customer_name?: string; tenant_name?: string; name?: string };
-    const raw = ag.tenant_name || ag.customer_name || ag.name || "";
+    const ag = row as {
+      assigned_customer_name?: string | null;
+      customer_name?: string;
+      tenant_name?: string;
+      name?: string;
+    };
+    const raw =
+      String(ag.assigned_customer_name ?? "").trim() ||
+      ag.tenant_name ||
+      ag.customer_name ||
+      ag.name ||
+      "";
     const r = resolveCustomerName(String(raw), orgName);
     if (r) resolved.add(r);
   }

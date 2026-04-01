@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { agentFleetCustomerLabel } from "@/lib/agent-customer-bucket";
 
 /** Fleet row shape used by Fleet Command (central + agent merged view). */
 export interface FleetFirewall {
@@ -51,6 +52,8 @@ type AgentRow = {
   firewall_host?: string | null;
   name?: string | null;
   customer_name?: string | null;
+  assigned_customer_name?: string | null;
+  tenant_name?: string | null;
   last_score?: number | null;
   last_grade?: string | null;
   last_seen_at?: string | null;
@@ -327,11 +330,13 @@ export async function fetchFleetBundle(
       const age = Date.now() - new Date(ag.last_seen_at).getTime();
       status = age > 24 * 3_600_000 ? "stale" : "online";
     }
-    const report = latestReportMap.get(ag.customer_name || ag.name || hn);
+    const custLabel = agentFleetCustomerLabel(ag, orgDisplayName);
+    const report =
+      latestReportMap.get(custLabel) ?? latestReportMap.get(ag.customer_name || ag.name || hn);
     mapped.push({
       id: ag.id,
       hostname: hn,
-      customer: ag.customer_name || ag.name || "",
+      customer: custLabel,
       score: ag.last_score ?? 0,
       grade: ag.last_score != null ? (ag.last_grade ?? gradeFromScore(ag.last_score)) : "—",
       findings: 0,

@@ -1,6 +1,9 @@
 import type { Tables } from "@/integrations/supabase/types";
 
-type AgentRow = Pick<Tables<"agents">, "customer_name" | "tenant_name" | "name" | "firewall_host">;
+type AgentRow = Pick<
+  Tables<"agents">,
+  "customer_name" | "assigned_customer_name" | "tenant_name" | "name" | "firewall_host"
+>;
 
 /**
  * Label for “customer / site” in fleet and agent lists. Matches server-side
@@ -19,6 +22,8 @@ export function resolveAgentCustomerDisplayName(
   agent: AgentRow,
   submissionCustomerName?: string | null,
 ): string {
+  const assigned = (agent.assigned_customer_name ?? "").trim();
+  if (assigned) return assigned;
   const raw = (submissionCustomerName ?? agent.customer_name ?? "").trim();
   if (raw && raw !== "Unnamed") return raw;
   const tn = (agent.tenant_name ?? "").trim();

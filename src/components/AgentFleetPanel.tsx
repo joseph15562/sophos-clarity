@@ -30,6 +30,13 @@ import { getLatestConnectorVersion, isConnectorVersionOutdated } from "@/lib/con
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { resolveAgentCustomerDisplayName } from "@/lib/agent-site-label";
+import { isAgentFleetEligible } from "@/lib/agent-fleet-eligibility";
+import {
+  UNASSIGNED_AGENT_GROUP,
+  agentCustomerGroupingKey,
+  agentCustomerGroupTitle,
+} from "@/lib/agent-customer-bucket";
+import { resolveCustomerName } from "@/lib/customer-name";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -448,6 +455,7 @@ export function AgentFleetPanel({
   const agentsQuery = useOrgAgentsQuery(org?.id ?? null);
   const countsQuery = useAgentSubmissionCounts7dQuery(org?.id ?? null);
   const agents = agentsQuery.data ?? [];
+  const fleetAgents = useMemo(() => agents.filter(isAgentFleetEligible), [agents]);
   const loading = agentsQuery.isPending;
   const submissionCounts7d = countsQuery.data ?? {};
   const [expandedTenant, setExpandedTenant] = useState<string | null>(null);
@@ -472,41 +480,45 @@ export function AgentFleetPanel({
   }, []);
 
   const agentsForUi = useMemo(() => {
-    if (fleetFilter === "all") return agents;
+    if (fleetFilter === "all") return fleetAgents;
     if (fleetFilter === "attention") {
-      return agents.filter(
+      return fleetAgents.filter(
         (a) =>
           a.status === "error" ||
           Boolean(a.error_message?.trim()) ||
           (a.status !== "online" && a.status !== "error"),
       );
     }
-    if (fleetFilter === "error") return agents.filter(isAgentInError);
-    if (fleetFilter === "offline") return agents.filter(isEffectivelyOffline);
+    if (fleetFilter === "error") return fleetAgents.filter(isAgentInError);
+    if (fleetFilter === "offline") return fleetAgents.filter(isEffectivelyOffline);
     if (fleetFilter === "outdated") {
-      return agents.filter((a) => isConnectorVersionOutdated(a.connector_version));
+      return fleetAgents.filter((a) => isConnectorVersionOutdated(a.connector_version));
     }
-    return agents;
-  }, [agents, fleetFilter]);
+    return fleetAgents;
+  }, [fleetAgents, fleetFilter]);
 
   const grouped = useMemo(() => {
-    const resolveName = (raw: string | null) => {
-      if (!raw) return "Unassigned";
-      if (/^\s*\(this tenant\)\s*$/i.test(raw)) return org?.name || raw;
-      return raw;
-    };
     const filtered = filterTenantName
-      ? agentsForUi.filter((a) => resolveName(a.tenant_name) === filterTenantName)
+      ? agentsForUi.filter((a) => {
+          const gk = agentCustomerGroupingKey(a);
+          const title = agentCustomerGroupTitle(gk, org?.name);
+          const f = filterTenantName.trim();
+          return (
+            title === filterTenantName ||
+            gk === filterTenantName ||
+            title === resolveCustomerName(f, org?.name ?? "")
+          );
+        })
       : agentsForUi;
     const map = new Map<string, Agent[]>();
     for (const a of filtered) {
-      const key = resolveName(a.tenant_name);
+      const key = agentCustomerGroupingKey(a);
       const list = map.get(key) ?? [];
       list.push(a);
       map.set(key, list);
     }
     return Array.from(map.entries()).sort(([a], [b]) =>
-      a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b),
+      a === UNASSIGNED_AGENT_GROUP ? 1 : b === UNASSIGNED_AGENT_GROUP ? -1 : a.localeCompare(b),
     );
   }, [agentsForUi, filterTenantName, org?.name]);
 
@@ -791,7 +803,7 @@ export function AgentFleetPanel({
         </div>
       </div>
 
-      {agentsForUi.length === 0 && agents.length > 0 && fleetFilter !== "all" && (
+      {agentsForUi.length === 0 && fleetAgents.length > 0 && fleetFilter !== "all" && (
         <EmptyState
           className="py-8 px-6"
           title="No agents match this filter"
@@ -813,9 +825,19 @@ export function AgentFleetPanel({
         />
       )}
 
+      {agents.length > 0 && fleetAgents.length === 0 && (
+        <EmptyState
+          className="py-8 px-6"
+          icon={<Server className="h-6 w-6 text-muted-foreground/50" />}
+          title="Connector setup in progress"
+          description="This list appears after the connector successfully reaches your firewall (serial or firmware is reported). Finish the connector wizard and API test, or open Management to review the registered agent."
+        />
+      )}
+
       <div className="divide-y divide-border">
-        {grouped.map(([tenantName, tenantAgents]) => {
-          const isOpen = expandedTenant === tenantName;
+        {grouped.map(([groupKey, tenantAgents]) => {
+          const isOpen = expandedTenant === groupKey;
+          const groupTitle = agentCustomerGroupTitle(groupKey, org?.name);
           const onlineCount = tenantAgents.filter(
             (a) =>
               a.status === "online" &&
@@ -824,9 +846,9 @@ export function AgentFleetPanel({
           ).length;
 
           return (
-            <div key={tenantName}>
+            <div key={groupKey}>
               <button
-                onClick={() => setExpandedTenant(isOpen ? null : tenantName)}
+                onClick={() => setExpandedTenant(isOpen ? null : groupKey)}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-muted/30 transition-colors"
               >
                 {isOpen ? (
@@ -836,7 +858,7 @@ export function AgentFleetPanel({
                 )}
                 <Server className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <span className="text-[11px] font-semibold text-foreground flex-1">
-                  {tenantName}
+                  {groupTitle}
                 </span>
                 <span className="text-[9px] text-muted-foreground">
                   {tenantAgents.length} firewall{tenantAgents.length !== 1 ? "s" : ""}

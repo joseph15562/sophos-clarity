@@ -47,6 +47,16 @@ vi.mock("@/lib/sophos-central", () => ({
   ),
 }));
 
+vi.mock("@/hooks/use-company-logo", () => ({
+  useCompanyLogo: () => ({
+    logoUrl: null,
+    setLogo: vi.fn(),
+    loading: false,
+    saving: false,
+    canEdit: true,
+  }),
+}));
+
 const initialBranding: BrandingData = {
   companyName: "Test Co",
   customerName: "",

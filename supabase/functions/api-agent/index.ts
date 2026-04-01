@@ -17,6 +17,7 @@ import {
   safeError,
 } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
+import { persistedAssessmentCustomerName } from "../_shared/agent-assessment-customer.ts";
 import {
   sophosFetchFirewalls,
   sophosFetchTenants,
@@ -223,10 +224,7 @@ async function handleSubmit(
     drift = { new: trulyNew, fixed: fixedFindings, regressed };
   }
 
-  const rawName = body.customer_name ?? (agent.customer_name as string);
-  const customerName = (rawName === "Unnamed" && agent.tenant_name)
-    ? (agent.tenant_name as string)
-    : rawName;
+  const customerName = persistedAssessmentCustomerName(agent, body.customer_name);
   const overallScore = body.overall_score ?? 0;
   const overallGrade = body.overall_grade ?? "F";
   const firewalls = body.firewalls ?? [];

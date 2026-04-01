@@ -78,6 +78,7 @@ export type Database = {
         Row: {
           api_key_hash: string;
           api_key_prefix: string;
+          assigned_customer_name: string | null;
           central_firewall_id: string | null;
           connector_version: string | null;
           created_at: string;
@@ -105,6 +106,7 @@ export type Database = {
         Insert: {
           api_key_hash: string;
           api_key_prefix: string;
+          assigned_customer_name?: string | null;
           central_firewall_id?: string | null;
           connector_version?: string | null;
           created_at?: string;
@@ -132,6 +134,7 @@ export type Database = {
         Update: {
           api_key_hash?: string;
           api_key_prefix?: string;
+          assigned_customer_name?: string | null;
           central_firewall_id?: string | null;
           connector_version?: string | null;
           created_at?: string;

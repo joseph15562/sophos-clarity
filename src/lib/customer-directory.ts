@@ -100,7 +100,7 @@ export async function fetchCustomerDirectory(
       supabase
         .from("agents")
         .select(
-          "id, name, firewall_host, customer_name, tenant_name, last_score, last_grade, last_seen_at, status, hardware_model",
+          "id, name, firewall_host, customer_name, assigned_customer_name, tenant_name, last_score, last_grade, last_seen_at, status, hardware_model",
         )
         .eq("org_id", orgId),
       s,
@@ -123,6 +123,15 @@ export async function fetchCustomerDirectory(
   const agents = agentRes.data ?? [];
   const firewalls = fwRes.data ?? [];
   const portalRows = portalRes.data ?? [];
+
+  /** Legacy rows: assessment keyed by connector site label while agent has Central tenant — fold into tenant bucket. */
+  const agentSiteLabelToTenant = new Map<string, string>();
+  for (const ag of agents) {
+    const t = String(ag.tenant_name ?? "").trim();
+    const site = String(ag.customer_name ?? "").trim();
+    if (!t || !site || site === "Unnamed") continue;
+    if (!agentSiteLabelToTenant.has(site)) agentSiteLabelToTenant.set(site, t);
+  }
 
   const gradeFor = (s: number) =>
     s >= 85 ? "A" : s >= 70 ? "B" : s >= 55 ? "C" : s >= 40 ? "D" : "F";
@@ -147,7 +156,9 @@ export async function fetchCustomerDirectory(
   const namesByResolved = new Map<string, Set<string>>();
   const latestByResolved = new Map<string, AssessmentRow>();
   for (const a of assessments) {
-    const resolved = resolveCustomerName(a.customer_name, orgDisplayName);
+    const rawStored = String(a.customer_name ?? "").trim();
+    const rawForResolve = agentSiteLabelToTenant.get(rawStored) ?? a.customer_name;
+    const resolved = resolveCustomerName(rawForResolve, orgDisplayName);
     if (!namesByResolved.has(resolved)) namesByResolved.set(resolved, new Set());
     namesByResolved.get(resolved)!.add(a.customer_name);
     const prev = latestByResolved.get(resolved);
@@ -232,7 +243,13 @@ export async function fetchCustomerDirectory(
   }
 
   for (const ag of agents) {
-    const rawAgName = ag.tenant_name || ag.customer_name || ag.name;
+    const assigned = String(ag.assigned_customer_name ?? "").trim();
+    const tenant = String(ag.tenant_name ?? "").trim();
+    const rawAgName = assigned
+      ? assigned
+      : tenant
+        ? tenant
+        : String(ag.customer_name ?? "").trim() || String(ag.name ?? "").trim();
     const resolvedName = resolveCustomerName(rawAgName, orgDisplayName);
     const existing = customerMap.get(resolvedName);
     if (existing) {

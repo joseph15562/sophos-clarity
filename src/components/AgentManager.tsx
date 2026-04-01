@@ -27,6 +27,13 @@ import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 import { queryKeys } from "@/hooks/queries";
 import { EmptyState } from "@/components/EmptyState";
 import { agentSiteLabelForList } from "@/lib/agent-site-label";
+import { displayCustomerNameForUi } from "@/lib/sophos-central";
+import {
+  UNASSIGNED_AGENT_GROUP,
+  agentCustomerGroupingKey,
+  agentCustomerGroupTitle,
+} from "@/lib/agent-customer-bucket";
+import { loadOrgResolvedCustomerNames } from "@/lib/org-customer-names";
 
 type Agent = Tables<"agents">;
 type Submission = Tables<"agent_submissions">;
@@ -287,8 +294,10 @@ function RegisterDialog({
                     className="h-8 text-[11px]"
                   />
                   <p className="text-[9px] text-muted-foreground/80 mt-1 leading-snug">
-                    Shown in fleet and reports. Optional — Central tenant or connector name is used
-                    if blank. You can change it anytime under the agent.
+                    Site or location only (shown next to the connector in Management and fleet).
+                    When Sophos Central is linked, this does not create a separate customer — the
+                    Central tenant still groups assessments. Optional; you can change it anytime
+                    under the agent.
                   </p>
                 </div>
                 <div>
@@ -419,6 +428,9 @@ export function AgentManager() {
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
   const [siteLabelDraft, setSiteLabelDraft] = useState("");
   const [siteLabelSaving, setSiteLabelSaving] = useState(false);
+  const [assignedCustomerDraft, setAssignedCustomerDraft] = useState("");
+  const [assignedCustomerSaving, setAssignedCustomerSaving] = useState(false);
+  const [customerNameOptions, setCustomerNameOptions] = useState<string[]>([]);
 
   const loadAgents = useCallback(async () => {
     if (!org) return;
@@ -445,6 +457,14 @@ export function AgentManager() {
     loadAgents();
     loadRetention();
   }, [loadAgents, loadRetention]);
+
+  useEffect(() => {
+    if (!org) {
+      setCustomerNameOptions([]);
+      return;
+    }
+    void loadOrgResolvedCustomerNames(org.id, org.name ?? "").then(setCustomerNameOptions);
+  }, [org?.id, org?.name]);
 
   const loadSubmissionsBatch = useCallback(async (agentIds: string[]) => {
     const unique = [...new Set(agentIds)];
@@ -486,13 +506,19 @@ export function AgentManager() {
       setExpanded(agentId);
       const ag = agents.find((a) => a.id === agentId);
       setSiteLabelDraft(ag && ag.customer_name !== "Unnamed" ? ag.customer_name : "");
+      setAssignedCustomerDraft((ag?.assigned_customer_name ?? "").trim());
       if (submissions[agentId] === undefined) void loadSubmissionsBatch([agentId]);
     }
   };
 
   const handlePatchAgent = async (
     agentId: string,
-    body: { customer_name?: string | null; name?: string; environment?: string | null },
+    body: {
+      customer_name?: string | null;
+      assigned_customer_name?: string | null;
+      name?: string;
+      environment?: string | null;
+    },
   ) => {
     const session = (await supabase.auth.getSession()).data.session;
     if (!session) {
@@ -732,35 +758,40 @@ export function AgentManager() {
           {(() => {
             const grouped = new Map<string, Agent[]>();
             for (const a of agents) {
-              const key = a.tenant_name || "Unassigned";
+              const key = agentCustomerGroupingKey(a);
               const list = grouped.get(key) ?? [];
               list.push(a);
               grouped.set(key, list);
             }
             const sorted = Array.from(grouped.entries()).sort(([a], [b]) =>
-              a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b),
+              a === UNASSIGNED_AGENT_GROUP
+                ? 1
+                : b === UNASSIGNED_AGENT_GROUP
+                  ? -1
+                  : a.localeCompare(b),
             );
 
-            return sorted.map(([tenantName, tenantAgents]) => {
+            return sorted.map(([groupKey, tenantAgents]) => {
+              const tenantTitle = agentCustomerGroupTitle(groupKey, org?.name);
               const onlineCount = tenantAgents.filter(
                 (a) =>
                   a.status === "online" &&
                   a.last_seen_at &&
                   Date.now() - new Date(a.last_seen_at).getTime() < 30 * 60 * 1000,
               ).length;
-              const isLinked = tenantName !== "Unassigned";
+              const anyCentralLinked = tenantAgents.some((a) => Boolean(a.tenant_name?.trim()));
 
               return (
                 <div
-                  key={tenantName}
+                  key={groupKey}
                   className="rounded-[20px] border border-brand-accent/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(247,249,255,0.92))] dark:bg-[linear-gradient(135deg,rgba(9,13,24,0.92),rgba(14,20,34,0.92))] shadow-[0_8px_30px_rgba(32,6,247,0.05)] overflow-hidden"
                 >
                   <div className="flex items-center gap-2.5 px-4 py-3 bg-brand-accent/[0.03] dark:bg-brand-accent/[0.06] border-b border-brand-accent/10">
                     <Server className="h-3.5 w-3.5 text-brand-accent/50 shrink-0" />
                     <span className="text-[10px] font-display font-semibold text-foreground flex-1">
-                      {tenantName}
+                      {tenantTitle}
                     </span>
-                    {isLinked ? (
+                    {anyCentralLinked ? (
                       <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-semibold flex items-center gap-1">
                         <Link2 className="h-2.5 w-2.5" /> Central Linked
                       </span>
@@ -841,6 +872,64 @@ export function AgentManager() {
                               {canManageAgents && (
                                 <div className="rounded-lg border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-3 space-y-2">
                                   <label
+                                    htmlFor={`agent-assigned-customer-${agent.id}`}
+                                    className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide"
+                                  >
+                                    Customer (grouping)
+                                  </label>
+                                  <div className="flex flex-wrap gap-2 items-end">
+                                    <Input
+                                      id={`agent-assigned-customer-${agent.id}`}
+                                      list={`agent-customer-pick-${agent.id}`}
+                                      value={assignedCustomerDraft}
+                                      onChange={(e) => setAssignedCustomerDraft(e.target.value)}
+                                      placeholder="e.g. same name on each connector for this end customer"
+                                      className="h-8 text-[11px] flex-1 min-w-[160px]"
+                                    />
+                                    <datalist id={`agent-customer-pick-${agent.id}`}>
+                                      {customerNameOptions.map((n) => (
+                                        <option key={n} value={n} />
+                                      ))}
+                                    </datalist>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="secondary"
+                                      className="h-8 text-[10px] gap-1.5"
+                                      disabled={
+                                        assignedCustomerSaving ||
+                                        assignedCustomerDraft.trim() ===
+                                          (agent.assigned_customer_name ?? "").trim()
+                                      }
+                                      onClick={async () => {
+                                        setAssignedCustomerSaving(true);
+                                        try {
+                                          await handlePatchAgent(agent.id, {
+                                            assigned_customer_name:
+                                              assignedCustomerDraft.trim() || null,
+                                          });
+                                        } finally {
+                                          setAssignedCustomerSaving(false);
+                                        }
+                                      }}
+                                    >
+                                      {assignedCustomerSaving ? (
+                                        <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                                      ) : null}
+                                      Save
+                                    </Button>
+                                  </div>
+                                  <p className="text-[9px] text-muted-foreground/70 leading-snug">
+                                    Optional. Use the same value on multiple connectors to group
+                                    them under one customer. New assessments bucket here instead of
+                                    the Sophos Central tenant. Clear the field to follow Central
+                                    again. Pick from existing customers or type a new name.
+                                  </p>
+                                </div>
+                              )}
+                              {canManageAgents && (
+                                <div className="rounded-lg border border-brand-accent/10 bg-brand-accent/[0.02] dark:bg-brand-accent/[0.04] p-3 space-y-2">
+                                  <label
                                     htmlFor={`agent-site-label-${agent.id}`}
                                     className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide"
                                   >
@@ -884,8 +973,12 @@ export function AgentManager() {
                                     </Button>
                                   </div>
                                   <p className="text-[9px] text-muted-foreground/70 leading-snug">
-                                    Leave blank to clear the label (shows as unnamed; Central tenant
-                                    name still appears when linked).
+                                    Site or location only. Leave blank to clear (shows as unnamed in
+                                    lists). Does not split customers when{" "}
+                                    <span className="font-medium text-foreground/80">
+                                      Customer (grouping)
+                                    </span>{" "}
+                                    or Central tenant applies.
                                   </p>
                                 </div>
                               )}
@@ -929,9 +1022,17 @@ export function AgentManager() {
                                   </span>
                                 </div>
                                 <div>
+                                  <span className="text-muted-foreground">Customer grouping:</span>{" "}
+                                  <span className="font-medium text-foreground">
+                                    {(agent.assigned_customer_name ?? "").trim() || "—"}
+                                  </span>
+                                </div>
+                                <div>
                                   <span className="text-muted-foreground">Tenant:</span>{" "}
                                   <span className="font-medium text-foreground">
-                                    {agent.tenant_name || "Unassigned"}
+                                    {agent.tenant_name
+                                      ? displayCustomerNameForUi(agent.tenant_name, org?.name)
+                                      : "Unassigned"}
                                   </span>
                                 </div>
                                 <div>

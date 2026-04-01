@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useCompanyLogo } from "@/hooks/use-company-logo";
 import { loadHistory } from "@/lib/assessment-history";
 import { loadHistoryCloud } from "@/lib/assessment-cloud";
 import { loadSavedReportsCloud, loadSavedReportsLocal } from "@/lib/saved-reports";
@@ -248,6 +249,9 @@ type Props = {
 
 export function BrandingSetup({ branding, onChange }: Props) {
   const { isGuest, org } = useAuth();
+  const { logoUrl: orgWorkspaceLogoUrl } = useCompanyLogo();
+  /** When non-null, report logo was last set from workspace logo (so we can follow workspace updates). */
+  const lastSyncedWorkspaceLogoRef = useRef<string | null>(null);
   const userTouchedFrameworks = useRef(false);
 
   const [knownCustomers, setKnownCustomers] = useState<string[]>([]);
@@ -263,6 +267,40 @@ export function BrandingSetup({ branding, onChange }: Props) {
       );
     }
   }, [isGuest, org, onChange]);
+
+  // Auto-fill report identity logo from workspace (Settings → Company logo) when unset, and keep
+  // it in sync until the user uploads a different file here.
+  useEffect(() => {
+    if (isGuest || !org) return;
+    const w = orgWorkspaceLogoUrl?.trim() ? orgWorkspaceLogoUrl : null;
+    onChange((prev) => {
+      const cur = prev.logoUrl?.trim() || null;
+      if (!w) {
+        if (
+          cur &&
+          lastSyncedWorkspaceLogoRef.current !== null &&
+          cur === lastSyncedWorkspaceLogoRef.current
+        ) {
+          lastSyncedWorkspaceLogoRef.current = null;
+          return { ...prev, logoUrl: null };
+        }
+        return prev;
+      }
+      if (!cur) {
+        lastSyncedWorkspaceLogoRef.current = w;
+        return { ...prev, logoUrl: w };
+      }
+      if (
+        lastSyncedWorkspaceLogoRef.current !== null &&
+        cur === lastSyncedWorkspaceLogoRef.current &&
+        cur !== w
+      ) {
+        lastSyncedWorkspaceLogoRef.current = w;
+        return { ...prev, logoUrl: w };
+      }
+      return prev;
+    });
+  }, [isGuest, org, orgWorkspaceLogoUrl, onChange]);
 
   // Load known customers from history + saved reports + Central tenants
   useEffect(() => {
@@ -334,6 +372,7 @@ export function BrandingSetup({ branding, onChange }: Props) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
+      lastSyncedWorkspaceLogoRef.current = null;
       onChange({ ...branding, logoUrl: ev.target?.result as string });
     };
     reader.readAsDataURL(file);
@@ -394,6 +433,11 @@ export function BrandingSetup({ branding, onChange }: Props) {
               className="flex items-center gap-2 font-display font-semibold tracking-tight text-foreground"
             >
               <ImageIcon className="h-4 w-4" /> Company Logo
+              {!isGuest && org && (
+                <span className="text-[9px] text-muted-foreground font-normal ml-1">
+                  (from workspace when unset)
+                </span>
+              )}
             </Label>
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex h-16 min-w-[160px] items-center justify-center rounded-xl border border-dashed border-border bg-background/70 px-4">
@@ -415,6 +459,12 @@ export function BrandingSetup({ branding, onChange }: Props) {
                 className="max-w-xs bg-background/80"
               />
             </div>
+            {!isGuest && org && orgWorkspaceLogoUrl && (
+              <p className="text-[11px] text-muted-foreground">
+                The logo from Settings (Company logo) is copied here automatically. Choose a file
+                above to use a different logo on this assessment only.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

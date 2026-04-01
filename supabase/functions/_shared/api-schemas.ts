@@ -24,12 +24,14 @@ export const agentUpdateBodySchema = z
     name: z.string().min(1).max(500).optional(),
     customer_name: z.string().max(500).optional().nullable(),
     environment: z.string().max(200).optional().nullable(),
+    assigned_customer_name: z.string().max(500).optional().nullable(),
   })
   .refine(
     (d) =>
       d.name !== undefined ||
       d.customer_name !== undefined ||
-      d.environment !== undefined,
+      d.environment !== undefined ||
+      d.assigned_customer_name !== undefined,
     { message: "At least one field is required" },
   );
 
