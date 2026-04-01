@@ -34,11 +34,9 @@ function ChangelogPageInner() {
               popovers (configuration stats, feature coverage, charts, compliance heatmap, priority
               matrix) use the same readable surface as other popovers instead of dark glass with
               theme text; report/QBR/deterministic-finding shells paint their top accent as part of
-              the rounded background so corners stay consistent. Customer Management uses the same
-              light header bar as Trust/Updates (card surface + border) in light mode; the navy
-              gradient header remains for dark mode. On those subpages, the Home link and title icon
-              use the same Sophos blue as the Drift hub in light mode; the title icon stays cyan in
-              dark mode.
+              the rounded background so corners stay consistent. Customer Management, Trust, and
+              What&apos;s new use the same navy banner strip as Report Centre (white title, cyan
+              title icon, muted Home crumb) in light and dark mode.
             </li>
             <li>
               <strong className="text-foreground">Readability</strong>: medium severity and grade C

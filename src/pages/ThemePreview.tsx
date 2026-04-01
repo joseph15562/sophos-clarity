@@ -74,9 +74,9 @@ export default function ThemePreview() {
         <p className="text-xs text-white/45 -mt-6 mb-2 max-w-2xl leading-relaxed">
           Renders real <code className="text-[#00EDFF]/90">WorkspaceSubpageHeader</code> and{" "}
           <code className="text-[#00EDFF]/90">Button</code> on a normal app background. Use your
-          theme toggle in the header below (or system theme) to compare light vs dark; hard-refresh{" "}
-          <code className="text-[#00EDFF]/90">/preview</code> to confirm the primary blue stays
-          solid after reload.
+          theme toggle in the header below (or system theme); the bar matches Report Centre (navy
+          gradient) in both modes. Hard-refresh <code className="text-[#00EDFF]/90">/preview</code>{" "}
+          to confirm the primary blue stays solid after reload.
         </p>
         <div className="space-y-6">
           <div className="rounded-2xl border border-white/[0.12] overflow-hidden bg-background text-foreground shadow-[0_24px_70px_rgba(0,0,0,0.4)]">
