@@ -1,0 +1,5 @@
+npm run format:check:deno || {
+  echo ""
+  echo "Deno format check failed. Run: npm run format:deno"
+  exit 1
+}

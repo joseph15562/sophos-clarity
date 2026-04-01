@@ -184,6 +184,18 @@ npm run test:e2e     # Run end-to-end tests (Playwright)
 npm run preview      # Preview production build locally
 ```
 
+### Supabase Edge functions (Deno)
+
+Git **pre-push** (Husky) runs `npm run format:check:deno`, matching CI quality gates. If it fails, fix formatting then push again:
+
+```bash
+npm run format:deno        # apply deno fmt under supabase/functions
+npm run format:check:deno  # verify (same as CI / pre-push)
+npm run test:deno          # Deno tests for Edge code
+```
+
+Install [Deno](https://deno.land/) locally for these commands.
+
 ---
 
 ## Deployment
