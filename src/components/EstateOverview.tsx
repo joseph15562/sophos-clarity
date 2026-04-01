@@ -97,7 +97,7 @@ export function EstateOverview({
       {/* Estate summary cards */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
-          icon={<Network className="h-7 w-7" style={{ color: "#2006F7" }} />}
+          icon={<Network className="h-7 w-7" />}
           value={fileCount}
           label={`Firewall${fileCount !== 1 ? "s" : ""}`}
           hex="#2006F7"
@@ -107,7 +107,7 @@ export function EstateOverview({
           valueColor=""
         />
         <StatCard
-          icon={<Scale className="h-7 w-7" style={{ color: "#5A00FF" }} />}
+          icon={<Scale className="h-7 w-7" />}
           value={totalRules}
           label="Rules Parsed"
           hex="#5A00FF"
@@ -117,7 +117,7 @@ export function EstateOverview({
           valueColor=""
         />
         <StatCard
-          icon={<Search className="h-7 w-7" style={{ color: "#00EDFF" }} />}
+          icon={<Search className="h-7 w-7" />}
           value={totalSections}
           label="Sections"
           hex="#00EDFF"
@@ -127,12 +127,7 @@ export function EstateOverview({
           valueColor=""
         />
         <StatCard
-          icon={
-            <AlertTriangle
-              className="h-7 w-7"
-              style={{ color: totalFindings > 0 ? "#EA0022" : "#00F2B3" }}
-            />
-          }
+          icon={<AlertTriangle className="h-7 w-7" />}
           value={totalFindings}
           label="Issues"
           hex={totalFindings > 0 ? "#EA0022" : "#00F2B3"}

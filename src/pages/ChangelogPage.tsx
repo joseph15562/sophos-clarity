@@ -27,6 +27,14 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Light mode polish</strong>: dashboard stat tiles
+              (outcome summary, security analysis strip, extraction summary, estate overview, score
+              dial) use neutral card surfaces with readable{" "}
+              <strong className="text-foreground">emerald / amber / rose</strong> typography instead
+              of neon text on pale mint or yellow washes; coloured glass gradients stay in dark
+              mode.
+            </li>
+            <li>
               <strong className="text-foreground">Rule optimiser</strong>: shadowed-rule hints now
               respect <strong className="text-foreground">user identity</strong>,{" "}
               <strong className="text-foreground">Match known users</strong>, and{" "}

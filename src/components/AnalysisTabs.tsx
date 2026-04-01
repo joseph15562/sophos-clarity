@@ -39,6 +39,11 @@ import type { RiskScoreResult } from "@/lib/risk-score";
 import type { FindingsCsvReviewerSignoff } from "@/lib/findings-export";
 import { SecurityPostureScorecard } from "@/components/SecurityPostureScorecard";
 import { cn } from "@/lib/utils";
+import {
+  accentKindFromHex,
+  statDarkGradientOverlayStyle,
+  statValueTextClass,
+} from "@/lib/stat-accent";
 import { ScoreDialGauge } from "@/components/ScoreDialGauge";
 import { ScoreDeltaBanner } from "@/components/ScoreDeltaBanner";
 import { QuickActions } from "@/components/QuickActions";
@@ -792,90 +797,114 @@ export function AnalysisTabs({
 
               {securityStats &&
                 (() => {
-                  const scoreColor =
+                  const scoreHex =
                     securityStats.score >= 75
                       ? "#00F2B3"
                       : securityStats.score >= 50
                         ? "#F29400"
                         : "#EA0022";
-                  const critColor = securityStats.criticalHigh === 0 ? "#00F2B3" : "#EA0022";
-                  const covColor =
+                  const critHex = securityStats.criticalHigh === 0 ? "#00F2B3" : "#EA0022";
+                  const covHex =
                     securityStats.coverage >= 75
                       ? "#00F2B3"
                       : securityStats.coverage >= 40
                         ? "#F29400"
                         : "#EA0022";
+                  const neutralHex = "#64748b";
                   const statCards = [
                     {
                       label: "Score",
                       value: securityStats.score,
-                      color: scoreColor,
+                      hex: scoreHex,
                       suffix: "",
                       badge: securityStats.grade,
                     },
                     {
                       label: "Critical Issues",
                       value: securityStats.criticalHigh,
-                      color: critColor,
+                      hex: critHex,
                       suffix: "",
                     },
                     {
                       label: "Coverage",
                       value: securityStats.coverage,
-                      color: covColor,
+                      hex: covHex,
                       suffix: "%",
                     },
                     {
                       label: "Rules Analysed",
                       value: securityStats.totalRules,
-                      color: "#fff",
+                      hex: neutralHex,
                       suffix: "",
                     },
                   ];
                   return (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {statCards.map((card) => (
-                        <div
-                          key={card.label}
-                          className="group relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-4 transition-all duration-200 hover:scale-[1.03] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated cursor-default"
-                          style={{
-                            background: `linear-gradient(145deg, ${card.color}10, ${card.color}04)`,
-                          }}
-                        >
+                      {statCards.map((card) => {
+                        const kind = accentKindFromHex(card.hex);
+                        return (
                           <div
-                            className="absolute inset-x-0 top-0 h-px pointer-events-none"
-                            style={{
-                              background: `linear-gradient(90deg, transparent, ${card.color}20, transparent)`,
-                            }}
-                          />
-                          <div
-                            className="absolute -top-4 -right-4 h-12 w-12 rounded-full blur-[20px] opacity-15 transition-opacity group-hover:opacity-30 pointer-events-none"
-                            style={{ backgroundColor: card.color }}
-                          />
-                          <div className="relative">
-                            <div className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                              {card.label}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span
-                                className="text-2xl font-extrabold tabular-nums"
-                                style={{ color: card.color === "#fff" ? undefined : card.color }}
-                              >
-                                {card.value}
-                                {card.suffix}
-                              </span>
-                              {card.badge && (
+                            key={card.label}
+                            className={cn(
+                              "group relative cursor-default overflow-hidden rounded-xl border p-4 transition-all duration-200 hover:scale-[1.03] hover:shadow-elevated",
+                              "border-slate-200/90 bg-card shadow-sm",
+                              "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
+                              "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+                            )}
+                          >
+                            <div
+                              className="pointer-events-none absolute inset-0 hidden dark:block"
+                              style={statDarkGradientOverlayStyle(card.hex)}
+                            />
+                            <div
+                              className="absolute inset-x-0 top-0 h-px pointer-events-none hidden dark:block"
+                              style={{
+                                background: `linear-gradient(90deg, transparent, ${card.hex}20, transparent)`,
+                              }}
+                            />
+                            <div
+                              className="pointer-events-none absolute -right-4 -top-4 hidden h-12 w-12 rounded-full blur-[20px] opacity-15 transition-opacity group-hover:opacity-30 dark:block"
+                              style={{ backgroundColor: card.hex }}
+                            />
+                            <div className="relative">
+                              <div className="text-[10px] font-semibold text-slate-600 dark:text-muted-foreground/70 uppercase tracking-wider">
+                                {card.label}
+                              </div>
+                              <div className="mt-1 flex items-center gap-2">
                                 <span
-                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                                  style={{ background: `${card.color}15`, color: card.color }}
+                                  className={cn(
+                                    "text-2xl font-extrabold tabular-nums",
+                                    statValueTextClass(kind),
+                                  )}
                                 >
-                                  {card.badge}
+                                  {card.value}
+                                  {card.suffix}
                                 </span>
-                              )}
+                                {card.badge && (
+                                  <span
+                                    className={cn(
+                                      "rounded border px-1.5 py-0.5 text-[10px] font-bold",
+                                      kind === "green" &&
+                                        "border-emerald-300/70 bg-emerald-100/90 text-emerald-900 dark:border-[#00F2B3]/35 dark:bg-[#00F2B3]/14 dark:text-[#00F2B3]",
+                                      kind === "amber" &&
+                                        "border-amber-300/70 bg-amber-100/90 text-amber-950 dark:border-[#F29400]/35 dark:bg-[#F29400]/14 dark:text-[#F29400]",
+                                      kind === "red" &&
+                                        "border-rose-300/70 bg-rose-100/90 text-rose-900 dark:border-[#EA0022]/35 dark:bg-[#EA0022]/14 dark:text-[#EA0022]",
+                                      (kind === "slate" ||
+                                        kind === "violet" ||
+                                        kind === "purple" ||
+                                        kind === "cyan") &&
+                                        "border-slate-200 bg-slate-100 text-slate-800 dark:border-white/10 dark:bg-white/10 dark:text-slate-100",
+                                    )}
+                                  >
+                                    {card.badge}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   );
                 })()}

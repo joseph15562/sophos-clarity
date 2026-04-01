@@ -10,6 +10,11 @@ import {
 import { Progress } from "@/components/ui/progress";
 import type { ExtractionMeta, SectionMeta } from "@/lib/extract-sections";
 import { cn } from "@/lib/utils";
+import {
+  accentKindFromHex,
+  statDarkGradientOverlayStyle,
+  statValueTextClass,
+} from "@/lib/stat-accent";
 
 interface FileExtractionInfo {
   fileName: string;
@@ -39,9 +44,9 @@ function SectionRow({ section }: { section: SectionMeta }) {
   return (
     <div className="flex items-center gap-2 py-1 text-xs">
       {isExtracted ? (
-        <CheckCircle2 className="h-3.5 w-3.5 text-[#00F2B3] shrink-0" />
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-[#00F2B3]" />
       ) : (
-        <AlertTriangle className="h-3.5 w-3.5 text-[#F29400] shrink-0" />
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-800 dark:text-[#F29400]" />
       )}
       <span
         className={`flex-1 truncate ${isExtracted ? "text-foreground" : "text-muted-foreground"}`}
@@ -49,7 +54,7 @@ function SectionRow({ section }: { section: SectionMeta }) {
         {section.displayName}
       </span>
       {section.plainTextFallback && (
-        <span className="text-[9px] px-1 py-0.5 rounded bg-[#F29400]/10 text-[#F29400] font-medium">
+        <span className="rounded bg-amber-100/90 px-1 py-0.5 text-[9px] font-medium text-amber-950 dark:bg-[#F29400]/12 dark:text-[#F29400]">
           text
         </span>
       )}
@@ -69,7 +74,9 @@ function SectionRow({ section }: { section: SectionMeta }) {
           {section.tableCount}
         </span>
       )}
-      {!isExtracted && <span className="text-[10px] text-[#F29400] font-medium">empty</span>}
+      {!isExtracted && (
+        <span className="text-[10px] font-medium text-amber-900 dark:text-[#F29400]">empty</span>
+      )}
     </div>
   );
 }
@@ -92,12 +99,20 @@ function FileBlock({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-      style={{ background: `linear-gradient(135deg, ${covHex}08, ${covHex}02)` }}
+      className={cn(
+        "relative overflow-hidden rounded-xl border transition-all duration-200 hover:shadow-elevated",
+        "border-slate-200/90 bg-card shadow-sm",
+        "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
+        "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+      )}
     >
-      <div className="absolute inset-0 pointer-events-none">
+      <div
+        className="pointer-events-none absolute inset-0 hidden dark:block"
+        style={statDarkGradientOverlayStyle(covHex)}
+      />
+      <div className="absolute inset-0 pointer-events-none hidden dark:block">
         <div
-          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[16px] opacity-15"
+          className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[16px] opacity-20"
           style={{ backgroundColor: covHex }}
         />
       </div>
@@ -113,8 +128,16 @@ function FileBlock({
         <FileText className="h-3.5 w-3.5 text-brand-accent shrink-0" />
         <span className="text-xs font-bold text-foreground truncate flex-1">{file.fileName}</span>
         <span
-          className="text-[10px] font-bold px-2 py-0.5 rounded-md border"
-          style={{ color: covHex, backgroundColor: `${covHex}14`, borderColor: `${covHex}25` }}
+          className={cn(
+            "rounded-md border px-2 py-0.5 text-[10px] font-bold",
+            meta.coveragePct === 100 &&
+              "border-emerald-300/70 bg-emerald-100/90 text-emerald-900 dark:border-[#00F2B3]/30 dark:bg-[#00F2B3]/12 dark:text-[#00F2B3]",
+            meta.coveragePct < 100 &&
+              meta.coveragePct >= 70 &&
+              "border-amber-300/70 bg-amber-100/90 text-amber-950 dark:border-[#F29400]/30 dark:bg-[#F29400]/12 dark:text-[#F29400]",
+            meta.coveragePct < 70 &&
+              "border-rose-300/70 bg-rose-100/90 text-rose-900 dark:border-[#EA0022]/30 dark:bg-[#EA0022]/12 dark:text-[#EA0022]",
+          )}
         >
           {meta.coveragePct}%
         </span>
@@ -125,7 +148,9 @@ function FileBlock({
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground mb-2">
             <span>{meta.totalDetected} detected</span>
             <span>{meta.totalExtracted} extracted</span>
-            {meta.totalEmpty > 0 && <span className="text-[#F29400]">{meta.totalEmpty} empty</span>}
+            {meta.totalEmpty > 0 && (
+              <span className="text-amber-900 dark:text-[#F29400]">{meta.totalEmpty} empty</span>
+            )}
             <span>{totalRows.toLocaleString()} total items</span>
           </div>
           <div className="space-y-0.5">
@@ -151,8 +176,6 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
   const totalEmpty = allMetas.reduce((s, m) => s + m.totalEmpty, 0);
   const overallCoverage =
     totalDetected > 0 ? Math.round((totalExtracted / totalDetected) * 100) : 0;
-  const covHex =
-    overallCoverage === 100 ? "#00F2B3" : overallCoverage >= 70 ? "#F29400" : "#EA0022";
   const totalRows = allMetas.reduce(
     (s, m) => s + m.sections.reduce((rs, sec) => rs + sec.rowCount + sec.detailCount, 0),
     0,
@@ -169,11 +192,8 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2.5">
-        <div
-          className="h-9 w-9 rounded-xl flex items-center justify-center border border-slate-900/[0.12] dark:border-white/[0.08]"
-          style={{ backgroundColor: "rgba(32,6,247,0.12)" }}
-        >
-          <FileText className="h-4.5 w-4.5 text-brand-accent" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-violet-100/80 dark:border-white/[0.08] dark:bg-brand-accent/15">
+          <FileText className="h-4.5 w-4.5 text-violet-800 dark:text-brand-accent" />
         </div>
         <h3 className="text-base sm:text-lg font-display font-black tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#2006F7] dark:to-[#00EDFF] bg-clip-text text-transparent">
           Extraction Summary
@@ -195,74 +215,88 @@ export function ExtractionSummary({ files }: ExtractionSummaryProps) {
       </div>
 
       <div
-        className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-4 space-y-3 shadow-card"
-        style={{
-          background: "linear-gradient(145deg, rgba(32,6,247,0.07), rgba(0,242,179,0.025))",
-        }}
+        className={cn(
+          "relative space-y-3 overflow-hidden rounded-xl border px-4 py-4 shadow-card",
+          "border-slate-200/90 bg-slate-50/70",
+          "dark:border-white/[0.06] dark:bg-[linear-gradient(145deg,rgba(32,6,247,0.12),rgba(0,242,179,0.05))]",
+        )}
       >
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-6 -left-6 h-16 w-16 rounded-full blur-[28px] opacity-20 bg-brand-accent" />
+        <div className="pointer-events-none absolute inset-0 hidden dark:block">
+          <div className="absolute -left-6 -top-6 h-16 w-16 rounded-full bg-brand-accent opacity-20 blur-[28px]" />
         </div>
         <div
-          className="absolute inset-x-0 top-0 h-px pointer-events-none"
+          className="pointer-events-none absolute inset-x-0 top-0 hidden h-px dark:block"
           style={{
             background: "linear-gradient(90deg, transparent, rgba(32,6,247,0.22), transparent)",
           }}
         />
 
-        <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {STAT_ITEMS.map((item) => (
-            <div
-              key={item.label}
-              className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5 text-xs transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
-              style={{ background: `linear-gradient(145deg, ${item.hex}10, ${item.hex}04)` }}
-            >
-              <div className="absolute inset-0 pointer-events-none">
-                <div
-                  className="absolute -top-3 -right-3 h-8 w-8 rounded-full blur-[14px] opacity-15"
-                  style={{ backgroundColor: item.hex }}
-                />
-              </div>
-              <p className="relative text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80">
-                {item.label}
-              </p>
-              <p
-                className="relative font-black text-lg tabular-nums mt-0.5"
-                style={{ color: item.hex }}
+        <div className="relative grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {STAT_ITEMS.map((item) => {
+            const kind = accentKindFromHex(item.hex);
+            return (
+              <div
+                key={item.label}
+                className={cn(
+                  "relative overflow-hidden rounded-xl border px-3.5 py-2.5 text-xs transition-all duration-200",
+                  "border-slate-200/90 bg-card shadow-sm",
+                  "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
+                  "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+                )}
               >
-                {item.value}
-              </p>
-            </div>
-          ))}
+                <div
+                  className="pointer-events-none absolute inset-0 hidden dark:block"
+                  style={statDarkGradientOverlayStyle(item.hex)}
+                />
+                <div className="absolute inset-0 pointer-events-none hidden dark:block">
+                  <div
+                    className="absolute -right-3 -top-3 h-8 w-8 rounded-full blur-[14px] opacity-20"
+                    style={{ backgroundColor: item.hex }}
+                  />
+                </div>
+                <p className="relative text-[10px] font-bold uppercase tracking-[0.15em] text-slate-600 dark:text-muted-foreground/80">
+                  {item.label}
+                </p>
+                <p
+                  className={cn(
+                    "relative mt-0.5 text-lg font-black tabular-nums",
+                    statValueTextClass(kind),
+                  )}
+                >
+                  {item.value}
+                </p>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="relative h-2.5 rounded-full bg-white/80 dark:bg-white/[0.06] overflow-hidden">
+        <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-200/90 dark:bg-white/[0.06]">
           <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${overallCoverage}%`,
-              background: `linear-gradient(90deg, ${covHex}90, ${covHex})`,
-              boxShadow: `0 0 10px ${covHex}40`,
-            }}
+            className={cn(
+              "h-full rounded-full transition-all duration-700",
+              overallCoverage === 100 &&
+                "bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-[0_0_10px_rgba(5,150,105,0.25)] dark:from-[#00F2B3] dark:to-[#00c9a3] dark:shadow-[0_0_12px_rgba(0,242,179,0.35)]",
+              overallCoverage < 100 &&
+                overallCoverage >= 70 &&
+                "bg-gradient-to-r from-amber-600 to-amber-500 shadow-[0_0_10px_rgba(217,119,6,0.2)] dark:from-[#F29400] dark:to-[#d97706] dark:shadow-[0_0_12px_rgba(242,148,0,0.3)]",
+              overallCoverage < 70 &&
+                "bg-gradient-to-r from-rose-600 to-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.22)] dark:from-[#EA0022] dark:to-[#dc2626] dark:shadow-[0_0_12px_rgba(234,0,34,0.3)]",
+            )}
+            style={{ width: `${overallCoverage}%` }}
           />
         </div>
 
         {hasWarning && (
-          <div
-            className="relative overflow-hidden flex items-start gap-2.5 rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3.5 py-2.5"
-            style={{
-              background: "linear-gradient(135deg, rgba(242,148,0,0.08), rgba(242,148,0,0.02))",
-            }}
-          >
+          <div className="relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-amber-200/80 bg-amber-50/60 px-3.5 py-2.5 dark:border-[#F29400]/20 dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.1),rgba(242,148,0,0.02))]">
             <div
-              className="absolute inset-x-0 top-0 h-px pointer-events-none"
+              className="pointer-events-none absolute inset-x-0 top-0 hidden h-px dark:block"
               style={{
                 background: "linear-gradient(90deg, rgba(242,148,0,0.25), transparent 60%)",
               }}
             />
-            <AlertTriangle className="relative h-3.5 w-3.5 text-[#F29400] mt-0.5 shrink-0" />
-            <p className="relative text-[11px] text-muted-foreground/90 leading-relaxed">
-              <strong className="text-[#F29400] font-bold">
+            <AlertTriangle className="relative mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-800 dark:text-[#F29400]" />
+            <p className="relative text-[11px] leading-relaxed text-muted-foreground/90">
+              <strong className="font-bold text-amber-950 dark:text-[#F29400]">
                 {totalEmpty} section{totalEmpty !== 1 ? "s" : ""}
               </strong>{" "}
               detected in the config export but contained no parseable data. These may be empty in

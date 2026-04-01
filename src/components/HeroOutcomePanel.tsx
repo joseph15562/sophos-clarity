@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { Shield, AlertTriangle, FileCheck2, TrendingUp, Zap, Clock3, Sparkles } from "lucide-react";
 import type { AnalysisResult, Severity } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
+import { cn } from "@/lib/utils";
+import { accentKindFromHex, statIconTextClass, statValueTextClass } from "@/lib/stat-accent";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -22,28 +24,33 @@ type HeroAction = {
 
 const GRADE_STYLE: Record<string, { ring: string; text: string; bg: string; label: string }> = {
   A: {
-    ring: "ring-[#00F2B3]",
-    text: "text-[#00F2B3]",
-    bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
+    ring: "ring-emerald-700 dark:ring-[#00F2B3]",
+    text: "text-emerald-800 dark:text-[#00F2B3]",
+    bg: "bg-emerald-100/90 dark:bg-[#00F2B3]/10",
     label: "Excellent",
   },
   B: {
-    ring: "ring-[#00F2B3]",
-    text: "text-[#00F2B3]",
-    bg: "bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10",
+    ring: "ring-emerald-700 dark:ring-[#00F2B3]",
+    text: "text-emerald-800 dark:text-[#00F2B3]",
+    bg: "bg-emerald-100/90 dark:bg-[#00F2B3]/10",
     label: "Good",
   },
   C: {
-    ring: "ring-[#F29400]",
-    text: "text-[#F29400]",
-    bg: "bg-[#F29400]/10",
+    ring: "ring-amber-700 dark:ring-[#F29400]",
+    text: "text-amber-950 dark:text-[#F29400]",
+    bg: "bg-amber-100/90 dark:bg-[#F29400]/10",
     label: "Needs Improvement",
   },
-  D: { ring: "ring-[#EA0022]", text: "text-[#EA0022]", bg: "bg-[#EA0022]/10", label: "At Risk" },
+  D: {
+    ring: "ring-rose-700 dark:ring-[#EA0022]",
+    text: "text-rose-800 dark:text-[#EA0022]",
+    bg: "bg-rose-100/90 dark:bg-[#EA0022]/10",
+    label: "At Risk",
+  },
   F: {
-    ring: "ring-[#EA0022]",
-    text: "text-[#EA0022]",
-    bg: "bg-[#EA0022]/10",
+    ring: "ring-rose-700 dark:ring-[#EA0022]",
+    text: "text-rose-800 dark:text-[#EA0022]",
+    bg: "bg-rose-100/90 dark:bg-[#EA0022]/10",
     label: "Critical Risk",
   },
 };
@@ -221,9 +228,9 @@ export function HeroOutcomePanel({
       </div>
 
       {topActions.length > 0 && (
-        <div className="rounded-2xl border border-[#F29400]/20 bg-[linear-gradient(135deg,rgba(242,148,0,0.04),rgba(234,0,34,0.02),transparent_60%)] dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.08),rgba(234,0,34,0.04),transparent_60%)] backdrop-blur-sm p-4 sm:p-5 space-y-4 shadow-card">
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/45 dark:border-[#F29400]/20 dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.08),rgba(234,0,34,0.04),transparent_60%)] backdrop-blur-sm p-4 sm:p-5 space-y-4 shadow-card">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="inline-flex items-center gap-2 rounded-full border border-[#F29400]/20 bg-[#F29400]/[0.08] dark:bg-[#F29400]/[0.12] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#F29400]">
+            <p className="inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-100/60 dark:border-[#F29400]/20 dark:bg-[#F29400]/[0.12] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-950 dark:text-[#F29400]">
               <Zap className="h-3 w-3" /> Top Actions to Improve Score
             </p>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
@@ -234,17 +241,25 @@ export function HeroOutcomePanel({
             {topActions.map((action, i) => {
               const isCrit = action.severity === "critical";
               const sevHex = isCrit ? "#EA0022" : "#F29400";
+              const sevKind = isCrit ? "red" : "amber";
               return (
                 <div
                   key={`${action.title}-${i}`}
-                  className="relative isolate overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] border-l-[3px] px-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-                  style={{
-                    borderLeftColor: sevHex,
-                    background: `radial-gradient(120% 95% at 100% 0%, ${sevHex}40, transparent 58%), linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
-                  }}
+                  className={cn(
+                    "relative isolate overflow-hidden rounded-xl border border-l-[3px] px-4 py-4 contain-paint space-y-2.5 shadow-card transition-all duration-200 hover:scale-[1.02] hover:shadow-elevated",
+                    "border-slate-200/90 bg-card dark:border-white/[0.06] dark:bg-transparent",
+                    "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+                  )}
+                  style={{ borderLeftColor: sevHex }}
                 >
                   <div
-                    className="absolute inset-x-0 top-0 h-px pointer-events-none"
+                    className="pointer-events-none absolute inset-0 hidden dark:block"
+                    style={{
+                      background: `radial-gradient(120% 95% at 100% 0%, ${sevHex}40, transparent 58%), linear-gradient(145deg, ${sevHex}10, ${sevHex}04)`,
+                    }}
+                  />
+                  <div
+                    className="absolute inset-x-0 top-0 h-px pointer-events-none hidden dark:block"
                     style={{
                       background: `linear-gradient(90deg, transparent, ${sevHex}30, transparent)`,
                     }}
@@ -252,12 +267,12 @@ export function HeroOutcomePanel({
 
                   <div className="relative flex items-center gap-2.5 flex-wrap">
                     <span
-                      className="text-[9px] font-black uppercase px-2.5 py-0.5 rounded-lg tracking-wider border"
-                      style={{
-                        color: sevHex,
-                        backgroundColor: `${sevHex}14`,
-                        borderColor: `${sevHex}25`,
-                      }}
+                      className={cn(
+                        "text-[9px] font-black uppercase px-2.5 py-0.5 rounded-lg tracking-wider border",
+                        sevKind === "red"
+                          ? "border-rose-300/70 bg-rose-100/80 text-rose-900 dark:border-[#EA0022]/40 dark:bg-[#EA0022]/14 dark:text-[#EA0022]"
+                          : "border-amber-300/70 bg-amber-100/80 text-amber-950 dark:border-[#F29400]/40 dark:bg-[#F29400]/14 dark:text-[#F29400]",
+                      )}
                     >
                       {action.severity}
                     </span>
@@ -271,11 +286,23 @@ export function HeroOutcomePanel({
                     </p>
                   )}
                   <div
-                    className="relative rounded-lg border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-2"
-                    style={{ background: `linear-gradient(135deg, ${sevHex}06, transparent)` }}
+                    className={cn(
+                      "relative rounded-lg border px-3 py-2",
+                      "border-slate-200/80 bg-slate-50/80 dark:border-white/[0.06]",
+                      sevKind === "red"
+                        ? "dark:bg-[linear-gradient(135deg,rgba(234,0,34,0.06),transparent)]"
+                        : "dark:bg-[linear-gradient(135deg,rgba(242,148,0,0.06),transparent)]",
+                    )}
                   >
                     <p className="text-[10px] text-muted-foreground/90">
-                      <span className="font-bold" style={{ color: sevHex }}>
+                      <span
+                        className={cn(
+                          "font-bold",
+                          sevKind === "red"
+                            ? "text-rose-800 dark:text-[#EA0022]"
+                            : "text-amber-950 dark:text-[#F29400]",
+                        )}
+                      >
                         Evidence source:
                       </span>{" "}
                       {action.section}
@@ -310,17 +337,28 @@ function ValueCard({
   accent?: "neutral" | "primary" | "success";
 }) {
   const hex = VALUE_HEX[accent];
+  const kind = accentKindFromHex(hex);
   return (
     <div
-      className="relative isolate overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-3 contain-paint transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated"
-      style={{
-        background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
-      }}
+      className={cn(
+        "relative isolate overflow-hidden rounded-2xl border px-3 py-3 contain-paint transition-all duration-200 hover:shadow-elevated",
+        "border-slate-200/90 bg-card shadow-sm",
+        "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
+        "hover:border-slate-300/80 dark:hover:border-white/[0.12]",
+      )}
     >
-      <p className="relative text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/80">
+      <div
+        className="pointer-events-none absolute inset-0 hidden dark:block"
+        style={{
+          background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
+        }}
+      />
+      <p className="relative text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>
-      <p className="relative mt-1 text-xl font-black tracking-tight" style={{ color: hex }}>
+      <p
+        className={cn("relative mt-1 text-xl font-black tracking-tight", statValueTextClass(kind))}
+      >
         {value}
       </p>
       <p className="relative text-[10px] text-muted-foreground mt-0.5">{sublabel}</p>
@@ -347,21 +385,31 @@ function StatPill({
   accent: "red" | "amber" | "green" | "neutral";
 }) {
   const hex = STAT_HEX[accent];
+  const kind = accentKindFromHex(hex);
   return (
     <div
-      className="relative isolate overflow-hidden rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-4 py-3 contain-paint transition-all duration-200 hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
-      style={{
-        background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
-      }}
+      className={cn(
+        "relative isolate overflow-hidden rounded-2xl border px-4 py-3 contain-paint transition-all duration-200",
+        "border-slate-200/90 bg-card shadow-sm",
+        "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
+        "hover:border-slate-300/80 dark:hover:border-white/[0.12]",
+      )}
     >
       <div
-        className="absolute inset-x-0 top-0 h-px pointer-events-none"
+        className="pointer-events-none absolute inset-0 hidden dark:block"
+        style={{
+          background: `radial-gradient(130% 100% at 100% 0%, ${hex}38, transparent 56%), linear-gradient(145deg, ${hex}10, ${hex}04)`,
+        }}
+      />
+      <div
+        className="absolute inset-x-0 top-0 h-px pointer-events-none hidden dark:block"
         style={{ background: `linear-gradient(90deg, transparent, ${hex}28, transparent)` }}
       />
-      <div className="relative flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/80">
-        {icon} {label}
+      <div className="relative flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600 dark:text-muted-foreground/80">
+        <span className={cn("inline-flex shrink-0", statIconTextClass(kind))}>{icon}</span>
+        {label}
       </div>
-      <p className="relative text-2xl font-black mt-1 tabular-nums" style={{ color: hex }}>
+      <p className={cn("relative text-2xl font-black mt-1 tabular-nums", statValueTextClass(kind))}>
         {value}
       </p>
     </div>

@@ -5,6 +5,13 @@ import { AlertTriangle, Eye, Layers, FileSearch, BarChart3 } from "lucide-react"
 import type { AnalysisResult } from "@/lib/analyse-config";
 import { computeRiskScore } from "@/lib/risk-score";
 import { scoreToColor } from "@/lib/design-tokens";
+import { cn } from "@/lib/utils";
+import {
+  accentKindFromHex,
+  statDarkGradientOverlayStyle,
+  statIconTextClass,
+  statValueTextClass,
+} from "@/lib/stat-accent";
 
 interface ScoreDialGaugeProps {
   analysisResults: Record<string, AnalysisResult>;
@@ -697,30 +704,41 @@ function StatStrip({ analysisResults }: { analysisResults: Record<string, Analys
     <div className="relative grid grid-cols-5 gap-2.5 pt-5 border-t border-border/20">
       {items.map((item) => {
         const hex = STAT_HEX[item.color];
+        const kind = accentKindFromHex(hex);
         const Icon = item.icon;
         return (
           <div
             key={item.label}
-            className="relative overflow-hidden rounded-xl border border-slate-900/[0.10] dark:border-white/[0.06] p-3.5 transition-all duration-200 hover:scale-[1.03] hover:border-slate-900/[0.16] dark:hover:border-white/[0.12]"
-            style={{ background: `linear-gradient(145deg, ${hex}14, ${hex}06)` }}
+            className={cn(
+              "relative overflow-hidden rounded-xl border p-3.5 transition-all duration-200 hover:scale-[1.03]",
+              "border-slate-200/90 bg-card shadow-sm",
+              "dark:border-white/[0.06] dark:bg-transparent dark:shadow-none",
+              "hover:border-slate-300/90 dark:hover:border-white/[0.12]",
+            )}
           >
-            <div className="absolute inset-0 pointer-events-none">
+            <div
+              className="pointer-events-none absolute inset-0 hidden dark:block"
+              style={statDarkGradientOverlayStyle(hex)}
+            />
+            <div className="absolute inset-0 pointer-events-none hidden dark:block">
               <div
                 className="absolute -top-6 -right-6 h-16 w-16 rounded-full blur-[28px] opacity-25"
                 style={{ backgroundColor: hex }}
               />
             </div>
             <div
-              className="absolute inset-x-0 top-0 h-px"
+              className="absolute inset-x-0 top-0 h-px hidden dark:block"
               style={{ background: `linear-gradient(90deg, transparent, ${hex}30, transparent)` }}
             />
-            <Icon className="h-4 w-4 mb-1.5 relative" style={{ color: hex }} />
-            <p className="relative text-[9px] font-semibold text-muted-foreground uppercase tracking-[0.14em]">
+            <Icon className={cn("relative mb-1.5 h-4 w-4", statIconTextClass(kind))} />
+            <p className="relative text-[9px] font-semibold text-slate-600 dark:text-muted-foreground uppercase tracking-[0.14em]">
               {item.label}
             </p>
             <p
-              className="relative text-2xl font-black tabular-nums tracking-tight mt-0.5"
-              style={{ color: hex }}
+              className={cn(
+                "relative text-2xl font-black tabular-nums tracking-tight mt-0.5",
+                statValueTextClass(kind),
+              )}
             >
               {item.value}
             </p>
