@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { AnalysisResult } from "@/lib/analyse-config";
+import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { mapToAllFrameworks, type ControlMapping } from "@/lib/compliance-map";
 
 interface Props {
@@ -22,14 +22,30 @@ export function ComplianceGapAnalysis({ analysisResults, selectedFrameworks }: P
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [showAll, setShowAll] = useState(false);
 
-  const firstResult = Object.values(analysisResults)[0];
+  const mergedResult = useMemo<AnalysisResult | null>(() => {
+    const all = Object.values(analysisResults);
+    if (all.length === 0) return null;
+    if (all.length === 1) return all[0];
+    const seen = new Set<string>();
+    const merged: Finding[] = [];
+    for (const r of all) {
+      for (const f of r.findings) {
+        if (!seen.has(f.id)) {
+          seen.add(f.id);
+          merged.push(f);
+        }
+      }
+    }
+    return { ...all[0], findings: merged };
+  }, [analysisResults]);
+
   const gaps = useMemo(() => {
-    if (!firstResult) return [];
+    if (!mergedResult) return [];
     const fws =
       selectedFrameworks.length > 0
         ? selectedFrameworks
         : ["NCSC Guidelines", "Cyber Essentials / CE+"];
-    const mappings = mapToAllFrameworks(fws, firstResult);
+    const mappings = mapToAllFrameworks(fws, mergedResult);
     const items: Array<{
       framework: string;
       control: ControlMapping;

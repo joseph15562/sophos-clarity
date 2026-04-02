@@ -305,6 +305,8 @@ export interface AnalysisTabsProps {
   firecomplyCustomerKey?: string;
   /** Cloud reviewer sign-off for the linked assessment snapshot (Export Centre CSV). */
   exportReviewerSignoff?: FindingsCsvReviewerSignoff | null;
+  /** Union of per-config compliance frameworks (overrides branding.selectedFrameworks for heatmap). */
+  aggregatedSelectedFrameworks?: string[];
 }
 
 function fileLabel(f: ParsedFile) {
@@ -347,7 +349,12 @@ export function AnalysisTabs({
   trendSnapshot,
   firecomplyCustomerKey,
   exportReviewerSignoff = null,
+  aggregatedSelectedFrameworks,
 }: AnalysisTabsProps) {
+  const complianceFrameworks =
+    aggregatedSelectedFrameworks && aggregatedSelectedFrameworks.length > 0
+      ? aggregatedSelectedFrameworks
+      : branding.selectedFrameworks;
   const analysisTabBarDark = useResolvedIsDark();
   const panelRef = useRef<HTMLDivElement>(null);
   const [widgetPrefs, setWidgetPrefs] = useState<WidgetPreferences>(() => loadWidgetPreferences());
@@ -385,7 +392,7 @@ export function AnalysisTabs({
         totalFindings={totalFindings}
         fileCount={files.length}
         extractionPct={extractionPct}
-        hasComplianceFrameworks={branding.selectedFrameworks.length > 0}
+        hasComplianceFrameworks={complianceFrameworks.length > 0}
         hasReports={hasReports}
       />
 
@@ -586,7 +593,7 @@ export function AnalysisTabs({
               <ReportUpsellStrip
                 fileCount={files.length}
                 averageScore={securityStats?.score}
-                hasComplianceFrameworks={branding.selectedFrameworks.length > 0}
+                hasComplianceFrameworks={complianceFrameworks.length > 0}
                 isGuest={isGuest}
               />
 
@@ -745,7 +752,7 @@ export function AnalysisTabs({
                       totalPopulated={totalPopulated}
                       extractionPct={extractionPct}
                       aggregatedPosture={aggregatedPosture}
-                      selectedFrameworks={branding.selectedFrameworks}
+                      selectedFrameworks={complianceFrameworks}
                       onExplainFinding={onExplainFinding}
                     />
                   </SecurityWidgetShell>
@@ -1114,10 +1121,10 @@ export function AnalysisTabs({
                     title="Compliance Heatmap"
                     description="View control coverage, gaps, and readiness across NIST 800-53, ISO 27001, CIS, SOC 2, PCI DSS, HIPAA, Essential Eight, Cyber Essentials, and more."
                   />
-                  {branding.selectedFrameworks.length > 0 && (
+                  {complianceFrameworks.length > 0 && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B47AFF] font-bold">
-                      {branding.selectedFrameworks.length} framework
-                      {branding.selectedFrameworks.length !== 1 ? "s" : ""}
+                      {complianceFrameworks.length} framework
+                      {complianceFrameworks.length !== 1 ? "s" : ""}
                     </span>
                   )}
                 </div>
@@ -1149,7 +1156,7 @@ export function AnalysisTabs({
                 </div>
                 <ComplianceHeatmap
                   analysisResults={analysisResult}
-                  selectedFrameworks={branding.selectedFrameworks}
+                  selectedFrameworks={complianceFrameworks}
                 />
                 <CertificatePostureStrip analysisResults={analysisResult} />
               </div>
@@ -1171,7 +1178,7 @@ export function AnalysisTabs({
                     <Suspense fallback={<ChartSkeleton />}>
                       <CompliancePostureRing
                         analysisResults={analysisResult}
-                        selectedFrameworks={branding.selectedFrameworks}
+                        selectedFrameworks={complianceFrameworks}
                       />
                     </Suspense>
                   </SecurityWidgetShell>
@@ -1179,7 +1186,7 @@ export function AnalysisTabs({
                     <Suspense fallback={<ChartSkeleton />}>
                       <FrameworkCoverageBars
                         analysisResults={analysisResult}
-                        selectedFrameworks={branding.selectedFrameworks}
+                        selectedFrameworks={complianceFrameworks}
                       />
                     </Suspense>
                   </SecurityWidgetShell>
@@ -1191,7 +1198,7 @@ export function AnalysisTabs({
                   <Suspense fallback={<CardSkeleton />}>
                     <ComplianceGapWidget
                       analysisResults={analysisResult}
-                      selectedFrameworks={branding.selectedFrameworks}
+                      selectedFrameworks={complianceFrameworks}
                     />
                   </Suspense>
                 </SecurityWidgetShell>
@@ -1202,7 +1209,7 @@ export function AnalysisTabs({
                   <Suspense fallback={<CardSkeleton />}>
                     <EvidenceCollection
                       analysisResults={analysisResult}
-                      selectedFrameworks={branding.selectedFrameworks}
+                      selectedFrameworks={complianceFrameworks}
                     />
                   </Suspense>
                 </SecurityWidgetShell>
@@ -1323,7 +1330,7 @@ export function AnalysisTabs({
                   analysisResults={analysisResult}
                   branding={{
                     customerName: branding.customerName,
-                    selectedFrameworks: branding.selectedFrameworks,
+                    selectedFrameworks: complianceFrameworks,
                   }}
                   reviewerSignoff={exportReviewerSignoff}
                 />

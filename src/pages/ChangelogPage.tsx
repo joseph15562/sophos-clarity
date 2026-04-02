@@ -18,6 +18,19 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Compliance heatmap — multi-firewall</strong>: the
+              heatmap, posture ring, coverage bars, gap analysis, evidence collection, and control
+              map now show the <strong className="text-foreground">union</strong> of all per-config
+              compliance frameworks and merge findings from every uploaded firewall instead of only
+              the first.
+            </li>
+            <li>
+              <strong className="text-foreground">Demo &amp; agent polish</strong>: Central link
+              loading no longer logs 406 when a config has no saved firewall link; report generation
+              skips empty config sections instead of hammering the API; fleet overview tolerates
+              snapshots missing risk score details.
+            </li>
+            <li>
               <strong className="text-foreground">Demo mode</strong>: a{" "}
               <strong className="text-foreground">Demo mode</strong> button on the login page signs
               you into a fully populated workspace with 10 customers across 7 countries (UK, DE, FR,

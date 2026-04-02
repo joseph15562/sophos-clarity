@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import type { AnalysisResult } from "@/lib/analyse-config";
+import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { mapToAllFrameworks } from "@/lib/compliance-map";
 
 interface Props {
@@ -18,15 +18,31 @@ const STATUS_COLORS = {
 export function CompliancePostureRing({ analysisResults, selectedFrameworks }: Props) {
   const [selectedFramework, setSelectedFramework] = useState<string | null>(null);
 
-  const firstResult = Object.values(analysisResults)[0];
+  const mergedResult = useMemo<AnalysisResult | null>(() => {
+    const all = Object.values(analysisResults);
+    if (all.length === 0) return null;
+    if (all.length === 1) return all[0];
+    const seen = new Set<string>();
+    const merged: Finding[] = [];
+    for (const r of all) {
+      for (const f of r.findings) {
+        if (!seen.has(f.id)) {
+          seen.add(f.id);
+          merged.push(f);
+        }
+      }
+    }
+    return { ...all[0], findings: merged };
+  }, [analysisResults]);
+
   const mappings = useMemo(() => {
-    if (!firstResult) return [];
+    if (!mergedResult) return [];
     const fws =
       selectedFrameworks.length > 0
         ? selectedFrameworks
         : ["NCSC Guidelines", "Cyber Essentials / CE+"];
-    return mapToAllFrameworks(fws, firstResult);
-  }, [firstResult, selectedFrameworks]);
+    return mapToAllFrameworks(fws, mergedResult);
+  }, [mergedResult, selectedFrameworks]);
 
   const { data, compliantPct, pass, partial, fail, na } = useMemo(() => {
     const activeFramework = selectedFramework ?? mappings[0]?.framework ?? null;

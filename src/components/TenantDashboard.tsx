@@ -384,12 +384,14 @@ export function TenantDashboard() {
     }[] = [];
     for (const c of customers) {
       for (const fw of c.latestSnapshot.firewalls) {
-        const grade = fw.riskScore.grade ?? scoreToGrade(fw.riskScore.overall);
+        const rs = fw.riskScore;
+        if (!rs) continue;
+        const grade = rs.grade ?? scoreToGrade(rs.overall);
         out.push({
           label: fw.label,
           customer: c.name,
           environment: c.environment,
-          score: fw.riskScore.overall,
+          score: rs.overall,
           grade,
         });
       }
@@ -403,7 +405,7 @@ export function TenantDashboard() {
     const byCategory = new Map<string, number>();
     for (const c of customers) {
       for (const fw of c.latestSnapshot.firewalls) {
-        const cats = fw.riskScore.categories;
+        const cats = fw.riskScore?.categories;
         if (!Array.isArray(cats)) continue;
         for (const cat of cats) {
           if (cat.pct < 50) {
@@ -1171,14 +1173,15 @@ export function TenantDashboard() {
               {isExpanded && (
                 <div className="px-4 pb-4 pt-2 border-t border-border/40 space-y-2">
                   {c.latestSnapshot.firewalls.map((fw) => {
+                    const overall = fw.riskScore?.overall ?? 0;
                     const fwGrade =
-                      fw.riskScore.overall >= 90
+                      overall >= 90
                         ? "A"
-                        : fw.riskScore.overall >= 75
+                        : overall >= 75
                           ? "B"
-                          : fw.riskScore.overall >= 60
+                          : overall >= 60
                             ? "C"
-                            : fw.riskScore.overall >= 40
+                            : overall >= 40
                               ? "D"
                               : "F";
                     return (
@@ -1193,7 +1196,7 @@ export function TenantDashboard() {
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${gradeColor(fwGrade)}`}
                         >
-                          {fw.riskScore.overall}/100
+                          {overall}/100
                         </span>
                         <span className="text-[10px] text-muted-foreground/70 tabular-nums">
                           {fw.totalRules} rules
@@ -1215,7 +1218,7 @@ export function TenantDashboard() {
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {c.latestSnapshot.firewalls.flatMap((fw) =>
-                      (fw.riskScore.categories ?? [])
+                      (fw.riskScore?.categories ?? [])
                         .filter((cat) => cat.pct < 50)
                         .map((cat) => (
                           <span

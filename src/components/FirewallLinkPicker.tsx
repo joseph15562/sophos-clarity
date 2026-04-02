@@ -314,7 +314,7 @@ export function FirewallLinkPicker({
       .select("*")
       .eq("org_id", orgId)
       .eq("config_hash", configHash)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) {
           void getCachedFirewalls(orgId, data.central_tenant_id).then(async (fws) => {

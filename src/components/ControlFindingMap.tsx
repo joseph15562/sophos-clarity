@@ -31,11 +31,27 @@ export function ControlFindingMap({ analysisResults, selectedFrameworks }: Props
   const [collapsedFrameworks, setCollapsedFrameworks] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<FilterStatus>("all");
 
-  const firstResult = Object.values(analysisResults)[0];
+  const mergedResult = useMemo<AnalysisResult | null>(() => {
+    const all = Object.values(analysisResults);
+    if (all.length === 0) return null;
+    if (all.length === 1) return all[0];
+    const seen = new Set<string>();
+    const merged: Finding[] = [];
+    for (const r of all) {
+      for (const f of r.findings) {
+        if (!seen.has(f.id)) {
+          seen.add(f.id);
+          merged.push(f);
+        }
+      }
+    }
+    return { ...all[0], findings: merged };
+  }, [analysisResults]);
+
   const mappings = useMemo(() => {
-    if (!firstResult || selectedFrameworks.length === 0) return [];
-    return mapToAllFrameworks(selectedFrameworks, firstResult);
-  }, [firstResult, selectedFrameworks]);
+    if (!mergedResult || selectedFrameworks.length === 0) return [];
+    return mapToAllFrameworks(selectedFrameworks, mergedResult);
+  }, [mergedResult, selectedFrameworks]);
 
   const findingsById = useMemo(() => {
     const map = new Map<string, Finding>();

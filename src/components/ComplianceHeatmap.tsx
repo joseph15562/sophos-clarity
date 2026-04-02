@@ -78,15 +78,31 @@ export function ComplianceHeatmap({ analysisResults, selectedFrameworks }: Props
   } | null>(null);
   const [showGapsOnly, setShowGapsOnly] = useState(false);
 
-  const firstResult = Object.values(analysisResults)[0];
+  const mergedResult = useMemo<AnalysisResult | null>(() => {
+    const all = Object.values(analysisResults);
+    if (all.length === 0) return null;
+    if (all.length === 1) return all[0];
+    const seen = new Set<string>();
+    const merged: Finding[] = [];
+    for (const r of all) {
+      for (const f of r.findings) {
+        if (!seen.has(f.id)) {
+          seen.add(f.id);
+          merged.push(f);
+        }
+      }
+    }
+    return { ...all[0], findings: merged };
+  }, [analysisResults]);
+
   const mappings = useMemo<FrameworkMapping[]>(() => {
-    if (!firstResult) return [];
+    if (!mergedResult) return [];
     const fws =
       selectedFrameworks.length > 0
         ? selectedFrameworks
         : ["NCSC Guidelines", "Cyber Essentials / CE+"];
-    return mapToAllFrameworks(fws, firstResult);
-  }, [firstResult, selectedFrameworks]);
+    return mapToAllFrameworks(fws, mergedResult);
+  }, [mergedResult, selectedFrameworks]);
 
   const findingsById = useMemo(() => {
     const map = new Map<string, Finding>();

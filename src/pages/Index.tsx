@@ -37,6 +37,8 @@ import type {
 import {
   createScopeFromBranding,
   deserializeScope,
+  effectiveFrameworks,
+  mergeScopeWithBrandingForEffective,
   scopeFromFirewallLink,
   seedExplicitFrameworksForLinkedScope,
   serializeScope,
@@ -248,6 +250,21 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     }
     return m;
   }, [files, configComplianceScopes]);
+
+  const aggregatedSelectedFrameworks = useMemo(() => {
+    if (files.length === 0) return branding.selectedFrameworks;
+    const seen = new Set<string>();
+    for (const f of files) {
+      const scope = configComplianceScopes[f.id];
+      if (!scope) continue;
+      const fws =
+        scope.explicitSelectedFrameworks ??
+        effectiveFrameworks(mergeScopeWithBrandingForEffective(branding, scope));
+      for (const fw of fws) seen.add(fw);
+    }
+    if (seen.size === 0) return branding.selectedFrameworks;
+    return [...seen];
+  }, [files, configComplianceScopes, branding]);
 
   const firewallAnalysisOpts = useMemo(
     () => ({
@@ -1901,6 +1918,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
                       : undefined
                   }
                   exportReviewerSignoff={exportReviewerSignoff}
+                  aggregatedSelectedFrameworks={aggregatedSelectedFrameworks}
                 />
               </div>
             )}

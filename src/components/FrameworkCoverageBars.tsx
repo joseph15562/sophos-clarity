@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AnalysisResult } from "@/lib/analyse-config";
+import type { AnalysisResult, Finding } from "@/lib/analyse-config";
 import { mapToAllFrameworks } from "@/lib/compliance-map";
 
 interface Props {
@@ -14,10 +14,26 @@ function barColor(pct: number): string {
 }
 
 export function FrameworkCoverageBars({ analysisResults, selectedFrameworks }: Props) {
-  const firstResult = Object.values(analysisResults)[0];
+  const mergedResult = useMemo<AnalysisResult | null>(() => {
+    const all = Object.values(analysisResults);
+    if (all.length === 0) return null;
+    if (all.length === 1) return all[0];
+    const seen = new Set<string>();
+    const merged: Finding[] = [];
+    for (const r of all) {
+      for (const f of r.findings) {
+        if (!seen.has(f.id)) {
+          seen.add(f.id);
+          merged.push(f);
+        }
+      }
+    }
+    return { ...all[0], findings: merged };
+  }, [analysisResults]);
+
   const coverage = useMemo(() => {
-    if (!firstResult || selectedFrameworks.length === 0) return [];
-    const mappings = mapToAllFrameworks(selectedFrameworks, firstResult);
+    if (!mergedResult || selectedFrameworks.length === 0) return [];
+    const mappings = mapToAllFrameworks(selectedFrameworks, mergedResult);
     return mappings
       .map((m) => {
         const applicable = m.summary.pass + m.summary.partial + m.summary.fail;
@@ -25,7 +41,7 @@ export function FrameworkCoverageBars({ analysisResults, selectedFrameworks }: P
         return { framework: m.framework, pct, color: barColor(pct) };
       })
       .sort((a, b) => b.pct - a.pct);
-  }, [firstResult, selectedFrameworks]);
+  }, [mergedResult, selectedFrameworks]);
 
   const shellClass =
     "relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] p-6 sm:p-8 shadow-card backdrop-blur-sm transition-all duration-200 hover:shadow-elevated";

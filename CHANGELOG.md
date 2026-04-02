@@ -6,7 +6,15 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ## [Unreleased]
 
+### Fixed
+
+- **Demo / agent assessments:** `firewall_config_links` queries use `maybeSingle()` so “no link yet” no longer surfaces as HTTP 406 in the browser console.
+- **Report generation:** skip calling `parse-config` when extracted sections are empty (avoids repeated 400s and retries for agent-only or demo rows without a real HTML export).
+- **Management — fleet overview:** tolerate missing `riskScore` or `categories` on snapshot firewalls so the drawer does not crash on sparse demo data.
+
 ### Changed
+
+- **Assess — compliance (multi-firewall):** union of per-upload compliance frameworks is passed into analysis tabs; heatmap, posture ring, coverage bars, gap analysis, evidence collection, and control–finding map merge deduplicated findings from all loaded configs instead of only the first file’s analysis.
 
 - **Assess — Sophos Central:** per-upload **Link to Sophos Central** is full width with a lighter outline-style trigger; expanded picker keeps roomier padding, `h-10` inputs, taller scroll list, and larger row typography.
 

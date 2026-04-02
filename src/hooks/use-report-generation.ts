@@ -265,6 +265,10 @@ export function useReportGeneration(
         centralEnrichment?: CentralEnrichment;
       },
     ) => {
+      if (!sections || Object.keys(sections).length === 0) {
+        console.warn(`[report] Skipping ${reportId}: no extracted sections available`);
+        return false;
+      }
       setLoadingReportIds((prev) => new Set(prev).add(reportId));
       setFailedReportIds((prev) => {
         const n = new Set(prev);
