@@ -35,12 +35,14 @@ import type {
   SerializableConfigComplianceScope,
 } from "@/lib/config-compliance-scope";
 import {
+  createScopeFromBranding,
   deserializeScope,
   scopeFromFirewallLink,
+  seedExplicitFrameworksForLinkedScope,
   serializeScope,
 } from "@/lib/config-compliance-scope";
 import type { FirewallLink } from "@/components/FirewallLinkPicker";
-import type { ComplianceFramework } from "@/lib/compliance-context-options";
+import { brandingPatchFromComplianceGeo } from "@/lib/compliance-context-options";
 import { useAuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { invalidateFleetRelatedQueries } from "@/lib/invalidate-org-queries";
@@ -162,6 +164,23 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [configComplianceScopes, setConfigComplianceScopes] = useState<
     Record<string, ConfigComplianceScope>
   >({});
+
+  /** Every upload gets a scope row (frameworks + web filter); backfills agent loads and legacy sessions. */
+  useEffect(() => {
+    if (files.length === 0) return;
+    setConfigComplianceScopes((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const f of files) {
+        if (!next[f.id]) {
+          next[f.id] = createScopeFromBranding(branding);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [files, branding]);
+
   const [savingReports, setSavingReports] = useState(false);
   const [reportsSaved, setReportsSaved] = useState(false);
   const [savedReportsTrigger, setSavedReportsTrigger] = useState(0);
@@ -221,17 +240,28 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     return () => window.removeEventListener(OPEN_MANAGEMENT_EVENT, onOpenManagement);
   }, []);
 
+  const webFilterModeByConfigId = useMemo(() => {
+    const m: Record<string, NonNullable<ConfigComplianceScope["webFilterComplianceMode"]>> = {};
+    for (const f of files) {
+      const mode = configComplianceScopes[f.id]?.webFilterComplianceMode;
+      if (mode !== undefined) m[f.id] = mode;
+    }
+    return m;
+  }, [files, configComplianceScopes]);
+
   const firewallAnalysisOpts = useMemo(
     () => ({
       dpiExemptZones,
       dpiExemptNetworks,
       webFilterComplianceMode: branding.webFilterComplianceMode,
+      webFilterModeByConfigId,
       webFilterExemptRuleNames: branding.webFilterExemptRuleNames,
     }),
     [
       dpiExemptZones,
       dpiExemptNetworks,
       branding.webFilterComplianceMode,
+      webFilterModeByConfigId,
       branding.webFilterExemptRuleNames,
     ],
   );
@@ -831,47 +861,70 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
 
   const handleFirewallScopeChange = useCallback(
     (configId: string, link: FirewallLink | null) => {
+      const builtPreview = link ? scopeFromFirewallLink(link, []) : null;
+
       setConfigComplianceScopes((prev) => {
         const next = { ...prev };
         if (!link) {
-          delete next[configId];
+          const had = next[configId];
+          if (had) {
+            next[configId] = { ...had, tenantCustomerDisplayName: undefined };
+          }
           return next;
         }
-        const preserved = prev[configId]?.additionalFrameworks;
-        const built = scopeFromFirewallLink(link, preserved);
+        const built = scopeFromFirewallLink(link, []);
         if (!built) {
           delete next[configId];
           return next;
         }
-        next[configId] = built;
+        const seed = seedExplicitFrameworksForLinkedScope(branding, built);
+        next[configId] = {
+          ...built,
+          additionalFrameworks: [],
+          explicitSelectedFrameworks: [...seed],
+          webFilterComplianceMode: branding.webFilterComplianceMode ?? "strict",
+        };
         return next;
       });
-      if (link) {
-        const tenantLabel = link.tenantCustomerDisplayName?.trim() ?? "";
-        if (tenantLabel) {
-          setBranding((b) => {
-            if (files.length <= 1 || !b.customerName?.trim()) {
-              return { ...b, customerName: tenantLabel };
-            }
-            return b;
-          });
+
+      if (!link || !builtPreview) return;
+
+      const tenantLabel = link.tenantCustomerDisplayName?.trim() ?? "";
+      const hasGeoFromLink = !!(builtPreview.environment?.trim() || builtPreview.country?.trim());
+
+      setBranding((b) => {
+        let next = { ...b };
+        if (tenantLabel && (files.length <= 1 || !b.customerName?.trim())) {
+          next = { ...next, customerName: tenantLabel };
         }
-      }
+        const globalGeoEmpty = !b.environment?.trim() && !b.country?.trim();
+        const shouldApplyGeo = hasGeoFromLink && (files.length <= 1 || globalGeoEmpty);
+        if (!shouldApplyGeo) return next;
+
+        const patch = brandingPatchFromComplianceGeo(
+          builtPreview.environment,
+          builtPreview.country,
+          builtPreview.state,
+          { existingState: b.state },
+        );
+        return {
+          ...next,
+          environment: patch.environment || next.environment,
+          country: patch.country || next.country,
+          state: patch.state,
+          selectedFrameworks: patch.selectedFrameworks,
+        };
+      });
     },
-    [files.length],
+    [branding, files.length],
   );
 
-  const handleConfigAdditionalFrameworksChange = useCallback(
-    (configId: string, frameworks: ComplianceFramework[]) => {
+  const handleConfigCompliancePatch = useCallback(
+    (configId: string, patch: Partial<ConfigComplianceScope>) => {
       setConfigComplianceScopes((prev) => {
         const existing = prev[configId];
-        const base: ConfigComplianceScope = existing ?? {
-          country: "",
-          state: "",
-          environment: "",
-          additionalFrameworks: [],
-        };
-        return { ...prev, [configId]: { ...base, additionalFrameworks: frameworks } };
+        if (!existing) return prev;
+        return { ...prev, [configId]: { ...existing, ...patch } };
       });
     },
     [],
@@ -958,6 +1011,15 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       await new Promise((r) => setTimeout(r, 0));
       const allParsed = [...existingParsed, ...parsed];
       setFiles(allParsed);
+      setConfigComplianceScopes((prev) => {
+        const next = { ...prev };
+        for (const f of allParsed) {
+          if (!next[f.id]) {
+            next[f.id] = createScopeFromBranding(branding);
+          }
+        }
+        return next;
+      });
       setParsingProgress(null);
       if (reports.length > 0) {
         setReports([]);
@@ -968,7 +1030,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         logAudit(org.id, "config.uploaded", "config", "", { count: toProcess.length });
       }
     },
-    [files, reports.length, setReports, setActiveReportId, org?.id, isGuest, queryClient],
+    [files, reports.length, setReports, setActiveReportId, org?.id, isGuest, queryClient, branding],
   );
 
   const handleLoadAgentAssessment = useCallback(
@@ -1696,7 +1758,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               setBranding={setBranding}
               configComplianceScopes={configComplianceScopes}
               onFirewallScopeChange={handleFirewallScopeChange}
-              onConfigAdditionalFrameworksChange={handleConfigAdditionalFrameworksChange}
+              onConfigCompliancePatch={handleConfigCompliancePatch}
               analysisResult={analysisResults}
               configMetas={configMetas}
               hasFiles={hasFiles}
@@ -1956,7 +2018,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       />
 
       {/* Management Drawer */}
-      <ErrorBoundary fallbackTitle="Management panel failed to load">
+      <ErrorBoundary
+        fallbackTitle="Management panel failed to load"
+        resetKeys={[drawerOpen]}
+        onError={() => setDrawerOpen(false)}
+      >
         <ManagementDrawer
           open={drawerOpen}
           onClose={() => {

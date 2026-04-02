@@ -55,7 +55,7 @@ function minimalUploadProps() {
     totalFindings: 0,
     configComplianceScopes: {},
     onFirewallScopeChange: vi.fn(),
-    onConfigAdditionalFrameworksChange: vi.fn(),
+    onConfigCompliancePatch: vi.fn(),
   };
 }
 

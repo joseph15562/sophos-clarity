@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 interface Props {
   children: ReactNode;
   fallbackTitle?: string;
+  /** When any value changes while in error state, the boundary auto-resets. */
+  resetKeys?: unknown[];
+  /** Fires once when an error is caught (useful for closing drawers / resetting parent state). */
+  onError?: (error: Error, info: ErrorInfo) => void;
 }
 
 interface State {
@@ -33,8 +37,18 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && this.props.resetKeys) {
+      const prev = prevProps.resetKeys ?? [];
+      if (this.props.resetKeys.some((k, i) => k !== prev[i])) {
+        this.setState({ hasError: false, error: null });
+      }
+    }
+  }
+
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.warn("[ErrorBoundary]", error.message, info.componentStack);
+    this.props.onError?.(error, info);
   }
 
   handleRetry = () => {

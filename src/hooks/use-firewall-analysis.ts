@@ -14,25 +14,37 @@ type ParsedFile = {
 export type FirewallAnalysisHookOptions = {
   dpiExemptZones?: string[];
   dpiExemptNetworks?: string[];
+  /** @deprecated Prefer webFilterModeByConfigId; used when no per-file entry */
   webFilterComplianceMode?: WebFilterComplianceMode;
+  /** Per upload id (`ParsedFile.id`); overrides webFilterComplianceMode when set */
+  webFilterModeByConfigId?: Record<string, WebFilterComplianceMode>;
   webFilterExemptRuleNames?: string[];
 };
 
 export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnalysisHookOptions) {
   const analysisResults = useMemo<Record<string, AnalysisResult>>(() => {
     const results: Record<string, AnalysisResult> = {};
+    const fallback = hookOpts?.webFilterComplianceMode ?? "strict";
     for (const f of files) {
       const label = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
+      const wfMode = hookOpts?.webFilterModeByConfigId?.[f.id] ?? fallback;
       results[label] = analyseConfig(f.extractedData, {
         centralLinked: !!f.centralEnrichment,
         dpiExemptZones: hookOpts?.dpiExemptZones,
         dpiExemptNetworks: hookOpts?.dpiExemptNetworks,
-        webFilterComplianceMode: hookOpts?.webFilterComplianceMode,
+        webFilterComplianceMode: wfMode,
         webFilterExemptRuleNames: hookOpts?.webFilterExemptRuleNames,
       });
     }
     return results;
-  }, [files, hookOpts?.dpiExemptZones, hookOpts?.dpiExemptNetworks, hookOpts?.webFilterComplianceMode, hookOpts?.webFilterExemptRuleNames]);
+  }, [
+    files,
+    hookOpts?.dpiExemptZones,
+    hookOpts?.dpiExemptNetworks,
+    hookOpts?.webFilterComplianceMode,
+    hookOpts?.webFilterModeByConfigId,
+    hookOpts?.webFilterExemptRuleNames,
+  ]);
 
   const totalFindings = useMemo(
     () => Object.values(analysisResults).reduce((sum, r) => sum + r.findings.length, 0),
@@ -54,12 +66,27 @@ export function useFirewallAnalysis(files: ParsedFile[], hookOpts?: FirewallAnal
 
   const aggregatedPosture = useMemo<InspectionPosture>(() => {
     const agg: InspectionPosture = {
-      totalWanRules: 0, enabledWanRules: 0, disabledWanRules: 0,
-      webFilterableRules: 0, withWebFilter: 0, withoutWebFilter: 0,
-      withAppControl: 0, withIps: 0, withSslInspection: 0,
-      sslDecryptRules: 0, sslExclusionRules: 0, sslRules: [], sslUncoveredZones: [], sslUncoveredNetworks: [],
-      allWanSourceZones: [], allWanSourceNetworks: [],
-      wanRuleNames: [], wanWebServiceRuleNames: [], wanMissingWebFilterRuleNames: [], totalDisabledRules: 0, dpiEngineEnabled: false,
+      totalWanRules: 0,
+      enabledWanRules: 0,
+      disabledWanRules: 0,
+      webFilterableRules: 0,
+      withWebFilter: 0,
+      withoutWebFilter: 0,
+      withAppControl: 0,
+      withIps: 0,
+      withSslInspection: 0,
+      sslDecryptRules: 0,
+      sslExclusionRules: 0,
+      sslRules: [],
+      sslUncoveredZones: [],
+      sslUncoveredNetworks: [],
+      allWanSourceZones: [],
+      allWanSourceNetworks: [],
+      wanRuleNames: [],
+      wanWebServiceRuleNames: [],
+      wanMissingWebFilterRuleNames: [],
+      totalDisabledRules: 0,
+      dpiEngineEnabled: false,
     };
     for (const r of Object.values(analysisResults)) {
       const ip = r.inspectionPosture;

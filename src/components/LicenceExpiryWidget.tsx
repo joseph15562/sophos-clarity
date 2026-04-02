@@ -134,15 +134,17 @@ export function LicenceExpiryWidget() {
         const matched = new Set<string>();
         for (let i = 0; i < fws.length; i++) {
           if (matched.has(fws[i].serialNumber)) continue;
+          const aLicenses = fws[i].licenses ?? [];
           const aCodes = new Set(
-            fws[i].licenses.map((l) => l.product?.code ?? l.product?.genericCode ?? ""),
+            aLicenses.map((l) => l.product?.code ?? l.product?.genericCode ?? ""),
           );
           for (let j = i + 1; j < fws.length; j++) {
             if (matched.has(fws[j].serialNumber)) continue;
-            const overlap = fws[j].licenses.filter((l) =>
+            const bLicenses = fws[j].licenses ?? [];
+            const overlap = bLicenses.filter((l) =>
               aCodes.has(l.product?.code ?? l.product?.genericCode ?? ""),
             ).length;
-            const smaller = Math.min(fws[i].licenses.length, fws[j].licenses.length);
+            const smaller = Math.min(aLicenses.length, bLicenses.length);
             if (overlap >= 2 && overlap >= smaller * 0.5) {
               const groupId = `ha-lic:${fws[i].serialNumber}`;
               serialToGroup.set(fws[i].serialNumber, groupId);
@@ -161,7 +163,7 @@ export function LicenceExpiryWidget() {
   const flattened = useMemo<FlattenedLicence[]>(() => {
     const items: FlattenedLicence[] = [];
     for (const fw of firewallLicences) {
-      for (const sub of fw.licenses) {
+      for (const sub of fw.licenses ?? []) {
         const days = sub.endDate
           ? Math.ceil((new Date(sub.endDate).getTime() - Date.now()) / 86_400_000)
           : sub.perpetual

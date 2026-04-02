@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
-import { LogIn, UserPlus, ArrowRight, AlertCircle, Fingerprint } from "lucide-react";
+import { LogIn, UserPlus, ArrowRight, AlertCircle, Fingerprint, Play } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { AuthSignUpResult } from "@/hooks/use-auth";
@@ -11,9 +11,10 @@ interface Props {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>;
   onSignUp: (email: string, password: string) => Promise<AuthSignUpResult>;
   onSkip: () => void;
+  onEnterDemo?: () => Promise<{ error: string | null }>;
 }
 
-export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
+export function AuthGate({ onSignIn, onSignUp, onSkip, onEnterDemo }: Props) {
   const nextFetchSignal = useAbortableInFlight();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -24,6 +25,7 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
   const [signupSuccess, setSignupSuccess] = useState(false);
 
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handlePasskeyLogin = useCallback(async () => {
     if (!email.trim()) {
@@ -377,6 +379,37 @@ export function AuthGate({ onSignIn, onSignUp, onSkip }: Props) {
             </span>
           </div>
         </div>
+
+        {onEnterDemo && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={async () => {
+              setError(null);
+              setDemoLoading(true);
+              try {
+                const result = await onEnterDemo();
+                if (result.error) {
+                  setError(result.error);
+                  toast.error(result.error);
+                }
+              } finally {
+                setDemoLoading(false);
+              }
+            }}
+            disabled={demoLoading}
+            className="w-full gap-2 border-brand-accent/20 text-brand-accent hover:bg-brand-accent/5"
+          >
+            {demoLoading ? (
+              <span className="animate-spin h-4 w-4 border-2 border-brand-accent/30 border-t-brand-accent rounded-full" />
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                Demo mode
+              </>
+            )}
+          </Button>
+        )}
 
         <div className="rounded-2xl border border-dashed border-border bg-background/50 px-4 py-3 text-center">
           <button

@@ -15,15 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileUpload, UploadedFile } from "@/components/FileUpload";
 import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
-import type { ConfigComplianceScope } from "@/lib/config-compliance-scope";
-import type { ComplianceFramework } from "@/lib/compliance-context-options";
+import { filesHaveDifferingGeo, type ConfigComplianceScope } from "@/lib/config-compliance-scope";
 import type { FirewallLink } from "@/components/FirewallLinkPicker";
 import { ReportCards } from "@/components/ReportCards";
 import { AgentFleetPanel } from "@/components/AgentFleetPanel";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { OrgInfo } from "@/hooks/use-auth";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { FirewallLinker } from "@/components/FirewallLinker";
 import { WelcomeBackCard } from "@/components/WelcomeBackCard";
 import { TrustStrip } from "@/components/TrustStrip";
@@ -88,7 +87,7 @@ export interface UploadSectionProps {
   workbenchRef?: React.RefObject<HTMLDivElement | null>;
   configComplianceScopes: Record<string, ConfigComplianceScope>;
   onFirewallScopeChange: (configId: string, link: FirewallLink | null) => void;
-  onConfigAdditionalFrameworksChange: (configId: string, frameworks: ComplianceFramework[]) => void;
+  onConfigCompliancePatch: (configId: string, patch: Partial<ConfigComplianceScope>) => void;
 }
 
 export function UploadSection({
@@ -129,8 +128,12 @@ export function UploadSection({
   workbenchRef,
   configComplianceScopes,
   onFirewallScopeChange,
-  onConfigAdditionalFrameworksChange,
+  onConfigCompliancePatch,
 }: UploadSectionProps) {
+  const mixedJurisdiction = useMemo(
+    () => filesHaveDifferingGeo(files, configComplianceScopes, branding),
+    [files, configComplianceScopes, branding],
+  );
   return (
     <>
       {/* Landing hero */}
@@ -383,7 +386,7 @@ export function UploadSection({
           }}
           branding={branding}
           configComplianceScopes={configComplianceScopes}
-          onConfigAdditionalFrameworksChange={onConfigAdditionalFrameworksChange}
+          onConfigCompliancePatch={onConfigCompliancePatch}
         />
 
         {/* Connected firewalls — add from agent fleet (authenticated only) */}
@@ -613,6 +616,7 @@ export function UploadSection({
                     branding={branding}
                     onChange={setBranding}
                     multiConfig={files.length > 1}
+                    mixedJurisdiction={mixedJurisdiction}
                   />
                 </CardContent>
               </Card>

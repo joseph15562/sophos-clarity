@@ -510,6 +510,11 @@ serve(async (req) => {
                 }
               }
             }
+            const rowWf = row.webFilterComplianceMode;
+            if (rowWf === "informational") {
+              complianceContext +=
+                "- **Web filter compliance mode**: Informational (softer regulatory framing for missing WAN web filtering on this firewall unless a selected framework explicitly requires it).\n";
+            }
             complianceContext += "\n";
           }
         } else if (compliance && firewallLabels && firewallLabels.length > 1) {

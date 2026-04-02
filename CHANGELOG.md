@@ -6,9 +6,19 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ## [Unreleased]
 
+### Changed
+
+- **Assess — Sophos Central:** per-upload **Link to Sophos Central** is full width with a lighter outline-style trigger; expanded picker keeps roomier padding, `h-10` inputs, taller scroll list, and larger row typography.
+
+- **Assess — Assessment Context:** **Report identity** and **Customer name** are combined in one column; **environment** and **country** dropdowns removed from this card (set per upload under **Compliance (this firewall)** or via Central / Fleet defaults). Directory customer selection still hydrates branding geo fields in the background when available.
+
+- **Assess — compliance per upload:** removed the global **Compliance alignment** card; each config row has **Compliance (this firewall)** (web filter mode + framework grid). Every upload gets a `configComplianceScopes` entry seeded from Customer context; deterministic analysis and AI reports use per-file scope (and `webFilterComplianceMode` on scope). Unlinking clears the Central tenant label on the scope but no longer deletes the row. Multi-device compliance prompts include per-firewall web-filter mode when set to informational. Per-row **Scope for this export** (environment, country, US state) shows when the file is unlinked or the Central link did not populate both sector and country on the scope; otherwise chips stay above the link control only.
+
 ### Added
 
-- **Assess — per-config compliance scope:** `configComplianceScopes` keyed by upload id; Central link updates one config only; optional per-file additional frameworks; `parse-config` accepts `perFirewallComplianceContext` and `jurisdictionSummary` for multi-jurisdiction compliance/executive reports; session persistence includes the map.
+- **Assess — Customer Context:** directory selection, `?customer=` (after directory loads), and Central firewall links hydrate global environment, country, and default frameworks when still empty (single-file from link; multi-file only while global geo unset).
+
+- **Assess — per-config compliance scope:** `configComplianceScopes` keyed by upload id; Central link updates one config only; **`explicitSelectedFrameworks`** per linked file (full grid under the row, seeded on link); legacy sessions without explicit still use implicit geo + `additionalFrameworks`; `parse-config` accepts `perFirewallComplianceContext` and `jurisdictionSummary` for multi-jurisdiction compliance/executive reports; session persistence includes the map.
 
 - **Trust page — Legal & questionnaires:** security-review checklist, SOC2/ISO control mapping stub table, data-flow diagram placeholders (with DATA-PRIVACY link), questionnaire topic matrix, legal document link stubs, procurement callout; **Subprocessors** section id **`#trust-subprocessors`** for in-page links.
 

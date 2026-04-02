@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { ReportEntry } from "@/components/DocumentPreview";
 import type { BrandingData } from "@/components/BrandingSetup";
+import type { WebFilterComplianceMode } from "@/lib/analysis/types";
 import type { ExtractedSections } from "@/lib/extract-sections";
 import { streamConfigParse, type CentralEnrichment } from "@/lib/stream-ai";
 import { toast } from "sonner";
@@ -116,6 +117,40 @@ function displayLabelForFile(
   return hostname && hostname.trim() ? hostname.trim() : lookupKey;
 }
 
+function resolveWebFilterComplianceModeForStream(
+  reportId: string,
+  files: ParsedFile[],
+  scopeMap: Record<string, ConfigComplianceScope>,
+  branding: BrandingData,
+  opts?: { firewallLabels?: string[]; compliance?: boolean; executive?: boolean },
+): WebFilterComplianceMode {
+  const fallback = branding.webFilterComplianceMode ?? "strict";
+
+  if (
+    reportId.startsWith("report-") &&
+    reportId !== "report-executive" &&
+    reportId !== "report-compliance" &&
+    reportId !== "report-executive-one-pager"
+  ) {
+    const fileId = reportId.slice("report-".length);
+    return scopeMap[fileId]?.webFilterComplianceMode ?? fallback;
+  }
+
+  const multi = (opts?.firewallLabels?.length ?? 0) > 1;
+  if (multi && (opts?.compliance === true || opts?.executive === true)) {
+    const anyInfo = files.some(
+      (f) => (scopeMap[f.id]?.webFilterComplianceMode ?? fallback) === "informational",
+    );
+    return anyInfo ? "informational" : "strict";
+  }
+
+  const first = files[0];
+  if (first) {
+    return scopeMap[first.id]?.webFilterComplianceMode ?? fallback;
+  }
+  return fallback;
+}
+
 function buildParseStreamOptions(
   reportId: string,
   files: ParsedFile[],
@@ -172,10 +207,13 @@ function buildParseStreamOptions(
       const lookupKey = f.label || f.fileName.replace(/\.(html|htm)$/i, "");
       const displayLabel = displayLabelForFile(f, lookupKey, analysisResults);
       const sf = resolveStreamFieldsForConfig(branding, scopeMap[f.id]);
+      const wf =
+        scopeMap[f.id]?.webFilterComplianceMode ?? branding.webFilterComplianceMode ?? "strict";
       per[displayLabel] = {
         environment: sf.environment,
         country: sf.country,
         selectedFrameworks: sf.selectedFrameworks,
+        webFilterComplianceMode: wf,
       };
     }
     const differing = filesHaveDifferingGeo(files, scopeMap, branding);
@@ -286,7 +324,17 @@ export function useReportGeneration(
             executive: opts?.executive,
             firewallLabels: opts?.firewallLabels,
             compliance: opts?.compliance,
-            webFilterComplianceMode: branding.webFilterComplianceMode,
+            webFilterComplianceMode: resolveWebFilterComplianceModeForStream(
+              reportId,
+              files,
+              configComplianceScopes,
+              branding,
+              {
+                firewallLabels: opts?.firewallLabels,
+                compliance: opts?.compliance,
+                executive: opts?.executive,
+              },
+            ),
             centralEnrichment: opts?.centralEnrichment,
             perFirewallComplianceContext,
             jurisdictionSummary,

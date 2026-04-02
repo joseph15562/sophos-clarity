@@ -20,6 +20,7 @@ import {
   resolveLinkedTenantCustomerName,
 } from "@/lib/linked-firewall-compliance";
 import { countryFlagEmoji } from "@/lib/compliance-context-options";
+import { cn } from "@/lib/utils";
 
 const linkedFwComplianceKey = (orgId: string, fwId: string, tenantId: string, orgName: string) =>
   ["linkedFwCompliance", orgId, fwId, tenantId, orgName] as const;
@@ -83,7 +84,7 @@ function PickerRowFleetLine({
 }) {
   if (!listFleetReady) {
     return (
-      <span className="text-[8px] text-muted-foreground/55 mt-0.5 tabular-nums" aria-hidden>
+      <span className="text-[10px] text-muted-foreground/55 mt-1 tabular-nums" aria-hidden>
         …
       </span>
     );
@@ -94,8 +95,8 @@ function PickerRowFleetLine({
   const usState = country === "United States" ? (row?.state ?? "").trim() : "";
   const flag = country ? countryFlagEmoji(country) : "";
   return (
-    <span className="text-[8px] text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
-      <span className="rounded border border-[#008F69]/20 dark:border-[#00F2B3]/15 bg-[#008F69]/[0.06] dark:bg-[#00F2B3]/5 px-1 py-px font-medium text-foreground/80">
+    <span className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+      <span className="rounded-md border border-[#008F69]/20 dark:border-[#00F2B3]/15 bg-[#008F69]/[0.06] dark:bg-[#00F2B3]/5 px-1.5 py-0.5 font-medium text-foreground/85">
         {env}
       </span>
       <span className="text-muted-foreground/60">·</span>
@@ -288,10 +289,18 @@ export function FirewallLinkPicker({
   useEffect(() => {
     if (!orgId || isGuest) return;
     getCachedTenants(orgId)
-      .then((t) => {
+      .then(async (t) => {
         setTenants(t);
         if (t.length === 1 && !selectedTenantId) {
           setSelectedTenantId(t[0].id);
+        } else if (t.length > 1 && !selectedTenantId && configSerialNumber && !disableAutoLink) {
+          const allFws = await getCachedFirewalls(orgId);
+          const match = allFws.find(
+            (f) => f.serialNumber.toLowerCase() === configSerialNumber.toLowerCase(),
+          );
+          if (match) {
+            setSelectedTenantId(match.centralTenantId);
+          }
         }
       })
       .catch(() => {});
@@ -602,27 +611,43 @@ export function FirewallLinkPicker({
   }
 
   return (
-    <div className="mt-1">
+    <div className="mt-2 w-full space-y-3">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-brand-accent/30 dark:border-[#00EDFF]/30 bg-brand-accent/[0.06] dark:bg-[#00EDFF]/[0.08] px-2 py-1 text-[11px] font-semibold tracking-tight text-brand-accent hover:bg-brand-accent/10 dark:hover:bg-[#00EDFF]/12 transition-colors"
+        aria-expanded={open}
+        className={cn(
+          "flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-display font-semibold tracking-tight transition-colors",
+          "border-brand-accent/35 bg-brand-accent/[0.06] text-brand-accent",
+          "hover:bg-brand-accent/10 hover:border-brand-accent/45",
+          "dark:border-[#00EDFF]/25 dark:bg-[#00EDFF]/[0.06] dark:text-[#7dd3fc] dark:hover:bg-[#00EDFF]/10",
+          open &&
+            "border-brand-accent/50 bg-brand-accent/10 dark:border-[#00EDFF]/35 dark:bg-[#00EDFF]/12",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        )}
       >
-        <Link2 className="h-3 w-3" />
-        Link to Central Firewall
-        <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
+        <Link2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+        <span>Link to Sophos Central</span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 opacity-80 transition-transform duration-200",
+            open && "rotate-180",
+          )}
+          aria-hidden
+        />
       </button>
 
       {open && (
-        <div className="mt-2 rounded-xl border border-border/50 bg-card p-3 space-y-2.5 shadow-sm">
+        <div className="rounded-xl border border-border/60 bg-card p-4 sm:p-5 space-y-4 shadow-md">
           {/* Tenant selector */}
-          <div className="space-y-1">
-            <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">
               Tenant
             </label>
             <select
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
-              className="w-full rounded-xl border border-border/50 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+              className="w-full rounded-xl border border-border/50 bg-background/80 px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
             >
               <option value="">Select tenant…</option>
               {tenants.map((t) => (
@@ -636,23 +661,24 @@ export function FirewallLinkPicker({
           {firewalls.length > 0 && (
             <>
               {/* Manual serial input */}
-              <div className="flex gap-1.5 items-end">
-                <div className="flex-1 space-y-1">
-                  <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Serial Number (optional)
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">
+                    Serial number (optional)
                   </label>
                   <Input
                     value={manualSerial}
                     onChange={(e) => setManualSerial(e.target.value)}
                     placeholder="Paste serial from appliance / Central"
-                    className="h-7 text-[11px] font-mono"
+                    className="h-10 text-sm font-mono"
                   />
                 </div>
                 <Button
+                  type="button"
                   size="sm"
                   variant="outline"
                   onClick={handleSerialMatch}
-                  className="h-7 text-[10px] px-2"
+                  className="h-10 shrink-0 px-4 text-xs sm:self-end"
                 >
                   Match
                 </Button>
@@ -660,14 +686,14 @@ export function FirewallLinkPicker({
 
               {/* Group filter */}
               {groups.length > 0 && (
-                <div className="space-y-1">
-                  <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.18em]">
                     Group
                   </label>
                   <select
                     value={selectedGroupId}
                     onChange={(e) => setSelectedGroupId(e.target.value)}
-                    className="w-full rounded-xl border border-border/50 bg-card px-2.5 py-2 text-xs text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
+                    className="w-full rounded-xl border border-border/50 bg-background/80 px-3 py-2.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30"
                   >
                     <option value="">All groups ({firewalls.length})</option>
                     {groups.map((g) => (
@@ -681,17 +707,17 @@ export function FirewallLinkPicker({
 
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search firewalls…"
-                  className="h-7 text-[11px] pl-7"
+                  className="h-10 text-sm pl-10"
                 />
               </div>
 
               {/* Firewall list */}
-              <div className="max-h-44 overflow-y-auto rounded border border-border divide-y divide-border">
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-border/80 bg-muted/20 divide-y divide-border/80">
                 {filtered.map((haGroup) => {
                   const allFws = [haGroup.primary, ...haGroup.peers];
                   const isSelected = allFws.some((f) => f.firewallId === selectedFwId);
@@ -704,32 +730,34 @@ export function FirewallLinkPicker({
 
                   return (
                     <button
+                      type="button"
                       key={haGroup.primary.firewallId}
                       onClick={() => setSelectedFwId(haGroup.primary.firewallId)}
-                      className={`w-full text-left flex items-center gap-2 px-2 py-1.5 text-[11px] hover:bg-muted/30 transition-colors ${
-                        isSelected ? "bg-brand-accent/5 dark:bg-brand-accent/10" : ""
-                      }`}
+                      className={cn(
+                        "w-full text-left flex items-start gap-3 px-3 py-3 text-sm hover:bg-background/80 transition-colors",
+                        isSelected && "bg-brand-accent/[0.07] dark:bg-brand-accent/10",
+                      )}
                     >
                       <div
-                        className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                        className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
                           (haGroup.primary.status as { connected?: boolean })?.connected
                             ? "bg-[#00F2B3]"
                             : "bg-[#EA0022]"
                         }`}
                       />
-                      <Server className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-foreground truncate">
+                      <Server className="mt-1 h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-foreground break-words">
                             {getFirewallDisplayName(haGroup.primary)}
                           </span>
                           {haGroup.isHa && (
-                            <span className="px-1 py-0.5 rounded text-[8px] font-bold bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B529F7] shrink-0">
-                              HA PAIR
+                            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wide bg-[#5A00FF]/10 text-[#5A00FF] dark:text-[#B529F7] shrink-0">
+                              HA pair
                             </span>
                           )}
                         </div>
-                        <span className="text-[9px] text-muted-foreground block">
+                        <span className="text-[11px] text-muted-foreground block leading-relaxed break-words">
                           {haGroup.primary.model} · {haGroup.primary.firmwareVersion} ·{" "}
                           {allFws.map((f) => f.serialNumber).join(" / ")}
                         </span>
@@ -740,11 +768,11 @@ export function FirewallLinkPicker({
                         />
                       </div>
                       {isSelected && (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-accent shrink-0" />
+                        <CheckCircle2 className="mt-1 h-4 w-4 text-brand-accent shrink-0" />
                       )}
                       {autoMatch && (
-                        <span className="text-[8px] px-1 py-0.5 rounded bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-semibold shrink-0">
-                          AUTO
+                        <span className="mt-1 text-[9px] px-1.5 py-0.5 rounded-md bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-semibold shrink-0">
+                          Auto
                         </span>
                       )}
                     </button>
@@ -761,8 +789,8 @@ export function FirewallLinkPicker({
               </div>
 
               {selectedFwId && selectedFleetContext && (
-                <p className="text-[9px] text-muted-foreground leading-snug px-0.5">
-                  <span className="font-semibold text-foreground/80">Fleet context</span>
+                <p className="text-xs text-muted-foreground leading-relaxed rounded-lg border border-border/50 bg-muted/30 px-3 py-2.5">
+                  <span className="font-semibold text-foreground/90">Fleet context</span>
                   {" · "}
                   <span className="rounded border border-border/60 px-1 py-px">
                     {(selectedFleetContext.environment || "—").trim()}
@@ -788,10 +816,10 @@ export function FirewallLinkPicker({
                 size="sm"
                 onClick={handleLink}
                 disabled={!selectedFwId}
-                className="w-full h-7 text-[11px] gap-1.5 bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white"
+                className="w-full h-11 text-sm gap-2 font-display font-semibold bg-gradient-to-r from-[#2006F7] to-[#5A00FF] hover:from-[#10037C] hover:to-[#2006F7] text-white shadow-md"
               >
-                <Link2 className="h-3 w-3" />
-                Link Firewall
+                <Link2 className="h-4 w-4" />
+                Link firewall
               </Button>
             </>
           )}

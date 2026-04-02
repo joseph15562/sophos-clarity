@@ -81,14 +81,27 @@ describe("BrandingSetup", () => {
     expect(screen.getByLabelText(/company name/i)).toBeVisible();
   });
 
-  it("renders environment selector", () => {
+  it("renders customer name in the combined assessment context card", () => {
     renderWithProviders(<BrandingHarness />);
-    expect(screen.getByText("Environment Type")).toBeVisible();
-    expect(screen.getByRole("combobox", { name: /environment type/i })).toBeVisible();
+    expect(screen.getByText(/customer context/i)).toBeVisible();
+    expect(screen.getByLabelText(/customer name/i)).toBeVisible();
+    expect(screen.getByText(/Compliance \(this firewall\)/i)).toBeVisible();
   });
 
   it("renders without crashing", () => {
     renderWithProviders(<BrandingHarness />);
     expect(screen.getByText(/report identity/i)).toBeVisible();
+  });
+
+  it("shows mixed-jurisdiction guidance when uploads resolve to different geo", () => {
+    renderWithProviders(
+      <BrandingSetup
+        branding={initialBranding}
+        onChange={() => {}}
+        multiConfig
+        mixedJurisdiction
+      />,
+    );
+    expect(screen.getByText(/Different regions or sectors across uploads/i)).toBeVisible();
   });
 });

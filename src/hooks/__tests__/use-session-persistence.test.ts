@@ -92,6 +92,37 @@ describe("use-session-persistence", () => {
     expect(loaded?.configComplianceScopes).toEqual(scopes);
   });
 
+  it("round-trips explicitSelectedFrameworks on scopes", () => {
+    const scopes = {
+      "file-1": {
+        country: "United Kingdom",
+        state: "",
+        environment: "Education",
+        additionalFrameworks: [],
+        explicitSelectedFrameworks: ["GDPR", "DfE / KCSIE"],
+      },
+    };
+    saveSession(baseBranding, reports, "r1", null, scopes);
+    const loaded = loadSession();
+    expect(loaded?.configComplianceScopes).toEqual(scopes);
+  });
+
+  it("round-trips webFilterComplianceMode on scopes", () => {
+    const scopes = {
+      "file-1": {
+        country: "United Kingdom",
+        state: "",
+        environment: "Education",
+        additionalFrameworks: [],
+        explicitSelectedFrameworks: ["GDPR"],
+        webFilterComplianceMode: "informational" as const,
+      },
+    };
+    saveSession(baseBranding, reports, "r1", null, scopes);
+    const loaded = loadSession();
+    expect(loaded?.configComplianceScopes).toEqual(scopes);
+  });
+
   it("loadSession treats missing linkedCloudAssessmentId as null (backward compatible)", () => {
     const savedAt = Date.now();
     localStorage.setItem(

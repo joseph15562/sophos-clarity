@@ -46,6 +46,7 @@ export interface AuthState {
   createOrg: (name: string) => Promise<{ error: string | null }>;
   refreshOrg: () => Promise<void>;
   clearMfaRequired: () => void;
+  enterDemoMode: () => Promise<{ error: string | null }>;
 }
 
 async function fetchOrgMembership(userId: string): Promise<{ org: OrgInfo; role: OrgRole } | null> {
@@ -140,10 +141,20 @@ export function useAuthProvider(): AuthState {
     } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) {
+
+      if (!s?.user) {
+        setOrg(null);
+        setRole(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Only (re-)load org on sign-in; token refreshes should not query the DB
+      // and risk wiping org state if the query transiently fails.
+      if (event === "SIGNED_IN") {
         loadOrg(s.user.id)
           .then((membership) => {
-            if (event === "SIGNED_IN" && membership) {
+            if (membership) {
               logAudit(membership.org.id, "auth.login", "", "", {
                 email: s?.user?.email ?? undefined,
               }).catch(() => {});
@@ -151,10 +162,12 @@ export function useAuthProvider(): AuthState {
           })
           .catch((err) => {
             console.warn("[useAuth] loadOrg in onAuthStateChange failed", err);
-          });
+          })
+          .finally(() => setIsLoading(false));
+      } else if (event === "TOKEN_REFRESHED") {
+        // Session & user are already updated above; org stays untouched.
       } else {
-        setOrg(null);
-        setRole(null);
+        setIsLoading(false);
       }
     });
 
@@ -249,6 +262,39 @@ export function useAuthProvider(): AuthState {
     if (user) await loadOrg(user.id);
   }, [user, loadOrg]);
 
+  const enterDemoMode = useCallback(async (): Promise<{ error: string | null }> => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-demo-session`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Demo sign-in failed" }));
+        return { error: (body as { error?: string }).error ?? "Demo sign-in failed" };
+      }
+      const data = (await res.json()) as {
+        access_token: string;
+        refresh_token: string;
+      };
+      setIsLoading(true);
+      const { error: setErr } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (setErr) {
+        setIsLoading(false);
+        return { error: setErr.message };
+      }
+      return { error: null };
+    } catch (err) {
+      setIsLoading(false);
+      return { error: err instanceof Error ? err.message : "Demo sign-in failed" };
+    }
+  }, []);
+
   const isGuest = !user;
   const needsOrg = !!user && !org && !isLoading;
   const canManageTeam = role === "admin";
@@ -276,6 +322,7 @@ export function useAuthProvider(): AuthState {
       createOrg,
       refreshOrg,
       clearMfaRequired,
+      enterDemoMode,
     }),
     [
       user,
@@ -296,6 +343,7 @@ export function useAuthProvider(): AuthState {
       createOrg,
       refreshOrg,
       clearMfaRequired,
+      enterDemoMode,
     ],
   );
 }

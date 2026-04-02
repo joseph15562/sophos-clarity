@@ -403,7 +403,9 @@ export function TenantDashboard() {
     const byCategory = new Map<string, number>();
     for (const c of customers) {
       for (const fw of c.latestSnapshot.firewalls) {
-        for (const cat of fw.riskScore.categories) {
+        const cats = fw.riskScore.categories;
+        if (!Array.isArray(cats)) continue;
+        for (const cat of cats) {
           if (cat.pct < 50) {
             byCategory.set(cat.label, (byCategory.get(cat.label) ?? 0) + 1);
           }
@@ -1213,7 +1215,7 @@ export function TenantDashboard() {
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {c.latestSnapshot.firewalls.flatMap((fw) =>
-                      fw.riskScore.categories
+                      (fw.riskScore.categories ?? [])
                         .filter((cat) => cat.pct < 50)
                         .map((cat) => (
                           <span

@@ -74,6 +74,9 @@ export function AuthFlow({ auth, children }: AuthFlowProps) {
             onSignIn={auth.signIn}
             onSignUp={auth.signUp}
             onSkip={() => setGuestMode(true)}
+            onEnterDemo={
+              import.meta.env.VITE_PUBLIC_DEMO_ENABLED === "1" ? auth.enterDemoMode : undefined
+            }
           />
         </div>
       </AuthProvider>

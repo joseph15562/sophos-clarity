@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { FirewallLinkPicker, type FirewallLink } from "@/components/FirewallLinkPicker";
 import type { BrandingData } from "@/components/BrandingSetup";
 import type { ConfigComplianceScope } from "@/lib/config-compliance-scope";
-import type { ComplianceFramework } from "@/lib/compliance-context-options";
+import { shouldShowPerFileGeoEditors } from "@/lib/config-compliance-scope";
 import { ConfigFileScopeLine } from "@/components/ConfigFileScopeLine";
-import { ConfigFileAdditionalFrameworks } from "@/components/ConfigFileAdditionalFrameworks";
+import { ConfigFileCompliancePanel } from "@/components/ConfigFileCompliancePanel";
 
 export type UploadedFile = {
   id: string;
@@ -27,10 +27,7 @@ type Props = {
   onFirewallLinked?: (configId: string, link: FirewallLink | null) => void;
   branding?: BrandingData;
   configComplianceScopes?: Record<string, ConfigComplianceScope>;
-  onConfigAdditionalFrameworksChange?: (
-    configId: string,
-    frameworks: ComplianceFramework[],
-  ) => void;
+  onConfigCompliancePatch?: (configId: string, patch: Partial<ConfigComplianceScope>) => void;
 };
 
 let fileIdCounter = 0;
@@ -41,7 +38,7 @@ export function FileUpload({
   onFirewallLinked,
   branding,
   configComplianceScopes,
-  onConfigAdditionalFrameworksChange,
+  onConfigCompliancePatch,
 }: Props) {
   const [dragActive, setDragActive] = useState(false);
 
@@ -110,7 +107,7 @@ export function FileUpload({
   return (
     <div className="space-y-3">
       {/* File list */}
-      {files.map((f) => (
+      {files.map((f, fileIndex) => (
         <div
           key={f.id}
           className="relative overflow-hidden rounded-xl border border-brand-accent/25 dark:border-brand-accent/30 bg-[#2006F7]/[0.04] dark:bg-brand-accent/[0.08] flex items-center gap-4 p-4 shadow-[0_10px_28px_rgba(32,6,247,0.10)]"
@@ -137,13 +134,15 @@ export function FileUpload({
                 ? [f.hardwareModel, `S/N: ${f.serialNumber}`].filter(Boolean).join(" · ")
                 : f.fileName}
             </p>
-            {branding && (
-              <ConfigFileScopeLine
-                branding={branding}
-                scope={configComplianceScopes?.[f.id]}
-                hasScopeEntry={!!configComplianceScopes?.[f.id]}
-              />
-            )}
+            {branding &&
+              configComplianceScopes?.[f.id] &&
+              !shouldShowPerFileGeoEditors(branding, configComplianceScopes[f.id]) && (
+                <ConfigFileScopeLine
+                  branding={branding}
+                  scope={configComplianceScopes[f.id]}
+                  hasScopeEntry
+                />
+              )}
             <FirewallLinkPicker
               configId={f.id}
               configHostname={fileHostnames[f.id] || f.agentHostname || ""}
@@ -152,11 +151,13 @@ export function FileUpload({
               disableAutoLink={f.source !== "agent"}
               onLinked={(link) => onFirewallLinked?.(f.id, link)}
             />
-            {onConfigAdditionalFrameworksChange && (
-              <ConfigFileAdditionalFrameworks
+            {branding && onConfigCompliancePatch && configComplianceScopes?.[f.id] && (
+              <ConfigFileCompliancePanel
                 configId={f.id}
-                additionalFrameworks={configComplianceScopes?.[f.id]?.additionalFrameworks ?? []}
-                onAdditionalChange={onConfigAdditionalFrameworksChange}
+                branding={branding}
+                scope={configComplianceScopes[f.id]}
+                onPatch={onConfigCompliancePatch}
+                tourFrameworkSelector={fileIndex === 0}
               />
             )}
           </div>

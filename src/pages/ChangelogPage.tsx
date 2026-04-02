@@ -18,6 +18,63 @@ function ChangelogPageInner() {
           <h2 className="text-sm font-semibold text-foreground">2026-04</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             <li>
+              <strong className="text-foreground">Demo mode</strong>: a{" "}
+              <strong className="text-foreground">Demo mode</strong> button on the login page signs
+              you into a fully populated workspace with 10 customers across 7 countries (UK, DE, FR,
+              SE, US, JP, AU), 51 firewalls (including HA pairs), a realistic Sophos Central
+              connection, sample assessments and reports, and client portals — no credentials
+              needed.
+            </li>
+            <li>
+              <strong className="text-foreground">Sophos Central link</strong>: the per-upload{" "}
+              <strong className="text-foreground">Link to Sophos Central</strong> control is{" "}
+              <strong className="text-foreground">full width</strong> with a calm outline + brand
+              tint (no heavy gradient or glow). When expanded, the picker keeps comfortable padding,
+              taller inputs, and readable firewall rows.
+            </li>
+            <li>
+              <strong className="text-foreground">Assessment Context</strong>:{" "}
+              <strong className="text-foreground">Report identity</strong> and{" "}
+              <strong className="text-foreground">Customer name</strong> share one card (single
+              column). <strong className="text-foreground">Environment</strong> and{" "}
+              <strong className="text-foreground">country</strong> are no longer edited on this
+              screen — set them per upload under{" "}
+              <strong className="text-foreground">Compliance (this firewall)</strong>, or they come
+              from a Central link / Fleet-backed defaults.
+            </li>
+            <li>
+              <strong className="text-foreground">Customer Context — auto fill</strong>: choosing a
+              customer from your org directory (when signed in) fills{" "}
+              <strong className="text-foreground">environment</strong>,{" "}
+              <strong className="text-foreground">country</strong>, and default{" "}
+              <strong className="text-foreground">compliance frameworks</strong> from Fleet when
+              available — including after the directory loads if you landed via{" "}
+              <strong className="text-foreground">?customer=</strong>. Central firewall links do the
+              same when global context was still empty (single file, or first link while global geo
+              is unset with multiple files), matching the scope chips on the upload row.
+            </li>
+            <li>
+              <strong className="text-foreground">Compliance per firewall</strong>: every upload row
+              has <strong className="text-foreground">Compliance (this firewall)</strong> — web
+              filter tone (strict vs informational) and the full framework checklist. New uploads
+              copy defaults from session branding; a{" "}
+              <strong className="text-foreground">Central link</strong> still sets country and
+              sector on that row. Unlinking removes the tenant label but keeps that row&apos;s
+              compliance choices. The old global Compliance alignment block is removed so there is a
+              single place to tune each device. When a file is not Central-linked, or the link did
+              not supply both sector and country, a highlighted{" "}
+              <strong className="text-foreground">Scope for this export</strong> block appears in
+              that row so you set geography next to frameworks; fully linked devices keep compact
+              chips above and hide the duplicate geo fields.
+            </li>
+            <li>
+              <strong className="text-foreground">Mixed regions in one session</strong>: if uploads
+              use different country or sector (for example UK Education and Canada Education), an
+              amber note in Assessment Context clarifies that the session customer label is not
+              enough on its own; each row&apos;s compliance panel and link chips are what apply per
+              firewall for frameworks and findings.
+            </li>
+            <li>
               <strong className="text-foreground">New assessment flow</strong>: saved local sessions
               offer Resume session or Start fresh instead of auto-restoring reports, branding, and
               the header report count. For manual config uploads, the Context step stays incomplete

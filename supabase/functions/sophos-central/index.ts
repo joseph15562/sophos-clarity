@@ -3,6 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { jwtVerify } from "https://esm.sh/jose@4.15.4?target=deno";
 import { safeError } from "../_shared/db.ts";
 import { logJson } from "../_shared/logger.ts";
+import {
+  DEMO_ORG_ID,
+  demoCentralAlerts,
+  demoCentralFirewallLicenses,
+  demoCentralFirewalls,
+  demoCentralLicenses,
+  demoCentralMdrThreatFeed,
+  demoCentralStatus,
+  demoCentralTenants,
+} from "../_shared/demo-central-data.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -547,6 +557,39 @@ serve(async (req) => {
         { "X-Tenant-ID": tid },
       );
       return json({ items: fwItems });
+    }
+
+    // ── Demo workspace intercept ──
+    // Return canned data for the demo org; never call live Sophos API.
+    if (orgId && orgId === DEMO_ORG_ID) {
+      await verifyOrgMembership(authHeader, orgId);
+
+      if (mode === "status") return json(demoCentralStatus());
+      if (mode === "tenants") return json(demoCentralTenants());
+      if (mode === "firewalls") {
+        const { tenantId } = body as { tenantId?: string };
+        return json(demoCentralFirewalls(tenantId ?? ""));
+      }
+      if (mode === "alerts") {
+        const { tenantId } = body as { tenantId?: string };
+        return json(demoCentralAlerts(tenantId ?? ""));
+      }
+      if (mode === "licenses") {
+        const { tenantId } = body as { tenantId?: string };
+        return json(demoCentralLicenses(tenantId ?? ""));
+      }
+      if (mode === "firewall-licenses") {
+        const { tenantId } = body as { tenantId?: string };
+        return json(demoCentralFirewallLicenses(tenantId));
+      }
+      if (mode === "mdr-threat-feed") return json(demoCentralMdrThreatFeed());
+      if (mode === "connect" || mode === "disconnect") {
+        return json({
+          error: "Demo workspace — Central connection is pre-configured.",
+        }, 400);
+      }
+      if (mode === "firewall-groups") return json({ items: [] });
+      return json({ error: `Unknown mode: ${mode}` }, 400);
     }
 
     // ── Mode: connect ── validate + store credentials
