@@ -93,7 +93,12 @@ function MissionThreatActivityTooltip({
   const keyLabels =
     variant === "demo"
       ? { blocked: "Blocked threats", ips: "IPS triggers", web: "Web filter hits" }
-      : { blocked: "Other / firewall", ips: "IPS / threat", web: "Web / filter" };
+      : {
+          /** Operational / connectivity-style open alerts (RED, gateway, HA, sync, …). */
+          blocked: "Firewall",
+          /** Malware, phishing, IPS-style alerts — the kinds of rules Sophos can raise. */
+          ips: "Threat alerts",
+        };
 
   return (
     <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-[var(--shadow-elevated)]">
@@ -245,6 +250,9 @@ function MissionControlInner() {
             tooltipBorder: "hsl(215 40% 28%)",
             tooltipFg: "hsl(210 20% 92%)",
             barCursor: "rgba(255,255,255,0.05)",
+            areaCursorStroke: "hsl(210 20% 42%)",
+            areaActiveDotFill: "hsl(215 52% 20%)",
+            areaActiveDotStroke: "hsl(210 20% 65%)",
           }
         : {
             grid: "hsl(214 24% 88%)",
@@ -253,6 +261,9 @@ function MissionControlInner() {
             tooltipBorder: "hsl(214 24% 84%)",
             tooltipFg: "hsl(215 52% 14%)",
             barCursor: "rgba(32, 6, 247, 0.08)",
+            areaCursorStroke: "hsl(214 24% 72%)",
+            areaActiveDotFill: "hsl(0 0% 100%)",
+            areaActiveDotStroke: "hsl(214 28% 48%)",
           },
     [isDark],
   );
@@ -412,7 +423,7 @@ function MissionControlInner() {
                   {useDemo
                     ? "Last 30 days (demo)"
                     : live.threatChartSource === "central"
-                      ? "Last 30 days · Sophos Central"
+                      ? "Last 30 days · firewall alerts (Sophos Central)"
                       : "Last 30 days · assessments"}
                 </span>
               </div>
@@ -445,6 +456,11 @@ function MissionControlInner() {
                       width={44}
                     />
                     <Tooltip
+                      cursor={{
+                        stroke: chartUi.areaCursorStroke,
+                        strokeWidth: 1,
+                        strokeDasharray: "4 4",
+                      }}
                       content={(props) => (
                         <MissionThreatActivityTooltip
                           active={props.active}
@@ -461,6 +477,12 @@ function MissionControlInner() {
                       stackId={assessOnlyChart ? undefined : "1"}
                       stroke="#3b82f6"
                       fill="url(#mcBlocked)"
+                      activeDot={{
+                        r: 3,
+                        strokeWidth: 1,
+                        stroke: chartUi.areaActiveDotStroke,
+                        fill: chartUi.areaActiveDotFill,
+                      }}
                     />
                     {!assessOnlyChart ? (
                       <>
@@ -470,14 +492,28 @@ function MissionControlInner() {
                           stackId="2"
                           stroke="#06b6d4"
                           fill="url(#mcIps)"
+                          activeDot={{
+                            r: 3,
+                            strokeWidth: 1,
+                            stroke: chartUi.areaActiveDotStroke,
+                            fill: chartUi.areaActiveDotFill,
+                          }}
                         />
-                        <Area
-                          type="monotone"
-                          dataKey="web"
-                          stackId="3"
-                          stroke="#8b5cf6"
-                          fill="url(#mcWeb)"
-                        />
+                        {useDemo ? (
+                          <Area
+                            type="monotone"
+                            dataKey="web"
+                            stackId="3"
+                            stroke="#8b5cf6"
+                            fill="url(#mcWeb)"
+                            activeDot={{
+                              r: 3,
+                              strokeWidth: 1,
+                              stroke: chartUi.areaActiveDotStroke,
+                              fill: chartUi.areaActiveDotFill,
+                            }}
+                          />
+                        ) : null}
                       </>
                     ) : null}
                   </AreaChart>
@@ -499,13 +535,14 @@ function MissionControlInner() {
                 ) : live.threatChartSource === "central" ? (
                   <>
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-blue-500" /> Other / firewall
+                      <span className="h-2 w-2 rounded-full bg-blue-500" /> Firewall
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-cyan-500" /> IPS / threat
+                      <span className="h-2 w-2 rounded-full bg-cyan-500" /> Threat alerts
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-violet-500" /> Web / filter
+                    <span className="text-[10px] text-muted-foreground/90 max-w-[220px] leading-snug">
+                      Firewall <span className="text-muted-foreground">product</span> only — ZTNA,
+                      email, and endpoint alerts are excluded.
                     </span>
                   </>
                 ) : (

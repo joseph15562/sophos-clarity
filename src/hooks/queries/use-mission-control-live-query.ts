@@ -94,6 +94,20 @@ function buildFirewallHostnameMap(
   return m;
 }
 
+/** Mission control chart: Sophos Central `product` must be firewall (not ZTNA, email, endpoint, …). */
+function centralAlertIsFirewallProduct(a: CentralAlertRow): boolean {
+  const prod = `${a.product ?? ""}`.trim().toLowerCase();
+  const agentType = `${a.managedAgent?.type ?? ""}`.trim().toLowerCase();
+  return prod === "firewall" || (!prod && agentType === "utm");
+}
+
+/** Two-line chart: threat-style vs operational; “web” bucket (e.g. URL wording) still counts as firewall strip. */
+function mapMcFirewallThreatAxis(a: CentralAlertRow): "ips" | "blocked" {
+  const axis = mapAlertToMissionControlAxes(a);
+  if (axis === "ips") return "ips";
+  return "blocked";
+}
+
 function buildThreatFromAlerts(alerts: CentralAlertRow[]): ThreatActivityDay[] {
   const now = new Date();
   const days: ThreatActivityDay[] = [];
@@ -107,6 +121,7 @@ function buildThreatFromAlerts(alerts: CentralAlertRow[]): ThreatActivityDay[] {
   const cutoff = new Date(now);
   cutoff.setDate(cutoff.getDate() - 30);
   for (const a of alerts) {
+    if (!centralAlertIsFirewallProduct(a)) continue;
     const day = parseIsoDateDay(centralAlertRaisedAt(a));
     if (!day) continue;
     const tMs = new Date(day).getTime();
@@ -115,9 +130,8 @@ function buildThreatFromAlerts(alerts: CentralAlertRow[]): ThreatActivityDay[] {
     const idx = idxByKey.get(key);
     if (idx == null) continue;
     const row = days[idx];
-    const axis = mapAlertToMissionControlAxes(a);
-    if (axis === "web") row.web += 1;
-    else if (axis === "ips") row.ips += 1;
+    const branch = mapMcFirewallThreatAxis(a);
+    if (branch === "ips") row.ips += 1;
     else row.blocked += 1;
   }
   return days;
