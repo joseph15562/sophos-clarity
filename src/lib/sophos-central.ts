@@ -277,6 +277,8 @@ export interface CentralAlert {
   severity: string;
   category: string;
   product: string;
+  /** Sophos event id, e.g. `Event::Firewall::FirewallAdvancedThreatProtection`. */
+  type?: string;
   raisedAt: string;
   allowedActions: string[];
   managedAgent?: CentralManagedAgent;

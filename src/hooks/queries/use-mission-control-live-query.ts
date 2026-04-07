@@ -9,6 +9,7 @@ import {
   loadSavedReportsCloud,
   normalizeReportEntries,
 } from "@/lib/saved-reports";
+import { mapAlertToMissionControlAxes } from "@/lib/portfolio-threat-from-central";
 import {
   centralAlertRaisedAt,
   getCachedFirewalls,
@@ -113,10 +114,10 @@ function buildThreatFromAlerts(alerts: CentralAlertRow[]): ThreatActivityDay[] {
     const key = day.slice(5, 10);
     const idx = idxByKey.get(key);
     if (idx == null) continue;
-    const blob = `${a.category} ${a.product} ${a.description}`.toLowerCase();
     const row = days[idx];
-    if (/ips|intrusion|threat|malware/i.test(blob)) row.ips += 1;
-    else if (/web|filter|url|waf|category/i.test(blob)) row.web += 1;
+    const axis = mapAlertToMissionControlAxes(a);
+    if (axis === "web") row.web += 1;
+    else if (axis === "ips") row.ips += 1;
     else row.blocked += 1;
   }
   return days;

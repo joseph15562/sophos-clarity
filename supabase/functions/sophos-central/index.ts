@@ -307,13 +307,16 @@ async function sophosGet(
 
 type SophosPagedItems = {
   items?: unknown[];
-  pages?: { total?: number };
+  pages?: {
+    total?: number;
+    /** Cursor for the next slice; GET `/common/v1/alerts` documents `pageFromKey`, not only numeric `page`. */
+    nextKey?: string;
+  };
 };
 
 /**
- * Paginated Sophos list. If the first response omits `pages.total` (seen on some tenants), the old
- * implementation stopped after **one page** — often the **oldest** slice when default sort is
- * ascending — so Mission control showed stale “time ago” while Central listed recent activity.
+ * Paginated Sophos list. Alerts often return `pages.nextKey` + `pageFromKey` (Postman); numeric `page`
+ * alone may not advance, leaving only the **oldest** slice. Other list endpoints keep using `page`.
  */
 async function fetchAllPages(
   baseUrl: string,
@@ -323,30 +326,55 @@ async function fetchAllPages(
   options?: { maxPagesIfTotalUnknown?: number },
 ): Promise<unknown[]> {
   const maxIfUnknown = options?.maxPagesIfTotalUnknown ?? 50;
+  const useAlertCursor = baseUrl.includes("/common/v1/alerts");
   const items: unknown[] = [];
   let page = 1;
   let reportedTotal: number | null = null;
+  let followingCursor = false;
+  let cursor: string | undefined;
+  const maxSteps = 60;
 
-  while (true) {
+  for (let step = 0; step < maxSteps; step++) {
     const sep = baseUrl.includes("?") ? "&" : "?";
-    const url = `${baseUrl}${sep}page=${page}&pageSize=${pageSize}${
-      page === 1 ? "&pageTotal=true" : ""
-    }`;
+    const url = useAlertCursor && followingCursor && cursor
+      ? `${baseUrl}${sep}pageSize=${pageSize}&pageFromKey=${
+        encodeURIComponent(cursor)
+      }`
+      : `${baseUrl}${sep}page=${page}&pageSize=${pageSize}${
+        page === 1 ? "&pageTotal=true" : ""
+      }`;
+
     const data = await sophosGet(url, token, headers) as SophosPagedItems;
     const batch = Array.isArray(data.items) ? data.items : [];
     items.push(...batch);
 
     if (
-      page === 1 && typeof data.pages?.total === "number" &&
-      data.pages.total > 0
+      !followingCursor && page === 1 &&
+      typeof data.pages?.total === "number" && data.pages.total > 0
     ) {
       reportedTotal = data.pages.total;
     }
 
+    const nextKey = typeof data.pages?.nextKey === "string"
+      ? data.pages.nextKey.trim()
+      : "";
+
+    if (batch.length < pageSize) break;
+
+    if (useAlertCursor && nextKey) {
+      followingCursor = true;
+      cursor = nextKey;
+      continue;
+    }
+
+    if (followingCursor && !nextKey) break;
+
+    followingCursor = false;
+    cursor = undefined;
+
     if (reportedTotal != null) {
       if (page >= reportedTotal) break;
     } else {
-      if (batch.length < pageSize) break;
       if (page >= maxIfUnknown) break;
     }
     page++;
@@ -355,16 +383,14 @@ async function fetchAllPages(
   return items;
 }
 
-/** GET `/common/v1/alerts` — Postman lists `sort`; default order can be oldest-first. */
-function centralOpenAlertsBaseUrl(apiHost: string): string {
-  const sort = encodeURIComponent("raisedAt:desc");
-  return `${apiHost}/common/v1/alerts?sort=${sort}`;
-}
-
-function mergedAlertRaisedMs(a: Record<string, unknown>): number {
-  const s = String(a.raisedAt ?? "");
-  const t = Date.parse(s);
-  return Number.isNaN(t) ? 0 : t;
+/**
+ * `GET /common/v1/alerts` (paginated). We intentionally omit `sort=` here: some tenants/regions
+ * return 400 for `sort=raisedAt:desc` on GET, and mission-alerts used to `catch` → `[]`, so the
+ * UI showed **no alerts** while Central still listed open items. Newest-first order is applied
+ * after fetch via `merged.sort` on normalized `raisedAt`.
+ */
+function centralOpenAlertsListUrl(apiHost: string): string {
+  return `${apiHost}/common/v1/alerts`;
 }
 
 /** Central `/common/v1/alerts` items sometimes use snake_case or only `createdAt` — normalize for clients. */
@@ -379,6 +405,19 @@ const ALERT_TIME_FIELD_KEYS = [
   "last_modified_at",
   "updatedAt",
   "updated_at",
+  "when",
+  "whenAt",
+  "when_at",
+  "occurredAt",
+  "occurred_at",
+  "eventAt",
+  "event_at",
+  "firstDetectedAt",
+  "first_detected_at",
+  "lastDetectedAt",
+  "last_detected_at",
+  "detectedAt",
+  "detected_at",
   "raisedAt",
   "raised_at",
   "reportedAt",
@@ -386,6 +425,21 @@ const ALERT_TIME_FIELD_KEYS = [
   "createdAt",
   "created_at",
 ] as const;
+
+function instantMsFromAlertString(s: string): number | null {
+  const t = s.trim();
+  if (t.length < 4) return null;
+  if (/^\d{10,16}$/.test(t)) {
+    const n = Number(t);
+    if (!Number.isFinite(n)) return null;
+    if (t.length === 10) return n * 1000;
+    if (t.length >= 13) return n;
+    if (n >= 1_000_000_000_000) return n;
+    return n * 1000;
+  }
+  const ms = Date.parse(t);
+  return Number.isNaN(ms) ? null : ms;
+}
 
 function alertFieldInstantMs(
   a: Record<string, unknown>,
@@ -396,21 +450,49 @@ function alertFieldInstantMs(
     return v > 1e12 ? v : v * 1000;
   }
   const s = pickAlertTimeString(v);
-  if (!s || s.length < 4) return null;
-  const ms = Date.parse(s);
-  return Number.isNaN(ms) ? null : ms;
+  if (!s) return null;
+  return instantMsFromAlertString(s);
+}
+
+function isPlainRecord(v: unknown): v is Record<string, unknown> {
+  return Boolean(v) && typeof v === "object" && !Array.isArray(v);
+}
+
+/** Root + one nested object level; matches app `centralAlertRaisedAt`. */
+function alertBestInstantMs(a: Record<string, unknown>): number | null {
+  let bestMs: number | null = null;
+  const consider = (ms: number | null) => {
+    if (ms == null) return;
+    if (bestMs === null || ms > bestMs) bestMs = ms;
+  };
+  for (const k of ALERT_TIME_FIELD_KEYS) {
+    consider(alertFieldInstantMs(a, k));
+  }
+  for (const v of Object.values(a)) {
+    if (!isPlainRecord(v)) continue;
+    for (const k of ALERT_TIME_FIELD_KEYS) {
+      consider(alertFieldInstantMs(v, k));
+    }
+  }
+  return bestMs;
+}
+
+/** Sort key after normalize; falls back to `alertBestInstantMs` if `raisedAt` is missing or unparseable. */
+function mergedAlertRaisedMs(a: Record<string, unknown>): number {
+  const s = String(a.raisedAt ?? "").trim();
+  if (s) {
+    const t = Date.parse(s);
+    if (!Number.isNaN(t)) return t;
+  }
+  return alertBestInstantMs(a) ?? 0;
 }
 
 /** Single `raisedAt` for clients: latest meaningful instant (matches app `centralAlertRaisedAt`). */
 function normalizeSophosAlertItem(
   a: Record<string, unknown>,
 ): Record<string, unknown> {
-  let bestMs = -Infinity;
-  for (const k of ALERT_TIME_FIELD_KEYS) {
-    const ms = alertFieldInstantMs(a, k);
-    if (ms != null && ms > bestMs) bestMs = ms;
-  }
-  if (bestMs === -Infinity) return a;
+  const bestMs = alertBestInstantMs(a);
+  if (bestMs === null) return a;
   return { ...a, raisedAt: new Date(bestMs).toISOString() };
 }
 
@@ -1106,7 +1188,7 @@ serve(async (req) => {
 
       const apiHost = await resolveApiHost(orgId, tenantId, creds, token);
       const items = await fetchAllPages(
-        centralOpenAlertsBaseUrl(apiHost),
+        centralOpenAlertsListUrl(apiHost),
         token,
         { "X-Tenant-ID": tenantId },
       );
@@ -1160,7 +1242,7 @@ serve(async (req) => {
                 : resolveApiHostFromCachedTenantRow(row, creds);
               if (!apiHost) return [] as Merged[];
               const items = await fetchAllPages(
-                centralOpenAlertsBaseUrl(apiHost),
+                centralOpenAlertsListUrl(apiHost),
                 token,
                 { "X-Tenant-ID": tid },
               );
@@ -1168,7 +1250,11 @@ serve(async (req) => {
                 ...normalizeSophosAlertItem(a),
                 tenantId: tid,
               }));
-            } catch {
+            } catch (err) {
+              logJson("warn", "sophos_central_mission_alerts_tenant", {
+                tenantId: tid,
+                error: err instanceof Error ? err.message : String(err),
+              });
               return [] as Merged[];
             }
           }),

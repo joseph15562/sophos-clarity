@@ -605,16 +605,25 @@ function ChangelogPageInner() {
                 <strong className="text-foreground">
                   Mission control &amp; Central — live alert recency
                 </strong>
-                : merged alert fetches use <code className="text-xs">sort=raisedAt:desc</code> and
-                keep paginating when Sophos omits <code className="text-xs">pages.total</code>{" "}
-                (previously only the first page loaded — often the{" "}
-                <strong className="text-foreground">oldest</strong> slice — so the table could show
-                “months ago” while Central listed newer open alerts). Browser cache for the
-                mission-alerts bundle uses a new storage key so you pick up the behaviour without
-                clearing site data. Timestamps still prefer the{" "}
-                <strong className="text-foreground">latest</strong> among raised, modified, updated,
-                reported, and created fields where present. Hover the TIME cell for absolute local
-                date and time.
+                : merged alert fetches <strong className="text-foreground">omit</strong>{" "}
+                <code className="text-xs">sort=</code> on Sophos GET (some tenants error and the
+                Edge handler used to return an empty list, so Mission control showed no alerts while
+                Central still had open items). We still paginate when{" "}
+                <code className="text-xs">pages.total</code> is missing and sort newest-first in the
+                Edge merge. Open-alert pagination follows Sophos{" "}
+                <code className="text-xs">pages.nextKey</code> /{" "}
+                <code className="text-xs">pageFromKey</code> when present (GET list docs use cursor
+                fields, not only numeric <code className="text-xs">page</code>), so all open alerts
+                load before client-side newest-first sort. Browser cache uses the v5 mission-alerts
+                key; dev skips rehydrate so local browsers stay aligned. Timestamps prefer the
+                latest among raised, modified, updated, reported, created, detected, and other known
+                Central fields (including <code className="text-xs">when</code> /{" "}
+                <code className="text-xs">occurredAt</code> variants) on the alert and{" "}
+                <strong className="text-foreground">one nested object level</strong> (e.g. threat /
+                managed-agent payloads); digit-only epoch seconds or milliseconds strings are parsed
+                (ISO strings still supported). Recent alerts{" "}
+                <strong className="text-foreground">Time</strong> shows that instant as an absolute
+                local date/time (aligned with Central); hover for relative “ago” plus ISO.
               </li>
               <li>
                 <strong className="text-foreground">API Explorer — real org keys</strong>: when
@@ -625,22 +634,27 @@ function ChangelogPageInner() {
               </li>
               <li>
                 <strong className="text-foreground">Insights — data clarity</strong>: Security
-                Intelligence now shows banners for guest demo, organisations with no saved
-                assessments (illustrative charts hidden; empty states and CTA to Assess), and live
-                portfolios (which widgets use assessments vs mock samples). Score trend resets
-                correctly when there is no history; help docs for Insights note the live vs sample
+                Intelligence keeps banners for guest demo and organisations with no saved
+                assessments (illustrative charts hidden; empty states and CTA to Assess); the
+                signed-in live vs sample explainer strip was removed. Score trend resets correctly
+                when there is no history; help docs for Insights still note the live vs sample
                 split. When you&apos;re signed in with saved assessments,{" "}
                 <strong className="text-foreground">Threat landscape</strong> charts Sophos Central
                 open alerts (same merged bundle as Mission control): daily counts by alert time,
-                stacked buckets, and top categories — each alert uses the latest Central instant
-                among raised, modified, reported, and created fields (same rule as Mission control);
-                guests still see the demo series.{" "}
-                <strong className="text-foreground">Compliance trends</strong> (posture categories
-                from score history), <strong className="text-foreground">report activity</strong>{" "}
-                (weekly save totals plus a dated list of busy days for saved reports + assessments),
-                and <strong className="text-foreground">recommendations</strong> (scores + recency)
-                are live for signed-in orgs with saved assessments; guests keep the demo
-                GDPR/NIST-style lines and sample cards.
+                stacked buckets (Malware / Phishing / IPS / Web / Other) from Central{" "}
+                <strong className="text-foreground">product</strong>,{" "}
+                <code className="text-xs">Event::</code>{" "}
+                <strong className="text-foreground">type</strong>, category, and description —
+                operational rows (e.g. RED tunnel, patch state) stay in Other; Mission
+                control&apos;s 30-day threat strip uses the same mapping. Each alert uses the latest
+                Central instant among raised, modified, reported, and created fields; guests still
+                see the demo series. <strong className="text-foreground">Compliance trends</strong>{" "}
+                (posture categories from score history),{" "}
+                <strong className="text-foreground">report activity</strong> (weekly save totals
+                plus a dated list of busy days for saved reports + assessments), and{" "}
+                <strong className="text-foreground">recommendations</strong> (scores + recency) are
+                live for signed-in orgs with saved assessments; guests keep the demo GDPR/NIST-style
+                lines and sample cards.
               </li>
               <li>
                 <strong className="text-foreground">Central firewall sync (MSP)</strong>: tenant

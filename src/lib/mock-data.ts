@@ -185,6 +185,7 @@ export const MOCK_THREAT_CATEGORIES = [
   { name: "Phishing", value: 3100 },
   { name: "IPS", value: 2800 },
   { name: "Web", value: 5100 },
+  { name: "Other", value: 1200 },
 ];
 
 export const MOCK_TOP_THREAT_TYPES = [

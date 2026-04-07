@@ -1,9 +1,12 @@
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { redirectDevLoopbackToCanonicalLocalhost } from "@/lib/dev-canonical-localhost";
 import { initSentry } from "./init-sentry";
 import "./index.css";
 import "./styles/driver-theme.css";
+
+const exitingForLocalhostRedirect = redirectDevLoopbackToCanonicalLocalhost();
 
 /** After a deploy, lazy chunks may 404 until HTML is revalidated — reload once per tab session. */
 const CHUNK_RELOAD_KEY = "sophos-fc-chunk-reload-done";
@@ -24,18 +27,20 @@ function installStaleChunkReloadRecovery(): void {
   window.addEventListener("unhandledrejection", handler);
 }
 
-installStaleChunkReloadRecovery();
+if (!exitingForLocalhostRedirect) {
+  installStaleChunkReloadRecovery();
 
-initSentry();
+  initSentry();
 
-const rootEl = document.getElementById("root");
-if (!rootEl) {
-  throw new Error("Missing #root element");
+  const rootEl = document.getElementById("root");
+  if (!rootEl) {
+    throw new Error("Missing #root element");
+  }
+
+  createRoot(rootEl).render(
+    <>
+      <App />
+      <SpeedInsights />
+    </>,
+  );
 }
-
-createRoot(rootEl).render(
-  <>
-    <App />
-    <SpeedInsights />
-  </>,
-);

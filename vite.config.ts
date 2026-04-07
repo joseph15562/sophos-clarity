@@ -1,6 +1,43 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+
+const DEV_PORT = 8080;
+
+/**
+ * Cursor’s Simple Browser often opens `http://127.0.0.1:8080`, while Safari uses
+ * `http://localhost:8080`. Browsers treat those as different origins, so Supabase session and
+ * localStorage (e.g. mission-alerts cache) diverge — Mission control can show stale “months ago”.
+ * Redirect loopback hostnames to `localhost` so every local tool shares one origin.
+ */
+function devRedirectLoopbackToLocalhost(): Plugin {
+  return {
+    name: "dev-redirect-loopback-to-localhost",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const host = req.headers.host?.toLowerCase() ?? "";
+        const hostOnly =
+          host.includes(":") && host.startsWith("[")
+            ? host.slice(0, host.indexOf("]") + 1)
+            : (host.split(":")[0] ?? "");
+        const isIPv4Loopback = /^127(\.(25[0-5]|2[0-4]\d|1?\d{1,2})){3}$/.test(hostOnly);
+        const isIPv6Loopback = host === "[::1]" || host.startsWith("[::1]:");
+        const isLoopback = isIPv4Loopback || isIPv6Loopback;
+        if (!isLoopback) {
+          next();
+          return;
+        }
+        const port = server.config.server.port ?? DEV_PORT;
+        const pathAndQuery = req.url ?? "/";
+        const location = `http://localhost:${port}${pathAndQuery}`;
+        res.statusCode = 302;
+        res.setHeader("Location", location);
+        res.end();
+      });
+    },
+  };
+}
 
 /** Prevent identity bypass from being baked into Vercel Production bundles (mis-set env vars). */
 function assertE2eBypassNotOnVercelProduction(): void {
@@ -30,7 +67,7 @@ export default defineConfig(() => {
   return {
     server: {
       host: "::",
-      port: 8080,
+      port: DEV_PORT,
       hmr: {
         overlay: false,
       },
@@ -43,7 +80,7 @@ export default defineConfig(() => {
         },
       },
     },
-    plugins: [react()],
+    plugins: [devRedirectLoopbackToLocalhost(), react()],
     resolve: {
       dedupe: ["react", "react-dom"],
       alias: {

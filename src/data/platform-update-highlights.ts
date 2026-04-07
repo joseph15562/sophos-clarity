@@ -26,7 +26,7 @@ export const PLATFORM_UPDATE_CARD = {
     },
     {
       tag: "improved" as const,
-      text: "Workspace header (Central popover), unified hub chrome, Central Alerts/MDR merged requests + mission-alerts browser snapshot for faster return visits, API Explorer live keys, changelog threats from Sophos advisories RSS, signed-in firmware table from Central inventory, Insights: Central threat charts by alert raised time (raisedAt/raised_at), score-history trends, report/assess activity (weekly bars + recent busy days), and data-driven recommendations when signed in.",
+      text: "Workspace header (Central popover), unified hub chrome, Central Alerts/MDR merged requests + mission-alerts browser snapshot for faster return visits, API Explorer live keys, changelog threats from Sophos advisories RSS, signed-in firmware table from Central inventory, Insights: Central threat charts by raised time with stacks mapped from product/Event type (not all Other), score-history trends, report/assess activity, recommendations when signed in.",
     },
     {
       tag: "improved" as const,
@@ -34,7 +34,7 @@ export const PLATFORM_UPDATE_CARD = {
     },
     {
       tag: "fixed" as const,
-      text: "Central alerts: newest-first sort + full pagination when page totals are missing; mission-alerts cache key bumped. Tenant-type keys still use whoAmI; timestamps use latest Sophos field when present.",
+      text: "Central alerts: no brittle GET sort param (fixes empty mission-alerts on some tenants), full pagination + nextKey/pageFromKey for open alerts, merge-time newest-first; cache v5 + dev no-rehydrate; tenant-type whoAmI; timestamps include nested level + detected* + digit epoch strings.",
     },
   ] satisfies PlatformHighlightLine[],
 };

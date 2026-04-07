@@ -14,14 +14,23 @@ export type UseMissionAlertsBundleQueryOptions = {
 
 /**
  * Shared Sophos Central open-alerts bundle: one Edge call, optional localStorage rehydrate, persist on success.
+ *
+ * In **development** we skip reading the mission-alerts cache for `initialData`. Safari, Cursor Simple
+ * Browser, Chrome, etc. each use a separate storage partition even for `localhost`, so a bad bundle
+ * written in one (e.g. before Edge pagination/sort fixes) never poisons another — but Cursor could
+ * keep showing that snapshot if refetches fail silently. Forcing a network-first load in dev keeps
+ * all local browsers aligned. Production still rehydrates from localStorage for fast return visits.
  */
 export function useMissionAlertsBundleQuery(
   orgId: string | undefined,
   enabled: boolean,
   options?: UseMissionAlertsBundleQueryOptions,
 ) {
+  const rehydrateFromLs = !import.meta.env.DEV;
   const cached =
-    orgId && typeof window !== "undefined" ? readMissionAlertsBundleCache(orgId) : null;
+    rehydrateFromLs && orgId && typeof window !== "undefined"
+      ? readMissionAlertsBundleCache(orgId)
+      : null;
   const refetchInterval =
     options?.refetchIntervalMs === undefined ? false : options.refetchIntervalMs;
 
@@ -35,6 +44,7 @@ export function useMissionAlertsBundleQuery(
     initialDataUpdatedAt: cached ? cached.updatedAt : undefined,
     staleTime: 120_000,
     gcTime: 1000 * 60 * 60 * 6,
+    refetchOnMount: import.meta.env.DEV ? "always" : true,
     refetchInterval: enabled && orgId ? refetchInterval : false,
     refetchIntervalInBackground: false,
     retry: false,

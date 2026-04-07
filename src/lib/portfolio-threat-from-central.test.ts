@@ -42,6 +42,49 @@ describe("mapAlertToThreatBucket", () => {
       ),
     ).toBe("IPS");
   });
+
+  it("maps firewall ATP / botnet copy to Malware using type + description", () => {
+    expect(
+      mapAlertToThreatBucket(
+        alert({
+          category: "security",
+          product: "firewall",
+          type: "Event::Firewall::FirewallAdvancedThreatProtection",
+          description:
+            "We detected an attempt to communicate with a botnet or command and control server.",
+          raisedAt: new Date().toISOString(),
+        }),
+      ),
+    ).toBe("Malware");
+  });
+
+  it("maps Sophos product ztna to Web", () => {
+    expect(
+      mapAlertToThreatBucket(
+        alert({
+          category: "ztnaResource",
+          product: "ztna",
+          description: 'Resource "http_proxy" is unreachable',
+          type: "Event::ZTNA::ZTNAApplicationUnreachable",
+          raisedAt: new Date().toISOString(),
+        }),
+      ),
+    ).toBe("Web");
+  });
+
+  it("maps RED tunnel events to Other", () => {
+    expect(
+      mapAlertToThreatBucket(
+        alert({
+          category: "connectivity",
+          product: "firewall",
+          type: "Event::Firewall::FirewallREDTunnelDown",
+          description: "JM-RED is now disconnected",
+          raisedAt: new Date().toISOString(),
+        }),
+      ),
+    ).toBe("Other");
+  });
 });
 
 describe("buildPortfolioThreatFromCentralAlerts", () => {

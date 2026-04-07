@@ -1,7 +1,7 @@
 import type { MissionAlertsBundle } from "@/lib/sophos-central";
 
 /** Bump when alert merge semantics change (e.g. pagination/sort) so stale bundles are not rehydrated. */
-const LS_PREFIX = "fc.mc.mission_alerts.v2.";
+const LS_PREFIX = "fc.mc.mission_alerts.v5.";
 
 function storageKey(orgId: string): string {
   return `${LS_PREFIX}${orgId}`;

@@ -20,4 +20,36 @@ describe("centralAlertRaisedAt", () => {
       }),
     ).toBe("2026-04-05T12:00:00.000Z");
   });
+
+  it("parses epoch milliseconds as a digit string (Date.parse would be NaN)", () => {
+    const ms = Date.parse("2026-04-06T19:18:00.000Z");
+    expect(
+      centralAlertRaisedAt({
+        raisedAt: "2026-02-01T10:20:00.000Z",
+        occurredAt: String(ms),
+      }),
+    ).toBe("2026-04-06T19:18:00.000Z");
+  });
+
+  it("parses epoch seconds as a 10-digit string", () => {
+    const sec = Math.floor(Date.parse("2026-04-06T19:18:00.000Z") / 1000);
+    expect(
+      centralAlertRaisedAt({
+        raisedAt: "2026-02-01T10:20:00.000Z",
+        updated_at: String(sec),
+      }),
+    ).toBe("2026-04-06T19:18:00.000Z");
+  });
+
+  it("uses a newer time field nested one level (e.g. managedAgent / threat)", () => {
+    expect(
+      centralAlertRaisedAt({
+        raisedAt: "2026-02-01T10:20:00.000Z",
+        createdAt: "2026-02-01T10:20:00.000Z",
+        threat: {
+          lastDetectedAt: "2026-04-06T19:18:00.000Z",
+        },
+      }),
+    ).toBe("2026-04-06T19:18:00.000Z");
+  });
 });

@@ -61,8 +61,12 @@ import {
   MOCK_COMPLIANCE_SERIES,
   MOCK_RECOMMENDATIONS,
 } from "@/lib/mock-data";
-import { buildPortfolioThreatFromCentralAlerts } from "@/lib/portfolio-threat-from-central";
+import {
+  buildPortfolioThreatFromCentralAlerts,
+  PORTFOLIO_THREAT_STACK_KEYS,
+} from "@/lib/portfolio-threat-from-central";
 import { useMissionAlertsBundleQuery } from "@/hooks/queries/use-mission-alerts-bundle-query";
+import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { cn } from "@/lib/utils";
 
 const THREAT_STACK_PALETTE = ["#8b5cf6", "#06b6d4", "#f59e0b", "#10b981", "#64748b"] as const;
@@ -329,6 +333,15 @@ type PortfolioDataMode = "guest_demo" | "org_live" | "org_empty";
 function PortfolioInsightsInner() {
   const { user, org, isGuest } = useAuth();
   void user;
+  const isDark = useResolvedIsDark();
+  /** Recharts default bar hover band is light gray — override for dark UI (same values as Mission control). */
+  const rechartsBarCursor = useMemo(
+    () =>
+      isDark
+        ? { fill: "rgba(255,255,255,0.06)", stroke: "none" as const }
+        : { fill: "rgba(32, 6, 247, 0.08)", stroke: "none" as const },
+    [isDark],
+  );
 
   const [portfolio, setPortfolio] = useState<Customer[]>(DEMO_PORTFOLIO);
   const [trendData, setTrendData] = useState(TREND_DATA);
@@ -528,7 +541,10 @@ function PortfolioInsightsInner() {
 
   const mockStackedRow = useMemo(() => {
     const row: Record<string, string | number> = { name: `${threatHorizonDays}d` };
-    for (const c of MOCK_THREAT_CATEGORIES) row[c.name] = c.value;
+    const byName = new Map(MOCK_THREAT_CATEGORIES.map((c) => [c.name, c.value]));
+    for (const k of PORTFOLIO_THREAT_STACK_KEYS) {
+      row[k] = byName.get(k) ?? 0;
+    }
     return [row];
   }, [threatHorizonDays]);
 
@@ -536,7 +552,7 @@ function PortfolioInsightsInner() {
 
   const threatStackBarKeys = centralThreatModel
     ? centralThreatModel.stackKeys
-    : MOCK_THREAT_CATEGORIES.map((c) => c.name);
+    : [...PORTFOLIO_THREAT_STACK_KEYS];
 
   const threatTopTypes = centralThreatModel?.topTypes ?? MOCK_TOP_THREAT_TYPES;
 
@@ -674,26 +690,6 @@ function PortfolioInsightsInner() {
           </Alert>
         ) : null}
 
-        {!loading && portfolioDataMode === "org_live" ? (
-          <Alert className="border-sky-500/30 bg-sky-500/[0.06] dark:bg-sky-950/25">
-            <Info className="h-4 w-4 text-sky-800 dark:text-sky-300" />
-            <AlertTitle>What is live vs sample on this page</AlertTitle>
-            <AlertDescription>
-              Customer counts, scores, exposure, compliance rate, risk matrix, sector breakdown,
-              portfolio trend (from score history), and at-risk tables reflect your saved
-              assessments. <strong className="text-foreground">Threat landscape</strong> uses{" "}
-              <strong className="text-foreground">Sophos Central</strong> open alerts (same bundle
-              as Mission control).
-              <strong className="text-foreground"> Category trends</strong> use score-history
-              snapshots from Assess, the{" "}
-              <strong className="text-foreground">activity heatmap</strong> uses saved report and
-              assessment timestamps, and{" "}
-              <strong className="text-foreground">recommendations</strong> are derived from customer
-              scores and recency. Guest / demo sign-in still shows sample charts for those widgets.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
         <div data-tour="tour-ins-risk-strip">
           <PortfolioRiskStrip
             customerCount={totalCustomers}
@@ -737,7 +733,7 @@ function PortfolioInsightsInner() {
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
                       {centralThreatChartsEnabled
-                        ? "Open Sophos Central alerts across linked tenants, grouped by calendar day and coarse category (not firewall traffic volume)."
+                        ? "Open Sophos Central alerts across linked tenants, grouped by calendar day; bar segments use Sophos product, event type, and text (not raw traffic volume)."
                         : "Sample blocked-event trend and category mix from bundled demo data; sign in with saved assessments to chart live Central alerts."}
                     </p>
                   </div>
@@ -850,11 +846,14 @@ function PortfolioInsightsInner() {
                         <XAxis type="number" tick={{ fontSize: 11 }} />
                         <YAxis type="category" dataKey="name" width={40} tick={{ fontSize: 11 }} />
                         <Tooltip
+                          cursor={rechartsBarCursor}
                           contentStyle={{
                             background: "hsl(var(--card))",
                             border: "1px solid hsl(var(--border))",
                             borderRadius: 12,
+                            color: "hsl(var(--card-foreground))",
                           }}
+                          labelStyle={{ color: "hsl(var(--card-foreground))" }}
                         />
                         <Legend />
                         {threatStackBarKeys.map((key, i) => (
@@ -1060,12 +1059,15 @@ function PortfolioInsightsInner() {
                           width={28}
                         />
                         <Tooltip
+                          cursor={rechartsBarCursor}
                           contentStyle={{
                             background: "hsl(var(--card))",
                             border: "1px solid hsl(var(--border))",
                             borderRadius: 8,
                             fontSize: 12,
+                            color: "hsl(var(--card-foreground))",
                           }}
+                          labelStyle={{ color: "hsl(var(--card-foreground))" }}
                           formatter={(value: number) => [
                             `${value} save${value === 1 ? "" : "s"}`,
                             "This week",

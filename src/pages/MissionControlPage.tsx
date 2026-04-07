@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useRelativeTimeTick } from "@/hooks/use-relative-time-tick";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -133,6 +134,24 @@ function safeDistanceToNow(iso: string): string {
   return formatDistanceToNow(t, { addSuffix: true });
 }
 
+/**
+ * Absolute time in the viewer’s locale (same instant as Sophos Central; Central’s wording may vary
+ * by portal locale). Uses the browser’s local timezone.
+ */
+function formatAlertRaisedLocal(iso: string): string {
+  if (!iso.trim()) return "—";
+  const d = new Date(iso);
+  const t = d.getTime();
+  if (Number.isNaN(t)) return "—";
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function MiniSparkline({
   data,
   color,
@@ -188,6 +207,7 @@ function ComplianceRing({ pct }: { pct: number }) {
 function MissionControlInner() {
   const { org, isGuest } = useAuth();
   const isDark = useResolvedIsDark();
+  useRelativeTimeTick(30_000);
 
   const useDemo = !org?.id || isGuest;
   const live = useMissionControlLiveQuery(org?.id, org?.name, Boolean(org?.id && !isGuest));
@@ -507,7 +527,7 @@ function MissionControlInner() {
                       : live.alertsRefreshing
                         ? "Updating alerts from Sophos Central…"
                         : live.hasCentralTenants
-                          ? "Open alerts from Sophos Central (latest first)."
+                          ? "Open alerts from Sophos Central (latest first). Time is your local clock, same instant as the portal; hover for relative + ISO."
                           : "Sync Sophos Central tenants to load live alerts here."}
                 </p>
               </div>
@@ -519,7 +539,7 @@ function MissionControlInner() {
                       <th className="px-4 py-2 font-medium sm:px-5 min-w-[200px]">Alert</th>
                       <th className="px-4 py-2 font-medium sm:px-5">Customer</th>
                       <th className="px-4 py-2 font-medium sm:px-5">Device</th>
-                      <th className="px-4 py-2 font-medium sm:px-5">Time</th>
+                      <th className="px-4 py-2 font-medium sm:px-5 min-w-[9.5rem]">Time</th>
                       <th className="px-4 py-2 font-medium sm:px-5 text-right">Action</th>
                     </tr>
                   </thead>
@@ -573,17 +593,12 @@ function MissionControlInner() {
                             {row.device}
                           </td>
                           <td
-                            className="px-4 py-2.5 text-xs text-muted-foreground sm:px-5 tabular-nums"
+                            className="px-4 py-2.5 text-xs text-muted-foreground sm:px-5 tabular-nums whitespace-nowrap"
                             title={
-                              row.ts.trim()
-                                ? new Date(row.ts).toLocaleString(undefined, {
-                                    dateStyle: "medium",
-                                    timeStyle: "short",
-                                  })
-                                : undefined
+                              row.ts.trim() ? `${safeDistanceToNow(row.ts)} · ${row.ts}` : undefined
                             }
                           >
-                            {safeDistanceToNow(row.ts)}
+                            {formatAlertRaisedLocal(row.ts)}
                           </td>
                           <td className="px-4 py-2.5 text-right sm:px-5">
                             <Button

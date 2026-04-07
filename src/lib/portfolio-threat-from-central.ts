@@ -5,7 +5,16 @@ export type PortfolioThreatSeriesPoint = { date: string; alerts: number };
 
 export type PortfolioThreatStackBucket = "Malware" | "Phishing" | "IPS" | "Web" | "Other";
 
-const STACK_ORDER: PortfolioThreatStackBucket[] = ["Malware", "Phishing", "IPS", "Web", "Other"];
+/** Stacked bar / legend order (left-to-right segments); keep charts and mocks aligned. */
+export const PORTFOLIO_THREAT_STACK_KEYS: readonly PortfolioThreatStackBucket[] = [
+  "Malware",
+  "Phishing",
+  "IPS",
+  "Web",
+  "Other",
+];
+
+const STACK_ORDER: PortfolioThreatStackBucket[] = [...PORTFOLIO_THREAT_STACK_KEYS];
 
 /** MM-DD in local time — matches `MOCK_THREAT_ACTIVITY` labelling style. */
 function localDayKey(d: Date): string {
@@ -14,16 +23,110 @@ function localDayKey(d: Date): string {
   return `${m < 10 ? "0" : ""}${m}-${day < 10 ? "0" : ""}${day}`;
 }
 
+function norm(s: unknown): string {
+  return `${s ?? ""}`.toLowerCase();
+}
+
 /**
- * Map Central alert category / product / description into stacked chart buckets
- * (aligned with previous mock labels).
+ * Map Central alert `product`, `type` (`Event::…`), `category`, and description into stacked chart
+ * buckets. Product/type take precedence so firewall ATP, ZTNA, email, etc. don’t all land in Other.
  */
 export function mapAlertToThreatBucket(alert: CentralAlert): PortfolioThreatStackBucket {
-  const cat = `${alert.category ?? ""}`.toLowerCase();
-  const prod = `${alert.product ?? ""}`.toLowerCase();
-  const desc = `${alert.description ?? ""}`.toLowerCase();
-  const all = `${cat} ${prod} ${desc}`;
+  const cat = norm(alert.category);
+  const prod = norm(alert.product);
+  const desc = norm(alert.description);
+  const typ = `${(alert as CentralAlert & { type?: string }).type ?? ""}`;
+  const typLower = typ.toLowerCase();
+  const all = `${cat} ${prod} ${desc} ${typLower}`;
 
+  // ── Operational / health (Central categories): tunnel up/down, patch state, etc. ──
+  if (
+    /::(?:firewallred|heartbeat|sync)/i.test(typ) ||
+    ["connectivity", "health", "updating", "licensing"].includes(cat)
+  ) {
+    if (
+      !/malware|virus|troj|phish|intrusion|ips|botnet|c2|ransom|advanced threat|command and control/i.test(
+        all,
+      )
+    ) {
+      return "Other";
+    }
+  }
+
+  // ── Sophos `type` (highest signal when present) ──
+  if (typ) {
+    if (
+      /::(?:email|mail|smtp|mime|impersonation|spoof|phish|spam|quarantine|postdelivery)/i.test(typ)
+    ) {
+      return "Phishing";
+    }
+    if (/::ztna/i.test(typ)) {
+      return "Web";
+    }
+    if (
+      /firewalladvancedthreatprotection|::malware|::virus|::pua|::ransomware|::sandbox|macdetection|cleanpua|heartbeatmalware/i.test(
+        typLower,
+      )
+    ) {
+      return "Malware";
+    }
+    if (/::(?:ips|intrusion|packet|heartbeatips)/i.test(typ)) {
+      return "IPS";
+    }
+    if (
+      /::(?:web|url|waf|category|tls|ssl|certificate|dnsfilter|webfilter)/i.test(typ) ||
+      /webcategory|applicationcontrol/i.test(typLower)
+    ) {
+      return "Web";
+    }
+  }
+
+  // ── `product` (Central API; MCP uses lowercase snake in some paths — we normalise) ──
+  if (prod === "email" || prod === "mail") {
+    return "Phishing";
+  }
+  if (prod === "ztna") {
+    return "Web";
+  }
+  if (prod === "wireless" || prod === "wifi") {
+    return "Web";
+  }
+  if (prod === "endpoint" || prod === "server" || prod === "computer" || prod === "mobile") {
+    if (cat.includes("phish") || cat.includes("spam") || desc.includes("phish")) {
+      return "Phishing";
+    }
+    if (cat.includes("web") || cat.includes("url")) {
+      return "Web";
+    }
+    if (cat.includes("ips") || cat.includes("intrusion")) {
+      return "IPS";
+    }
+    return "Malware";
+  }
+
+  // ── Category (snake_case from API) ──
+  if (cat.includes("phish") || cat.includes("spam") || cat === "email") {
+    return "Phishing";
+  }
+  if (cat.includes("ztna")) {
+    return "Web";
+  }
+  if (cat.includes("malware") || cat.includes("runtimedetection") || cat.includes("virus")) {
+    return "Malware";
+  }
+  if (cat.includes("ips") || cat.includes("intrusion")) {
+    return "IPS";
+  }
+  if (
+    cat.includes("web") ||
+    cat.includes("url") ||
+    cat.includes("applicationcontrol") ||
+    cat.includes("dns")
+  ) {
+    return "Web";
+  }
+
+  // ── Description keywords (firewall product often has category "security") ──
   if (
     all.includes("phish") ||
     all.includes("spam") ||
@@ -32,17 +135,29 @@ export function mapAlertToThreatBucket(alert: CentralAlert): PortfolioThreatStac
   ) {
     return "Phishing";
   }
-  // Malware before IPS — Central often sets product to "firewall" for edge events.
+  if (
+    all.includes("botnet") ||
+    all.includes("command and control") ||
+    all.includes("command-and-control") ||
+    /\bc2\b/.test(desc) ||
+    all.includes("c&c") ||
+    all.includes("beacon") ||
+    all.includes("callback") ||
+    all.includes("malicious communication") ||
+    all.includes("exfiltration")
+  ) {
+    return "Malware";
+  }
   if (
     cat.includes("malware") ||
     desc.includes("malware") ||
     desc.includes("troj") ||
     desc.includes("virus") ||
     desc.includes("ransom") ||
-    desc.includes("c2") ||
-    desc.includes("callback") ||
+    desc.includes("pua") ||
+    desc.includes("sandbox") ||
     desc.includes("advanced threat") ||
-    /\bthreat\b/.test(desc)
+    /\bransomware\b/.test(desc)
   ) {
     return "Malware";
   }
@@ -53,7 +168,9 @@ export function mapAlertToThreatBucket(alert: CentralAlert): PortfolioThreatStac
     all.includes("malicious dns") ||
     all.includes("tls") ||
     all.includes("ssl ") ||
-    all.includes("certificate")
+    all.includes("certificate") ||
+    all.includes("web filter") ||
+    all.includes("category")
   ) {
     return "Web";
   }
@@ -63,11 +180,21 @@ export function mapAlertToThreatBucket(alert: CentralAlert): PortfolioThreatStac
     all.includes("sql injection") ||
     all.includes("packet inspection") ||
     all.includes("xstream") ||
-    all.includes("deep packet")
+    all.includes("deep packet") ||
+    all.includes("exploit")
   ) {
     return "IPS";
   }
+
   return "Other";
+}
+
+/** Mission control spark: collapse five buckets to three series colours. */
+export function mapAlertToMissionControlAxes(alert: CentralAlert): "ips" | "web" | "blocked" {
+  const b = mapAlertToThreatBucket(alert);
+  if (b === "Web") return "web";
+  if (b === "Other") return "blocked";
+  return "ips";
 }
 
 function titleCaseCategory(raw: string): string {
