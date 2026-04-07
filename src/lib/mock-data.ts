@@ -213,10 +213,6 @@ export const MOCK_COMPLIANCE_SERIES: ComplianceSeriesPoint[] = [
 ];
 
 /** GitHub-style heatmap: week rows, day columns — values 0–4 activity level (deterministic) */
-export const MOCK_REPORT_HEATMAP_WEEKS: number[][] = Array.from({ length: 10 }, (_, w) =>
-  Array.from({ length: 7 }, (_, d) => ((w * 7 + d) * 17) % 5),
-);
-
 export interface ScatterCustomer {
   id: string;
   name: string;
@@ -522,22 +518,6 @@ export interface DriftHistoryMarker {
   date: string;
   customer: string;
 }
-
-/** Fleet map — approximate lat/lng for demo dots (sized by fleet count) */
-export const MOCK_FLEET_MAP_POINTS: {
-  id: string;
-  label: string;
-  lat: number;
-  lng: number;
-  count: number;
-}[] = [
-  { id: "m1", label: "London", lat: 51.5, lng: -0.12, count: 24 },
-  { id: "m2", label: "Manchester", lat: 53.48, lng: -2.24, count: 14 },
-  { id: "m3", label: "New York", lat: 40.71, lng: -74.01, count: 32 },
-  { id: "m4", label: "Frankfurt", lat: 50.11, lng: 8.68, count: 18 },
-  { id: "m5", label: "Sydney", lat: -33.87, lng: 151.2, count: 9 },
-  { id: "m6", label: "Tokyo", lat: 35.68, lng: 139.65, count: 11 },
-];
 
 export const MOCK_DRIFT_HISTORY: DriftHistoryMarker[] = [
   { id: "h1", label: "Rules delta", date: "2026-04-01", customer: "Vertex Partners" },

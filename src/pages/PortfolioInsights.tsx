@@ -3,7 +3,13 @@ import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { loadScoreHistoryForFleet } from "@/lib/score-history";
+import { loadScoreHistoryForFleet, type ScoreHistoryEntry } from "@/lib/score-history";
+import {
+  buildCategoryTrendFromScoreHistory,
+  buildPortfolioRecommendations,
+  buildReportActivityPanel,
+  mockReportActivityPanelDemo,
+} from "@/lib/portfolio-insights-live";
 import { gradeForScore, GRADE_COLORS, type Grade } from "@/lib/design-tokens";
 import { resolveCustomerName } from "@/lib/customer-name";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
@@ -53,10 +59,13 @@ import {
   MOCK_THREAT_CATEGORIES,
   MOCK_TOP_THREAT_TYPES,
   MOCK_COMPLIANCE_SERIES,
-  MOCK_REPORT_HEATMAP_WEEKS,
   MOCK_RECOMMENDATIONS,
 } from "@/lib/mock-data";
+import { buildPortfolioThreatFromCentralAlerts } from "@/lib/portfolio-threat-from-central";
+import { useMissionAlertsBundleQuery } from "@/hooks/queries/use-mission-alerts-bundle-query";
 import { cn } from "@/lib/utils";
+
+const THREAT_STACK_PALETTE = ["#8b5cf6", "#06b6d4", "#f59e0b", "#10b981", "#64748b"] as const;
 
 /* ------------------------------------------------------------------ */
 /*  Demo data                                                         */
@@ -315,14 +324,6 @@ function TrendChart({ data }: { data: { month: string; score: number }[] }) {
 const glassCard =
   "relative rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] bg-white/80 dark:bg-card/95 backdrop-blur-xl shadow-card";
 
-function heatLevelClass(v: number) {
-  if (v <= 0) return "bg-muted/50";
-  if (v === 1) return "bg-emerald-600/25";
-  if (v === 2) return "bg-emerald-500/40";
-  if (v === 3) return "bg-emerald-500/60";
-  return "bg-emerald-400/80";
-}
-
 type PortfolioDataMode = "guest_demo" | "org_live" | "org_empty";
 
 function PortfolioInsightsInner() {
@@ -336,12 +337,16 @@ function PortfolioInsightsInner() {
   const [timeRange, setTimeRange] = useState<"7D" | "30D" | "90D" | "12M" | "Custom">("30D");
   const [matrixCustomer, setMatrixCustomer] = useState<Customer | null>(null);
   const [dismissedRecIds, setDismissedRecIds] = useState<Set<string>>(() => new Set());
+  const [scoreHistoryEntries, setScoreHistoryEntries] = useState<ScoreHistoryEntry[]>([]);
+  const [activityTimestamps, setActivityTimestamps] = useState<string[]>([]);
 
   useEffect(() => {
     if (!org?.id) {
       setPortfolio(DEMO_PORTFOLIO);
       setTrendData(TREND_DATA);
       setPortfolioDataMode("guest_demo");
+      setScoreHistoryEntries([]);
+      setActivityTimestamps([]);
       setLoading(false);
       return;
     }
@@ -349,17 +354,24 @@ function PortfolioInsightsInner() {
     setLoading(true);
     (async () => {
       try {
-        const [assessRes, historyEntries] = await Promise.all([
+        const [assessRes, historyEntries, reportsRes] = await Promise.all([
           supabase
             .from("assessments")
             .select("*")
             .eq("org_id", org.id)
             .order("created_at", { ascending: false }),
           loadScoreHistoryForFleet(org.id),
+          supabase
+            .from("saved_reports")
+            .select("created_at")
+            .eq("org_id", org.id)
+            .order("created_at", { ascending: true })
+            .limit(4000),
         ]);
         if (cancelled) return;
 
         const assessments = assessRes.data ?? [];
+        setScoreHistoryEntries(historyEntries);
         const orgName = org.name ?? "";
 
         // One row per logical customer: merge "(This tenant)", "Unnamed", empty, etc. to org name
@@ -391,9 +403,13 @@ function PortfolioInsightsInner() {
           });
           setPortfolio(mapped);
           setPortfolioDataMode("org_live");
+          const reportTimes = (reportsRes.data ?? []).map((r) => r.created_at as string);
+          const assessTimes = assessments.map((a) => a.created_at as string);
+          setActivityTimestamps([...reportTimes, ...assessTimes]);
         } else {
           setPortfolio([]);
           setPortfolioDataMode("org_empty");
+          setActivityTimestamps([]);
         }
 
         if (historyEntries.length > 0) {
@@ -419,6 +435,8 @@ function PortfolioInsightsInner() {
           setPortfolio([]);
           setTrendData([]);
           setPortfolioDataMode("org_empty");
+          setScoreHistoryEntries([]);
+          setActivityTimestamps([]);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -475,18 +493,57 @@ function PortfolioInsightsInner() {
     }));
   }, [portfolio]);
 
-  const threatDays =
-    timeRange === "7D" ? 7 : timeRange === "90D" ? 30 : timeRange === "12M" ? 30 : 30;
-  const threatSlice = useMemo(
-    () => MOCK_THREAT_ACTIVITY.slice(-Math.min(threatDays, MOCK_THREAT_ACTIVITY.length)),
-    [threatDays],
+  const centralThreatChartsEnabled =
+    portfolioDataMode === "org_live" && Boolean(org?.id) && !isGuest;
+
+  const missionAlertsQuery = useMissionAlertsBundleQuery(org?.id, centralThreatChartsEnabled);
+
+  const threatHorizonDays =
+    timeRange === "7D"
+      ? 7
+      : timeRange === "30D"
+        ? 30
+        : timeRange === "90D"
+          ? 90
+          : timeRange === "12M"
+            ? 365
+            : 30;
+
+  const mockThreatAreaData = useMemo(
+    () =>
+      MOCK_THREAT_ACTIVITY.slice(-Math.min(threatHorizonDays, MOCK_THREAT_ACTIVITY.length)).map(
+        (d) => ({ date: d.date, alerts: d.blocked }),
+      ),
+    [threatHorizonDays],
   );
 
-  const stackedCategoryRow = useMemo(() => {
-    const row: Record<string, string | number> = { name: "30d" };
+  const centralThreatModel = useMemo(() => {
+    if (!centralThreatChartsEnabled) return null;
+    const items = missionAlertsQuery.data?.items ?? [];
+    return buildPortfolioThreatFromCentralAlerts(items, threatHorizonDays);
+  }, [centralThreatChartsEnabled, missionAlertsQuery.data?.items, threatHorizonDays]);
+
+  const threatAreaData = centralThreatModel?.series ?? mockThreatAreaData;
+  const threatAreaSeriesName = centralThreatChartsEnabled ? "Open alerts" : "Sample (demo)";
+
+  const mockStackedRow = useMemo(() => {
+    const row: Record<string, string | number> = { name: `${threatHorizonDays}d` };
     for (const c of MOCK_THREAT_CATEGORIES) row[c.name] = c.value;
     return [row];
-  }, []);
+  }, [threatHorizonDays]);
+
+  const threatStackedData = centralThreatModel ? [centralThreatModel.stackedRow] : mockStackedRow;
+
+  const threatStackBarKeys = centralThreatModel
+    ? centralThreatModel.stackKeys
+    : MOCK_THREAT_CATEGORIES.map((c) => c.name);
+
+  const threatTopTypes = centralThreatModel?.topTypes ?? MOCK_TOP_THREAT_TYPES;
+
+  const threatChartsLoading =
+    centralThreatChartsEnabled && missionAlertsQuery.isLoading && !missionAlertsQuery.data;
+
+  const threatChartsError = centralThreatChartsEnabled && missionAlertsQuery.isError;
 
   const scatterData = useMemo(
     () =>
@@ -520,6 +577,37 @@ function PortfolioInsightsInner() {
 
   const showIllustrativeCharts =
     portfolioDataMode === "guest_demo" || portfolioDataMode === "org_live";
+
+  /** Signed-in org with saved assessments: Threat + compliance + heatmap + recs use workspace data, not mock-data. */
+  const orgLivePortfolioCharts = portfolioDataMode === "org_live" && Boolean(org?.id) && !isGuest;
+
+  const categoryTrendLive = useMemo(
+    () => buildCategoryTrendFromScoreHistory(scoreHistoryEntries),
+    [scoreHistoryEntries],
+  );
+
+  const reportActivityPanel = useMemo(
+    () =>
+      orgLivePortfolioCharts
+        ? buildReportActivityPanel(activityTimestamps)
+        : mockReportActivityPanelDemo(),
+    [orgLivePortfolioCharts, activityTimestamps],
+  );
+
+  const recommendationCards = useMemo(
+    () =>
+      orgLivePortfolioCharts
+        ? buildPortfolioRecommendations(
+            portfolio.map((c) => ({
+              name: c.name,
+              score: c.score,
+              daysSinceAssessment: c.daysSinceAssessment,
+              criticalFindings: c.criticalFindings,
+            })),
+          )
+        : MOCK_RECOMMENDATIONS,
+    [orgLivePortfolioCharts, portfolio],
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -593,9 +681,15 @@ function PortfolioInsightsInner() {
             <AlertDescription>
               Customer counts, scores, exposure, compliance rate, risk matrix, sector breakdown,
               portfolio trend (from score history), and at-risk tables reflect your saved
-              assessments. Threat landscape, compliance trend lines, report activity heatmap, and
-              recommendation cards are still mock visualisations — they do not pull Sophos Central
-              alerts or SIEM data yet.
+              assessments. <strong className="text-foreground">Threat landscape</strong> uses{" "}
+              <strong className="text-foreground">Sophos Central</strong> open alerts (same bundle
+              as Mission control).
+              <strong className="text-foreground"> Category trends</strong> use score-history
+              snapshots from Assess, the{" "}
+              <strong className="text-foreground">activity heatmap</strong> uses saved report and
+              assessment timestamps, and{" "}
+              <strong className="text-foreground">recommendations</strong> are derived from customer
+              scores and recency. Guest / demo sign-in still shows sample charts for those widgets.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -635,19 +729,89 @@ function PortfolioInsightsInner() {
             {/* ---- Threat landscape ---- */}
             <section className={glassCard + " overflow-hidden"} data-tour="tour-ins-threat">
               <div className="border-b border-border/40 px-6 py-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-[#2006F7]" />
-                  Threat landscape
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Modelled traffic mix for the selected window (demo series).
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-[#2006F7]" />
+                      Threat landscape
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
+                      {centralThreatChartsEnabled
+                        ? "Open Sophos Central alerts across linked tenants, grouped by calendar day and coarse category (not firewall traffic volume)."
+                        : "Sample blocked-event trend and category mix from bundled demo data; sign in with saved assessments to chart live Central alerts."}
+                    </p>
+                  </div>
+                  {threatChartsLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading Central alerts…
+                    </div>
+                  ) : null}
+                </div>
+                {threatChartsError ? (
+                  <Alert className="mt-3 border-destructive/30 bg-destructive/5">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <AlertTitle>Could not refresh Central alerts</AlertTitle>
+                    <AlertDescription>
+                      Charts below may be empty. Check Sophos Central connection in Settings, then
+                      retry from Mission control.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+                {centralThreatChartsEnabled &&
+                !threatChartsLoading &&
+                !threatChartsError &&
+                (missionAlertsQuery.data?.items?.length ?? 0) > 0 &&
+                (centralThreatModel?.inWindowCount ?? 0) === 0 ? (
+                  <Alert className="mt-3 border-amber-500/35 bg-amber-500/10">
+                    <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertTitle>Open alerts exist, but not in this date range</AlertTitle>
+                    <AlertDescription className="text-sm">
+                      Sophos Central returned{" "}
+                      <span className="font-medium text-foreground">
+                        {missionAlertsQuery.data?.items?.length ?? 0} open alert
+                        {(missionAlertsQuery.data?.items?.length ?? 0) === 1 ? "" : "s"}
+                      </span>
+                      , but their <strong className="text-foreground">raised</strong> time is not in
+                      the last{" "}
+                      {threatHorizonDays >= 365 ? "12 months" : `${threatHorizonDays} days`} (this
+                      chart counts by raised time, not when you open the page). Try{" "}
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-foreground underline"
+                        onClick={() => setTimeRange("90D")}
+                      >
+                        90D
+                      </Button>{" "}
+                      or{" "}
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-foreground underline"
+                        onClick={() => setTimeRange("12M")}
+                      >
+                        12M
+                      </Button>
+                      , or review timestamps on{" "}
+                      <Link to="/central/alerts" className="font-medium text-foreground underline">
+                        Central → Alerts
+                      </Link>
+                      .
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
               </div>
-              <div className="grid gap-6 p-4 lg:grid-cols-3 lg:p-6">
+              <div
+                className={cn(
+                  "grid gap-6 p-4 lg:grid-cols-3 lg:p-6",
+                  threatChartsLoading && "opacity-60 pointer-events-none",
+                )}
+              >
                 <div className="lg:col-span-2 space-y-6">
                   <div className="h-[240px] w-full min-h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={threatSlice}>
+                      <AreaChart data={threatAreaData}>
                         <defs>
                           <linearGradient id="insThreatFill" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#2006F7" stopOpacity={0.35} />
@@ -670,8 +834,8 @@ function PortfolioInsightsInner() {
                         />
                         <Area
                           type="monotone"
-                          dataKey="blocked"
-                          name="Blocked"
+                          dataKey="alerts"
+                          name={threatAreaSeriesName}
                           stroke="#2006F7"
                           fill="url(#insThreatFill)"
                           strokeWidth={2}
@@ -681,7 +845,7 @@ function PortfolioInsightsInner() {
                   </div>
                   <div className="h-[200px] w-full min-h-[180px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stackedCategoryRow} layout="vertical">
+                      <BarChart data={threatStackedData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
                         <XAxis type="number" tick={{ fontSize: 11 }} />
                         <YAxis type="category" dataKey="name" width={40} tick={{ fontSize: 11 }} />
@@ -693,12 +857,12 @@ function PortfolioInsightsInner() {
                           }}
                         />
                         <Legend />
-                        {MOCK_THREAT_CATEGORIES.map((c, i) => (
+                        {threatStackBarKeys.map((key, i) => (
                           <Bar
-                            key={c.name}
-                            dataKey={c.name}
+                            key={key}
+                            dataKey={key}
                             stackId="t"
-                            fill={["#8b5cf6", "#06b6d4", "#f59e0b", "#10b981"][i % 4]}
+                            fill={THREAT_STACK_PALETTE[i % THREAT_STACK_PALETTE.length]}
                             radius={[0, 4, 4, 0]}
                           />
                         ))}
@@ -709,24 +873,37 @@ function PortfolioInsightsInner() {
                 <div className="rounded-xl border border-border/40 bg-muted/20 p-4">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                     <ListOrdered className="h-4 w-4" />
-                    Top threat types
+                    Top alert categories
                   </h3>
-                  <ul className="space-y-3">
-                    {MOCK_TOP_THREAT_TYPES.map((t) => (
-                      <li key={t.name}>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-medium">{t.name}</span>
-                          <span className="tabular-nums text-muted-foreground">{t.pct}%</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-[#2006F7]/80"
-                            style={{ width: `${t.pct}%` }}
-                          />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {threatTopTypes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {centralThreatChartsEnabled
+                        ? "No open alerts with a raised time in this window."
+                        : "Sample categories appear when viewing the demo portfolio."}
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {threatTopTypes.map((t) => (
+                        <li key={t.name}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{t.name}</span>
+                            <span className="tabular-nums text-muted-foreground">
+                              {t.pct}%
+                              {centralThreatChartsEnabled && "count" in t
+                                ? ` (${(t as { count: number }).count})`
+                                : ""}
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-[#2006F7]/80"
+                              style={{ width: `${t.pct}%` }}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </section>
@@ -736,76 +913,198 @@ function PortfolioInsightsInner() {
               <div className="border-b border-border/40 px-6 py-4">
                 <h2 className="text-lg font-semibold">Compliance trends</h2>
                 <p className="text-sm text-muted-foreground">
-                  Average framework scores over time (illustrative — not your assessed frameworks).
+                  {orgLivePortfolioCharts
+                    ? "Average posture category scores from your score history (saved when you run Assess) — same categories as the risk breakdown, not external framework feeds."
+                    : "Sample multi-line chart (demo): illustrative GDPR / HIPAA / NIST / PCI style series for guests."}
                 </p>
               </div>
               <div className="grid gap-6 p-4 lg:grid-cols-2 lg:p-6">
                 <div className="h-[260px] min-h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={MOCK_COMPLIANCE_SERIES}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                      <YAxis domain={[60, 90]} tick={{ fontSize: 11 }} />
-                      <Tooltip
-                        contentStyle={{
-                          background: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: 12,
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="gdpr"
-                        name="GDPR"
-                        stroke="#8b5cf6"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="hipaa"
-                        name="HIPAA"
-                        stroke="#06b6d4"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="nist"
-                        name="NIST"
-                        stroke="#f59e0b"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="pci"
-                        name="PCI-DSS"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {orgLivePortfolioCharts && categoryTrendLive.lines.length === 0 ? (
+                    <EmptyState
+                      className="min-h-[220px] py-12"
+                      icon={<BarChart3 className="h-6 w-6 text-muted-foreground/50" />}
+                      title="No category history yet"
+                      description="Run Assess while signed in so snapshots write to score history; category lines appear on the next visit."
+                    />
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={
+                          orgLivePortfolioCharts && categoryTrendLive.rows.length > 0
+                            ? categoryTrendLive.rows
+                            : MOCK_COMPLIANCE_SERIES
+                        }
+                      >
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                        <YAxis
+                          domain={
+                            orgLivePortfolioCharts && categoryTrendLive.rows.length > 0
+                              ? [0, 100]
+                              : [60, 90]
+                          }
+                          tick={{ fontSize: 11 }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            background: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: 12,
+                          }}
+                        />
+                        <Legend />
+                        {orgLivePortfolioCharts && categoryTrendLive.lines.length > 0 ? (
+                          categoryTrendLive.lines.map((line) => (
+                            <Line
+                              key={line.key}
+                              type="monotone"
+                              dataKey={line.key}
+                              name={line.name}
+                              stroke={line.color}
+                              strokeWidth={2}
+                              dot={false}
+                              connectNulls
+                            />
+                          ))
+                        ) : (
+                          <>
+                            <Line
+                              type="monotone"
+                              dataKey="gdpr"
+                              name="GDPR"
+                              stroke="#8b5cf6"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="hipaa"
+                              name="HIPAA"
+                              stroke="#06b6d4"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="nist"
+                              name="NIST"
+                              stroke="#f59e0b"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="pci"
+                              name="PCI-DSS"
+                              stroke="#10b981"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          </>
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold mb-2">Report generation activity</h3>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    GitHub-style intensity (demo).
+                  <h3 className="text-sm font-semibold mb-1">Report generation activity</h3>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {orgLivePortfolioCharts
+                      ? "Saved reports (Report centre) plus cloud assessment saves, grouped by calendar week (Monday–Sunday). Bars show how many saves happened that week."
+                      : "Sample chart and list for guests — sign in to see your organisation’s real weeks and dates."}
                   </p>
-                  <div className="flex gap-1 flex-col">
-                    {MOCK_REPORT_HEATMAP_WEEKS.map((week, wi) => (
-                      <div key={wi} className="flex gap-1">
-                        {week.map((v, di) => (
-                          <div
-                            key={di}
-                            className={cn("h-3.5 w-3.5 rounded-sm", heatLevelClass(v))}
-                            title={`Activity level ${v}`}
-                          />
+                  {orgLivePortfolioCharts ? (
+                    <p className="text-[11px] text-muted-foreground mb-2">
+                      <span className="font-medium text-foreground/80">Last ~10 weeks:</span>{" "}
+                      {reportActivityPanel.totalSavesInWindow} total save
+                      {reportActivityPanel.totalSavesInWindow === 1 ? "" : "s"},{" "}
+                      {reportActivityPanel.daysWithActivity} calendar day
+                      {reportActivityPanel.daysWithActivity === 1 ? "" : "s"} with at least one save
+                      {reportActivityPanel.peakDayCount > 0
+                        ? ` (busiest single day: ${reportActivityPanel.peakDayCount})`
+                        : ""}
+                      .
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground mb-2">
+                      Numbers below are placeholders — not your workspace data.
+                    </p>
+                  )}
+                  <div
+                    className="h-[160px] w-full min-w-0 mb-3"
+                    role="img"
+                    aria-label="Report and assessment saves per week"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={reportActivityPanel.weekBars}
+                        margin={{ top: 4, right: 4, left: 0, bottom: 4 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          className="stroke-muted/40"
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="weekLabel"
+                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                          interval={0}
+                          angle={-32}
+                          textAnchor="end"
+                          height={48}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                          allowDecimals={false}
+                          width={28}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            background: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: 8,
+                            fontSize: 12,
+                          }}
+                          formatter={(value: number) => [
+                            `${value} save${value === 1 ? "" : "s"}`,
+                            "This week",
+                          ]}
+                          labelFormatter={(label, items) => {
+                            const row = items?.[0]?.payload as { weekKey?: string } | undefined;
+                            if (row?.weekKey?.startsWith("demo-")) return `Sample week (${label})`;
+                            return `Week starting ${label}`;
+                          }}
+                        />
+                        <Bar dataKey="count" name="Saves" fill="#2006F7" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-semibold text-foreground/90 mb-1.5">
+                      Days with saves (newest first)
+                    </h4>
+                    {reportActivityPanel.recentDays.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        {orgLivePortfolioCharts
+                          ? "No saves in the tracked window yet — saving a report or assessment will show up here."
+                          : "—"}
+                      </p>
+                    ) : (
+                      <ul className="text-xs space-y-1 text-muted-foreground max-h-[140px] overflow-y-auto pr-1">
+                        {reportActivityPanel.recentDays.map((d) => (
+                          <li
+                            key={d.dateKey}
+                            className="flex justify-between gap-3 border-b border-border/50 py-1.5 last:border-0"
+                          >
+                            <span className="min-w-0">{d.dateLabel}</span>
+                            <span className="shrink-0 tabular-nums font-medium text-foreground/80">
+                              {d.count} save{d.count === 1 ? "" : "s"}
+                            </span>
+                          </li>
                         ))}
-                      </div>
-                    ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               </div>
@@ -939,50 +1238,70 @@ function PortfolioInsightsInner() {
             <div className="border-b border-border/40 px-6 py-4">
               <h2 className="text-lg font-semibold">Recommendations</h2>
               <p className="text-sm text-muted-foreground">
-                Illustrative action cards (demo) — not generated from your current assessment rows.
+                {orgLivePortfolioCharts
+                  ? "Priorities from saved customer scores and assessment age (same customers as the matrix)."
+                  : "Illustrative action cards (demo) — sign in with assessments for live suggestions."}
               </p>
             </div>
-            <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {MOCK_RECOMMENDATIONS.filter((r) => !dismissedRecIds.has(r.id)).map((r) => (
-                <div
-                  key={r.id}
-                  className="flex flex-col rounded-xl border border-border/50 bg-muted/20 p-4 gap-3"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={cn(
-                        "text-[10px] font-bold rounded-md border px-2 py-0.5",
-                        r.priority === "P1" &&
-                          "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
-                        r.priority === "P2" &&
-                          "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-                        r.priority === "P3" && "border-border bg-muted/50 text-muted-foreground",
-                      )}
+            {recommendationCards.filter((r) => !dismissedRecIds.has(r.id)).length === 0 ? (
+              <p className="px-4 pb-6 text-sm text-muted-foreground">
+                {orgLivePortfolioCharts
+                  ? "No priority cards to show — scores and recency look fine, or you dismissed every card for this visit."
+                  : "No cards left in the demo set — refresh the page to reset."}
+              </p>
+            ) : (
+              <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {recommendationCards
+                  .filter((r) => !dismissedRecIds.has(r.id))
+                  .map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex flex-col rounded-xl border border-border/50 bg-muted/20 p-4 gap-3"
                     >
-                      {r.priority}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground uppercase">
-                      {r.effort} effort
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-foreground">{r.customer}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed flex-1">{r.text}</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" className="flex-1 h-8 text-xs" asChild>
-                      <Link to="/playbooks">Playbook</Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 text-xs"
-                      onClick={() => setDismissedRecIds((prev) => new Set(prev).add(r.id))}
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold rounded-md border px-2 py-0.5",
+                            r.priority === "P1" &&
+                              "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400",
+                            r.priority === "P2" &&
+                              "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+                            r.priority === "P3" &&
+                              "border-border bg-muted/50 text-muted-foreground",
+                          )}
+                        >
+                          {r.priority}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground uppercase">
+                          {r.effort} effort
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-foreground">{r.customer}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed flex-1">
+                        {r.text}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="flex-1 h-8 text-xs"
+                          asChild
+                        >
+                          <Link to="/playbooks">Playbook</Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-xs"
+                          onClick={() => setDismissedRecIds((prev) => new Set(prev).add(r.id))}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </section>
         ) : null}
 

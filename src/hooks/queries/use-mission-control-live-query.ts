@@ -10,6 +10,7 @@ import {
   normalizeReportEntries,
 } from "@/lib/saved-reports";
 import {
+  centralAlertRaisedAt,
   getCachedFirewalls,
   getEffectiveTenantDisplayName,
   type MissionAlertsBundle,
@@ -105,7 +106,7 @@ function buildThreatFromAlerts(alerts: CentralAlertRow[]): ThreatActivityDay[] {
   const cutoff = new Date(now);
   cutoff.setDate(cutoff.getDate() - 30);
   for (const a of alerts) {
-    const day = parseIsoDateDay(a.raisedAt);
+    const day = parseIsoDateDay(centralAlertRaisedAt(a));
     if (!day) continue;
     const tMs = new Date(day).getTime();
     if (tMs < cutoff.getTime()) continue;
@@ -281,7 +282,7 @@ export function useMissionControlLiveQuery(
     const customerSparkline = bucketCountsByDay(assessmentTs, 90);
 
     const alertDayKeys = bucketCountsByDay(
-      alerts.map((a) => a.raisedAt),
+      alerts.map((a) => centralAlertRaisedAt(a)),
       90,
     );
     const alertSparkline = alertDayKeys;
@@ -303,7 +304,7 @@ export function useMissionControlLiveQuery(
       : "assessments";
 
     const missionAlerts: MissionAlertRow[] = alerts.slice(0, 12).map((a) => {
-      const tsRaw = typeof a.raisedAt === "string" ? a.raisedAt.trim() : "";
+      const tsRaw = centralAlertRaisedAt(a);
       const ts = parseIsoDateDay(tsRaw) ? tsRaw : "";
       return {
         id: a.id,

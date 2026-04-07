@@ -507,6 +507,14 @@ function ChangelogPageInner() {
                 bottom of the viewport.
               </li>
               <li>
+                <strong className="text-foreground">Fleet — Map tab</strong>: the world view now
+                renders Natural Earth land (same source as the attack-surface geo map), pins from
+                your <strong className="text-foreground">filtered fleet list</strong> grouped by
+                customer, and approximate positions from each row&apos;s compliance country. Hover
+                (or focus) a pin for customer name, counts, and a scrollable list of hostnames with
+                model, grade, and status.
+              </li>
+              <li>
                 <strong className="text-foreground">API hub — endpoint list</strong>: the API &amp;
                 Integrations <em>Endpoints</em> section now uses the same canonical route list as
                 the management panel API documentation (including public{" "}
@@ -583,6 +591,32 @@ function ChangelogPageInner() {
                 browser (per org) so return visits can paint immediately while a refresh runs.
               </li>
               <li>
+                <strong className="text-foreground">
+                  Central — tenant-type (single-tenant) API keys
+                </strong>
+                : merged alerts (Mission control, Central Alerts, Insights threat charts), merged
+                Groups, and merged MDR always use Sophos <code className="text-xs">whoAmI</code> for
+                the tenant id and regional API host. If{" "}
+                <code className="text-xs">central_tenants</code> had a different UUID, the Edge
+                function used to send the wrong <code className="text-xs">X-Tenant-ID</code> and you
+                could see no open alerts despite Central having them.
+              </li>
+              <li>
+                <strong className="text-foreground">
+                  Mission control &amp; Central — live alert recency
+                </strong>
+                : merged alert fetches use <code className="text-xs">sort=raisedAt:desc</code> and
+                keep paginating when Sophos omits <code className="text-xs">pages.total</code>{" "}
+                (previously only the first page loaded — often the{" "}
+                <strong className="text-foreground">oldest</strong> slice — so the table could show
+                “months ago” while Central listed newer open alerts). Browser cache for the
+                mission-alerts bundle uses a new storage key so you pick up the behaviour without
+                clearing site data. Timestamps still prefer the{" "}
+                <strong className="text-foreground">latest</strong> among raised, modified, updated,
+                reported, and created fields where present. Hover the TIME cell for absolute local
+                date and time.
+              </li>
+              <li>
                 <strong className="text-foreground">API Explorer — real org keys</strong>: when
                 you&apos;re signed in with an organisation, the API tab shows live scoped service
                 keys (create, revoke, one-time secret copy) instead of sample rows; usage charts and
@@ -595,7 +629,18 @@ function ChangelogPageInner() {
                 assessments (illustrative charts hidden; empty states and CTA to Assess), and live
                 portfolios (which widgets use assessments vs mock samples). Score trend resets
                 correctly when there is no history; help docs for Insights note the live vs sample
-                split.
+                split. When you&apos;re signed in with saved assessments,{" "}
+                <strong className="text-foreground">Threat landscape</strong> charts Sophos Central
+                open alerts (same merged bundle as Mission control): daily counts by alert time,
+                stacked buckets, and top categories — each alert uses the latest Central instant
+                among raised, modified, reported, and created fields (same rule as Mission control);
+                guests still see the demo series.{" "}
+                <strong className="text-foreground">Compliance trends</strong> (posture categories
+                from score history), <strong className="text-foreground">report activity</strong>{" "}
+                (weekly save totals plus a dated list of busy days for saved reports + assessments),
+                and <strong className="text-foreground">recommendations</strong> (scores + recency)
+                are live for signed-in orgs with saved assessments; guests keep the demo
+                GDPR/NIST-style lines and sample cards.
               </li>
               <li>
                 <strong className="text-foreground">Central firewall sync (MSP)</strong>: tenant

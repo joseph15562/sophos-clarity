@@ -246,6 +246,50 @@ async function whoami(token: string): Promise<WhoAmIResponse> {
   return res.json();
 }
 
+/** Row shape from `central_tenants` when building merged per-tenant calls. */
+type CentralTenantCacheRow = {
+  central_tenant_id: string;
+  name: string | null;
+  api_host: string | null;
+  data_region: string | null;
+};
+
+/**
+ * Tenant-type service principals are scoped to exactly one Sophos tenant. For merged modes we
+ * must use `whoami().id` as `X-Tenant-ID` and the current regional host — not whatever happens
+ * to be in `central_tenants` (stale/wrong UUIDs yield empty alerts with silent per-tenant errors).
+ */
+async function resolveTenantCredentialTenantRows(
+  token: string,
+  cachedRows: CentralTenantCacheRow[],
+): Promise<
+  | { ok: true; rows: CentralTenantCacheRow[]; tenantApiHost: string }
+  | { ok: false; error: string }
+> {
+  const identity = await whoami(token);
+  const tenantApiHost = String(
+    identity.apiHosts.dataRegion ?? identity.apiHosts.global ?? "",
+  ).trim();
+  if (!tenantApiHost) {
+    return {
+      ok: false,
+      error:
+        "Sophos whoAmI did not return a regional API host for this tenant credential. Reconnect Central in settings.",
+    };
+  }
+  const match = cachedRows.find((r) => r.central_tenant_id === identity.id);
+  return {
+    ok: true,
+    rows: [{
+      central_tenant_id: identity.id,
+      name: (match?.name ?? "").trim() || "(This tenant)",
+      api_host: tenantApiHost,
+      data_region: match?.data_region ?? "",
+    }],
+    tenantApiHost,
+  };
+}
+
 async function sophosGet(
   url: string,
   token: string,
@@ -261,26 +305,113 @@ async function sophosGet(
   return res.json();
 }
 
+type SophosPagedItems = {
+  items?: unknown[];
+  pages?: { total?: number };
+};
+
+/**
+ * Paginated Sophos list. If the first response omits `pages.total` (seen on some tenants), the old
+ * implementation stopped after **one page** — often the **oldest** slice when default sort is
+ * ascending — so Mission control showed stale “time ago” while Central listed recent activity.
+ */
 async function fetchAllPages(
   baseUrl: string,
   token: string,
   headers: Record<string, string>,
   pageSize = 100,
+  options?: { maxPagesIfTotalUnknown?: number },
 ): Promise<unknown[]> {
+  const maxIfUnknown = options?.maxPagesIfTotalUnknown ?? 50;
   const items: unknown[] = [];
   let page = 1;
-  let totalPages = 1;
-  do {
+  let reportedTotal: number | null = null;
+
+  while (true) {
     const sep = baseUrl.includes("?") ? "&" : "?";
     const url = `${baseUrl}${sep}page=${page}&pageSize=${pageSize}${
       page === 1 ? "&pageTotal=true" : ""
     }`;
-    const data = await sophosGet(url, token, headers);
-    if (data.items) items.push(...data.items);
-    if (page === 1 && data.pages?.total) totalPages = data.pages.total;
+    const data = await sophosGet(url, token, headers) as SophosPagedItems;
+    const batch = Array.isArray(data.items) ? data.items : [];
+    items.push(...batch);
+
+    if (
+      page === 1 && typeof data.pages?.total === "number" &&
+      data.pages.total > 0
+    ) {
+      reportedTotal = data.pages.total;
+    }
+
+    if (reportedTotal != null) {
+      if (page >= reportedTotal) break;
+    } else {
+      if (batch.length < pageSize) break;
+      if (page >= maxIfUnknown) break;
+    }
     page++;
-  } while (page <= totalPages);
+  }
+
   return items;
+}
+
+/** GET `/common/v1/alerts` — Postman lists `sort`; default order can be oldest-first. */
+function centralOpenAlertsBaseUrl(apiHost: string): string {
+  const sort = encodeURIComponent("raisedAt:desc");
+  return `${apiHost}/common/v1/alerts?sort=${sort}`;
+}
+
+function mergedAlertRaisedMs(a: Record<string, unknown>): number {
+  const s = String(a.raisedAt ?? "");
+  const t = Date.parse(s);
+  return Number.isNaN(t) ? 0 : t;
+}
+
+/** Central `/common/v1/alerts` items sometimes use snake_case or only `createdAt` — normalize for clients. */
+function pickAlertTimeString(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const t = v.trim();
+  return t || undefined;
+}
+
+const ALERT_TIME_FIELD_KEYS = [
+  "lastModifiedAt",
+  "last_modified_at",
+  "updatedAt",
+  "updated_at",
+  "raisedAt",
+  "raised_at",
+  "reportedAt",
+  "reported_at",
+  "createdAt",
+  "created_at",
+] as const;
+
+function alertFieldInstantMs(
+  a: Record<string, unknown>,
+  key: string,
+): number | null {
+  const v = a[key];
+  if (typeof v === "number" && Number.isFinite(v)) {
+    return v > 1e12 ? v : v * 1000;
+  }
+  const s = pickAlertTimeString(v);
+  if (!s || s.length < 4) return null;
+  const ms = Date.parse(s);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/** Single `raisedAt` for clients: latest meaningful instant (matches app `centralAlertRaisedAt`). */
+function normalizeSophosAlertItem(
+  a: Record<string, unknown>,
+): Record<string, unknown> {
+  let bestMs = -Infinity;
+  for (const k of ALERT_TIME_FIELD_KEYS) {
+    const ms = alertFieldInstantMs(a, k);
+    if (ms != null && ms > bestMs) bestMs = ms;
+  }
+  if (bestMs === -Infinity) return a;
+  return { ...a, raisedAt: new Date(bestMs).toISOString() };
 }
 
 // ── Verify the calling user belongs to the given org ──
@@ -909,17 +1040,10 @@ serve(async (req) => {
 
       let tenantApiHost: string | null = null;
       if (creds.partnerType === "tenant") {
-        const identity = await whoami(token);
-        tenantApiHost = identity.apiHosts.dataRegion ??
-          identity.apiHosts.global;
-        if (rows.length === 0) {
-          rows = [{
-            central_tenant_id: identity.id,
-            name: "(This tenant)",
-            api_host: tenantApiHost,
-            data_region: "",
-          }];
-        }
+        const r = await resolveTenantCredentialTenantRows(token, rows);
+        if (!r.ok) return json({ error: r.error }, 502);
+        rows = r.rows as TenantRow[];
+        tenantApiHost = r.tenantApiHost;
       }
 
       const GROUPS_MERGED_PARALLEL = 16;
@@ -982,11 +1106,15 @@ serve(async (req) => {
 
       const apiHost = await resolveApiHost(orgId, tenantId, creds, token);
       const items = await fetchAllPages(
-        `${apiHost}/common/v1/alerts`,
+        centralOpenAlertsBaseUrl(apiHost),
         token,
         { "X-Tenant-ID": tenantId },
       );
-      return json({ items });
+      return json({
+        items: (items as Record<string, unknown>[]).map((x) =>
+          normalizeSophosAlertItem(x)
+        ),
+      });
     }
 
     // ── Mode: mission-alerts ── all tenants' open alerts in one call (Mission Control)
@@ -1011,17 +1139,10 @@ serve(async (req) => {
 
       let tenantApiHost: string | null = null;
       if (creds.partnerType === "tenant") {
-        const identity = await whoami(token);
-        tenantApiHost = identity.apiHosts.dataRegion ??
-          identity.apiHosts.global;
-        if (rows.length === 0) {
-          rows = [{
-            central_tenant_id: identity.id,
-            name: "(This tenant)",
-            api_host: tenantApiHost,
-            data_region: "",
-          }];
-        }
+        const r = await resolveTenantCredentialTenantRows(token, rows);
+        if (!r.ok) return json({ error: r.error }, 502);
+        rows = r.rows as TenantRow[];
+        tenantApiHost = r.tenantApiHost;
       }
 
       const MISSION_ALERT_PARALLEL = 16;
@@ -1039,12 +1160,12 @@ serve(async (req) => {
                 : resolveApiHostFromCachedTenantRow(row, creds);
               if (!apiHost) return [] as Merged[];
               const items = await fetchAllPages(
-                `${apiHost}/common/v1/alerts`,
+                centralOpenAlertsBaseUrl(apiHost),
                 token,
                 { "X-Tenant-ID": tid },
               );
               return (items as Record<string, unknown>[]).map((a) => ({
-                ...a,
+                ...normalizeSophosAlertItem(a),
                 tenantId: tid,
               }));
             } catch {
@@ -1055,13 +1176,9 @@ serve(async (req) => {
         for (const part of batch) merged.push(...part);
       }
 
-      merged.sort((a, b) => {
-        const ra = String(a.raisedAt ?? "");
-        const rb = String(b.raisedAt ?? "");
-        if (ra < rb) return 1;
-        if (ra > rb) return -1;
-        return 0;
-      });
+      merged.sort(
+        (a, b) => mergedAlertRaisedMs(b) - mergedAlertRaisedMs(a),
+      );
 
       const items = merged.slice(0, 300);
 
@@ -1162,17 +1279,10 @@ serve(async (req) => {
 
       let tenantApiHost: string | null = null;
       if (creds.partnerType === "tenant") {
-        const identity = await whoami(token);
-        tenantApiHost = identity.apiHosts.dataRegion ??
-          identity.apiHosts.global;
-        if (rows.length === 0) {
-          rows = [{
-            central_tenant_id: identity.id,
-            name: "(This tenant)",
-            api_host: tenantApiHost,
-            data_region: "",
-          }];
-        }
+        const r = await resolveTenantCredentialTenantRows(token, rows);
+        if (!r.ok) return json({ error: r.error }, 502);
+        rows = r.rows as TenantRow[];
+        tenantApiHost = r.tenantApiHost;
       }
 
       const MDR_MERGED_PARALLEL = 16;

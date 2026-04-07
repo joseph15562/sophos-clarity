@@ -572,7 +572,17 @@ function MissionControlInner() {
                           >
                             {row.device}
                           </td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground sm:px-5 tabular-nums">
+                          <td
+                            className="px-4 py-2.5 text-xs text-muted-foreground sm:px-5 tabular-nums"
+                            title={
+                              row.ts.trim()
+                                ? new Date(row.ts).toLocaleString(undefined, {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  })
+                                : undefined
+                            }
+                          >
                             {safeDistanceToNow(row.ts)}
                           </td>
                           <td className="px-4 py-2.5 text-right sm:px-5">

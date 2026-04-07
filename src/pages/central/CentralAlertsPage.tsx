@@ -4,7 +4,11 @@ import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { queryKeys } from "@/hooks/queries/keys";
 import { useMissionAlertsBundleQuery } from "@/hooks/queries/use-mission-alerts-bundle-query";
-import { getEffectiveTenantDisplayName, type CentralAlert } from "@/lib/sophos-central";
+import {
+  centralAlertRaisedAt,
+  getEffectiveTenantDisplayName,
+  type CentralAlert,
+} from "@/lib/sophos-central";
 import {
   Table,
   TableBody,
@@ -215,26 +219,31 @@ export default function CentralAlertsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((a) => (
-              <TableRow key={`${a.tenantId}-${a.id}`}>
-                <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
-                  {a.raisedAt ? new Date(a.raisedAt).toLocaleString() : "—"}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-normal">
-                    {a.severity}
-                  </Badge>
-                </TableCell>
-                <TableCell className="max-w-[140px] truncate text-sm">
-                  {tenantNameById.get(a.tenantId) ?? a.tenantId}
-                </TableCell>
-                <TableCell className="max-w-[120px] truncate text-xs text-muted-foreground">
-                  {a.category || "—"}
-                </TableCell>
-                <TableCell className="max-w-md text-sm">{a.description}</TableCell>
-                <TableCell className="text-muted-foreground text-xs">{a.product ?? "—"}</TableCell>
-              </TableRow>
-            ))}
+            {filtered.map((a) => {
+              const raised = centralAlertRaisedAt(a);
+              return (
+                <TableRow key={`${a.tenantId}-${a.id}`}>
+                  <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+                    {raised ? new Date(raised).toLocaleString() : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-normal">
+                      {a.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[140px] truncate text-sm">
+                    {tenantNameById.get(a.tenantId) ?? a.tenantId}
+                  </TableCell>
+                  <TableCell className="max-w-[120px] truncate text-xs text-muted-foreground">
+                    {a.category || "—"}
+                  </TableCell>
+                  <TableCell className="max-w-md text-sm">{a.description}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {a.product ?? "—"}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

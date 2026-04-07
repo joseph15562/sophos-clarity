@@ -226,7 +226,7 @@ export const HELP_WORKSPACE_PAGE_DOCS: Record<HelpWorkspacePageSlug, HelpWorkspa
         paragraphs: [
           "Insights rolls up signals across customers you’ve assessed, helping you compare posture and spot systemic gaps.",
           "Coverage is assessment-driven: customers with no recent assess activity may appear thin or absent compared to heavily assessed accounts. Use Insights for portfolio QBRs and prioritisation, not as a substitute for Central inventory counts.",
-          "The page labels what is live: customer KPIs, matrix, sector breakdown, and tables use saved assessments when you are signed into an organisation. Threat landscape, compliance line charts, report heatmaps, and recommendation cards are illustrative samples until wired to telemetry — the UI shows a banner that explains the split.",
+          "The page labels what is live: customer KPIs, matrix, sector breakdown, and tables use saved assessments when you are signed into an organisation. Threat landscape uses Central open alerts; category trend lines use score-history snapshots from Assess; the activity heatmap uses saved report and assessment timestamps; recommendations derive from scores and recency. Guests still see sample charts for those widgets — the banner explains the split.",
         ],
       },
       {

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { centralAlertRaisedAt as centralAlertRaisedAtFromFields } from "@/lib/central-alert-timestamps";
 import { mapTenantBatches } from "@/pages/central/central-batched";
 
 const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sophos-central`;
@@ -283,6 +284,14 @@ export interface CentralAlert {
   managedAgentName?: string;
   hostname?: string;
   computerName?: string;
+  /** Present on some API payloads; newer than `raisedAt` when Central updates an open alert. */
+  lastModifiedAt?: string;
+  updatedAt?: string;
+}
+
+/** @see central-alert-timestamps — latest Sophos instant among raised / modified / reported / created. */
+export function centralAlertRaisedAt(alert: CentralAlert | Record<string, unknown>): string {
+  return centralAlertRaisedAtFromFields(alert as Record<string, unknown>);
 }
 
 export async function getAlerts(orgId: string, tenantId: string): Promise<CentralAlert[]> {
@@ -313,7 +322,13 @@ async function fetchMissionAlertsLegacy(orgId: string): Promise<MissionAlertsBun
     },
     { batchSize: 8 },
   );
-  rows.sort((a, b) => (a.raisedAt < b.raisedAt ? 1 : a.raisedAt > b.raisedAt ? -1 : 0));
+  rows.sort((a, b) => {
+    const ra = centralAlertRaisedAt(a);
+    const rb = centralAlertRaisedAt(b);
+    if (ra < rb) return 1;
+    if (ra > rb) return -1;
+    return 0;
+  });
   return { items: rows.slice(0, 300), tenants };
 }
 

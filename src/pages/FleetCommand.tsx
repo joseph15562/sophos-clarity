@@ -80,6 +80,7 @@ import {
   type FleetFirewall,
   gradeFromScore,
 } from "@/lib/fleet-command-data";
+import { buildFleetMapSites } from "@/lib/fleet-map-geo";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -1326,6 +1327,8 @@ function FleetCommandInner() {
     return list;
   }, [fleet, debouncedSearch, gradeFilter, statusFilter, linkingFilter, fleetSpotlight]);
 
+  const fleetMapSites = useMemo(() => buildFleetMapSites(filtered), [filtered]);
+
   const tenantGroups = useMemo(() => {
     const groups = new Map<string, FleetFirewall[]>();
     const orgName = org?.name ?? "";
@@ -2218,7 +2221,7 @@ function FleetCommandInner() {
 
           <TabsContent value="map" className="mt-0 focus-visible:outline-none">
             <div data-tour="tour-fleet-map">
-              <FleetWorldMap />
+              <FleetWorldMap sites={fleetMapSites} loading={loading} isGuestView={isGuest} />
             </div>
           </TabsContent>
         </Tabs>
