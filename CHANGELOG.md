@@ -14,6 +14,8 @@ Curated release notes for end users also appear on the in-app **What’s new** p
 
 ### Changed
 
+- **Fleet Command:** when Sophos Central is connected and healthy, show a compact “Connected to Sophos Central” strip (aligned with Customer Management’s Central pill), partner API type, relative last sync, and link to Central settings (`CentralHealthBanner` `showConnectedIndicator`).
+
 - **Assess — compliance (multi-firewall):** union of per-upload compliance frameworks is passed into analysis tabs; heatmap, posture ring, coverage bars, gap analysis, evidence collection, and control–finding map merge deduplicated findings from all loaded configs instead of only the first file’s analysis.
 
 - **Assess — Sophos Central:** per-upload **Link to Sophos Central** is full width with a lighter outline-style trigger; expanded picker keeps roomier padding, `h-10` inputs, taller scroll list, and larger row typography.

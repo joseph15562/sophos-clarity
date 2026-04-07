@@ -15,6 +15,8 @@ import {
   Settings,
   ClipboardList,
   Search,
+  Cloud,
+  Radar,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -27,9 +29,11 @@ import {
 } from "@/components/ui/command";
 
 const NAV = [
+  { to: "/dashboard", label: "Mission control", icon: Radar },
   { to: "/", label: "Assess", icon: LayoutDashboard },
   { to: "/command", label: "Fleet", icon: Monitor },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/central/overview", label: "Sophos Central", icon: Cloud },
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/insights", label: "Insights", icon: BarChart3 },
   { to: "/drift", label: "Drift", icon: GitCompare },

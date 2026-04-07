@@ -1,13 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { useTheme } from "next-themes";
-import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import {
   Code2,
   Plug,
-  ArrowLeft,
   Webhook,
   Server,
   Cpu,
@@ -23,11 +20,27 @@ import {
   MessageSquare,
   Ticket,
   KeyRound,
-  Sun,
-  Moon,
+  Users,
+  Monitor,
+  Shield,
+  FileText,
+  BarChart3,
+  GitCompare,
+  ScrollText,
+  ClipboardList,
+  Cloud,
+  Terminal,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -43,6 +56,49 @@ import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
+import { toast } from "sonner";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+} from "recharts";
+import {
+  MOCK_API_CALLS_HOURLY,
+  MOCK_API_BY_ENDPOINT,
+  MOCK_API_KEYS,
+  MOCK_API_RECENT_REQUESTS,
+} from "@/lib/mock-data";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  API_REFERENCE_ENDPOINTS,
+  resolveApiReferenceEndpointUrl,
+  type ApiReferenceEndpoint,
+} from "@/data/api-reference-endpoints";
 
 const CentralIntegration = lazy(() =>
   import("@/components/CentralIntegration").then((m) => ({ default: m.CentralIntegration })),
@@ -83,15 +139,6 @@ interface Integration {
   icon: React.ReactNode;
   status: "connected" | "available" | "coming-soon" | "partial";
   action: string;
-}
-
-interface Endpoint {
-  id: string;
-  method: "GET" | "POST" | "PUT" | "DELETE";
-  path: string;
-  description: string;
-  request?: string;
-  response: string;
 }
 
 interface WebhookDelivery {
@@ -205,99 +252,6 @@ const INTEGRATIONS: Integration[] = [
   },
 ];
 
-const API_ENDPOINTS: Endpoint[] = [
-  {
-    id: "get-assessments",
-    method: "GET",
-    path: "/api/assessments",
-    description: "List all assessments for the authenticated organisation (paginated).",
-    response: `{
-  "data": [
-    {
-      "id": "a1b2c3d4",
-      "customer_name": "Acme Corp",
-      "score": 78,
-      "grade": "B",
-      "created_at": "2025-03-10T14:22:00Z"
-    }
-  ],
-  "total": 42,
-  "page": 1,
-  "limit": 20
-}`,
-  },
-  {
-    id: "get-firewalls",
-    method: "GET",
-    path: "/api/firewalls",
-    description: "List Central-synced firewalls with latest health scores.",
-    response: `{
-  "data": [
-    {
-      "id": "fw-001",
-      "hostname": "xgs-4500-hq",
-      "serial": "C44012345678",
-      "last_score": 72,
-      "last_grade": "C",
-      "synced_at": "2025-03-12T09:15:00Z"
-    }
-  ]
-}`,
-  },
-  {
-    id: "post-assessments",
-    method: "POST",
-    path: "/api/assessments",
-    description: "Create a new assessment by uploading a Sophos XG/XGS configuration export.",
-    request: `{
-  "customer_name": "Acme Corp",
-  "environment": "Production",
-  "config_html": "<base64-encoded config>"
-}`,
-    response: `{
-  "id": "a1b2c3d4",
-  "score": 78,
-  "grade": "B",
-  "findings_count": 14,
-  "created_at": "2025-03-12T10:00:00Z"
-}`,
-  },
-  {
-    id: "get-reports",
-    method: "GET",
-    path: "/api/reports",
-    description: "List saved reports with metadata and sharing status.",
-    response: `{
-  "data": [
-    {
-      "id": "rpt-001",
-      "title": "Q1 2025 Health Check",
-      "format": "pdf",
-      "shared": true,
-      "created_at": "2025-03-01T08:00:00Z"
-    }
-  ]
-}`,
-  },
-  {
-    id: "post-config-upload",
-    method: "POST",
-    path: "/api/config-upload",
-    description:
-      "Upload a raw configuration file for parsing and analysis without creating an assessment record.",
-    request: `{
-  "file": "<multipart/form-data>",
-  "parse_only": true
-}`,
-    response: `{
-  "sections": 24,
-  "rules_count": 187,
-  "firmware": "20.0.2 MR-2",
-  "model": "XGS 4500"
-}`,
-  },
-];
-
 const WEBHOOK_EVENTS = [
   { id: "assessment_complete", label: "Assessment Complete" },
   { id: "score_change", label: "Score Change" },
@@ -360,6 +314,7 @@ const METHOD_COLORS: Record<string, string> = {
   POST: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/25",
   PUT: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25",
   DELETE: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/25",
+  MIXED: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/25",
 };
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -416,6 +371,152 @@ function formatTs(iso: string): string {
 
 const GLASS =
   "rounded-2xl border border-border/60 bg-white/70 dark:bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.25)]";
+
+function curlOneLiner(ep: ApiReferenceEndpoint, fullUrl: string): string {
+  if (ep.authMode === "none") {
+    if (ep.method === "GET" || ep.method === "DELETE") {
+      return `curl -sS -X ${ep.method} "${fullUrl}"`;
+    }
+    if (ep.method === "MIXED") {
+      return `# Public / multi-method — see description and OpenAPI\ncurl -sS -X GET "${fullUrl}"`;
+    }
+    const body = (ep.requestBody ?? "{}")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"');
+    return `curl -sS -X ${ep.method} "${fullUrl}" -H "Content-Type: application/json" -d "${body}"`;
+  }
+  if (ep.authMode === "service-key") {
+    return `curl -sS -X GET "${fullUrl}" -H "X-FireComply-Service-Key: YOUR_SERVICE_KEY"`;
+  }
+  const authHeader = `Authorization: Bearer YOUR_JWT_HERE`;
+  if (ep.method === "MIXED") {
+    return `# ${ep.path} — multiple methods; see OpenAPI\ncurl -sS -X GET "${fullUrl}" -H "${authHeader}"`;
+  }
+  if (ep.method === "GET" || ep.method === "DELETE") {
+    return `curl -sS -X ${ep.method} "${fullUrl}" -H "${authHeader}"`;
+  }
+  const body = (ep.requestBody ?? "{}")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
+  return `curl -sS -X ${ep.method} "${fullUrl}" -H "${authHeader}" -H "Content-Type: application/json" -d "${body}"`;
+}
+
+function fetchSnippet(ep: ApiReferenceEndpoint, fullUrl: string): string {
+  if (ep.authMode === "none") {
+    if (ep.method === "GET" || ep.method === "DELETE") {
+      return `const res = await fetch("${fullUrl}", { method: "${ep.method}" });
+const data = await res.json();`;
+    }
+    if (ep.method === "MIXED") {
+      return `// ${ep.path} — see OpenAPI for methods and bodies
+const res = await fetch("${fullUrl}", { method: "GET" });
+const data = await res.json();`;
+    }
+    const rawBody = (ep.requestBody ?? "{}").trim();
+    return `const body = ${JSON.stringify(rawBody)};
+const res = await fetch("${fullUrl}", {
+  method: "${ep.method}",
+  headers: { "Content-Type": "application/json" },
+  body,
+});
+const data = await res.json();`;
+  }
+  if (ep.authMode === "service-key") {
+    return `const res = await fetch("${fullUrl}", {
+  headers: { "X-FireComply-Service-Key": "<your-service-key>" },
+});
+const data = await res.json();`;
+  }
+  if (ep.method === "GET" || ep.method === "DELETE") {
+    return `const res = await fetch("${fullUrl}", {
+  method: "${ep.method}",
+  headers: { Authorization: "Bearer <your-jwt>" },
+});
+const data = await res.json();`;
+  }
+  if (ep.method === "MIXED") {
+    return `// ${ep.path} — multiple methods; see OpenAPI
+const res = await fetch("${fullUrl}", {
+  method: "GET",
+  headers: { Authorization: "Bearer <your-jwt>" },
+});
+const data = await res.json();`;
+  }
+  const rawBody = (ep.requestBody ?? "{}").trim();
+  return `const body = ${JSON.stringify(rawBody)};
+const res = await fetch("${fullUrl}", {
+  method: "${ep.method}",
+  headers: {
+    Authorization: "Bearer <your-jwt>",
+    "Content-Type": "application/json",
+  },
+  body,
+});
+const data = await res.json();`;
+}
+
+async function copyToClipboard(text: string, successMessage: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(successMessage);
+  } catch {
+    toast.error("Could not copy to clipboard");
+  }
+}
+
+function WorkspaceResourceStrip() {
+  const pill =
+    "inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-white/70 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-[#2006F7]/35 hover:bg-white dark:bg-white/[0.06] dark:hover:border-[#00EDFF]/30";
+  return (
+    <div className={`${GLASS} p-4`}>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+        Workspace shortcuts
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/" className={pill}>
+          <Shield className="h-3.5 w-3.5 text-[#2006F7]" />
+          Assess
+        </Link>
+        <Link to="/command" className={pill}>
+          <Monitor className="h-3.5 w-3.5 text-[#009CFB]" />
+          Fleet
+        </Link>
+        <Link to="/customers" className={pill}>
+          <Users className="h-3.5 w-3.5 text-[#2006F7]" />
+          Customers
+        </Link>
+        <Link to="/central/overview" className={pill}>
+          <Cloud className="h-3.5 w-3.5 text-[#00EDFF]" />
+          Central hub
+        </Link>
+        <Link to="/reports" className={pill}>
+          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+          Reports
+        </Link>
+        <Link to="/insights" className={pill}>
+          <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+          Insights
+        </Link>
+        <Link to="/drift" className={pill}>
+          <GitCompare className="h-3.5 w-3.5 text-muted-foreground" />
+          Drift
+        </Link>
+        <Link to="/audit" className={pill}>
+          <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+          Activity
+        </Link>
+        <Link to="/changelog" className={pill}>
+          <ScrollText className="h-3.5 w-3.5 text-muted-foreground" />
+          Updates
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 /* ───────── sub-components ───────── */
 
@@ -497,11 +598,15 @@ function IntegrationCard({
   );
 }
 
-function EndpointRow({ ep }: { ep: Endpoint }) {
+function EndpointRow({ ep }: { ep: ApiReferenceEndpoint }) {
   const [expanded, setExpanded] = useState(false);
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const fullUrl = resolveApiReferenceEndpointUrl(supabaseUrl, ep);
+  const responseDoc = `${ep.responseShape}\n\n— Example —\n\n${ep.exampleResponse}`;
   return (
     <div className={`${GLASS} overflow-hidden`}>
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-3 px-5 py-3.5 text-left hover:bg-accent/40 transition-colors"
       >
@@ -511,7 +616,7 @@ function EndpointRow({ ep }: { ep: Endpoint }) {
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
         )}
         <span
-          className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-bold font-mono ${METHOD_COLORS[ep.method]}`}
+          className={`shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-bold font-mono ${METHOD_COLORS[ep.method] ?? "border-border bg-muted/40 text-muted-foreground"}`}
         >
           {ep.method}
         </span>
@@ -525,18 +630,79 @@ function EndpointRow({ ep }: { ep: Endpoint }) {
         <div className="border-t border-border/50 bg-muted/20 px-5 py-4 space-y-4">
           <p className="text-xs text-muted-foreground sm:hidden">{ep.description}</p>
 
-          {ep.request && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Full URL
+            </span>
+            <code className="flex-1 min-w-0 truncate rounded-lg bg-slate-950/90 px-2 py-1.5 font-mono text-[11px] text-emerald-300/95">
+              {fullUrl}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-[11px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                void copyToClipboard(fullUrl, "URL copied");
+              }}
+            >
+              <Copy className="h-3 w-3" />
+              URL
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-[11px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                void copyToClipboard(curlOneLiner(ep, fullUrl), "cURL copied");
+              }}
+            >
+              <Terminal className="h-3 w-3" />
+              cURL
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-[11px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                void copyToClipboard(fetchSnippet(ep, fullUrl), "fetch() copied");
+              }}
+            >
+              <Code2 className="h-3 w-3" />
+              fetch
+            </Button>
+          </div>
+
+          {ep.queryParams.length > 0 ? (
+            <div>
+              <p className="text-[11px] font-semibold text-foreground mb-1.5">Query parameters</p>
+              <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
+                {ep.queryParams.map((q) => (
+                  <li key={q.name}>
+                    <code className="text-emerald-300/90">{q.name}</code> ({q.type}) — {q.desc}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {ep.requestBody ? (
             <div>
               <p className="text-[11px] font-semibold text-foreground mb-1.5">Request body</p>
               <pre className="rounded-xl bg-slate-950 p-4 text-[12px] font-mono text-emerald-300 overflow-x-auto">
-                {ep.request}
+                {ep.requestBody}
               </pre>
             </div>
-          )}
+          ) : null}
           <div>
             <p className="text-[11px] font-semibold text-foreground mb-1.5">Response</p>
-            <pre className="rounded-xl bg-slate-950 p-4 text-[12px] font-mono text-emerald-300 overflow-x-auto">
-              {ep.response}
+            <pre className="rounded-xl bg-slate-950 p-4 text-[12px] font-mono text-emerald-300 overflow-x-auto whitespace-pre-wrap">
+              {responseDoc}
             </pre>
           </div>
         </div>
@@ -737,9 +903,455 @@ function IntegrationsTab() {
   );
 }
 
+function useOrgActiveServiceKeyStats(orgId: string | undefined) {
+  const [count, setCount] = useState<number | null>(null);
+  const [lastUsedAt, setLastUsedAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(!!orgId);
+
+  useEffect(() => {
+    if (!orgId) {
+      setCount(null);
+      setLastUsedAt(null);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    void supabase
+      .from("org_service_api_keys")
+      .select("last_used_at")
+      .eq("org_id", orgId)
+      .is("revoked_at", null)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data) {
+          setCount(0);
+          setLastUsedAt(null);
+          setLoading(false);
+          return;
+        }
+        setCount(data.length);
+        let max: string | null = null;
+        for (const row of data) {
+          const t = row.last_used_at;
+          if (!t) continue;
+          if (!max || t > max) max = t;
+        }
+        setLastUsedAt(max);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
+  return { count, lastUsedAt, loading };
+}
+
+function formatApiHubShortDate(iso: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function ApiExplorerTab() {
+  const { isGuest, org } = useAuth();
+  const useLiveWorkspace = !isGuest && !!org;
+  const keyStats = useOrgActiveServiceKeyStats(useLiveWorkspace ? org!.id : undefined);
+
+  const [endpointQuery, setEndpointQuery] = useState("");
+  const [revealedKeys, setRevealedKeys] = useState<Record<string, boolean>>({});
+  const [revealConfirmId, setRevealConfirmId] = useState<string | null>(null);
+  const [revokeConfirmId, setRevokeConfirmId] = useState<string | null>(null);
+  const [demoKeys, setDemoKeys] = useState(() => [...MOCK_API_KEYS]);
+  const [createKeyOpen, setCreateKeyOpen] = useState(false);
+  const apiBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api`;
+
+  const filteredEndpoints = useMemo(() => {
+    const q = endpointQuery.trim().toLowerCase();
+    if (!q) return API_REFERENCE_ENDPOINTS;
+    return API_REFERENCE_ENDPOINTS.filter(
+      (ep) =>
+        ep.path.toLowerCase().includes(q) ||
+        ep.description.toLowerCase().includes(q) ||
+        ep.method.toLowerCase().includes(q) ||
+        ep.id.toLowerCase().includes(q),
+    );
+  }, [endpointQuery]);
+
+  const methodBreakdown = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const ep of filteredEndpoints) {
+      m[ep.method] = (m[ep.method] ?? 0) + 1;
+    }
+    return m;
+  }, [filteredEndpoints]);
+
+  const lastKeyUseLabel = formatApiHubShortDate(keyStats.lastUsedAt);
+
   return (
     <div className="space-y-6">
+      {useLiveWorkspace ? (
+        <p className="text-[11px] text-muted-foreground rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
+          Request volume, latency, and per-endpoint analytics are not collected in the workspace
+          yet. <strong className="text-foreground">Scoped service keys</strong> below are your
+          organisation&apos;s live keys (the same list as Integrations → Scoped service keys on this
+          page).
+        </p>
+      ) : (
+        <p className="text-[11px] text-muted-foreground rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+          Usage KPIs and keys below use{" "}
+          <strong className="text-foreground">structured demo data</strong> for layout — sign in
+          with an organisation for live keys, or open Scoped service keys under Settings.
+        </p>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className={`${GLASS} p-4 flex items-center gap-3`}>
+          <span className="relative flex h-3 w-3 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
+          </span>
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              API status
+            </p>
+            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Operational</p>
+          </div>
+        </div>
+        {useLiveWorkspace ? (
+          <>
+            <div className={`${GLASS} p-4`}>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <KeyRound className="h-3 w-3" />
+                Active service keys
+              </p>
+              <p className="text-2xl font-bold tabular-nums mt-1">
+                {keyStats.loading ? "—" : keyStats.count}
+              </p>
+            </div>
+            <div className={`${GLASS} p-4`}>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Last key use
+              </p>
+              <p className="text-sm font-bold mt-1 leading-snug">
+                {keyStats.loading ? (
+                  "—"
+                ) : lastKeyUseLabel ? (
+                  lastKeyUseLabel
+                ) : (
+                  <span className="text-muted-foreground font-normal">Not recorded yet</span>
+                )}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={`${GLASS} p-4`}>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                Requests today
+              </p>
+              <p className="text-2xl font-bold tabular-nums mt-1">2,847</p>
+            </div>
+            <div className={`${GLASS} p-4`}>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Avg response
+              </p>
+              <p className="text-2xl font-bold tabular-nums mt-1">
+                142<span className="text-sm font-normal text-muted-foreground">ms</span>
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {useLiveWorkspace ? (
+        <div className={`${GLASS} p-5 space-y-4`}>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Scoped service API keys</h3>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              Create and revoke keys for automation. The secret is shown only once when a key is
+              issued.
+            </p>
+          </div>
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-6">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
+                Loading keys…
+              </div>
+            }
+          >
+            <OrgServiceKeysSettings />
+          </Suspense>
+        </div>
+      ) : (
+        <div className={`${GLASS} p-5 space-y-4`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h3 className="text-sm font-semibold">API keys</h3>
+            <Button type="button" size="sm" onClick={() => setCreateKeyOpen(true)}>
+              Create new key
+            </Button>
+          </div>
+          <div className="rounded-xl border border-border/50 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="text-xs">Name</TableHead>
+                  <TableHead className="text-xs">Key</TableHead>
+                  <TableHead className="text-xs">Created</TableHead>
+                  <TableHead className="text-xs">Last used</TableHead>
+                  <TableHead className="text-xs">Permissions</TableHead>
+                  <TableHead className="text-xs text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {demoKeys.map((k) => (
+                  <TableRow key={k.id}>
+                    <TableCell className="text-sm font-medium">{k.name}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {revealedKeys[k.id] ? "sk-fc-demo-reveal-9a1b2c3d4e5f" : k.masked}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{k.created}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{k.lastUsed}</TableCell>
+                    <TableCell className="text-xs max-w-[200px] truncate" title={k.permissions}>
+                      {k.permissions}
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => setRevealConfirmId(k.id)}
+                      >
+                        Reveal
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-destructive hover:text-destructive"
+                        onClick={() => setRevokeConfirmId(k.id)}
+                      >
+                        Revoke
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {useLiveWorkspace ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className={`${GLASS} p-4 h-[220px] flex flex-col`}>
+            <p className="text-xs font-semibold mb-2 shrink-0">Calls per hour (24h)</p>
+            <div className="flex flex-1 min-h-0 items-center justify-center px-4 text-center">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Hourly request volume is not available yet. Use your API gateway or observability
+                stack for traffic charts.
+              </p>
+            </div>
+          </div>
+          <div className={`${GLASS} p-4 h-[220px] flex flex-col`}>
+            <p className="text-xs font-semibold mb-2 shrink-0">Top endpoints</p>
+            <div className="flex flex-1 min-h-0 items-center justify-center px-4 text-center">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Per-endpoint usage is not tracked in FireComply yet.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className={`${GLASS} p-4 h-[220px]`}>
+            <p className="text-xs font-semibold mb-2">Calls per hour (24h)</p>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={MOCK_API_CALLS_HOURLY}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+                <XAxis dataKey="hour" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <RechartsTooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 8,
+                    fontSize: 11,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="calls"
+                  stroke="#2006F7"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className={`${GLASS} p-4 h-[220px]`}>
+            <p className="text-xs font-semibold mb-2">Top endpoints</p>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={MOCK_API_BY_ENDPOINT}
+                layout="vertical"
+                margin={{ left: 8, right: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+                <XAxis type="number" tick={{ fontSize: 10 }} />
+                <YAxis type="category" dataKey="path" width={120} tick={{ fontSize: 9 }} />
+                <RechartsTooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 8,
+                    fontSize: 11,
+                  }}
+                />
+                <Bar dataKey="calls" fill="#00EDFF" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {useLiveWorkspace ? (
+        <div className={`${GLASS} p-5`}>
+          <h3 className="text-sm font-semibold mb-3">Recent requests</h3>
+          <EmptyState
+            className="py-10"
+            title="No request log yet"
+            description="Individual API calls are not listed here. Use server logs or your gateway for request-level tracing."
+          />
+        </div>
+      ) : (
+        <div className={`${GLASS} p-5`}>
+          <h3 className="text-sm font-semibold mb-3">Recent requests</h3>
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs">Endpoint</TableHead>
+                <TableHead className="text-xs">Method</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs">Latency</TableHead>
+                <TableHead className="text-xs">Time</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {MOCK_API_RECENT_REQUESTS.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-mono text-xs">{r.endpoint}</TableCell>
+                  <TableCell className="text-xs">{r.method}</TableCell>
+                  <TableCell className="text-xs tabular-nums">{r.status}</TableCell>
+                  <TableCell className="text-xs tabular-nums">{r.latencyMs}ms</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.ts}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {!useLiveWorkspace && (
+        <>
+          <AlertDialog
+            open={revealConfirmId !== null}
+            onOpenChange={(o) => !o && setRevealConfirmId(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reveal API key?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Anyone with access to this screen could copy the full secret. Continue only in a
+                  safe environment.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (revealConfirmId)
+                      setRevealedKeys((prev) => ({ ...prev, [revealConfirmId]: true }));
+                    setRevealConfirmId(null);
+                    toast.success("Key revealed (demo)");
+                  }}
+                >
+                  Reveal
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog
+            open={revokeConfirmId !== null}
+            onOpenChange={(o) => !o && setRevokeConfirmId(null)}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Revoke this key?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Automations using this key will fail until you issue a replacement.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => {
+                    if (revokeConfirmId)
+                      setDemoKeys((prev) => prev.filter((x) => x.id !== revokeConfirmId));
+                    setRevokeConfirmId(null);
+                    toast.success("Key revoked (demo)");
+                  }}
+                >
+                  Revoke
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Dialog open={createKeyOpen} onOpenChange={setCreateKeyOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create API key</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-key-name" className="text-xs">
+                    Name
+                  </Label>
+                  <Input id="new-key-name" placeholder="CI export" className="h-9" />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Demo only — production keys are provisioned from org service key settings.
+                </p>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => {
+                    setCreateKeyOpen(false);
+                    toast.success("Key queued (demo)");
+                  }}
+                >
+                  Create
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Dialog>
           <DialogTrigger asChild>
@@ -757,20 +1369,50 @@ function ApiExplorerTab() {
           <WorkspacePanelLink section="api-docs">API Documentation</WorkspacePanelLink>.
         </p>
       </div>
+
+      <div className={`${GLASS} p-5 space-y-3`}>
+        <h3 className="text-sm font-semibold text-foreground">REST base URL</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Primary JWT routes use the Edge function below (each row expands to the resolved URL).
+          Public and auxiliary functions (<code className="font-mono text-[11px]">api-public</code>,{" "}
+          <code className="font-mono text-[11px]">portal-data</code>,{" "}
+          <code className="font-mono text-[11px]">parse-config</code>) use different bases — see
+          each endpoint.
+        </p>
+        <div className="flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 font-mono text-[11px] text-emerald-300 break-all">
+          <span className="select-all flex-1 min-w-0">{apiBaseUrl}</span>
+          <button
+            type="button"
+            className="shrink-0 text-slate-400 hover:text-white transition-colors"
+            title="Copy base URL"
+            onClick={() => void copyToClipboard(apiBaseUrl, "Base URL copied")}
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
       <div className={`${GLASS} p-5`}>
         <h3 className="text-sm font-semibold text-foreground mb-1">Authentication</h3>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          All endpoints require a valid JWT in the{" "}
+          Most org routes use a JWT in the{" "}
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
             Authorization
           </code>{" "}
-          header.
+          header; public routes omit it;{" "}
+          <code className="font-mono text-[11px]">GET /api/service-key/ping</code> uses{" "}
+          <code className="font-mono text-[11px]">X-FireComply-Service-Key</code>. Expand an
+          endpoint for copy-ready cURL and fetch snippets.
         </p>
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 font-mono text-xs text-emerald-300">
           <span className="select-all">Authorization: Bearer {"<your-jwt>"}</span>
           <button
+            type="button"
             className="ml-auto text-slate-400 hover:text-white transition-colors"
-            title="Copy"
+            title="Copy header template"
+            onClick={() =>
+              void copyToClipboard("Authorization: Bearer <your-jwt>", "Header template copied")
+            }
           >
             <Copy className="h-3.5 w-3.5" />
           </button>
@@ -778,9 +1420,41 @@ function ApiExplorerTab() {
       </div>
 
       <div className="space-y-3">
-        {API_ENDPOINTS.map((ep) => (
-          <EndpointRow key={ep.id} ep={ep} />
-        ))}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Endpoints</h3>
+            {filteredEndpoints.length > 0 ? (
+              <p className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                <span>
+                  <strong className="text-foreground">{filteredEndpoints.length}</strong> in view
+                </span>
+                {Object.entries(methodBreakdown)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([method, count]) => (
+                    <span
+                      key={method}
+                      className={`rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold ${METHOD_COLORS[method] ?? "border-border bg-muted/40"}`}
+                    >
+                      {method} ×{count}
+                    </span>
+                  ))}
+              </p>
+            ) : null}
+          </div>
+          <Input
+            value={endpointQuery}
+            onChange={(e) => setEndpointQuery(e.target.value)}
+            placeholder="Filter by path, method, or description…"
+            className="h-9 max-w-md bg-white/70 dark:bg-white/[0.06]"
+          />
+        </div>
+        {filteredEndpoints.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            No endpoints match &quot;{endpointQuery.trim()}&quot;.
+          </p>
+        ) : (
+          filteredEndpoints.map((ep) => <EndpointRow key={ep.id} ep={ep} />)
+        )}
       </div>
     </div>
   );
@@ -1369,47 +2043,31 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 
 function ApiHubInner() {
   const [activeTab, setActiveTab] = useState<TabId>("integrations");
-  const { setTheme } = useTheme();
-  const isDark = useResolvedIsDark();
-  const auth = useAuth();
+  const { isGuest } = useAuth();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* ── Header ── */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-[#0a0a2e] via-[#111152] to-[#1a1a5c] text-white">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(32,6,247,0.18),transparent_60%)]" />
-        <div className="relative mx-auto max-w-6xl px-6 py-10">
-          <nav className="mb-6 flex items-center gap-2 text-sm text-white/60">
-            <Link to="/" className="hover:text-white transition-colors flex items-center gap-1">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Dashboard
-            </Link>
-            <span>/</span>
-            <span className="text-white/90 font-medium">API &amp; Integrations</span>
-          </nav>
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight">API &amp; Integrations</h1>
-            <button
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-          </div>
-          <p className="mt-2 text-base text-white/70 max-w-lg">
-            Automate and extend FireComply — connect third-party tools, explore the REST API, manage
-            webhooks, and monitor your agent fleet.
-          </p>
-        </div>
-      </header>
+      <FireComplyWorkspaceHeader loginShell={isGuest} />
 
       <WorkspacePrimaryNav />
 
       {/* ── Body ── */}
-      <main className="mx-auto max-w-6xl px-6 py-8 space-y-8">
+      <main
+        className="mx-auto max-w-6xl px-6 pt-8 space-y-8 assist-chrome-pad-bottom"
+        data-tour="tour-page-api"
+      >
+        <div className="space-y-1" data-tour="tour-api-hero">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            API &amp; Integrations
+          </h1>
+          <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
+            Automate and extend FireComply — connect third-party tools, explore the REST API, manage
+            webhooks, and monitor your agent fleet.
+          </p>
+        </div>
+
         {/* Tab pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" data-tour="tour-api-tabs">
           {TABS.map((t) => (
             <TabPill
               key={t.id}
@@ -1421,11 +2079,15 @@ function ApiHubInner() {
           ))}
         </div>
 
-        {/* Tab content */}
-        {activeTab === "integrations" && <IntegrationsTab />}
-        {activeTab === "api" && <ApiExplorerTab />}
-        {activeTab === "webhooks" && <WebhooksTab />}
-        {activeTab === "agents" && <AgentsTab />}
+        <div className="space-y-6" data-tour="tour-api-panel">
+          <WorkspaceResourceStrip />
+
+          {/* Tab content */}
+          {activeTab === "integrations" && <IntegrationsTab />}
+          {activeTab === "api" && <ApiExplorerTab />}
+          {activeTab === "webhooks" && <WebhooksTab />}
+          {activeTab === "agents" && <AgentsTab />}
+        </div>
       </main>
     </div>
   );

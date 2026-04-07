@@ -40,6 +40,10 @@ verify_jwt = false
 verify_jwt = false
 # User JWT for optional manual scan; service role Bearer for pg_cron daily ingest.
 
+[functions.sophos-advisories-feed]
+verify_jwt = false
+# Public RSS proxy for /changelog “Latest threats” (Sophos security advisories).
+
 [functions.sophos-central]
 verify_jwt = false
 # Auth validated internally via getUser().

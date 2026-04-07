@@ -41,6 +41,10 @@ export const queryKeys = {
   regulatoryDigest: {
     recent: () => ["regulatory_updates", "recent"] as const,
   },
+  /** Sophos Security Advisories RSS (Edge Function; changelog intel feed). */
+  sophosAdvisories: {
+    changelogFeed: (limit: number) => ["sophos_advisories_rss", "changelog", limit] as const,
+  },
   /** Current user passkeys list (settings drawer) */
   passkeys: {
     list: () => ["passkeys", "list"] as const,
@@ -55,7 +59,23 @@ export const queryKeys = {
   },
   central: {
     all: ["central"] as const,
+    /** Sophos Central open alerts — one Edge call; shared with Mission Control + Alerts page prefetch. */
+    missionAlertsBundle: (orgId: string) => ["central", orgId, "mission_alerts_bundle"] as const,
+    /** MDR threat feed — merged on Edge (Central MDR tab); warmed from OrgCentralPrefetch / CentralHub. */
+    mdrThreatFeedMerged: (orgId: string) => ["central", orgId, "mdr_threat_feed_merged"] as const,
+    /** Firewall groups — merged on Edge (Central Groups tab). */
+    firewallGroupsMerged: (orgId: string) => ["central", orgId, "firewall_groups_merged"] as const,
     status: (orgId: string) => ["central", orgId, "status"] as const,
+    cachedTenants: (orgId: string) => ["central", orgId, "cached_tenants"] as const,
+    cachedFirewalls: (orgId: string, tenantId: string | "all") =>
+      ["central", orgId, "cached_firewalls", tenantId] as const,
+    alertsTenant: (orgId: string, tenantId: string) =>
+      ["central", orgId, "alerts", tenantId] as const,
+    firewallLicences: (orgId: string) => ["central", orgId, "firewall_licences"] as const,
+    tenantLicencesMerged: (orgId: string, tenantKey: string) =>
+      ["central", orgId, "tenant_licences_merged", tenantKey] as const,
+    mdrMerged: (orgId: string, tenantKey: string) =>
+      ["central", orgId, "mdr_merged", tenantKey] as const,
   },
   portal: {
     all: ["portal"] as const,

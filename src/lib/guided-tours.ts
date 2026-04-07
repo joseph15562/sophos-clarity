@@ -47,7 +47,7 @@ export function startGettingStartedTour() {
       popover: {
         title: "Upload Firewall Exports",
         description:
-          "Drop your Sophos config HTML exports here, or click to browse. You can export these from the Sophos XGS Config Viewer.",
+          "Drop your Sophos config HTML or XML exports here, or click to browse. You can export these from the Sophos XGS Config Viewer.",
         side: "bottom",
         align: "center",
       },
@@ -1030,6 +1030,1033 @@ export function startPowerUserTour() {
     },
   ]);
   t.drive();
+}
+
+// ---------------------------------------------------------------------------
+// Workspace & hub — page shell tours (data-tour anchors on each route)
+// ---------------------------------------------------------------------------
+
+const STEP_WORKSPACE_NAV: DriveStep = {
+  element: sel("workspace-primary-nav"),
+  popover: {
+    title: "Workspace navigation",
+    description:
+      "Switch between Mission control, Assess, Fleet, Customers, Sophos Central, Reports, Insights, and the rest of the hub.",
+    side: "bottom",
+    align: "center",
+  },
+};
+
+const STEP_CENTRAL_SUBNAV: DriveStep = {
+  element: sel("central-subnav"),
+  popover: {
+    title: "Central sections",
+    description:
+      "Drill into Overview, Tenants, Firewalls, Alerts, MDR, Groups, Licensing, and Sync for your connected Sophos Central workspace.",
+    side: "bottom",
+    align: "center",
+  },
+};
+
+const STEP_SHORTCUTS_HUB: DriveStep = {
+  element: sel("shortcuts-button"),
+  popover: {
+    title: "Keyboard shortcuts",
+    description: "Press Shift+? or use this button to see shortcuts for the page you're on.",
+    side: "top",
+    align: "end",
+  },
+};
+
+const STEP_MANAGEMENT_HUB: DriveStep = {
+  element: sel("management-panel"),
+  popover: {
+    title: "Management panel",
+    description:
+      "Saved reports, Sophos Central setup, team settings, and more open from the menu in the header.",
+    side: "bottom",
+    align: "start",
+  },
+};
+
+function pageSurfaceStep(
+  tourId: string,
+  title: string,
+  description: string,
+  side: "top" | "bottom" = "bottom",
+): DriveStep {
+  return {
+    element: sel(tourId),
+    popover: { title, description, side, align: "center" },
+  };
+}
+
+/** Highlighted workspace / hub region (popover centered). */
+function wsStep(
+  tourId: string,
+  title: string,
+  description: string,
+  side: "top" | "bottom" | "left" | "right" = "bottom",
+): DriveStep {
+  return {
+    element: sel(tourId),
+    popover: { title, description, side, align: "center" },
+  };
+}
+
+export type RunHubPageTourOpts = {
+  includeWorkspaceNav?: boolean;
+  centralSubnav?: boolean;
+  includeShortcuts?: boolean;
+  includeManagement?: boolean;
+};
+
+/** Shell + page steps + shortcuts + management; missing elements are skipped via filterVisible. */
+export function runHubPageTour(pageSteps: DriveStep[], opts?: RunHubPageTourOpts) {
+  const steps: DriveStep[] = [];
+  if (opts?.includeWorkspaceNav !== false) {
+    steps.push(STEP_WORKSPACE_NAV);
+  }
+  if (opts?.centralSubnav) {
+    steps.push(STEP_CENTRAL_SUBNAV);
+  }
+  steps.push(...pageSteps);
+  if (opts?.includeShortcuts !== false) {
+    steps.push(STEP_SHORTCUTS_HUB);
+  }
+  if (opts?.includeManagement !== false) {
+    steps.push(STEP_MANAGEMENT_HUB);
+  }
+  createTour(steps).drive();
+}
+
+/** Workspace tab bar, shortcuts, and management (steps omit missing anchors). */
+export function startWorkspaceShellTour() {
+  createTour([STEP_WORKSPACE_NAV, STEP_SHORTCUTS_HUB, STEP_MANAGEMENT_HUB]).drive();
+}
+
+export function startAssessPageTour() {
+  runHubPageTour(
+    [
+      {
+        popover: {
+          title: "Assess workspace",
+          description:
+            "Upload configs, set customer context, run analysis, and ship reports. Follow the highlights below — steps skip anything not on screen yet (for example until files are loaded).",
+          side: "bottom",
+          align: "center",
+        },
+      },
+      wsStep(
+        "step-upload",
+        "Upload & files",
+        "Drop Sophos HTML or XML exports here, or add files. This kicks off parsing and scoring for your firewall assessment.",
+        "bottom",
+      ),
+      wsStep(
+        "agent-fleet",
+        "Connected firewalls",
+        "When Sophos Central agents are linked, configs can sync without manual HTML or XML exports.",
+        "top",
+      ),
+      wsStep(
+        "step-context",
+        "Assessment context",
+        "Customer name, environment, and frameworks tag every finding and report for this engagement.",
+        "top",
+      ),
+      wsStep(
+        "step-reports",
+        "Reports",
+        "Generate technical, executive, and compliance outputs once analysis has run.",
+        "top",
+      ),
+      wsStep(
+        "analysis-tabs",
+        "Analysis tabs",
+        "Switch between Overview, findings, compliance, maps, compare, and more after analysis completes.",
+        "bottom",
+      ),
+      wsStep(
+        "priority-actions",
+        "Priority actions",
+        "Critical and high findings surface first with remediation context.",
+        "bottom",
+      ),
+      pageSurfaceStep(
+        "tour-page-assess",
+        "Full workspace",
+        "Scroll the page for upload requests, connector setup, and the full analysis canvas.",
+        "top",
+      ),
+    ],
+    { includeWorkspaceNav: false },
+  );
+}
+
+export function startMissionControlPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-mc-kpis",
+      "Portfolio KPIs",
+      "Customers, fleet size, critical Central alerts, and blended compliance give you a one-glance MSP posture. Live data appears when you are signed in with Central synced.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-mc-activity",
+      "Threat or workspace activity",
+      "The chart reflects Sophos Central telemetry when connected, otherwise assessment activity — check the subtitle for the source.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-mc-alerts",
+      "Recent alerts",
+      "Latest Central alerts with severity, customer, and device. Use Investigate to open the Central alerts hub for the full feed.",
+      "top",
+    ),
+    wsStep(
+      "tour-mc-top-risk",
+      "Top customers by risk",
+      "Ranking uses Central alert volume when tenants are synced, otherwise posture score — use this to prioritise follow-ups.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-mc-fleet-health",
+      "Fleet health",
+      "Online versus offline and health slices across cached inventory help you spot sync or connectivity issues.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-mc-quick-actions",
+      "Quick actions",
+      "Jump straight to a new assessment, reports, customer onboarding, or the playbook library.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-mc-recent-docs",
+      "Recent documents",
+      "Saved report packages with quick links into the viewer or the full report library.",
+      "top",
+    ),
+  ]);
+}
+
+export function startFleetPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-fleet-settings",
+      "Workspace strip",
+      "Org-level hints and Central sync context for fleet data appear here when you are signed in.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-fleet-jump",
+      "Quick navigation",
+      "Jump to Assess, Customers, Central, Reports, Insights, Drift, or API without hunting the tab bar.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-fleet-stats",
+      "Fleet statistics",
+      "Totals for devices, average score, critical findings, licence alerts, and customer sites frame the whole fleet.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-fleet-drop-hint",
+      "Drop to analyse",
+      "Drag a Sophos config export onto a firewall card to open an instant assessment for that device.",
+      "top",
+    ),
+    wsStep(
+      "tour-fleet-tabs",
+      "List or map",
+      "Toggle between the sortable fleet list and the geographic map of devices.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-fleet-filters",
+      "Search & filters",
+      "Search hostname, customer, or model; filter by grade and status; sort and spotlight weak or attention-needed firewalls.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-fleet-list",
+      "Fleet list & cards",
+      "Expand tenants, open assessments, and export CSV from the live inventory.",
+      "top",
+    ),
+    wsStep(
+      "tour-fleet-map",
+      "Map view",
+      "Geographic distribution of firewalls when you switch to the Map tab.",
+      "top",
+    ),
+  ]);
+}
+
+export function startCustomersPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-cust-settings",
+      "Workspace strip",
+      "Customer-directory settings and sync hints for this org show here when signed in.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-cust-summary",
+      "Directory summary",
+      "Counts for total customers, active portals, overdue assessments, average score, and tracked firewalls.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-cust-pulse",
+      "Portfolio pulse",
+      "Grade A/B mix across the directory — use it when briefing leadership; drill in with filters and exports.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-cust-jump",
+      "Workspace shortcuts",
+      "One-click jumps to Mission control, Assess, Fleet, Central, Reports, Insights, and Playbooks.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-cust-toolbar",
+      "Search & actions",
+      "Filter the directory, export, and onboard customers from this toolbar.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-cust-directory",
+      "Customer directory",
+      "Per-customer posture, portals, and links into Fleet or Assess — your canonical MSP customer list.",
+      "top",
+    ),
+  ]);
+}
+
+export function startCentralOverviewPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-connect-banner",
+        "Connection status",
+        "If Central is not connected, open workspace settings from here. Once connected, cached sync data powers the rest of the hub.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-central-summary-cards",
+        "Sync snapshot",
+        "Connection state, cached tenant count, firewall inventory, and a shortcut to the Sync tab for refresh.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-central-api-hosts",
+        "API hosts",
+        "When available, resolved Central API endpoints for your connector are listed for troubleshooting.",
+        "top",
+      ),
+      wsStep(
+        "tour-central-explore",
+        "Explore Central",
+        "Cards deep-link into Tenants, Firewalls, Alerts, MDR, Groups, Licensing, and Sync — each has its own tour from the subnav.",
+        "top",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralTenantsPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-tenants-intro",
+        "Cached tenants",
+        "Rows reflect your last successful sync — not a live directory listing. Refresh from Sync or the header when data is stale.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-central-tenants-table",
+        "Tenant table",
+        "Tenant name, region, and firewall counts help you verify coverage before drilling into Firewalls or Alerts.",
+        "top",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralFirewallsPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-fw-intro",
+        "Firewall inventory",
+        "Cached Sophos Central firewalls for your org. Use sync to refresh models, firmware, and online state.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-central-fw-table",
+        "Inventory table",
+        "Filter and open a device for tenant-scoped detail and deep links back to Fleet command.",
+        "top",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralAlertsPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-alerts-controls",
+        "Alert controls",
+        "Filter by severity and tenant, search text, and refresh the batched Central feed.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-central-alerts-table",
+        "Alert feed",
+        "Latest alerts across synced tenants — use Mission control for a shorter recent list or triage here in full.",
+        "top",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralMdrPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-mdr-shell",
+        "MDR feed",
+        "Threat indicators and MDR-oriented signals from Central appear here when data is available.",
+        "bottom",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralGroupsPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-groups-shell",
+        "Firewall groups",
+        "Central firewall groups for policy and inventory alignment — use alongside the per-firewall inventory.",
+        "bottom",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralLicensingPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-licensing-shell",
+        "Licensing",
+        "Device and SKU visibility derived from cached Central data — refresh from Sync when licences change.",
+        "bottom",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralSyncPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-sync-shell",
+        "Sync & API",
+        "Connector status, manual refresh, and API details to keep tenants and firewalls current.",
+        "bottom",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startCentralFirewallDetailPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-central-fw-detail-shell",
+        "Firewall detail",
+        "Tenant-scoped device view with health, metadata, and links back to the wider inventory and Fleet.",
+        "bottom",
+      ),
+    ],
+    { centralSubnav: true },
+  );
+}
+
+export function startReportsHubPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-reports-stats",
+      "Report metrics",
+      "Totals, monthly volume, pending delivery, and delivered counts summarise report activity for the workspace.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-reports-filters",
+      "Filters & search",
+      "Narrow by date, customer, environment, and free-text search across the library.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-reports-library",
+      "Report library",
+      "Sortable table of generated reports — open a row to view HTML or manage delivery.",
+      "top",
+    ),
+    wsStep(
+      "tour-reports-scheduled",
+      "Scheduled reports",
+      "Expand to review cadence, next run, and active toggles for automated customer delivery.",
+      "top",
+    ),
+    wsStep(
+      "tour-reports-sidebar",
+      "Tips & actions",
+      "Side panel guidance and shortcuts for generation workflows when present.",
+      "top",
+    ),
+  ]);
+}
+
+export function startSavedReportViewerPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-saved-breadcrumb",
+      "Navigation",
+      "Return to Report centre or stay in the saved document context from the header strip.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-saved-document",
+      "Saved report",
+      "Read-only rendered report — same document shell as live assessments for consistent customer delivery.",
+      "top",
+    ),
+  ]);
+}
+
+export function startInsightsPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-ins-header",
+      "Security intelligence",
+      "Cross-customer trends and portfolio analytics — switch time windows to change every chart.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-ins-risk-strip",
+      "Portfolio risk strip",
+      "Customers below target, stale assessments, and weakest scores surface for prioritisation.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-ins-settings",
+      "Workspace strip",
+      "Insights-specific workspace settings when signed in.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-ins-time-range",
+      "Time range",
+      "7D through 12M and Custom control the window for threat and trend visuals.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-ins-threat",
+      "Threat landscape",
+      "Modelled traffic and category mix for the selected period — use for exec briefings.",
+      "top",
+    ),
+    wsStep(
+      "tour-ins-widgets",
+      "Insight widgets",
+      "Additional portfolio widgets and breakdowns fill the rest of the page as you scroll.",
+      "top",
+    ),
+  ]);
+}
+
+export function startDriftPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-drift-selector",
+      "Firewall & snapshots",
+      "Pick a firewall to scope cached snapshots and timeline data (connector-driven when deployed).",
+      "bottom",
+    ),
+    wsStep(
+      "tour-drift-compare",
+      "Manual config compare",
+      "Upload baseline and current exports for a structured diff when you need an ad-hoc comparison.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-drift-timeline",
+      "Stats & snapshot timeline",
+      "Snapshot counts, score trend, and the interactive timeline — select a node to inspect change details.",
+      "top",
+    ),
+    wsStep(
+      "tour-drift-history",
+      "Drift history",
+      "Customer-scoped history cards for engagement-level storytelling (demo data where shown).",
+      "top",
+    ),
+    wsStep(
+      "tour-drift-alerts",
+      "Drift alert rules",
+      "Expand to toggle which drift conditions should raise notifications for your team.",
+      "bottom",
+    ),
+  ]);
+}
+
+export function startPlaybooksPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-pb-header",
+      "Playbook library",
+      "Remediation guides mapped to Sophos best-practice checks — use alongside Assess findings.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-pb-search",
+      "Search",
+      "Filter hundreds of playbooks by keyword to match the finding you are fixing.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-pb-categories",
+      "Categories",
+      "Chip filters by security domain — combine with search to narrow fast.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-pb-stats",
+      "Library stats",
+      "Totals, categories, average effort, and completion tracking for your team.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-pb-grid",
+      "Playbook cards",
+      "Open a card for step-by-step remediation content you can follow on live firewalls.",
+      "top",
+    ),
+  ]);
+}
+
+export function startApiHubPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-api-hero",
+      "API & integrations",
+      "Automate FireComply: marketplace integrations, REST explorer, webhooks, and connector agents — all from this hub.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-api-tabs",
+      "Hub sections",
+      "Switch tabs to configure third-party apps, try API calls, manage webhook endpoints, or review agent connectivity.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-api-panel",
+      "Workspace tools",
+      "The strip and body under the tabs reflect your org — keys, examples, and lists update per section.",
+      "top",
+    ),
+  ]);
+}
+
+export function startTrustPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-trust-hero",
+      "Trust centre",
+      "Security, privacy, and compliance posture for the FireComply platform — share with customer risk teams.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-trust-security",
+      "Security practices",
+      "How we protect data, infrastructure, and access — alignment questions start here.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-trust-privacy",
+      "Privacy & data",
+      "Data handling, retention themes, and subprocessors customers ask about in reviews.",
+      "top",
+    ),
+    wsStep(
+      "tour-trust-compliance",
+      "Compliance & assurances",
+      "Framework mappings, questionnaires, and downloadable artefacts when available.",
+      "top",
+    ),
+  ]);
+}
+
+export function startChangelogPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-changelog-hero",
+      "Updates",
+      "Product changes, threat intel, and firmware references — the in-app companion to the technical changelog.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-changelog-panels",
+      "Highlights",
+      "Overview panels summarise what shipped recently without reading the full history.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-changelog-history",
+      "Detailed history",
+      "Month-by-month bullets for auditors and power users who need exact shipped behaviour.",
+      "top",
+    ),
+  ]);
+}
+
+export function startAuditPageTour() {
+  runHubPageTour([
+    wsStep(
+      "tour-audit-actions",
+      "Open in drawer",
+      "The same audit log is available inside the management drawer — use whichever fits your workflow.",
+      "bottom",
+    ),
+    wsStep(
+      "tour-audit-log",
+      "Activity log",
+      "Immutable-style workspace events for sign-ins, settings, and report actions when signed in.",
+      "top",
+    ),
+  ]);
+}
+
+export function startNotFoundPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-nf-message",
+        "Unknown URL",
+        "This path is not registered in the app — the address may be a typo or an old bookmark.",
+        "top",
+      ),
+      wsStep(
+        "tour-nf-cta",
+        "Get back on track",
+        "Use Back to FireComply or the workspace tabs (when signed in) to return to a known area.",
+        "bottom",
+      ),
+    ],
+    { includeWorkspaceNav: false },
+  );
+}
+
+export function startSharedReportPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-shared-header",
+        "Shared report",
+        "Read-only assessment shared by link — branding and customer name come from the publisher.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-shared-downloads",
+        "Downloads",
+        "When enabled, export Word or print PDF for offline sharing — respect your org policy on redistribution.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-shared-body",
+        "Report content",
+        "Full findings and narrative as delivered; link expiry is shown in the header strip.",
+        "top",
+      ),
+    ],
+    { includeWorkspaceNav: false, includeManagement: false },
+  );
+}
+
+export function startSharedReportErrorPageTour() {
+  runHubPageTour(
+    [
+      wsStep(
+        "tour-shared-error",
+        "Link issue",
+        "The share may be invalid, expired, or unavailable — request a fresh link from the report owner.",
+        "top",
+      ),
+    ],
+    { includeWorkspaceNav: false, includeManagement: false },
+  );
+}
+
+export function startClientPortalPageTour() {
+  runHubPageTour(
+    filterVisible([
+      wsStep(
+        "tour-portal-shell",
+        "Client portal",
+        "Read-only customer view of assessments and reports your MSP published — scoped to this tenant.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-portal-header",
+        "Branding & session",
+        "Customer name, optional MSP branding, sign out, and theme — same portal identity on every tab.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-portal-tabs",
+        "Sections",
+        "Switch between dashboard, findings, compliance, and published reports without leaving the portal.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-portal-main",
+        "Content",
+        "Scores, findings, and documents for this tenant — what your customer is cleared to see.",
+        "top",
+      ),
+    ]),
+    { includeWorkspaceNav: false, includeManagement: false },
+  );
+}
+
+export function startConfigUploadPageTour() {
+  runHubPageTour(
+    filterVisible([
+      wsStep(
+        "tour-upload-token-shell",
+        "Secure upload",
+        "Tokenised upload flow for customers to submit configs without a full workspace login.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-upload-header",
+        "Health check context",
+        "Confirms this is the Sophos Firewall Health Check intake — not the full workspace.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-upload-dropzone",
+        "Drop or choose file",
+        "Submit the firewall export (e.g. entities.xml); progress shows while the file uploads.",
+        "top",
+      ),
+    ]),
+    { includeWorkspaceNav: false, includeManagement: false },
+  );
+}
+
+export function startTeamInvitePageTour() {
+  runHubPageTour(
+    filterVisible([
+      wsStep(
+        "tour-invite-shell",
+        "Team invite",
+        "Accept an invitation to join an organisation — sign in with the invited email when prompted.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-invite-brand",
+        "FireComply",
+        "You landed on a one-time team invite link scoped to Sophos FireComply.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-invite-card",
+        "Status & next step",
+        "Loading, success, sign-in, or error states appear here — follow the prompt to finish joining.",
+        "top",
+      ),
+    ]),
+    { includeWorkspaceNav: false, includeManagement: false },
+  );
+}
+
+export function startThemePreviewPageTour() {
+  runHubPageTour(
+    filterVisible([
+      wsStep(
+        "tour-theme-header",
+        "Theme preview",
+        "Internal preview of colours, typography, and components — not customer data.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-theme-workspace",
+        "Live hub chrome",
+        "Workspace subpage headers and buttons as they render on real routes — toggle light/dark in your OS or app.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-theme-landing",
+        "Marketing surfaces",
+        "Hero and trust patterns used on first-run experiences — scroll for more component blocks below.",
+        "top",
+      ),
+      wsStep(
+        "tour-theme-palette",
+        "Brand tokens",
+        "Named Sophos palette swatches the UI derives accents and states from.",
+        "top",
+      ),
+    ]),
+    { includeWorkspaceNav: false, includeManagement: false },
+  );
+}
+
+export function startSharedHealthCheckPageTour() {
+  runHubPageTour(
+    filterVisible([
+      wsStep(
+        "tour-shc-shell",
+        "Shared health check",
+        "Read-only SE health check delivered via link — same HTML report the engineer saved.",
+        "bottom",
+      ),
+      wsStep(
+        "tour-shc-actions",
+        "Download & print",
+        "Save HTML or open print/PDF when sharing allows — customer and expiry show in the bar.",
+        "top",
+      ),
+      wsStep(
+        "tour-shc-report",
+        "Report body",
+        "The embedded health check HTML — scroll the full assessment as the engineer delivered it.",
+        "top",
+      ),
+    ]),
+    { includeWorkspaceNav: false, includeManagement: false },
+  );
+}
+
+export type WorkspacePageTourMeta = { label: string; start: () => void };
+
+function centralTourMeta(path: string): WorkspacePageTourMeta {
+  if (path.includes("/central/firewall/")) {
+    return { label: "This page (Central · Firewall)", start: startCentralFirewallDetailPageTour };
+  }
+  const parts = path.replace(/\/$/, "").split("/").filter(Boolean);
+  const sub = parts[1] ?? "overview";
+  switch (sub) {
+    case "tenants":
+      return { label: "This page (Central · Tenants)", start: startCentralTenantsPageTour };
+    case "firewalls":
+      return { label: "This page (Central · Firewalls)", start: startCentralFirewallsPageTour };
+    case "alerts":
+      return { label: "This page (Central · Alerts)", start: startCentralAlertsPageTour };
+    case "mdr":
+      return { label: "This page (Central · MDR)", start: startCentralMdrPageTour };
+    case "groups":
+      return { label: "This page (Central · Groups)", start: startCentralGroupsPageTour };
+    case "licensing":
+      return { label: "This page (Central · Licensing)", start: startCentralLicensingPageTour };
+    case "sync":
+      return { label: "This page (Central · Sync)", start: startCentralSyncPageTour };
+    default:
+      return { label: "This page (Central · Overview)", start: startCentralOverviewPageTour };
+  }
+}
+
+/**
+ * Tours menu: “This page” for the current route. Token/share flows included where UI exists.
+ */
+export function getWorkspacePageTourMeta(pathname: string): WorkspacePageTourMeta | null {
+  const path = pathname.split("?")[0] || pathname;
+
+  if (path === "/preview") {
+    return { label: "This page (Theme preview)", start: startThemePreviewPageTour };
+  }
+  if (path.startsWith("/shared/")) {
+    return { label: "This page (Shared report)", start: startSharedReportPageTour };
+  }
+  if (path.startsWith("/portal/")) {
+    return { label: "This page (Client portal)", start: startClientPortalPageTour };
+  }
+  if (path.startsWith("/upload/")) {
+    return { label: "This page (Config upload)", start: startConfigUploadPageTour };
+  }
+  if (path.startsWith("/team-invite/")) {
+    return { label: "This page (Team invite)", start: startTeamInvitePageTour };
+  }
+
+  if (path === "/") {
+    return { label: "This page (Assess)", start: startAssessPageTour };
+  }
+  if (path === "/dashboard") {
+    return { label: "This page (Mission control)", start: startMissionControlPageTour };
+  }
+  if (path === "/command") {
+    return { label: "This page (Fleet)", start: startFleetPageTour };
+  }
+  if (path === "/customers") {
+    return { label: "This page (Customers)", start: startCustomersPageTour };
+  }
+  if (path === "/central" || path.startsWith("/central/")) {
+    return centralTourMeta(path);
+  }
+  if (path === "/reports") {
+    return { label: "This page (Reports)", start: startReportsHubPageTour };
+  }
+  if (path.startsWith("/reports/")) {
+    return { label: "This page (Saved report)", start: startSavedReportViewerPageTour };
+  }
+  if (path === "/insights") {
+    return { label: "This page (Insights)", start: startInsightsPageTour };
+  }
+  if (path === "/drift") {
+    return { label: "This page (Drift)", start: startDriftPageTour };
+  }
+  if (path === "/playbooks") {
+    return { label: "This page (Playbooks)", start: startPlaybooksPageTour };
+  }
+  if (path === "/api") {
+    return { label: "This page (API)", start: startApiHubPageTour };
+  }
+  if (path === "/trust") {
+    return { label: "This page (Trust)", start: startTrustPageTour };
+  }
+  if (path === "/changelog") {
+    return { label: "This page (Updates)", start: startChangelogPageTour };
+  }
+  if (path === "/help" || path.startsWith("/help/")) {
+    return null;
+  }
+  if (path === "/audit") {
+    return { label: "This page (Activity log)", start: startAuditPageTour };
+  }
+  if (path.startsWith("/health-check/shared/")) {
+    return { label: "This page (Shared health check)", start: startSharedHealthCheckPageTour };
+  }
+  if (path.startsWith("/health-check")) {
+    return { label: "This page (Health check)", start: startHealthCheckTour };
+  }
+
+  return { label: "This page (Not found)", start: startNotFoundPageTour };
 }
 
 // ---------------------------------------------------------------------------

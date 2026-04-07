@@ -116,9 +116,10 @@ export default function TeamInviteAccept() {
     <main
       id="main-content"
       className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4"
+      data-tour="tour-invite-shell"
     >
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8" data-tour="tour-invite-brand">
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-[#2006F7] to-[#4A20F7] shadow-lg mb-4">
             <Users className="h-7 w-7 text-white" />
           </div>
@@ -126,7 +127,10 @@ export default function TeamInviteAccept() {
           <p className="text-sm text-muted-foreground mt-1">Team Invite</p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card shadow-sm p-8">
+        <div
+          className="rounded-2xl border border-border bg-card shadow-sm p-8"
+          data-tour="tour-invite-card"
+        >
           {(pageState === "loading" || pageState === "accepting") && (
             <div className="text-center space-y-4">
               <Loader2 className="h-10 w-10 animate-spin text-[#2006F7] mx-auto" />

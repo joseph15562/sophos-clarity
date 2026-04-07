@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -41,11 +41,49 @@ import {
   UserCog,
   Settings,
   Cloud,
+  Monitor,
+  BarChart3,
+  GitCompare,
+  Code2,
+  LayoutDashboard,
+  Star,
+  Download,
+  Sparkles,
+  LayoutGrid,
+  Table2,
+  Radar,
 } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
-import { WorkspaceSubpageHeader } from "@/components/WorkspaceSubpageHeader";
+import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CustomerDirectoryTable } from "@/components/customers/CustomerDirectoryTable";
+import { CustomerDetailSheet } from "@/components/customers/CustomerDetailSheet";
+import { cn } from "@/lib/utils";
+import {
+  customerCardGlowClass,
+  customerCrmStatus,
+  customerOpenAlerts,
+  customerInitials,
+  avatarHueFromName,
+  customerRiskScore,
+} from "@/lib/customer-ui-helpers";
 
 type DemoCustomer = CustomerDirectoryEntry;
 
@@ -156,26 +194,11 @@ const DEMO_CUSTOMERS: DemoCustomer[] = [
 
 const HEALTH_OPTIONS: HealthStatus[] = ["Healthy", "At Risk", "Critical", "Overdue"];
 
-const GRADE_COLORS: Record<string, string> = {
-  A: "#00F2B3",
-  B: "#00EDFF",
-  C: "#F29400",
-  D: "#EA0022",
-  F: "#EA0022",
-};
-
 const HEALTH_DOT: Record<HealthStatus, string> = {
   Healthy: "bg-[#00F2B3]",
   "At Risk": "bg-[#F29400]",
   Critical: "bg-[#EA0022]",
   Overdue: "bg-[#EA0022] animate-pulse",
-};
-
-const HEALTH_BADGE_STYLE: Record<HealthStatus, string> = {
-  Healthy: "bg-[#00F2B3]/15 text-[#007A5A] dark:text-[#00F2B3] border-[#00F2B3]/20",
-  "At Risk": "bg-[#F29400]/15 text-[#F29400] border-[#F29400]/20",
-  Critical: "bg-[#EA0022]/15 text-[#EA0022] border-[#EA0022]/20",
-  Overdue: "bg-[#EA0022]/15 text-[#EA0022] border-[#EA0022]/20",
 };
 
 const SECTOR_BADGE_STYLE: Record<string, string> = {
@@ -186,6 +209,56 @@ const SECTOR_BADGE_STYLE: Record<string, string> = {
   Legal: "bg-slate-500/15 text-slate-300 border-slate-500/20",
   Retail: "bg-pink-500/15 text-pink-400 border-pink-500/20",
 };
+
+const CUSTOMER_PIN_STORAGE_KEY = (orgKey: string) => `fc-customer-pins-v1:${orgKey}`;
+
+function escapeCsvCell(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCustomersCsv(rows: DemoCustomer[], filename: string) {
+  const header = [
+    "name",
+    "sector",
+    "country",
+    "grade",
+    "score",
+    "health",
+    "firewalls",
+    "unassessed",
+    "last_assessed_days_ago",
+    "frameworks",
+  ];
+  const lines = [
+    header.join(","),
+    ...rows.map((c) =>
+      [
+        escapeCsvCell(c.name),
+        escapeCsvCell(c.sector),
+        escapeCsvCell(c.country),
+        escapeCsvCell(c.grade),
+        escapeCsvCell(c.score),
+        escapeCsvCell(c.health),
+        escapeCsvCell(c.firewallCount),
+        escapeCsvCell(c.unassessedCount),
+        escapeCsvCell(c.daysAgo),
+        escapeCsvCell(c.frameworks.join("; ")),
+      ].join(","),
+    ),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success("Customer directory CSV downloaded");
+}
+
+type CustomerSortKey = "name" | "score_desc" | "firewalls_desc" | "assessed_recent";
 
 const SECTOR_FALLBACK_BADGE_STYLE =
   "bg-muted/45 text-muted-foreground border-border/55 dark:bg-white/[0.05] dark:border-white/10";
@@ -213,12 +286,63 @@ function CustomerManagementInner() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sectorFilter, setSectorFilter] = useState<string>("");
   const [healthFilter, setHealthFilter] = useState<HealthStatus | "">("");
+  const [countryFilter, setCountryFilter] = useState<string>("");
+  const [customerSort, setCustomerSort] = useState<CustomerSortKey>("name");
+  const [attentionCustomersOnly, setAttentionCustomersOnly] = useState(false);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
   const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DemoCustomer | null>(null);
   const [accessTarget, setAccessTarget] = useState<DemoCustomer | null>(null);
   const [portalConfigTarget, setPortalConfigTarget] = useState<DemoCustomer | null>(null);
+  const [customerViewMode, setCustomerViewMode] = useState<"grid" | "table">("grid");
+  const [detailCustomer, setDetailCustomer] = useState<DemoCustomer | null>(null);
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: "",
+    email: "",
+    environment: "",
+    country: "",
+    logoFile: null as File | null,
+  });
   const debouncedSearch = useDebouncedValue(searchQuery.trim(), 300);
+
+  const pinStorageKey = CUSTOMER_PIN_STORAGE_KEY(org?.id ?? (isGuest ? "guest" : "signed-out"));
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(pinStorageKey);
+      if (!raw) {
+        setPinnedIds(new Set());
+        return;
+      }
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) {
+        setPinnedIds(new Set());
+        return;
+      }
+      setPinnedIds(new Set(parsed.filter((x): x is string => typeof x === "string")));
+    } catch {
+      setPinnedIds(new Set());
+    }
+  }, [pinStorageKey]);
+
+  const togglePin = useCallback(
+    (id: string) => {
+      setPinnedIds((prev) => {
+        const n = new Set(prev);
+        if (n.has(id)) n.delete(id);
+        else n.add(id);
+        try {
+          localStorage.setItem(pinStorageKey, JSON.stringify([...n]));
+        } catch {
+          /* ignore quota */
+        }
+        return n;
+      });
+    },
+    [pinStorageKey],
+  );
 
   const customers = useMemo(() => {
     if (!org?.id) return isGuest ? DEMO_CUSTOMERS : [];
@@ -229,6 +353,15 @@ function CustomerManagementInner() {
   const loading = Boolean(org?.id) && customerDirectoryQuery.isPending;
 
   const sectors = useMemo(() => [...new Set(customers.map((c) => c.sector))].sort(), [customers]);
+
+  const countries = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of customers) {
+      const co = (c.country ?? "").trim();
+      if (co) set.add(co);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [customers]);
 
   const deleteCustomerMutation = useMutation({
     mutationFn: async (payload: { orgId: string; customer: DemoCustomer }) => {
@@ -287,8 +420,42 @@ function CustomerManagementInner() {
     if (healthFilter) {
       list = list.filter((c) => c.health === healthFilter);
     }
+    if (countryFilter) {
+      list = list.filter((c) => c.country === countryFilter);
+    }
+    if (attentionCustomersOnly) {
+      list = list.filter((c) => c.health !== "Healthy");
+    }
     return list;
-  }, [debouncedSearch, sectorFilter, healthFilter, customers]);
+  }, [
+    debouncedSearch,
+    sectorFilter,
+    healthFilter,
+    countryFilter,
+    attentionCustomersOnly,
+    customers,
+  ]);
+
+  const sortedFiltered = useMemo(() => {
+    const list = [...filtered];
+    list.sort((a, b) => {
+      const ap = pinnedIds.has(a.id) ? 1 : 0;
+      const bp = pinnedIds.has(b.id) ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      switch (customerSort) {
+        case "score_desc":
+          return b.score - a.score || a.name.localeCompare(b.name);
+        case "firewalls_desc":
+          return b.firewallCount - a.firewallCount || a.name.localeCompare(b.name);
+        case "assessed_recent":
+          return a.daysAgo - b.daysAgo || a.name.localeCompare(b.name);
+        case "name":
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+    return list;
+  }, [filtered, pinnedIds, customerSort]);
 
   const stats = useMemo(() => {
     const total = customers.length;
@@ -297,7 +464,10 @@ function CustomerManagementInner() {
       (c) => c.health === "Overdue" || c.health === "Critical",
     ).length;
     const avg = total > 0 ? Math.round(customers.reduce((s, c) => s + c.score, 0) / total) : 0;
-    return { total, active, overdue, avg };
+    const firewallsTracked = customers.reduce((s, c) => s + c.firewallCount, 0);
+    const abCount = customers.filter((c) => c.grade === "A" || c.grade === "B").length;
+    const abPct = total > 0 ? Math.round((abCount / total) * 100) : 0;
+    return { total, active, overdue, avg, firewallsTracked, abPct, abCount };
   }, [customers]);
 
   if (loading) {
@@ -310,22 +480,35 @@ function CustomerManagementInner() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <WorkspaceSubpageHeader
-        title="Customer Management"
-        actions={
-          <Button variant="default" onClick={() => setShowOnboardModal(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Onboard Customer</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
+      <FireComplyWorkspaceHeader loginShell={isGuest} />
+
+      <WorkspacePrimaryNav
+        pageActions={
+          <>
+            <Button variant="outline" onClick={() => setAddCustomerOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add customer</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => setShowOnboardModal(true)}
+              className="gap-2 shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Onboard Customer</span>
+            </Button>
+          </>
         }
       />
 
-      <WorkspacePrimaryNav />
-
-      <main id="main-content" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main
+        id="main-content"
+        className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 assist-chrome-pad-bottom"
+        data-tour="tour-page-customers"
+      >
         {org?.id && !isGuest && (
-          <div className="mb-4">
+          <div className="mb-4" data-tour="tour-cust-settings">
             <WorkspaceSettingsStrip variant="customers" />
           </div>
         )}
@@ -354,7 +537,10 @@ function CustomerManagementInner() {
           </div>
         )}
         {/* Summary strip */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div
+          className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+          data-tour="tour-cust-summary"
+        >
           <SummaryCard
             icon={<Users className="h-5 w-5 text-[#2006F7]" />}
             label="Total Customers"
@@ -376,105 +562,333 @@ function CustomerManagementInner() {
             value={stats.avg}
             suffix="/100"
           />
+          <SummaryCard
+            icon={<Monitor className="h-5 w-5 text-[#009CFB]" />}
+            label="Firewalls tracked"
+            value={stats.firewallsTracked}
+          />
         </div>
 
-        {/* Search & filter bar */}
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search customers…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-xl border border-slate-900/[0.10] bg-white/70 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground backdrop-blur-md transition-colors focus:border-[#2006F7]/40 focus:outline-none focus:ring-2 focus:ring-[#2006F7]/20 dark:border-white/[0.06] dark:bg-white/[0.04]"
-            />
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="gap-2 sm:w-auto"
+        {stats.total > 0 ? (
+          <div
+            className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-900/[0.10] bg-gradient-to-br from-[#2006F7]/[0.06] via-white/70 to-[#00EDFF]/[0.05] p-4 backdrop-blur-md dark:border-white/[0.06] dark:from-[#2006F7]/[0.12] dark:via-white/[0.04] dark:to-[#00EDFF]/[0.06] sm:flex-row sm:items-center"
+            data-tour="tour-cust-pulse"
           >
-            <Filter className="h-4 w-4" />
-            Filters
-            {(sectorFilter || healthFilter) && (
-              <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#2006F7] text-[10px] font-bold text-white">
-                {(sectorFilter ? 1 : 0) + (healthFilter ? 1 : 0)}
-              </span>
-            )}
+            <div className="flex items-start gap-3 shrink-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2006F7]/15 text-[#2006F7] dark:text-[#00EDFF]">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Portfolio pulse</p>
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">
+                  <strong className="text-foreground">{stats.abPct}%</strong> of your customers are
+                  grade A or B ({stats.abCount} of {stats.total}). This blends every row in your
+                  directory — use filters and export when you brief leadership or the board.
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 min-w-[120px] space-y-1.5 sm:max-w-md sm:ml-auto">
+              <div className="h-2.5 overflow-hidden rounded-full bg-slate-900/[0.08] dark:bg-white/[0.10]">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#2006F7] via-[#009CFB] to-[#00F2B3] transition-[width] duration-500 ease-out"
+                  style={{ width: `${stats.abPct}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground text-right tabular-nums">
+                Target: move weak grades up with Assess + Fleet follow-through
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        <div
+          className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-900/[0.10] bg-white/60 px-3 py-2.5 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.04]"
+          data-tour="tour-cust-jump"
+        >
+          <span className="text-[11px] font-medium text-muted-foreground self-center mr-1">
+            Workspace
+          </span>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/dashboard">
+              <Radar className="h-3.5 w-3.5" />
+              Mission control
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/">
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Assess
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/command">
+              <Monitor className="h-3.5 w-3.5" />
+              Fleet
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/central/overview">
+              <Cloud className="h-3.5 w-3.5" />
+              Central
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/reports">
+              <FileText className="h-3.5 w-3.5" />
+              Reports
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/insights">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Insights
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/drift">
+              <GitCompare className="h-3.5 w-3.5" />
+              Drift
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link to="/api">
+              <Code2 className="h-3.5 w-3.5" />
+              API
+            </Link>
           </Button>
         </div>
 
-        {/* Filter pills row */}
-        {showFilters && (
-          <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-900/[0.10] bg-white/60 p-4 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.03]">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Sector
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              <FilterPill label="All" active={!sectorFilter} onClick={() => setSectorFilter("")} />
-              {sectors.map((s) => (
-                <FilterPill
-                  key={s}
-                  label={s}
-                  active={sectorFilter === s}
-                  onClick={() => setSectorFilter(sectorFilter === s ? "" : s)}
-                />
-              ))}
+        {/* Search & filter bar */}
+        <div className="mb-6 space-y-6" data-tour="tour-cust-toolbar">
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search customers…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-900/[0.10] bg-white/70 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground backdrop-blur-md transition-colors focus:border-[#2006F7]/40 focus:outline-none focus:ring-2 focus:ring-[#2006F7]/20 dark:border-white/[0.06] dark:bg-white/[0.04]"
+              />
             </div>
 
-            <span className="ml-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Health
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              <FilterPill label="All" active={!healthFilter} onClick={() => setHealthFilter("")} />
-              {HEALTH_OPTIONS.map((h) => (
-                <FilterPill
-                  key={h}
-                  label={h}
-                  active={healthFilter === h}
-                  onClick={() => setHealthFilter(healthFilter === h ? "" : h)}
-                />
-              ))}
-            </div>
-
-            {(sectorFilter || healthFilter) && (
-              <button
-                onClick={() => {
-                  setSectorFilter("");
-                  setHealthFilter("");
-                }}
-                className="ml-auto text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={customerSort}
+                onValueChange={(v) => setCustomerSort(v as CustomerSortKey)}
               >
-                Clear all
-              </button>
-            )}
+                <SelectTrigger className="h-10 w-full min-w-[160px] sm:w-[200px] text-xs bg-white/80 dark:bg-white/[0.06]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Sort: Name A–Z</SelectItem>
+                  <SelectItem value="score_desc">Sort: Score (high first)</SelectItem>
+                  <SelectItem value="firewalls_desc">Sort: Most firewalls</SelectItem>
+                  <SelectItem value="assessed_recent">Sort: Assessed recently</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                type="button"
+                variant={attentionCustomersOnly ? "default" : "outline"}
+                size="sm"
+                className={`h-10 gap-1.5 ${attentionCustomersOnly ? "shadow-md shadow-[#EA0022]/10" : ""}`}
+                onClick={() => setAttentionCustomersOnly((v) => !v)}
+              >
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                Needs follow-up
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-10 gap-1.5"
+                disabled={sortedFiltered.length === 0}
+                onClick={() =>
+                  downloadCustomersCsv(
+                    sortedFiltered,
+                    `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+
+              <div className="flex h-10 rounded-xl border border-slate-900/[0.10] bg-white/80 p-0.5 dark:border-white/[0.06] dark:bg-white/[0.06]">
+                <Button
+                  type="button"
+                  variant={customerViewMode === "grid" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-9 px-3 rounded-lg"
+                  onClick={() => setCustomerViewMode("grid")}
+                  aria-pressed={customerViewMode === "grid"}
+                  title="Card grid"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={customerViewMode === "table" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-9 px-3 rounded-lg"
+                  onClick={() => setCustomerViewMode("table")}
+                  aria-pressed={customerViewMode === "table"}
+                  title="Table view"
+                >
+                  <Table2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 gap-2"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {(sectorFilter || healthFilter || countryFilter || attentionCustomersOnly) && (
+                  <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-[#2006F7] text-[10px] font-bold text-white tabular-nums">
+                    {(sectorFilter ? 1 : 0) +
+                      (healthFilter ? 1 : 0) +
+                      (countryFilter ? 1 : 0) +
+                      (attentionCustomersOnly ? 1 : 0)}
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
-        )}
+
+          {/* Filter pills row */}
+          {showFilters && (
+            <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-900/[0.10] bg-white/60 p-4 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.03]">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Sector
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                <FilterPill
+                  label="All"
+                  active={!sectorFilter}
+                  onClick={() => setSectorFilter("")}
+                />
+                {sectors.map((s) => (
+                  <FilterPill
+                    key={s}
+                    label={s}
+                    active={sectorFilter === s}
+                    onClick={() => setSectorFilter(sectorFilter === s ? "" : s)}
+                  />
+                ))}
+              </div>
+
+              <span className="ml-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Health
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                <FilterPill
+                  label="All"
+                  active={!healthFilter}
+                  onClick={() => setHealthFilter("")}
+                />
+                {HEALTH_OPTIONS.map((h) => (
+                  <FilterPill
+                    key={h}
+                    label={h}
+                    active={healthFilter === h}
+                    onClick={() => setHealthFilter(healthFilter === h ? "" : h)}
+                  />
+                ))}
+              </div>
+
+              {countries.length > 0 ? (
+                <>
+                  <span className="w-full sm:w-auto sm:ml-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Country
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <Select
+                      value={countryFilter || "__all__"}
+                      onValueChange={(v) => setCountryFilter(v === "__all__" ? "" : v)}
+                    >
+                      <SelectTrigger className="h-9 w-full sm:w-[220px] text-xs bg-white/80 dark:bg-white/[0.06]">
+                        <SelectValue placeholder="All countries" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All countries</SelectItem>
+                        {countries.map((co) => (
+                          <SelectItem key={co} value={co}>
+                            {co}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : null}
+
+              {(sectorFilter || healthFilter || countryFilter || attentionCustomersOnly) && (
+                <button
+                  onClick={() => {
+                    setSectorFilter("");
+                    setHealthFilter("");
+                    setCountryFilter("");
+                    setAttentionCustomersOnly(false);
+                  }}
+                  className="ml-auto text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Customer cards grid */}
-        {filtered.length > 0 ? (
-          <div className="space-y-2">
-            {debouncedSearch || sectorFilter || healthFilter ? (
-              <p className="text-xs text-muted-foreground">
-                Showing {filtered.length} of {customers.length} customer
-                {customers.length === 1 ? "" : "s"}
-                {debouncedSearch ? ` matching “${debouncedSearch}”` : ""}
+        {sortedFiltered.length > 0 ? (
+          <div className="space-y-2" data-tour="tour-cust-directory">
+            {pinnedIds.size > 0 ? (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" aria-hidden />
+                Starred customers stay at the top on this browser (saved per organisation).
               </p>
             ) : null}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((customer) => (
-                <CustomerCard
-                  key={customer.id}
-                  customer={customer}
-                  onDelete={setDeleteTarget}
-                  onManageAccess={setAccessTarget}
-                  onConfigurePortal={setPortalConfigTarget}
-                />
-              ))}
-            </div>
+            {debouncedSearch ||
+            sectorFilter ||
+            healthFilter ||
+            countryFilter ||
+            attentionCustomersOnly ? (
+              <p className="text-xs text-muted-foreground">
+                Showing {sortedFiltered.length} of {customers.length} customer
+                {customers.length === 1 ? "" : "s"}
+                {debouncedSearch ? ` matching “${debouncedSearch}”` : ""}
+                {countryFilter ? ` · ${countryFilter}` : ""}
+                {attentionCustomersOnly ? " · needs follow-up only" : ""}
+              </p>
+            ) : null}
+            {customerViewMode === "grid" ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {sortedFiltered.map((customer) => (
+                  <CustomerCard
+                    key={customer.id}
+                    customer={customer}
+                    isPinned={pinnedIds.has(customer.id)}
+                    onTogglePin={togglePin}
+                    onDelete={setDeleteTarget}
+                    onManageAccess={setAccessTarget}
+                    onConfigurePortal={setPortalConfigTarget}
+                    onView={setDetailCustomer}
+                  />
+                ))}
+              </div>
+            ) : (
+              <CustomerDirectoryTable
+                data={sortedFiltered}
+                onView={(c) => setDetailCustomer(c)}
+                onManage={(c) => setPortalConfigTarget(c)}
+              />
+            )}
           </div>
         ) : customers.length > 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-900/[0.10] bg-white/40 backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.02]">
@@ -490,6 +904,9 @@ function CustomerManagementInner() {
                     setSearchQuery("");
                     setSectorFilter("");
                     setHealthFilter("");
+                    setCountryFilter("");
+                    setAttentionCustomersOnly(false);
+                    setCustomerSort("name");
                   }}
                 >
                   Clear search &amp; filters
@@ -648,6 +1065,128 @@ function CustomerManagementInner() {
         </>
       )}
 
+      <CustomerDetailSheet
+        customer={detailCustomer}
+        open={detailCustomer !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailCustomer(null);
+        }}
+        onConfigurePortal={(c) => {
+          setDetailCustomer(null);
+          setPortalConfigTarget(c);
+        }}
+        onManageAccess={(c) => {
+          setDetailCustomer(null);
+          setAccessTarget(c);
+        }}
+      />
+
+      <Dialog open={addCustomerOpen} onOpenChange={setAddCustomerOpen}>
+        <DialogContent className="sm:max-w-md border-border/60">
+          <DialogHeader>
+            <DialogTitle>Add customer</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="add-customer-name">Customer name</Label>
+              <Input
+                id="add-customer-name"
+                value={addForm.name}
+                onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Acme Ltd"
+                autoComplete="organization"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-customer-email">Primary contact email</Label>
+              <Input
+                id="add-customer-email"
+                type="email"
+                value={addForm.email}
+                onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="security@example.com"
+                autoComplete="email"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-customer-env">Environment</Label>
+              <Select
+                value={addForm.environment || "__none__"}
+                onValueChange={(v) =>
+                  setAddForm((f) => ({ ...f, environment: v === "__none__" ? "" : v }))
+                }
+              >
+                <SelectTrigger id="add-customer-env">
+                  <SelectValue placeholder="Select environment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Select…</SelectItem>
+                  <SelectItem value="Production">Production</SelectItem>
+                  <SelectItem value="Staging">Staging</SelectItem>
+                  <SelectItem value="Lab">Lab</SelectItem>
+                  <SelectItem value="MSP tenant">MSP tenant</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-customer-country">Country</Label>
+              <Select
+                value={addForm.country || "__none__"}
+                onValueChange={(v) =>
+                  setAddForm((f) => ({ ...f, country: v === "__none__" ? "" : v }))
+                }
+              >
+                <SelectTrigger id="add-customer-country">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Select…</SelectItem>
+                  <SelectItem value="United Kingdom">United Kingdom</SelectItem>
+                  <SelectItem value="United States">United States</SelectItem>
+                  <SelectItem value="Ireland">Ireland</SelectItem>
+                  <SelectItem value="Germany">Germany</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-customer-logo">Logo (optional)</Label>
+              <Input
+                id="add-customer-logo"
+                type="file"
+                accept="image/*"
+                className="cursor-pointer"
+                onChange={(e) =>
+                  setAddForm((f) => ({
+                    ...f,
+                    logoFile: e.target.files?.[0] ?? null,
+                  }))
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => setAddCustomerOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!addForm.name.trim()) {
+                  toast.error("Enter a customer name.");
+                  return;
+                }
+                toast.success("Customer queued — complete onboarding from Assess when ready.");
+                setAddCustomerOpen(false);
+                setAddForm({ name: "", email: "", environment: "", country: "", logoFile: null });
+              }}
+            >
+              Create customer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirmation dialog */}
       {deleteTarget && (
         <>
@@ -765,164 +1304,263 @@ function FilterPill({
   );
 }
 
+function CustomerRiskRing({ risk }: { risk: number }) {
+  const r = 18;
+  const cx = 22;
+  const cy = 22;
+  const stroke = 3.5;
+  const C = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, risk)) / 100;
+  const offset = C * (1 - pct);
+  const color = risk > 70 ? "#ef4444" : risk > 50 ? "#f59e0b" : risk > 25 ? "#eab308" : "#22c55e";
+  return (
+    <svg width="44" height="44" viewBox="0 0 44 44" className="shrink-0" aria-hidden>
+      <circle cx={cx} cy={cy} r={r} fill="none" className="stroke-muted/40" strokeWidth={stroke} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={C}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${cx} ${cy})`}
+      />
+      <text
+        x={cx}
+        y={cy + 4}
+        textAnchor="middle"
+        className="fill-foreground text-[10px] font-bold tabular-nums"
+      >
+        {Math.round(risk)}
+      </text>
+    </svg>
+  );
+}
+
+function crmBadgeClass(status: ReturnType<typeof customerCrmStatus>): string {
+  if (status === "Active")
+    return "border-emerald-500/35 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400";
+  if (status === "Onboarding")
+    return "border-blue-500/35 bg-blue-500/12 text-blue-700 dark:text-blue-400";
+  return "border-border bg-muted/60 text-muted-foreground";
+}
+
 function CustomerCard({
   customer,
+  isPinned,
+  onTogglePin,
   onDelete,
   onManageAccess,
   onConfigurePortal,
+  onView,
 }: {
   customer: DemoCustomer;
+  isPinned?: boolean;
+  onTogglePin?: (customerId: string) => void;
   onDelete?: (c: DemoCustomer) => void;
   onManageAccess?: (c: DemoCustomer) => void;
   onConfigurePortal?: (c: DemoCustomer) => void;
+  onView?: (c: DemoCustomer) => void;
 }) {
-  const gradeColor = GRADE_COLORS[customer.grade] ?? "#2006F7";
+  const hue = avatarHueFromName(customer.name);
+  const crm = customerCrmStatus(customer);
+  const openAlerts = customerOpenAlerts(customer);
+  const risk = customerRiskScore(customer);
 
   return (
-    <div className="group relative rounded-2xl border border-slate-900/[0.10] bg-white/70 p-5 backdrop-blur-md transition-all duration-200 hover:scale-[1.015] hover:shadow-lg dark:border-white/[0.06] dark:bg-white/[0.04]">
-      {/* Health dot */}
+    <div
+      className={cn(
+        "group relative rounded-2xl border border-slate-900/[0.10] bg-white/70 p-5 backdrop-blur-md transition-all duration-200 hover:scale-[1.015] hover:shadow-lg dark:border-white/[0.06] dark:bg-white/[0.04]",
+        customerCardGlowClass(customer),
+      )}
+    >
+      <button
+        type="button"
+        className="absolute left-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-amber-500/15 hover:text-amber-600 dark:hover:text-amber-400"
+        title={isPinned ? "Unstar customer" : "Star — keep at top of directory"}
+        aria-label={isPinned ? "Unstar customer" : "Star customer"}
+        aria-pressed={isPinned}
+        onClick={() => onTogglePin?.(customer.id)}
+      >
+        <Star
+          className={
+            isPinned
+              ? "h-4 w-4 fill-amber-500 text-amber-500"
+              : "h-4 w-4 text-muted-foreground group-hover:text-amber-600/80"
+          }
+        />
+      </button>
       <div className="absolute right-4 top-4">
         <span className={`block h-2.5 w-2.5 rounded-full ${HEALTH_DOT[customer.health]}`} />
       </div>
 
-      {/* Header */}
-      <div className="mb-3">
-        <h3 className="pr-6 text-base font-bold leading-snug">{customer.name}</h3>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${sectorBadgeClass(customer.sector)}`}
-          >
-            <Building2 className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
-            {sectorBadgeText(customer.sector)}
-          </span>
-          {customer.centralLinked ? (
+      <div className="mb-3 flex gap-3 pl-8 pr-6">
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-inner"
+          style={{ backgroundColor: `hsl(${hue} 55% 42%)` }}
+        >
+          {customerInitials(customer.name)}
+        </div>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h3 className="text-base font-bold leading-snug line-clamp-2">{customer.name}</h3>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <span
-              className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-tight bg-[#2006F7]/[0.09] text-[#2006F7] border-[#2006F7]/22 dark:bg-[#009CFB]/[0.12] dark:text-[#7ae8ff] dark:border-[#00EDFF]/28"
-              title="Sophos Central tenant — firewalls and connectors are tied to this customer in Central."
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${sectorBadgeClass(customer.sector)}`}
             >
-              <Cloud className="h-3 w-3 shrink-0 opacity-95" aria-hidden />
-              Sophos Central
+              <Building2 className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+              {sectorBadgeText(customer.sector)}
             </span>
-          ) : null}
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <span
+              className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${crmBadgeClass(crm)}`}
+            >
+              {crm}
+            </span>
+            {customer.centralLinked ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-tight bg-[#2006F7]/[0.09] text-[#2006F7] border-[#2006F7]/22 dark:bg-[#009CFB]/[0.12] dark:text-[#7ae8ff] dark:border-[#00EDFF]/28"
+                title="Sophos Central tenant"
+              >
+                <Cloud className="h-3 w-3 shrink-0 opacity-95" aria-hidden />
+                Central
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
             <Globe className="h-3 w-3 shrink-0" aria-hidden />
             {customer.countryFlag} {customer.country}
+          </p>
+        </div>
+        <div className="shrink-0 flex flex-col items-center gap-0.5">
+          <CustomerRiskRing risk={risk} />
+          <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+            Risk
           </span>
         </div>
       </div>
 
-      {/* Score gauge */}
-      <div className="mb-4 flex items-end gap-3">
-        <span className="text-4xl font-extrabold tabular-nums" style={{ color: gradeColor }}>
-          {customer.score}
-        </span>
-        <div className="mb-1 flex flex-col">
-          <span className="text-xl font-bold leading-none" style={{ color: gradeColor }}>
-            {customer.grade}
-          </span>
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Grade
-          </span>
+      <div className="mb-3 grid grid-cols-3 gap-2 rounded-xl border border-slate-900/[0.08] bg-white/50 px-3 py-2 text-center dark:border-white/[0.06] dark:bg-white/[0.03]">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Devices
+          </p>
+          <p className="text-sm font-semibold tabular-nums text-foreground">
+            {customer.firewallCount}
+          </p>
         </div>
-        <span
-          className={`mb-1 ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${HEALTH_BADGE_STYLE[customer.health]}`}
-        >
-          {customer.health}
-        </span>
-      </div>
-
-      {/* Meta row */}
-      <div className="mb-4 grid grid-cols-2 gap-y-2 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Shield className="h-3.5 w-3.5 shrink-0" />
-          <span className="leading-snug">
-            {customer.firewallCount} firewall{customer.firewallCount !== 1 ? "s" : ""}
-            {customer.unassessedCount > 0 && <> · {customer.unassessedCount} not assessed</>}
-          </span>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Open alerts
+          </p>
+          <p className="text-sm font-semibold tabular-nums text-foreground">{openAlerts}</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5" />
-          <span>{customer.lastAssessed}</span>
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Last report
+          </p>
+          <p className="text-xs font-medium leading-tight text-foreground line-clamp-2">
+            {customer.lastAssessed}
+          </p>
         </div>
       </div>
 
-      {/* Framework pills */}
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        {customer.frameworks.map((fw) => (
+      <div className="mb-3 flex flex-wrap gap-1">
+        {customer.frameworks.slice(0, 4).map((fw) => (
           <span
             key={fw}
-            className="rounded-full border border-[#2006F7]/15 bg-[#2006F7]/8 px-2 py-0.5 text-[10px] font-medium text-[#2006F7] dark:border-[#00EDFF]/15 dark:bg-[#00EDFF]/8 dark:text-[#00EDFF]"
+            className="rounded-full border border-[#2006F7]/15 bg-[#2006F7]/8 px-2 py-0.5 text-[9px] font-medium text-[#2006F7] dark:border-[#00EDFF]/15 dark:bg-[#00EDFF]/8 dark:text-[#00EDFF]"
           >
             {fw}
           </span>
         ))}
+        {customer.frameworks.length > 4 ? (
+          <span className="text-[9px] text-muted-foreground self-center">
+            +{customer.frameworks.length - 4}
+          </span>
+        ) : null}
       </div>
 
-      {/* Actions */}
       <div className="flex flex-wrap items-center gap-2 border-t border-slate-900/[0.06] pt-3 dark:border-white/[0.06]">
-        {customer.portalSlug ? (
-          <Link to={`/portal/${customer.portalSlug}`} className="flex-1 min-w-[120px]">
-            <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs">
-              <ExternalLink className="h-3.5 w-3.5" />
-              View Portal
-            </Button>
-          </Link>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 min-w-[120px] gap-1.5 text-xs"
-            disabled
-            title="Save a portal slug in Configure Portal to open the customer link"
-          >
-            <ExternalLink className="h-3.5 w-3.5 opacity-50" />
-            View Portal
-          </Button>
-        )}
-        <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-          <Link
-            to={`/?${new URLSearchParams({ customer: customer.name }).toString()}`}
-            title="Open dashboard — set customer context and generate FireComply reports"
-            aria-label="Open main dashboard to generate reports for this customer"
-          >
-            <FileText className="h-4 w-4" />
-          </Link>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="flex-1 min-w-[88px] gap-1.5 text-xs"
+          onClick={() => onView?.(customer)}
+        >
+          View
         </Button>
-        <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-          <Link
-            to={`/?${new URLSearchParams({ customer: customer.name, openUpload: "1" }).toString()}`}
-            title="Open dashboard — upload configs for this customer (email upload link: SE Health Check menu)"
-            aria-label="Open main dashboard to upload firewall configs for this customer"
-          >
-            <Send className="h-4 w-4" />
+        <Button
+          asChild
+          variant="default"
+          size="sm"
+          className="flex-1 min-w-[120px] gap-1.5 text-xs"
+        >
+          <Link to={`/?${new URLSearchParams({ customer: customer.name }).toString()}`}>
+            New assessment
           </Link>
         </Button>
         <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          title="Configure customer portal"
+          type="button"
+          variant="outline"
+          size="sm"
+          className="flex-1 min-w-[88px] gap-1.5 text-xs"
           onClick={() => onConfigurePortal?.(customer)}
         >
-          <Settings className="h-4 w-4" />
+          Manage
         </Button>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-1 border-t border-dashed border-border/50 pt-2">
+        <Button asChild variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[10px]">
+          <Link to={`/command?${new URLSearchParams({ customer: customer.name }).toString()}`}>
+            <Monitor className="h-3 w-3" />
+            Fleet
+          </Link>
+        </Button>
+        {customer.portalSlug ? (
+          <Button asChild variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[10px]">
+            <Link to={`/portal/${customer.portalSlug}`}>
+              <ExternalLink className="h-3 w-3" />
+              Portal
+            </Link>
+          </Button>
+        ) : null}
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
-          title="Manage portal access"
+          className="h-7 w-7"
+          title="Portal access"
           onClick={() => onManageAccess?.(customer)}
         >
-          <UserCog className="h-4 w-4" />
+          <UserCog className="h-3.5 w-3.5" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-[#EA0022] hover:bg-[#EA0022]/10"
+          className="h-7 w-7"
+          title="Configure portal"
+          onClick={() => onConfigurePortal?.(customer)}
+        >
+          <Settings className="h-3.5 w-3.5" />
+        </Button>
+        <Button asChild variant="ghost" size="icon" className="h-7 w-7" title="Upload configs">
+          <Link
+            to={`/?${new URLSearchParams({ customer: customer.name, openUpload: "1" }).toString()}`}
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-[#EA0022] hover:bg-[#EA0022]/10"
           title="Delete customer"
           onClick={() => onDelete?.(customer)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>

@@ -2,6 +2,23 @@ export const SOPHOS_TOKEN_URL = "https://id.sophos.com/api/v2/oauth2/token";
 export const SOPHOS_WHOAMI_URL = "https://api.central.sophos.com/whoami/v1";
 export const SOPHOS_GLOBAL_URL = "https://api.central.sophos.com";
 
+/**
+ * Partner/org tenant payloads sometimes omit `apiHost` but include a regional code (`eu01`, `us03`, …).
+ */
+export function apiHostFromDataRegion(dataRegion: string): string {
+  const d = dataRegion.trim();
+  if (!d) return "";
+  if (d.startsWith("http://") || d.startsWith("https://")) return d;
+  const lower = d.toLowerCase();
+  if (lower.includes("central.sophos.com")) {
+    return d.startsWith("http") ? d : `https://${d}`;
+  }
+  if (/^[a-z]{2}\d{2,4}$/i.test(d)) {
+    return `https://api-${d.toLowerCase()}.central.sophos.com`;
+  }
+  return "";
+}
+
 export async function sophosGetToken(
   clientId: string,
   clientSecret: string,
@@ -107,7 +124,7 @@ export async function sophosFetchTenants(
         }
       } catch { /* optional name lookup */ }
     }
-    return [{ id: identity.id, name, apiHost }];
+    return [{ id: identity.id, name, apiHost, dataRegion: "" }];
   }
   const multiHeader: Record<string, string> = identity.idType === "partner"
     ? { "X-Partner-ID": identity.id }
@@ -123,27 +140,41 @@ export async function sophosFetchTenants(
     id: string;
     name?: string;
     showAs?: string;
+    dataRegion?: string;
     apiHost?: string;
   }>;
-  return items.map((t) => ({
-    id: t.id,
-    name: t.showAs ?? t.name ?? "",
-    apiHost: t.apiHost ?? "",
-  }));
+  return items.map((t) => {
+    const dataRegion = String(t.dataRegion ?? "").trim();
+    const explicitHost = String(t.apiHost ?? "").trim();
+    const derivedHost = explicitHost || apiHostFromDataRegion(dataRegion);
+    return {
+      id: t.id,
+      name: t.showAs ?? t.name ?? "",
+      dataRegion,
+      apiHost: derivedHost,
+    };
+  });
 }
 
 export async function sophosFetchFirewalls(
   token: string,
   identity: SophosIdentity,
   tenantId: string,
-  tenants: Array<{ id: string; apiHost?: string }>,
+  tenants: Array<{ id: string; apiHost?: string; dataRegion?: string }>,
 ) {
   let apiHost: string;
   if (identity.idType === "tenant") {
     apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
   } else {
     const row = tenants.find((t) => t.id === tenantId);
-    apiHost = row?.apiHost ?? "";
+    const explicit = String(row?.apiHost ?? "").trim();
+    const fromRegion = apiHostFromDataRegion(
+      String(row?.dataRegion ?? "").trim(),
+    );
+    const idFallback = String(
+      identity.apiHosts.dataRegion ?? identity.apiHosts.global ?? "",
+    ).trim();
+    apiHost = explicit || fromRegion || idFallback;
     if (!apiHost) throw new Error("Tenant not found or API host missing");
   }
   const fwHeaders: Record<string, string> = { "X-Tenant-ID": tenantId };

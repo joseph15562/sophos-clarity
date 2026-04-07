@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { SafeHtml } from "@/components/SafeHtml";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
 
 function packageToMarkdown(pkg: SavedReportPackage): string {
   const reps = normalizeReportEntries(pkg.reports);
@@ -81,6 +82,7 @@ function SavedReportViewerInner() {
   if (!user || isGuest || !org) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        <FireComplyWorkspaceHeader loginShell />
         <WorkspacePrimaryNav />
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <div className="max-w-md text-center space-y-4">
@@ -100,6 +102,7 @@ function SavedReportViewerInner() {
   if (!id) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        <FireComplyWorkspaceHeader loginShell={isGuest} />
         <WorkspacePrimaryNav />
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <p className="text-muted-foreground text-sm">Invalid link.</p>
@@ -114,6 +117,7 @@ function SavedReportViewerInner() {
   if (pkg === undefined) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        <FireComplyWorkspaceHeader />
         <WorkspacePrimaryNav />
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <p className="text-muted-foreground text-sm">Loading report…</p>
@@ -125,6 +129,7 @@ function SavedReportViewerInner() {
   if (!pkg) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        <FireComplyWorkspaceHeader />
         <WorkspacePrimaryNav />
         <div className="flex flex-1 flex-col items-center justify-center p-6">
           <div className="max-w-md text-center space-y-4">
@@ -191,9 +196,17 @@ function SavedReportViewerInner() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen bg-background">
+    <main
+      id="main-content"
+      className="min-h-screen bg-background"
+      data-tour="tour-page-saved-report"
+    >
+      <FireComplyWorkspaceHeader />
       <WorkspacePrimaryNav />
-      <div className="border-b border-border/60 bg-card/40 px-4 py-3">
+      <div
+        className="border-b border-border/60 bg-card/40 px-4 py-3"
+        data-tour="tour-saved-breadcrumb"
+      >
         <div className="mx-auto max-w-4xl flex items-center gap-3 text-sm">
           <Link
             to="/reports"
@@ -207,7 +220,10 @@ function SavedReportViewerInner() {
         </div>
       </div>
 
-      <div className="max-w-full w-full mx-auto px-4 py-8">
+      <div
+        className="max-w-full w-full mx-auto px-4 pt-8 assist-chrome-pad-bottom"
+        data-tour="tour-saved-document"
+      >
         <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">
           <div className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-3">

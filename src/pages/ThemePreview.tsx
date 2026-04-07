@@ -45,7 +45,10 @@ export default function ThemePreview() {
   return (
     <div className="min-h-screen bg-[#00102e] text-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#00102e]/95 backdrop-blur-xl">
+      <header
+        className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#00102e]/95 backdrop-blur-xl"
+        data-tour="tour-theme-header"
+      >
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-14">
           <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-[#2006F7]" />
@@ -78,7 +81,7 @@ export default function ThemePreview() {
           gradient) in both modes. Hard-refresh <code className="text-[#00EDFF]/90">/preview</code>{" "}
           to confirm the primary blue stays solid after reload.
         </p>
-        <div className="space-y-6">
+        <div className="space-y-6" data-tour="tour-theme-workspace">
           <div className="rounded-2xl border border-white/[0.12] overflow-hidden bg-background text-foreground shadow-[0_24px_70px_rgba(0,0,0,0.4)]">
             <WorkspaceSubpageHeader
               title="Customer Management"
@@ -112,7 +115,10 @@ export default function ThemePreview() {
 
         {/* ── Section: Landing Hero + Trust Strip ── */}
         <SectionLabel>Landing Page — First Impression</SectionLabel>
-        <section className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(0,237,255,0.10),transparent_35%),linear-gradient(135deg,rgba(0,16,46,0.98),rgba(0,24,64,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] relative overflow-hidden">
+        <section
+          data-tour="tour-theme-landing"
+          className="rounded-[28px] border border-brand-accent/15 bg-[radial-gradient(circle_at_top_left,rgba(32,6,247,0.18),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(0,237,255,0.10),transparent_35%),linear-gradient(135deg,rgba(0,16,46,0.98),rgba(0,24,64,0.98))] shadow-[0_20px_60px_rgba(32,6,247,0.08)] relative overflow-hidden"
+        >
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2006F7] via-[#5A00FF] to-[#00F2B3]" />
 
           <div className="text-center pt-10 pb-6 px-6 space-y-5">
@@ -576,18 +582,20 @@ export default function ThemePreview() {
         </div>
 
         {/* ── Brand Palette ── */}
-        <SectionLabel>Sophos Brand Palette</SectionLabel>
-        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2">
-          {Object.entries(BRAND).map(([name, hex]) => (
-            <div key={name} className="flex flex-col items-center gap-1.5">
-              <div
-                className="h-10 w-10 rounded-lg border border-white/10"
-                style={{ backgroundColor: hex }}
-              />
-              <span className="text-[9px] text-white/40 font-mono">{name}</span>
-              <span className="text-[8px] text-white/25 font-mono">{hex}</span>
-            </div>
-          ))}
+        <div data-tour="tour-theme-palette">
+          <SectionLabel>Sophos Brand Palette</SectionLabel>
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2">
+            {Object.entries(BRAND).map(([name, hex]) => (
+              <div key={name} className="flex flex-col items-center gap-1.5">
+                <div
+                  className="h-10 w-10 rounded-lg border border-white/10"
+                  style={{ backgroundColor: hex }}
+                />
+                <span className="text-[9px] text-white/40 font-mono">{name}</span>
+                <span className="text-[8px] text-white/25 font-mono">{hex}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="h-20" />

@@ -713,7 +713,7 @@ async function handleConfigUploadPublic(
       const identity = await sophosWhoAmI(accessToken);
       const tenants =
         (row.central_data as Record<string, unknown>)?.tenants as Array<
-          { id: string; apiHost?: string }
+          { id: string; apiHost?: string; dataRegion?: string }
         > ?? [];
       const fwData = await sophosFetchFirewalls(
         accessToken,

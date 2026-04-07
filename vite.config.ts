@@ -34,6 +34,14 @@ export default defineConfig(() => {
       hmr: {
         overlay: false,
       },
+      /** Same path as Vercel rewrite — changelog advisories when Edge Function is unavailable. */
+      proxy: {
+        "/api/sophos-advisories-feed": {
+          target: "https://www.sophos.com",
+          changeOrigin: true,
+          rewrite: () => "/en-us/security-advisories/feed",
+        },
+      },
     },
     plugins: [react()],
     resolve: {

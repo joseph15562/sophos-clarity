@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Appended after built-in groups (e.g. route-specific shortcuts). */
+  extraGroups?: { label: string; shortcuts: { keys: string[]; description: string }[] }[];
 }
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
@@ -21,7 +23,7 @@ const SHORTCUT_GROUPS = [
     label: "Navigation",
     shortcuts: [
       { keys: ["Escape"], description: "Go back / close modal" },
-      { keys: ["?"], description: "Show keyboard shortcuts" },
+      { keys: ["Shift", "?"], description: "Show keyboard shortcuts" },
       { keys: [MOD, "K"], description: "Open command palette (jump to hub routes)" },
     ],
   },
@@ -38,7 +40,7 @@ const SHORTCUT_GROUPS = [
   },
 ];
 
-export function KeyboardShortcutsModal({ open, onClose }: Props) {
+export function KeyboardShortcutsModal({ open, onClose, extraGroups = [] }: Props) {
   return (
     <Dialog
       open={open}
@@ -65,7 +67,7 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
         </DialogHeader>
 
         <div className="space-y-5 bg-card p-5 dark:bg-background">
-          {SHORTCUT_GROUPS.map((group) => (
+          {[...SHORTCUT_GROUPS, ...extraGroups].map((group) => (
             <div key={group.label}>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
                 {group.label}
@@ -95,7 +97,7 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
           <p className="text-center text-[10px] text-muted-foreground">
             Press{" "}
             <kbd className="inline rounded border border-border bg-background px-1 py-0.5 font-mono text-[9px] font-semibold text-foreground dark:bg-muted">
-              ?
+              Shift+?
             </kbd>{" "}
             anywhere to toggle this panel
           </p>

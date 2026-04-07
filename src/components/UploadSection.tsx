@@ -18,7 +18,7 @@ import { BrandingSetup, BrandingData } from "@/components/BrandingSetup";
 import { filesHaveDifferingGeo, type ConfigComplianceScope } from "@/lib/config-compliance-scope";
 import type { FirewallLink } from "@/components/FirewallLinkPicker";
 import { ReportCards } from "@/components/ReportCards";
-import { AgentFleetPanel } from "@/components/AgentFleetPanel";
+import { AgentFleetPanel, type AgentEstateLoadItem } from "@/components/AgentFleetPanel";
 import type { AnalysisResult } from "@/lib/analyse-config";
 import type { ParsedFile } from "@/hooks/use-report-generation";
 import type { OrgInfo } from "@/hooks/use-auth";
@@ -70,6 +70,7 @@ export interface UploadSectionProps {
     rawConfig?: Record<string, unknown>,
     agentMeta?: { serialNumber?: string; hostname?: string; model?: string; tenantName?: string },
   ) => void;
+  onLoadEstateAgentAssessments?: (items: AgentEstateLoadItem[]) => void;
   activeTenantName?: string;
   setCentralEnriched: (v: boolean | ((prev: boolean) => boolean)) => void;
   saveError: string;
@@ -113,6 +114,7 @@ export function UploadSection({
   onOpenInsuranceReadiness,
   setViewingReports,
   onLoadAgentAssessment,
+  onLoadEstateAgentAssessments,
   activeTenantName,
   setCentralEnriched,
   saveError,
@@ -499,6 +501,7 @@ export function UploadSection({
 
               <AgentFleetPanel
                 onLoadAssessment={onLoadAgentAssessment}
+                onLoadEstateAssessments={onLoadEstateAgentAssessments}
                 filterTenantName={activeTenantName}
                 loadedLabels={new Set(files.map((f) => f.label))}
               />

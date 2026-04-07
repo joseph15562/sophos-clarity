@@ -48,7 +48,10 @@ const SharedReport = () => {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div
+        className="min-h-screen bg-background flex flex-col items-center justify-center p-6"
+        data-tour="tour-shared-error"
+      >
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-xl font-bold text-foreground">Invalid link</h1>
           <p className="text-muted-foreground">
@@ -64,7 +67,10 @@ const SharedReport = () => {
 
   if (report === undefined) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div
+        className="min-h-screen bg-background flex flex-col items-center justify-center p-6"
+        data-tour="tour-shared-error"
+      >
         <p className="text-muted-foreground text-sm">Loading report…</p>
       </div>
     );
@@ -90,7 +96,10 @@ const SharedReport = () => {
                   : "The server returned an error. Try again in a moment.",
             };
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+      <div
+        className="min-h-screen bg-background flex flex-col items-center justify-center p-6"
+        data-tour="tour-shared-error"
+      >
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-xl font-bold text-foreground">{copy.title}</h1>
           <p className="text-muted-foreground">{copy.body}</p>
@@ -147,7 +156,10 @@ const SharedReport = () => {
       {/* Match main doc shell exactly: same classes and structure as DocumentPreview ReportContent */}
       <div className="max-w-full w-full mx-auto px-4 py-8">
         <div className="rounded-xl border border-border shadow-sm overflow-hidden doc-section">
-          <div className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex flex-wrap items-center justify-between gap-2">
+          <div
+            className="bg-[#001A47] dark:bg-[#000d24] px-6 md:px-10 py-3 flex flex-wrap items-center justify-between gap-2"
+            data-tour="tour-shared-header"
+          >
             <div className="flex items-center gap-3">
               <img
                 src="/sophos-icon-white.svg"
@@ -160,7 +172,7 @@ const SharedReport = () => {
                 Sophos FireComply — Document
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3" data-tour="tour-shared-downloads">
               {report.allowDownload !== false && (
                 <div className="no-print flex flex-wrap items-center gap-2">
                   <Button
@@ -197,7 +209,7 @@ const SharedReport = () => {
               </span>
             </div>
           </div>
-          <div className="bg-card p-8 md:p-12">
+          <div className="bg-card p-8 md:p-12" data-tour="tour-shared-body">
             {/* Same title block as main doc: company name + report subtitle only */}
             <div className="flex items-center gap-4 mb-8 pb-6 border-b-2 border-brand-accent/20 dark:border-brand-accent/30">
               <div className="flex-1">

@@ -28,6 +28,8 @@ export interface StickyActionBarProps {
   onOpenShortcuts?: () => void;
   /** `reports`: same full-width bottom bar as analysis, but only Tours + Shortcuts (report view). */
   variant?: StickyActionBarVariant;
+  /** Stack above the global Tours/Shortcuts strip (fixed offset). */
+  slotAboveGlobalAssist?: boolean;
 }
 
 const REQUIRED_FIELDS: { key: keyof BrandingData; label: string }[] = [
@@ -47,6 +49,7 @@ export function StickyActionBar({
   tourSlot,
   onOpenShortcuts,
   variant = "full",
+  slotAboveGlobalAssist = false,
 }: StickyActionBarProps) {
   const barDark = useResolvedIsDark();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -78,14 +81,17 @@ export function StickyActionBar({
     onScrollToContext();
   }
 
+  const showLeftUtility = Boolean(tourSlot || onOpenShortcuts);
+
   return (
     <>
       <div
-        className={
+        className={cn(
           barDark
-            ? "no-print fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.08] backdrop-blur-xl"
-            : "no-print fixed bottom-0 inset-x-0 z-40 border-t border-slate-900/[0.08] supports-[backdrop-filter]:backdrop-blur-2xl backdrop-blur-2xl backdrop-saturate-150"
-        }
+            ? "no-print fixed inset-x-0 z-40 border-t border-white/[0.08] backdrop-blur-xl"
+            : "no-print fixed inset-x-0 z-40 border-t border-slate-900/[0.08] supports-[backdrop-filter]:backdrop-blur-2xl backdrop-blur-2xl backdrop-saturate-150",
+          slotAboveGlobalAssist ? "bottom-[4.5rem]" : "bottom-0",
+        )}
         style={{
           background: barDark
             ? "linear-gradient(135deg, rgba(32,6,247,0.08), rgba(0,237,255,0.04), rgba(12,18,34,0.85))"
@@ -105,43 +111,49 @@ export function StickyActionBar({
         <div
           className={cn(
             "mx-auto flex max-w-[1320px] items-center gap-3 px-4 py-3 sm:px-6",
-            variant === "reports" ? "justify-start" : "justify-between",
+            variant === "reports"
+              ? "justify-start"
+              : showLeftUtility
+                ? "justify-between"
+                : "justify-end",
           )}
         >
-          {/* Left: utility actions */}
-          <div className="flex items-center gap-2">
-            {tourSlot}
+          {/* Left: utility actions (optional — global bar may own Tours/Shortcuts) */}
+          {showLeftUtility ? (
+            <div className="flex items-center gap-2">
+              {tourSlot}
 
-            {onOpenShortcuts && (
-              <button
-                type="button"
-                onClick={onOpenShortcuts}
-                className={cn(
-                  "group relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all duration-200",
-                  "border-slate-900/[0.10] dark:border-white/[0.06]",
-                  "text-slate-700 hover:text-slate-900 dark:text-muted-foreground dark:hover:text-foreground",
-                  "hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset",
-                )}
-                style={{
-                  background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
-                }}
-                title="Keyboard shortcuts (?)"
-                aria-label="Keyboard shortcuts"
-                data-tour="shortcuts-button"
-              >
-                <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
-                  <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 bg-brand-accent" />
-                </span>
-                <Keyboard className="relative z-[1] h-3 w-3 text-brand-accent" />
-                <span className="relative z-[1]">Shortcuts</span>
-              </button>
-            )}
-          </div>
+              {onOpenShortcuts && (
+                <button
+                  type="button"
+                  onClick={onOpenShortcuts}
+                  className={cn(
+                    "group relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-bold transition-all duration-200",
+                    "border-slate-900/[0.10] dark:border-white/[0.06]",
+                    "text-slate-700 hover:text-slate-900 dark:text-muted-foreground dark:hover:text-foreground",
+                    "hover:border-slate-900/[0.16] dark:hover:border-white/[0.12] hover:shadow-elevated",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset",
+                  )}
+                  style={{
+                    background: "linear-gradient(145deg, rgba(32,6,247,0.06), rgba(32,6,247,0.02))",
+                  }}
+                  title="Keyboard shortcuts (?)"
+                  aria-label="Keyboard shortcuts"
+                  data-tour="shortcuts-button"
+                >
+                  <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+                    <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full blur-[10px] opacity-0 transition-opacity duration-200 group-hover:opacity-25 bg-brand-accent" />
+                  </span>
+                  <Keyboard className="relative z-[1] h-3 w-3 text-brand-accent" />
+                  <span className="relative z-[1]">Shortcuts</span>
+                </button>
+              )}
+            </div>
+          ) : null}
 
           {/* Right: primary actions (analysis dashboard only) */}
           {variant === "full" && (
-            <div className="flex items-center gap-2.5 ml-auto">
+            <div className={cn("flex items-center gap-2.5", showLeftUtility && "ml-auto")}>
               <Button
                 variant="outline"
                 size="sm"

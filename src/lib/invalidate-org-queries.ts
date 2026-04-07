@@ -51,6 +51,7 @@ export async function invalidateOrgScopedQueries(
     queryClient.invalidateQueries({ queryKey: queryKeys.central.status(orgId) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.savedReports.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.org.clientPortalPreviewAll(orgId) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.regulatoryDigest.recent() }),
+    queryClient.invalidateQueries({ queryKey: ["regulatory_updates"] }),
+    queryClient.invalidateQueries({ queryKey: ["sophos_advisories_rss"], exact: false }),
   ]);
 }

@@ -7,6 +7,7 @@ import { UploadedFile } from "@/components/FileUpload";
 import { BrandingData } from "@/components/BrandingSetup";
 import { AppHeader } from "@/components/AppHeader";
 import { UploadSection } from "@/components/UploadSection";
+import type { AgentEstateLoadItem } from "@/components/AgentFleetPanel";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { resolveCustomerName } from "@/lib/customer-name";
 import { agentCustomerGroupingKey } from "@/lib/agent-customer-bucket";
@@ -74,11 +75,12 @@ import {
 import type { LoadSavedReportArgs } from "@/components/SavedReportsLibrary";
 import { logAudit } from "@/lib/audit";
 import { useNotifications } from "@/hooks/use-notifications";
-import { NotificationCentre } from "@/components/NotificationCentre";
 import { useKeyboardShortcuts, type ShortcutAction } from "@/hooks/use-keyboard-shortcuts";
-import { KeyboardShortcutsModal } from "@/components/KeyboardShortcuts";
 import { ManagementDrawer } from "@/components/ManagementDrawer";
-import { GuidedTourButton } from "@/components/GuidedTourButton";
+import {
+  useRegisterAssessAssistChrome,
+  type AssessAssistRegistration,
+} from "@/contexts/assist-chrome-context";
 import type { TourCallbacks } from "@/lib/guided-tours";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SetupWizard, isSetupComplete, resetSetupFlag } from "@/components/SetupWizard";
@@ -89,17 +91,14 @@ import {
   stripManagePanelParams,
   settingsSectionExpandAllowed,
 } from "@/lib/workspace-deeplink";
-import { CentralHealthBanner } from "@/components/CentralHealthBanner";
 import { MspAttentionSurface } from "@/components/MspAttentionSurface";
 import { MspSetupChecklist } from "@/components/MspSetupChecklist";
 import { getDemoConfigHtml, DEMO_FILE_NAME, DEMO_LABEL } from "@/lib/demo-mode";
 import { trackProductEvent } from "@/lib/product-telemetry";
+import { isAssessAnalysisTabValue } from "@/lib/assess-analysis-tabs";
 
 const ConfigDiff = lazy(() =>
   import("@/components/ConfigDiff").then((m) => ({ default: m.ConfigDiff })),
-);
-const AIChatPanel = lazy(() =>
-  import("@/components/AIChatPanel").then((m) => ({ default: m.AIChatPanel })),
 );
 import { computeRiskScore, type RiskScoreResult } from "@/lib/risk-score";
 import { saveFindingSnapshot } from "@/lib/finding-snapshots";
@@ -135,16 +134,10 @@ function scrollPageToTop() {
 function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const { isGuest, org, isViewerOnly, canManageTeam } = useAuth();
   const queryClient = useQueryClient();
-  const {
-    notifications,
-    unreadCount,
-    addNotification,
-    markRead,
-    markAllRead,
-    dismiss: dismissNotif,
-    clearAll: clearNotifs,
-  } = useNotifications();
+  const { addNotification } = useNotifications();
   const [files, setFiles] = useState<ParsedFile[]>([]);
+  const filesRef = useRef<ParsedFile[]>([]);
+  filesRef.current = files;
   const [branding, setBranding] = useState<BrandingData>({
     companyName: "",
     logoUrl: null,
@@ -187,7 +180,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const [reportsSaved, setReportsSaved] = useState(false);
   const [savedReportsTrigger, setSavedReportsTrigger] = useState(0);
   const [viewingReports, setViewingReports] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<string | undefined>(undefined);
   const [drawerSection, setDrawerSection] = useState<string | undefined>(undefined);
@@ -199,7 +191,25 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   } | null>(null);
   const [centralEnriched, setCentralEnriched] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(() => !isGuest && !!org && !isSetupComplete());
-  const [analysisTab, setAnalysisTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabBootstrap = searchParams.get("tab");
+  const [analysisTab, setAnalysisTabState] = useState<string>(() =>
+    tabBootstrap && isAssessAnalysisTabValue(tabBootstrap) ? tabBootstrap : "overview",
+  );
+  const setAnalysisTab = useCallback(
+    (tab: string) => {
+      setAnalysisTabState(tab);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("tab", tab);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [projectedScore, setProjectedScore] = useState<RiskScoreResult | null>(null);
   const [trendSnapshot, setTrendSnapshot] = useState<{
     score: number;
@@ -215,7 +225,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const reportsRef = useRef<HTMLDivElement>(null);
   const workbenchRef = useRef<HTMLDivElement>(null);
   const qbrRef = useRef<HTMLDivElement>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatInitialMessage, setAiChatInitialMessage] = useState<string | undefined>(undefined);
   const [parsingProgress, setParsingProgress] = useState<{
@@ -408,6 +417,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   }, [
     searchParams,
     setSearchParams,
+    setAnalysisTab,
     files.length,
     isGuest,
     isViewerOnly,
@@ -1101,6 +1111,79 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
     [setReports, setActiveReportId],
   );
 
+  const handleLoadEstateAgentAssessments = useCallback(
+    (items: AgentEstateLoadItem[]) => {
+      if (items.length === 0) {
+        toast.info("No assessments to load.");
+        return;
+      }
+      const existing = new Set(filesRef.current.map((f) => f.id));
+      const toAdd = items.filter((i) => !existing.has(i.id));
+      if (toAdd.length === 0) {
+        toast.info("Every agent in that list is already on the workbench.");
+        return;
+      }
+
+      const newFiles: ParsedFile[] = toAdd.map((item) => {
+        const extractedData = item.rawConfig
+          ? rawConfigToSections(item.rawConfig)
+          : ({} as ExtractedSections);
+        const hasRealSections = Object.keys(extractedData).length > 0;
+        const subLabel =
+          [item.agentMeta?.model, item.agentMeta?.serialNumber].filter(Boolean).join(" · ") ||
+          item.label;
+        return {
+          id: item.id,
+          fileName: subLabel,
+          label: item.label,
+          content: "",
+          extractedData,
+          extractionMeta: hasRealSections ? buildMetaFromSections(extractedData) : undefined,
+          serialNumber: item.agentMeta?.serialNumber,
+          agentHostname: item.agentMeta?.hostname,
+          hardwareModel: item.agentMeta?.model,
+          source: "agent" as const,
+        };
+      });
+
+      setFiles((prev) => [...prev, ...newFiles]);
+
+      setAnalysisOverride((prev) => {
+        const next = { ...(prev ?? {}) };
+        for (const item of toAdd) {
+          const extractedData = item.rawConfig
+            ? rawConfigToSections(item.rawConfig)
+            : ({} as ExtractedSections);
+          const hasRealSections = Object.keys(extractedData).length > 0;
+          if (!hasRealSections) next[item.id] = item.analysis;
+          else delete next[item.id];
+        }
+        return Object.keys(next).length > 0 ? next : null;
+      });
+
+      const firstNamed = toAdd.find(
+        (i) => i.agentMeta?.tenantName?.trim() || i.customerName?.trim(),
+      );
+      const autoCustomer =
+        firstNamed?.agentMeta?.tenantName?.trim() || firstNamed?.customerName?.trim();
+      if (autoCustomer) {
+        setBranding((prev) => (prev.customerName ? prev : { ...prev, customerName: autoCustomer }));
+      }
+      const tenant = toAdd.find((i) => i.agentMeta?.tenantName?.trim())?.agentMeta?.tenantName;
+      if (tenant) setActiveTenantName(tenant);
+
+      setReports([]);
+      setActiveReportId("");
+      setReportsSaved(false);
+      setLoadedSavedSummary(null);
+      scrollPageToTop();
+      toast.success(
+        `Loaded ${toAdd.length} assessment${toAdd.length === 1 ? "" : "s"} onto the workbench.`,
+      );
+    },
+    [setReports, setActiveReportId],
+  );
+
   const handleLoadDemo = useCallback(() => {
     const html = getDemoConfigHtml();
     const demoFile: UploadedFile = {
@@ -1527,26 +1610,44 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
   const inDiffMode = diffSelection !== null;
 
   useEffect(() => {
-    if (analysisTab === "remediation" && totalFindings === 0) setAnalysisTab("overview");
-    if (analysisTab === "compare" && files.length < 2) setAnalysisTab("overview");
-  }, [analysisTab, totalFindings, files.length]);
+    if (analysisTab === "remediation" && totalFindings === 0) {
+      setAnalysisTabState("overview");
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("tab", "overview");
+          return next;
+        },
+        { replace: true },
+      );
+      return;
+    }
+    if (analysisTab === "compare" && files.length < 2) {
+      setAnalysisTabState("overview");
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("tab", "overview");
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [analysisTab, totalFindings, files.length, setSearchParams]);
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && isAssessAnalysisTabValue(t) && t !== analysisTab) {
+      setAnalysisTabState(t);
+    }
+  }, [searchParams, analysisTab]);
 
   const keyboardShortcuts = useMemo<ShortcutAction[]>(
     () => [
       {
-        key: "?",
-        shift: true,
-        description: "Show keyboard shortcuts",
-        handler: () => setShortcutsOpen((v) => !v),
-      },
-      {
         key: "Escape",
         description: "Go back / close modal",
         handler: () => {
-          if (shortcutsOpen) {
-            setShortcutsOpen(false);
-            return;
-          }
           if (drawerOpen) {
             setDrawerOpen(false);
             return;
@@ -1584,7 +1685,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       })),
     ],
     [
-      shortcutsOpen,
       drawerOpen,
       viewingReports,
       inDiffMode,
@@ -1609,8 +1709,46 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
       setDrawerTab: (tab: string) => setDrawerTab(tab),
       setAnalysisTab: (tab: string) => setAnalysisTab(tab),
     }),
-    [],
+    [setAnalysisTab],
   );
+
+  const assessAssistRegistration = useMemo((): AssessAssistRegistration => {
+    return {
+      tourCallbacks,
+      hasFiles,
+      hasReports,
+      isGuest,
+      ai:
+        hasFiles && !localMode
+          ? {
+              analysisResults,
+              reports,
+              customerName: branding.customerName,
+              environment: branding.environment,
+              analysisTab,
+              open: aiChatOpen,
+              onOpenChange: setAiChatOpen,
+              initialMessage: aiChatInitialMessage,
+              onInitialMessageSent: () => setAiChatInitialMessage(undefined),
+            }
+          : null,
+    };
+  }, [
+    tourCallbacks,
+    hasFiles,
+    hasReports,
+    isGuest,
+    localMode,
+    analysisResults,
+    reports,
+    branding.customerName,
+    branding.environment,
+    analysisTab,
+    aiChatOpen,
+    aiChatInitialMessage,
+  ]);
+
+  useRegisterAssessAssistChrome(assessAssistRegistration);
 
   const fileLabel = (f: ParsedFile) => f.label || f.fileName.replace(/\.(html|htm)$/i, "");
 
@@ -1625,21 +1763,12 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         reportCount={reports.length}
         onOrgClick={() => setDrawerOpen(true)}
         localMode={localMode}
-        notificationSlot={
-          <NotificationCentre
-            notifications={notifications}
-            unreadCount={unreadCount}
-            onMarkRead={markRead}
-            onMarkAllRead={markAllRead}
-            onDismiss={dismissNotif}
-            onClearAll={clearNotifs}
-          />
-        }
       />
 
       <main
         id="main-content"
-        className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"} ${!inDiffMode ? "pb-20" : ""}`}
+        className={`workspace-shell section-stack ${viewingReports ? "max-w-full" : "max-w-[1320px]"} ${!inDiffMode ? "assist-chrome-pad-bottom" : ""}`}
+        data-tour="tour-page-assess"
       >
         {!inDiffMode && (
           <AssessWorkflowStepper
@@ -1652,7 +1781,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         )}
         {!isGuest && org?.id && (
           <>
-            <CentralHealthBanner orgId={org.id} />
             {canManageTeam && <MspSetupChecklist orgId={org.id} canManage={canManageTeam} />}
             <MspAttentionSurface orgId={org.id} orgName={org.name ?? ""} />
           </>
@@ -1828,6 +1956,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               }}
               setViewingReports={setViewingReports}
               onLoadAgentAssessment={handleLoadAgentAssessment}
+              onLoadEstateAgentAssessments={handleLoadEstateAgentAssessments}
               activeTenantName={activeTenantName}
               setCentralEnriched={setCentralEnriched}
               saveError={saveError}
@@ -1960,10 +2089,11 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
         )}
       </main>
 
-      {/* Sticky bottom bar: Tours + Shortcuts on the left always (except diff mode); full actions when analysis is ready */}
-      {!inDiffMode && (
+      {/* Sticky bottom bar: assess actions only; Tours/Shortcuts + AI are global (GlobalAssistChrome) */}
+      {!inDiffMode && hasFiles && !isLoading && (!viewingReports || isGuest) && (
         <StickyActionBar
-          variant={hasFiles && !isLoading && (!viewingReports || isGuest) ? "full" : "reports"}
+          variant="full"
+          slotAboveGlobalAssist
           hasFiles={hasFiles}
           branding={branding}
           onScrollToFindings={() => {
@@ -1994,35 +2124,7 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
               `Generating all reports for ${branding.customerName || "this assessment"}…`,
             );
           }}
-          tourSlot={
-            <GuidedTourButton
-              hasFiles={hasFiles}
-              hasReports={hasReports}
-              isGuest={isGuest}
-              tourCallbacks={tourCallbacks}
-            />
-          }
-          onOpenShortcuts={() => setShortcutsOpen(true)}
         />
-      )}
-
-      {/* AI Chat — floating panel, hidden in local mode */}
-      {hasFiles && !localMode && (
-        <ErrorBoundary fallbackTitle="AI Chat failed to load">
-          <Suspense fallback={null}>
-            <AIChatPanel
-              analysisResults={analysisResults}
-              reports={reports}
-              customerName={branding.customerName}
-              environment={branding.environment}
-              analysisTab={analysisTab}
-              open={aiChatOpen}
-              onOpenChange={setAiChatOpen}
-              initialMessage={aiChatInitialMessage}
-              onInitialMessageSent={() => setAiChatInitialMessage(undefined)}
-            />
-          </Suspense>
-        </ErrorBoundary>
       )}
 
       {/* First-Time Setup Wizard */}
@@ -2074,8 +2176,6 @@ function InnerApp({ onShowAuth }: { onShowAuth?: () => void }) {
           onCloudAssessmentSaved={handleCloudAssessmentSaved}
         />
       </ErrorBoundary>
-
-      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }

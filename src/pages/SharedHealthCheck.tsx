@@ -148,9 +148,12 @@ const SharedHealthCheck = () => {
   };
 
   return (
-    <main id="main-content" className="min-h-screen bg-[#001A47]">
+    <main id="main-content" className="min-h-screen bg-[#001A47]" data-tour="tour-shc-shell">
       {/* Header bar */}
-      <div className="sticky top-0 z-10 bg-[#001A47]/95 backdrop-blur border-b border-white/10 px-4 py-2.5 flex items-center justify-between">
+      <div
+        className="sticky top-0 z-10 bg-[#001A47]/95 backdrop-blur border-b border-white/10 px-4 py-2.5 flex items-center justify-between"
+        data-tour="tour-shc-actions"
+      >
         <div className="flex items-center gap-3">
           <img
             src="/sophos-icon-white.svg"
@@ -195,7 +198,7 @@ const SharedHealthCheck = () => {
       </div>
 
       {/* Report content */}
-      <div className="max-w-[1100px] mx-auto px-4 py-8">
+      <div className="max-w-[1100px] mx-auto px-4 py-8" data-tour="tour-shc-report">
         <div className="rounded-xl border border-white/10 overflow-hidden shadow-2xl">
           {/*
            * Sandbox: default flags block script, form submit, top navigation, etc. (mitigates XSS in

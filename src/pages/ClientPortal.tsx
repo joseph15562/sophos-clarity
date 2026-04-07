@@ -1236,9 +1236,13 @@ export default function ClientPortal() {
     <div
       className="min-h-screen bg-[linear-gradient(135deg,rgba(247,249,255,1),rgba(240,243,255,1))] dark:bg-[linear-gradient(135deg,rgba(5,8,18,1),rgba(10,14,28,1))]"
       style={accentStyle}
+      data-tour="tour-portal-shell"
     >
       {/* Header */}
-      <header className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm">
+      <header
+        className="sticky top-0 z-40 no-print border-b border-[#10037C]/20 bg-[radial-gradient(circle_at_top_left,rgba(0,237,255,0.10),transparent_18%),radial-gradient(circle_at_top_right,rgba(32,6,247,0.20),transparent_24%),linear-gradient(90deg,#00163d_0%,#001A47_42%,#10037C_100%)] shadow-panel backdrop-blur-sm"
+        data-tour="tour-portal-header"
+      >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {isMspUser && (
@@ -1306,7 +1310,10 @@ export default function ClientPortal() {
       </header>
 
       {/* Tab navigation */}
-      <div className="sticky top-[52px] z-30 border-b border-slate-900/[0.10] dark:border-white/[0.06] bg-white/80 dark:bg-[#080d1c]/80 backdrop-blur-sm">
+      <div
+        className="sticky top-[52px] z-30 border-b border-slate-900/[0.10] dark:border-white/[0.06] bg-white/80 dark:bg-[#080d1c]/80 backdrop-blur-sm"
+        data-tour="tour-portal-tabs"
+      >
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <nav className="flex gap-1 -mb-px" role="tablist">
             {(
@@ -1342,7 +1349,11 @@ export default function ClientPortal() {
         </div>
       </div>
 
-      <main id="main-content" className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main
+        id="main-content"
+        className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8"
+        data-tour="tour-portal-main"
+      >
         {/* ── Dashboard Tab ── */}
         {activeTab === "dashboard" && (
           <>

@@ -22,7 +22,11 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|icons/|favicon|sophos-|se-).*)",
+      "source": "/api/sophos-advisories-feed",
+      "destination": "https://www.sophos.com/en-us/security-advisories/feed"
+    },
+    {
+      "source": "/((?!assets/|icons/|favicon|sophos-|se-|api/).*)",
       "destination": "/index.html"
     }
   ]

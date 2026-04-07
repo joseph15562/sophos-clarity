@@ -12,7 +12,11 @@ import {
   demoCentralMdrThreatFeed,
   demoCentralStatus,
   demoCentralTenants,
+  demoFirewallGroupsMerged,
+  demoMdrThreatFeedMerged,
+  demoMissionAlerts,
 } from "../_shared/demo-central-data.ts";
+import { apiHostFromDataRegion } from "../_shared/sophos-central-api.ts";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -574,6 +578,7 @@ serve(async (req) => {
         const { tenantId } = body as { tenantId?: string };
         return json(demoCentralAlerts(tenantId ?? ""));
       }
+      if (mode === "mission-alerts") return json(demoMissionAlerts());
       if (mode === "licenses") {
         const { tenantId } = body as { tenantId?: string };
         return json(demoCentralLicenses(tenantId ?? ""));
@@ -583,12 +588,18 @@ serve(async (req) => {
         return json(demoCentralFirewallLicenses(tenantId));
       }
       if (mode === "mdr-threat-feed") return json(demoCentralMdrThreatFeed());
+      if (mode === "mdr-threat-feed-merged") {
+        return json(demoMdrThreatFeedMerged());
+      }
       if (mode === "connect" || mode === "disconnect") {
         return json({
           error: "Demo workspace — Central connection is pre-configured.",
         }, 400);
       }
       if (mode === "firewall-groups") return json({ items: [] });
+      if (mode === "firewall-groups-merged") {
+        return json(demoFirewallGroupsMerged());
+      }
       return json({ error: `Unknown mode: ${mode}` }, 400);
     }
 
@@ -661,6 +672,12 @@ serve(async (req) => {
     await verifyOrgMembership(authHeader, orgId);
     const creds = await loadCredentials(orgId);
     if (!creds) {
+      if (
+        mode === "mission-alerts" || mode === "mdr-threat-feed-merged" ||
+        mode === "firewall-groups-merged"
+      ) {
+        return json({ items: [], tenants: [] });
+      }
       return json({
         error: "No Central credentials configured. Connect first.",
       }, 400);
@@ -758,15 +775,20 @@ serve(async (req) => {
           apiHost?: string;
           billingType?: string;
         }
-      >).map((t) => ({
-        org_id: orgId,
-        central_tenant_id: t.id,
-        name: t.showAs ?? t.name ?? "",
-        data_region: t.dataRegion ?? "",
-        api_host: t.apiHost ?? "",
-        billing_type: t.billingType ?? "",
-        synced_at: new Date().toISOString(),
-      }));
+      >).map((t) => {
+        const dataRegion = String(t.dataRegion ?? "").trim();
+        const explicitHost = String(t.apiHost ?? "").trim();
+        const derivedHost = explicitHost || apiHostFromDataRegion(dataRegion);
+        return {
+          org_id: orgId,
+          central_tenant_id: t.id,
+          name: t.showAs ?? t.name ?? "",
+          data_region: dataRegion,
+          api_host: derivedHost,
+          billing_type: t.billingType ?? "",
+          synced_at: new Date().toISOString(),
+        };
+      });
 
       if (rows.length > 0) {
         await sb.from("central_tenants").delete().eq("org_id", orgId);
@@ -799,21 +821,15 @@ serve(async (req) => {
       if (!tenantId) return json({ error: "Missing tenantId" }, 400);
 
       let apiHost: string;
-      if (creds.partnerType === "tenant") {
-        const identity = await whoami(token);
-        apiHost = identity.apiHosts.dataRegion ?? identity.apiHosts.global;
-      } else {
-        const sb = adminClient();
-        const { data: tenantRow } = await sb
-          .from("central_tenants")
-          .select("api_host")
-          .eq("org_id", orgId)
-          .eq("central_tenant_id", tenantId)
-          .single();
-        apiHost = tenantRow?.api_host ?? "";
-        if (!apiHost) {
-          return json({ error: "Tenant not found. Sync tenants first." }, 400);
-        }
+      try {
+        apiHost = await resolveTenantScopedApiHost(
+          orgId,
+          tenantId,
+          creds,
+          token,
+        );
+      } catch (e) {
+        return json({ error: safeError(e) }, 400);
       }
 
       const items = await fetchAllPages(
@@ -823,12 +839,18 @@ serve(async (req) => {
       );
 
       const sb = adminClient();
+      // Always clear this tenant's cache so an empty Central response does not leave stale rows.
+      await sb.from("central_firewalls").delete().eq("org_id", orgId).eq(
+        "central_tenant_id",
+        tenantId,
+      );
+
       const fwRows = (items as Array<Record<string, unknown>>).map((
         fw: Record<string, unknown>,
       ) => ({
         org_id: orgId,
         central_tenant_id: tenantId,
-        firewall_id: fw.id as string,
+        firewall_id: String(fw.id ?? "").trim(),
         serial_number: (fw.serialNumber as string) ?? "",
         hostname: (fw.hostname as string) ?? "",
         name: (fw.name as string) ?? "",
@@ -840,13 +862,9 @@ serve(async (req) => {
         external_ips: fw.externalIpv4Addresses ?? [],
         geo_location: fw.geoLocation ?? null,
         synced_at: new Date().toISOString(),
-      }));
+      })).filter((row) => row.firewall_id.length > 0);
 
       if (fwRows.length > 0) {
-        await sb.from("central_firewalls").delete().eq("org_id", orgId).eq(
-          "central_tenant_id",
-          tenantId,
-        );
         await sb.from("central_firewalls").upsert(fwRows, {
           onConflict: "org_id,firewall_id",
         });
@@ -869,6 +887,94 @@ serve(async (req) => {
       return json({ items });
     }
 
+    // ── Mode: firewall-groups-merged ── all tenants (Central Groups page)
+    if (mode === "firewall-groups-merged") {
+      const sb = adminClient();
+      const { data: tenantRows, error: trErr } = await sb
+        .from("central_tenants")
+        .select("central_tenant_id, name, api_host, data_region")
+        .eq("org_id", orgId)
+        .order("name");
+
+      if (trErr) return json({ error: safeError(trErr) }, 500);
+
+      type TenantRow = {
+        central_tenant_id: string;
+        name: string | null;
+        api_host: string | null;
+        data_region: string | null;
+      };
+
+      let rows: TenantRow[] = (tenantRows ?? []) as TenantRow[];
+
+      let tenantApiHost: string | null = null;
+      if (creds.partnerType === "tenant") {
+        const identity = await whoami(token);
+        tenantApiHost = identity.apiHosts.dataRegion ??
+          identity.apiHosts.global;
+        if (rows.length === 0) {
+          rows = [{
+            central_tenant_id: identity.id,
+            name: "(This tenant)",
+            api_host: tenantApiHost,
+            data_region: "",
+          }];
+        }
+      }
+
+      const GROUPS_MERGED_PARALLEL = 16;
+
+      type GroupMergedRow = {
+        tenantId: string;
+        group: Record<string, unknown>;
+        members: number;
+      };
+      const mergedOut: GroupMergedRow[] = [];
+
+      for (let i = 0; i < rows.length; i += GROUPS_MERGED_PARALLEL) {
+        const chunk = rows.slice(i, i + GROUPS_MERGED_PARALLEL);
+        const batch = await Promise.all(
+          chunk.map(async (row) => {
+            const tid = row.central_tenant_id;
+            try {
+              const apiHost = creds.partnerType === "tenant"
+                ? (tenantApiHost as string)
+                : resolveApiHostFromCachedTenantRow(row, creds);
+              if (!apiHost) return [] as GroupMergedRow[];
+              const items = await fetchAllPages(
+                `${apiHost}/firewall/v1/firewall-groups`,
+                token,
+                { "X-Tenant-ID": tid },
+              );
+              return (items as Record<string, unknown>[]).map((g) => {
+                const fw = g.firewalls as { items?: unknown[] } | undefined;
+                const members = Array.isArray(fw?.items) ? fw.items.length : 0;
+                return { tenantId: tid, group: g, members };
+              });
+            } catch (err) {
+              logJson("warn", "sophos_central_firewall_groups_merged_tenant", {
+                tenantId: tid,
+                error: err instanceof Error ? err.message : String(err),
+              });
+              return [] as GroupMergedRow[];
+            }
+          }),
+        );
+        for (const part of batch) mergedOut.push(...part);
+      }
+
+      return json({
+        items: mergedOut,
+        tenants: rows.map((r) => ({
+          id: r.central_tenant_id,
+          name: r.name ?? "",
+          dataRegion: r.data_region ?? "",
+          apiHost: r.api_host ?? "",
+          billingType: "",
+        })),
+      });
+    }
+
     // ── Mode: alerts ── fetch alerts for a tenant
     if (mode === "alerts") {
       const { tenantId } = body as { tenantId: string };
@@ -881,6 +987,94 @@ serve(async (req) => {
         { "X-Tenant-ID": tenantId },
       );
       return json({ items });
+    }
+
+    // ── Mode: mission-alerts ── all tenants' open alerts in one call (Mission Control)
+    if (mode === "mission-alerts") {
+      const sb = adminClient();
+      const { data: tenantRows, error: trErr } = await sb
+        .from("central_tenants")
+        .select("central_tenant_id, name, api_host, data_region")
+        .eq("org_id", orgId)
+        .order("name");
+
+      if (trErr) return json({ error: safeError(trErr) }, 500);
+
+      type TenantRow = {
+        central_tenant_id: string;
+        name: string | null;
+        api_host: string | null;
+        data_region: string | null;
+      };
+
+      let rows: TenantRow[] = (tenantRows ?? []) as TenantRow[];
+
+      let tenantApiHost: string | null = null;
+      if (creds.partnerType === "tenant") {
+        const identity = await whoami(token);
+        tenantApiHost = identity.apiHosts.dataRegion ??
+          identity.apiHosts.global;
+        if (rows.length === 0) {
+          rows = [{
+            central_tenant_id: identity.id,
+            name: "(This tenant)",
+            api_host: tenantApiHost,
+            data_region: "",
+          }];
+        }
+      }
+
+      const MISSION_ALERT_PARALLEL = 16;
+      type Merged = Record<string, unknown> & { tenantId: string };
+      const merged: Merged[] = [];
+
+      for (let i = 0; i < rows.length; i += MISSION_ALERT_PARALLEL) {
+        const chunk = rows.slice(i, i + MISSION_ALERT_PARALLEL);
+        const batch = await Promise.all(
+          chunk.map(async (row) => {
+            const tid = row.central_tenant_id;
+            try {
+              const apiHost = creds.partnerType === "tenant"
+                ? (tenantApiHost as string)
+                : resolveApiHostFromCachedTenantRow(row, creds);
+              if (!apiHost) return [] as Merged[];
+              const items = await fetchAllPages(
+                `${apiHost}/common/v1/alerts`,
+                token,
+                { "X-Tenant-ID": tid },
+              );
+              return (items as Record<string, unknown>[]).map((a) => ({
+                ...a,
+                tenantId: tid,
+              }));
+            } catch {
+              return [] as Merged[];
+            }
+          }),
+        );
+        for (const part of batch) merged.push(...part);
+      }
+
+      merged.sort((a, b) => {
+        const ra = String(a.raisedAt ?? "");
+        const rb = String(b.raisedAt ?? "");
+        if (ra < rb) return 1;
+        if (ra > rb) return -1;
+        return 0;
+      });
+
+      const items = merged.slice(0, 300);
+
+      return json({
+        items,
+        tenants: rows.map((r) => ({
+          id: r.central_tenant_id,
+          name: r.name ?? "",
+          dataRegion: r.data_region ?? "",
+          apiHost: r.api_host ?? "",
+          billingType: "",
+        })),
+      });
     }
 
     // ── Mode: licenses ── fetch licence info for a tenant (legacy)
@@ -946,6 +1140,103 @@ serve(async (req) => {
       }
     }
 
+    // ── Mode: mdr-threat-feed-merged ── all tenants in one call (Central MDR page)
+    if (mode === "mdr-threat-feed-merged") {
+      const sb = adminClient();
+      const { data: tenantRows, error: trErr } = await sb
+        .from("central_tenants")
+        .select("central_tenant_id, name, api_host, data_region")
+        .eq("org_id", orgId)
+        .order("name");
+
+      if (trErr) return json({ error: safeError(trErr) }, 500);
+
+      type TenantRow = {
+        central_tenant_id: string;
+        name: string | null;
+        api_host: string | null;
+        data_region: string | null;
+      };
+
+      let rows: TenantRow[] = (tenantRows ?? []) as TenantRow[];
+
+      let tenantApiHost: string | null = null;
+      if (creds.partnerType === "tenant") {
+        const identity = await whoami(token);
+        tenantApiHost = identity.apiHosts.dataRegion ??
+          identity.apiHosts.global;
+        if (rows.length === 0) {
+          rows = [{
+            central_tenant_id: identity.id,
+            name: "(This tenant)",
+            api_host: tenantApiHost,
+            data_region: "",
+          }];
+        }
+      }
+
+      const MDR_MERGED_PARALLEL = 16;
+
+      function mdrItemsFromPayload(data: unknown): unknown[] {
+        if (data && typeof data === "object") {
+          const it = (data as Record<string, unknown>).items;
+          if (Array.isArray(it)) return it;
+        }
+        if (Array.isArray(data)) return data as unknown[];
+        return [];
+      }
+
+      type MergedMdr = Record<string, unknown> & { tenantId: string };
+      const mergedOut: MergedMdr[] = [];
+
+      for (let i = 0; i < rows.length; i += MDR_MERGED_PARALLEL) {
+        const chunk = rows.slice(i, i + MDR_MERGED_PARALLEL);
+        const batch = await Promise.all(
+          chunk.map(async (row) => {
+            const tid = row.central_tenant_id;
+            try {
+              const apiHost = creds.partnerType === "tenant"
+                ? (tenantApiHost as string)
+                : resolveApiHostFromCachedTenantRow(row, creds);
+              if (!apiHost) return [] as MergedMdr[];
+              const data = await sophosGet(
+                `${apiHost}/firewall/v1/mdr-threat-feed`,
+                token,
+                { "X-Tenant-ID": tid },
+              );
+              const items = mdrItemsFromPayload(data);
+              return items.map((item) =>
+                item && typeof item === "object"
+                  ? {
+                    ...(item as Record<string, unknown>),
+                    tenantId: tid,
+                  } as MergedMdr
+                  : { tenantId: tid, value: String(item) } as MergedMdr
+              );
+            } catch (err) {
+              logJson("warn", "sophos_central_mdr_threat_feed_merged_tenant", {
+                tenantId: tid,
+                error: err instanceof Error ? err.message : String(err),
+              });
+              return [] as MergedMdr[];
+            }
+          }),
+        );
+        for (const part of batch) mergedOut.push(...part);
+      }
+
+      return json({
+        items: mergedOut,
+        tenants: rows.map((r) => ({
+          id: r.central_tenant_id,
+          name: r.name ?? "",
+          dataRegion: r.data_region ?? "",
+          apiHost: r.api_host ?? "",
+          billingType: "",
+        })),
+      });
+    }
+
     return json({ error: `Unknown mode: ${mode}` }, 400);
   } catch (err) {
     return json({ error: safeError(err) }, 500);
@@ -954,7 +1245,33 @@ serve(async (req) => {
 
 // ── Helpers ──
 
-async function resolveApiHost(
+/** Resolve API host from a `central_tenants` row (no extra DB round-trip). */
+function resolveApiHostFromCachedTenantRow(
+  row: { api_host?: string | null; data_region?: string | null },
+  creds: { partnerType: string; apiHosts: Record<string, string> },
+): string {
+  const rowHost = String(row.api_host ?? "").trim();
+  if (rowHost) return rowHost;
+  const fromRegion = apiHostFromDataRegion(
+    String(row.data_region ?? "").trim(),
+  );
+  if (fromRegion) return fromRegion;
+  return apiHostFromStoredCreds(creds.apiHosts ?? {});
+}
+
+/** Last resort: connector whoami `apiHosts` from stored credentials (JSON). */
+function apiHostFromStoredCreds(apiHosts: Record<string, string>): string {
+  const dr = String(apiHosts?.dataRegion ?? "").trim();
+  const gl = String(apiHosts?.global ?? "").trim();
+  if (dr.startsWith("http")) return dr;
+  if (gl.startsWith("http")) return gl;
+  return "";
+}
+
+/**
+ * Resolves the regional base URL for firewall/alerts/etc. when `X-Tenant-ID` is set.
+ */
+async function resolveTenantScopedApiHost(
   orgId: string,
   tenantId: string,
   creds: { partnerType: string; apiHosts: Record<string, string> },
@@ -967,12 +1284,34 @@ async function resolveApiHost(
   const sb = adminClient();
   const { data } = await sb
     .from("central_tenants")
-    .select("api_host")
+    .select("api_host, data_region")
     .eq("org_id", orgId)
     .eq("central_tenant_id", tenantId)
     .single();
-  if (!data?.api_host) throw new Error("Tenant not found. Sync tenants first.");
-  return data.api_host;
+
+  const rowHost = String(data?.api_host ?? "").trim();
+  if (rowHost) return rowHost;
+
+  const fromRegion = apiHostFromDataRegion(
+    String(data?.data_region ?? "").trim(),
+  );
+  if (fromRegion) return fromRegion;
+
+  const credFallback = apiHostFromStoredCreds(creds.apiHosts ?? {});
+  if (credFallback) return credFallback;
+
+  throw new Error(
+    "Tenant API host unknown — sync tenants from Central, or check tenant data region in Sophos.",
+  );
+}
+
+async function resolveApiHost(
+  orgId: string,
+  tenantId: string,
+  creds: { partnerType: string; apiHosts: Record<string, string> },
+  token: string,
+): Promise<string> {
+  return resolveTenantScopedApiHost(orgId, tenantId, creds, token);
 }
 
 function json(data: unknown, status = 200) {

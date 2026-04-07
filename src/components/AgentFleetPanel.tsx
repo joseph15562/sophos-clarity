@@ -4,7 +4,10 @@ import { useOrgAgentsQuery } from "@/hooks/queries/use-org-agents-query";
 import { useAgentSubmissionCounts7dQuery } from "@/hooks/queries/use-agent-submission-counts-7d-query";
 import { useAgentSubmissionsLatestBatchQuery } from "@/hooks/queries/use-agent-submissions-latest-batch-query";
 import { queryKeys } from "@/hooks/queries/keys";
-import { fetchLatestSubmissionForAgent } from "@/lib/data/agent-submissions-latest";
+import {
+  fetchLatestSubmissionForAgent,
+  fetchLatestSubmissionsForAgentIds,
+} from "@/lib/data/agent-submissions-latest";
 import {
   ChevronDown,
   ChevronRight,
@@ -17,6 +20,7 @@ import {
   Activity,
   Loader2,
   Play,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +52,16 @@ export interface AgentMeta {
   tenantName?: string;
 }
 
+/** Batch load from “Load full estate” — stable `id` is agent UUID (workbench file id). */
+export interface AgentEstateLoadItem {
+  id: string;
+  label: string;
+  analysis: AnalysisResult;
+  customerName: string;
+  rawConfig?: Record<string, unknown>;
+  agentMeta?: AgentMeta;
+}
+
 interface AgentFleetPanelProps {
   onLoadAssessment?: (
     label: string,
@@ -56,6 +70,8 @@ interface AgentFleetPanelProps {
     rawConfig?: Record<string, unknown>,
     agentMeta?: AgentMeta,
   ) => void;
+  /** Adds every agent that has a stored full assessment to the workbench in one action. */
+  onLoadEstateAssessments?: (items: AgentEstateLoadItem[]) => void;
   filterTenantName?: string;
   loadedLabels?: Set<string>;
 }
@@ -447,6 +463,7 @@ function AgentSummaryCard({
 
 export function AgentFleetPanel({
   onLoadAssessment,
+  onLoadEstateAssessments,
   filterTenantName,
   loadedLabels,
 }: AgentFleetPanelProps) {
@@ -463,6 +480,7 @@ export function AgentFleetPanel({
   const [submissionMap, setSubmissionMap] = useState<Record<string, Submission | null>>({});
   const [scanRequested, setScanRequested] = useState<Record<string, boolean>>({});
   const [fleetFilter, setFleetFilter] = useState<FleetFilter>("all");
+  const [loadingCustomerGroupKey, setLoadingCustomerGroupKey] = useState<string | null>(null);
   const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const runNowAbortByAgentRef = useRef<Map<string, AbortController>>(new Map());
   const pollUnmountAbortRef = useRef<AbortController | null>(null);
@@ -696,6 +714,78 @@ export function AgentFleetPanel({
     );
   };
 
+  const buildEstateItemsFromAgents = (
+    agents: Agent[],
+    submissionsByAgentId: Record<string, Submission | null>,
+  ): AgentEstateLoadItem[] => {
+    const items: AgentEstateLoadItem[] = [];
+    for (const agent of agents) {
+      const sub = submissionsByAgentId[agent.id];
+      if (!sub) continue;
+      const fullAnalysis = sub.full_analysis as unknown as AnalysisResult | null;
+      if (!fullAnalysis) continue;
+      const rawConfig = sub.raw_config as unknown as Record<string, unknown> | null;
+      const displayName = resolveAgentCustomerDisplayName(agent, sub.customer_name);
+      const label = agent.name || agent.firewall_host || agent.id;
+      items.push({
+        id: agent.id,
+        label,
+        analysis: fullAnalysis,
+        customerName: displayName,
+        rawConfig: rawConfig ?? undefined,
+        agentMeta: {
+          serialNumber: agent.serial_number ?? undefined,
+          hostname: agent.firewall_host,
+          model: agent.hardware_model ?? undefined,
+          tenantName: agent.tenant_name ?? undefined,
+        },
+      });
+    }
+    return items;
+  };
+
+  const handleLoadFullEstate = () => {
+    if (!onLoadEstateAssessments) return;
+    const items = buildEstateItemsFromAgents(agentsForUi, submissionMap);
+    if (items.length === 0) {
+      toast.info(
+        "No full assessments available yet — run a scan on your agents or wait for the next connector submission.",
+      );
+      return;
+    }
+    onLoadEstateAssessments(items);
+  };
+
+  const handleLoadCustomerGroupAssessments = async (groupKey: string, tenantAgents: Agent[]) => {
+    if (!onLoadEstateAssessments || !org?.id || tenantAgents.length === 0) return;
+    setLoadingCustomerGroupKey(groupKey);
+    try {
+      const ids = tenantAgents.map((a) => a.id);
+      const batch = await fetchLatestSubmissionsForAgentIds(org.id, ids);
+      setSubmissionMap((prev) => {
+        const next = { ...prev };
+        for (const [id, row] of Object.entries(batch)) {
+          next[id] = row;
+        }
+        return next;
+      });
+      const items = buildEstateItemsFromAgents(tenantAgents, batch);
+      if (items.length === 0) {
+        toast.info(
+          "No full assessments for this customer yet — run a scan or wait for the next connector submission.",
+        );
+        return;
+      }
+      onLoadEstateAssessments(items);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not load assessments for this customer.",
+      );
+    } finally {
+      setLoadingCustomerGroupKey(null);
+    }
+  };
+
   if (isGuest || !org) return null;
 
   if (loading) {
@@ -741,7 +831,13 @@ export function AgentFleetPanel({
                 <span className="text-foreground dark:text-white font-semibold">
                   refresh posture without waiting for manual exports
                 </span>
-                .
+                . Use{" "}
+                <span className="text-foreground dark:text-white font-semibold">
+                  Load full estate into workbench
+                </span>{" "}
+                for all agents, or{" "}
+                <span className="text-foreground dark:text-white font-semibold">Load all</span> on a
+                customer row for that site only.
               </p>
             </div>
           </div>
@@ -789,6 +885,20 @@ export function AgentFleetPanel({
             >
               Offline
             </Button>
+            {onLoadEstateAssessments && (
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                className="h-7 text-[10px] gap-1.5 font-semibold shadow-sm"
+                title="Add every connected agent that has a stored full assessment to the workbench for multi-firewall analysis and reports."
+                onClick={handleLoadFullEstate}
+              >
+                <Layers className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="hidden min-[380px]:inline">Load full estate</span>
+                <span className="min-[380px]:hidden">Estate</span>
+              </Button>
+            )}
             <Button
               type="button"
               variant={fleetFilter === "outdated" ? "secondary" : "outline"}
@@ -847,28 +957,55 @@ export function AgentFleetPanel({
 
           return (
             <div key={groupKey}>
-              <button
-                onClick={() => setExpandedTenant(isOpen ? null : groupKey)}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-muted/30 transition-colors"
-              >
-                {isOpen ? (
-                  <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
-                ) : (
-                  <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                )}
-                <Server className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="text-[11px] font-semibold text-foreground flex-1">
-                  {groupTitle}
-                </span>
-                <span className="text-[9px] text-muted-foreground">
-                  {tenantAgents.length} firewall{tenantAgents.length !== 1 ? "s" : ""}
-                </span>
-                {onlineCount > 0 && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#008F69]/[0.12] dark:bg-[#00F2B3]/10 text-[#007A5A] dark:text-[#00F2B3] font-medium">
-                    {onlineCount} online
+              <div className="flex w-full items-stretch">
+                <button
+                  type="button"
+                  onClick={() => setExpandedTenant(isOpen ? null : groupKey)}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-muted/30"
+                >
+                  {isOpen ? (
+                    <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  )}
+                  <Server className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-foreground">
+                    {groupTitle}
                   </span>
-                )}
-              </button>
+                </button>
+                <div className="flex shrink-0 items-center gap-2 border-l border-border/40 px-3 py-2">
+                  <span className="whitespace-nowrap text-[9px] text-muted-foreground">
+                    {tenantAgents.length} firewall{tenantAgents.length !== 1 ? "s" : ""}
+                  </span>
+                  {onlineCount > 0 && (
+                    <span className="whitespace-nowrap rounded bg-[#008F69]/[0.12] px-1.5 py-0.5 text-[9px] font-medium text-[#007A5A] dark:bg-[#00F2B3]/10 dark:text-[#00F2B3]">
+                      {onlineCount} online
+                    </span>
+                  )}
+                  {onLoadEstateAssessments && tenantAgents.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 gap-1 text-[10px] font-semibold"
+                      disabled={loadingCustomerGroupKey === groupKey}
+                      title="Load every firewall under this customer that has a stored full assessment onto the workbench (same as Load Full Assessment per device, in one step)."
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void handleLoadCustomerGroupAssessments(groupKey, tenantAgents);
+                      }}
+                    >
+                      {loadingCustomerGroupKey === groupKey ? (
+                        <Loader2 className="h-3 w-3 animate-spin shrink-0" aria-hidden />
+                      ) : (
+                        <Layers className="h-3 w-3 shrink-0" aria-hidden />
+                      )}
+                      <span className="hidden sm:inline">Load all</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
 
               {isOpen && (
                 <div className="bg-muted/10">

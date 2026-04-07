@@ -15,7 +15,9 @@ import {
   Building2,
   Zap,
   Gauge,
+  LayoutTemplate,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import {
   DropdownMenu,
@@ -48,6 +50,8 @@ import {
   startSchedulingTour,
   startTenantDashboardTour,
   startPowerUserTour,
+  getWorkspacePageTourMeta,
+  startWorkspaceShellTour,
 } from "@/lib/guided-tours";
 
 const LBL =
@@ -74,6 +78,8 @@ const DARK_PANEL_BG = "linear-gradient(145deg, rgba(12,18,34,0.96), rgba(8,13,26
 export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks }: Props) {
   const cb = tourCallbacks;
   const darkPanel = useResolvedIsDark();
+  const { pathname } = useLocation();
+  const pageTourMeta = getWorkspacePageTourMeta(pathname);
 
   return (
     <DropdownMenu>
@@ -127,6 +133,24 @@ export function GuidedTourButton({ hasFiles, hasReports, isGuest, tourCallbacks 
           </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => startGettingStartedTour()} className={ITEM}>
             <Compass className={ICON} style={{ color: "#00F2B3" }} /> Getting Started
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator className={SEP} />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className={LBL}>
+            <LayoutTemplate className="h-3 w-3 text-[#00EDFF]" />
+            Current route
+          </DropdownMenuLabel>
+          {pageTourMeta ? (
+            <DropdownMenuItem onClick={() => pageTourMeta.start()} className={ITEM}>
+              <LayoutTemplate className={ICON} style={{ color: "#00EDFF" }} />
+              {pageTourMeta.label}
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem onClick={() => startWorkspaceShellTour()} className={ITEM}>
+            <LayoutTemplate className={ICON} style={{ color: "#2006F7" }} />
+            Workspace navigation & shortcuts
           </DropdownMenuItem>
         </DropdownMenuGroup>
 

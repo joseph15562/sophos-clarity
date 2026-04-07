@@ -752,9 +752,16 @@ const ConfigUpload = () => {
 
   // Ready / Uploading state
   return (
-    <main id="main-content" className="min-h-screen bg-[#001A47] flex flex-col">
+    <main
+      id="main-content"
+      className="min-h-screen bg-[#001A47] flex flex-col"
+      data-tour="tour-upload-token-shell"
+    >
       {/* Header */}
-      <div className="bg-[#001A47]/95 backdrop-blur border-b border-white/10 px-6 py-4">
+      <div
+        className="bg-[#001A47]/95 backdrop-blur border-b border-white/10 px-6 py-4"
+        data-tour="tour-upload-header"
+      >
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <img
             src="/sophos-icon-white.svg"
@@ -782,6 +789,7 @@ const ConfigUpload = () => {
 
           {/* Drop zone */}
           <div
+            data-tour="tour-upload-dropzone"
             className={cn(
               "relative rounded-xl border-2 border-dashed transition-all duration-200 p-8",
               pageState === "uploading"

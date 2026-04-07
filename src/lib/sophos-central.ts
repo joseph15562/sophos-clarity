@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { mapTenantBatches } from "@/pages/central/central-batched";
 
 const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sophos-central`;
 
@@ -8,8 +9,10 @@ const RETRY_BASE_MS = 1_000;
 
 async function callCentral<T = unknown>(
   body: Record<string, unknown>,
-  retries = MAX_RETRIES,
+  opts?: { retries?: number; timeoutMs?: number },
 ): Promise<T> {
+  const retries = opts?.retries ?? MAX_RETRIES;
+  const timeoutMs = opts?.timeoutMs ?? CALL_TIMEOUT_MS;
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -24,7 +27,7 @@ async function callCentral<T = unknown>(
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(FUNCTION_URL, {
@@ -216,7 +219,56 @@ export async function getFirewallGroups(
   return res.items ?? [];
 }
 
+export type FirewallGroupsMergedBundle = {
+  items: Array<{ tenantId: string; group: CentralFirewallGroup; members: number }>;
+  tenants: CentralTenant[];
+};
+
+/** One Edge call for all tenants’ firewall groups; falls back to batched per-tenant calls if the mode is missing. */
+export async function getFirewallGroupsMerged(orgId: string): Promise<FirewallGroupsMergedBundle> {
+  try {
+    return await callCentral<FirewallGroupsMergedBundle>(
+      { mode: "firewall-groups-merged", orgId },
+      { timeoutMs: 120_000, retries: 0 },
+    );
+  } catch {
+    const tenants = await getCachedTenants(orgId);
+    const tenantIds = tenants.map((t) => t.id);
+    if (tenantIds.length === 0) return { items: [], tenants: [] };
+
+    const rows = await mapTenantBatches(
+      tenantIds,
+      async (tenantId) => {
+        try {
+          const items = await getFirewallGroups(orgId, tenantId);
+          return items.map((g) => ({
+            tenantId,
+            group: g,
+            members: g.firewalls?.items?.length ?? 0,
+          }));
+        } catch {
+          return [] as FirewallGroupsMergedBundle["items"];
+        }
+      },
+      { batchSize: 8 },
+    );
+    return { items: rows.flat(), tenants };
+  }
+}
+
 // ── Alerts ──
+
+/** Managed asset on a Central alert (firewall, computer, server, …). */
+export interface CentralManagedAgent {
+  id: string;
+  type: string;
+  /** Computer / endpoint display name when Central returns it. */
+  name?: string;
+  hostname?: string;
+  computerName?: string;
+  showAs?: string;
+  displayName?: string;
+}
 
 export interface CentralAlert {
   id: string;
@@ -226,12 +278,55 @@ export interface CentralAlert {
   product: string;
   raisedAt: string;
   allowedActions: string[];
-  managedAgent?: { id: string; type: string };
+  managedAgent?: CentralManagedAgent;
+  /** Some alert payloads expose the source name at the top level. */
+  managedAgentName?: string;
+  hostname?: string;
+  computerName?: string;
 }
 
 export async function getAlerts(orgId: string, tenantId: string): Promise<CentralAlert[]> {
   const res = await callCentral<{ items: CentralAlert[] }>({ mode: "alerts", orgId, tenantId });
   return res.items ?? [];
+}
+
+export type MissionAlertsBundle = {
+  items: Array<CentralAlert & { tenantId: string }>;
+  tenants: CentralTenant[];
+};
+
+/** Per-tenant calls from the browser — used if the `mission-alerts` edge mode is unavailable or errors. */
+async function fetchMissionAlertsLegacy(orgId: string): Promise<MissionAlertsBundle> {
+  const tenants = await getCachedTenants(orgId);
+  const tenantIds = tenants.map((t) => t.id);
+  if (tenantIds.length === 0) return { items: [], tenants: [] };
+
+  const rows = await mapTenantBatches(
+    tenantIds,
+    async (tenantId) => {
+      try {
+        const items = await getAlerts(orgId, tenantId);
+        return items.map((a) => ({ ...a, tenantId }));
+      } catch {
+        return [] as Array<CentralAlert & { tenantId: string }>;
+      }
+    },
+    { batchSize: 8 },
+  );
+  rows.sort((a, b) => (a.raisedAt < b.raisedAt ? 1 : a.raisedAt > b.raisedAt ? -1 : 0));
+  return { items: rows.slice(0, 300), tenants };
+}
+
+/**
+ * Prefer one `mission-alerts` edge call; fall back to cached tenants + batched `alerts` calls
+ * so Mission Control still works if the function is not deployed yet or returns an error.
+ */
+export async function getMissionAlertsBundle(orgId: string): Promise<MissionAlertsBundle> {
+  try {
+    return await callCentral({ mode: "mission-alerts", orgId }, { timeoutMs: 120_000, retries: 0 });
+  } catch {
+    return fetchMissionAlertsLegacy(orgId);
+  }
 }
 
 // ── Licences (legacy tenant-level) ──
@@ -300,6 +395,43 @@ export async function getMdrThreatFeed(orgId: string, tenantId: string): Promise
   return res.items ?? [];
 }
 
+/** One Edge call for all tenants (parallel on server); falls back to batched per-tenant calls if the mode is missing. */
+export type MdrThreatFeedMergedBundle = {
+  items: unknown[];
+  tenants: CentralTenant[];
+};
+
+export async function getMdrThreatFeedMerged(orgId: string): Promise<MdrThreatFeedMergedBundle> {
+  try {
+    return await callCentral<MdrThreatFeedMergedBundle>(
+      { mode: "mdr-threat-feed-merged", orgId },
+      { timeoutMs: 120_000, retries: 0 },
+    );
+  } catch {
+    const tenants = await getCachedTenants(orgId);
+    const tenantIds = tenants.map((t) => t.id);
+    if (tenantIds.length === 0) return { items: [], tenants: [] };
+
+    const rows = await mapTenantBatches(
+      tenantIds,
+      async (tenantId) => {
+        try {
+          const items = await getMdrThreatFeed(orgId, tenantId);
+          return (items ?? []).map((it) =>
+            it && typeof it === "object"
+              ? { ...(it as Record<string, unknown>), tenantId }
+              : { tenantId, value: String(it) },
+          );
+        } catch {
+          return [] as unknown[];
+        }
+      },
+      { batchSize: 8 },
+    );
+    return { items: rows.flat(), tenants };
+  }
+}
+
 // ── Cached data from Supabase ──
 
 export async function getCachedTenants(orgId: string): Promise<CentralTenant[]> {
@@ -340,6 +472,8 @@ export async function getCachedFirewalls(
   if (tenantId) q = q.eq("central_tenant_id", tenantId);
   const { data } = await q.order("hostname");
   return (data ?? []).map((r) => ({
+    /** DB row id — use for Assess `fleetContext` / Fleet row identity. */
+    rowId: r.id,
     firewallId: r.firewall_id,
     centralTenantId: r.central_tenant_id,
     serialNumber: r.serial_number,

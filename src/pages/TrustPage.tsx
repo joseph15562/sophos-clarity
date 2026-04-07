@@ -1,8 +1,8 @@
-import { FileQuestion, GitBranch, Layers, Shield } from "lucide-react";
+import { FileQuestion, GitBranch, Layers } from "lucide-react";
 import { WorkspacePanelLink } from "@/components/WorkspaceSettingsStrip";
-import { useAuthProvider, AuthProvider } from "@/hooks/use-auth";
+import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
-import { WorkspaceSubpageHeader } from "@/components/WorkspaceSubpageHeader";
+import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
 
 const DATA_PRIVACY_HREF =
   "https://github.com/joseph15562/sophos-firecomply/blob/main/docs/DATA-PRIVACY.md";
@@ -13,12 +13,16 @@ const DATA_PRIVACY_HREF =
  * replace with counsel-approved content before customer procurement.
  */
 function TrustPageInner() {
+  const { isGuest } = useAuth();
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <WorkspaceSubpageHeader title="Trust" titleIcon={<Shield />} container="docs" />
+      <FireComplyWorkspaceHeader loginShell={isGuest} />
       <WorkspacePrimaryNav />
-      <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
-        <section className="space-y-2">
+      <main
+        className="mx-auto max-w-3xl space-y-8 px-4 pt-10 assist-chrome-pad-bottom"
+        data-tour="tour-page-trust"
+      >
+        <section className="space-y-2" data-tour="tour-trust-hero">
           <h2 className="text-sm font-semibold tracking-tight">Overview</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Sophos FireComply helps partners assess Sophos firewall posture from configuration
@@ -28,7 +32,7 @@ function TrustPageInner() {
           </p>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4" data-tour="tour-trust-security">
           <h2 className="text-sm font-semibold tracking-tight">How we handle your data</h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
             This summary matches the in-app{" "}
@@ -173,7 +177,11 @@ function TrustPageInner() {
           </p>
         </section>
 
-        <section id="trust-subprocessors" className="space-y-3 scroll-mt-20">
+        <section
+          id="trust-subprocessors"
+          className="space-y-3 scroll-mt-20"
+          data-tour="tour-trust-privacy"
+        >
           <h2 className="text-sm font-semibold tracking-tight">Subprocessors (baseline)</h2>
           <p className="text-xs text-muted-foreground">
             Confirm regions and DPAs with your legal team. This table is a starting inventory, not a
@@ -214,7 +222,7 @@ function TrustPageInner() {
           </div>
         </section>
 
-        <section className="space-y-6">
+        <section className="space-y-6" data-tour="tour-trust-compliance">
           <div className="space-y-2">
             <h2 className="text-sm font-semibold tracking-tight">Legal &amp; questionnaires</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">

@@ -1,17 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { useTheme } from "next-themes";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MOCK_DRIFT_HISTORY } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
 import {
   GitCompare,
   Clock,
-  ArrowLeft,
   ChevronRight,
+  ChevronDown,
+  FileCode2,
   AlertTriangle,
   Shield,
   TrendingUp,
@@ -24,8 +30,6 @@ import {
   ToggleRight,
   Server,
   Loader2,
-  Sun,
-  Moon,
 } from "lucide-react";
 
 interface ConfigChange {
@@ -276,7 +280,7 @@ function severityBorder(s: ConfigChange["severity"]) {
 }
 
 function DriftMonitorInner() {
-  const { user, org } = useAuth();
+  const { user, org, isGuest } = useAuth();
   const isDark = useResolvedIsDark();
 
   const [selectedFirewall, setSelectedFirewall] = useState(FIREWALLS[0].id);
@@ -286,6 +290,12 @@ function DriftMonitorInner() {
   const [firewalls, setFirewalls] = useState(FIREWALLS);
   const [allSnapshots, setAllSnapshots] = useState<Snapshot[]>(DEMO_SNAPSHOTS);
   const [loading, setLoading] = useState(true);
+  const [baselineDate, setBaselineDate] = useState("2026-03-01");
+  const [currentDate, setCurrentDate] = useState("2026-04-02");
+  const [compareDone, setCompareDone] = useState(false);
+  const [diffOpen, setDiffOpen] = useState<string | null>("rules");
+  const [historyCustomer, setHistoryCustomer] = useState<string>("__all__");
+  const [showUnchanged, setShowUnchanged] = useState(false);
 
   useEffect(() => {
     if (!org?.id) {
@@ -393,12 +403,21 @@ function DriftMonitorInner() {
   const toggleAlert = (id: string) =>
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a)));
 
+  const driftHistoryFiltered = useMemo(() => {
+    if (historyCustomer === "__all__") return MOCK_DRIFT_HISTORY;
+    return MOCK_DRIFT_HISTORY.filter((h) => h.customer === historyCustomer);
+  }, [historyCustomer]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <Header />
+        <FireComplyWorkspaceHeader loginShell={isGuest} />
         <WorkspacePrimaryNav />
-        <main id="main-content" className="flex-1 flex items-center justify-center px-4">
+        <main
+          id="main-content"
+          className="flex-1 flex items-center justify-center px-4 assist-chrome-pad-bottom"
+          data-tour="tour-page-drift"
+        >
           <Loader2 className="w-8 h-8 animate-spin text-[#2006F7]" />
         </main>
       </div>
@@ -408,9 +427,13 @@ function DriftMonitorInner() {
   if (snapshots.length === 0) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <Header />
+        <FireComplyWorkspaceHeader loginShell={isGuest} />
         <WorkspacePrimaryNav />
-        <main id="main-content" className="flex-1 flex items-center justify-center px-4">
+        <main
+          id="main-content"
+          className="flex-1 flex items-center justify-center px-4 assist-chrome-pad-bottom"
+          data-tour="tour-page-drift"
+        >
           <EmptyState
             className="max-w-md py-12"
             icon={<Server className="h-8 w-8 text-muted-foreground/60" />}
@@ -429,15 +452,19 @@ function DriftMonitorInner() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header />
+      <FireComplyWorkspaceHeader loginShell={isGuest} />
       <WorkspacePrimaryNav />
 
       <main
         id="main-content"
-        className="flex-1 mx-auto max-w-6xl w-full px-4 md:px-6 py-8 space-y-8"
+        className="flex-1 mx-auto max-w-6xl w-full px-4 md:px-6 pt-8 space-y-8 assist-chrome-pad-bottom"
+        data-tour="tour-page-drift"
       >
         {/* Firewall selector */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div
+          className="flex flex-col sm:flex-row items-start sm:items-center gap-4"
+          data-tour="tour-drift-selector"
+        >
           <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Server className="w-4 h-4" />
             Firewall
@@ -458,188 +485,443 @@ function DriftMonitorInner() {
           </select>
         </div>
 
-        {/* Stats bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard
-            icon={<Clock className="w-5 h-5 text-[#2006F7]" />}
-            label="Total Snapshots"
-            value={String(snapshots.length)}
-          />
-          <StatCard
-            icon={<Activity className="w-5 h-5 text-[#00EDFF]" />}
-            label="Changes Detected"
-            value={String(totalChanges)}
-          />
-          <StatCard
-            icon={
-              overallTrend >= 0 ? (
-                <TrendingUp className="w-5 h-5 text-[#00F2B3]" />
-              ) : (
-                <TrendingDown className="w-5 h-5 text-[#EA0022]" />
-              )
-            }
-            label="Score Trend"
-            value={`${overallTrend >= 0 ? "↑" : "↓"} ${Math.abs(overallTrend)} pts`}
-          />
-          <StatCard
-            icon={<Shield className="w-5 h-5 text-[#F29400]" />}
-            label="Days Monitored"
-            value={String(daysMonitored)}
-          />
-        </div>
-
-        {/* Timeline */}
-        <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 shadow-[0_12px_40px_rgba(32,6,247,0.04)]">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-6 flex items-center gap-2">
-            <GitCompare className="w-4 h-4" />
-            Snapshot Timeline
-          </h2>
-
-          <div className="overflow-x-auto pb-2">
-            <div className="relative flex items-start gap-0 min-w-max px-4">
-              {/* Connecting line */}
-              <div
-                className="absolute top-[18px] left-8 right-8 h-[2px] bg-border/60"
-                style={{ zIndex: 0 }}
+        {/* Manual config compare (spec) */}
+        <section
+          className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 shadow-[0_12px_40px_rgba(32,6,247,0.04)] space-y-4"
+          data-tour="tour-drift-compare"
+        >
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <FileCode2 className="w-4 h-4 text-[#2006F7]" />
+              Compare configs
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Upload baseline and current exports, set effective dates, then run a structured diff
+              (demo — uses sample results).
+            </p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-end">
+            <div className="space-y-3 rounded-xl border border-border/40 bg-background/40 p-4">
+              <Label className="text-xs">Baseline config</Label>
+              <Input
+                type="file"
+                accept=".xml,.conf,.txt,.tar,.gz,.zip"
+                className="cursor-pointer text-xs"
               />
+              <Label className="text-xs">Config date</Label>
+              <Input
+                type="date"
+                value={baselineDate}
+                onChange={(e) => setBaselineDate(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center justify-center py-2 lg:py-0">
+              <span className="rounded-full border border-[#2006F7]/40 bg-[#2006F7]/10 px-3 py-1 text-xs font-bold text-[#2006F7]">
+                VS
+              </span>
+            </div>
+            <div className="space-y-3 rounded-xl border border-border/40 bg-background/40 p-4">
+              <Label className="text-xs">Current config</Label>
+              <Input
+                type="file"
+                accept=".xml,.conf,.txt,.tar,.gz,.zip"
+                className="cursor-pointer text-xs"
+              />
+              <Label className="text-xs">Config date</Label>
+              <Input
+                type="date"
+                value={currentDate}
+                onChange={(e) => setCurrentDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <Button
+            type="button"
+            className="w-full sm:w-auto"
+            onClick={() => {
+              setCompareDone(true);
+              toast.success("Comparison complete (demo diff loaded)");
+            }}
+          >
+            Compare configs
+          </Button>
 
-              {snapshots.map((snap, i) => {
-                const fill = scoreColor(snap.scoreBefore, snap.scoreAfter);
-                const isSelected = snap.id === selectedSnapshotId;
-                return (
-                  <button
-                    key={snap.id}
-                    onClick={() => setSelectedSnapshotId(snap.id)}
-                    className="relative flex flex-col items-center group focus:outline-none"
-                    style={{
-                      minWidth: 80,
-                      zIndex: 1,
-                    }}
+          {compareDone ? (
+            <div className="space-y-4 pt-2 border-t border-border/40">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  {
+                    label: "Added rules",
+                    value: 3,
+                    cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/25",
+                  },
+                  {
+                    label: "Removed rules",
+                    value: 1,
+                    cls: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/25",
+                  },
+                  {
+                    label: "Modified",
+                    value: 5,
+                    cls: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30",
+                  },
+                  {
+                    label: "Unchanged",
+                    value: 412,
+                    cls: "bg-muted/40 text-muted-foreground border-border/60",
+                  },
+                ].map((b) => (
+                  <span
+                    key={b.label}
+                    className={cn("rounded-lg border px-3 py-1.5 text-xs font-semibold", b.cls)}
                   >
-                    {/* Score delta label */}
-                    <span
-                      className="text-[10px] font-mono font-medium mb-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: fill }}
-                    >
-                      {snap.scoreAfter - snap.scoreBefore > 0
-                        ? `+${snap.scoreAfter - snap.scoreBefore}`
-                        : snap.scoreAfter - snap.scoreBefore === 0
-                          ? "±0"
-                          : String(snap.scoreAfter - snap.scoreBefore)}
-                    </span>
+                    {b.label}: {b.value}
+                  </span>
+                ))}
+              </div>
 
-                    {/* Node */}
-                    <div
-                      className={`w-9 h-9 rounded-full border-[3px] flex items-center justify-center transition-all ${
-                        isSelected ? "scale-125 shadow-lg" : "hover:scale-110"
-                      }`}
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-2">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                  Change risk analysis
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Overall risk{" "}
+                  <span className="font-bold text-amber-700 dark:text-amber-300">Elevated</span> —
+                  WAN-facing rule broadened; NAT exposure introduced in current export.
+                </p>
+                <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+                  <li>Rule &quot;Vendor-Remote&quot;: source set widened from /32 to /16</li>
+                  <li>NAT: internal RDP published — verify jump host pattern</li>
+                </ul>
+                <Button type="button" size="sm" variant="outline" className="mt-1">
+                  Generate change report (PDF)
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  {
+                    id: "rules",
+                    title: "Firewall rules",
+                    count: 6,
+                    pairs: [
+                      {
+                        side: "removed" as const,
+                        left: "allow tcp any any -> DMZ_WEB (80,443)",
+                        right: "—",
+                      },
+                      {
+                        side: "added" as const,
+                        left: "—",
+                        right: "allow tcp VENDOR_NET any -> DMZ_WEB (22)",
+                      },
+                      { side: "modified" as const, left: "log: off", right: "log: on" },
+                    ],
+                  },
+                  {
+                    id: "nat",
+                    title: "NAT",
+                    count: 2,
+                    pairs: [
+                      {
+                        side: "added" as const,
+                        left: "—",
+                        right: "DNAT 203.0.113.4:3389 -> 10.20.4.50",
+                      },
+                    ],
+                  },
+                ].map((sec) => (
+                  <div key={sec.id} className="rounded-xl border border-border/50 overflow-hidden">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium bg-muted/20 hover:bg-muted/30"
+                      onClick={() => setDiffOpen((o) => (o === sec.id ? null : sec.id))}
+                    >
+                      <span className="flex items-center gap-2">
+                        {diffOpen === sec.id ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                        {sec.title}
+                      </span>
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {sec.count} changes
+                      </span>
+                    </button>
+                    {diffOpen === sec.id ? (
+                      <div className="p-3 space-y-2 border-t border-border/40">
+                        <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold uppercase text-muted-foreground px-1">
+                          <span>Baseline</span>
+                          <span>Current</span>
+                        </div>
+                        {sec.pairs.map((p, i) => (
+                          <div key={i} className="grid grid-cols-2 gap-2 text-xs font-mono">
+                            <div
+                              className={cn(
+                                "rounded-lg border p-2 break-all",
+                                p.side === "removed" && "border-red-500/30 bg-red-500/5",
+                                p.side === "modified" && "border-amber-500/30 bg-amber-500/5",
+                                p.side === "added" && "border-border/40 bg-muted/20",
+                              )}
+                            >
+                              {p.left}
+                            </div>
+                            <div
+                              className={cn(
+                                "rounded-lg border p-2 break-all",
+                                p.side === "added" && "border-emerald-500/30 bg-emerald-500/5",
+                                p.side === "modified" && "border-amber-500/30 bg-amber-500/5",
+                                p.side === "removed" && "border-border/40 bg-muted/20",
+                              )}
+                            >
+                              {p.right}
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                          onClick={() => setShowUnchanged((v) => !v)}
+                        >
+                          {showUnchanged ? "Hide" : "Show"} 14 unchanged objects
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        <div className="space-y-8" data-tour="tour-drift-timeline">
+          {/* Stats bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard
+              icon={<Clock className="w-5 h-5 text-[#2006F7]" />}
+              label="Total Snapshots"
+              value={String(snapshots.length)}
+            />
+            <StatCard
+              icon={<Activity className="w-5 h-5 text-[#00EDFF]" />}
+              label="Changes Detected"
+              value={String(totalChanges)}
+            />
+            <StatCard
+              icon={
+                overallTrend >= 0 ? (
+                  <TrendingUp className="w-5 h-5 text-[#00F2B3]" />
+                ) : (
+                  <TrendingDown className="w-5 h-5 text-[#EA0022]" />
+                )
+              }
+              label="Score Trend"
+              value={`${overallTrend >= 0 ? "↑" : "↓"} ${Math.abs(overallTrend)} pts`}
+            />
+            <StatCard
+              icon={<Shield className="w-5 h-5 text-[#F29400]" />}
+              label="Days Monitored"
+              value={String(daysMonitored)}
+            />
+          </div>
+
+          {/* Timeline */}
+          <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 shadow-[0_12px_40px_rgba(32,6,247,0.04)]">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-6 flex items-center gap-2">
+              <GitCompare className="w-4 h-4" />
+              Snapshot Timeline
+            </h2>
+
+            <div className="overflow-x-auto pb-2">
+              <div className="relative flex items-start gap-0 min-w-max px-4">
+                {/* Connecting line */}
+                <div
+                  className="absolute top-[18px] left-8 right-8 h-[2px] bg-border/60"
+                  style={{ zIndex: 0 }}
+                />
+
+                {snapshots.map((snap, i) => {
+                  const fill = scoreColor(snap.scoreBefore, snap.scoreAfter);
+                  const isSelected = snap.id === selectedSnapshotId;
+                  return (
+                    <button
+                      key={snap.id}
+                      onClick={() => setSelectedSnapshotId(snap.id)}
+                      className="relative flex flex-col items-center group focus:outline-none"
                       style={{
-                        borderColor: fill,
-                        backgroundColor: isSelected ? fill : "var(--card)",
+                        minWidth: 80,
+                        zIndex: 1,
                       }}
                     >
+                      {/* Score delta label */}
                       <span
-                        className="text-[10px] font-bold"
+                        className="text-[10px] font-mono font-medium mb-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ color: fill }}
+                      >
+                        {snap.scoreAfter - snap.scoreBefore > 0
+                          ? `+${snap.scoreAfter - snap.scoreBefore}`
+                          : snap.scoreAfter - snap.scoreBefore === 0
+                            ? "±0"
+                            : String(snap.scoreAfter - snap.scoreBefore)}
+                      </span>
+
+                      {/* Node */}
+                      <div
+                        className={`w-9 h-9 rounded-full border-[3px] flex items-center justify-center transition-all ${
+                          isSelected ? "scale-125 shadow-lg" : "hover:scale-110"
+                        }`}
                         style={{
-                          color: isSelected ? (isDark ? "#0a0a0a" : "#fff") : fill,
+                          borderColor: fill,
+                          backgroundColor: isSelected ? fill : "var(--card)",
                         }}
                       >
-                        {snap.scoreAfter}
+                        <span
+                          className="text-[10px] font-bold"
+                          style={{
+                            color: isSelected ? (isDark ? "#0a0a0a" : "#fff") : fill,
+                          }}
+                        >
+                          {snap.scoreAfter}
+                        </span>
+                      </div>
+
+                      {/* Date */}
+                      <span className="mt-2 text-[10px] text-muted-foreground whitespace-nowrap">
+                        {new Date(snap.date).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                        })}
                       </span>
-                    </div>
 
-                    {/* Date */}
-                    <span className="mt-2 text-[10px] text-muted-foreground whitespace-nowrap">
-                      {new Date(snap.date).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </span>
+                      {/* Change count */}
+                      <span className="text-[9px] text-muted-foreground/60">
+                        {snap.changes.length} change{snap.changes.length !== 1 ? "s" : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
 
-                    {/* Change count */}
-                    <span className="text-[9px] text-muted-foreground/60">
-                      {snap.changes.length} change{snap.changes.length !== 1 ? "s" : ""}
+          {/* Snapshot detail */}
+          {selectedSnapshot ? (
+            <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 shadow-[0_12px_40px_rgba(32,6,247,0.04)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-[#2006F7]" />
+                    {new Date(selectedSnapshot.date).toLocaleDateString("en-GB", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                    <span className="text-muted-foreground font-normal text-sm">
+                      {selectedSnapshot.time}
                     </span>
-                  </button>
-                );
-              })}
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-6 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Score</span>
+                    <span className="font-mono font-semibold">{selectedSnapshot.scoreBefore}</span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <span
+                      className={`font-mono font-semibold ${scoreBadge(selectedSnapshot.scoreBefore, selectedSnapshot.scoreAfter)}`}
+                    >
+                      {selectedSnapshot.scoreAfter}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    {selectedSnapshot.findingsAdded > 0 && (
+                      <span className="flex items-center gap-1 text-[#EA0022]">
+                        <Plus className="w-3 h-3" />
+                        {selectedSnapshot.findingsAdded}
+                      </span>
+                    )}
+                    {selectedSnapshot.findingsRemoved > 0 && (
+                      <span className="flex items-center gap-1 text-[#007A5A] dark:text-[#00F2B3]">
+                        <Minus className="w-3 h-3" />
+                        {selectedSnapshot.findingsRemoved}
+                      </span>
+                    )}
+                    {selectedSnapshot.findingsAdded === 0 &&
+                      selectedSnapshot.findingsRemoved === 0 && (
+                        <span className="text-muted-foreground">No finding delta</span>
+                      )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {selectedSnapshot.changes.map((ch, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-3 rounded-xl border px-4 py-3 bg-background/50 ${severityBorder(ch.severity)}`}
+                  >
+                    <span
+                      className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${severityDot(ch.severity)}`}
+                    />
+                    <span className="text-sm">{ch.description}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border/50 bg-card/40 backdrop-blur-sm p-8 text-center text-muted-foreground text-sm">
+              Click a snapshot node on the timeline to view change details.
+            </div>
+          )}
+        </div>
+
+        {/* Drift history (customer-scoped, demo) */}
+        <section
+          className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 shadow-[0_12px_40px_rgba(32,6,247,0.04)] space-y-4"
+          data-tour="tour-drift-history"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Drift history
+            </h2>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs whitespace-nowrap">Customer</Label>
+              <select
+                value={historyCustomer}
+                onChange={(e) => setHistoryCustomer(e.target.value)}
+                className="rounded-lg border border-border/50 bg-background px-3 py-1.5 text-xs min-w-[160px]"
+              >
+                <option value="__all__">All (demo)</option>
+                <option value="Vertex Partners">Vertex Partners</option>
+                <option value="Pennine BS">Pennine BS</option>
+                <option value="Northern Retail">Northern Retail</option>
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto pb-1">
+            <div className="flex gap-3 min-w-max">
+              {driftHistoryFiltered.map((h) => (
+                <div
+                  key={h.id}
+                  className="shrink-0 rounded-xl border border-border/50 bg-background/60 px-4 py-3 min-w-[140px]"
+                >
+                  <p className="text-[10px] text-muted-foreground">{h.date}</p>
+                  <p className="text-xs font-semibold mt-1">{h.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{h.customer}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Snapshot detail */}
-        {selectedSnapshot ? (
-          <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 shadow-[0_12px_40px_rgba(32,6,247,0.04)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-[#2006F7]" />
-                  {new Date(selectedSnapshot.date).toLocaleDateString("en-GB", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                  <span className="text-muted-foreground font-normal text-sm">
-                    {selectedSnapshot.time}
-                  </span>
-                </h2>
-              </div>
-
-              <div className="flex items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Score</span>
-                  <span className="font-mono font-semibold">{selectedSnapshot.scoreBefore}</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  <span
-                    className={`font-mono font-semibold ${scoreBadge(selectedSnapshot.scoreBefore, selectedSnapshot.scoreAfter)}`}
-                  >
-                    {selectedSnapshot.scoreAfter}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-xs">
-                  {selectedSnapshot.findingsAdded > 0 && (
-                    <span className="flex items-center gap-1 text-[#EA0022]">
-                      <Plus className="w-3 h-3" />
-                      {selectedSnapshot.findingsAdded}
-                    </span>
-                  )}
-                  {selectedSnapshot.findingsRemoved > 0 && (
-                    <span className="flex items-center gap-1 text-[#007A5A] dark:text-[#00F2B3]">
-                      <Minus className="w-3 h-3" />
-                      {selectedSnapshot.findingsRemoved}
-                    </span>
-                  )}
-                  {selectedSnapshot.findingsAdded === 0 &&
-                    selectedSnapshot.findingsRemoved === 0 && (
-                      <span className="text-muted-foreground">No finding delta</span>
-                    )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {selectedSnapshot.changes.map((ch, i) => (
-                <div
-                  key={i}
-                  className={`flex items-start gap-3 rounded-xl border px-4 py-3 bg-background/50 ${severityBorder(ch.severity)}`}
-                >
-                  <span
-                    className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${severityDot(ch.severity)}`}
-                  />
-                  <span className="text-sm">{ch.description}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border/50 bg-card/40 backdrop-blur-sm p-8 text-center text-muted-foreground text-sm">
-            Click a snapshot node on the timeline to view change details.
-          </div>
-        )}
-
         {/* Drift alerts */}
-        <section className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-[0_12px_40px_rgba(32,6,247,0.04)]">
+        <section
+          className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-[0_12px_40px_rgba(32,6,247,0.04)]"
+          data-tour="tour-drift-alerts"
+        >
           <button
             onClick={() => setAlertsExpanded(!alertsExpanded)}
             className="w-full flex items-center justify-between px-6 py-4 text-left focus:outline-none"
@@ -682,52 +964,6 @@ function DriftMonitorInner() {
         </section>
       </main>
     </div>
-  );
-}
-
-function Header() {
-  const { setTheme } = useTheme();
-  const isDark = useResolvedIsDark();
-  return (
-    <header
-      className="border-b border-white/[0.06] sticky top-0 z-40"
-      style={{
-        background: "linear-gradient(135deg, #0a0e2a 0%, #111640 50%, #0d1230 100%)",
-      }}
-    >
-      <div className="mx-auto max-w-6xl px-4 md:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Dashboard
-          </Link>
-          <span className="text-white/20">/</span>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#2006F7]/20 flex items-center justify-center">
-              <GitCompare className="w-5 h-5 text-[#00EDFF]" />
-            </div>
-            <div>
-              <h1 className="text-white font-semibold text-base leading-tight">
-                Configuration Drift
-              </h1>
-              <p className="text-white/50 text-xs">
-                Continuous change detection across your firewall estate
-              </p>
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={() => setTheme(isDark ? "light" : "dark")}
-          className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </button>
-      </div>
-    </header>
   );
 }
 

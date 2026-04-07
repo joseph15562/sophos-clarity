@@ -5,6 +5,7 @@ import type { AnalysisResult } from "@/lib/analyse-config";
 import { marked } from "marked";
 import { SafeHtml } from "@/components/SafeHtml";
 import { warnOptionalError } from "@/lib/client-error-feedback";
+import { getRouteAssistConfig, normalizeAssistPath } from "@/lib/assist-route-context";
 
 interface Props {
   analysisResults: Record<string, AnalysisResult>;
@@ -12,6 +13,8 @@ interface Props {
   customerName?: string;
   environment?: string;
   analysisTab?: string;
+  /** Current path for hub-mode suggestions, storage scoping, and system context (default "/"). */
+  assistPathname?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialMessage?: string;
@@ -31,12 +34,15 @@ function getCustomerHash(
   customerName?: string,
   environment?: string,
   analysisResults?: Record<string, AnalysisResult>,
+  routeKey?: string,
 ): string {
   const parts: string[] = [];
   if (customerName) parts.push(customerName);
   if (environment) parts.push(environment);
   if (analysisResults && Object.keys(analysisResults).length > 0) {
     parts.push(Object.keys(analysisResults).sort().join(","));
+  } else if (routeKey) {
+    parts.push(`route:${routeKey}`);
   }
   const str = parts.join("|") || "default";
   let h = 0;
@@ -80,8 +86,14 @@ const TAB_SUGGESTIONS: Record<string, string[]> = {
 
 function getSuggestedQuestions(
   analysisResults: Record<string, AnalysisResult>,
-  analysisTab?: string,
+  analysisTab: string | undefined,
+  hubSuggestions: string[],
+  hasAssessmentData: boolean,
 ): string[] {
+  if (!hasAssessmentData) {
+    return hubSuggestions.slice(0, 4);
+  }
+
   const tabQuestions = analysisTab ? TAB_SUGGESTIONS[analysisTab] : [];
   const questions: string[] = [...(tabQuestions ?? [])];
 
@@ -115,14 +127,25 @@ export function AIChatPanel({
   customerName,
   environment,
   analysisTab,
+  assistPathname = "/",
   open: controlledOpen,
   onOpenChange,
   initialMessage,
   onInitialMessageSent,
 }: Props) {
+  const pathKey = normalizeAssistPath(assistPathname);
+  const hasAssessmentData = Object.keys(analysisResults).length > 0;
+  const routeAssist = useMemo(() => getRouteAssistConfig(pathKey), [pathKey]);
+
   const customerHash = useMemo(
-    () => getCustomerHash(customerName, environment, analysisResults),
-    [customerName, environment, analysisResults],
+    () =>
+      getCustomerHash(
+        customerName,
+        environment,
+        analysisResults,
+        hasAssessmentData ? undefined : pathKey,
+      ),
+    [customerName, environment, analysisResults, hasAssessmentData, pathKey],
   );
   const storageKey = useMemo(() => getStorageKey(customerHash), [customerHash]);
 
@@ -144,8 +167,14 @@ export function AIChatPanel({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const suggestedQuestions = useMemo(
-    () => getSuggestedQuestions(analysisResults, analysisTab),
-    [analysisResults, analysisTab],
+    () =>
+      getSuggestedQuestions(
+        analysisResults,
+        analysisTab,
+        routeAssist.suggestions,
+        hasAssessmentData,
+      ),
+    [analysisResults, analysisTab, routeAssist.suggestions, hasAssessmentData],
   );
 
   const didLoadFromStorage = useRef(false);
@@ -211,6 +240,13 @@ export function AIChatPanel({
   }, [storageKey]);
 
   const buildContext = useCallback(() => {
+    if (!hasAssessmentData) {
+      return `CONTEXT: Sophos FireComply — ${routeAssist.title} (${pathKey})
+${routeAssist.blurb}
+
+No firewall configuration analysis is loaded in this chat session. Answer from product and general security practice knowledge only; do not invent specific findings or rule counts.`;
+    }
+
     const findings = Object.entries(analysisResults)
       .flatMap(([label, r]) =>
         r.findings.map((f) => `[${label}] ${f.severity}: ${f.title} — ${f.detail}`),
@@ -240,7 +276,16 @@ ${findings}
 
 GENERATED REPORTS:
 ${reportSummary}`;
-  }, [analysisResults, reports, customerName, environment]);
+  }, [
+    hasAssessmentData,
+    routeAssist.title,
+    routeAssist.blurb,
+    pathKey,
+    analysisResults,
+    reports,
+    customerName,
+    environment,
+  ]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -323,7 +368,7 @@ ${reportSummary}`;
         <button
           data-tour="ai-chat-trigger"
           onClick={() => setIsOpen(true)}
-          className="no-print fixed bottom-20 right-6 z-50 h-12 w-12 rounded-full bg-[#2006F7] text-white shadow-lg hover:bg-[#10037C] transition-colors flex items-center justify-center group"
+          className="no-print fixed bottom-40 right-6 z-50 h-12 w-12 rounded-full bg-[#2006F7] text-white shadow-lg hover:bg-[#10037C] transition-colors flex items-center justify-center group"
           aria-label="Open AI chat assistant"
         >
           <MessageCircle className="h-5 w-5" />
@@ -333,17 +378,19 @@ ${reportSummary}`;
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="no-print fixed bottom-20 right-6 z-50 w-[380px] max-h-[600px] rounded-2xl border border-border/50 bg-card shadow-2xl flex flex-col overflow-hidden">
+        <div className="no-print fixed bottom-40 right-6 z-50 w-[380px] max-h-[600px] rounded-2xl border border-border/50 bg-card shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#001A47] text-white">
             <div className="flex items-center gap-2">
               <MessageCircle className="h-4 w-4" />
-              <span className="text-sm font-semibold">AI Assessment Assistant</span>
+              <span className="text-sm font-semibold">
+                {hasAssessmentData ? "AI Assessment Assistant" : "AI Assistant"}
+              </span>
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => sendMessage(EXECUTIVE_SUMMARY_PROMPT)}
-                disabled={isStreaming}
+                disabled={isStreaming || !hasAssessmentData}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/10 transition-colors text-xs disabled:opacity-50"
                 aria-label="Generate executive summary"
               >
@@ -384,8 +431,9 @@ ${reportSummary}`;
             {messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground text-center">
-                  Ask questions about your firewall assessment. The AI has full context of your
-                  analysis results and reports.
+                  {hasAssessmentData
+                    ? "Ask questions about your firewall assessment. The AI has full context of your analysis results and reports."
+                    : `Ask about ${routeAssist.title}. Answers use product knowledge for this page — load an assessment for config-specific findings.`}
                 </p>
                 <div className="space-y-1.5">
                   {suggestedQuestions.map((q) => (
@@ -438,7 +486,9 @@ ${reportSummary}`;
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about your assessment…"
+                placeholder={
+                  hasAssessmentData ? "Ask about your assessment…" : "Ask about this page…"
+                }
                 rows={1}
                 className="flex-1 resize-none rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#2006F7]/30 min-h-[36px] max-h-[80px]"
                 disabled={isStreaming}

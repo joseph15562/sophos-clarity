@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFleetCommandQuery } from "@/hooks/queries/use-fleet-command-query";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Monitor,
   Shield,
@@ -19,8 +19,6 @@ import {
   List,
   ChevronRight,
   ChevronDown,
-  Sun,
-  Moon,
   ExternalLink,
   FileText,
   Loader2,
@@ -28,8 +26,17 @@ import {
   HelpCircle,
   X,
   AlertCircle,
+  Users,
+  BarChart3,
+  GitCompare,
+  Cloud,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Download,
+  Zap,
+  TrendingDown,
+  MapPin,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -44,6 +51,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FleetWorldMap } from "@/components/FleetWorldMap";
 import {
   COUNTRIES,
   countryFlagEmoji,
@@ -63,9 +72,9 @@ import { computeRiskScore } from "@/lib/risk-score";
 import { parseEntitiesXml } from "@/lib/parse-entities-xml";
 import { rawConfigToSections } from "@/lib/raw-config-to-sections";
 import { saveScoreSnapshot } from "@/lib/score-history";
-import { CentralHealthBanner } from "@/components/CentralHealthBanner";
 import { WorkspaceSettingsStrip } from "@/components/WorkspaceSettingsStrip";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
 import {
   fleetEffectiveComplianceCountry,
   type FleetFirewall,
@@ -1051,7 +1060,83 @@ function FleetCard({
   );
 }
 
+type FleetSort = "hostname" | "score_desc" | "score_asc" | "last_assessed" | "customer";
+
+function sortFleetFirewalls(list: FleetFirewall[], sort: FleetSort): FleetFirewall[] {
+  const out = [...list];
+  const lastTs = (f: FleetFirewall) => (f.lastAssessed ? new Date(f.lastAssessed).getTime() : 0);
+  switch (sort) {
+    case "score_desc":
+      out.sort((a, b) => b.score - a.score || a.hostname.localeCompare(b.hostname));
+      break;
+    case "score_asc":
+      out.sort((a, b) => a.score - b.score || a.hostname.localeCompare(b.hostname));
+      break;
+    case "last_assessed":
+      out.sort((a, b) => lastTs(b) - lastTs(a) || a.hostname.localeCompare(b.hostname));
+      break;
+    case "customer":
+      out.sort(
+        (a, b) => a.customer.localeCompare(b.customer) || a.hostname.localeCompare(b.hostname),
+      );
+      break;
+    default:
+      out.sort((a, b) => a.hostname.localeCompare(b.hostname));
+  }
+  return out;
+}
+
 /** Demo fleet is only for unauthenticated guest preview — never substitute for a failed org query. */
+function escapeCsvCell(v: unknown): string {
+  const s = v == null ? "" : String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadFleetCsv(rows: FleetFirewall[], filenameHint: string) {
+  const header = [
+    "hostname",
+    "customer",
+    "tenant",
+    "grade",
+    "score",
+    "status",
+    "critical_findings",
+    "findings",
+    "config_linked",
+    "model",
+    "serial",
+    "last_assessed",
+  ];
+  const lines = [
+    header.join(","),
+    ...rows.map((f) =>
+      [
+        escapeCsvCell(f.hostname),
+        escapeCsvCell(f.customer),
+        escapeCsvCell(f.tenantName ?? ""),
+        escapeCsvCell(f.grade),
+        escapeCsvCell(f.score),
+        escapeCsvCell(f.status),
+        escapeCsvCell(f.criticalFindings),
+        escapeCsvCell(f.findings),
+        escapeCsvCell(f.configLinked ? "yes" : "no"),
+        escapeCsvCell(f.model),
+        escapeCsvCell(f.serialNumber),
+        escapeCsvCell(f.lastAssessed ?? ""),
+      ].join(","),
+    ),
+  ];
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filenameHint;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success("Fleet CSV downloaded");
+}
+
 function fleetBundleErrorMessage(err: unknown): string {
   if (err && typeof err === "object" && "message" in err) {
     const m = (err as { message?: unknown }).message;
@@ -1066,8 +1151,8 @@ function fleetBundleErrorMessage(err: unknown): string {
 
 function FleetCommandInner() {
   const { org, isGuest, isViewerOnly } = useAuth();
-  const { setTheme } = useTheme();
   const isDark = useResolvedIsDark();
+  const [searchParams] = useSearchParams();
 
   const fleetQuery = useFleetCommandQuery(org?.id, org?.name);
   const baseFleet = useMemo(() => {
@@ -1088,7 +1173,13 @@ function FleetCommandInner() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [gradeFilter, setGradeFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [fleetSort, setFleetSort] = useState<FleetSort>("hostname");
+  const [linkingFilter, setLinkingFilter] = useState<"all" | "linked" | "unlinked">("all");
+  /** One-click slices on top of grade/status/link filters. */
+  const [fleetSpotlight, setFleetSpotlight] = useState<null | "attention" | "weak">(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /** List view: tenant groups start collapsed; names here are expanded after user toggles. */
@@ -1096,6 +1187,28 @@ function FleetCommandInner() {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+
+  const urlSearchHint = searchParams.get("customer")?.trim() || searchParams.get("q")?.trim() || "";
+  useEffect(() => {
+    if (urlSearchHint) setSearch(urlSearchHint);
+  }, [urlSearchHint]);
+
+  useEffect(() => {
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      const inField =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (e.target as HTMLElement | null)?.isContentEditable;
+      if (e.key === "/" && !inField && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   /* ---- Drag-and-drop config analysis ---- */
   const handleDragOver = useCallback((e: React.DragEvent, fwId: string) => {
@@ -1196,8 +1309,22 @@ function FleetCommandInner() {
     if (statusFilter !== "All") {
       list = list.filter((f) => f.status === statusFilter.toLowerCase());
     }
+    if (linkingFilter === "linked") list = list.filter((f) => f.configLinked);
+    if (linkingFilter === "unlinked") list = list.filter((f) => !f.configLinked);
+    if (fleetSpotlight === "attention") {
+      list = list.filter(
+        (f) =>
+          f.criticalFindings > 0 ||
+          f.status === "offline" ||
+          f.status === "stale" ||
+          f.status === "suspended",
+      );
+    }
+    if (fleetSpotlight === "weak") {
+      list = list.filter((f) => f.grade === "C" || f.grade === "D" || f.grade === "F");
+    }
     return list;
-  }, [fleet, debouncedSearch, gradeFilter, statusFilter]);
+  }, [fleet, debouncedSearch, gradeFilter, statusFilter, linkingFilter, fleetSpotlight]);
 
   const tenantGroups = useMemo(() => {
     const groups = new Map<string, FleetFirewall[]>();
@@ -1222,10 +1349,16 @@ function FleetCommandInner() {
       .map(([key, firewalls]) => ({
         key,
         name: titleFor(firewalls[0]),
-        firewalls,
+        firewalls: sortFleetFirewalls(firewalls, fleetSort),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [filtered, org?.name]);
+  }, [filtered, org?.name, fleetSort]);
+
+  const siteCount = useMemo(() => {
+    const s = new Set<string>();
+    for (const f of fleet) s.add(fleetCommandGroupKey(f));
+    return s.size;
+  }, [fleet]);
 
   const totalFirewalls = fleet.length;
   const avgScore = fleet.length
@@ -1254,59 +1387,27 @@ function FleetCommandInner() {
   /* ---- Render ---- */
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* ── Header bar ── */}
-      <header
-        className="sticky top-0 z-40 w-full border-b border-white/[0.06]"
-        style={{
-          background:
-            "radial-gradient(circle at top left, rgba(0,237,255,0.10), transparent 18%), radial-gradient(circle at top right, rgba(32,6,247,0.20), transparent 24%), linear-gradient(90deg, #00163d 0%, #001A47 42%, #10037C 100%)",
-        }}
-      >
-        <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-3 px-4 sm:px-6">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-xs hidden sm:inline">Home</span>
-          </Link>
-
-          <div className="mx-2 h-5 w-px bg-white/10" />
-
-          <Shield className="h-5 w-5 text-[#00EDFF]" />
-          <h1 className="text-base font-display font-black text-white tracking-tight">
-            Fleet Command
-          </h1>
-
-          <span className="rounded-full border border-[#00EDFF]/15 bg-[#00EDFF]/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#00EDFF] hidden sm:inline-block">
-            MSP
-          </span>
-
-          <div className="ml-auto flex items-center gap-2">
-            {org && <span className="text-xs text-white/50 hidden md:inline">{org.name}</span>}
-            {isGuest && (
-              <span className="rounded-full bg-[#F29400]/10 px-2 py-0.5 text-[10px] font-bold text-[#F29400]">
+      <FireComplyWorkspaceHeader
+        loginShell={isGuest}
+        headerActions={
+          <>
+            {isGuest ? (
+              <span className="rounded-full bg-[#F29400]/10 px-2 py-0.5 text-[10px] font-bold text-[#F29400] shrink-0">
                 Guest
               </span>
-            )}
+            ) : null}
             <button
+              type="button"
               onClick={() => setShowHelp(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/18 transition-colors shrink-0"
               aria-label="Help"
               title="Help — status indicators & features"
             >
               <HelpCircle className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <WorkspacePrimaryNav />
 
@@ -1446,21 +1547,112 @@ function FleetCommandInner() {
                   default country and sector; expand a firewall to override country per site.
                 </p>
               </div>
+
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display font-bold text-foreground mb-2">Keyboard shortcuts</h4>
+                <ul className="space-y-1.5 text-muted-foreground text-sm list-disc pl-4">
+                  <li>
+                    <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                      /
+                    </kbd>{" "}
+                    — Focus fleet search (when you are not typing in a field).
+                  </li>
+                  <li>
+                    <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                      Esc
+                    </kbd>{" "}
+                    — Clear the search box and blur it.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display font-bold text-foreground mb-2">Deep links</h4>
+                <p className="text-muted-foreground leading-relaxed">
+                  Pre-fill the fleet search from the URL:{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                    ?customer=
+                  </code>{" "}
+                  (customer or tenant label) or{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">?q=</code>{" "}
+                  (free text). Customer directory cards link here with{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                    /command?customer=…
+                  </code>
+                  .
+                </p>
+              </div>
             </div>
           </div>
         </>
       )}
 
       {/* ── Body ── */}
-      <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6 space-y-6">
+      <main
+        className="mx-auto max-w-[1440px] px-4 sm:px-6 pt-6 space-y-6 assist-chrome-pad-bottom"
+        data-tour="tour-page-fleet"
+      >
         {org?.id && !isGuest && (
-          <div className="space-y-3">
-            <CentralHealthBanner orgId={org.id} />
+          <div className="space-y-3" data-tour="tour-fleet-settings">
             <WorkspaceSettingsStrip variant="fleet" />
           </div>
         )}
+
+        <div
+          className="flex flex-wrap gap-2 rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] px-3 py-2.5 text-[11px]"
+          style={glassCard(isDark)}
+          data-tour="tour-fleet-jump"
+        >
+          <span className="text-muted-foreground font-medium self-center mr-1">Jump:</span>
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[10px]" asChild>
+            <Link to="/">
+              <Shield className="h-3 w-3" />
+              Assess
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[10px]" asChild>
+            <Link to="/customers">
+              <Users className="h-3 w-3" />
+              Customers
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[10px]" asChild>
+            <Link to="/central/overview">
+              <Cloud className="h-3 w-3" />
+              Central
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[10px]" asChild>
+            <Link to="/reports">
+              <FileText className="h-3 w-3" />
+              Reports
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[10px]" asChild>
+            <Link to="/insights">
+              <BarChart3 className="h-3 w-3" />
+              Insights
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[10px]" asChild>
+            <Link to="/drift">
+              <GitCompare className="h-3 w-3" />
+              Drift
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-[10px]" asChild>
+            <Link to="/api">
+              <Activity className="h-3 w-3" />
+              API
+            </Link>
+          </Button>
+        </div>
+
         {/* ── Stat cards ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
+          data-tour="tour-fleet-stats"
+        >
           <StatCard
             icon={Monitor}
             label="Total Firewalls"
@@ -1493,375 +1685,543 @@ function FleetCommandInner() {
             accent={licenceAlerts > 0 ? "#F29400" : "#00F2B3"}
             isDark={isDark}
           />
+          <StatCard
+            icon={Users}
+            label="Customer sites"
+            value={siteCount}
+            sub="Tenant / agent groups"
+            accent="#009CFB"
+            isDark={isDark}
+          />
         </div>
 
         {/* ── Drag hint ── */}
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground px-1">
+        <div
+          className="flex items-center gap-2 text-[11px] text-muted-foreground px-1"
+          data-tour="tour-fleet-drop-hint"
+        >
           <Upload className="h-3.5 w-3.5" />
           <span>
             Drop a Sophos config export (.html) onto any firewall card to analyse it instantly
           </span>
         </div>
 
-        {/* ── Filter bar ── */}
-        <div
-          className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-3 sm:p-4"
-          style={glassCard(isDark)}
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search hostname, customer, model, tenant…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 w-full rounded-lg border border-slate-900/[0.08] dark:border-white/[0.08] bg-background/60 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
-              />
-            </div>
+        <Tabs defaultValue="list" className="w-full space-y-4" data-tour="tour-fleet-tabs">
+          <TabsList className="grid h-auto w-full max-w-md grid-cols-2 gap-1 bg-muted/30 p-1">
+            <TabsTrigger value="list" className="gap-1.5 text-xs sm:text-sm">
+              <List className="h-3.5 w-3.5 shrink-0" />
+              Fleet list
+            </TabsTrigger>
+            <TabsTrigger value="map" className="gap-1.5 text-xs sm:text-sm">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              Map
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Grade filter */}
-            <div className="flex items-center gap-1">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-              {GRADES.map((g) => (
-                <button
-                  key={g}
-                  onClick={() => setGradeFilter(g)}
-                  className={`h-7 rounded-md px-2.5 text-xs font-semibold transition-colors ${
-                    gradeFilter === g
-                      ? "bg-[#2006F7] text-white"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
-
-            {/* Status filter */}
-            <div className="flex items-center gap-1">
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(s)}
-                  className={`h-7 rounded-md px-2.5 text-xs font-semibold transition-colors ${
-                    statusFilter === s
-                      ? "bg-[#2006F7] text-white"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            {/* View toggle */}
-            <div className="flex items-center gap-0.5 ml-auto">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 ${viewMode === "list" ? "text-[#2006F7]" : "text-muted-foreground"}`}
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 ${viewMode === "grid" ? "text-[#2006F7]" : "text-muted-foreground"}`}
-                onClick={() => setViewMode("grid")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Fleet list ── */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
-          </div>
-        ) : fleetLoadFailed ? (
-          <Alert variant="destructive" className="border-destructive/40">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Could not load your fleet</AlertTitle>
-            <AlertDescription className="space-y-3">
-              <p className="text-sm opacity-90">
-                {fleetQuery.error ? fleetBundleErrorMessage(fleetQuery.error) : null} This is not
-                sample data — the request failed. Common causes: network issues, or the database is
-                missing a recent migration (run{" "}
-                <code className="rounded bg-background/80 px-1 py-0.5 text-xs">
-                  supabase db push
-                </code>{" "}
-                for self-hosted schema).
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="border-destructive/40"
-                onClick={() => void fleetQuery.refetch()}
-              >
-                Try again
-              </Button>
-            </AlertDescription>
-          </Alert>
-        ) : filtered.length === 0 && fleet.length === 0 ? (
-          <div
-            className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm"
-            style={glassCard(isDark)}
-          >
-            <EmptyState
-              className="py-14 px-6"
-              icon={<WifiOff className="h-6 w-6 text-[#2006F7]" />}
-              title="No firewalls discovered yet"
-              description="Connect Sophos Central or deploy the connector agent to start monitoring your fleet."
-              action={
-                <Button className="bg-[#2006F7] hover:bg-[#2006F7]/90 text-white" asChild>
-                  <Link to="/">Get started</Link>
-                </Button>
-              }
-            />
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            className="py-14"
-            icon={<Search className="h-6 w-6 text-muted-foreground" />}
-            title="No matches"
-            description="No firewalls match your current filters."
-            action={
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-[#2006F7]"
-                onClick={() => {
-                  setSearch("");
-                  setGradeFilter("All");
-                  setStatusFilter("All");
-                }}
-              >
-                Clear filters
-              </Button>
-            }
-          />
-        ) : viewMode === "list" ? (
-          <div className="space-y-2">
-            {/* Column headers (lg+ only) */}
-            <div className="hidden lg:grid lg:grid-cols-[2fr_1.2fr_auto_auto_auto_auto_auto] items-center gap-4 px-4 pb-1">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Firewall
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Model / Firmware
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Score
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Findings
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Last Assessed
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Status
-              </span>
-              <span />
-            </div>
-
-            {/* Tenant groups */}
-            {tenantGroups.map((group) => {
-              const avg = group.firewalls.length
-                ? Math.round(
-                    group.firewalls.reduce((s, f) => s + f.score, 0) / group.firewalls.length,
-                  )
-                : 0;
-              const isCollapsed = !expandedTenants.has(group.key);
-              const readOnlyFleet = isGuest || isViewerOnly || !org?.id;
-
-              return (
-                <div key={group.key} className="space-y-2">
-                  <FleetCustomerGroupHeader
-                    name={group.name}
-                    count={group.firewalls.length}
-                    avgScore={avg}
-                    collapsed={isCollapsed}
-                    onToggle={() => toggleTenant(group.key)}
-                    isDark={isDark}
-                    orgId={org?.id}
-                    readOnly={readOnlyFleet}
-                    sampleFw={group.firewalls[0]}
+          <TabsContent value="list" className="mt-0 space-y-4 focus-visible:outline-none">
+            {/* ── Filter bar ── */}
+            <div
+              className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm p-3 sm:p-4"
+              style={glassCard(isDark)}
+              data-tour="tour-fleet-filters"
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search hostname, customer, model, tenant… (press / to focus)"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setSearch("");
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    className="h-9 w-full rounded-lg border border-slate-900/[0.08] dark:border-white/[0.08] bg-background/60 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
                   />
-                  {!isCollapsed &&
-                    group.firewalls.map((fw) => (
-                      <div key={fw.id} className="space-y-2">
-                        <FleetCard
-                          fw={fw}
-                          isDark={isDark}
-                          isSelected={selectedId === fw.id}
-                          onSelect={toggleSelected}
-                          dragOverId={dragOverId}
-                          analyzingId={analyzingId}
-                          onDragOver={handleDragOver}
-                          onDragLeave={handleDragLeave}
-                          onDrop={handleDrop}
-                          onFileUpload={handleFileUpload}
-                        />
-                        {selectedId === fw.id && (
-                          <DetailPanel
-                            fw={fw}
-                            isDark={isDark}
-                            orgId={org?.id}
-                            isGuest={isGuest}
-                            isViewerOnly={isViewerOnly}
-                          />
-                        )}
-                      </div>
-                    ))}
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {tenantGroups.map((group) => {
-              const avg = group.firewalls.length
-                ? Math.round(
-                    group.firewalls.reduce((s, f) => s + f.score, 0) / group.firewalls.length,
-                  )
-                : 0;
-              const isCollapsed = !expandedTenants.has(group.key);
-              const readOnlyFleet = isGuest || isViewerOnly || !org?.id;
-              return (
-                <div key={group.key} className="space-y-4">
-                  <FleetCustomerGroupHeader
-                    name={group.name}
-                    count={group.firewalls.length}
-                    avgScore={avg}
-                    collapsed={isCollapsed}
-                    onToggle={() => toggleTenant(group.key)}
-                    isDark={isDark}
-                    orgId={org?.id}
-                    readOnly={readOnlyFleet}
-                    sampleFw={group.firewalls[0]}
+
+                {/* Grade filter */}
+                <div className="flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+                  {GRADES.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGradeFilter(g)}
+                      className={`h-7 rounded-md px-2.5 text-xs font-semibold transition-colors ${
+                        gradeFilter === g
+                          ? "bg-[#2006F7] text-white"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Status filter */}
+                <div className="flex items-center gap-1">
+                  {STATUSES.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setStatusFilter(s)}
+                      className={`h-7 rounded-md px-2.5 text-xs font-semibold transition-colors ${
+                        statusFilter === s
+                          ? "bg-[#2006F7] text-white"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+
+                {/* View toggle */}
+                <div className="flex items-center gap-0.5 ml-auto">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-8 w-8 ${viewMode === "list" ? "text-[#2006F7]" : "text-muted-foreground"}`}
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-8 w-8 ${viewMode === "grid" ? "text-[#2006F7]" : "text-muted-foreground"}`}
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-900/[0.06] dark:border-white/[0.06] pt-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    Sort
+                  </Label>
+                  <Select value={fleetSort} onValueChange={(v) => setFleetSort(v as FleetSort)}>
+                    <SelectTrigger className="h-8 w-[200px] text-xs bg-background/60">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hostname">Hostname (A–Z)</SelectItem>
+                      <SelectItem value="customer">Customer, then hostname</SelectItem>
+                      <SelectItem value="score_desc">Score (high → low)</SelectItem>
+                      <SelectItem value="score_asc">Score (low → high)</SelectItem>
+                      <SelectItem value="last_assessed">Last assessed (recent first)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    Config link
+                  </Label>
+                  <Select
+                    value={linkingFilter}
+                    onValueChange={(v) => setLinkingFilter(v as "all" | "linked" | "unlinked")}
+                  >
+                    <SelectTrigger className="h-8 w-[160px] text-xs bg-background/60">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All firewalls</SelectItem>
+                      <SelectItem value="linked">Linked to upload</SelectItem>
+                      <SelectItem value="unlinked">Not linked</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 text-[10px]"
+                    onClick={() => setExpandedTenants(new Set(tenantGroups.map((g) => g.key)))}
+                    disabled={tenantGroups.length === 0}
+                  >
+                    <ChevronsDownUp className="h-3.5 w-3.5" />
+                    Expand all
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 text-[10px]"
+                    onClick={() => setExpandedTenants(new Set())}
+                    disabled={tenantGroups.length === 0}
+                  >
+                    <ChevronsUpDown className="h-3.5 w-3.5" />
+                    Collapse all
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1 text-[10px]"
+                    disabled={filtered.length === 0}
+                    onClick={() =>
+                      downloadFleetCsv(
+                        filtered,
+                        `fleet-command-${new Date().toISOString().slice(0, 10)}.csv`,
+                      )
+                    }
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-900/[0.06] dark:border-white/[0.06] pt-3">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">
+                  Spotlight
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFleetSpotlight((s) => (s === "attention" ? null : "attention"))}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition-all ${
+                    fleetSpotlight === "attention"
+                      ? "border-[#EA0022]/40 bg-[#EA0022]/12 text-[#EA0022] shadow-[0_0_0_1px_rgba(234,0,34,0.15)]"
+                      : "border-slate-900/[0.08] bg-background/50 text-muted-foreground hover:text-foreground dark:border-white/[0.08]"
+                  }`}
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  Needs attention
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFleetSpotlight((s) => (s === "weak" ? null : "weak"))}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition-all ${
+                    fleetSpotlight === "weak"
+                      ? "border-[#F29400]/45 bg-[#F29400]/12 text-[#F29400]"
+                      : "border-slate-900/[0.08] bg-background/50 text-muted-foreground hover:text-foreground dark:border-white/[0.08]"
+                  }`}
+                >
+                  <TrendingDown className="h-3.5 w-3.5" />
+                  Weak scores (C–F)
+                </button>
+                {fleetSpotlight ? (
+                  <button
+                    type="button"
+                    className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                    onClick={() => setFleetSpotlight(null)}
+                  >
+                    Clear spotlight
+                  </button>
+                ) : null}
+                <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+                  Showing <strong className="text-foreground">{filtered.length}</strong> of{" "}
+                  {fleet.length} firewall{fleet.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            </div>
+
+            {/* ── Fleet list ── */}
+            <div className="space-y-4" data-tour="tour-fleet-list">
+              {loading ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#2006F7] border-t-transparent" />
+                </div>
+              ) : fleetLoadFailed ? (
+                <Alert variant="destructive" className="border-destructive/40">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Could not load your fleet</AlertTitle>
+                  <AlertDescription className="space-y-3">
+                    <p className="text-sm opacity-90">
+                      {fleetQuery.error ? fleetBundleErrorMessage(fleetQuery.error) : null} This is
+                      not sample data — the request failed. Common causes: network issues, or the
+                      database is missing a recent migration (run{" "}
+                      <code className="rounded bg-background/80 px-1 py-0.5 text-xs">
+                        supabase db push
+                      </code>{" "}
+                      for self-hosted schema).
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-destructive/40"
+                      onClick={() => void fleetQuery.refetch()}
+                    >
+                      Try again
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : filtered.length === 0 && fleet.length === 0 ? (
+                <div
+                  className="rounded-2xl border border-slate-900/[0.10] dark:border-white/[0.06] backdrop-blur-sm"
+                  style={glassCard(isDark)}
+                >
+                  <EmptyState
+                    className="py-14 px-6"
+                    icon={<WifiOff className="h-6 w-6 text-[#2006F7]" />}
+                    title="No firewalls discovered yet"
+                    description="Connect Sophos Central or deploy the connector agent to start monitoring your fleet."
+                    action={
+                      <Button className="bg-[#2006F7] hover:bg-[#2006F7]/90 text-white" asChild>
+                        <Link to="/">Get started</Link>
+                      </Button>
+                    }
                   />
-                  {!isCollapsed && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {group.firewalls.map((fw) => (
-                        <div
-                          key={fw.id}
-                          className={`group rounded-2xl backdrop-blur-sm p-5 transition-all hover:scale-[1.01] hover:shadow-lg hover:shadow-brand-accent/5 cursor-pointer relative ${
-                            dragOverId === fw.id
-                              ? "border-[#2006F7] border-dashed border-2"
-                              : "border border-slate-900/[0.10] dark:border-white/[0.06]"
-                          }`}
-                          style={glassCard(isDark)}
-                          onClick={() => toggleSelected(fw.id)}
-                          onDragOver={(e) => handleDragOver(e, fw.id)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => handleDrop(e, fw.id)}
-                        >
-                          {analyzingId === fw.id && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-sm">
-                              <Loader2 className="h-5 w-5 animate-spin text-[#2006F7]" />
-                            </div>
-                          )}
+                </div>
+              ) : filtered.length === 0 ? (
+                <EmptyState
+                  className="py-14"
+                  icon={<Search className="h-6 w-6 text-muted-foreground" />}
+                  title="No matches"
+                  description="No firewalls match your current filters."
+                  action={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-[#2006F7]"
+                      onClick={() => {
+                        setSearch("");
+                        setGradeFilter("All");
+                        setStatusFilter("All");
+                        setFleetSort("hostname");
+                        setLinkingFilter("all");
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  }
+                />
+              ) : viewMode === "list" ? (
+                <div className="space-y-2">
+                  {/* Column headers (lg+ only) */}
+                  <div className="hidden lg:grid lg:grid-cols-[2fr_1.2fr_auto_auto_auto_auto_auto] items-center gap-4 px-4 pb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Firewall
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Model / Firmware
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Score
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Findings
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Last Assessed
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Status
+                    </span>
+                    <span />
+                  </div>
 
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-accent/[0.08]">
-                                <Server className="h-4 w-4 text-brand-accent" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-foreground truncate">
-                                  {fw.hostname}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground truncate">
-                                  {fw.customer}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                              <span
-                                className={`inline-block h-2 w-2 rounded-full ${statusDotColor(fw.status)}`}
-                              />
-                              <span className="text-[10px] text-muted-foreground">
-                                {statusLabel(fw.status)}
-                              </span>
-                              <SourceBadges fw={fw} />
-                            </div>
-                          </div>
+                  {/* Tenant groups */}
+                  {tenantGroups.map((group) => {
+                    const avg = group.firewalls.length
+                      ? Math.round(
+                          group.firewalls.reduce((s, f) => s + f.score, 0) / group.firewalls.length,
+                        )
+                      : 0;
+                    const isCollapsed = !expandedTenants.has(group.key);
+                    const readOnlyFleet = isGuest || isViewerOnly || !org?.id;
 
-                          <div className="flex items-center gap-4 mb-4">
-                            {fw.grade === "—" ? (
-                              <div className="text-sm text-muted-foreground py-3">
-                                Not assessed — drop a config to score
-                              </div>
-                            ) : (
-                              <>
-                                <ScoreRing score={fw.score} grade={fw.grade} />
-                                <div>
-                                  <p className="text-2xl font-display font-black text-foreground leading-none">
-                                    {fw.score}
-                                  </p>
-                                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    {fw.findings} findings
-                                    {fw.criticalFindings > 0 && (
-                                      <span className="text-[#EA0022] font-semibold">
-                                        {" "}
-                                        · {fw.criticalFindings} critical
-                                      </span>
-                                    )}
-                                  </p>
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-slate-900/[0.06] dark:border-white/[0.04] pt-3">
-                            <span className="truncate">{fw.model}</span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <GridUploadButton fwId={fw.id} onFileUpload={handleFileUpload} />
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {timeAgo(fw.lastAssessed)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {selectedId === fw.id && (
-                            <div
-                              className="mt-4 pt-2 border-t border-slate-900/[0.06] dark:border-white/[0.04]"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <DetailPanel
+                    return (
+                      <div key={group.key} className="space-y-2">
+                        <FleetCustomerGroupHeader
+                          name={group.name}
+                          count={group.firewalls.length}
+                          avgScore={avg}
+                          collapsed={isCollapsed}
+                          onToggle={() => toggleTenant(group.key)}
+                          isDark={isDark}
+                          orgId={org?.id}
+                          readOnly={readOnlyFleet}
+                          sampleFw={group.firewalls[0]}
+                        />
+                        {!isCollapsed &&
+                          group.firewalls.map((fw) => (
+                            <div key={fw.id} className="space-y-2">
+                              <FleetCard
                                 fw={fw}
                                 isDark={isDark}
-                                orgId={org?.id}
-                                isGuest={isGuest}
-                                isViewerOnly={isViewerOnly}
-                                variant="embedded"
+                                isSelected={selectedId === fw.id}
+                                onSelect={toggleSelected}
+                                dragOverId={dragOverId}
+                                analyzingId={analyzingId}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                onFileUpload={handleFileUpload}
                               />
+                              {selectedId === fw.id && (
+                                <DetailPanel
+                                  fw={fw}
+                                  isDark={isDark}
+                                  orgId={org?.id}
+                                  isGuest={isGuest}
+                                  isViewerOnly={isViewerOnly}
+                                />
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          ))}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ) : (
+                <div className="space-y-8">
+                  {tenantGroups.map((group) => {
+                    const avg = group.firewalls.length
+                      ? Math.round(
+                          group.firewalls.reduce((s, f) => s + f.score, 0) / group.firewalls.length,
+                        )
+                      : 0;
+                    const isCollapsed = !expandedTenants.has(group.key);
+                    const readOnlyFleet = isGuest || isViewerOnly || !org?.id;
+                    return (
+                      <div key={group.key} className="space-y-4">
+                        <FleetCustomerGroupHeader
+                          name={group.name}
+                          count={group.firewalls.length}
+                          avgScore={avg}
+                          collapsed={isCollapsed}
+                          onToggle={() => toggleTenant(group.key)}
+                          isDark={isDark}
+                          orgId={org?.id}
+                          readOnly={readOnlyFleet}
+                          sampleFw={group.firewalls[0]}
+                        />
+                        {!isCollapsed && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {group.firewalls.map((fw) => (
+                              <div
+                                key={fw.id}
+                                className={`group rounded-2xl backdrop-blur-sm p-5 transition-all hover:scale-[1.01] hover:shadow-lg hover:shadow-brand-accent/5 cursor-pointer relative ${
+                                  dragOverId === fw.id
+                                    ? "border-[#2006F7] border-dashed border-2"
+                                    : "border border-slate-900/[0.10] dark:border-white/[0.06]"
+                                }`}
+                                style={glassCard(isDark)}
+                                onClick={() => toggleSelected(fw.id)}
+                                onDragOver={(e) => handleDragOver(e, fw.id)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, fw.id)}
+                              >
+                                {analyzingId === fw.id && (
+                                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-background/60 backdrop-blur-sm">
+                                    <Loader2 className="h-5 w-5 animate-spin text-[#2006F7]" />
+                                  </div>
+                                )}
 
-        {/* ── Footer count ── */}
-        {!loading && filtered.length > 0 && (
-          <p className="text-center text-xs text-muted-foreground pt-2 pb-6">
-            Showing {filtered.length} of {fleet.length} firewalls
-          </p>
-        )}
+                                <div className="flex items-start justify-between mb-4">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-accent/[0.08]">
+                                      <Server className="h-4 w-4 text-brand-accent" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold text-foreground truncate">
+                                        {fw.hostname}
+                                      </p>
+                                      <p className="text-[11px] text-muted-foreground truncate">
+                                        {fw.customer}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                    <span
+                                      className={`inline-block h-2 w-2 rounded-full ${statusDotColor(fw.status)}`}
+                                    />
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {statusLabel(fw.status)}
+                                    </span>
+                                    <SourceBadges fw={fw} />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-4 mb-4">
+                                  {fw.grade === "—" ? (
+                                    <div className="text-sm text-muted-foreground py-3">
+                                      Not assessed — drop a config to score
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <ScoreRing score={fw.score} grade={fw.grade} />
+                                      <div>
+                                        <p className="text-2xl font-display font-black text-foreground leading-none">
+                                          {fw.score}
+                                        </p>
+                                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                                          {fw.findings} findings
+                                          {fw.criticalFindings > 0 && (
+                                            <span className="text-[#EA0022] font-semibold">
+                                              {" "}
+                                              · {fw.criticalFindings} critical
+                                            </span>
+                                          )}
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-slate-900/[0.06] dark:border-white/[0.04] pt-3">
+                                  <span className="truncate">{fw.model}</span>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <GridUploadButton
+                                      fwId={fw.id}
+                                      onFileUpload={handleFileUpload}
+                                    />
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {timeAgo(fw.lastAssessed)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {selectedId === fw.id && (
+                                  <div
+                                    className="mt-4 pt-2 border-t border-slate-900/[0.06] dark:border-white/[0.04]"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <DetailPanel
+                                      fw={fw}
+                                      isDark={isDark}
+                                      orgId={org?.id}
+                                      isGuest={isGuest}
+                                      isViewerOnly={isViewerOnly}
+                                      variant="embedded"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── Footer count ── */}
+              {!loading && filtered.length > 0 && (
+                <p className="text-center text-xs text-muted-foreground pt-2 pb-6">
+                  Showing {filtered.length} of {fleet.length} firewalls
+                </p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="map" className="mt-0 focus-visible:outline-none">
+            <div data-tour="tour-fleet-map">
+              <FleetWorldMap />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

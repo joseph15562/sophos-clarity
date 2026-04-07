@@ -5,6 +5,7 @@ import { ReactElement } from "react";
 import { expect } from "vitest";
 import { axe } from "jest-axe";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { NotificationsProvider } from "@/hooks/use-notifications";
 
 /** Aligns with Playwright axe checks (critical + serious only). */
 export async function expectNoSeriousAxeViolations(container: HTMLElement) {
@@ -36,7 +37,9 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <TooltipProvider>{children}</TooltipProvider>
+          <NotificationsProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </NotificationsProvider>
         </BrowserRouter>
       </QueryClientProvider>
     );

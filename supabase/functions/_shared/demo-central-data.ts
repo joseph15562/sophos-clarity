@@ -716,6 +716,46 @@ export function demoCentralFirewalls(tenantId: string) {
 
 // ── Alerts ──
 
+/** Mission Control: merged alerts + tenant list in one payload (demo org). */
+export function demoMissionAlerts() {
+  const { items: tenants } = demoCentralTenants();
+  const firstId = tenants[0]?.id ?? "d0000001-0000-0000-0000-000000000001";
+  const { items: alerts } = demoCentralAlerts(firstId);
+  return {
+    tenants,
+    items: alerts.map((a) => ({ ...a, tenantId: firstId })),
+  };
+}
+
+/** Central Groups: merged firewall groups (demo org). */
+export function demoFirewallGroupsMerged() {
+  const { items: tenants } = demoCentralTenants();
+  const firstId = tenants[0]?.id ?? "d0000001-0000-0000-0000-000000000001";
+  return {
+    tenants,
+    items: [
+      {
+        tenantId: firstId,
+        group: {
+          id: "grp-demo-001",
+          name: "Production DC",
+          firewalls: { items: [{ id: "fw-001" }, { id: "fw-002" }] },
+        },
+        members: 2,
+      },
+      {
+        tenantId: firstId,
+        group: {
+          id: "grp-demo-002",
+          name: "Branch offices",
+          firewalls: { items: [{ id: "fw-003" }] },
+        },
+        members: 1,
+      },
+    ],
+  };
+}
+
 export function demoCentralAlerts(_tenantId: string) {
   const now = new Date();
   return {
@@ -726,7 +766,11 @@ export function demoCentralAlerts(_tenantId: string) {
         severity: "high",
         category: "malware",
         raisedAt: new Date(now.getTime() - 2 * 3_600_000).toISOString(),
-        managedAgent: { type: "computer", id: "endpoint-001" },
+        managedAgent: {
+          type: "computer",
+          id: "endpoint-001",
+          name: "WIN-DC01",
+        },
       },
       {
         id: "alert-demo-002",
@@ -742,7 +786,11 @@ export function demoCentralAlerts(_tenantId: string) {
         severity: "low",
         category: "policy",
         raisedAt: new Date(now.getTime() - 24 * 3_600_000).toISOString(),
-        managedAgent: { type: "computer", id: "endpoint-005" },
+        managedAgent: {
+          type: "computer",
+          id: "endpoint-005",
+          name: "FINANCE-LT-12",
+        },
       },
       {
         id: "alert-demo-004",
@@ -750,7 +798,11 @@ export function demoCentralAlerts(_tenantId: string) {
         severity: "info",
         category: "general",
         raisedAt: new Date(now.getTime() - 36 * 3_600_000).toISOString(),
-        managedAgent: { type: "computer", id: "endpoint-042" },
+        managedAgent: {
+          type: "computer",
+          id: "endpoint-042",
+          name: "LAPTOP-042",
+        },
       },
       {
         id: "alert-demo-005",
@@ -934,5 +986,16 @@ export function demoCentralMdrThreatFeed() {
         createdAt: new Date(Date.now() - 7 * 86_400_000).toISOString(),
       },
     ],
+  };
+}
+
+/** Merged MDR feed for Central hub — same tenant list as mission-alerts demo. */
+export function demoMdrThreatFeedMerged() {
+  const { items: tenants } = demoCentralTenants();
+  const firstId = tenants[0]?.id ?? "d0000001-0000-0000-0000-000000000001";
+  const { items: mdrItems } = demoCentralMdrThreatFeed();
+  return {
+    tenants,
+    items: mdrItems.map((row) => ({ ...row, tenantId: firstId })),
   };
 }

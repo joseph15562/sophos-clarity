@@ -1,11 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { useTheme } from "next-themes";
+import { useSearchParams } from "react-router-dom";
 import { useResolvedIsDark } from "@/hooks/use-resolved-appearance";
 import {
   BookOpen,
   Search,
-  ArrowLeft,
   Clock,
   Star,
   ChevronRight,
@@ -18,8 +16,6 @@ import {
   Eye,
   AlertTriangle,
   Zap,
-  Sun,
-  Moon,
   Globe,
   Radio,
   Layers,
@@ -33,6 +29,7 @@ import { useRemediationPlaybookIdsQuery } from "@/hooks/queries/use-remediation-
 import { warnOptionalError } from "@/lib/client-error-feedback";
 import { useAuthProvider, AuthProvider, useAuth } from "@/hooks/use-auth";
 import { WorkspacePrimaryNav } from "@/components/WorkspacePrimaryNav";
+import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeader";
 import { BEST_PRACTICE_CHECKS, MODULES, type BestPracticeCheck } from "@/lib/sophos-licence";
 import { ALL_FRAMEWORK_NAMES } from "@/lib/compliance-map";
 
@@ -174,8 +171,7 @@ function deriveSteps(recommendation: string): string[] {
 /* ------------------------------------------------------------------ */
 
 function PlaybookLibraryInner() {
-  const { setTheme } = useTheme();
-  const { org } = useAuth();
+  const { org, isGuest } = useAuth();
   const { mutate: syncPlaybookRemediation } = useRemediationPlaybookToggleMutation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
@@ -311,80 +307,47 @@ function PlaybookLibraryInner() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* ── Header ── */}
-      <header
-        className="relative overflow-hidden border-b border-white/[0.06]"
-        style={{
-          background: isDark
-            ? "linear-gradient(135deg, #001030 0%, #001A47 40%, #0D1B4A 100%)"
-            : "linear-gradient(135deg, #001A47 0%, #002366 40%, #0D2B6B 100%)",
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-30 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle at 20% 50%, rgba(32,6,247,0.25), transparent 50%), radial-gradient(circle at 80% 30%, rgba(0,237,255,0.15), transparent 50%)",
-          }}
-        />
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#2006F7]/40 to-transparent" />
-
-        <div className="relative max-w-7xl mx-auto px-6 pt-6 pb-8">
-          <nav className="flex items-center gap-2 text-xs text-white/50 mb-6">
-            <Link to="/" className="hover:text-white/80 transition-colors flex items-center gap-1">
-              <ArrowLeft className="h-3 w-3" />
-              Dashboard
-            </Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-white/80">Remediation Playbooks</span>
-          </nav>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-[#2006F7]/20 border border-[#2006F7]/30 flex items-center justify-center">
-                  <BookOpen className="h-5 w-5 text-[#00EDFF]" />
-                </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  Remediation Playbooks
-                </h1>
-              </div>
-              <p className="text-sm text-white/60 max-w-lg">
-                Step-by-step Sophos firewall security guides sourced from{" "}
-                {BEST_PRACTICE_CHECKS.length} best-practice checks. Follow these playbooks to harden
-                your firewall, close compliance gaps, and improve your security posture.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                className="h-10 w-10 rounded-xl bg-white/[0.08] border border-white/[0.12] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/[0.15] transition-all"
-                aria-label="Toggle theme"
-              >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
-
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                <input
-                  type="text"
-                  placeholder="Search playbooks…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full h-10 pl-10 pr-4 rounded-xl bg-white/[0.08] border border-white/[0.12] text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#2006F7]/50 focus:border-[#2006F7]/50 transition-all backdrop-blur-sm"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <FireComplyWorkspaceHeader loginShell={isGuest} />
 
       <WorkspacePrimaryNav />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main
+        className="max-w-7xl mx-auto px-6 pt-8 assist-chrome-pad-bottom"
+        data-tour="tour-page-playbooks"
+      >
+        <div
+          className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+          data-tour="tour-pb-header"
+        >
+          <div>
+            <div className="mb-2 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+                <BookOpen className="h-5 w-5 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                Remediation Playbooks
+              </h1>
+            </div>
+            <p className="max-w-lg text-sm text-muted-foreground">
+              Step-by-step Sophos firewall security guides sourced from{" "}
+              {BEST_PRACTICE_CHECKS.length} best-practice checks. Follow these playbooks to harden
+              your firewall, close compliance gaps, and improve your security posture.
+            </p>
+          </div>
+          <div className="relative w-full md:max-w-sm" data-tour="tour-pb-search">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search playbooks…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-10 w-full rounded-xl border border-border bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        </div>
+
         {/* ── Category chips ── */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-6" data-tour="tour-pb-categories">
           {allCategories.map((cat) => {
             const active = selectedCategory === cat;
             const colour = cat === "All" ? "#2006F7" : CATEGORY_COLOURS[cat] || "#666";
@@ -406,7 +369,7 @@ function PlaybookLibraryInner() {
         </div>
 
         {/* ── Stats ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8" data-tour="tour-pb-stats">
           {[
             {
               label: "Total Playbooks",
@@ -441,7 +404,10 @@ function PlaybookLibraryInner() {
         </div>
 
         {/* ── Grid + Detail panel ── */}
-        <div className={`flex flex-col ${expandedCheck ? "lg:flex-row" : ""} gap-6`}>
+        <div
+          className={`flex flex-col ${expandedCheck ? "lg:flex-row" : ""} gap-6`}
+          data-tour="tour-pb-grid"
+        >
           <div
             className={`grid gap-4 ${expandedCheck ? "lg:w-1/2 grid-cols-1" : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"}`}
           >

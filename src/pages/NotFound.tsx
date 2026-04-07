@@ -11,29 +11,37 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <main id="main-content" className="flex min-h-screen items-center justify-center bg-background">
+    <main
+      id="main-content"
+      className="flex min-h-screen items-center justify-center bg-background"
+      data-tour="tour-page-not-found"
+    >
       <div className="text-center max-w-md mx-auto px-6 space-y-6">
-        <div className="mx-auto h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-          <span className="text-3xl font-display font-black text-primary">404</span>
+        <div className="space-y-6" data-tour="tour-nf-message">
+          <div className="mx-auto h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <span className="text-3xl font-display font-black text-primary">404</span>
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-display font-bold text-foreground tracking-tight">
+              Page not found
+            </h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              The page{" "}
+              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                {location.pathname}
+              </code>{" "}
+              doesn't exist or has been moved.
+            </p>
+          </div>
         </div>
-        <div className="space-y-2">
-          <h1 className="text-xl font-display font-bold text-foreground tracking-tight">
-            Page not found
-          </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            The page{" "}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-              {location.pathname}
-            </code>{" "}
-            doesn't exist or has been moved.
-          </p>
+        <div data-tour="tour-nf-cta">
+          <Button asChild>
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4" />
+              Back to FireComply
+            </Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link to="/">
-            <ArrowLeft className="h-4 w-4" />
-            Back to FireComply
-          </Link>
-        </Button>
       </div>
     </main>
   );
