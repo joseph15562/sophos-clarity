@@ -650,7 +650,7 @@ export function buildPdfHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${titleSafe} — ${companyNameSafe || "Sophos FireComply"}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Zalando+Sans:wght@400;500;600;700;800;900&family=Zalando+Sans+Expanded:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Zalando+Sans:wght@400;500;600;700;800;900&family=Zalando+Sans+Expanded:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
     ${pagedMediaPageRule}
 
@@ -692,7 +692,7 @@ export function buildPdfHtml(
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif, 'Noto Color Emoji';
       font-size: 10.5pt;
       line-height: 1.6;
       color: var(--text);
@@ -770,9 +770,10 @@ export function buildPdfHtml(
       padding: 28px clamp(16px, 4vw, 48px) 48px;
     }
 
-    /* Print/PDF: innerHTML has no Tailwind — constrain images so branding logos cannot span pages */
+    /* innerHTML has no Tailwind — constrain images so branding logos cannot span pages */
     .print-content img {
       max-width: 100%;
+      max-height: 60mm;
       height: auto;
       object-fit: contain;
     }
@@ -1014,7 +1015,8 @@ export function buildPdfHtml(
         min-width: 0 !important;
         width: 100% !important;
         table-layout: fixed !important;
-        border-collapse: collapse !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
       }
       /*
        * Medium/wide compliance-style tables: fixed layout splits width evenly and crushes long
@@ -1111,7 +1113,7 @@ export function buildPdfHtml(
       }
       .table-wrapper {
         overflow: visible !important;
-        border-radius: 0;
+        border-radius: 12px;
         max-width: 100% !important;
         border: 1px solid #cbd5e1;
         border-left: 4px solid #2006f7 !important;

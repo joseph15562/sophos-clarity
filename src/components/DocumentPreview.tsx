@@ -807,7 +807,7 @@ function ReportContent({
     if (!el || !markdown) return;
 
     const title = pdfFilename.replace(/\.pdf$/i, "");
-    const themedHtml = buildPdfHtml(el.innerHTML, title, branding, { theme: exportTheme });
+    const themedHtml = buildPdfHtml(el.innerHTML, title, branding, { theme: "light" });
 
     try {
       const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
