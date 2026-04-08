@@ -4,6 +4,7 @@
  */
 
 import type { BrandingData } from "@/components/BrandingSetup";
+import { normalizeMarkdownEmbeddedDataImages } from "@/lib/markdown-data-uri-normalize";
 import { normalizeMarkdownTables, trimIncompleteMarkdownTableTail } from "@/lib/report-html";
 import {
   SE_HEALTH_CHECK_PDF_LAYOUT_CSS,
@@ -1375,9 +1376,24 @@ export function printHtmlInHiddenIframe(html: string): boolean {
 
 // ── Word export ──
 
+/**
+ * Saved packages use HTML div anchors for in-browser scroll ({@link packageReportsToMarkdown}).
+ * Word export would otherwise print the full tag line as body text.
+ */
+export function stripSavedReportJumpTargetDivsForWord(markdown: string): string {
+  return markdown.replace(
+    /^\s*<div\b[^>]*\bsaved-report-jump-target\b[^>]*>\s*<\/div>\s*\r?\n?/gim,
+    "",
+  );
+}
+
 /** Generate Word blob from markdown */
 export async function generateWordBlob(markdown: string, branding: BrandingData): Promise<Blob> {
-  const cleaned = trimIncompleteMarkdownTableTail(normalizeMarkdownTables(markdown));
+  const cleaned = trimIncompleteMarkdownTableTail(
+    normalizeMarkdownTables(
+      normalizeMarkdownEmbeddedDataImages(stripSavedReportJumpTargetDivsForWord(markdown)),
+    ),
+  );
   const { text: mdForDocx, images: docxImages } = extractDataUriMarkdownImagesForDocx(cleaned);
 
   const headerParagraphs: Paragraph[] = [];

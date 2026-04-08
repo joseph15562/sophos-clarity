@@ -143,24 +143,35 @@ const SharedReport = () => {
 
   const handlePdf = async () => {
     if (!markdown.trim()) return;
-    const coverLines = [
-      report.customerName ? `Customer: ${report.customerName}` : "",
-      new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-    ].filter(Boolean);
+    const el = reportContentRef.current;
+    if (!el) return;
+    const themedHtml = buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" });
+
     try {
-      const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
-      const blob = await generateMarkdownReportPdfBlob(markdown, { title: baseTitle, coverLines });
+      const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
+      const blob = await renderPdfViaServer(themedHtml, { landscape: true });
       saveAs(blob, pdfFilename);
-    } catch (err) {
-      console.warn("FireComply: shared report PDF fell back to print", err);
-      const el = reportContentRef.current;
-      if (!el) return;
-      const html = buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" });
-      openHtmlForPrint(html);
+    } catch (serverErr) {
+      console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+      try {
+        const coverLines = [
+          report.customerName ? `Customer: ${report.customerName}` : "",
+          new Date().toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+        ].filter(Boolean);
+        const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+        const blob = await generateMarkdownReportPdfBlob(markdown, {
+          title: baseTitle,
+          coverLines,
+        });
+        saveAs(blob, pdfFilename);
+      } catch (pdfmakeErr) {
+        console.warn("FireComply: pdfmake also failed, falling back to print", pdfmakeErr);
+        openHtmlForPrint(themedHtml);
+      }
     }
   };
 

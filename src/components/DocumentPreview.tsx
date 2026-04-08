@@ -807,24 +807,31 @@ function ReportContent({
     if (!el || !markdown) return;
 
     const title = pdfFilename.replace(/\.pdf$/i, "");
-    const coverLines = [
-      branding.customerName ? `Customer: ${branding.customerName}` : "",
-      branding.companyName || "",
-      new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-    ].filter(Boolean);
+    const themedHtml = buildPdfHtml(el.innerHTML, title, branding, { theme: exportTheme });
 
     try {
-      const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
-      const blob = await generateMarkdownReportPdfBlob(markdown, { title, coverLines });
+      const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
+      const blob = await renderPdfViaServer(themedHtml, { landscape: true });
       saveAs(blob, pdfFilename);
-    } catch (err) {
-      console.warn("FireComply: PDF download fell back to browser print", err);
-      const html = buildPdfHtml(el.innerHTML, title, branding, { theme: exportTheme });
-      if (!openHtmlForPrint(html)) return;
+    } catch (serverErr) {
+      console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+      try {
+        const coverLines = [
+          branding.customerName ? `Customer: ${branding.customerName}` : "",
+          branding.companyName || "",
+          new Date().toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+        ].filter(Boolean);
+        const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+        const blob = await generateMarkdownReportPdfBlob(markdown, { title, coverLines });
+        saveAs(blob, pdfFilename);
+      } catch (pdfmakeErr) {
+        console.warn("FireComply: pdfmake also failed, falling back to browser print", pdfmakeErr);
+        if (!openHtmlForPrint(themedHtml)) return;
+      }
     }
   };
 

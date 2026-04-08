@@ -1,5 +1,11 @@
 {
   "installCommand": "npm ci",
+  "functions": {
+    "api/render-pdf.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
   "headers": [
     {
       "source": "/assets/(.*)",

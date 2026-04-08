@@ -21,24 +21,36 @@ import { FireComplyWorkspaceHeader } from "@/components/FireComplyWorkspaceHeade
 
 function SavedReportViewerInner() {
   const { id } = useParams<{ id: string }>();
-  const { user, org, isGuest } = useAuth();
+  const { user, org, isGuest, isLoading } = useAuth();
   const [pkg, setPkg] = useState<SavedReportPackage | null | undefined>(undefined);
   const [tocOpen, setTocOpen] = useState(false);
   const reportContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!id || !user || isGuest || !org) {
+    if (!id) {
+      setPkg(undefined);
+      return;
+    }
+
+    // Session + org membership still resolving — do not set pkg to null (would flash "Report not found").
+    if (isLoading) {
+      return;
+    }
+
+    if (!user || isGuest || !org) {
       setPkg(null);
       return;
     }
+
     let cancelled = false;
-    loadSavedReportPackageById(id).then((p) => {
+    setPkg(undefined);
+    void loadSavedReportPackageById(id).then((p) => {
       if (!cancelled) setPkg(p);
     });
     return () => {
       cancelled = true;
     };
-  }, [id, user, isGuest, org]);
+  }, [id, user, isGuest, org, isLoading]);
 
   const markdown = pkg ? savedPackageToMarkdown(pkg) : "";
   const html = useMemo(() => buildReportHtml(markdown), [markdown]);
@@ -142,25 +154,36 @@ function SavedReportViewerInner() {
 
   const handlePdf = async () => {
     if (!markdown.trim()) return;
-    const coverLines = [
-      customerTitle ? `Customer: ${customerTitle}` : "",
-      pkg.environment ? `Environment: ${pkg.environment}` : "",
-      new Date().toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }),
-    ].filter(Boolean);
+    const el = reportContentRef.current;
+    if (!el) return;
+    const themedHtml = buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" });
+
     try {
-      const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
-      const blob = await generateMarkdownReportPdfBlob(markdown, { title: baseTitle, coverLines });
+      const { renderPdfViaServer } = await import("@/lib/pdf-render-client");
+      const blob = await renderPdfViaServer(themedHtml, { landscape: true });
       saveAs(blob, pdfFilename);
-    } catch (err) {
-      console.warn("FireComply: saved report PDF fell back to print", err);
-      const el = reportContentRef.current;
-      if (!el) return;
-      const html = buildPdfHtml(el.innerHTML, baseTitle, branding, { theme: "light" });
-      openHtmlForPrint(html);
+    } catch (serverErr) {
+      console.warn("FireComply: server PDF render failed, trying pdfmake", serverErr);
+      try {
+        const coverLines = [
+          customerTitle ? `Customer: ${customerTitle}` : "",
+          pkg.environment ? `Environment: ${pkg.environment}` : "",
+          new Date().toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+        ].filter(Boolean);
+        const { generateMarkdownReportPdfBlob } = await import("@/lib/assessment-report-pdfmake");
+        const blob = await generateMarkdownReportPdfBlob(markdown, {
+          title: baseTitle,
+          coverLines,
+        });
+        saveAs(blob, pdfFilename);
+      } catch (pdfmakeErr) {
+        console.warn("FireComply: pdfmake also failed, falling back to print", pdfmakeErr);
+        openHtmlForPrint(themedHtml);
+      }
     }
   };
 

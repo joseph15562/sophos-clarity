@@ -6,9 +6,15 @@
 import { marked } from "marked";
 import type { Token, Tokens } from "marked";
 import type { Content, TableCell, TDocumentDefinitions } from "pdfmake/interfaces";
+import { normalizeMarkdownEmbeddedDataImages } from "@/lib/markdown-data-uri-normalize";
 import { normalizeMarkdownTables, trimIncompleteMarkdownTableTail } from "@/lib/report-html";
 
 marked.setOptions({ gfm: true, breaks: false });
+
+export {
+  normalizeMarkdownEmbeddedDataImages,
+  normalizePdfImageMarkdownSyntax,
+} from "@/lib/markdown-data-uri-normalize";
 
 const MAX_MARKDOWN_CHARS = 450_000;
 const MAX_TABLE_BODY_ROWS = 200;
@@ -19,27 +25,6 @@ const DATA_IMAGE_URI_RE = /^data:image\/(png|jpeg|jpg|gif);base64,/i;
 /** Only whitespace / BOM / NBSP before a line-start image (handles CRLF and full-width space). */
 function isOnlyLeadingWhitespaceBeforeImage(prefix: string): boolean {
   return !/[^\s\uFEFF\u00A0]/.test(prefix);
-}
-
-/**
- * Repair markdown that lost `![]` / `](` so it became `label|(data:image/...;base64,...)`, which
- * marked treats as plain text and pdfmake would print as a wall of base64.
- */
-export function normalizePdfImageMarkdownSyntax(markdown: string): string {
-  let md = markdown;
-  md = md.replace(
-    /(^|[\r\n])([\t \u00A0\uFEFF]*)([^\r\n]+?)\|\((data:image\/(?:png|jpeg|jpg|gif);base64,[^)\r\n]+)\)/gi,
-    (_, lineBreak, indent, label, uri) => `${lineBreak}${indent}![${String(label).trim()}](${uri})`,
-  );
-  md = md.replace(
-    /(^|[\r\n])([\t \u00A0\uFEFF]*)\[([^\]\r\n]+)\]\((data:image\/(?:png|jpeg|jpg|gif);base64,[^)\r\n]+)\)/gi,
-    (match, lineBreak, sp, alt, uri, offset, fullString: string) => {
-      const bracketIdx = offset + String(lineBreak).length + String(sp).length;
-      if (bracketIdx > 0 && fullString[bracketIdx - 1] === "!") return match;
-      return `${lineBreak}${sp}![${alt}](${uri})`;
-    },
-  );
-  return md;
 }
 
 export type MarkdownOrDataUriImage = { kind: "md"; text: string } | { kind: "image"; uri: string };
@@ -67,17 +52,21 @@ export function splitMarkdownDataUriImages(markdown: string): MarkdownOrDataUriI
     pushMd(i, img);
     const closeBracket = markdown.indexOf("]", img + 2);
     if (closeBracket < 0) {
+      pushMd(img, img + 2);
       i = img + 2;
       continue;
     }
     const afterBracket = closeBracket + 1;
     if (afterBracket >= n || markdown[afterBracket] !== "(") {
+      pushMd(img, img + 2);
       i = img + 2;
       continue;
     }
     const closeParen = markdown.indexOf(")", afterBracket + 1);
     if (closeParen < 0) {
-      i = img + 2;
+      // No closing `)` anywhere — push everything remaining as text
+      pushMd(img, n);
+      i = n;
       continue;
     }
     const uri = markdown.slice(afterBracket + 1, closeParen);
@@ -286,15 +275,138 @@ function listItemPlain(item: Tokens.ListItem): string {
   return prefix + text;
 }
 
+// A4 landscape: 841.89 pt wide. Margins [24, 36, 24, 40] → content width ~794 pt.
+const PAGE_MARGIN_H = 24;
+const LANDSCAPE_CONTENT_WIDTH = 842 - PAGE_MARGIN_H * 2; // ~794
+const SAMPLE_ROWS = 30;
+const MAX_CHARS_CAP = 24;
+
+const ZWS = "\u200B";
+
+/** Insert zero-width spaces after _, commas, slashes, and dots so pdfmake
+ *  wraps at logical boundaries instead of splitting words mid-character. */
+function softBreakCellText(s: string): string {
+  return s.replace(/([_,/.:])/g, `$1${ZWS}`);
+}
+
+/** Sizing tiers — font, padding, and char-width all shrink with column count. */
+function tableSizingForCols(colCount: number) {
+  if (colCount <= 4)
+    return {
+      fontSize: 7.5,
+      headerFontSize: 7.5,
+      hPad: 4,
+      vPad: 3,
+      headerVPad: 4,
+      charWidth: 4.2,
+      minCol: 28,
+    };
+  if (colCount <= 6)
+    return {
+      fontSize: 7,
+      headerFontSize: 7,
+      hPad: 3,
+      vPad: 3,
+      headerVPad: 3,
+      charWidth: 3.9,
+      minCol: 24,
+    };
+  if (colCount <= 9)
+    return {
+      fontSize: 6,
+      headerFontSize: 6,
+      hPad: 2,
+      vPad: 2,
+      headerVPad: 2,
+      charWidth: 3.3,
+      minCol: 20,
+    };
+  if (colCount <= 12)
+    return {
+      fontSize: 5.5,
+      headerFontSize: 5.5,
+      hPad: 2,
+      vPad: 2,
+      headerVPad: 2,
+      charWidth: 3.0,
+      minCol: 18,
+    };
+  // 13+ columns — very dense
+  return {
+    fontSize: 5,
+    headerFontSize: 5,
+    hPad: 1,
+    vPad: 1,
+    headerVPad: 2,
+    charWidth: 2.7,
+    minCol: 14,
+  };
+}
+
+/**
+ * All-numeric column widths that sum to exactly the content width.
+ * Measures capped text lengths, builds proportional weights, then distributes
+ * the full page width so every column is accounted for — no `"*"` wildcards
+ * that let pdfmake miscalculate borders.
+ */
+function computeColumnWidths(
+  header: Tokens.TableCell[],
+  rows: Tokens.TableCell[][],
+  sizing: ReturnType<typeof tableSizingForCols>,
+): number[] {
+  const colCount = header.length;
+  if (colCount === 0) return [];
+  if (colCount === 1) return [LANDSCAPE_CONTENT_WIDTH];
+
+  const sample = rows.slice(0, SAMPLE_ROWS);
+  const cellHPad = sizing.hPad * 2;
+
+  const maxChars: number[] = header.map((h, i) => {
+    let max = inlinePlain(h.tokens).length;
+    for (const row of sample) {
+      if (row[i]) max = Math.max(max, inlinePlain(row[i].tokens).length);
+    }
+    return Math.min(max, MAX_CHARS_CAP);
+  });
+
+  // Desired width per column = text width + internal padding
+  const desired = maxChars.map((ch) => Math.max(sizing.minCol, ch * sizing.charWidth + cellHPad));
+  const totalDesired = desired.reduce((a, b) => a + b, 0);
+
+  // Scale so the total fills exactly the content width
+  const scale = LANDSCAPE_CONTENT_WIDTH / totalDesired;
+  const scaled = desired.map((w) => Math.max(sizing.minCol, w * scale));
+
+  // Integer-round and fix off-by-one so the sum is exactly LANDSCAPE_CONTENT_WIDTH
+  const rounded = scaled.map((w) => Math.round(w));
+  let diff = LANDSCAPE_CONTENT_WIDTH - rounded.reduce((a, b) => a + b, 0);
+  for (let i = 0; diff !== 0 && i < rounded.length; i++) {
+    if (diff > 0) {
+      rounded[i]++;
+      diff--;
+    } else if (rounded[i] > sizing.minCol) {
+      rounded[i]--;
+      diff++;
+    }
+  }
+  return rounded;
+}
+
 function tableToPdf(tok: Tokens.Table): Content {
   const colCount = Math.max(1, tok.header.length);
-  const widths = Array.from({ length: colCount }, () => "*");
+  const sizing = tableSizingForCols(colCount);
 
   const headerRow: TableCell[] = tok.header.map((cell) => ({
-    text: tokensToFlowContent(cell.tokens, true),
+    text: softBreakCellText(inlinePlain(cell.tokens)),
     style: "tableHeader",
+    fontSize: sizing.headerFontSize,
     color: "#ffffff",
-    margin: [4, 5, 4, 5],
+    margin: [sizing.hPad, sizing.headerVPad, sizing.hPad, sizing.headerVPad] as [
+      number,
+      number,
+      number,
+      number,
+    ],
   }));
 
   let bodyRows = tok.rows;
@@ -308,32 +420,49 @@ function tableToPdf(tok: Tokens.Table): Content {
     };
   }
 
+  const widths = computeColumnWidths(tok.header, bodyRows, sizing);
+
   const dataRows: TableCell[][] = bodyRows.map((row) =>
     row.map((cell) => ({
-      text: tokensToFlowContent(cell.tokens, true),
+      text: softBreakCellText(inlinePlain(cell.tokens)),
       style: "tableCell",
-      margin: [4, 4, 4, 4],
+      fontSize: sizing.fontSize,
+      margin: [sizing.hPad, sizing.vPad, sizing.hPad, sizing.vPad] as [
+        number,
+        number,
+        number,
+        number,
+      ],
     })),
   );
+
+  const isFirstRow = (ri: number) => ri === 0;
 
   const stack: Content[] = [
     {
       table: {
         headerRows: 1,
+        dontBreakRows: true,
         widths,
         body: [headerRow, ...dataRows],
       },
       layout: {
         fillColor: (rowIndex: number) => {
-          if (rowIndex === 0) return "#001A47";
-          return rowIndex % 2 === 0 ? "#EDF2F9" : null;
+          if (isFirstRow(rowIndex)) return "#0f1d3d";
+          return rowIndex % 2 === 0 ? "#f0f4f8" : "#ffffff";
         },
-        hLineWidth: () => 0.5,
-        vLineWidth: () => 0.5,
-        hLineColor: () => "#cbd5e1",
-        vLineColor: () => "#cbd5e1",
+        hLineWidth: (lineIdx: number, _node: unknown) => {
+          if (lineIdx === 0 || lineIdx === 1) return 0;
+          return 0.25;
+        },
+        vLineWidth: () => 0,
+        hLineColor: () => "#e2e8f0",
+        paddingLeft: () => 0,
+        paddingRight: () => 0,
+        paddingTop: () => 0,
+        paddingBottom: () => 0,
       },
-      margin: [0, 0, 0, 10],
+      margin: [0, 0, 0, 12],
     },
   ];
   if (truncatedNote) stack.push(truncatedNote);
@@ -441,13 +570,36 @@ function blocksToContent(tokens: Token[]): Content[] {
   return out;
 }
 
+export type PdfFontConfig = {
+  bodyFont?: string;
+  headingFont?: string;
+};
+
 /** Builds the pdfmake document definition (no PDF bytes). Exported for unit tests. */
 export function buildMarkdownReportPdfDocDefinition(
   markdown: string,
   options: MarkdownReportPdfOptions,
+  fontCfg?: PdfFontConfig,
 ): TDocumentDefinitions {
-  const sliced = normalizePdfImageMarkdownSyntax(markdown).slice(0, MAX_MARKDOWN_CHARS);
-  const pieces = splitMarkdownDataUriImages(sliced);
+  const bodyFont = fontCfg?.bodyFont ?? "Roboto";
+  const headingFont = fontCfg?.headingFont ?? bodyFont;
+  const normalized = normalizeMarkdownEmbeddedDataImages(markdown);
+  const rawPieces = splitMarkdownDataUriImages(normalized);
+
+  // Truncate only markdown text — data-URI images (which can be 500 K+ chars for a PNG logo)
+  // must not be sliced in half or the closing `)` is lost and the image renders as raw text.
+  let charBudget = MAX_MARKDOWN_CHARS;
+  const pieces: MarkdownOrDataUriImage[] = [];
+  for (const p of rawPieces) {
+    if (p.kind === "image") {
+      pieces.push(p);
+    } else {
+      if (charBudget <= 0) break;
+      const text = p.text.slice(0, charBudget);
+      charBudget -= text.length;
+      pieces.push({ kind: "md", text });
+    }
+  }
 
   const cover: Content[] = [
     { text: options.title, style: "coverTitle" },
@@ -490,25 +642,26 @@ export function buildMarkdownReportPdfDocDefinition(
     info: { title: options.title },
     pageSize: "A4",
     pageOrientation: "landscape",
-    pageMargins: [40, 48, 40, 52],
+    pageMargins: [PAGE_MARGIN_H, 36, PAGE_MARGIN_H, 40],
     content: body,
     styles: {
       coverTitle: {
+        font: headingFont,
         fontSize: 18,
         bold: true,
         color: "#001A47",
       },
       coverMeta: { fontSize: 9, color: "#64748b" },
-      h1: { fontSize: 14, bold: true, color: "#001A47" },
-      h2: { fontSize: 12, bold: true, color: "#001A47" },
-      h3: { fontSize: 10.5, bold: true, color: "#0f172a" },
+      h1: { font: headingFont, fontSize: 14, bold: true, color: "#001A47" },
+      h2: { font: headingFont, fontSize: 12, bold: true, color: "#001A47" },
+      h3: { font: headingFont, fontSize: 10.5, bold: true, color: "#0f172a" },
       body: { fontSize: 9, lineHeight: 1.35, color: "#334155" },
       muted: { fontSize: 8, color: "#94a3b8", italics: true },
-      tableHeader: { bold: true, color: "#ffffff", fontSize: 7.5 },
-      tableCell: { fontSize: 7.5, color: "#334155" },
+      tableHeader: { bold: true, color: "#ffffff" },
+      tableCell: { color: "#334155" },
     },
     defaultStyle: {
-      font: "Roboto",
+      font: bodyFont,
       fontSize: 9,
       lineHeight: 1.35,
     },

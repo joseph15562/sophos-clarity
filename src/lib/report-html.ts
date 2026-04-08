@@ -4,6 +4,7 @@
 
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import { normalizeMarkdownEmbeddedDataImages } from "@/lib/markdown-data-uri-normalize";
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -181,7 +182,8 @@ export type BuildReportHtmlOptions = {
  */
 export function buildReportHtml(markdown: string, options?: BuildReportHtmlOptions): string {
   if (!markdown) return "";
-  let md = normalizeMarkdownTables(markdown);
+  let md = normalizeMarkdownEmbeddedDataImages(markdown);
+  md = normalizeMarkdownTables(md);
   if (options?.stripIncompleteTableTail !== false) {
     md = trimIncompleteMarkdownTableTail(md);
   }

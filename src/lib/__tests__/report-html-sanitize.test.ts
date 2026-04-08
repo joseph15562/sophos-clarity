@@ -79,6 +79,16 @@ describe("buildReportHtml – XSS sanitization", () => {
     expect(html).not.toContain("style=");
   });
 
+  it("repairs Company Logo](data:image… before parse so preview is an img, not raw base64 text", () => {
+    const tiny =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const md = `## Sophos Wall\n\nCompany Logo](${tiny})\n`;
+    const html = buildReportHtml(md);
+    expect(html).toContain("<img");
+    expect(html).toContain("src=");
+    expect(html).not.toContain("Company Logo](");
+  });
+
   it("returns empty string for empty input", () => {
     expect(buildReportHtml("")).toBe("");
   });

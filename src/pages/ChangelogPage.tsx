@@ -551,7 +551,14 @@ function ChangelogPageInner() {
                 <code className="text-xs">max-height</code> clamp). Word export scales{" "}
                 <code className="text-xs">Company Logo</code> (and similar alt text) data-URI PNGs
                 to a small header-style box (~44px tall max); larger caps still apply to other
-                embedded figures. <code className="text-xs">buildReportHtml</code> now removes{" "}
+                embedded figures. Saved-report Word exports omit HTML jump-anchor{" "}
+                <code className="text-xs">div</code>s (in-browser scroll targets) so they are not
+                printed as raw tags. The same data-URI logo repair used for PDF/Word runs at the
+                start of <code className="text-xs">buildReportHtml</code> (Assess preview, shared
+                links, Report Centre, portal) so broken{" "}
+                <code className="text-xs">Company Logo](data:…</code> lines become real images in
+                HTML too — not only in the pdfmake file download.{" "}
+                <code className="text-xs">buildReportHtml</code> still removes{" "}
                 <code className="text-xs">img</code> width/height/style before sanitize (and drops{" "}
                 <code className="text-xs">style</code> on all nodes), and the rendered body uses{" "}
                 <code className="text-xs">report-body-html</code> with unlayered{" "}
@@ -575,10 +582,18 @@ function ChangelogPageInner() {
                 the cover markdown are converted to real pdfmake images (not dumped as raw
                 markdown/base64 text). Lines corrupted to{" "}
                 <code className="text-xs">Label|(data:image/png|jpeg|gif;base64,…)</code> (missing{" "}
-                <code className="text-xs">![](</code>) are repaired first; data-URI images inside
-                GFM table cells render as images. Other inline images stay in markdown. No system
-                print dialog or Safari orientation toggle is required. If pdf generation fails, the
-                app falls back to the existing HTML print tab.
+                <code className="text-xs">![](</code>) or{" "}
+                <code className="text-xs">Alt](data:image/…;base64,…)</code> missing the leading{" "}
+                <code className="text-xs">![</code> and <code className="text-xs">[</code>) are
+                repaired by a shared scanner (flexible spaces in{" "}
+                <code className="text-xs">data:image/…;base64,</code>, fullwidth closing{" "}
+                <code className="text-xs">）</code>, line-wrapped payloads). Whitespace inside the
+                URI is compacted. Data-URI images inside GFM table cells render as images. Other
+                inline images stay in markdown. Large logos (&gt;450 K-char data URIs) are no longer
+                truncated by the character budget—images are split out before truncation so the
+                closing <code className="text-xs">)</code> is never sliced off. No system print
+                dialog or Safari orientation toggle is required. If pdf generation fails, the app
+                falls back to the existing HTML print tab.
               </li>
               <li>
                 <strong className="text-foreground">
@@ -696,7 +711,12 @@ function ChangelogPageInner() {
                 instead of a tight 3×2 icon grid, so view, PDF, Markdown, email, archive, and delete
                 are easier to use. The <strong className="text-foreground">Eye</strong> preview
                 modal loads the saved package from the cloud and renders the full report HTML (not
-                only the short “preview only” stub).
+                only the short “preview only” stub). The dedicated{" "}
+                <code className="text-xs">/reports/saved/&lt;id&gt;</code> page waits for auth to
+                finish loading org membership before treating a missing package as “not found”, so
+                you no longer see a false{" "}
+                <strong className="text-foreground">Report not found</strong> flash while the row is
+                still fetching.
               </li>
               <li>
                 <strong className="text-foreground">Client portal — HA firewalls</strong>:{" "}
@@ -1415,6 +1435,15 @@ function ChangelogPageInner() {
                 <strong className="text-foreground">AI report generation</strong> cancels the
                 in-flight stream; PSA settings, the public config-upload page, client portal load,
                 and fleet scan/delete actions use the same cancellation pattern where it matters.
+              </li>
+              <li>
+                <strong className="text-foreground">PDF exports — server-rendered</strong>:{" "}
+                <strong className="text-foreground">Download PDF</strong> now renders the fully
+                themed HTML report (Zalando Sans fonts, rounded table corners, theme colours,
+                landscape A4) via a serverless headless Chromium function and returns a direct{" "}
+                <code className="text-xs">.pdf</code> file download — no print dialog required. If
+                the server render is unavailable the app falls back to pdfmake, then to the browser
+                print tab.
               </li>
             </ul>
           </section>

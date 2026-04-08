@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { docxImageTransformation, generateWordBlob } from "@/lib/report-export";
+import {
+  docxImageTransformation,
+  generateWordBlob,
+  stripSavedReportJumpTargetDivsForWord,
+} from "@/lib/report-export";
 import type { BrandingData } from "@/components/BrandingSetup";
 
 const minimalBranding: BrandingData = {
@@ -34,5 +38,15 @@ describe("generateWordBlob — data URI images", () => {
     const raw = new TextDecoder("latin1").decode(new Uint8Array(ab));
     expect(raw).not.toContain("iVBORw0KGgo");
     expect(raw).not.toContain("data:image/png;base64");
+  });
+
+  it("strips saved-report HTML jump anchors before Word conversion", () => {
+    const md =
+      '<div id="saved-doc-report-abc" class="saved-report-jump-target scroll-mt-28" aria-hidden="true"></div>\n\n## Firewall one\n\nBody.\n\n---\n\n<div id="saved-doc-report-def" class="saved-report-jump-target scroll-mt-28" aria-hidden="true"></div>\n\n## Firewall two\n\nMore.';
+    const stripped = stripSavedReportJumpTargetDivsForWord(md);
+    expect(stripped).not.toContain("saved-report-jump-target");
+    expect(stripped).not.toContain("<div");
+    expect(stripped).toContain("## Firewall one");
+    expect(stripped).toContain("## Firewall two");
   });
 });
