@@ -1445,6 +1445,14 @@ function ChangelogPageInner() {
                 the server render is unavailable the app falls back to pdfmake, then to the browser
                 print tab.
               </li>
+              <li>
+                <strong className="text-foreground">SE Health Check — data purge</strong>: the
+                Management drawer now includes a{" "}
+                <strong className="text-foreground">Data purge</strong> section with two options —
+                delete all saved checks for a specific customer, or purge all your health check data
+                (saved checks, shared links, follow-up reminders, and local overrides). The full
+                purge requires typing &quot;DELETE&quot; to confirm.
+              </li>
             </ul>
           </section>
           <section className="space-y-4">

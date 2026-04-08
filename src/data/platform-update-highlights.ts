@@ -30,7 +30,7 @@ export const PLATFORM_UPDATE_CARD = {
     },
     {
       tag: "improved" as const,
-      text: "Visual polish: ambient mesh + motion-safe pulse, glass panels, gradient title, primary button glow, nav shimmer, richer assist bar; Assess footer: View Findings + Generate Reports on the same strip as Tours/Shortcuts; Save Reports + save errors at the top of the report preview toolbar; Help docs: wider mocks (max-w-6xl), optional zoom on larger breakpoints, taller frame cap; Fleet Map: per-firewall pins, pan/zoom, optional MSP lat/long, Central geo fallback, then country centroid; daily server presence rows keep Assess fleet Agent Status (7-day) green without opening the connector.",
+      text: "Visual polish: ambient mesh + motion-safe pulse, glass panels, gradient title, primary button glow, nav shimmer, richer assist bar; Assess footer: View Findings + Generate Reports on the same strip as Tours/Shortcuts; Save Reports + save errors at the top of the report preview toolbar; Help docs: wider mocks (max-w-6xl), optional zoom on larger breakpoints, taller frame cap; Fleet Map: per-firewall pins, pan/zoom, optional MSP lat/long, Central geo fallback, then country centroid; daily server presence rows keep Assess fleet Agent Status (7-day) green without opening the connector; SE Health Check: data purge per customer or full-SE wipe from the Management drawer.",
     },
     {
       tag: "fixed" as const,

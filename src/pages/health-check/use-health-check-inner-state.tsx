@@ -917,6 +917,56 @@ export function useHealthCheckInnerState() {
   const [sendingReport, setSendingReport] = useState(false);
   const [sendingReportToSe, setSendingReportToSe] = useState(false);
   const [savingCheck, setSavingCheck] = useState(false);
+  const [purgingCustomer, setPurgingCustomer] = useState(false);
+  const [purgingAll, setPurgingAll] = useState(false);
+
+  const purgeByCustomer = useCallback(
+    async (purgeCustomerName: string) => {
+      if (!seAuth.seProfile) return;
+      setPurgingCustomer(true);
+      try {
+        const { error, count } = await supabase
+          .from("se_health_checks")
+          .delete({ count: "exact" })
+          .eq("se_user_id", seAuth.seProfile.id)
+          .eq("customer_name", purgeCustomerName);
+        if (error) throw error;
+        toast.success(`Deleted ${count ?? 0} health check(s) for "${purgeCustomerName}".`);
+        setHistoryRefreshKey((k) => k + 1);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Purge failed.");
+      } finally {
+        setPurgingCustomer(false);
+      }
+    },
+    [seAuth.seProfile],
+  );
+
+  const purgeAllMyData = useCallback(async () => {
+    if (!seAuth.seProfile) return;
+    setPurgingAll(true);
+    try {
+      const { error, count } = await supabase
+        .from("se_health_checks")
+        .delete({ count: "exact" })
+        .eq("se_user_id", seAuth.seProfile.id);
+      if (error) throw error;
+      try {
+        localStorage.removeItem("se-health-check-bp-manual-overrides");
+        localStorage.removeItem("firecomply-hc-tour-seen");
+      } catch {
+        /* localStorage may be unavailable */
+      }
+      resetAll();
+      toast.success(`Deleted ${count ?? 0} health check(s) and cleared local data.`);
+      setHistoryRefreshKey((k) => k + 1);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Purge failed.");
+    } finally {
+      setPurgingAll(false);
+    }
+  }, [seAuth.seProfile, resetAll]);
+
   const [centralApiHelpOpen, setCentralApiHelpOpen] = useCentralApiHelpHash();
 
   const centralFromUploadRef = useRef(false);
@@ -1950,5 +2000,9 @@ export function useHealthCheckInnerState() {
     handleSendReportToCustomer,
     restoreFromSavedSnapshot,
     hasParsedConfigs,
+    purgingCustomer,
+    purgingAll,
+    purgeByCustomer,
+    purgeAllMyData,
   };
 }

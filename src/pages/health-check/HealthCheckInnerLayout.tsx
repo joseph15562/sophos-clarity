@@ -102,6 +102,10 @@ export function HealthCheckInnerLayout() {
     recheckSearching,
     handleRecheckSearch,
     handleRecheckSelect,
+    purgingCustomer,
+    purgingAll,
+    purgeByCustomer,
+    purgeAllMyData,
   } = useHealthCheckInnerModel();
 
   return (
@@ -171,6 +175,10 @@ export function HealthCheckInnerLayout() {
       <SeHealthCheckManagementDrawer
         open={seManagementOpen}
         onClose={() => setSeManagementOpen(false)}
+        purgingCustomer={purgingCustomer}
+        purgingAll={purgingAll}
+        onPurgeByCustomer={purgeByCustomer}
+        onPurgeAllMyData={purgeAllMyData}
       />
 
       {/* Config Upload Request Dialog */}

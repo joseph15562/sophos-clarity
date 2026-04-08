@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  AlertTriangle,
   Crown,
   Loader2,
   LogOut,
@@ -34,6 +35,10 @@ import { useAbortableInFlight } from "@/hooks/use-abortable-in-flight";
 type Props = {
   open: boolean;
   onClose: () => void;
+  purgingCustomer?: boolean;
+  purgingAll?: boolean;
+  onPurgeByCustomer?: (customerName: string) => Promise<void>;
+  onPurgeAllMyData?: () => Promise<void>;
 };
 
 function defaultDraftFromProfile(p: SEProfile): string {
@@ -84,13 +89,26 @@ const SE_TITLE_PRESETS = [
   "Sophos Professional Services Engineer",
 ];
 
-export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
+export function SeHealthCheckManagementDrawer({
+  open,
+  onClose,
+  purgingCustomer,
+  purgingAll,
+  onPurgeByCustomer,
+  onPurgeAllMyData,
+}: Props) {
   const nextMutationSignal = useAbortableInFlight();
   const { seProfile, reloadSeProfile } = useSEAuth();
   const { teams, reload: reloadTeams } = useActiveTeam();
   const [draft, setDraft] = useState("");
   const [titleDraft, setTitleDraft] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Data purge
+  const [customerNames, setCustomerNames] = useState<string[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [selectedPurgeCustomer, setSelectedPurgeCustomer] = useState("");
+  const [purgeAllConfirmText, setPurgeAllConfirmText] = useState("");
 
   // Team creation
   const [newTeamName, setNewTeamName] = useState("");
@@ -123,6 +141,28 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
     seProfile?.email,
     seProfile?.seTitle,
   ]);
+
+  useEffect(() => {
+    if (!open || !seProfile) return;
+    let cancelled = false;
+    setLoadingCustomers(true);
+    supabase
+      .from("se_health_checks")
+      .select("customer_name")
+      .eq("se_user_id", seProfile.id)
+      .order("customer_name")
+      .then(({ data }) => {
+        if (cancelled) return;
+        const unique = [
+          ...new Set((data ?? []).map((r) => r.customer_name as string).filter(Boolean)),
+        ];
+        setCustomerNames(unique);
+        setLoadingCustomers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, seProfile, purgingCustomer, purgingAll]);
 
   const handleSave = async () => {
     if (!seProfile) return;
@@ -754,6 +794,111 @@ export function SeHealthCheckManagementDrawer({ open, onClose }: Props) {
                         <Plus className="h-3 w-3" />
                       )}
                       Create
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
+              {/* Data purge section */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-display tracking-tight font-semibold flex items-center gap-1.5 text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                  Data purge
+                </h3>
+
+                {/* Per-customer purge */}
+                <div className="space-y-2">
+                  <Label className="text-[10px] text-muted-foreground font-semibold">
+                    Delete all checks for a customer
+                  </Label>
+                  {loadingCustomers ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : customerNames.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground">No saved health checks.</p>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={selectedPurgeCustomer}
+                        onValueChange={setSelectedPurgeCustomer}
+                      >
+                        <SelectTrigger className="h-8 text-xs flex-1">
+                          <SelectValue placeholder="Select customer…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customerNames.map((name) => (
+                            <SelectItem key={name} value={name}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1 text-destructive hover:text-destructive border-destructive/30"
+                        disabled={!selectedPurgeCustomer || purgingCustomer}
+                        onClick={() => {
+                          if (
+                            !selectedPurgeCustomer ||
+                            !confirm(
+                              `Delete ALL health checks for "${selectedPurgeCustomer}"? This cannot be undone.`,
+                            )
+                          )
+                            return;
+                          void onPurgeByCustomer?.(selectedPurgeCustomer).then(() =>
+                            setSelectedPurgeCustomer(""),
+                          );
+                        }}
+                      >
+                        {purgingCustomer ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                        Delete
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Full SE purge */}
+                <div className="space-y-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+                  <Label className="text-[10px] font-semibold flex items-center gap-1 text-destructive">
+                    <AlertTriangle className="h-3 w-3" />
+                    Delete ALL my health checks
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Permanently removes every saved health check, shared links, follow-up reminders,
+                    and clears local overrides. Type{" "}
+                    <span className="font-mono font-semibold text-destructive">DELETE</span> to
+                    confirm.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className="h-8 text-xs flex-1 font-mono"
+                      placeholder='Type "DELETE" to confirm'
+                      value={purgeAllConfirmText}
+                      onChange={(e) => setPurgeAllConfirmText(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      disabled={purgeAllConfirmText !== "DELETE" || purgingAll}
+                      onClick={() => {
+                        void onPurgeAllMyData?.().then(() => setPurgeAllConfirmText(""));
+                      }}
+                    >
+                      {purgingAll ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                      Purge all
                     </Button>
                   </div>
                 </div>
