@@ -929,11 +929,13 @@ function ReportContent({
           {(branding.companyName || branding.logoUrl) && (
             <div className="report-pdf-brand-block flex items-center gap-4 mb-8 pb-6 border-b-2 border-brand-accent/20 dark:border-brand-accent/30">
               {branding.logoUrl && (
-                <img
-                  src={branding.logoUrl}
-                  alt="Company logo"
-                  className="report-pdf-brand-logo h-14 w-auto max-w-[200px] object-contain"
-                />
+                <div className="flex h-14 max-h-14 w-full max-w-[200px] shrink-0 basis-[min(200px,100%)] items-center justify-start overflow-hidden min-w-0">
+                  <img
+                    src={branding.logoUrl}
+                    alt="Company logo"
+                    className="report-pdf-brand-logo max-h-14 max-w-full w-auto object-contain"
+                  />
+                </div>
               )}
               <div className="flex-1">
                 {branding.companyName && (

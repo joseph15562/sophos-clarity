@@ -610,6 +610,17 @@
     background: hsl(var(--primary) / 0.06);
     color: hsl(var(--muted-foreground));
   }
+  /* Model/markdown images (e.g. embedded “logo”) — intrinsic SVG/raster sizes can be huge */
+  .doc-section img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    max-height: min(14rem, 35vh);
+  }
+  .doc-section .report-pdf-brand-logo {
+    max-height: 3.5rem;
+    max-width: 200px;
+  }
 }
 
 @media print {

@@ -533,7 +533,12 @@ function ChangelogPageInner() {
                 Download PDF includes a short orientation hint. Word exports stay landscape with{" "}
                 <strong className="text-foreground">autofit</strong> tables for five or fewer
                 columns and a wider first column for larger tables; E2E pdfmake downloads use
-                landscape A4 for parity.
+                landscape A4 for parity. In the live document preview (and any{" "}
+                <code className="text-xs">.doc-section</code> shell), the MSP branding logo uses a
+                bounded flex slot so large intrinsic SVG/raster dimensions cannot blow out the
+                layout, and images from report markdown are capped (
+                <code className="text-xs">max-width: 100%</code>,{" "}
+                <code className="text-xs">max-height</code> clamp).
               </li>
               <li>
                 <strong className="text-foreground">Report library — quick email</strong>: the row

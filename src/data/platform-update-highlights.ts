@@ -26,7 +26,7 @@ export const PLATFORM_UPDATE_CARD = {
     },
     {
       tag: "improved" as const,
-      text: "Workspace header (Central popover), unified hub chrome, Central Alerts/MDR merged requests + mission-alerts browser snapshot for faster return visits, API Explorer live keys, changelog threats from Sophos advisories RSS, signed-in firmware table from Central inventory, Insights: Central threat charts by raised time with stacks mapped from product/Event type (not all Other), score-history trends, report/assess activity, recommendations when signed in; report PDF/Word: A4 landscape print with logo/table fixes (incl. 7–9 col tier), duplicate body logo hidden when the header shows it, Word autofit for narrow tables + wider first column on wide tables, SE Health Check snapshot copy.",
+      text: "Workspace header (Central popover), unified hub chrome, Central Alerts/MDR merged requests + mission-alerts browser snapshot for faster return visits, API Explorer live keys, changelog threats from Sophos advisories RSS, signed-in firmware table from Central inventory, Insights: Central threat charts by raised time with stacks mapped from product/Event type (not all Other), score-history trends, report/assess activity, recommendations when signed in; report PDF/Word: A4 landscape print with logo/table fixes (incl. 7–9 col tier), duplicate body logo hidden when the header shows it, Word autofit for narrow tables + wider first column on wide tables, SE Health Check snapshot copy; document preview caps MSP logo + markdown images so huge intrinsics do not overflow.",
     },
     {
       tag: "improved" as const,
